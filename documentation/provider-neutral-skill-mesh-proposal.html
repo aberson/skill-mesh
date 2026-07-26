@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Skill Mesh - provider-neutral correction proposal</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --ground: #f4f7f6;
+      --surface: #ffffff;
+      --surface-2: #eaf1ef;
+      --ink: #17211f;
+      --soft: #4d5a57;
+      --line: #cfdbd7;
+      --accent: #087f70;
+      --accent-soft: #dcefeb;
+      --pick: #8c5b0a;
+      --pick-soft: #f5ead4;
+      --shadow: 0 10px 30px -20px rgba(20, 45, 40, .35);
+      font-family: system-ui, "Segoe UI", sans-serif;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --ground: #0c1312;
+        --surface: #141d1b;
+        --surface-2: #192522;
+        --ink: #e8efed;
+        --soft: #a8b5b1;
+        --line: #2c3d39;
+        --accent: #53c5b5;
+        --accent-soft: #123b35;
+        --pick: #e0aa5e;
+        --pick-soft: #392d17;
+        --shadow: 0 12px 32px -18px rgba(0, 0, 0, .8);
+      }
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--ground); color: var(--ink); line-height: 1.55; }
+    main { max-width: 68rem; margin: auto; padding: 2rem 1rem 4rem; }
+    header { padding: 2rem 0 1rem; }
+    .eyebrow, code, .id { font-family: "Cascadia Code", Consolas, monospace; }
+    .eyebrow { color: var(--accent); font-size: .78rem; letter-spacing: .12em; text-transform: uppercase; }
+    h1 { font-size: clamp(2.2rem, 6vw, 4.2rem); line-height: 1; margin: .45rem 0 .8rem; max-width: 16ch; }
+    h2 { margin: 2.5rem 0 .75rem; }
+    h3 { margin: 0 0 .45rem; }
+    p { color: var(--soft); max-width: 70ch; }
+    .chips { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: 1.2rem; }
+    .chip { border: 1px solid var(--line); border-radius: 999px; padding: .28rem .65rem; background: var(--surface); }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr)); gap: 1rem; }
+    .card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 1.1rem; box-shadow: var(--shadow); }
+    .card p { margin: .35rem 0 0; }
+    .id { display: inline-block; font-size: .76rem; font-weight: 700; border-radius: 6px; padding: .15rem .4rem; margin-bottom: .5rem; }
+    .picked .id { color: var(--pick); background: var(--pick-soft); }
+    .default .id { color: var(--accent); background: var(--accent-soft); }
+    .timeline { counter-reset: phase; display: grid; gap: .7rem; }
+    .phase { display: grid; grid-template-columns: 3rem 1fr; gap: .75rem; align-items: start; }
+    .phase b { color: var(--accent); font-family: "Cascadia Code", Consolas, monospace; }
+    table { width: 100%; border-collapse: collapse; background: var(--surface); border: 1px solid var(--line); }
+    th, td { padding: .7rem; text-align: left; vertical-align: top; border-bottom: 1px solid var(--line); }
+    th { color: var(--accent); }
+    .feedback { border-left: 4px solid var(--accent); padding: 1rem 1.2rem; background: var(--surface-2); }
+    .source { font-size: .9rem; }
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <div class="eyebrow">Skill Mesh proposal - publication 1</div>
+    <h1>Provider-neutral by construction</h1>
+    <p>Move shared contracts and routing out of Claude-owned paths, generate native
+      adapters for each host, and make the public repository match the product it
+      claims to provide.</p>
+    <div class="chips">
+      <span class="chip">47 portable skills</span>
+      <span class="chip">2 first-class cloud providers</span>
+      <span class="chip">9 build steps</span>
+      <span class="chip">3 explicit Claude-native exclusions</span>
+    </div>
+  </header>
+
+  <section>
+    <h2>What I heard</h2>
+    <div class="grid">
+      <article class="card"><h3>The product still reads as Claude-first</h3><p>Rename and restructure it around the shared workflow rather than treating GPT as an appendix.</p></article>
+      <article class="card"><h3>The auth story is wrong</h3><p>GitHub Copilot authentication is a supported GPT transport; a direct OpenAI API key is optional, not universal.</p></article>
+      <article class="card"><h3>The source tree communicates ownership</h3><p>Shared cores, mappings, and routing should not be canonically rooted under <code>.claude</code>.</p></article>
+      <article class="card"><h3>Matching the active model matters</h3><p>Claude hosts should discover Claude adapters and GPT hosts GPT adapters without a silent Claude default.</p></article>
+    </div>
+  </section>
+
+  <section>
+    <h2>Why this shape</h2>
+    <p>The current internal implementation has paired wrappers and shared cores,
+      but the public repository publishes a flattened Claude-oriented export. The
+      proposed shape makes the public repository authoritative and treats host
+      layouts as generated compatibility products.</p>
+  </section>
+
+  <section>
+    <h2>Delivery timeline</h2>
+    <div class="timeline">
+      <div class="phase"><b>33-35</b><div><strong>Define and migrate the source.</strong><br>Lock the host contract, move runtime/configuration, then migrate all cores and adapters.</div></div>
+      <div class="phase"><b>36-38</b><div><strong>Make it installable and enforceable.</strong><br>Build host distributions, correct selection/auth behavior, and add package drift gates.</div></div>
+      <div class="phase"><b>39-40</b><div><strong>Publish accurate docs and evidence.</strong><br>Rewrite the product story and run cross-provider package/workflow smoke tests.</div></div>
+      <div class="phase"><b>41</b><div><strong>Accept on real hosts.</strong><br>Invoke a representative skill in Claude and GPT/Copilot before releasing.</div></div>
+    </div>
+    <p><strong>Afterwards:</strong> run <code>/plan-expedite --plan documentation/provider-neutral-skill-mesh-plan.md</code>, then the emitted <code>/build-phase</code> command.</p>
+  </section>
+
+  <section>
+    <h2>Operator choices already captured</h2>
+    <div class="grid">
+      <article class="card picked"><span class="id">P1</span><h3>Provider-neutral behavior</h3><p>Claude sessions use Claude adapters; GPT sessions use GPT adapters.</p></article>
+      <article class="card picked"><span class="id">P2</span><h3>Neutral ownership</h3><p>Shared skills and routing are not canonically owned by <code>.claude</code>.</p></article>
+      <article class="card picked"><span class="id">P3</span><h3>Accurate GPT authentication</h3><p>Documentation does not universally require <code>OPENAI_API_KEY</code>.</p></article>
+    </div>
+  </section>
+
+  <section>
+    <h2>Agent defaults to review</h2>
+    <div class="grid">
+      <article class="card default"><span class="id">D1</span><h3>Public repository is canonical</h3><p><strong>Why:</strong> removes private-source/public-mirror drift; coding-root remains read-only migration input until the released package is installed in Step 41. <strong>Tweak:</strong> retain coding-root as canonical and generate a stricter export instead.</p></article>
+      <article class="card default"><span class="id">D2</span><h3>Neutral core with sibling adapters</h3><p><strong>Why:</strong> neither provider owns shared behavior. <strong>Tweak:</strong> choose different neutral filenames while preserving one core.</p></article>
+      <article class="card default"><span class="id">D3</span><h3>Host binding before auto-detection</h3><p><strong>Why:</strong> hosts may not expose active-model metadata before discovery. <strong>Tweak:</strong> require explicit provider selection everywhere.</p></article>
+      <article class="card default"><span class="id">D4</span><h3>Release artifacts, not committed distributions</h3><p><strong>Why:</strong> keeps source review readable. <strong>Tweak:</strong> commit generated trees if offline installation requires it.</p></article>
+      <article class="card default"><span class="id">D5</span><h3>Keep truthful exclusions</h3><p><strong>Why:</strong> fake GPT stubs overstate portability. <strong>Tweak:</strong> reopen a specific exclusion only with capability evidence.</p></article>
+      <article class="card default"><span class="id">D6</span><h3>Real-host acceptance before release</h3><p><strong>Why:</strong> fixtures cannot prove host discovery. <strong>Tweak:</strong> expand the representative acceptance set.</p></article>
+    </div>
+  </section>
+
+  <section>
+    <h2>Not in this phase</h2>
+    <table>
+      <thead><tr><th>Excluded</th><th>Reason</th></tr></thead>
+      <tbody>
+        <tr><td>Rewriting all skill behavior</td><td>The existing shared contracts remain the behavioral baseline.</td></tr>
+        <tr><td>A third cloud provider</td><td>This phase fixes ownership and packaging for the two implemented cloud paths.</td></tr>
+        <tr><td>A custom editor extension</td><td>Generated host-native discovery layouts are sufficient.</td></tr>
+        <tr><td>Private workspace data</td><td>Memory, credentials, adapters, and second-brain data stay private.</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>Risks to watch</h2>
+    <div class="grid">
+      <article class="card"><h3>Host metadata is incomplete</h3><p>Use installation-time binding and fail explicitly when runtime detection is ambiguous.</p></article>
+      <article class="card"><h3>Two repositories drift</h3><p>Make one canonical, generate consumers, and compare manifest hashes in release gates.</p></article>
+      <article class="card"><h3>Compatibility paths break</h3><p>Keep tested shims and exercise Windows junction installation before publication.</p></article>
+      <article class="card"><h3>Fallback hides provider failure</h3><p>Retain exit code 2, fallback disclosure, adapter/core identity, and telemetry attempt roles.</p></article>
+    </div>
+  </section>
+
+  <section>
+    <h2>Reply with terse changes</h2>
+    <div class="feedback">
+      <p>Silence means the proposal stands. To change a default, reply with its ID:</p>
+      <p><code>D1 -&gt; keep coding-root canonical</code><br>
+         <code>D3 -&gt; require explicit provider selection</code><br>
+         <code>D4 -&gt; commit generated distributions</code></p>
+    </div>
+    <p class="source">Source of truth:
+      <code>documentation/provider-neutral-skill-mesh-plan.md</code><br>
+      Proposal:
+      <code>documentation/provider-neutral-skill-mesh-proposal.html</code></p>
+  </section>
+</main>
+</body>
+</html>
