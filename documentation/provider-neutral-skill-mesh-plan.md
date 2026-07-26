@@ -242,6 +242,7 @@ existing deterministic/rubric comparison that checks adapter parity.
 - **Produces:** Updated framework design, host capability matrix, canonical directory contract, CLI compatibility table, and migration manifest covering all current skills and support assets.
 - **Done when:** The design names one canonical location for every core, adapter, mapping, test, and doc; documents host-native binding versus runtime auto-detection; includes a migration entry for all 47 portable skills plus the 3 Claude-native exclusions; and records the exact PowerShell build/install/test commands with absent lint/typecheck commands explicitly marked not configured.
 - **Depends on:** none
+- **Status:** DONE (2026-07-26)
 
 ### Step 34: Create the provider-neutral runtime and configuration surface
 - **Problem:** Router, mappings, telemetry, and tests are physically and logically rooted under `.claude`.
