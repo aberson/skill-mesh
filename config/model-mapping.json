@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "description": "Per-skill model capability mapping for the provider-neutral skill-mesh router. Transformed faithfully from the legacy .claude/references/model-mapping.md table (Step 34). Consumed by runtime/skill-router.ps1 to decide claude/gpt/local capability. Note text was ASCII-normalized (em-dash -> hyphen); the boolean capability data is preserved exactly, one row per legacy row.",
+  "default_provider": "auto",
+  "providers": {
+    "claude": {
+      "host": "Claude Code",
+      "transport_default": "host-native"
+    },
+    "gpt": {
+      "host": "GitHub Copilot / GPT",
+      "transport_default": "copilot"
+    },
+    "local": {
+      "host": "local code-30b (text-only)",
+      "transport_default": "ollama"
+    }
+  },
+  "columns": {
+    "default_model": "Provider to use when neither -Provider nor -Model is passed (legacy default-model column).",
+    "claude": "Claude variant exists and is functional (legacy claude-capable=Y).",
+    "gpt": "GPT variant exists and is functional (legacy gpt-capable=Y).",
+    "local": "Can run on local code-30b, text-only, no vision/sub-agents (legacy local-capable=Y)."
+  },
+  "skills": {
+    "build-phase": { "default_model": "claude", "claude": true, "gpt": true, "local": false, "notes": "Ported - shared core + GPT/Claude wrappers; identical halt contract" },
+    "build-queue": { "default_model": "claude", "claude": true, "gpt": true, "local": false, "notes": "Ported - shared core + GPT/Claude wrappers" },
+    "build-step": { "default_model": "claude", "claude": true, "gpt": true, "local": false, "notes": "Ported - shared core + GPT/Claude wrappers; identical halt contract" },
+    "claude-oauth-auth": { "default_model": "claude", "claude": true, "gpt": false, "local": false, "notes": "Claude-native - excluded from GPT porting" },
+    "context-slim": { "default_model": "claude", "claude": true, "gpt": false, "local": false, "notes": "Claude-native - excluded from GPT porting" },
+    "goblin-do": { "default_model": "claude", "claude": true, "gpt": true, "local": false, "notes": "Ported - GPT actions adapter; orchestration remains parent-owned" },
+    "goblin-suggest": { "default_model": "claude", "claude": true, "gpt": true, "local": false, "notes": "Ported - GPT actions adapter; evidence-backed judge normalization" },
+    "judge-motion": { "default_model": "claude", "claude": true, "gpt": false, "local": false, "notes": "Claude-native - excluded from GPT porting" },
+    "judge-ui": { "default_model": "claude", "claude": true, "gpt": true, "local": false, "notes": "Ported - GPT-5.6 Sol native vision; read-back + swap-and-tie calibration contract" },
+    "lesson-harvest": { "default_model": "claude", "claude": true, "gpt": true, "local": true, "notes": "Ported - shared core + GPT/Claude wrappers" },
+    "memory-distill": { "default_model": "claude", "claude": true, "gpt": true, "local": true, "notes": "Ported - shared core + GPT/Claude wrappers" },
+    "observatory-doctor": { "default_model": "claude", "claude": true, "gpt": true, "local": true, "notes": "Ported - shared core + GPT/Claude wrappers" },
+    "plan-expedite": { "default_model": "claude", "claude": true, "gpt": true, "local": false, "notes": "Ported - cross-skill GPT routing documented" },
+    "plan-feature": { "default_model": "claude", "claude": true, "gpt": true, "local": true, "notes": "Ported - shared core + GPT/Claude wrappers" },
+    "plan-init": { "default_model": "claude", "claude": true, "gpt": true, "local": true, "notes": "Ported pilot - GPT peer resolved by model-tier-map.json" },
+    "plan-merge": { "default_model": "claude", "claude": true, "gpt": true, "local": true, "notes": "Ported - shared core + GPT/Claude wrappers" },
+    "plan-redline": { "default_model": "claude", "claude": true, "gpt": true, "local": false, "notes": "Ported - GPT uses standalone HTML fallback" },
+    "plan-review": { "default_model": "claude", "claude": true, "gpt": true, "local": true, "notes": "Ported - shared core + GPT/Claude wrappers" },
+    "plan-trim": { "default_model": "claude", "claude": true, "gpt": true, "local": true, "notes": "Ported - shared core + GPT/Claude wrappers" },
+    "plan-wrap": { "default_model": "claude", "claude": true, "gpt": true, "local": true, "notes": "Ported - shared core + GPT/Claude wrappers" },
+    "repo-init": { "default_model": "claude", "claude": true, "gpt": true, "local": true, "notes": "Ported - shared core; gh/git sequence preserved" },
+    "repo-sync": { "default_model": "claude", "claude": true, "gpt": true, "local": true, "notes": "Ported - shared core; gh/git sequence and body-file rules preserved" },
+    "repo-update": { "default_model": "claude", "claude": true, "gpt": true, "local": true, "notes": "Ported - shared core; gh/git sequence preserved" },
+    "research-prospect": { "default_model": "claude", "claude": true, "gpt": true, "local": false, "notes": "Ported - GPT actions fan-out; parent-owned consolidation" },
+    "review-deep": { "default_model": "claude", "claude": true, "gpt": true, "local": false, "notes": "Ported - shared core; independent evidence-backed lenses + deterministic aggregation" },
+    "review-gauntlet": { "default_model": "claude", "claude": true, "gpt": true, "local": false, "notes": "Ported - shared core; judge-core invariants preserved" },
+    "review-proof": { "default_model": "claude", "claude": true, "gpt": true, "local": true, "notes": "Ported - shared core + GPT/Claude wrappers" },
+    "review-uat": { "default_model": "claude", "claude": true, "gpt": true, "local": true, "notes": "Ported - shared core + GPT/Claude wrappers" },
+    "session-wrap": { "default_model": "claude", "claude": true, "gpt": true, "local": false, "notes": "Ported with Phase 2 abstract session-I/O limitation" },
+    "skill-eval-setup": { "default_model": "claude", "claude": true, "gpt": true, "local": true, "notes": "Ported - GPT-compatible eval setup; parent owns action nesting" },
+    "skill-evolve": { "default_model": "claude", "claude": true, "gpt": true, "local": false, "notes": "Ported - GPT action children are single-shot; parent owns iteration" },
+    "skill-iterate": { "default_model": "claude", "claude": true, "gpt": true, "local": false, "notes": "Ported - GPT action children are single-shot; parent owns iteration" },
+    "task-handoff": { "default_model": "claude", "claude": true, "gpt": true, "local": false, "notes": "Ported with abstract session-I/O adapter" },
+    "test-prune": { "default_model": "claude", "claude": true, "gpt": true, "local": false, "notes": "Ported - GPT actions fan-out; parent-owned consolidation" },
+    "tier-escalate": { "default_model": "claude", "claude": true, "gpt": true, "local": false, "notes": "Ported - tier map + GPT actions adapter; fresh-context task API required" },
+    "tier-offload": { "default_model": "claude", "claude": true, "gpt": true, "local": false, "notes": "Ported - GPT actions adapter; fresh-context task API required" },
+    "user-afterparty": { "default_model": "claude", "claude": true, "gpt": true, "local": false, "notes": "Ported - shared core + GPT/Claude wrappers" },
+    "user-brainstorm": { "default_model": "claude", "claude": true, "gpt": true, "local": false, "notes": "Ported - shared core + GPT/Claude wrappers" },
+    "user-debug": { "default_model": "claude", "claude": true, "gpt": true, "local": true, "notes": "Ported - shared core + GPT/Claude wrappers" },
+    "user-draft": { "default_model": "claude", "claude": true, "gpt": true, "local": true, "notes": "Ported - shared core + GPT/Claude wrappers" },
+    "user-gateway": { "default_model": "claude", "claude": true, "gpt": true, "local": true, "notes": "Ported - shared core + GPT/Claude wrappers" },
+    "user-lavishify": { "default_model": "claude", "claude": true, "gpt": true, "local": false, "notes": "Ported - shared core + GPT/Claude wrappers" },
+    "user-learn": { "default_model": "claude", "claude": true, "gpt": true, "local": false, "notes": "Ported - shared core + GPT/Claude wrappers" },
+    "user-orient": { "default_model": "claude", "claude": true, "gpt": true, "local": true, "notes": "Ported - shared core + GPT/Claude wrappers" },
+    "user-pm": { "default_model": "claude", "claude": true, "gpt": true, "local": true, "notes": "Ported - shared core + GPT/Claude wrappers" },
+    "user-project": { "default_model": "claude", "claude": true, "gpt": true, "local": false, "notes": "Ported - shared core + GPT/Claude wrappers" },
+    "user-shakedown": { "default_model": "claude", "claude": true, "gpt": true, "local": true, "notes": "Ported - shared core + GPT/Claude wrappers" },
+    "user-uat": { "default_model": "claude", "claude": true, "gpt": true, "local": true, "notes": "Ported - shared core + GPT/Claude wrappers" },
+    "user-walkthrough": { "default_model": "claude", "claude": true, "gpt": true, "local": true, "notes": "Ported - shared core + GPT/Claude wrappers" },
+    "user-wrap": { "default_model": "claude", "claude": true, "gpt": true, "local": true, "notes": "Ported - shared core + GPT/Claude wrappers" }
+  }
+}

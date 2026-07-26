@@ -1,0 +1,494 @@
+{
+  "schema_version": "1.0",
+  "phase": "3+4",
+  "ports": {
+    "user-gateway": {
+      "status": "PASS",
+      "mode": "structural-spec",
+      "date": "2026-07-23",
+      "checks": [
+        "core_exists",
+        "gpt_wrapper_exists",
+        "claude_wrapper_exists",
+        "compatibility_launcher_exists",
+        "utf8_no_bom",
+        "output_normalization"
+      ]
+    },
+    "user-draft": {
+      "status": "PASS",
+      "mode": "structural-spec",
+      "date": "2026-07-23",
+      "checks": [
+        "core_exists",
+        "gpt_wrapper_exists",
+        "claude_wrapper_exists",
+        "compatibility_launcher_exists",
+        "utf8_no_bom",
+        "output_normalization"
+      ]
+    },
+    "user-debug": {
+      "status": "PASS",
+      "mode": "structural-spec",
+      "date": "2026-07-23",
+      "checks": [
+        "core_exists",
+        "gpt_wrapper_exists",
+        "claude_wrapper_exists",
+        "compatibility_launcher_exists",
+        "utf8_no_bom",
+        "output_normalization"
+      ]
+    },
+    "user-uat": {
+      "status": "PASS",
+      "mode": "structural-spec",
+      "date": "2026-07-23",
+      "checks": [
+        "core_exists",
+        "gpt_wrapper_exists",
+        "claude_wrapper_exists",
+        "compatibility_launcher_exists",
+        "utf8_no_bom",
+        "output_normalization"
+      ]
+    },
+    "user-walkthrough": {
+      "status": "PASS",
+      "mode": "structural-spec",
+      "date": "2026-07-23",
+      "checks": [
+        "core_exists",
+        "gpt_wrapper_exists",
+        "claude_wrapper_exists",
+        "compatibility_launcher_exists",
+        "utf8_no_bom",
+        "output_normalization"
+      ]
+    },
+    "user-shakedown": {
+      "status": "PASS",
+      "mode": "structural-spec",
+      "date": "2026-07-23",
+      "checks": [
+        "core_exists",
+        "gpt_wrapper_exists",
+        "claude_wrapper_exists",
+        "compatibility_launcher_exists",
+        "utf8_no_bom",
+        "output_normalization"
+      ]
+    },
+    "user-pm": {
+      "status": "PASS",
+      "mode": "structural-spec",
+      "date": "2026-07-23",
+      "checks": [
+        "core_exists",
+        "gpt_wrapper_exists",
+        "claude_wrapper_exists",
+        "compatibility_launcher_exists",
+        "utf8_no_bom",
+        "output_normalization"
+      ]
+    },
+    "user-project": {
+      "status": "PASS",
+      "mode": "structural-spec",
+      "date": "2026-07-23",
+      "checks": [
+        "core_exists",
+        "gpt_wrapper_exists",
+        "claude_wrapper_exists",
+        "compatibility_launcher_exists",
+        "utf8_no_bom",
+        "output_normalization"
+      ]
+    },
+    "user-orient": {
+      "status": "PASS",
+      "mode": "structural-spec",
+      "date": "2026-07-23",
+      "checks": [
+        "core_exists",
+        "gpt_wrapper_exists",
+        "claude_wrapper_exists",
+        "compatibility_launcher_exists",
+        "utf8_no_bom",
+        "output_normalization"
+      ]
+    },
+    "user-wrap": {
+      "status": "PASS",
+      "mode": "structural-spec",
+      "date": "2026-07-23",
+      "checks": [
+        "core_exists",
+        "gpt_wrapper_exists",
+        "claude_wrapper_exists",
+        "compatibility_launcher_exists",
+        "utf8_no_bom",
+        "output_normalization"
+      ]
+    },
+    "user-afterparty": {
+      "status": "PASS",
+      "mode": "structural-spec",
+      "date": "2026-07-23",
+      "checks": [
+        "core_exists",
+        "gpt_wrapper_exists",
+        "claude_wrapper_exists",
+        "compatibility_launcher_exists",
+        "utf8_no_bom",
+        "output_normalization",
+        "fresh_context_adapter",
+        "nesting_limit_documented"
+      ]
+    },
+    "user-brainstorm": {
+      "status": "PASS",
+      "mode": "structural-spec",
+      "date": "2026-07-23",
+      "checks": [
+        "core_exists",
+        "gpt_wrapper_exists",
+        "claude_wrapper_exists",
+        "compatibility_launcher_exists",
+        "utf8_no_bom",
+        "output_normalization",
+        "fresh_context_adapter",
+        "nesting_limit_documented"
+      ]
+    },
+    "user-lavishify": {
+      "status": "PASS",
+      "mode": "structural-spec",
+      "date": "2026-07-23",
+      "checks": [
+        "core_exists",
+        "gpt_wrapper_exists",
+        "claude_wrapper_exists",
+        "compatibility_launcher_exists",
+        "utf8_no_bom",
+        "output_normalization"
+      ]
+    },
+    "user-learn": {
+      "status": "PASS",
+      "mode": "structural-spec",
+      "date": "2026-07-23",
+      "checks": [
+        "core_exists",
+        "gpt_wrapper_exists",
+        "claude_wrapper_exists",
+        "compatibility_launcher_exists",
+        "utf8_no_bom",
+        "output_normalization",
+        "fresh_context_adapter",
+        "nesting_limit_documented"
+      ]
+    },
+    "review-gauntlet": {
+      "status": "PASS",
+      "mode": "structural-spec",
+      "date": "2026-07-23",
+      "checks": [
+        "core_exists",
+        "gpt_wrapper_exists",
+        "claude_wrapper_exists",
+        "compatibility_launcher_exists",
+        "utf8_no_bom",
+        "output_normalization",
+        "judge_core_link",
+        "evidence_required",
+        "deterministic_aggregation_or_escalation",
+        "fresh_context_adapter",
+        "nesting_limit_documented"
+      ]
+    },
+    "review-deep": {
+      "status": "PASS",
+      "mode": "structural-spec",
+      "date": "2026-07-23",
+      "checks": [
+        "core_exists",
+        "gpt_wrapper_exists",
+        "claude_wrapper_exists",
+        "compatibility_launcher_exists",
+        "utf8_no_bom",
+        "output_normalization",
+        "judge_core_link",
+        "evidence_required",
+        "deterministic_aggregation_or_escalation",
+        "fresh_context_adapter",
+        "nesting_limit_documented"
+      ]
+    },
+    "review-uat": {
+      "status": "PASS",
+      "mode": "structural-spec",
+      "date": "2026-07-23",
+      "checks": [
+        "core_exists",
+        "gpt_wrapper_exists",
+        "claude_wrapper_exists",
+        "compatibility_launcher_exists",
+        "utf8_no_bom",
+        "output_normalization",
+        "judge_core_link",
+        "evidence_required",
+        "deterministic_aggregation_or_escalation"
+      ]
+    },
+    "review-proof": {
+      "status": "PASS",
+      "mode": "structural-spec",
+      "date": "2026-07-23",
+      "checks": [
+        "core_exists",
+        "gpt_wrapper_exists",
+        "claude_wrapper_exists",
+        "compatibility_launcher_exists",
+        "utf8_no_bom",
+        "output_normalization",
+        "judge_core_link",
+        "evidence_required",
+        "deterministic_aggregation_or_escalation"
+      ]
+    },
+    "repo-sync": {
+      "status": "PASS",
+      "mode": "structural-spec",
+      "date": "2026-07-23",
+      "checks": [
+        "core_exists",
+        "gpt_wrapper_exists",
+        "claude_wrapper_exists",
+        "compatibility_launcher_exists",
+        "utf8_no_bom",
+        "output_normalization"
+      ]
+    },
+    "repo-update": {
+      "status": "PASS",
+      "mode": "structural-spec",
+      "date": "2026-07-23",
+      "checks": [
+        "core_exists",
+        "gpt_wrapper_exists",
+        "claude_wrapper_exists",
+        "compatibility_launcher_exists",
+        "utf8_no_bom",
+        "output_normalization"
+      ]
+    },
+    "repo-init": {
+      "status": "PASS",
+      "mode": "structural-spec",
+      "date": "2026-07-23",
+      "checks": [
+        "core_exists",
+        "gpt_wrapper_exists",
+        "claude_wrapper_exists",
+        "compatibility_launcher_exists",
+        "utf8_no_bom",
+        "output_normalization"
+      ]
+    },
+    "judge-ui": {
+      "status": "PASS",
+      "mode": "structural-spec",
+      "date": "2026-07-23",
+      "checks": [
+        "core_exists",
+        "gpt_wrapper_exists",
+        "claude_wrapper_exists",
+        "compatibility_launcher_exists",
+        "utf8_no_bom",
+        "output_normalization",
+        "judge_core_link",
+        "evidence_required",
+        "deterministic_aggregation_or_escalation",
+        "fresh_context_adapter",
+        "nesting_limit_documented"
+      ]
+    },
+    "tier-offload": {
+      "status": "PASS",
+      "mode": "structural-spec",
+      "date": "2026-07-23",
+      "checks": [
+        "core_exists",
+        "gpt_wrapper_exists",
+        "claude_wrapper_exists",
+        "compatibility_launcher_exists",
+        "utf8_no_bom",
+        "output_normalization",
+        "fresh_context_adapter",
+        "nesting_limit_documented"
+      ]
+    },
+    "tier-escalate": {
+      "status": "PASS",
+      "mode": "structural-spec",
+      "date": "2026-07-23",
+      "checks": [
+        "core_exists",
+        "gpt_wrapper_exists",
+        "claude_wrapper_exists",
+        "compatibility_launcher_exists",
+        "utf8_no_bom",
+        "output_normalization",
+        "fresh_context_adapter",
+        "nesting_limit_documented"
+      ]
+    },
+    "research-prospect": {
+      "status": "PASS",
+      "mode": "structural-spec",
+      "date": "2026-07-23",
+      "checks": [
+        "core_exists",
+        "gpt_wrapper_exists",
+        "claude_wrapper_exists",
+        "compatibility_launcher_exists",
+        "utf8_no_bom",
+        "output_normalization",
+        "fresh_context_adapter",
+        "nesting_limit_documented"
+      ]
+    },
+    "skill-evolve": {
+      "status": "PASS",
+      "mode": "structural-spec",
+      "date": "2026-07-23",
+      "checks": [
+        "core_exists",
+        "gpt_wrapper_exists",
+        "claude_wrapper_exists",
+        "compatibility_launcher_exists",
+        "utf8_no_bom",
+        "output_normalization",
+        "fresh_context_adapter",
+        "nesting_limit_documented"
+      ]
+    },
+    "skill-iterate": {
+      "status": "PASS",
+      "mode": "structural-spec",
+      "date": "2026-07-23",
+      "checks": [
+        "core_exists",
+        "gpt_wrapper_exists",
+        "claude_wrapper_exists",
+        "compatibility_launcher_exists",
+        "utf8_no_bom",
+        "output_normalization",
+        "fresh_context_adapter",
+        "nesting_limit_documented"
+      ]
+    },
+    "skill-eval-setup": {
+      "status": "PASS",
+      "mode": "structural-spec",
+      "date": "2026-07-23",
+      "checks": [
+        "core_exists",
+        "gpt_wrapper_exists",
+        "claude_wrapper_exists",
+        "compatibility_launcher_exists",
+        "utf8_no_bom",
+        "output_normalization"
+      ]
+    },
+    "memory-distill": {
+      "status": "PASS",
+      "mode": "structural-spec",
+      "date": "2026-07-23",
+      "checks": [
+        "core_exists",
+        "gpt_wrapper_exists",
+        "claude_wrapper_exists",
+        "compatibility_launcher_exists",
+        "utf8_no_bom",
+        "output_normalization"
+      ]
+    },
+    "lesson-harvest": {
+      "status": "PASS",
+      "mode": "structural-spec",
+      "date": "2026-07-23",
+      "checks": [
+        "core_exists",
+        "gpt_wrapper_exists",
+        "claude_wrapper_exists",
+        "compatibility_launcher_exists",
+        "utf8_no_bom",
+        "output_normalization"
+      ]
+    },
+    "observatory-doctor": {
+      "status": "PASS",
+      "mode": "structural-spec",
+      "date": "2026-07-23",
+      "checks": [
+        "core_exists",
+        "gpt_wrapper_exists",
+        "claude_wrapper_exists",
+        "compatibility_launcher_exists",
+        "utf8_no_bom",
+        "output_normalization"
+      ]
+    },
+    "goblin-do": {
+      "status": "PASS",
+      "mode": "structural-spec",
+      "date": "2026-07-23",
+      "checks": [
+        "core_exists",
+        "gpt_wrapper_exists",
+        "claude_wrapper_exists",
+        "compatibility_launcher_exists",
+        "utf8_no_bom",
+        "output_normalization",
+        "fresh_context_adapter",
+        "nesting_limit_documented"
+      ]
+    },
+    "goblin-suggest": {
+      "status": "PASS",
+      "mode": "structural-spec",
+      "date": "2026-07-23",
+      "checks": [
+        "core_exists",
+        "gpt_wrapper_exists",
+        "claude_wrapper_exists",
+        "compatibility_launcher_exists",
+        "utf8_no_bom",
+        "output_normalization",
+        "judge_core_link",
+        "evidence_required",
+        "deterministic_aggregation_or_escalation",
+        "fresh_context_adapter",
+        "nesting_limit_documented"
+      ]
+    },
+    "test-prune": {
+      "status": "PASS",
+      "mode": "structural-spec",
+      "date": "2026-07-23",
+      "checks": [
+        "core_exists",
+        "gpt_wrapper_exists",
+        "claude_wrapper_exists",
+        "compatibility_launcher_exists",
+        "utf8_no_bom",
+        "output_normalization",
+        "fresh_context_adapter",
+        "nesting_limit_documented"
+      ]
+    }
+  }
+}

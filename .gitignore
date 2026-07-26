@@ -13,3 +13,9 @@ Thumbs.db
 
 # run artifacts
 tmp/
+
+# telemetry log (private per-session invocations; neutral log starts empty)
+runtime/telemetry/invocations.jsonl
+
+# generated calibration baseline (produced by tests/calibration/calibrate.py runs)
+tests/calibration/calibration-baseline.json
