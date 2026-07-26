@@ -253,6 +253,7 @@ existing deterministic/rubric comparison that checks adapter parity.
 - **Produces:** `runtime/`, `config/`, neutral telemetry paths, neutral calibration paths, and temporary `.claude` router/config shims.
 - **Done when:** Existing explicit Claude/GPT/local router scenarios pass from the neutral path; a generated legacy `.claude/lib/skill-router.ps1` shim delegates in a temporary installation without behavior loss; no neutral runtime code requires a `.claude` source root; and path canonicalization rejects traversal through `..`, symlinks, or Windows junctions outside allowed roots.
 - **Depends on:** 33
+- **Status:** DONE (2026-07-26)
 
 ### Step 35: Migrate skill cores and provider adapters into the neutral source tree
 - **Problem:** Shared cores currently live under the GPT tree and the public repository publishes only flattened Claude-oriented skills.
