@@ -1,0 +1,1421 @@
+{
+  "schema_version": 1,
+  "description": "Canonical source-of-truth for the skill-mesh package: one record per published skill. Consumed by distribution, installation, integrity, and README-count generation.",
+  "legacy_migration_root": "coding-root (aberson/coding-root at the operator's checkout, READ-ONLY during Steps 33-40). Every 'source'/'legacy_*' path in this manifest is relative to that root: the '.claude/...' trees and 'documentation/multi-model/...' are both direct children of coding-root.",
+  "capability_vocabulary": [
+    "filesystem",
+    "sub-agent",
+    "vision"
+  ],
+  "capability_semantics": {
+    "filesystem": "The skill reads and/or writes workspace files as an intrinsic part of its contract (plan docs, state files, reports, evals, or source edits). True for every skill in this package.",
+    "sub-agent": "The skill's core workflow requires dispatching one or more isolated fresh-context sub-agents -- the host Agent/Task primitive, a Workflow agent() call, or provider action children (e.g. parallel judge/reviewer fan-out or a separate vision-judge). A named-skill dispatch (/other-skill) does NOT count. A local text-only model cannot satisfy this, so sub-agent implies local_capable=false.",
+    "vision": "The skill requires a native image/vision capability (screenshot or filmstrip judging). Implies local_capable=false."
+  },
+  "host_metadata_sources": {
+    "description": "Approved trustworthy host-identity environment variables the neutral router (-Provider auto) may consult in Step 37. Explicit host-set environment metadata ONLY: no executable-name guessing, and credential variables are excluded because a credential can be exported in any environment and does not identify the active host.",
+    "claude": {
+      "markers": [
+        {
+          "var": "CLAUDECODE",
+          "expected": "1"
+        },
+        {
+          "var": "CLAUDE_CODE_ENTRYPOINT",
+          "expected": "<non-empty>"
+        }
+      ],
+      "rule": "present if any listed marker is set with its expected value"
+    },
+    "gpt": {
+      "markers": [
+        {
+          "var": "COPILOT_CLI",
+          "expected": "<non-empty>"
+        },
+        {
+          "var": "COPILOT_AGENT_SESSION_ID",
+          "expected": "<non-empty>"
+        }
+      ],
+      "rule": "present if any listed marker is set with its expected value"
+    },
+    "excluded_non_identity": [
+      "ANTHROPIC_API_KEY",
+      "OPENAI_API_KEY",
+      "CLAUDE_CODE_OAUTH_TOKEN",
+      "GITHUB_TOKEN"
+    ],
+    "precedence": [
+      "If exactly one provider's markers are present -> select it.",
+      "If BOTH providers' markers are present -> ambiguous: error (exit 2), never default to Claude.",
+      "If NEITHER is present -> unset/unsupported: error (exit 2) instructing an explicit -Provider claude|gpt."
+    ]
+  },
+  "providers": {
+    "claude": {
+      "host": "Claude Code",
+      "transport_default": "host-native"
+    },
+    "gpt": {
+      "host": "GitHub Copilot / GPT",
+      "transport_default": "copilot"
+    }
+  },
+  "counts": {
+    "total": 50,
+    "portable": 47,
+    "provider_native": 3,
+    "local_capable": 24,
+    "sub_agent": 16,
+    "vision": 2,
+    "filesystem": 50
+  },
+  "global_support_assets": [
+    {
+      "source": ".claude/lib/skill-router.ps1",
+      "dest": "runtime/skill-router.ps1",
+      "note": "provider-neutral router (lands Step 34)"
+    },
+    {
+      "source": ".claude/lib/telemetry/",
+      "dest": "runtime/telemetry/",
+      "note": "telemetry writer/summary + invocations log (Step 34)"
+    },
+    {
+      "source": ".claude/lib/calibration/",
+      "dest": "tests/calibration/",
+      "note": "existing pytest calibration suite (Step 34)"
+    },
+    {
+      "source": ".claude/references/model-mapping.md",
+      "dest": "config/model-mapping.json",
+      "note": "capability/local mapping, transformed md -> json (Step 34)"
+    },
+    {
+      "source": ".claude/references/model-tier-map.json",
+      "dest": "config/model-tier-map.json",
+      "note": "Claude-tier to GPT-peer mapping (Step 34)"
+    },
+    {
+      "source": ".claude/skills/_shared/",
+      "dest": "skills/_shared/",
+      "note": "cross-skill grader/scoring assets + judge-core.md; only skills/_shared exists (no skills-gpt/_shared)"
+    },
+    {
+      "source": "documentation/multi-model/",
+      "dest": "documentation/providers/ + documentation/architecture.md",
+      "note": "existing operator guides; coding-root-relative (sibling of .claude, NOT under it)"
+    }
+  ],
+  "skills": [
+    {
+      "name": "build-phase",
+      "status": "portable",
+      "core": "skills/build-phase/core.md",
+      "providers": {
+        "claude": "skills/build-phase/providers/claude.md",
+        "gpt": "skills/build-phase/providers/gpt.md"
+      },
+      "capabilities": [
+        "filesystem"
+      ],
+      "local_capable": false,
+      "migration": {
+        "legacy_core": ".claude/skills-gpt/build-phase/SKILL-core.md",
+        "legacy_claude_launcher": ".claude/skills/build-phase/SKILL.md",
+        "legacy_claude_adapter": ".claude/skills/build-phase/SKILL-claude.md",
+        "legacy_gpt": ".claude/skills-gpt/build-phase/SKILL-gpt.md"
+      },
+      "support_assets": [
+        {
+          "source": ".claude/skills/build-phase/evals/",
+          "dest": "skills/build-phase/evals/"
+        }
+      ]
+    },
+    {
+      "name": "build-queue",
+      "status": "portable",
+      "core": "skills/build-queue/core.md",
+      "providers": {
+        "claude": "skills/build-queue/providers/claude.md",
+        "gpt": "skills/build-queue/providers/gpt.md"
+      },
+      "capabilities": [
+        "filesystem"
+      ],
+      "local_capable": false,
+      "migration": {
+        "legacy_core": ".claude/skills-gpt/build-queue/SKILL-core.md",
+        "legacy_claude_launcher": ".claude/skills/build-queue/SKILL.md",
+        "legacy_claude_adapter": ".claude/skills/build-queue/SKILL-claude.md",
+        "legacy_gpt": ".claude/skills-gpt/build-queue/SKILL-gpt.md"
+      },
+      "support_assets": [
+        {
+          "source": ".claude/skills/build-queue/evals/",
+          "dest": "skills/build-queue/evals/"
+        }
+      ]
+    },
+    {
+      "name": "build-step",
+      "status": "portable",
+      "core": "skills/build-step/core.md",
+      "providers": {
+        "claude": "skills/build-step/providers/claude.md",
+        "gpt": "skills/build-step/providers/gpt.md"
+      },
+      "capabilities": [
+        "filesystem",
+        "sub-agent"
+      ],
+      "local_capable": false,
+      "migration": {
+        "legacy_core": ".claude/skills-gpt/build-step/SKILL-core.md",
+        "legacy_claude_launcher": ".claude/skills/build-step/SKILL.md",
+        "legacy_claude_adapter": ".claude/skills/build-step/SKILL-claude.md",
+        "legacy_gpt": ".claude/skills-gpt/build-step/SKILL-gpt.md"
+      },
+      "support_assets": [
+        {
+          "source": ".claude/skills/build-step/evals/",
+          "dest": "skills/build-step/evals/"
+        },
+        {
+          "source": ".claude/skills/build-step/scripts/",
+          "dest": "skills/build-step/scripts/"
+        }
+      ]
+    },
+    {
+      "name": "claude-oauth-auth",
+      "status": "provider-native",
+      "core": null,
+      "providers": {
+        "claude": "skills/claude-oauth-auth/providers/claude.md"
+      },
+      "capabilities": [
+        "filesystem"
+      ],
+      "local_capable": false,
+      "migration": {
+        "legacy_core": null,
+        "legacy_claude_launcher": null,
+        "legacy_claude_adapter": ".claude/skills/claude-oauth-auth/SKILL.md",
+        "legacy_gpt": null
+      },
+      "support_assets": [
+        {
+          "source": ".claude/skills/claude-oauth-auth/evals/",
+          "dest": "skills/claude-oauth-auth/evals/"
+        }
+      ]
+    },
+    {
+      "name": "context-slim",
+      "status": "provider-native",
+      "core": null,
+      "providers": {
+        "claude": "skills/context-slim/providers/claude.md"
+      },
+      "capabilities": [
+        "filesystem",
+        "sub-agent"
+      ],
+      "local_capable": false,
+      "migration": {
+        "legacy_core": null,
+        "legacy_claude_launcher": null,
+        "legacy_claude_adapter": ".claude/skills/context-slim/SKILL.md",
+        "legacy_gpt": null
+      },
+      "support_assets": [
+        {
+          "source": ".claude/skills/context-slim/evals/",
+          "dest": "skills/context-slim/evals/"
+        }
+      ]
+    },
+    {
+      "name": "goblin-do",
+      "status": "portable",
+      "core": "skills/goblin-do/core.md",
+      "providers": {
+        "claude": "skills/goblin-do/providers/claude.md",
+        "gpt": "skills/goblin-do/providers/gpt.md"
+      },
+      "capabilities": [
+        "filesystem",
+        "sub-agent"
+      ],
+      "local_capable": false,
+      "migration": {
+        "legacy_core": ".claude/skills-gpt/goblin-do/SKILL-core.md",
+        "legacy_claude_launcher": ".claude/skills/goblin-do/SKILL.md",
+        "legacy_claude_adapter": ".claude/skills/goblin-do/SKILL-claude.md",
+        "legacy_gpt": ".claude/skills-gpt/goblin-do/SKILL-gpt.md"
+      },
+      "support_assets": [
+        {
+          "source": ".claude/skills/goblin-do/evals/",
+          "dest": "skills/goblin-do/evals/"
+        },
+        {
+          "source": ".claude/skills/goblin-do/goblin_do.workflow.js",
+          "dest": "skills/goblin-do/goblin_do.workflow.js"
+        }
+      ]
+    },
+    {
+      "name": "goblin-suggest",
+      "status": "portable",
+      "core": "skills/goblin-suggest/core.md",
+      "providers": {
+        "claude": "skills/goblin-suggest/providers/claude.md",
+        "gpt": "skills/goblin-suggest/providers/gpt.md"
+      },
+      "capabilities": [
+        "filesystem",
+        "sub-agent"
+      ],
+      "local_capable": false,
+      "migration": {
+        "legacy_core": ".claude/skills-gpt/goblin-suggest/SKILL-core.md",
+        "legacy_claude_launcher": ".claude/skills/goblin-suggest/SKILL.md",
+        "legacy_claude_adapter": ".claude/skills/goblin-suggest/SKILL-claude.md",
+        "legacy_gpt": ".claude/skills-gpt/goblin-suggest/SKILL-gpt.md"
+      },
+      "support_assets": [
+        {
+          "source": ".claude/skills/goblin-suggest/evals/",
+          "dest": "skills/goblin-suggest/evals/"
+        },
+        {
+          "source": ".claude/skills/goblin-suggest/goblin_suggest.workflow.js",
+          "dest": "skills/goblin-suggest/goblin_suggest.workflow.js"
+        }
+      ]
+    },
+    {
+      "name": "judge-motion",
+      "status": "provider-native",
+      "core": null,
+      "providers": {
+        "claude": "skills/judge-motion/providers/claude.md"
+      },
+      "capabilities": [
+        "filesystem",
+        "sub-agent",
+        "vision"
+      ],
+      "local_capable": false,
+      "migration": {
+        "legacy_core": null,
+        "legacy_claude_launcher": null,
+        "legacy_claude_adapter": ".claude/skills/judge-motion/SKILL.md",
+        "legacy_gpt": null
+      },
+      "support_assets": [
+        {
+          "source": ".claude/skills/judge-motion/fixtures/",
+          "dest": "skills/judge-motion/fixtures/"
+        },
+        {
+          "source": ".claude/skills/judge-motion/package-lock.json",
+          "dest": "skills/judge-motion/package-lock.json"
+        },
+        {
+          "source": ".claude/skills/judge-motion/package.json",
+          "dest": "skills/judge-motion/package.json"
+        },
+        {
+          "source": ".claude/skills/judge-motion/scripts/",
+          "dest": "skills/judge-motion/scripts/"
+        },
+        {
+          "source": ".claude/skills/judge-motion/tests/",
+          "dest": "skills/judge-motion/tests/"
+        }
+      ]
+    },
+    {
+      "name": "judge-ui",
+      "status": "portable",
+      "core": "skills/judge-ui/core.md",
+      "providers": {
+        "claude": "skills/judge-ui/providers/claude.md",
+        "gpt": "skills/judge-ui/providers/gpt.md"
+      },
+      "capabilities": [
+        "filesystem",
+        "sub-agent",
+        "vision"
+      ],
+      "local_capable": false,
+      "migration": {
+        "legacy_core": ".claude/skills-gpt/judge-ui/SKILL-core.md",
+        "legacy_claude_launcher": ".claude/skills/judge-ui/SKILL.md",
+        "legacy_claude_adapter": ".claude/skills/judge-ui/SKILL-claude.md",
+        "legacy_gpt": ".claude/skills-gpt/judge-ui/SKILL-gpt.md"
+      },
+      "support_assets": [
+        {
+          "source": ".claude/skills/judge-ui/evals/",
+          "dest": "skills/judge-ui/evals/"
+        },
+        {
+          "source": ".claude/skills-gpt/judge-ui/calibration-notes.md",
+          "dest": "skills/judge-ui/calibration-notes.md"
+        }
+      ]
+    },
+    {
+      "name": "lesson-harvest",
+      "status": "portable",
+      "core": "skills/lesson-harvest/core.md",
+      "providers": {
+        "claude": "skills/lesson-harvest/providers/claude.md",
+        "gpt": "skills/lesson-harvest/providers/gpt.md"
+      },
+      "capabilities": [
+        "filesystem"
+      ],
+      "local_capable": true,
+      "migration": {
+        "legacy_core": ".claude/skills-gpt/lesson-harvest/SKILL-core.md",
+        "legacy_claude_launcher": ".claude/skills/lesson-harvest/SKILL.md",
+        "legacy_claude_adapter": ".claude/skills/lesson-harvest/SKILL-claude.md",
+        "legacy_gpt": ".claude/skills-gpt/lesson-harvest/SKILL-gpt.md"
+      },
+      "support_assets": [
+        {
+          "source": ".claude/skills/lesson-harvest/evals/",
+          "dest": "skills/lesson-harvest/evals/"
+        }
+      ]
+    },
+    {
+      "name": "memory-distill",
+      "status": "portable",
+      "core": "skills/memory-distill/core.md",
+      "providers": {
+        "claude": "skills/memory-distill/providers/claude.md",
+        "gpt": "skills/memory-distill/providers/gpt.md"
+      },
+      "capabilities": [
+        "filesystem"
+      ],
+      "local_capable": true,
+      "migration": {
+        "legacy_core": ".claude/skills-gpt/memory-distill/SKILL-core.md",
+        "legacy_claude_launcher": ".claude/skills/memory-distill/SKILL.md",
+        "legacy_claude_adapter": ".claude/skills/memory-distill/SKILL-claude.md",
+        "legacy_gpt": ".claude/skills-gpt/memory-distill/SKILL-gpt.md"
+      },
+      "support_assets": [
+        {
+          "source": ".claude/skills/memory-distill/evals/",
+          "dest": "skills/memory-distill/evals/"
+        }
+      ]
+    },
+    {
+      "name": "observatory-doctor",
+      "status": "portable",
+      "core": "skills/observatory-doctor/core.md",
+      "providers": {
+        "claude": "skills/observatory-doctor/providers/claude.md",
+        "gpt": "skills/observatory-doctor/providers/gpt.md"
+      },
+      "capabilities": [
+        "filesystem"
+      ],
+      "local_capable": true,
+      "migration": {
+        "legacy_core": ".claude/skills-gpt/observatory-doctor/SKILL-core.md",
+        "legacy_claude_launcher": ".claude/skills/observatory-doctor/SKILL.md",
+        "legacy_claude_adapter": ".claude/skills/observatory-doctor/SKILL-claude.md",
+        "legacy_gpt": ".claude/skills-gpt/observatory-doctor/SKILL-gpt.md"
+      },
+      "support_assets": []
+    },
+    {
+      "name": "plan-expedite",
+      "status": "portable",
+      "core": "skills/plan-expedite/core.md",
+      "providers": {
+        "claude": "skills/plan-expedite/providers/claude.md",
+        "gpt": "skills/plan-expedite/providers/gpt.md"
+      },
+      "capabilities": [
+        "filesystem"
+      ],
+      "local_capable": false,
+      "migration": {
+        "legacy_core": ".claude/skills-gpt/plan-expedite/SKILL-core.md",
+        "legacy_claude_launcher": ".claude/skills/plan-expedite/SKILL.md",
+        "legacy_claude_adapter": ".claude/skills/plan-expedite/SKILL-claude.md",
+        "legacy_gpt": ".claude/skills-gpt/plan-expedite/SKILL-gpt.md"
+      },
+      "support_assets": [
+        {
+          "source": ".claude/skills/plan-expedite/evals/",
+          "dest": "skills/plan-expedite/evals/"
+        },
+        {
+          "source": ".claude/skills/plan-expedite/test-fixtures/",
+          "dest": "skills/plan-expedite/test-fixtures/"
+        }
+      ]
+    },
+    {
+      "name": "plan-feature",
+      "status": "portable",
+      "core": "skills/plan-feature/core.md",
+      "providers": {
+        "claude": "skills/plan-feature/providers/claude.md",
+        "gpt": "skills/plan-feature/providers/gpt.md"
+      },
+      "capabilities": [
+        "filesystem"
+      ],
+      "local_capable": true,
+      "migration": {
+        "legacy_core": ".claude/skills-gpt/plan-feature/SKILL-core.md",
+        "legacy_claude_launcher": ".claude/skills/plan-feature/SKILL.md",
+        "legacy_claude_adapter": ".claude/skills/plan-feature/SKILL-claude.md",
+        "legacy_gpt": ".claude/skills-gpt/plan-feature/SKILL-gpt.md"
+      },
+      "support_assets": [
+        {
+          "source": ".claude/skills/plan-feature/evals/",
+          "dest": "skills/plan-feature/evals/"
+        }
+      ]
+    },
+    {
+      "name": "plan-init",
+      "status": "portable",
+      "core": "skills/plan-init/core.md",
+      "providers": {
+        "claude": "skills/plan-init/providers/claude.md",
+        "gpt": "skills/plan-init/providers/gpt.md"
+      },
+      "capabilities": [
+        "filesystem"
+      ],
+      "local_capable": true,
+      "migration": {
+        "legacy_core": ".claude/skills-gpt/plan-init/SKILL-core.md",
+        "legacy_claude_launcher": ".claude/skills/plan-init/SKILL.md",
+        "legacy_claude_adapter": ".claude/skills/plan-init/SKILL-claude.md",
+        "legacy_gpt": ".claude/skills-gpt/plan-init/SKILL-gpt.md"
+      },
+      "support_assets": [
+        {
+          "source": ".claude/skills/plan-init/evals/",
+          "dest": "skills/plan-init/evals/"
+        }
+      ]
+    },
+    {
+      "name": "plan-merge",
+      "status": "portable",
+      "core": "skills/plan-merge/core.md",
+      "providers": {
+        "claude": "skills/plan-merge/providers/claude.md",
+        "gpt": "skills/plan-merge/providers/gpt.md"
+      },
+      "capabilities": [
+        "filesystem"
+      ],
+      "local_capable": true,
+      "migration": {
+        "legacy_core": ".claude/skills-gpt/plan-merge/SKILL-core.md",
+        "legacy_claude_launcher": ".claude/skills/plan-merge/SKILL.md",
+        "legacy_claude_adapter": ".claude/skills/plan-merge/SKILL-claude.md",
+        "legacy_gpt": ".claude/skills-gpt/plan-merge/SKILL-gpt.md"
+      },
+      "support_assets": [
+        {
+          "source": ".claude/skills/plan-merge/evals/",
+          "dest": "skills/plan-merge/evals/"
+        }
+      ]
+    },
+    {
+      "name": "plan-redline",
+      "status": "portable",
+      "core": "skills/plan-redline/core.md",
+      "providers": {
+        "claude": "skills/plan-redline/providers/claude.md",
+        "gpt": "skills/plan-redline/providers/gpt.md"
+      },
+      "capabilities": [
+        "filesystem"
+      ],
+      "local_capable": false,
+      "migration": {
+        "legacy_core": ".claude/skills-gpt/plan-redline/SKILL-core.md",
+        "legacy_claude_launcher": ".claude/skills/plan-redline/SKILL.md",
+        "legacy_claude_adapter": ".claude/skills/plan-redline/SKILL-claude.md",
+        "legacy_gpt": ".claude/skills-gpt/plan-redline/SKILL-gpt.md"
+      },
+      "support_assets": [
+        {
+          "source": ".claude/skills/plan-redline/evals/",
+          "dest": "skills/plan-redline/evals/"
+        },
+        {
+          "source": ".claude/skills/plan-redline/reference-proposal.html",
+          "dest": "skills/plan-redline/reference-proposal.html"
+        }
+      ]
+    },
+    {
+      "name": "plan-review",
+      "status": "portable",
+      "core": "skills/plan-review/core.md",
+      "providers": {
+        "claude": "skills/plan-review/providers/claude.md",
+        "gpt": "skills/plan-review/providers/gpt.md"
+      },
+      "capabilities": [
+        "filesystem"
+      ],
+      "local_capable": true,
+      "migration": {
+        "legacy_core": ".claude/skills-gpt/plan-review/SKILL-core.md",
+        "legacy_claude_launcher": ".claude/skills/plan-review/SKILL.md",
+        "legacy_claude_adapter": ".claude/skills/plan-review/SKILL-claude.md",
+        "legacy_gpt": ".claude/skills-gpt/plan-review/SKILL-gpt.md"
+      },
+      "support_assets": [
+        {
+          "source": ".claude/skills/plan-review/evals/",
+          "dest": "skills/plan-review/evals/"
+        }
+      ]
+    },
+    {
+      "name": "plan-trim",
+      "status": "portable",
+      "core": "skills/plan-trim/core.md",
+      "providers": {
+        "claude": "skills/plan-trim/providers/claude.md",
+        "gpt": "skills/plan-trim/providers/gpt.md"
+      },
+      "capabilities": [
+        "filesystem"
+      ],
+      "local_capable": true,
+      "migration": {
+        "legacy_core": ".claude/skills-gpt/plan-trim/SKILL-core.md",
+        "legacy_claude_launcher": ".claude/skills/plan-trim/SKILL.md",
+        "legacy_claude_adapter": ".claude/skills/plan-trim/SKILL-claude.md",
+        "legacy_gpt": ".claude/skills-gpt/plan-trim/SKILL-gpt.md"
+      },
+      "support_assets": [
+        {
+          "source": ".claude/skills/plan-trim/evals/",
+          "dest": "skills/plan-trim/evals/"
+        }
+      ]
+    },
+    {
+      "name": "plan-wrap",
+      "status": "portable",
+      "core": "skills/plan-wrap/core.md",
+      "providers": {
+        "claude": "skills/plan-wrap/providers/claude.md",
+        "gpt": "skills/plan-wrap/providers/gpt.md"
+      },
+      "capabilities": [
+        "filesystem"
+      ],
+      "local_capable": true,
+      "migration": {
+        "legacy_core": ".claude/skills-gpt/plan-wrap/SKILL-core.md",
+        "legacy_claude_launcher": ".claude/skills/plan-wrap/SKILL.md",
+        "legacy_claude_adapter": ".claude/skills/plan-wrap/SKILL-claude.md",
+        "legacy_gpt": ".claude/skills-gpt/plan-wrap/SKILL-gpt.md"
+      },
+      "support_assets": [
+        {
+          "source": ".claude/skills/plan-wrap/evals/",
+          "dest": "skills/plan-wrap/evals/"
+        }
+      ]
+    },
+    {
+      "name": "repo-init",
+      "status": "portable",
+      "core": "skills/repo-init/core.md",
+      "providers": {
+        "claude": "skills/repo-init/providers/claude.md",
+        "gpt": "skills/repo-init/providers/gpt.md"
+      },
+      "capabilities": [
+        "filesystem"
+      ],
+      "local_capable": true,
+      "migration": {
+        "legacy_core": ".claude/skills-gpt/repo-init/SKILL-core.md",
+        "legacy_claude_launcher": ".claude/skills/repo-init/SKILL.md",
+        "legacy_claude_adapter": ".claude/skills/repo-init/SKILL-claude.md",
+        "legacy_gpt": ".claude/skills-gpt/repo-init/SKILL-gpt.md"
+      },
+      "support_assets": [
+        {
+          "source": ".claude/skills/repo-init/evals/",
+          "dest": "skills/repo-init/evals/"
+        }
+      ]
+    },
+    {
+      "name": "repo-sync",
+      "status": "portable",
+      "core": "skills/repo-sync/core.md",
+      "providers": {
+        "claude": "skills/repo-sync/providers/claude.md",
+        "gpt": "skills/repo-sync/providers/gpt.md"
+      },
+      "capabilities": [
+        "filesystem"
+      ],
+      "local_capable": true,
+      "migration": {
+        "legacy_core": ".claude/skills-gpt/repo-sync/SKILL-core.md",
+        "legacy_claude_launcher": ".claude/skills/repo-sync/SKILL.md",
+        "legacy_claude_adapter": ".claude/skills/repo-sync/SKILL-claude.md",
+        "legacy_gpt": ".claude/skills-gpt/repo-sync/SKILL-gpt.md"
+      },
+      "support_assets": [
+        {
+          "source": ".claude/skills/repo-sync/evals/",
+          "dest": "skills/repo-sync/evals/"
+        }
+      ]
+    },
+    {
+      "name": "repo-update",
+      "status": "portable",
+      "core": "skills/repo-update/core.md",
+      "providers": {
+        "claude": "skills/repo-update/providers/claude.md",
+        "gpt": "skills/repo-update/providers/gpt.md"
+      },
+      "capabilities": [
+        "filesystem"
+      ],
+      "local_capable": true,
+      "migration": {
+        "legacy_core": ".claude/skills-gpt/repo-update/SKILL-core.md",
+        "legacy_claude_launcher": ".claude/skills/repo-update/SKILL.md",
+        "legacy_claude_adapter": ".claude/skills/repo-update/SKILL-claude.md",
+        "legacy_gpt": ".claude/skills-gpt/repo-update/SKILL-gpt.md"
+      },
+      "support_assets": [
+        {
+          "source": ".claude/skills/repo-update/evals/",
+          "dest": "skills/repo-update/evals/"
+        }
+      ]
+    },
+    {
+      "name": "research-prospect",
+      "status": "portable",
+      "core": "skills/research-prospect/core.md",
+      "providers": {
+        "claude": "skills/research-prospect/providers/claude.md",
+        "gpt": "skills/research-prospect/providers/gpt.md"
+      },
+      "capabilities": [
+        "filesystem",
+        "sub-agent"
+      ],
+      "local_capable": false,
+      "migration": {
+        "legacy_core": ".claude/skills-gpt/research-prospect/SKILL-core.md",
+        "legacy_claude_launcher": ".claude/skills/research-prospect/SKILL.md",
+        "legacy_claude_adapter": ".claude/skills/research-prospect/SKILL-claude.md",
+        "legacy_gpt": ".claude/skills-gpt/research-prospect/SKILL-gpt.md"
+      },
+      "support_assets": [
+        {
+          "source": ".claude/skills/research-prospect/evals/",
+          "dest": "skills/research-prospect/evals/"
+        }
+      ]
+    },
+    {
+      "name": "review-deep",
+      "status": "portable",
+      "core": "skills/review-deep/core.md",
+      "providers": {
+        "claude": "skills/review-deep/providers/claude.md",
+        "gpt": "skills/review-deep/providers/gpt.md"
+      },
+      "capabilities": [
+        "filesystem",
+        "sub-agent"
+      ],
+      "local_capable": false,
+      "migration": {
+        "legacy_core": ".claude/skills-gpt/review-deep/SKILL-core.md",
+        "legacy_claude_launcher": ".claude/skills/review-deep/SKILL.md",
+        "legacy_claude_adapter": ".claude/skills/review-deep/SKILL-claude.md",
+        "legacy_gpt": ".claude/skills-gpt/review-deep/SKILL-gpt.md"
+      },
+      "support_assets": [
+        {
+          "source": ".claude/skills/review-deep/evals/",
+          "dest": "skills/review-deep/evals/"
+        },
+        {
+          "source": ".claude/skills/review-deep/scripts/",
+          "dest": "skills/review-deep/scripts/"
+        }
+      ]
+    },
+    {
+      "name": "review-gauntlet",
+      "status": "portable",
+      "core": "skills/review-gauntlet/core.md",
+      "providers": {
+        "claude": "skills/review-gauntlet/providers/claude.md",
+        "gpt": "skills/review-gauntlet/providers/gpt.md"
+      },
+      "capabilities": [
+        "filesystem",
+        "sub-agent"
+      ],
+      "local_capable": false,
+      "migration": {
+        "legacy_core": ".claude/skills-gpt/review-gauntlet/SKILL-core.md",
+        "legacy_claude_launcher": ".claude/skills/review-gauntlet/SKILL.md",
+        "legacy_claude_adapter": ".claude/skills/review-gauntlet/SKILL-claude.md",
+        "legacy_gpt": ".claude/skills-gpt/review-gauntlet/SKILL-gpt.md"
+      },
+      "support_assets": [
+        {
+          "source": ".claude/skills/review-gauntlet/evals/",
+          "dest": "skills/review-gauntlet/evals/"
+        }
+      ]
+    },
+    {
+      "name": "review-proof",
+      "status": "portable",
+      "core": "skills/review-proof/core.md",
+      "providers": {
+        "claude": "skills/review-proof/providers/claude.md",
+        "gpt": "skills/review-proof/providers/gpt.md"
+      },
+      "capabilities": [
+        "filesystem"
+      ],
+      "local_capable": true,
+      "migration": {
+        "legacy_core": ".claude/skills-gpt/review-proof/SKILL-core.md",
+        "legacy_claude_launcher": ".claude/skills/review-proof/SKILL.md",
+        "legacy_claude_adapter": ".claude/skills/review-proof/SKILL-claude.md",
+        "legacy_gpt": ".claude/skills-gpt/review-proof/SKILL-gpt.md"
+      },
+      "support_assets": [
+        {
+          "source": ".claude/skills/review-proof/evals/",
+          "dest": "skills/review-proof/evals/"
+        }
+      ]
+    },
+    {
+      "name": "review-uat",
+      "status": "portable",
+      "core": "skills/review-uat/core.md",
+      "providers": {
+        "claude": "skills/review-uat/providers/claude.md",
+        "gpt": "skills/review-uat/providers/gpt.md"
+      },
+      "capabilities": [
+        "filesystem"
+      ],
+      "local_capable": true,
+      "migration": {
+        "legacy_core": ".claude/skills-gpt/review-uat/SKILL-core.md",
+        "legacy_claude_launcher": ".claude/skills/review-uat/SKILL.md",
+        "legacy_claude_adapter": ".claude/skills/review-uat/SKILL-claude.md",
+        "legacy_gpt": ".claude/skills-gpt/review-uat/SKILL-gpt.md"
+      },
+      "support_assets": [
+        {
+          "source": ".claude/skills/review-uat/evals/",
+          "dest": "skills/review-uat/evals/"
+        }
+      ]
+    },
+    {
+      "name": "session-wrap",
+      "status": "portable",
+      "core": "skills/session-wrap/core.md",
+      "providers": {
+        "claude": "skills/session-wrap/providers/claude.md",
+        "gpt": "skills/session-wrap/providers/gpt.md"
+      },
+      "capabilities": [
+        "filesystem"
+      ],
+      "local_capable": false,
+      "migration": {
+        "legacy_core": ".claude/skills-gpt/session-wrap/SKILL-core.md",
+        "legacy_claude_launcher": ".claude/skills/session-wrap/SKILL.md",
+        "legacy_claude_adapter": ".claude/skills/session-wrap/SKILL-claude.md",
+        "legacy_gpt": ".claude/skills-gpt/session-wrap/SKILL-gpt.md"
+      },
+      "support_assets": [
+        {
+          "source": ".claude/skills/session-wrap/evals/",
+          "dest": "skills/session-wrap/evals/"
+        }
+      ]
+    },
+    {
+      "name": "skill-eval-setup",
+      "status": "portable",
+      "core": "skills/skill-eval-setup/core.md",
+      "providers": {
+        "claude": "skills/skill-eval-setup/providers/claude.md",
+        "gpt": "skills/skill-eval-setup/providers/gpt.md"
+      },
+      "capabilities": [
+        "filesystem"
+      ],
+      "local_capable": true,
+      "migration": {
+        "legacy_core": ".claude/skills-gpt/skill-eval-setup/SKILL-core.md",
+        "legacy_claude_launcher": ".claude/skills/skill-eval-setup/SKILL.md",
+        "legacy_claude_adapter": ".claude/skills/skill-eval-setup/SKILL-claude.md",
+        "legacy_gpt": ".claude/skills-gpt/skill-eval-setup/SKILL-gpt.md"
+      },
+      "support_assets": [
+        {
+          "source": ".claude/skills/skill-eval-setup/evals/",
+          "dest": "skills/skill-eval-setup/evals/"
+        },
+        {
+          "source": ".claude/skills/skill-eval-setup/scripts/",
+          "dest": "skills/skill-eval-setup/scripts/"
+        }
+      ]
+    },
+    {
+      "name": "skill-evolve",
+      "status": "portable",
+      "core": "skills/skill-evolve/core.md",
+      "providers": {
+        "claude": "skills/skill-evolve/providers/claude.md",
+        "gpt": "skills/skill-evolve/providers/gpt.md"
+      },
+      "capabilities": [
+        "filesystem",
+        "sub-agent"
+      ],
+      "local_capable": false,
+      "migration": {
+        "legacy_core": ".claude/skills-gpt/skill-evolve/SKILL-core.md",
+        "legacy_claude_launcher": ".claude/skills/skill-evolve/SKILL.md",
+        "legacy_claude_adapter": ".claude/skills/skill-evolve/SKILL-claude.md",
+        "legacy_gpt": ".claude/skills-gpt/skill-evolve/SKILL-gpt.md"
+      },
+      "support_assets": [
+        {
+          "source": ".claude/skills/skill-evolve/evals/",
+          "dest": "skills/skill-evolve/evals/"
+        }
+      ]
+    },
+    {
+      "name": "skill-iterate",
+      "status": "portable",
+      "core": "skills/skill-iterate/core.md",
+      "providers": {
+        "claude": "skills/skill-iterate/providers/claude.md",
+        "gpt": "skills/skill-iterate/providers/gpt.md"
+      },
+      "capabilities": [
+        "filesystem",
+        "sub-agent"
+      ],
+      "local_capable": false,
+      "migration": {
+        "legacy_core": ".claude/skills-gpt/skill-iterate/SKILL-core.md",
+        "legacy_claude_launcher": ".claude/skills/skill-iterate/SKILL.md",
+        "legacy_claude_adapter": ".claude/skills/skill-iterate/SKILL-claude.md",
+        "legacy_gpt": ".claude/skills-gpt/skill-iterate/SKILL-gpt.md"
+      },
+      "support_assets": [
+        {
+          "source": ".claude/skills/skill-iterate/evals/",
+          "dest": "skills/skill-iterate/evals/"
+        },
+        {
+          "source": ".claude/skills/skill-iterate/scripts/",
+          "dest": "skills/skill-iterate/scripts/"
+        }
+      ]
+    },
+    {
+      "name": "task-handoff",
+      "status": "portable",
+      "core": "skills/task-handoff/core.md",
+      "providers": {
+        "claude": "skills/task-handoff/providers/claude.md",
+        "gpt": "skills/task-handoff/providers/gpt.md"
+      },
+      "capabilities": [
+        "filesystem"
+      ],
+      "local_capable": false,
+      "migration": {
+        "legacy_core": ".claude/skills-gpt/task-handoff/SKILL-core.md",
+        "legacy_claude_launcher": ".claude/skills/task-handoff/SKILL.md",
+        "legacy_claude_adapter": ".claude/skills/task-handoff/SKILL-claude.md",
+        "legacy_gpt": ".claude/skills-gpt/task-handoff/SKILL-gpt.md"
+      },
+      "support_assets": []
+    },
+    {
+      "name": "test-prune",
+      "status": "portable",
+      "core": "skills/test-prune/core.md",
+      "providers": {
+        "claude": "skills/test-prune/providers/claude.md",
+        "gpt": "skills/test-prune/providers/gpt.md"
+      },
+      "capabilities": [
+        "filesystem",
+        "sub-agent"
+      ],
+      "local_capable": false,
+      "migration": {
+        "legacy_core": ".claude/skills-gpt/test-prune/SKILL-core.md",
+        "legacy_claude_launcher": ".claude/skills/test-prune/SKILL.md",
+        "legacy_claude_adapter": ".claude/skills/test-prune/SKILL-claude.md",
+        "legacy_gpt": ".claude/skills-gpt/test-prune/SKILL-gpt.md"
+      },
+      "support_assets": [
+        {
+          "source": ".claude/skills/test-prune/evals/",
+          "dest": "skills/test-prune/evals/"
+        }
+      ]
+    },
+    {
+      "name": "tier-escalate",
+      "status": "portable",
+      "core": "skills/tier-escalate/core.md",
+      "providers": {
+        "claude": "skills/tier-escalate/providers/claude.md",
+        "gpt": "skills/tier-escalate/providers/gpt.md"
+      },
+      "capabilities": [
+        "filesystem",
+        "sub-agent"
+      ],
+      "local_capable": false,
+      "migration": {
+        "legacy_core": ".claude/skills-gpt/tier-escalate/SKILL-core.md",
+        "legacy_claude_launcher": ".claude/skills/tier-escalate/SKILL.md",
+        "legacy_claude_adapter": ".claude/skills/tier-escalate/SKILL-claude.md",
+        "legacy_gpt": ".claude/skills-gpt/tier-escalate/SKILL-gpt.md"
+      },
+      "support_assets": [
+        {
+          "source": ".claude/skills/tier-escalate/evals/",
+          "dest": "skills/tier-escalate/evals/"
+        },
+        {
+          "source": ".claude/skills/tier-escalate/sample-escalate-map.md",
+          "dest": "skills/tier-escalate/sample-escalate-map.md"
+        }
+      ]
+    },
+    {
+      "name": "tier-offload",
+      "status": "portable",
+      "core": "skills/tier-offload/core.md",
+      "providers": {
+        "claude": "skills/tier-offload/providers/claude.md",
+        "gpt": "skills/tier-offload/providers/gpt.md"
+      },
+      "capabilities": [
+        "filesystem",
+        "sub-agent"
+      ],
+      "local_capable": false,
+      "migration": {
+        "legacy_core": ".claude/skills-gpt/tier-offload/SKILL-core.md",
+        "legacy_claude_launcher": ".claude/skills/tier-offload/SKILL.md",
+        "legacy_claude_adapter": ".claude/skills/tier-offload/SKILL-claude.md",
+        "legacy_gpt": ".claude/skills-gpt/tier-offload/SKILL-gpt.md"
+      },
+      "support_assets": [
+        {
+          "source": ".claude/skills/tier-offload/sample-inventory.md",
+          "dest": "skills/tier-offload/sample-inventory.md"
+        },
+        {
+          "source": ".claude/skills/tier-offload/sample-offload-config.json",
+          "dest": "skills/tier-offload/sample-offload-config.json"
+        },
+        {
+          "source": ".claude/skills/tier-offload/test_sample_config_loads.py",
+          "dest": "skills/tier-offload/test_sample_config_loads.py"
+        },
+        {
+          "source": ".claude/skills/tier-offload/test_taxonomy_osot.py",
+          "dest": "skills/tier-offload/test_taxonomy_osot.py"
+        }
+      ]
+    },
+    {
+      "name": "user-afterparty",
+      "status": "portable",
+      "core": "skills/user-afterparty/core.md",
+      "providers": {
+        "claude": "skills/user-afterparty/providers/claude.md",
+        "gpt": "skills/user-afterparty/providers/gpt.md"
+      },
+      "capabilities": [
+        "filesystem"
+      ],
+      "local_capable": false,
+      "migration": {
+        "legacy_core": ".claude/skills-gpt/user-afterparty/SKILL-core.md",
+        "legacy_claude_launcher": ".claude/skills/user-afterparty/SKILL.md",
+        "legacy_claude_adapter": ".claude/skills/user-afterparty/SKILL-claude.md",
+        "legacy_gpt": ".claude/skills-gpt/user-afterparty/SKILL-gpt.md"
+      },
+      "support_assets": []
+    },
+    {
+      "name": "user-brainstorm",
+      "status": "portable",
+      "core": "skills/user-brainstorm/core.md",
+      "providers": {
+        "claude": "skills/user-brainstorm/providers/claude.md",
+        "gpt": "skills/user-brainstorm/providers/gpt.md"
+      },
+      "capabilities": [
+        "filesystem",
+        "sub-agent"
+      ],
+      "local_capable": false,
+      "migration": {
+        "legacy_core": ".claude/skills-gpt/user-brainstorm/SKILL-core.md",
+        "legacy_claude_launcher": ".claude/skills/user-brainstorm/SKILL.md",
+        "legacy_claude_adapter": ".claude/skills/user-brainstorm/SKILL-claude.md",
+        "legacy_gpt": ".claude/skills-gpt/user-brainstorm/SKILL-gpt.md"
+      },
+      "support_assets": [
+        {
+          "source": ".claude/skills/user-brainstorm/evals/",
+          "dest": "skills/user-brainstorm/evals/"
+        }
+      ]
+    },
+    {
+      "name": "user-debug",
+      "status": "portable",
+      "core": "skills/user-debug/core.md",
+      "providers": {
+        "claude": "skills/user-debug/providers/claude.md",
+        "gpt": "skills/user-debug/providers/gpt.md"
+      },
+      "capabilities": [
+        "filesystem"
+      ],
+      "local_capable": true,
+      "migration": {
+        "legacy_core": ".claude/skills-gpt/user-debug/SKILL-core.md",
+        "legacy_claude_launcher": ".claude/skills/user-debug/SKILL.md",
+        "legacy_claude_adapter": ".claude/skills/user-debug/SKILL-claude.md",
+        "legacy_gpt": ".claude/skills-gpt/user-debug/SKILL-gpt.md"
+      },
+      "support_assets": [
+        {
+          "source": ".claude/skills/user-debug/evals/",
+          "dest": "skills/user-debug/evals/"
+        }
+      ]
+    },
+    {
+      "name": "user-draft",
+      "status": "portable",
+      "core": "skills/user-draft/core.md",
+      "providers": {
+        "claude": "skills/user-draft/providers/claude.md",
+        "gpt": "skills/user-draft/providers/gpt.md"
+      },
+      "capabilities": [
+        "filesystem"
+      ],
+      "local_capable": true,
+      "migration": {
+        "legacy_core": ".claude/skills-gpt/user-draft/SKILL-core.md",
+        "legacy_claude_launcher": ".claude/skills/user-draft/SKILL.md",
+        "legacy_claude_adapter": ".claude/skills/user-draft/SKILL-claude.md",
+        "legacy_gpt": ".claude/skills-gpt/user-draft/SKILL-gpt.md"
+      },
+      "support_assets": [
+        {
+          "source": ".claude/skills/user-draft/evals.seed/",
+          "dest": "skills/user-draft/evals.seed/"
+        }
+      ]
+    },
+    {
+      "name": "user-gateway",
+      "status": "portable",
+      "core": "skills/user-gateway/core.md",
+      "providers": {
+        "claude": "skills/user-gateway/providers/claude.md",
+        "gpt": "skills/user-gateway/providers/gpt.md"
+      },
+      "capabilities": [
+        "filesystem"
+      ],
+      "local_capable": true,
+      "migration": {
+        "legacy_core": ".claude/skills-gpt/user-gateway/SKILL-core.md",
+        "legacy_claude_launcher": ".claude/skills/user-gateway/SKILL.md",
+        "legacy_claude_adapter": ".claude/skills/user-gateway/SKILL-claude.md",
+        "legacy_gpt": ".claude/skills-gpt/user-gateway/SKILL-gpt.md"
+      },
+      "support_assets": [
+        {
+          "source": ".claude/skills/user-gateway/evals/",
+          "dest": "skills/user-gateway/evals/"
+        }
+      ]
+    },
+    {
+      "name": "user-lavishify",
+      "status": "portable",
+      "core": "skills/user-lavishify/core.md",
+      "providers": {
+        "claude": "skills/user-lavishify/providers/claude.md",
+        "gpt": "skills/user-lavishify/providers/gpt.md"
+      },
+      "capabilities": [
+        "filesystem"
+      ],
+      "local_capable": false,
+      "migration": {
+        "legacy_core": ".claude/skills-gpt/user-lavishify/SKILL-core.md",
+        "legacy_claude_launcher": ".claude/skills/user-lavishify/SKILL.md",
+        "legacy_claude_adapter": ".claude/skills/user-lavishify/SKILL-claude.md",
+        "legacy_gpt": ".claude/skills-gpt/user-lavishify/SKILL-gpt.md"
+      },
+      "support_assets": []
+    },
+    {
+      "name": "user-learn",
+      "status": "portable",
+      "core": "skills/user-learn/core.md",
+      "providers": {
+        "claude": "skills/user-learn/providers/claude.md",
+        "gpt": "skills/user-learn/providers/gpt.md"
+      },
+      "capabilities": [
+        "filesystem",
+        "sub-agent"
+      ],
+      "local_capable": false,
+      "migration": {
+        "legacy_core": ".claude/skills-gpt/user-learn/SKILL-core.md",
+        "legacy_claude_launcher": ".claude/skills/user-learn/SKILL.md",
+        "legacy_claude_adapter": ".claude/skills/user-learn/SKILL-claude.md",
+        "legacy_gpt": ".claude/skills-gpt/user-learn/SKILL-gpt.md"
+      },
+      "support_assets": [
+        {
+          "source": ".claude/skills/user-learn/evals/",
+          "dest": "skills/user-learn/evals/"
+        }
+      ]
+    },
+    {
+      "name": "user-orient",
+      "status": "portable",
+      "core": "skills/user-orient/core.md",
+      "providers": {
+        "claude": "skills/user-orient/providers/claude.md",
+        "gpt": "skills/user-orient/providers/gpt.md"
+      },
+      "capabilities": [
+        "filesystem"
+      ],
+      "local_capable": true,
+      "migration": {
+        "legacy_core": ".claude/skills-gpt/user-orient/SKILL-core.md",
+        "legacy_claude_launcher": ".claude/skills/user-orient/SKILL.md",
+        "legacy_claude_adapter": ".claude/skills/user-orient/SKILL-claude.md",
+        "legacy_gpt": ".claude/skills-gpt/user-orient/SKILL-gpt.md"
+      },
+      "support_assets": [
+        {
+          "source": ".claude/skills/user-orient/evals/",
+          "dest": "skills/user-orient/evals/"
+        }
+      ]
+    },
+    {
+      "name": "user-pm",
+      "status": "portable",
+      "core": "skills/user-pm/core.md",
+      "providers": {
+        "claude": "skills/user-pm/providers/claude.md",
+        "gpt": "skills/user-pm/providers/gpt.md"
+      },
+      "capabilities": [
+        "filesystem"
+      ],
+      "local_capable": true,
+      "migration": {
+        "legacy_core": ".claude/skills-gpt/user-pm/SKILL-core.md",
+        "legacy_claude_launcher": ".claude/skills/user-pm/SKILL.md",
+        "legacy_claude_adapter": ".claude/skills/user-pm/SKILL-claude.md",
+        "legacy_gpt": ".claude/skills-gpt/user-pm/SKILL-gpt.md"
+      },
+      "support_assets": [
+        {
+          "source": ".claude/skills/user-pm/evals/",
+          "dest": "skills/user-pm/evals/"
+        }
+      ]
+    },
+    {
+      "name": "user-project",
+      "status": "portable",
+      "core": "skills/user-project/core.md",
+      "providers": {
+        "claude": "skills/user-project/providers/claude.md",
+        "gpt": "skills/user-project/providers/gpt.md"
+      },
+      "capabilities": [
+        "filesystem"
+      ],
+      "local_capable": false,
+      "migration": {
+        "legacy_core": ".claude/skills-gpt/user-project/SKILL-core.md",
+        "legacy_claude_launcher": ".claude/skills/user-project/SKILL.md",
+        "legacy_claude_adapter": ".claude/skills/user-project/SKILL-claude.md",
+        "legacy_gpt": ".claude/skills-gpt/user-project/SKILL-gpt.md"
+      },
+      "support_assets": []
+    },
+    {
+      "name": "user-shakedown",
+      "status": "portable",
+      "core": "skills/user-shakedown/core.md",
+      "providers": {
+        "claude": "skills/user-shakedown/providers/claude.md",
+        "gpt": "skills/user-shakedown/providers/gpt.md"
+      },
+      "capabilities": [
+        "filesystem"
+      ],
+      "local_capable": true,
+      "migration": {
+        "legacy_core": ".claude/skills-gpt/user-shakedown/SKILL-core.md",
+        "legacy_claude_launcher": ".claude/skills/user-shakedown/SKILL.md",
+        "legacy_claude_adapter": ".claude/skills/user-shakedown/SKILL-claude.md",
+        "legacy_gpt": ".claude/skills-gpt/user-shakedown/SKILL-gpt.md"
+      },
+      "support_assets": [
+        {
+          "source": ".claude/skills/user-shakedown/evals/",
+          "dest": "skills/user-shakedown/evals/"
+        }
+      ]
+    },
+    {
+      "name": "user-uat",
+      "status": "portable",
+      "core": "skills/user-uat/core.md",
+      "providers": {
+        "claude": "skills/user-uat/providers/claude.md",
+        "gpt": "skills/user-uat/providers/gpt.md"
+      },
+      "capabilities": [
+        "filesystem"
+      ],
+      "local_capable": true,
+      "migration": {
+        "legacy_core": ".claude/skills-gpt/user-uat/SKILL-core.md",
+        "legacy_claude_launcher": ".claude/skills/user-uat/SKILL.md",
+        "legacy_claude_adapter": ".claude/skills/user-uat/SKILL-claude.md",
+        "legacy_gpt": ".claude/skills-gpt/user-uat/SKILL-gpt.md"
+      },
+      "support_assets": [
+        {
+          "source": ".claude/skills/user-uat/evals/",
+          "dest": "skills/user-uat/evals/"
+        }
+      ]
+    },
+    {
+      "name": "user-walkthrough",
+      "status": "portable",
+      "core": "skills/user-walkthrough/core.md",
+      "providers": {
+        "claude": "skills/user-walkthrough/providers/claude.md",
+        "gpt": "skills/user-walkthrough/providers/gpt.md"
+      },
+      "capabilities": [
+        "filesystem"
+      ],
+      "local_capable": true,
+      "migration": {
+        "legacy_core": ".claude/skills-gpt/user-walkthrough/SKILL-core.md",
+        "legacy_claude_launcher": ".claude/skills/user-walkthrough/SKILL.md",
+        "legacy_claude_adapter": ".claude/skills/user-walkthrough/SKILL-claude.md",
+        "legacy_gpt": ".claude/skills-gpt/user-walkthrough/SKILL-gpt.md"
+      },
+      "support_assets": [
+        {
+          "source": ".claude/skills/user-walkthrough/evals/",
+          "dest": "skills/user-walkthrough/evals/"
+        }
+      ]
+    },
+    {
+      "name": "user-wrap",
+      "status": "portable",
+      "core": "skills/user-wrap/core.md",
+      "providers": {
+        "claude": "skills/user-wrap/providers/claude.md",
+        "gpt": "skills/user-wrap/providers/gpt.md"
+      },
+      "capabilities": [
+        "filesystem"
+      ],
+      "local_capable": true,
+      "migration": {
+        "legacy_core": ".claude/skills-gpt/user-wrap/SKILL-core.md",
+        "legacy_claude_launcher": ".claude/skills/user-wrap/SKILL.md",
+        "legacy_claude_adapter": ".claude/skills/user-wrap/SKILL-claude.md",
+        "legacy_gpt": ".claude/skills-gpt/user-wrap/SKILL-gpt.md"
+      },
+      "support_assets": [
+        {
+          "source": ".claude/skills/user-wrap/evals/",
+          "dest": "skills/user-wrap/evals/"
+        }
+      ]
+    }
+  ]
+}
