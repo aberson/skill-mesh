@@ -9,7 +9,7 @@ A GPT/Copilot installation binds the `gpt` adapter of every portable skill into 
 host's discovery layout:
 
 ```powershell
-pwsh -File tools\install-skill-mesh.ps1 -Profile gpt -Destination <gpt-skills-root>
+pwsh -File tools\install-skill-mesh.ps1 -Provider gpt -Home <gpt-skills-root>
 ```
 
 Each installed skill resolves `skills/<name>/providers/gpt.md`, which references the
@@ -71,3 +71,10 @@ pwsh -File runtime\skill-router.ps1 -Provider gpt -Skill <skill>
 ```
 
 `-Model gpt` remains a deprecated compatibility alias during the migration.
+
+## See also
+
+[`README.md`](../../README.md) for the installation/authentication matrices (including why
+`OPENAI_API_KEY` is never universally required); [`claude.md`](claude.md) for the Claude
+counterpart; [`../migration.md`](../migration.md) for the pre-migration → provider-neutral
+transition.

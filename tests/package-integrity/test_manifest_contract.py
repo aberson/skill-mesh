@@ -329,11 +329,25 @@ def test_architecture_command_contract_normalized():
         r"python -m pytest tests\package-integrity",
         r"python -m pytest tests\calibration",
         r"python -m pytest $env:SKILL_MESH_LEGACY_SOURCE\.claude\lib\calibration\test_calibrate.py",
-        r"pwsh -File tools\build-distributions.ps1 -Profile claude",
-        r"pwsh -File tools\install-skill-mesh.ps1 -Profile claude -Destination <host-skills-root>",
+        # Canonical flag names ONLY (-Provider / -Home), never the -Profile /
+        # -Destination aliases -- tools/build-distributions.ps1 has NO -Profile
+        # alias at all (only -Provider), so a doc that used -Profile here
+        # documented a command that fails with "A parameter cannot be found
+        # that matches parameter name 'Profile'."
+        r"pwsh -File tools\build-distributions.ps1 -Provider claude",
+        r"pwsh -File tools\install-skill-mesh.ps1 -Provider claude -Home <host-skills-root>",
     ]
     for line in required_lines:
         assert line in text, f"architecture.md missing normalized command: {line}"
+
+
+def test_architecture_never_documents_profile_alias_for_build_distributions():
+    """tools/build-distributions.ps1's only parameter is -Provider (no -Profile
+    alias exists on that script -- -Profile is install-skill-mesh.ps1's alias for
+    -Provider). Guards against reintroducing the exact defect this test's sibling
+    above was fixed for."""
+    text = load_arch()
+    assert "build-distributions.ps1 -Profile" not in text
 
 
 def test_architecture_enumerates_host_metadata_vars():

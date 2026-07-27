@@ -9,7 +9,7 @@ A Claude Code installation binds the `claude` adapter of every skill into Claude
 discovery layout:
 
 ```powershell
-pwsh -File tools\install-skill-mesh.ps1 -Profile claude -Destination <claude-skills-root>
+pwsh -File tools\install-skill-mesh.ps1 -Provider claude -Home <claude-skills-root>
 ```
 
 Each installed skill resolves `skills/<name>/providers/claude.md`, which references
@@ -55,3 +55,9 @@ To force Claude from any host via the router:
 ```powershell
 pwsh -File runtime\skill-router.ps1 -Provider claude -Skill <skill>
 ```
+
+## See also
+
+[`README.md`](../../README.md) for the installation/authentication matrices;
+[`gpt.md`](gpt.md) for the GPT/Copilot counterpart; [`../migration.md`](../migration.md) for the
+pre-migration → provider-neutral transition.

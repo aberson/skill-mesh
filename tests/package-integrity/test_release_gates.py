@@ -351,11 +351,15 @@ def test_skill_count_reds_on_missing_status_line():
 # --------------------------------------------------------------------------- #
 
 def test_readme_claims_supported_by_real_manifest():
-    defects = release_checks.readme_claim_defects(load_readme(), load_manifest())
+    # repo_root supplied: exercises the full canonical-shape check (manifest path
+    # match + on-disk existence), not just the name-only legacy check -- the real
+    # README's skill links are all in the new `skills/<name>/...` shape (Step 39).
+    defects = release_checks.readme_claim_defects(load_readme(), load_manifest(), REPO_ROOT)
     assert not defects, defects
 
 
 def test_readme_claim_reds_on_unsupported_skill_link():
+    """Legacy shape (`name/SKILL.md`): an unknown skill name is still caught."""
     manifest = {"skills": [{"name": "plan-review"}]}
     text = "[fake-skill](fake-skill/SKILL.md)\n"
     defects = release_checks.readme_claim_defects(text, manifest)
@@ -363,10 +367,75 @@ def test_readme_claim_reds_on_unsupported_skill_link():
 
 
 def test_readme_claim_clean_when_referenced_skill_is_real():
+    """Legacy shape (`name/SKILL.md`): a real skill name stays clean."""
     manifest = {"skills": [{"name": "plan-review"}]}
     text = "[plan-review](plan-review/SKILL.md)\n"
     defects = release_checks.readme_claim_defects(text, manifest)
     assert not defects
+
+
+def _new_shape_manifest():
+    return {
+        "skills": [
+            {
+                "name": "plan-review",
+                "core": "skills/plan-review/core.md",
+                "providers": {
+                    "claude": "skills/plan-review/providers/claude.md",
+                    "gpt": "skills/plan-review/providers/gpt.md",
+                },
+            },
+            {
+                "name": "context-slim",
+                "core": None,
+                "providers": {"claude": "skills/context-slim/providers/claude.md"},
+            },
+        ]
+    }
+
+
+def test_readme_claim_reds_on_unsupported_new_shape_skill_link():
+    """Regression guard: Step 39 rewrote every README self-link from the legacy
+    `name/SKILL.md` shape to `skills/name/core.md` / `skills/name/providers/
+    claude.md`. The old regex only matched the legacy shape, so after the
+    rewrite this gate matched ZERO candidates and passed trivially -- a planted
+    defect in the NEW shape must still go red."""
+    manifest = _new_shape_manifest()
+    text = "[bogus-skill](skills/bogus-skill/core.md)\n"
+    defects = release_checks.readme_claim_defects(text, manifest)
+    assert defects and "bogus-skill" in defects[0]
+
+
+def test_readme_claim_clean_when_new_shape_core_link_is_real():
+    manifest = _new_shape_manifest()
+    text = "[plan-review](skills/plan-review/core.md)\n"
+    defects = release_checks.readme_claim_defects(text, manifest)
+    assert not defects
+
+
+def test_readme_claim_clean_when_new_shape_provider_native_link_is_real():
+    manifest = _new_shape_manifest()
+    text = "[context-slim](skills/context-slim/providers/claude.md)\n"
+    defects = release_checks.readme_claim_defects(text, manifest)
+    assert not defects
+
+
+def test_readme_claim_reds_on_new_shape_core_link_for_provider_native_skill():
+    """A core.md link for a skill the manifest marks provider-native (core: null)
+    is a defect even though the skill NAME is real."""
+    manifest = _new_shape_manifest()
+    text = "[context-slim](skills/context-slim/core.md)\n"
+    defects = release_checks.readme_claim_defects(text, manifest)
+    assert defects and "context-slim" in defects[0]
+
+
+def test_readme_claim_reds_on_new_shape_link_when_target_missing_on_disk(tmp_path):
+    """With repo_root supplied, a syntactically-correct new-shape link to a real
+    manifest entry still reds if the declared file does not actually exist."""
+    manifest = _new_shape_manifest()
+    text = "[plan-review](skills/plan-review/core.md)\n"
+    defects = release_checks.readme_claim_defects(text, manifest, tmp_path)
+    assert defects and "plan-review" in defects[0]
 
 
 # --------------------------------------------------------------------------- #

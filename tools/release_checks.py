@@ -285,24 +285,84 @@ def readme_skill_count_defects(readme_text: str, manifest: dict):
 # 6. README-CLAIM
 # --------------------------------------------------------------------------- #
 
-_SKILL_SELF_LINK_RE = re.compile(r"\[([a-z][a-z0-9-]*)\]\(\1/SKILL\.md\)")
+# Two self-link shapes are recognized: the legacy pre-migration top-level package
+# (`[name](name/SKILL.md)`) and the canonical Step-35 tree, which links either to a
+# portable skill's neutral core (`[name](skills/name/core.md)`) or -- for the 3
+# provider-native exclusions, which have no core -- straight to the claude adapter
+# (`[name](skills/name/providers/claude.md)`). Group 1 is the skill name; group 2 is
+# the full link target (used to tell the shapes apart and, for the canonical shape,
+# to verify it against the manifest's own declared path).
+_SKILL_SELF_LINK_RE = re.compile(
+    r"\[([a-z][a-z0-9-]*)\]\("
+    r"((?:\1/SKILL\.md|skills/\1/core\.md|skills/\1/providers/claude\.md))"
+    r"\)"
+)
 
 
-def readme_claim_defects(readme_text: str, manifest: dict):
-    """Every skill the README names as shipping (a `[name](name/SKILL.md)`
-    self-referencing link -- the README's own convention for 'this skill is
-    part of the package') must be a real entry in the release manifest. Catches
-    a claim the manifest no longer supports (e.g. a stale link surviving after
-    a skill is retired from the manifest, even if a stray file still lingers on
-    disk -- MANIFEST is the authority for what the package claims to ship, disk
-    presence alone is the LINK CHECKER's job)."""
-    names = {s["name"] for s in manifest.get("skills", [])}
-    referenced = {m.group(1) for m in _SKILL_SELF_LINK_RE.finditer(readme_text)}
-    unknown = sorted(referenced - names)
-    return [
-        f"README links to skill '{n}/SKILL.md' which is not in the release manifest"
-        for n in unknown
-    ]
+def readme_claim_defects(readme_text: str, manifest: dict, repo_root: Path = None):
+    """Every skill the README names as shipping -- via a self-referencing link in
+    either the legacy shape (`[name](name/SKILL.md)`) or the canonical shape
+    (`[name](skills/name/core.md)` / `[name](skills/name/providers/claude.md)`) --
+    must be a real entry in the release manifest. Catches a claim the manifest no
+    longer supports (e.g. a stale link surviving after a skill is retired from the
+    manifest, even if a stray file still lingers on disk).
+
+    For the canonical shape, the link is ALWAYS checked against more than just the
+    skill name (regardless of `repo_root`): it must point at the artifact the
+    manifest itself declares for that skill (core.md only for a portable skill;
+    providers/claude.md only when the manifest actually has a claude adapter, and
+    only that exact declared path). This catches a link naming a real skill but the
+    WRONG artifact (e.g. a core.md link for a skill the manifest marks
+    provider-native) -- not just an unknown skill name. When `repo_root` is ALSO
+    supplied, the declared file must exist on disk too. The legacy shape keeps the
+    original name-only check (disk presence for that shape is the LINK CHECKER's
+    job, since the manifest carries no path for it to verify against).
+    `repo_root=None` (the default) skips only the on-disk existence check --
+    convenient for callers exercising synthetic manifests/paths that were never
+    written to disk."""
+    skills_by_name = {s.get("name"): s for s in manifest.get("skills", [])}
+    defects = []
+    for m in _SKILL_SELF_LINK_RE.finditer(readme_text):
+        name, target = m.group(1), m.group(2)
+        if name not in skills_by_name:
+            defects.append(
+                f"README links to skill '{name}' (target '{target}') which is not in the release manifest"
+            )
+            continue
+        if not target.startswith("skills/"):
+            # Legacy shape: name-only check (already done above); disk presence
+            # for this shape is the LINK CHECKER's job, since the manifest carries
+            # no path to verify it against.
+            continue
+        # Canonical shape: manifest-consistency checks below run REGARDLESS of
+        # repo_root (they only compare against the manifest dict already passed
+        # in); only the final on-disk existence check needs repo_root.
+        skill = skills_by_name[name]
+        if target.endswith("/core.md"):
+            expected = skill.get("core")
+            if not expected:
+                defects.append(
+                    f"README links to '{target}' as {name}'s core, but the manifest marks "
+                    f"'{name}' provider-native (core: null)"
+                )
+                continue
+        else:
+            expected = (skill.get("providers") or {}).get("claude")
+            if not expected:
+                defects.append(
+                    f"README links to '{target}' but the manifest has no claude adapter for '{name}'"
+                )
+                continue
+        if expected != target:
+            defects.append(
+                f"README links to '{target}' for '{name}', but the manifest declares '{expected}'"
+            )
+            continue
+        if repo_root is not None and not _file_exists_within(repo_root, target):
+            defects.append(
+                f"README links to '{target}' for '{name}', but that file does not exist on disk"
+            )
+    return defects
 
 
 # --------------------------------------------------------------------------- #
