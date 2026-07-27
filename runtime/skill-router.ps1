@@ -61,11 +61,17 @@
       - config/model-mapping.json owns per-skill provider/local capability booleans.
       - config/model-tier-map.json owns Claude-tier-to-GPT-peer mapping.
 
-    GPT transport: GitHub Copilot is the sole wired GPT transport. OPENAI_API_KEY is
-    optional and acts only as an advisory availability signal -- there is no direct
-    OpenAI API call path. Spend ceiling: the value is config only; per-call cost
-    metering is not yet wired (Add-SpendEntry has no call sites), so the spend gate
-    currently trips only on an unavailable/rejected durable ledger, not on spend.
+    GPT transport precedence (Step 37): GitHub Copilot authentication is tried
+    FIRST; the optional direct-OpenAI transport (OPENAI_API_KEY) is tried SECOND,
+    only when Copilot is unavailable or fails. Selecting GPT never requires
+    OPENAI_API_KEY -- Copilot-only sessions work with it unset. Provider choice and
+    transport authentication are separate axes (documentation/providers/). Host
+    metadata detection for "-Provider auto" is delegated to the per-source adapters
+    in runtime/providers/ (claude-host.ps1, copilot-host.ps1); this file only
+    composes their results and applies the ambiguity/absence contract. Spend
+    ceiling: the value is config only; per-call cost metering is not yet wired
+    (Add-SpendEntry has no call sites), so the spend gate currently trips only on
+    an unavailable/rejected durable ledger, not on spend.
 
     Exit codes:
       0 = success on requested provider (no fallback triggered)
@@ -74,6 +80,19 @@
           resolve a provider (ambiguous/unset host metadata), OR an invalid
           skill name / unsafe path was rejected
       3 = both cloud providers failed AND no supported local fallback exists
+
+    DELIBERATE Step-37 exit-code correction: -Provider gpt with BOTH transports
+    unavailable pre-flight (no Copilot token/health-check pass AND no configured
+    OpenAI fallback) now exits 2, not 0. Pre-Step-37 this specific pre-flight
+    case fell through to Invoke-ClaudeVariant WITHOUT -IsRetry and exited 0 --
+    inconsistent with this file's own contract above ("0 = success on the
+    REQUESTED provider"), since gpt was requested and never even attempted.
+    Every OTHER GPT-unavailable path (an attempted-and-failed invocation) always
+    exited 2. This was a latent inconsistency in the pre-Step-37 router, not a
+    documented behavior; no test asserted the old exit-0 value for this case.
+    Fixed by treating "no transport available" and "attempted transport failed"
+    as the same GPT-provider-failure outcome (both throw into the single
+    catch block below that always retries with -IsRetry $true).
 #>
 
 [CmdletBinding()]
@@ -113,11 +132,79 @@ $TELEMETRY_WRITER_PATH = Join-Path $RUNTIME_DIR 'telemetry\telemetry-writer.ps1'
 # Load the path-canonicalization guard (defines Resolve-SafePath in this scope).
 . (Join-Path $RUNTIME_DIR 'path-guard.ps1')
 
+# Load the per-source host-metadata adapters (defines Test-ClaudeHostMarkers /
+# Test-CopilotHostMarkers). Each adapter reads ONLY its own approved source
+# (documentation/architecture.md section 5.3); this file composes their results.
+. (Join-Path $RUNTIME_DIR 'providers\claude-host.ps1')
+. (Join-Path $RUNTIME_DIR 'providers\copilot-host.ps1')
+
 # -- Constants ----------------------------------------------------------------
 
 $ROUTER_VERSION = '1.3.0'
 $SPEND_CEILING_DEFAULT = 5.0
 $LOCAL_MODEL_URL_DEFAULT = 'http://localhost:11434'
+$COPILOT_BASE_URL_DEFAULT = 'https://api.githubcopilot.com'
+$OPENAI_BASE_URL_DEFAULT = 'https://api.openai.com'
+$HEALTH_CHECK_TIMEOUT_SEC_DEFAULT = 8
+$INVOCATION_TIMEOUT_SEC_DEFAULT = 120
+
+function Test-IsLoopbackUrl([string]$Url) {
+    # Security gate for the test-only base-URL overrides below: only a loopback
+    # target is ever honored. Without this, a stray/leaked SKILL_MESH_*_BASE_URL
+    # in a real config (wrong shell profile, copy-pasted .env, CI misconfig) could
+    # silently redirect a REAL Copilot/OpenAI credential to an attacker-controlled
+    # host instead of the real API.
+    try {
+        $uri = [System.Uri]$Url
+        if ($uri.Scheme -ne 'http' -and $uri.Scheme -ne 'https') { return $false }
+        $h = $uri.Host
+        return ($h -eq '127.0.0.1') -or ($h -eq '::1') -or ($h -eq 'localhost')
+    } catch {
+        return $false
+    }
+}
+
+# Test-only seams: SKILL_MESH_COPILOT_BASE_URL / SKILL_MESH_OPENAI_BASE_URL let
+# tests point the router's GPT transports at a local mock HTTP server instead of
+# the real cloud endpoints (no live credentials or network calls needed to
+# exercise auth-failure/rate-limit/timeout/precedence behavior). Unset in
+# production; the router talks to the real APIs by default. Gated to loopback
+# only (Test-IsLoopbackUrl) -- a non-loopback value is ignored, not honored.
+function Get-CopilotBaseUrl {
+    if (-not [string]::IsNullOrWhiteSpace($env:SKILL_MESH_COPILOT_BASE_URL)) {
+        $candidate = $env:SKILL_MESH_COPILOT_BASE_URL.TrimEnd('/')
+        if (Test-IsLoopbackUrl $candidate) {
+            return $candidate
+        }
+        Write-RouterWarning "SKILL_MESH_COPILOT_BASE_URL is set to a non-loopback host; ignoring it (test-only override, loopback only) and using the real Copilot endpoint."
+    }
+    return $COPILOT_BASE_URL_DEFAULT
+}
+
+function Get-OpenAIBaseUrl {
+    if (-not [string]::IsNullOrWhiteSpace($env:SKILL_MESH_OPENAI_BASE_URL)) {
+        $candidate = $env:SKILL_MESH_OPENAI_BASE_URL.TrimEnd('/')
+        if (Test-IsLoopbackUrl $candidate) {
+            return $candidate
+        }
+        Write-RouterWarning "SKILL_MESH_OPENAI_BASE_URL is set to a non-loopback host; ignoring it (test-only override, loopback only) and using the real OpenAI endpoint."
+    }
+    return $OPENAI_BASE_URL_DEFAULT
+}
+
+# Test-only seam: SKILL_MESH_TRANSPORT_TIMEOUT_SEC shortens both health-check and
+# invocation timeouts so a timeout scenario can be exercised in test time rather
+# than waiting out the production default. Unset in production.
+function Get-TransportTimeoutSec([int]$Default) {
+    if (-not [string]::IsNullOrWhiteSpace($env:SKILL_MESH_TRANSPORT_TIMEOUT_SEC)) {
+        try {
+            return [int]$env:SKILL_MESH_TRANSPORT_TIMEOUT_SEC
+        } catch {
+            return $Default
+        }
+    }
+    return $Default
+}
 
 # Exit codes
 $EXIT_SUCCESS = 0
@@ -127,16 +214,73 @@ $EXIT_ALL_PROVIDERS_FAILED = 3
 
 # -- Helpers ------------------------------------------------------------------
 
+# Secrets resolved at RUNTIME rather than read directly from an env var (e.g. the
+# gh-CLI-derived Copilot token -- see Get-CopilotToken's `gh auth token` fallback
+# below) have no env var for Protect-SecretsInText to read. Any such value must be
+# registered here via Add-ResolvedSecretCandidate the moment it is resolved, so
+# the redaction guarantee below covers it too.
+$script:ResolvedSecretCandidates = New-Object System.Collections.Generic.List[string]
+
+function Add-ResolvedSecretCandidate([string]$Secret) {
+    if (-not [string]::IsNullOrWhiteSpace($Secret)) {
+        $script:ResolvedSecretCandidates.Add($Secret)
+    }
+}
+
+function Protect-SecretsInText([string]$Text) {
+    <#
+      Redact any known credential VALUE out of a diagnostic string before it is
+      ever written to stdout/stderr/telemetry. This is a defense-in-depth backstop
+      -- diagnostics must report only credential presence and source class (e.g.
+      "Copilot token: present (env)"), never the value, not even truncated. Applied
+      unconditionally by Write-RouterWarning/-Info/-Error/-RawStderr so every call
+      site is covered without relying on each call site to remember to redact.
+    #>
+    if ([string]::IsNullOrEmpty($Text)) { return $Text }
+    $secretCandidates = @(
+        $env:OPENAI_API_KEY,
+        $env:ANTHROPIC_API_KEY,
+        $env:CLAUDE_CODE_OAUTH_TOKEN,
+        $env:COPILOT_GITHUB_TOKEN,
+        $env:GH_TOKEN,
+        $env:GITHUB_TOKEN
+    ) + @($script:ResolvedSecretCandidates)
+    foreach ($secret in $secretCandidates) {
+        # Length guard avoids redacting short/common incidental substrings.
+        if ((-not [string]::IsNullOrWhiteSpace($secret)) -and $secret.Length -ge 6 -and $Text.Contains($secret)) {
+            $Text = $Text.Replace($secret, '[REDACTED]')
+        }
+    }
+    return $Text
+}
+
 function Write-RouterWarning([string]$Message) {
-    Write-Warning "skill-router: WARNING -- $Message"
+    Write-Warning "skill-router: WARNING -- $(Protect-SecretsInText $Message)"
 }
 
 function Write-RouterInfo([string]$Message) {
-    Write-Host "skill-router: $Message" -ForegroundColor Cyan
+    Write-Host "skill-router: $(Protect-SecretsInText $Message)" -ForegroundColor Cyan
 }
 
 function Write-RouterError([string]$Message) {
-    Write-Error "skill-router: ERROR -- $Message" -ErrorAction Continue
+    Write-Error "skill-router: ERROR -- $(Protect-SecretsInText $Message)" -ErrorAction Continue
+}
+
+function Write-RouterRawStderr([string]$PreformattedMessage) {
+    <#
+      Raw, single-line stderr write for early-exit / entry-point diagnostics
+      that are already fully formatted with their own "skill-router: X --"
+      prefix (ambiguous/absent provider, invalid skill name, deprecation
+      notices, spend-ledger escape, etc). Deliberately bypasses Write-Warning
+      (lands on STDOUT under this host's capture semantics -- verified
+      empirically) and Write-Error (adds a multi-line CategoryInfo /
+      FullyQualifiedErrorId block) so these messages keep landing on stderr as
+      a single clean line, exactly as several existing tests assert
+      (test_router_scenarios.py, test_spend_ledger_guard.py). Still passes
+      through Protect-SecretsInText so the centralized-redaction guarantee
+      covers these sites too, not just Write-RouterWarning/-Info/-Error.
+    #>
+    [Console]::Error.WriteLine((Protect-SecretsInText $PreformattedMessage))
 }
 
 function Read-SafeConfigText([string]$ConfigPath) {
@@ -148,15 +292,14 @@ function Read-SafeConfigText([string]$ConfigPath) {
 # -- Host-metadata provider detection (-Provider auto) -------------------------
 
 function Resolve-ProviderFromHostMetadata {
-    # Approved host-identity markers ONLY (architecture section 5.3). Credentials
-    # (ANTHROPIC_API_KEY / OPENAI_API_KEY / tokens) are NOT host identity.
-    $claudeDetected = ($env:CLAUDECODE -eq '1') -or
-        (-not [string]::IsNullOrWhiteSpace($env:CLAUDE_CODE_ENTRYPOINT))
-    $gptDetected = (-not [string]::IsNullOrWhiteSpace($env:COPILOT_CLI)) -or
-        (-not [string]::IsNullOrWhiteSpace($env:COPILOT_AGENT_SESSION_ID))
+    # Approved host-identity markers ONLY (architecture section 5.3), delegated to
+    # the per-source adapters in runtime/providers/. Credentials (ANTHROPIC_API_KEY
+    # / OPENAI_API_KEY / tokens) are NOT host identity and are never consulted here.
+    $claudeDetected = Test-ClaudeHostMarkers
+    $gptDetected = Test-CopilotHostMarkers
 
     if ($claudeDetected -and $gptDetected) {
-        [Console]::Error.WriteLine(
+        Write-RouterRawStderr (
             'skill-router: ERROR -- -Provider auto is ambiguous: both Claude host markers ' +
             '(CLAUDECODE=1 / CLAUDE_CODE_ENTRYPOINT) and GPT/Copilot host markers ' +
             '(COPILOT_CLI / COPILOT_AGENT_SESSION_ID) are present. Pass -Provider claude|gpt explicitly.'
@@ -166,7 +309,7 @@ function Resolve-ProviderFromHostMetadata {
     if ($claudeDetected) { return 'claude' }
     if ($gptDetected) { return 'gpt' }
 
-    [Console]::Error.WriteLine(
+    Write-RouterRawStderr (
         'skill-router: ERROR -- -Provider auto could not identify the host: no approved ' +
         'host-identity marker is set (Claude: CLAUDECODE=1 / CLAUDE_CODE_ENTRYPOINT; ' +
         'GPT/Copilot: COPILOT_CLI / COPILOT_AGENT_SESSION_ID). Pass -Provider claude|gpt explicitly.'
@@ -196,9 +339,7 @@ function Resolve-GptPeer([string]$ExplicitModel = '') {
             throw 'mapping file has an invalid schema'
         }
     } catch {
-        [Console]::Error.WriteLine(
-            'skill-router: WARNING -- model-tier-map.json missing or unreadable; using default_tier_peer gpt-5.5'
-        )
+        Write-RouterRawStderr 'skill-router: WARNING -- model-tier-map.json missing or unreadable; using default_tier_peer gpt-5.5'
         $script:GptPeerResolutionPath = 'default (mapping unavailable)'
         return 'gpt-5.5'
     }
@@ -317,9 +458,7 @@ function Get-SpendFilePath {
     try {
         return Resolve-SafePath -Path $candidate -AllowedRoots (Get-LedgerAllowedRoots)
     } catch {
-        [Console]::Error.WriteLine(
-            "skill-router: WARNING -- spend-ledger path '$candidate' resolves outside the allowed roots; disabling durable spend tracking for this session. $($_.Exception.Message)"
-        )
+        Write-RouterRawStderr "skill-router: WARNING -- spend-ledger path '$candidate' resolves outside the allowed roots; disabling durable spend tracking for this session. $($_.Exception.Message)"
         return $null
     }
 }
@@ -414,23 +553,52 @@ function Get-ModelMapping([string]$SkillName) {
     }
 }
 
+function Get-ProviderTransportPrecedence([string]$ProviderName) {
+    # Reads the documented transport order for a provider from
+    # config/model-mapping.json's providers block (kept in sync with
+    # documentation/providers/*.md by Step 37). Informational/diagnostic only --
+    # the actual precedence is enforced in code by Invoke-GptWithTransportPrecedence
+    # and Invoke-ClaudeVariant; this just surfaces the config that documents it.
+    $fallback = @{
+        'claude' = @('host-native', 'anthropic-api')
+        'gpt'    = @('copilot', 'openai-direct')
+        'local'  = @('ollama')
+    }
+    if (-not (Test-Path $MODEL_MAPPING_PATH)) {
+        return $fallback[$ProviderName]
+    }
+    try {
+        $config = Read-SafeConfigText $MODEL_MAPPING_PATH | ConvertFrom-Json
+        $providersProp = $config.PSObject.Properties['providers']
+        if ($providersProp) {
+            $entry = $providersProp.Value.PSObject.Properties[$ProviderName]
+            if ($entry -and $entry.Value.transport_precedence) {
+                return @($entry.Value.transport_precedence)
+            }
+        }
+    } catch {
+        # Fall through to the built-in default below.
+    }
+    return $fallback[$ProviderName]
+}
+
 # -- Health checks -------------------------------------------------------------
 
-# Advisory health signal ONLY. GitHub Copilot is the sole wired GPT transport
-# (Invoke-GPTModel always calls the Copilot endpoint); there is no direct OpenAI
-# API transport. OPENAI_API_KEY is therefore optional and, when present, only
-# contributes an extra availability probe -- it does not enable an OpenAI call path.
+# Health check for the OPTIONAL direct-OpenAI fallback transport (Step 37; see
+# Invoke-OpenAIModel and Invoke-GptWithTransportPrecedence below). OPENAI_API_KEY
+# is required only for THIS transport -- selecting GPT never requires it, because
+# Copilot is always tried first.
 function Test-OpenAIAvailable {
     if (-not $env:OPENAI_API_KEY) {
-        Write-RouterWarning "OPENAI_API_KEY not set -- no advisory OpenAI health signal (Copilot is the GPT transport)."
+        Write-RouterWarning "OPENAI_API_KEY not set -- direct-OpenAI fallback transport unavailable (optional; Copilot is tried first)."
         return $false
     }
     try {
         $response = Invoke-RestMethod `
-            -Uri 'https://api.openai.com/v1/models' `
-            -Headers @{ Authorization = "Bearer $env:OPENAI_API_KEY" } `
+            -Uri "$(Get-OpenAIBaseUrl)/v1/models" `
+            -Headers @{ Authorization = "Bearer $($env:OPENAI_API_KEY)" } `
             -Method GET `
-            -TimeoutSec 5 `
+            -TimeoutSec (Get-TransportTimeoutSec 5) `
             -ErrorAction Stop
         return $true
     } catch {
@@ -446,7 +614,14 @@ function Get-CopilotToken {
     if ($env:GITHUB_TOKEN) { return $env:GITHUB_TOKEN }
     try {
         $token = & gh auth token 2>$null
-        if ($token -and $token.Trim()) { return $token.Trim() }
+        if ($token -and $token.Trim()) {
+            $resolved = $token.Trim()
+            # This value has no env var for Protect-SecretsInText to read directly
+            # (it came from a subprocess, not $env:*) -- register it explicitly so
+            # the redaction guarantee covers it too.
+            Add-ResolvedSecretCandidate $resolved
+            return $resolved
+        }
     } catch { }
     return $null
 }
@@ -459,10 +634,10 @@ function Test-CopilotAvailable {
     }
     try {
         $response = Invoke-RestMethod `
-            -Uri 'https://api.githubcopilot.com/models' `
+            -Uri "$(Get-CopilotBaseUrl)/models" `
             -Headers @{ Authorization = "Bearer $token"; 'Copilot-Integration-Id' = 'skill-mesh-router' } `
             -Method GET `
-            -TimeoutSec 8 `
+            -TimeoutSec (Get-TransportTimeoutSec $HEALTH_CHECK_TIMEOUT_SEC_DEFAULT) `
             -ErrorAction Stop
         return $true
     } catch {
@@ -539,7 +714,46 @@ function Invoke-LocalModel([string]$Prompt, [string]$SkillEntryPoint) {
     }
 }
 
-# -- GPT invocation ------------------------------------------------------------
+# -- GPT invocation (Copilot-first, optional direct-OpenAI fallback) -----------
+
+function ConvertFrom-ResponsesApiOutput($Response) {
+    <#
+      Shared parser: both the Copilot and the direct-OpenAI transport speak the
+      same "responses" API shape (output[].content[].text). Real output from a
+      reasoning-tier model (BOTH Copilot peers -- gpt-5.6-sol and gpt-5.5 -- are
+      reasoning-tier) commonly LEADS with one or more {type:"reasoning"} items
+      that have NO "content" key at all, before the final {type:"message"} item
+      that does. Under Set-StrictMode -Version Latest (line 106), naked dot
+      access on a property that doesn't exist on a given item throws
+      PropertyNotFoundException -- every access below is therefore guarded via
+      .PSObject.Properties[...] lookups (which never throw: they return $null
+      for a missing key). A missing/content-less/textless item means "no text
+      from THIS item"; scanning continues to the rest of output. Only throw
+      when NO item across the whole response yielded any text.
+    #>
+    $texts = New-Object System.Collections.Generic.List[string]
+
+    $outputProp = $Response.PSObject.Properties['output']
+    $items = if ($outputProp -and $outputProp.Value) { @($outputProp.Value) } else { @() }
+
+    foreach ($item in $items) {
+        if ($null -eq $item) { continue }
+        $contentProp = $item.PSObject.Properties['content']
+        if (-not $contentProp -or $null -eq $contentProp.Value) { continue }
+        foreach ($contentItem in @($contentProp.Value)) {
+            if ($null -eq $contentItem) { continue }
+            $textProp = $contentItem.PSObject.Properties['text']
+            if ($textProp -and -not [string]::IsNullOrEmpty([string]$textProp.Value)) {
+                $texts.Add([string]$textProp.Value)
+            }
+        }
+    }
+
+    if ($texts.Count -gt 0) {
+        return ($texts -join '')
+    }
+    throw "response contained no output text."
+}
 
 function Invoke-GPTModel([string]$Prompt, [string]$SkillEntryPoint, [string]$ResolvedModel) {
     Write-RouterInfo "Routing to $ResolvedModel via GitHub Copilot for skill '$Skill'"
@@ -559,23 +773,84 @@ function Invoke-GPTModel([string]$Prompt, [string]$SkillEntryPoint, [string]$Res
     } | ConvertTo-Json -Depth 5
     try {
         $response = Invoke-RestMethod `
-            -Uri 'https://api.githubcopilot.com/responses' `
+            -Uri "$(Get-CopilotBaseUrl)/responses" `
             -Method POST `
             -Headers @{ Authorization = "Bearer $token"; 'Copilot-Integration-Id' = 'skill-mesh-router' } `
             -ContentType 'application/json' `
             -Body ([System.Text.Encoding]::UTF8.GetBytes($body)) `
-            -TimeoutSec 120 `
+            -TimeoutSec (Get-TransportTimeoutSec $INVOCATION_TIMEOUT_SEC_DEFAULT) `
             -ErrorAction Stop
-        if ($response.output -and $response.output.Count -gt 0) {
-            $texts = $response.output | ForEach-Object {
-                if ($_.content) { $_.content | ForEach-Object { if ($_.text) { $_.text } } }
-            }
-            return ($texts -join '')
-        }
-        throw "Copilot response contained no output text."
+        return ConvertFrom-ResponsesApiOutput $response
     } catch {
         throw "Copilot GPT invocation failed: $($_.Exception.Message)"
     }
+}
+
+function Invoke-OpenAIModel([string]$Prompt, [string]$SkillEntryPoint, [string]$ResolvedModel) {
+    # OPTIONAL fallback transport (Step 37). Only reached when Copilot is
+    # unavailable or fails AND OPENAI_API_KEY is set; see
+    # Invoke-GptWithTransportPrecedence. Never the primary GPT transport.
+    Write-RouterInfo "Routing to $ResolvedModel via direct OpenAI API (optional fallback transport) for skill '$Skill'"
+    if (-not $env:OPENAI_API_KEY) {
+        throw "OPENAI_API_KEY not set; the direct-OpenAI fallback transport requires it."
+    }
+    $coreContent = ''
+    if ($SkillEntryPoint -and (Test-Path $SkillEntryPoint)) {
+        $coreContent = Get-Content $SkillEntryPoint -Raw -Encoding UTF8
+    }
+    $fullInput = if ($coreContent) { "$coreContent`n`nINPUT:`n$Prompt" } else { $Prompt }
+    $body = @{
+        model             = $ResolvedModel
+        input             = $fullInput
+        max_output_tokens = 8192
+    } | ConvertTo-Json -Depth 5
+    try {
+        $response = Invoke-RestMethod `
+            -Uri "$(Get-OpenAIBaseUrl)/v1/responses" `
+            -Method POST `
+            -Headers @{ Authorization = "Bearer $($env:OPENAI_API_KEY)" } `
+            -ContentType 'application/json' `
+            -Body ([System.Text.Encoding]::UTF8.GetBytes($body)) `
+            -TimeoutSec (Get-TransportTimeoutSec $INVOCATION_TIMEOUT_SEC_DEFAULT) `
+            -ErrorAction Stop
+        return ConvertFrom-ResponsesApiOutput $response
+    } catch {
+        throw "Direct-OpenAI GPT invocation failed: $($_.Exception.Message)"
+    }
+}
+
+function Invoke-GptWithTransportPrecedence([string]$Prompt, [string]$SkillEntryPoint, [string]$ResolvedModel) {
+    <#
+      Copilot-first GPT transport selection with an OPTIONAL direct-OpenAI
+      fallback (documentation/providers/gpt.md). Returns a PSCustomObject with
+      Output + Transport ('copilot' | 'openai-direct') on success, or throws a
+      combined error describing why every available transport failed/was absent
+      -- the caller (the 'gpt' case in Invoke-SkillRouter) treats that as a single
+      GPT-provider failure and applies the existing bounded single-retry-to-Claude
+      fallback. This function never widens that cross-provider retry budget: it
+      only chooses between two TRANSPORTS of the SAME provider before the
+      cross-provider decision is made.
+    #>
+    if (Test-CopilotAvailable) {
+        try {
+            $result = Invoke-GPTModel -Prompt $Prompt -SkillEntryPoint $SkillEntryPoint -ResolvedModel $ResolvedModel
+            return [PSCustomObject]@{ output = $result; transport = 'copilot' }
+        } catch {
+            $copilotFailure = $_.Exception.Message
+            if (-not $env:OPENAI_API_KEY) {
+                throw "Copilot transport failed and no OPENAI_API_KEY fallback is configured: $copilotFailure"
+            }
+            Write-RouterWarning "Copilot transport failed ($copilotFailure); attempting the optional direct-OpenAI fallback transport."
+        }
+    } elseif (-not $env:OPENAI_API_KEY) {
+        throw "No GPT transport available: Copilot is unavailable (no GitHub token, or the Copilot health check failed) and OPENAI_API_KEY is not set for the optional direct-OpenAI fallback."
+    }
+
+    if (-not (Test-OpenAIAvailable)) {
+        throw "Direct-OpenAI fallback transport is unavailable (OPENAI_API_KEY is set but the OpenAI health check failed)."
+    }
+    $result = Invoke-OpenAIModel -Prompt $Prompt -SkillEntryPoint $SkillEntryPoint -ResolvedModel $ResolvedModel
+    return [PSCustomObject]@{ output = $result; transport = 'openai-direct' }
 }
 
 # -- Claude invocation stub ----------------------------------------------------
@@ -646,6 +921,13 @@ function Invoke-SkillRouter {
             Write-Host "  GPT peer:"
             Write-Host "    model:      $gptPeer"
             Write-Host "    resolution: $script:GptPeerResolutionPath"
+            Write-Host ""
+            Write-Host "  GPT transport precedence: $((Get-ProviderTransportPrecedence 'gpt') -join ' -> ') (2nd is optional; selecting GPT never requires OPENAI_API_KEY)"
+            # Touch the base-URL resolvers so a misconfigured/non-loopback test-only
+            # override is caught and warned about even during a dry run. Neither
+            # function makes a network call itself -- "No API calls made" holds.
+            $null = Get-CopilotBaseUrl
+            $null = Get-OpenAIBaseUrl
         }
         Write-Host ""
         Write-Host "  Entry points:"
@@ -682,21 +964,23 @@ function Invoke-SkillRouter {
                     Write-RouterWarning "No GPT entry point found for '$Skill'. Falling back to Claude."
                     return Invoke-ClaudeVariant
                 }
-                $gptAvailable = Test-CopilotAvailable
-                if (-not $gptAvailable -and $env:OPENAI_API_KEY) {
-                    $gptAvailable = Test-OpenAIAvailable
-                }
-                if (-not $gptAvailable) {
-                    Write-RouterWarning "Copilot GPT transport unavailable (OPENAI_API_KEY is only an advisory health signal; no direct OpenAI transport is wired). Falling back to Claude per fail-open contract."
-                    return Invoke-ClaudeVariant
-                }
                 $timer = $null
                 try {
                     $timer = [Diagnostics.Stopwatch]::StartNew()
-                    $result = Invoke-GPTModel -Prompt $SkillInput -SkillEntryPoint $ep -ResolvedModel $gptPeer
+                    # Copilot-first, with an OPTIONAL direct-OpenAI fallback transport
+                    # (documentation/providers/gpt.md). This is a within-provider
+                    # transport choice, not the cross-provider retry budget below.
+                    $invocation = Invoke-GptWithTransportPrecedence -Prompt $SkillInput -SkillEntryPoint $ep -ResolvedModel $gptPeer
                     $timer.Stop()
+                    # Telemetry 'model' stays the BARE model id on BOTH success and
+                    # failure (matches the pre-Step-37 shape; telemetry-summary.ps1
+                    # groups/aggregates by this exact string -- suffixing it with
+                    # "via copilot"/"via openai-direct" on success only would
+                    # fragment that grouping and silently diverge from the failure
+                    # path's shape). Transport attribution is surfaced to humans via
+                    # the Write-RouterInfo line below, not via telemetry.
                     Write-TelemetryInvocation -ModelUsed $gptPeer -TokensIn 0 -TokensOut 0 -LatencyMs $timer.ElapsedMilliseconds -CostUsd 0.0 -Verdict 'pass'
-                    Write-RouterInfo "GPT invocation succeeded for '$Skill'."
+                    Write-RouterInfo "GPT invocation succeeded for '$Skill' via $($invocation.transport)."
                     exit $EXIT_SUCCESS
                 } catch {
                     if ($null -ne $timer) {
@@ -704,7 +988,10 @@ function Invoke-SkillRouter {
                         $gptVerdict = if ($_.Exception.Message -like 'GPT invocation stub*') { 'stub' } else { 'fail' }
                         Write-TelemetryInvocation -ModelUsed $gptPeer -TokensIn 0 -TokensOut 0 -LatencyMs $timer.ElapsedMilliseconds -CostUsd 0.0 -Verdict $gptVerdict
                     }
-                    Write-RouterWarning "GPT invocation failed for '$Skill': $_. Attempting single Claude retry."
+                    # Both GPT transports (Copilot, and the optional direct-OpenAI
+                    # fallback) are exhausted -- ONE bounded retry to Claude, per the
+                    # existing cross-provider fail-open contract (not widened).
+                    Write-RouterWarning "GPT invocation failed for '$Skill' (Copilot-first, optional OpenAI fallback exhausted): $_. Attempting single Claude retry."
                     return Invoke-ClaudeVariant -IsRetry $true
                 }
             }
@@ -803,9 +1090,7 @@ function Invoke-ClaudeVariant([bool]$IsRetry = $false) {
 
 # Reject unsafe skill names before any path is constructed from them.
 if ($Skill -match '[\\/]' -or $Skill.Contains('..')) {
-    [Console]::Error.WriteLine(
-        "skill-router: SECURITY -- invalid skill name '$Skill': path separators and '..' are not allowed."
-    )
+    Write-RouterRawStderr "skill-router: SECURITY -- invalid skill name '$Skill': path separators and '..' are not allowed."
     exit $EXIT_FALLBACK_USED
 }
 
@@ -813,15 +1098,11 @@ if ($Skill -match '[\\/]' -or $Skill.Contains('..')) {
 $deprecatedModelUsed = ($Model -ne '')
 if ($Provider -ne 'auto') {
     if ($deprecatedModelUsed) {
-        [Console]::Error.WriteLine(
-            "skill-router: WARNING -- both -Provider and -Model supplied; -Provider '$Provider' takes precedence, ignoring deprecated -Model '$Model'."
-        )
+        Write-RouterRawStderr "skill-router: WARNING -- both -Provider and -Model supplied; -Provider '$Provider' takes precedence, ignoring deprecated -Model '$Model'."
     }
     $effectiveProvider = $Provider
 } elseif ($deprecatedModelUsed) {
-    [Console]::Error.WriteLine(
-        "skill-router: WARNING -- -Model is a deprecated compatibility alias; use -Provider. Mapping -Model '$Model' onto -Provider '$Model'."
-    )
+    Write-RouterRawStderr "skill-router: WARNING -- -Model is a deprecated compatibility alias; use -Provider. Mapping -Model '$Model' onto -Provider '$Model'."
     $effectiveProvider = $Model
 } else {
     $effectiveProvider = Resolve-ProviderFromHostMetadata
@@ -831,9 +1112,7 @@ $Model = $effectiveProvider
 
 if ([string]::IsNullOrWhiteSpace($env:SKILL_ROUTER_SESSION_ID)) {
     $env:SKILL_ROUTER_SESSION_ID = [System.Guid]::NewGuid().ToString()
-    [Console]::Error.WriteLine(
-        "skill-router: WARNING -- SKILL_ROUTER_SESSION_ID not set; auto-generated for this invocation: $($env:SKILL_ROUTER_SESSION_ID). Set SKILL_ROUTER_SESSION_ID in your environment for consistent session spend tracking."
-    )
+    Write-RouterRawStderr "skill-router: WARNING -- SKILL_ROUTER_SESSION_ID not set; auto-generated for this invocation: $($env:SKILL_ROUTER_SESSION_ID). Set SKILL_ROUTER_SESSION_ID in your environment for consistent session spend tracking."
 }
 
 Invoke-SkillRouter

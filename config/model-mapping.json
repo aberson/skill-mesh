@@ -5,15 +5,20 @@
   "providers": {
     "claude": {
       "host": "Claude Code",
-      "transport_default": "host-native"
+      "transport_default": "host-native",
+      "transport_precedence": ["host-native", "anthropic-api"],
+      "note": "Host-native execution requires no ANTHROPIC_API_KEY. 'anthropic-api' names a POSSIBLE future optional transport for parity with the GPT side's Copilot/OpenAI precedence -- unlike Invoke-OpenAIModel, no direct-Anthropic-API call is implemented (Invoke-ClaudeModel is a stub); this entry documents the intended shape only, not landed behavior."
     },
     "gpt": {
       "host": "GitHub Copilot / GPT",
-      "transport_default": "copilot"
+      "transport_default": "copilot",
+      "transport_precedence": ["copilot", "openai-direct"],
+      "note": "Copilot authentication is tried first and requires no OPENAI_API_KEY. Direct OpenAI is an optional, second fallback transport, tried only if Copilot is unavailable or fails (Step 37)."
     },
     "local": {
       "host": "local code-30b (text-only)",
-      "transport_default": "ollama"
+      "transport_default": "ollama",
+      "transport_precedence": ["ollama"]
     }
   },
   "columns": {

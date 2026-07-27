@@ -21,18 +21,24 @@ not installed into a GPT profile.
 
 ## Transport / authentication precedence
 
-Selecting GPT does **not** imply `OPENAI_API_KEY`. Transport is chosen
-independently, in this order:
+Selecting GPT does **not** imply `OPENAI_API_KEY`. `runtime/skill-router.ps1`
+chooses a transport independently, in this order (`Invoke-GptWithTransportPrecedence`):
 
 | Order | Transport | Requirement |
 |---|---|---|
-| 1 | GitHub Copilot authentication | Copilot sign-in; no `OPENAI_API_KEY` |
-| 2 | Direct OpenAI API (optional fallback) | `OPENAI_API_KEY` |
+| 1 | GitHub Copilot authentication | Copilot sign-in (`COPILOT_GITHUB_TOKEN` / `GH_TOKEN` / `GITHUB_TOKEN` / `gh auth token`); no `OPENAI_API_KEY` |
+| 2 | Direct OpenAI API (optional fallback) | `OPENAI_API_KEY`; tried only if Copilot is unavailable or fails |
 
 The public README must never present `OPENAI_API_KEY` as universally required.
-Copilot-first selection and the optional OpenAI fallback are implemented and tested
-independently in Step 37; diagnostics report only credential presence/source class,
-never values.
+Copilot-first selection and the optional direct-OpenAI fallback transport are
+implemented and tested in Step 37 (see `tests/router/test_gpt_transport_precedence.py`);
+diagnostics report only credential presence/source class, never values (see
+[`../troubleshooting.md`](../troubleshooting.md)).
+
+Falling through BOTH GPT transports counts as a single GPT-provider failure and
+triggers the router's existing bounded single-retry-to-Claude fallback -- trying
+Copilot then OpenAI is a same-provider transport choice, not an extra
+cross-provider retry (see [`../troubleshooting.md`](../troubleshooting.md)).
 
 ## Capabilities
 
@@ -50,12 +56,18 @@ GPT adapters support `filesystem`, `sub-agent`, and `vision`:
 The GPT peer model for each skill is resolved from `config/model-tier-map.json` at
 invocation time (lands Step 34).
 
+## Host-metadata detection
+
+`-Provider auto` detects a GPT/Copilot host via `runtime/providers/copilot-host.ps1`
+(`Test-CopilotHostMarkers`), which reads only `COPILOT_CLI` / `COPILOT_AGENT_SESSION_ID`
+-- see [`../architecture.md`](../architecture.md) section 5.3.
+
 ## Explicit routing
 
-To force GPT from any host via the router (lands Step 34):
+To force GPT from any host via the router:
 
 ```powershell
-pwsh -File runtime\skill-router.ps1 -Provider gpt <skill>
+pwsh -File runtime\skill-router.ps1 -Provider gpt -Skill <skill>
 ```
 
 `-Model gpt` remains a deprecated compatibility alias during the migration.

@@ -46,5 +46,16 @@ receive no misleading GPT stubs:
 | Optional transport | direct Anthropic API (`ANTHROPIC_API_KEY`) | direct OpenAI API (`OPENAI_API_KEY`) |
 
 `OPENAI_API_KEY` is **not** universally required for GPT; it is only the optional
-direct-OpenAI transport. Full precedence and diagnostics land with the router work
-in Step 37.
+direct-OpenAI transport, tried only when Copilot is unavailable or fails. Full
+precedence and diagnostics (Step 37): [`gpt.md`](gpt.md), and
+[`../troubleshooting.md`](../troubleshooting.md) for provider-selection and
+transport-auth failure modes.
+
+## Host-metadata adapters
+
+`-Provider auto` delegates detection to one adapter per approved source
+(`runtime/providers/`): `claude-host.ps1` (`Test-ClaudeHostMarkers`) and
+`copilot-host.ps1` (`Test-CopilotHostMarkers`). `runtime/skill-router.ps1`
+composes their results and applies the ambiguous/absent contract
+(architecture.md section 5.3) -- it never guesses and never silently defaults
+to Claude.
