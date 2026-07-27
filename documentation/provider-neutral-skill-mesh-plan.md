@@ -286,6 +286,7 @@ existing deterministic/rubric comparison that checks adapter parity.
 - **Produces:** `-Provider auto|claude|gpt|local`, compatibility handling for `-Model`, host metadata adapters, explicit ambiguity error, Copilot-first GPT transport selection, optional OpenAI transport, and sanitized diagnostics.
 - **Done when:** Tests cover host-bound Claude and GPT invocation, explicit overrides, each host metadata source approved in Step 33, ambiguous detection, Copilot auth without `OPENAI_API_KEY`, optional OpenAI fallback, token expiry/authentication failure, provider rate-limit/timeout behavior, no secret output, and the bounded cross-provider retry contract.
 - **Depends on:** 34, 36
+- **Status:** DONE (2026-07-27)
 
 ### Step 38: Add package integrity, drift, and release gates
 - **Problem:** The public README currently claims files and capabilities absent from the public package.
