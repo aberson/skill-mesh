@@ -319,6 +319,7 @@ existing deterministic/rubric comparison that checks adapter parity.
 - **Produces:** Automated smoke fixtures and a release candidate report containing adapter selected, core hash, transport used, normalized verdict, exit code, and fallback disclosure for representative planning, review, build-orchestration, and session skill families.
 - **Done when:** Automated package tests pass; representative Claude and GPT dry/integration runs select the intended adapters; direct GPT via Copilot works without `OPENAI_API_KEY`; fallback tests preserve the one-transition budget; and no test relies on the private pre-migration paths.
 - **Depends on:** 37, 38, 39
+- **Status:** DONE (2026-07-27)
 
 ### Step 41: Perform host-native acceptance and publish
 - **Problem:** The final goal depends on real host discovery behavior that fixtures cannot fully establish.
