@@ -6,7 +6,7 @@ lightly generalized for sharing.
 
 > **Multi-model:** These skills now ship with GPT peer variants: Claude remains the primary provider,
 > with GPT-5.6 Sol or a tier-matched GPT peer available as fallback. See the
-> [multi-model operator guide](documentation/MULTI_MODEL_GUIDE.md). Set `OPENAI_API_KEY` to activate
+> [multi-model operator guide](documentation/providers/README.md). Set `OPENAI_API_KEY` to activate
 > the GPT path; the existing Claude-only path is unchanged.
 
 > Extracted from a personal workspace. Paths and identifiers are generalized to placeholders

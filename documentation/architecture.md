@@ -380,6 +380,46 @@ $env:SKILL_MESH_LEGACY_SOURCE = "<coding-root>"
 python tools\gen_manifest.py
 ```
 
+### 8.6 Release (staging, integrity gate, checksums) — lands Step 38
+
+```powershell
+pwsh -File tools\release.ps1
+```
+
+Four phases. **Stage**: enumerates `SourceRoot`'s git-**tracked** files
+(`git ls-files`) and copies exactly those paths into `release-stage\`
+(gitignored, never committed) — a release is only committed content, so this
+is authoritative and can never leak an untracked scratch file, local note, or
+another worktree's stray file into the artifact (never a hand-maintained
+denylist). **Build**: invokes the STAGED `tools\build-distributions.ps1`
+(never the source copy), producing `release-stage\dist\claude` and
+`\dist\gpt`. **Check**: runs `python -m pytest tests\package-integrity` FROM
+WITHIN the staged tree (so the checker resolves the staged copy, not the
+source tree — a release is graded by the exact same checker code as a normal
+`pytest tests/` run), with `SKILL_MESH_SOURCE_ROOT` set to `SourceRoot` so the
+NO TRACKED GENERATED DISTRIBUTION check runs against the source repository's
+own index (which still has `.git`, unlike the — deliberately git-less —
+stage) instead of self-skipping; this also means a `git add -f`'d `dist/`
+path is caught even though the Build phase will already have wiped and
+regenerated `dist/claude`/`dist/gpt` by the time Check runs. A failing check
+aborts the release: no `CHECKSUMS.txt` is written and the staged output is
+left in place for inspection. **Checksum**: SHA-256 over every file under
+`release-stage\dist\` only — the deterministically-**generated** artifact a
+consumer installs and verifies, never the raw source tree (whose checked-out
+line endings / BOM depend on incidental `core.autocrlf` / clone history and so
+are not reproducible across machines; `build-distributions.ps1` already
+normalizes CRLF→LF and strips BOM when producing `dist/`, so hashing only
+`dist/` reproduces byte-for-byte regardless of the source checkout's line
+endings) — sorted by path, no wall-clock timestamp.
+
+Destructive-delete safety: `StageDir` is canonicalized via
+`runtime/path-guard.ps1`'s `Get-CanonicalRealPath` (resolves `..`, trailing
+separators, and junctions/symlinks to one real path) and refused if it equals
+`SourceRoot`'s real path or is an ANCESTOR of it; a pre-existing non-empty
+`StageDir` is refused unless it carries this script's own marker file from a
+prior run. `-StageDir` overrides the staging root; `-SourceRoot` is a test
+seam (defaults to this repository) that must be a git working tree.
+
 ## 9. Invariants enforced by tests
 
 `tests/package-integrity/test_manifest_contract.py` fails on any of:
@@ -413,3 +453,43 @@ python tools\gen_manifest.py
 - (Optional, source-verification) any manifest legacy/support path absent from the
   real READ-ONLY source when `SKILL_MESH_LEGACY_SOURCE` is set; skips cleanly when
   it is not.
+
+`tests/package-integrity/test_release_gates.py` (checker logic in
+`tools/release_checks.py`, Step 38) additionally fails on any of:
+
+- A local link/reference (markdown link or HTML `<img src>` / `<source
+  srcset>`) in `README.md` or `documentation/**/*.md` that does not resolve to
+  a real file/dir in the release tree (LINK CHECKER).
+- A manifest entry missing its required core/adapter file on disk (path
+  containment-checked — a manifest `core`/adapter value that escapes the
+  release root is treated as missing, never followed), a portable/
+  provider-native entry with the wrong core/adapter shape, an unknown
+  `status`, or a `skills/<name>/` directory on disk with no manifest entry
+  (MANIFEST COMPLETENESS).
+- A generated distribution tree that does not byte-for-byte match a fresh
+  rebuild from the same source — a hand-edited or stale generated wrapper
+  (SOURCE → DISTRIBUTION DRIFT).
+- A generated wrapper resolving outside its canonical dist root, or whose
+  `Canonical source:` / co-located `core.md` reference does not exist
+  (PROVIDER-WRAPPER / CORE-REFERENCE).
+- The README's `N/N skills are GPT-capable` claim not equal to the manifest's
+  portable count (SKILL-COUNT).
+- A README skill self-link (a skill name linking to its own `SKILL.md`) naming
+  a skill absent from the release manifest (README-CLAIM).
+- A `dist/` path tracked in git — checked against `SKILL_MESH_SOURCE_ROOT`
+  when set (the real source repository during a `release.ps1` run, which
+  still has `.git`) so this genuinely runs during a release rather than
+  self-skipping against the git-less stage; falls back to the live repo
+  otherwise (NO TRACKED GENERATED DISTRIBUTION).
+
+`tests/release/test_release_script.py` exercises `tools/release.ps1` end to
+end against throwaway git repositories (never this repository's own git
+state): a clean run stages only tracked files, builds, checks, and
+checksums `dist/` only; two runs over an unchanged tree reproduce an
+identical `CHECKSUMS.txt`, including across a source checkout with different
+line endings; an untracked working-tree file never leaks into the stage; a
+`git add -f`'d `dist/` path and a planted broken README link each abort the
+release with no `CHECKSUMS.txt` written; and `-StageDir` equal to, a
+trailing-separator variant of, or an ancestor of `-SourceRoot` — or a
+pre-existing non-empty foreign `-StageDir` — is refused without deleting
+anything.
