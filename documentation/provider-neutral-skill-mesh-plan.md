@@ -275,7 +275,7 @@ existing deterministic/rubric comparison that checks adapter parity.
 - **Produces:** Distribution builder, Claude installer/profile, GPT/Copilot installer/profile, compatibility launchers, uninstall/upgrade behavior, and generated-file provenance markers.
 - **Done when:** A clean temporary home can install each profile; Claude discovery resolves the Claude adapter, GPT discovery resolves the GPT adapter, relative core references resolve, reinstall is idempotent, and uninstall removes only files owned by skill-mesh.
 - **Depends on:** 35
-- **Status:** BLOCKED (2026-07-26 — audit required; install/uninstall ownership-boundary bug-shape in 3 consecutive review rounds, max dev iterations exhausted, stop-and-audit fired. See issue #45 and the preserved worktree's `.build-step/step36-audit-required.md`.)
+- **Status:** DONE (2026-07-27)
 
 ### Step 37: Implement honest provider selection and transport authentication
 - **Problem:** The router silently defaults to Claude, host-native discovery can bypass routing, and public auth guidance conflates GPT with direct OpenAI API access.
