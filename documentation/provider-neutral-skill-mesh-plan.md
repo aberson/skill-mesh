@@ -264,6 +264,7 @@ existing deterministic/rubric comparison that checks adapter parity.
 - **Produces:** `skills/<name>/core.md`, provider adapters, a machine-readable inventory, and explicit provider-native exclusion records.
 - **Done when:** All 47 portable skills have exactly one core plus Claude and GPT adapters; the 3 exclusions have only truthful supported adapters; hashes or normalized comparisons prove no required core clauses were lost during migration.
 - **Depends on:** 33, 34
+- **Status:** DONE (2026-07-26)
 
 ### Step 36: Build deterministic host distributions and installers
 - **Problem:** Host discovery requires provider-specific filenames and directories, but those requirements should not dictate canonical ownership.
