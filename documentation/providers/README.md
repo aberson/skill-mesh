@@ -59,3 +59,9 @@ transport-auth failure modes.
 composes their results and applies the ambiguous/absent contract
 (architecture.md section 5.3) -- it never guesses and never silently defaults
 to Claude.
+
+## See also
+
+[`README.md`](../../README.md) (repository root) for the skill catalog and top-level
+installation/authentication matrices; [`migration.md`](../migration.md) for what changed from the
+pre-migration, Claude-first layout.

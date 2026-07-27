@@ -1,41 +1,47 @@
-# claude-skills
+# skill-mesh
 
-A collection of [Claude Code](https://docs.anthropic.com/claude-code) skills for planning, building,
-reviewing, and shipping software with AI agents. These are the real workflow skills I use day to day,
+A provider-neutral collection of [Claude Code](https://docs.anthropic.com/claude-code) and
+[GitHub Copilot](https://docs.github.com/copilot) skills for planning, building, reviewing,
+and shipping software with AI agents. These are the real workflow skills used day to day,
 lightly generalized for sharing.
 
-> **Multi-model:** These skills now ship with GPT peer variants: Claude remains the primary provider,
-> with GPT-5.6 Sol or a tier-matched GPT peer available as fallback. See the
-> [multi-model operator guide](documentation/providers/README.md). Set `OPENAI_API_KEY` to activate
-> the GPT path; the existing Claude-only path is unchanged.
+> **Provider-neutral, not Claude-first.** skill-mesh ships one shared pipeline with two
+> first-class host adapters — Claude and GPT (via GitHub Copilot). Neither is "the default
+> product": a Claude Code install runs the Claude adapters, a GitHub Copilot install runs the
+> GPT adapters, and the underlying behavior contract (the `core.md` each adapter loads) is
+> identical either way. See [Providers &amp; installation](#providers--installation) below and
+> the full contract in [`documentation/architecture.md`](documentation/architecture.md).
 
 > Extracted from a personal workspace. Paths and identifiers are generalized to placeholders
 > (`<workspace>`, `<project>`, `<your-org>`). A few skills reference personal conventions — a
-> workspace "control plane" and a file-based memory system — that you would adapt to your own setup.
+> workspace "control plane" and a file-based memory system — that you would adapt to your own
+> setup. See [Adapt before use](#adapt-before-use).
 
 ## What's inside
 
-Each skill name links to its `SKILL.md`. Every skill also has a `## Multi-model` section identifying
-its GPT variant path.
+Each skill name links to its canonical behavior contract (`skills/<name>/core.md` for the 47
+portable skills; `skills/<name>/providers/claude.md` for the 3 Claude-native exclusions — see
+[Capability &amp; exclusion matrix](#capability--exclusion-matrix)). Every portable skill also has a
+`providers/claude.md` and `providers/gpt.md` adapter alongside its core.
 
 **Core pipeline** — plan → build → review → ship:
 
 | Stage | Skills |
 |------|--------|
-| **Planning** | [plan-init](plan-init/SKILL.md) · [plan-feature](plan-feature/SKILL.md) · [plan-review](plan-review/SKILL.md) · [plan-wrap](plan-wrap/SKILL.md) · [plan-merge](plan-merge/SKILL.md) · [plan-trim](plan-trim/SKILL.md) · [plan-expedite](plan-expedite/SKILL.md) |
-| **Building** | [build-step](build-step/SKILL.md) · [build-phase](build-phase/SKILL.md) · [build-queue](build-queue/SKILL.md) |
-| **Review** | [review-deep](review-deep/SKILL.md) · [review-gauntlet](review-gauntlet/SKILL.md) · [review-proof](review-proof/SKILL.md) · [review-uat](review-uat/SKILL.md) · [judge-ui](judge-ui/SKILL.md) |
-| **Repo & docs** | [repo-init](repo-init/SKILL.md) · [repo-sync](repo-sync/SKILL.md) · [repo-update](repo-update/SKILL.md) |
+| **Planning** | [plan-init](skills/plan-init/core.md) · [plan-feature](skills/plan-feature/core.md) · [plan-review](skills/plan-review/core.md) · [plan-redline](skills/plan-redline/core.md) · [plan-wrap](skills/plan-wrap/core.md) · [plan-merge](skills/plan-merge/core.md) · [plan-trim](skills/plan-trim/core.md) · [plan-expedite](skills/plan-expedite/core.md) |
+| **Building** | [build-step](skills/build-step/core.md) · [build-phase](skills/build-phase/core.md) · [build-queue](skills/build-queue/core.md) |
+| **Review** | [review-deep](skills/review-deep/core.md) · [review-gauntlet](skills/review-gauntlet/core.md) · [review-proof](skills/review-proof/core.md) · [review-uat](skills/review-uat/core.md) · [judge-ui](skills/judge-ui/core.md) · [judge-motion](skills/judge-motion/providers/claude.md) |
+| **Repo & docs** | [repo-init](skills/repo-init/core.md) · [repo-sync](skills/repo-sync/core.md) · [repo-update](skills/repo-update/core.md) |
 
 **Supporting**:
 
 | Area | Skills |
 |------|--------|
-| **User & session** | [user-brainstorm](user-brainstorm/SKILL.md) · [user-debug](user-debug/SKILL.md) · [user-draft](user-draft/SKILL.md) · [user-gateway](user-gateway/SKILL.md) · [user-learn](user-learn/SKILL.md) · [user-orient](user-orient/SKILL.md) · [user-pm](user-pm/SKILL.md) · [user-shakedown](user-shakedown/SKILL.md) · [user-uat](user-uat/SKILL.md) · [user-walkthrough](user-walkthrough/SKILL.md) · [user-wrap](user-wrap/SKILL.md) · [user-lavishify](user-lavishify/SKILL.md) · [session-wrap](session-wrap/SKILL.md) · [task-handoff](task-handoff/SKILL.md) · [research-prospect](research-prospect/SKILL.md) |
-| **Skill tooling** | [skill-eval-setup](skill-eval-setup/SKILL.md) · [skill-evolve](skill-evolve/SKILL.md) · [skill-iterate](skill-iterate/SKILL.md) · [tier-offload](tier-offload/SKILL.md) · [tier-escalate](tier-escalate/SKILL.md) |
-| **Maintenance & hygiene** | [test-prune](test-prune/SKILL.md) · [lesson-harvest](lesson-harvest/SKILL.md) · [memory-distill](memory-distill/SKILL.md) · [context-slim](context-slim/SKILL.md) · [user-afterparty](user-afterparty/SKILL.md) |
-| **Project improvement** | [goblin-suggest](goblin-suggest/SKILL.md) · [goblin-do](goblin-do/SKILL.md) — *reference only; needs a private second-brain store + the `goblin` CLI, see [_shared/goblin-second-brain.md](_shared/goblin-second-brain.md)* |
-| **Reference** | [claude-oauth-auth](claude-oauth-auth/SKILL.md) |
+| **User & session** | [user-brainstorm](skills/user-brainstorm/core.md) · [user-debug](skills/user-debug/core.md) · [user-draft](skills/user-draft/core.md) · [user-gateway](skills/user-gateway/core.md) · [user-learn](skills/user-learn/core.md) · [user-orient](skills/user-orient/core.md) · [user-pm](skills/user-pm/core.md) · [user-project](skills/user-project/core.md) · [user-shakedown](skills/user-shakedown/core.md) · [user-uat](skills/user-uat/core.md) · [user-walkthrough](skills/user-walkthrough/core.md) · [user-wrap](skills/user-wrap/core.md) · [user-lavishify](skills/user-lavishify/core.md) · [session-wrap](skills/session-wrap/core.md) · [task-handoff](skills/task-handoff/core.md) · [research-prospect](skills/research-prospect/core.md) |
+| **Skill tooling** | [skill-eval-setup](skills/skill-eval-setup/core.md) · [skill-evolve](skills/skill-evolve/core.md) · [skill-iterate](skills/skill-iterate/core.md) · [tier-offload](skills/tier-offload/core.md) · [tier-escalate](skills/tier-escalate/core.md) |
+| **Maintenance & hygiene** | [test-prune](skills/test-prune/core.md) · [lesson-harvest](skills/lesson-harvest/core.md) · [memory-distill](skills/memory-distill/core.md) · [context-slim](skills/context-slim/providers/claude.md) · [user-afterparty](skills/user-afterparty/core.md) · [observatory-doctor](skills/observatory-doctor/core.md) |
+| **Project improvement** | [goblin-suggest](skills/goblin-suggest/core.md) · [goblin-do](skills/goblin-do/core.md) — *reference only; needs a private second-brain store + the `goblin` CLI, see [_shared/goblin-second-brain.md](_shared/goblin-second-brain.md)* |
+| **Reference** | [claude-oauth-auth](skills/claude-oauth-auth/providers/claude.md) |
 
 `_shared/` holds resources referenced by several skills — the judging doctrine
 ([judge-core.md](_shared/judge-core.md)), the skill routing web
@@ -49,36 +55,124 @@ The design idea across all of these: treat agent work as a **pipeline with quali
 build one step at a time, review with independent adversarial passes, and only then ship. Several
 skills use multi-agent fan-out (parallel reviewers, judge panels, generate-then-grade loops).
 
-## Router
+## Providers & installation
 
-The router at `.claude/lib/skill-router.ps1` dispatches a skill to Claude or its GPT peer.
+skill-mesh publishes one canonical, provider-independent behavior contract per skill
+(`skills/<name>/core.md`) plus a thin adapter per host (`skills/<name>/providers/claude.md`,
+`skills/<name>/providers/gpt.md`). A host installation binds **one** adapter into that host's
+discovery layout — a Claude Code install never sees a GPT adapter and vice versa. The 3
+Claude-native exclusions (see below) ship only a Claude adapter, truthfully, with no GPT stub.
+Full contract: [`documentation/architecture.md`](documentation/architecture.md); per-provider
+detail: [`documentation/providers/`](documentation/providers/README.md); failure-mode lookup:
+[`documentation/troubleshooting.md`](documentation/troubleshooting.md).
 
-| Claude tier | GPT peer |
-|---|---|
-| Fable | `gpt-5.6-sol` |
-| Opus | `gpt-5.5` |
-| Sonnet | `gpt-5.4` |
-| Haiku | `gpt-5.4-mini` |
+### Installation matrix
+
+Both providers are installed the same way, with parallel commands — neither is primary:
 
 ```powershell
-pwsh -File .claude/lib/skill-router.ps1 -Model gpt -Skill <name>
+# Claude Code
+pwsh -File tools\install-skill-mesh.ps1 -Provider claude -Home <install-home>
+
+# GitHub Copilot / GPT
+pwsh -File tools\install-skill-mesh.ps1 -Provider gpt -Home <install-home>
 ```
+
+| Provider | Host | Discovery location | Install command |
+|---|---|---|---|
+| Claude | Claude Code | `<install-home>/.claude/skills/<skill>/` | `-Provider claude` (above) |
+| GPT | GitHub Copilot CLI | `<install-home>/.copilot/skills/<skill>/` | `-Provider gpt` (above) |
+
+`-Home` and `-Provider` are two distinct parameters, each with its own alias: `-Home` aliases
+`-Destination` (the target install root); `-Provider` aliases `-Profile` (`claude` or `gpt`).
+Add `-Uninstall` to remove a previously installed profile; add `-Force` to take ownership of a
+colliding non-skill-mesh file. Omitting `-DistDir` builds the profile on the fly via
+`tools\build-distributions.ps1`; installing never rewrites the canonical `skills/` source —
+it only writes a generated, marker-tagged discovery copy.
+
+### Authentication matrix
+
+Provider **selection** (which adapter runs) and transport **authentication** (which credential
+executes the model) are separate axes. Selecting GPT never implies `OPENAI_API_KEY`, and
+selecting Claude never implies `ANTHROPIC_API_KEY`:
+
+| Provider | Transport | Order | Credential | Required? |
+|---|---|---|---|---|
+| Claude | Host-native (inside Claude Code) | default | none — the host supplies the model | **No credential needed** |
+| Claude | Direct Anthropic API | optional | `ANTHROPIC_API_KEY` | Optional — headless/CI direct execution only |
+| GPT | GitHub Copilot | primary | Copilot sign-in (`gh auth login`, or `COPILOT_GITHUB_TOKEN` / `GH_TOKEN` / `GITHUB_TOKEN`) | **`OPENAI_API_KEY` NOT needed** |
+| GPT | Direct OpenAI API | optional fallback | `OPENAI_API_KEY` | Optional — tried only if Copilot is unavailable or fails |
+
+**`OPENAI_API_KEY` is never universally required.** It is only the optional direct-OpenAI
+fallback transport for GPT, tried after GitHub Copilot authentication. A GPT session
+authenticated via Copilot needs no OpenAI key at all.
+
+Provider *selection* itself is either host-bound (the normal path — see the installation matrix
+above) or resolved at runtime by `runtime/skill-router.ps1 -Provider auto`, which reads only
+trustworthy host-identity environment variables (never a credential) and **errors rather than
+guessing** when the host is absent or ambiguous:
+
+| Provider | Approved host marker(s) |
+|---|---|
+| Claude | `CLAUDECODE=1` or non-empty `CLAUDE_CODE_ENTRYPOINT` |
+| GPT/Copilot | non-empty `COPILOT_CLI` or `COPILOT_AGENT_SESSION_ID` |
+
+```powershell
+pwsh -File runtime\skill-router.ps1 -Provider auto -Skill <name>    # host-metadata detection; exits 2 if absent/ambiguous
+pwsh -File runtime\skill-router.ps1 -Provider claude -Skill <name>  # explicit override
+pwsh -File runtime\skill-router.ps1 -Provider gpt -Skill <name>     # explicit override
+```
+
+`-Model claude|gpt|local` remains a deprecated compatibility alias for `-Provider`. Full
+selection/transport contract and every failure mode (ambiguous host, expired token, rate limit,
+the bounded one-retry-to-Claude fallback): [`documentation/architecture.md`](documentation/architecture.md)
+§5, [`documentation/troubleshooting.md`](documentation/troubleshooting.md).
+
+### Capability & exclusion matrix
+
+47 of 50 skills are **portable** (a neutral core plus both a Claude and a GPT adapter); 3 are
+explicit **Claude-native exclusions** with no GPT adapter — never a misleading stub:
+
+| Skill | Claude | GPT | Reason |
+|---|---|---|---|
+| [claude-oauth-auth](skills/claude-oauth-auth/providers/claude.md) | yes | no adapter | Claude OAuth flow; Claude-native |
+| [context-slim](skills/context-slim/providers/claude.md) | yes | no adapter | Claude Code context management; Claude-native |
+| [judge-motion](skills/judge-motion/providers/claude.md) | yes | no adapter | Depends on Claude-native motion/vision capture |
+
+| Capability class | Claude | GPT/Copilot | Local (`code-30b`) |
+|---|---|---|---|
+| Portable skills (47) | yes | yes | 24 of 47 (`local_capable`) |
+| Vision skills (2: judge-ui, judge-motion) | yes | judge-ui only | no |
+| `sub-agent` fan-out skills (16) | yes | yes, parent-owned actions (14 GPT-portable; context-slim + judge-motion are native exclusions) | no |
 
 ## Current status
 
-- 47/47 skills are GPT-capable; 37 calibration tests pass.
-- Phase 5 automated Steps 28, 29, and 31 are complete.
-- The operator smoke test (Step 30) and sign-off (Step 32) remain pending.
+- **50 skills total; 47/47 skills are GPT-capable** (Claude + GPT adapters, the 47 portable
+  skills); 3 are explicit Claude-native exclusions.
+- Shipped: the canonical `skills/<name>/{core.md,providers/}` source tree; the provider-neutral
+  router (`runtime/skill-router.ps1`, honest host-metadata detection, Copilot-first GPT transport
+  with an optional direct-OpenAI fallback); the distribution builder and installer
+  (`tools/build-distributions.ps1`, `tools/install-skill-mesh.ps1`); a repeatable release command
+  (`tools/release.ps1`) with reproducible checksums; and the package-integrity test suite
+  (link checker, manifest completeness, source→distribution drift, provider-wrapper/core-reference,
+  README skill-count, README-claim, and no-tracked-generated-distribution gates).
+- The public repository still carries the original 46 top-level single-file `<skill>/SKILL.md`
+  packages from before this migration, kept as a compatibility surface during a deprecation
+  window. They are **not** the canonical source and are not updated by this migration — see
+  [`documentation/migration.md`](documentation/migration.md).
+- Full contract: [`documentation/architecture.md`](documentation/architecture.md). Proposed
+  (not yet applied) GitHub repository title/description text:
+  [`documentation/repo-metadata.md`](documentation/repo-metadata.md).
 
 ## Workflows
 
 The tables above list what each skill *is*; this section maps how they **chain together** in
-practice. Every sequence below is a workflow I actually run — commands are copy-pasteable. The
-detailed write-ups are collapsed; click a heading to expand it.
+practice. Every sequence below is a workflow actually run in production — commands are
+copy-pasteable. The detailed write-ups are collapsed; click a heading to expand it.
 
 Two notes on reading the maps:
 
-- `/goal`, `/loop`, `/schedule`, and `/deep-research` are built-in Claude Code commands, not skills
+- `/goal`, `/loop`, `/schedule`, and `/deep-research` are host built-in commands, not skills
   in this repo — several skills emit or arm them.
 - Pipeline skills are **autonomous by default**: no mid-run "(y/n)?" prompts. Conversational skills
   (`plan-init`, `plan-feature`, `plan-merge`, `plan-trim`, the `user-*` ideation skills) stop and ask
@@ -123,8 +217,9 @@ Plan → sync → build → ship. Everything else supports this spine.
   <img alt="The core pipeline: PLAN (plan-init or plan-feature → plan-review → plan-wrap), then SYNC to GitHub (repo-sync; first run repo-init), then BUILD (build-phase → build-step × N → review gates), then SHIP (acceptance UAT → repo-update)." src="_shared/core-pipeline-light.svg">
 </picture>
 
-`plan-expedite` collapses the middle — `plan-review → plan-wrap → repo-sync → handoff` — into one
-autonomous command, and ends by printing the exact `/goal` + `/build-phase` pair to paste next.
+`plan-expedite` collapses the middle — `plan-review → plan-redline → plan-wrap → repo-sync →
+handoff` — into one autonomous command, and ends by printing the exact `/goal` + `/build-phase`
+pair to paste next.
 
 Ordering matters in two places:
 
@@ -156,7 +251,7 @@ Ordering matters in two places:
 ```
 /plan-init                          # structured conversation → plan.md
 /repo-init                          # first time only: git init, GitHub repo, README, plan → issues
-/plan-expedite --plan plan.md       # autonomous: plan-review → plan-wrap → repo-sync → handoff
+/plan-expedite --plan plan.md       # autonomous: plan-review → plan-redline → plan-wrap → repo-sync → handoff
 ```
 
 `plan-expedite` finishes by printing a ready-to-paste pair — arm the goal, then build:
@@ -197,6 +292,7 @@ Prefer the à-la-carte version when you want to inspect between stages:
 
 ```
 /plan-review documentation/<feature>-plan.md    # technical gaps, risks (autofix on by default)
+/plan-redline --plan documentation/<feature>-plan.md   # operator-facing proposal + P/D feedback fold-in
 /plan-wrap documentation/<feature>-plan.md      # self-containment for a fresh-context model
 /repo-sync --plan documentation/<feature>-plan.md
 /build-phase --plan documentation/<feature>-plan.md
@@ -204,7 +300,8 @@ Prefer the à-la-carte version when you want to inspect between stages:
 
 - `plan-review` and `plan-wrap` check different things: review finds *technical* gaps; wrap checks
   the doc is *self-contained* for a model with zero conversation history (issue bodies and
-  autonomous builds depend on that).
+  autonomous builds depend on that). `plan-redline` sits between them, turning the corrected plan
+  into an operator-facing proposal and folding P/D feedback back in.
 
 </details>
 
@@ -325,6 +422,7 @@ is a library it calls or a mode it delegates to.
 /task-handoff --loop                # checkpoint library: durable current.md write mid-task (~5s)
 /task-handoff --next-task <label>   # durable task-boundary save, keep working
 /task-handoff                       # bare = --resume: orientation block from the last checkpoint
+/user-project <name>                # pin the session's active project so pipeline skills target the right repo
 /user-orient                        # session-axis re-orientation: verified vs not, asides, recommendation (read-only)
 /user-orient --quick                # ~150-word thread refresh: problem / tried / still to do (no lookups)
 /user-gateway <topic> <vent>        # pre-work intake: convert a brain-dump into routed, ledger-backed work
@@ -402,7 +500,7 @@ Two independent tracks operate on the skills themselves and on the workspace's f
 
 - The improve track is explore-then-exploit: brainstorm framings, A/B them with `skill-evolve`, then
   hill-climb the winner with `skill-iterate`. (In steady state the two loop — `skill-iterate` runs
-  nightly and hands plateaued skills back to `skill-evolve`; see each `SKILL.md`.)
+  nightly and hands plateaued skills back to `skill-evolve`; see each skill's `core.md`.)
 - `skill-evolve` and `skill-iterate` both require the evals folder `skill-eval-setup` creates.
 - Nothing self-approves: `skill-evolve` prints the PR command instead of opening it, `lesson-harvest`
   only drafts, and `memory-distill` keeps a human at the write gate.
@@ -427,47 +525,26 @@ These are deliberately conversational — they keep you in the loop instead of r
 they become issues, every build step is gated by independent reviewers, acceptance is evidence-based,
 and even the skills that improve the skills keep a human at the merge gate.*
 
-## Install
-
-<details>
-<summary><strong>How to point Claude Code at these skills</strong></summary>
-
-Each top-level folder is one skill. Point Claude Code at them by copying the folders into your skills
-directory, or by linking this repo in:
-
-```bash
-# copy individual skills
-cp -r plan-review ~/.claude/skills/
-
-# or link the whole collection (macOS/Linux)
-ln -s "$(pwd)" ~/.claude/skills-shared
-```
-
-On Windows, use a directory junction:
-
-```
-mklink /J "%USERPROFILE%\.claude\skills-shared" "%CD%"
-```
-
-Then invoke a skill in Claude Code, e.g. `/plan-review` or `/build-step`.
-
-</details>
-
 ## Adapt before use
 
 - Replace placeholders (`<workspace>`, `<project>`, `<your-org>`) with your own values.
-- Skills that reference a "control plane" or a memory index assume conventions from my workspace —
-  read the `SKILL.md` and adjust, or skip those skills.
-- **Some skills need adapting to your setup.** A few carry assumptions from my workspace: the
-  `goblin-*` pair ships as **reference only** — it needs a private "second-brain" atom store and
+- Skills that reference a "control plane" or a memory index assume conventions from the source
+  workspace — read the skill's `core.md` and adjust, or skip those skills.
+- **Some skills need adapting to your setup.** A few carry assumptions from the source workspace:
+  the `goblin-*` pair ships as **reference only** — it needs a private "second-brain" atom store and
   a separate `goblin` CLI, both omitted, so rebuild your own from
   [_shared/goblin-second-brain.md](_shared/goblin-second-brain.md); `tier-offload` emits a config
   for a local-model router and `tier-escalate` a model-tiering escalation map (adapt to your own
   models, or skip if you run neither); `judge-ui` needs a per-project browser adapter (server
-  bring-up, auth, test IDs); and `user-lavishify` drives an annotatable-HTML rendering step. A
-  handful of workspace reference files stay unpublished (`shakedown-engine.md`,
+  bring-up, auth, test IDs); `observatory-doctor` assumes a "dev-observatory" control-plane
+  convention from the source workspace; and `user-lavishify` drives an annotatable-HTML rendering
+  step. A handful of workspace reference files stay unpublished (`shakedown-engine.md`,
   `task-state-schema.md`, the `docs/investigations/` corpus); published skills may point at them —
   treat those as adaptation points, not missing files.
+- The 46 top-level `<skill>/SKILL.md` files from the original public release remain on disk as a
+  compatibility surface, but are not updated by this package's provider-neutral migration — see
+  [`documentation/migration.md`](documentation/migration.md) for what changed and what to point at
+  instead.
 - No secrets or credentials are included.
 
 ## License

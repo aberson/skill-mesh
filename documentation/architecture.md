@@ -151,7 +151,7 @@ adapter is already the correct one — no runtime provider decision occurs. This
 removes the current failure mode where a GPT session can discover the Claude
 compatibility launcher before any router runs.
 
-Binding is decided at install time by `tools/install-skill-mesh.ps1 -Profile
+Binding is decided at install time by `tools/install-skill-mesh.ps1 -Provider
 claude|gpt` and recorded in the generated discovery layout. Binding never rewrites
 canonical files; it emits a generated tree under `dist/<profile>/`.
 
@@ -321,8 +321,8 @@ the pinned interpreter and the legacy source root are supplied by the environmen
 ### 8.1 Build (distribution generation) — lands Step 36
 
 ```powershell
-pwsh -File tools\build-distributions.ps1 -Profile claude
-pwsh -File tools\build-distributions.ps1 -Profile gpt
+pwsh -File tools\build-distributions.ps1 -Provider claude
+pwsh -File tools\build-distributions.ps1 -Provider gpt
 ```
 
 Generates `dist\claude\` and `dist\gpt\` from `config\skill-manifest.json`. Output
@@ -331,8 +331,8 @@ is never committed.
 ### 8.2 Install (host profile) — lands Step 36
 
 ```powershell
-pwsh -File tools\install-skill-mesh.ps1 -Profile claude -Destination <host-skills-root>
-pwsh -File tools\install-skill-mesh.ps1 -Profile gpt    -Destination <host-skills-root>
+pwsh -File tools\install-skill-mesh.ps1 -Provider claude -Home <host-skills-root>
+pwsh -File tools\install-skill-mesh.ps1 -Provider gpt    -Home <host-skills-root>
 ```
 
 ### 8.3 Test
@@ -453,6 +453,19 @@ seam (defaults to this repository) that must be a git working tree.
 - (Optional, source-verification) any manifest legacy/support path absent from the
   real READ-ONLY source when `SKILL_MESH_LEGACY_SOURCE` is set; skips cleanly when
   it is not.
+
+## 10. Related documents
+
+This document is the design authority; the following describe how to *use* the
+package rather than how it is built:
+
+| Document | Covers |
+|---|---|
+| [`../README.md`](../README.md) | Skill catalog, installation matrix, authentication matrix, capability/exclusion table, workflows |
+| [`providers/README.md`](providers/README.md), [`providers/claude.md`](providers/claude.md), [`providers/gpt.md`](providers/gpt.md) | Per-provider host binding, transport precedence, capabilities |
+| [`troubleshooting.md`](troubleshooting.md) | Provider-selection and transport-authentication failure modes |
+| [`migration.md`](migration.md) | What changed from the pre-migration layout, where things live now, and the top-level `<skill>/SKILL.md` deprecation window |
+| [`repo-metadata.md`](repo-metadata.md) | Proposed (not yet applied) GitHub repository title/description text for Step 41 |
 
 `tests/package-integrity/test_release_gates.py` (checker logic in
 `tools/release_checks.py`, Step 38) additionally fails on any of:
