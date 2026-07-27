@@ -42,10 +42,16 @@ Claude adapter.
 `claude-oauth-auth`, `context-slim`, and `judge-motion` are Claude-only. They have
 no neutral core and no GPT adapter; their `claude` adapter is self-contained.
 
+## Host-metadata detection
+
+`-Provider auto` detects a Claude host via `runtime/providers/claude-host.ps1`
+(`Test-ClaudeHostMarkers`), which reads only `CLAUDECODE` / `CLAUDE_CODE_ENTRYPOINT`
+-- see [`../architecture.md`](../architecture.md) section 5.3.
+
 ## Explicit routing
 
-To force Claude from any host via the router (lands Step 34):
+To force Claude from any host via the router:
 
 ```powershell
-pwsh -File runtime\skill-router.ps1 -Provider claude <skill>
+pwsh -File runtime\skill-router.ps1 -Provider claude -Skill <skill>
 ```

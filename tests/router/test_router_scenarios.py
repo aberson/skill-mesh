@@ -136,6 +136,40 @@ def test_auto_gpt_only_selects_gpt():
     assert "--provider gpt --skill plan-init" in result.stdout
 
 
+def test_auto_claude_entrypoint_marker_selects_claude():
+    # The SECOND approved Claude marker (CLAUDECODE tested above), exercised on
+    # its own so each of the four approved host-metadata sources (architecture.md
+    # section 5.3) is individually proven at the router-integration level.
+    result = _run(
+        ["-Provider", "auto", "-Skill", "plan-init", "-DryRun"],
+        extra_env={"CLAUDE_CODE_ENTRYPOINT": "vscode"},
+    )
+    assert result.returncode == 0, result.stderr
+    assert "--provider claude --skill plan-init" in result.stdout
+
+
+def test_auto_copilot_session_marker_selects_gpt():
+    # The SECOND approved GPT/Copilot marker (COPILOT_CLI tested above).
+    result = _run(
+        ["-Provider", "auto", "-Skill", "plan-init", "-DryRun"],
+        extra_env={"COPILOT_AGENT_SESSION_ID": "session-abc"},
+    )
+    assert result.returncode == 0, result.stderr
+    assert "--provider gpt --skill plan-init" in result.stdout
+
+
+def test_auto_ignores_credential_vars_for_host_detection():
+    # ANTHROPIC_API_KEY / OPENAI_API_KEY / tokens are transport credentials, not
+    # host identity (architecture.md section 5.3) -- must NOT resolve -Provider
+    # auto on their own.
+    result = _run(
+        ["-Provider", "auto", "-Skill", "plan-init", "-DryRun"],
+        extra_env={"ANTHROPIC_API_KEY": "fake", "OPENAI_API_KEY": "fake"},
+    )
+    assert result.returncode == 2, (result.returncode, result.stdout, result.stderr)
+    assert "-Provider claude|gpt" in result.stderr
+
+
 def test_copilot_path_without_openai_key():
     # Copilot-first transport: a GitHub token is enough; OPENAI_API_KEY is optional.
     result = _run(
