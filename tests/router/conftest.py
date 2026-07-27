@@ -28,7 +28,9 @@ class _RecordingHandler(http.server.BaseHTTPRequestHandler):
 
     def _respond(self):
         if self.received is not None:
-            self.received.append({"path": self.path, "headers": dict(self.headers)})
+            length = int(self.headers.get("Content-Length", 0) or 0)
+            body = self.rfile.read(length) if length else b""
+            self.received.append({"path": self.path, "headers": dict(self.headers), "body": body})
         if self.delay:
             time.sleep(self.delay)
         payload = json.dumps(self.body if self.body is not None else {}).encode("utf-8")
@@ -72,7 +74,10 @@ class MockTransportServer:
 def mock_transport_server():
     """
     Factory fixture: mock_transport_server(status=200, body={...}, delay=0) ->
-    MockTransportServer with .base_url and .received (list of {path, headers}).
+    MockTransportServer with .base_url and .received (list of {path, headers, body}).
+    'body' (Step 40 addition, additive/backward-compatible) is the raw request
+    payload bytes -- lets a caller (tests/smoke/) assert which adapter's content
+    was actually transmitted, not just that a request happened.
     All instances created via the factory are shut down at test teardown.
     """
     instances = []

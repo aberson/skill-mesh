@@ -1,0 +1,9 @@
+{
+  "description": "Single source of truth for the Step-40 cross-provider smoke suite: one representative skill per skill family (documentation/provider-neutral-skill-mesh-plan.md Section 9 'Behavioral parity'). Consumed by BOTH tests/smoke/_scenarios.py (the smoke tests) and tests/smoke/gen_release_candidate_report.py (the release-candidate report generator) so the two can never silently pick different skills.",
+  "families": {
+    "planning": "plan-init",
+    "review": "review-gauntlet",
+    "build-orchestration": "build-phase",
+    "session": "session-wrap"
+  }
+}
