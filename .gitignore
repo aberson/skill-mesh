@@ -17,6 +17,10 @@ tmp/
 # generated host distributions (build-distributions.ps1 default staging output)
 dist/
 
+# release staging output + checksums (release.ps1 default staging output; never
+# the committed artifact -- a fresh release is built and verified on demand)
+release-stage/
+
 # telemetry log (private per-session invocations; neutral log starts empty)
 runtime/telemetry/invocations.jsonl
 
