@@ -297,6 +297,7 @@ existing deterministic/rubric comparison that checks adapter parity.
 - **Produces:** Link checker, manifest completeness test, source-to-distribution drift test, provider-wrapper/core-reference test, README claim checks, and a repeatable release/export command.
 - **Done when:** Tests fail on a missing linked file, missing provider adapter, stale generated wrapper, mismatched skill count, invalid core path, README claim unsupported by the release manifest, or tracked generated distribution; a clean release staging run reproduces the checked artifacts and emits checksums.
 - **Depends on:** 35, 36, 37
+- **Status:** DONE (2026-07-27)
 
 ### Step 39: Rewrite the public product documentation and repository metadata
 - **Problem:** The public presentation still says `claude-skills`, leads with Claude, requires `OPENAI_API_KEY`, and documents a router and guide that are not shipped.
