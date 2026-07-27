@@ -308,6 +308,7 @@ existing deterministic/rubric comparison that checks adapter parity.
 - **Produces:** Provider-neutral README, architecture overview, provider guides, installation matrix, authentication matrix, capability/exclusion table, migration notes, accurate status section, and proposed GitHub title/description text.
 - **Done when:** Every local link passes the package-integrity checker; the README never presents `OPENAI_API_KEY` as universally required; Claude and GPT receive parallel first-class installation examples; exclusions are explicit; and every documented command runs against files present in the public repository.
 - **Depends on:** 36, 37, 38
+- **Status:** DONE (2026-07-27)
 
 ### Step 40: Run cross-provider package and workflow smoke tests
 - **Problem:** Structural parity does not prove that installed profiles execute the expected adapters and preserve skill output contracts.
