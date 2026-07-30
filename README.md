@@ -1,28 +1,88 @@
 # skill-mesh
 
-A provider-neutral collection of [Claude Code](https://docs.anthropic.com/claude-code) and
-[GitHub Copilot](https://docs.github.com/copilot) skills for planning, building, reviewing,
-and shipping software with AI agents. These are the real workflow skills used day to day,
-lightly generalized for sharing.
+skill-mesh is a toolkit of agent skills for planning, building, reviewing, and shipping software —
+it treats agent work as a pipeline with quality gates: plans are reviewed before they become issues,
+every build step is gated by independent reviewers, and acceptance is evidence-based. The same skills
+run on two hosts — Claude Code and GitHub Copilot — from one shared behavior contract (47 of 50
+portable; 3 Claude-native). They're the real workflow skills used day to day, extracted from a
+personal workspace and lightly generalized — swap the placeholders (`<workspace>`, `<project>`,
+`<your-org>`) before use (see [Adapt before use](#adapt-before-use)).
 
-> **Provider-neutral, not Claude-first.** skill-mesh ships one shared pipeline with two
-> first-class host adapters — Claude and GPT (via GitHub Copilot). Neither is "the default
-> product": a Claude Code install runs the Claude adapters, a GitHub Copilot install runs the
-> GPT adapters, and the underlying behavior contract (the `core.md` each adapter loads) is
-> identical either way. See [Providers &amp; installation](#providers--installation) below and
-> the full contract in [`documentation/architecture.md`](documentation/architecture.md).
+## Quick start
 
-> Extracted from a personal workspace. Paths and identifiers are generalized to placeholders
-> (`<workspace>`, `<project>`, `<your-org>`). A few skills reference personal conventions — a
-> workspace "control plane" and a file-based memory system — that you would adapt to your own
-> setup. See [Adapt before use](#adapt-before-use).
+Install for your host — the installer and runtime are PowerShell Core (`pwsh`), which runs on Windows,
+macOS, and Linux:
+
+```powershell
+pwsh -File tools/install-skill-mesh.ps1 -Provider claude -Home <install-home>   # Claude Code
+pwsh -File tools/install-skill-mesh.ps1 -Provider gpt    -Home <install-home>   # GitHub Copilot
+```
+
+Then run a skill to try one — in Claude Code that's a slash command (`/plan-init`); on GitHub Copilot
+the same skill is discovered from its installed folder. Skills ship with placeholders — swap
+`<workspace>` / `<project>` / `<your-org>` before running (see [Adapt before use](#adapt-before-use)).
+
+**Prerequisites:** PowerShell 7+ (`pwsh`, cross-platform) to install; an authenticated `gh` CLI for the
+`repo-*` and `build-*` skills (they create repos and post to issues); Playwright for the `--ui` and
+`judge-*` skills.
+
+## Workflows
+
+How these skills **chain together** in practice — every sequence below is a workflow run in
+production, with copy-pasteable commands. Detailed write-ups are collapsed; click a heading to expand.
+
+- `/goal`, `/loop`, `/schedule`, and `/deep-research` are Claude Code built-in commands (not skills in
+  this repo) that several skills emit or arm — substitute your host's equivalent or skip on Copilot.
+- Pipeline skills are autonomous by default (no mid-run "(y/n)?" prompts); conversational skills
+  (`plan-init`, `plan-feature`, `plan-merge`, `plan-trim`, the `user-*` ideation skills) stop and ask
+  by design.
+
+### The core pipeline
+
+Plan → sync → build → ship. Everything else supports this spine.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="_shared/core-pipeline-dark.svg">
+  <img alt="The core pipeline: PLAN (plan-init or plan-feature → plan-review → plan-wrap), then SYNC to GitHub (repo-sync; first run repo-init), then BUILD (build-phase → build-step × N → review gates), then SHIP (acceptance UAT → repo-update)." src="_shared/core-pipeline-light.svg">
+</picture>
+
+`plan-expedite` collapses the middle — `plan-review → plan-redline → plan-wrap → repo-sync →
+handoff` — into one autonomous command, ending by printing the `/goal` + `/build-phase` pair to
+paste next.
+
+Order is load-bearing twice. **plan-review before repo-sync**: a gap caught after issues are minted
+means editing the plan plus N issue bodies (the "N+1 edit" trap). **repo-sync before build-phase**:
+build-phase posts live progress to those issues, so blank `Issue:` lines kill the audit trail.
+
+### The routing web
+
+Every operator fragment — a bug report, a half-formed feature idea, a "does this even work?" — lands
+on one of **8 rails**, and `/user-gateway` is the intake front door that sorts a whole brain-dump
+across them, one ledger row per fragment (full table and all 9 re-route edges:
+[_shared/skill-pipeline.md](_shared/skill-pipeline.md)).
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="_shared/routing-web-dark.svg">
+  <img alt="The routing web: operator vent through /user-gateway to eight rails — bug, do, plan, investigate, verify, trim, decide, draft — with the plan rail forking to /plan-feature (existing project) and /plan-init (brand-new project)." src="_shared/routing-web-light.svg">
+</picture>
+
+The graphic shows where each rail *goes*; the table shows what a fragment *sounds like* to land there:
+
+| Rail | Sounds like | Routes to |
+|------|-------------|-----------|
+| **bug** | "X is broken / erroring" | `/user-debug` |
+| **do** | "just do X" — small, resolved | `/goblin-do` |
+| **plan** | "add / build capability X" | `/plan-feature` (existing) · `/plan-init` (new) → build |
+| **investigate** | "what's true / why does X happen?" | `/deep-research` · Explore sweep |
+| **verify** | "does X actually work?" | `/review-uat` · `/user-uat` · `/user-shakedown` · `/user-walkthrough` |
+| **trim** | "plan feels bloated / what to cut" | `/plan-trim` |
+| **decide** | "should we do A or B?" | surfaced, then parked |
+| **draft** | "here are rough thoughts" | `/user-draft` → `/goal` |
 
 ## What's inside
 
-Each skill name links to its canonical behavior contract (`skills/<name>/core.md` for the 47
-portable skills; `skills/<name>/providers/claude.md` for the 3 Claude-native exclusions — see
-[Capability &amp; exclusion matrix](#capability--exclusion-matrix)). Every portable skill also has a
-`providers/claude.md` and `providers/gpt.md` adapter alongside its core.
+<details>
+<summary><strong>50 skills across planning, building, review, shipping, and skill/workspace maintenance</strong></summary>
 
 **Core pipeline** — plan → build → review → ship:
 
@@ -51,200 +111,30 @@ share ([skill-role-taxonomy.md](_shared/skill-role-taxonomy.md)), a guide to reb
 `goblin-*` second brain ([goblin-second-brain.md](_shared/goblin-second-brain.md)), and the
 skill-scoring harness.
 
-The design idea across all of these: treat agent work as a **pipeline with quality gates** — plan,
-build one step at a time, review with independent adversarial passes, and only then ship. Several
-skills use multi-agent fan-out (parallel reviewers, judge panels, generate-then-grade loops).
+Links point to each skill's `core.md` behavior contract; the 3 Claude-native skills link to their
+`providers/claude.md`. Full capability and exclusion matrix:
+[documentation/providers/](documentation/providers/README.md).
 
-## Providers & installation
+</details>
 
-skill-mesh publishes one canonical, provider-independent behavior contract per skill
-(`skills/<name>/core.md`) plus a thin adapter per host (`skills/<name>/providers/claude.md`,
-`skills/<name>/providers/gpt.md`). A host installation binds **one** adapter into that host's
-discovery layout — a Claude Code install never sees a GPT adapter and vice versa. The 3
-Claude-native exclusions (see below) ship only a Claude adapter, truthfully, with no GPT stub.
-Full contract: [`documentation/architecture.md`](documentation/architecture.md); per-provider
-detail: [`documentation/providers/`](documentation/providers/README.md); failure-mode lookup:
-[`documentation/troubleshooting.md`](documentation/troubleshooting.md).
+## Pick your entry point
 
-### Installation matrix
+| Start with | Situation | Details |
+|---|---|---|
+| `/plan-init` | Brand-new project, no code yet | [§1](#entry-1) |
+| `/plan-feature` | Add a feature to an existing project | [§2](#entry-2) |
+| `/build-step` | One well-scoped change, no plan needed | [§3](#entry-3) |
+| `/user-debug` | Stuck in a loop on a bug with the agent | [§4](#entry-4) |
+| `/review-gauntlet` or `/review-deep` | Review a diff or PR | [§5](#entry-5) |
+| `/review-uat` | A feature just built needs human acceptance | [§6](#entry-6) |
+| `/build-queue` | Several phases ready; run them overnight | [§7](#entry-7) |
+| `/user-wrap` | "Where were we?" / sitting back down at an open window | [§8](#entry-8) |
+| `/user-gateway` | A head full of half-formed observations about a topic | [§8](#entry-8) |
+| `/user-pm` | Plan drifted, or survey what to do next | [§9](#entry-9) |
+| `/skill-evolve` | Improve the skills or the workspace's memory | [§10](#entry-10) |
+| `/user-brainstorm` | Explore an idea or learn a topic | [§11](#entry-11) |
 
-Both providers are installed the same way, with parallel commands — neither is primary:
-
-```powershell
-# Claude Code
-pwsh -File tools\install-skill-mesh.ps1 -Provider claude -Home <install-home>
-
-# GitHub Copilot / GPT
-pwsh -File tools\install-skill-mesh.ps1 -Provider gpt -Home <install-home>
-```
-
-| Provider | Host | Discovery location | Install command |
-|---|---|---|---|
-| Claude | Claude Code | `<install-home>/.claude/skills/<skill>/` | `-Provider claude` (above) |
-| GPT | GitHub Copilot CLI | `<install-home>/.copilot/skills/<skill>/` | `-Provider gpt` (above) |
-
-`-Home` and `-Provider` are two distinct parameters, each with its own alias: `-Home` aliases
-`-Destination` (the target install root); `-Provider` aliases `-Profile` (`claude` or `gpt`).
-Add `-Uninstall` to remove a previously installed profile; add `-Force` to take ownership of a
-colliding non-skill-mesh file. Omitting `-DistDir` builds the profile on the fly via
-`tools\build-distributions.ps1`; installing never rewrites the canonical `skills/` source —
-it only writes a generated, marker-tagged discovery copy.
-
-### Authentication matrix
-
-Provider **selection** (which adapter runs) and transport **authentication** (which credential
-executes the model) are separate axes. Selecting GPT never implies `OPENAI_API_KEY`, and
-selecting Claude never implies `ANTHROPIC_API_KEY`:
-
-| Provider | Transport | Order | Credential | Required? |
-|---|---|---|---|---|
-| Claude | Host-native (inside Claude Code) | default | none — the host supplies the model | **No credential needed** |
-| Claude | Direct Anthropic API | optional | `ANTHROPIC_API_KEY` | Optional — headless/CI direct execution only |
-| GPT | GitHub Copilot | primary | Copilot sign-in (`gh auth login`, or `COPILOT_GITHUB_TOKEN` / `GH_TOKEN` / `GITHUB_TOKEN`) | **`OPENAI_API_KEY` NOT needed** |
-| GPT | Direct OpenAI API | optional fallback | `OPENAI_API_KEY` | Optional — tried only if Copilot is unavailable or fails |
-
-**`OPENAI_API_KEY` is never universally required.** It is only the optional direct-OpenAI
-fallback transport for GPT, tried after GitHub Copilot authentication. A GPT session
-authenticated via Copilot needs no OpenAI key at all.
-
-Provider *selection* itself is either host-bound (the normal path — see the installation matrix
-above) or resolved at runtime by `runtime/skill-router.ps1 -Provider auto`, which reads only
-trustworthy host-identity environment variables (never a credential) and **errors rather than
-guessing** when the host is absent or ambiguous:
-
-| Provider | Approved host marker(s) |
-|---|---|
-| Claude | `CLAUDECODE=1` or non-empty `CLAUDE_CODE_ENTRYPOINT` |
-| GPT/Copilot | non-empty `COPILOT_CLI` or `COPILOT_AGENT_SESSION_ID` |
-
-```powershell
-pwsh -File runtime\skill-router.ps1 -Provider auto -Skill <name>    # host-metadata detection; exits 2 if absent/ambiguous
-pwsh -File runtime\skill-router.ps1 -Provider claude -Skill <name>  # explicit override
-pwsh -File runtime\skill-router.ps1 -Provider gpt -Skill <name>     # explicit override
-```
-
-`-Model claude|gpt|local` remains a deprecated compatibility alias for `-Provider`. Full
-selection/transport contract and every failure mode (ambiguous host, expired token, rate limit,
-the bounded one-retry-to-Claude fallback): [`documentation/architecture.md`](documentation/architecture.md)
-§5, [`documentation/troubleshooting.md`](documentation/troubleshooting.md).
-
-### Capability & exclusion matrix
-
-47 of 50 skills are **portable** (a neutral core plus both a Claude and a GPT adapter); 3 are
-explicit **Claude-native exclusions** with no GPT adapter — never a misleading stub:
-
-| Skill | Claude | GPT | Reason |
-|---|---|---|---|
-| [claude-oauth-auth](skills/claude-oauth-auth/providers/claude.md) | yes | no adapter | Claude OAuth flow; Claude-native |
-| [context-slim](skills/context-slim/providers/claude.md) | yes | no adapter | Claude Code context management; Claude-native |
-| [judge-motion](skills/judge-motion/providers/claude.md) | yes | no adapter | Depends on Claude-native motion/vision capture |
-
-| Capability class | Claude | GPT/Copilot | Local (`code-30b`) |
-|---|---|---|---|
-| Portable skills (47) | yes | yes | 24 of 47 (`local_capable`) |
-| Vision skills (2: judge-ui, judge-motion) | yes | judge-ui only | no |
-| `sub-agent` fan-out skills (16) | yes | yes, parent-owned actions (14 GPT-portable; context-slim + judge-motion are native exclusions) | no |
-
-## Current status
-
-- **50 skills total; 47/47 skills are GPT-capable** (Claude + GPT adapters, the 47 portable
-  skills); 3 are explicit Claude-native exclusions.
-- Shipped: the canonical `skills/<name>/{core.md,providers/}` source tree; the provider-neutral
-  router (`runtime/skill-router.ps1`, honest host-metadata detection, Copilot-first GPT transport
-  with an optional direct-OpenAI fallback); the distribution builder and installer
-  (`tools/build-distributions.ps1`, `tools/install-skill-mesh.ps1`); a repeatable release command
-  (`tools/release.ps1`) with reproducible checksums; and the package-integrity test suite
-  (link checker, manifest completeness, source→distribution drift, provider-wrapper/core-reference,
-  README skill-count, README-claim, and no-tracked-generated-distribution gates).
-- The public repository still carries the original 46 top-level single-file `<skill>/SKILL.md`
-  packages from before this migration, kept as a compatibility surface during a deprecation
-  window. They are **not** the canonical source and are not updated by this migration — see
-  [`documentation/migration.md`](documentation/migration.md).
-- Full contract: [`documentation/architecture.md`](documentation/architecture.md). Proposed
-  (not yet applied) GitHub repository title/description text:
-  [`documentation/repo-metadata.md`](documentation/repo-metadata.md).
-
-## Workflows
-
-The tables above list what each skill *is*; this section maps how they **chain together** in
-practice. Every sequence below is a workflow actually run in production — commands are
-copy-pasteable. The detailed write-ups are collapsed; click a heading to expand it.
-
-Two notes on reading the maps:
-
-- `/goal`, `/loop`, `/schedule`, and `/deep-research` are host built-in commands, not skills
-  in this repo — several skills emit or arm them.
-- Pipeline skills are **autonomous by default**: no mid-run "(y/n)?" prompts. Conversational skills
-  (`plan-init`, `plan-feature`, `plan-merge`, `plan-trim`, the `user-*` ideation skills) stop and ask
-  by design.
-
-### The routing web
-
-The maps below chart the pipeline rails; this one charts **how work reaches a rail in the first
-place.** Every operator fragment — a bug report, a half-formed feature idea, a "does this even
-work?" — lands on one of **8 rails**, and `/user-gateway` is the intake front door that sorts a
-whole brain-dump across them, one ledger row per fragment, inventing nothing of its own. A rail is
-a starting guess, not a cage: sanctioned **re-route edges** correct a mis-route mid-run. The
-`plan` rail forks by project age — `/plan-feature` for an existing codebase, `/plan-init` to author
-a brand-new one (the gateway routes a new-project fragment *to* plan-init; it never authors the
-plan itself). The full 8-rail table and all 9 re-route edges live in
-[_shared/skill-pipeline.md](_shared/skill-pipeline.md); no skill hardcodes its own routing table.
-
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="_shared/routing-web-dark.svg">
-  <img alt="The routing web: operator vent through /user-gateway to eight rails — bug, do, plan, investigate, verify, trim, decide, draft — with the plan rail forking to /plan-feature (existing project) and /plan-init (brand-new project)." src="_shared/routing-web-light.svg">
-</picture>
-
-The graphic shows where each rail *goes*; the table shows what a fragment *sounds like* to land there:
-
-| Rail | Sounds like | Routes to |
-|------|-------------|-----------|
-| **bug** | "X is broken / erroring" — a symptom in hand | `/user-debug` |
-| **do** | "just do X" — a resolved, small task | `/goblin-do` |
-| **plan** | "add / build capability X" — multi-step work | `/plan-feature` (existing) · `/plan-init` (new) → build |
-| **investigate** | "what's true about X? why does X happen?" | `/deep-research` · Explore sweep |
-| **verify** | "does X actually work? I don't trust X" | `/review-uat` · `/user-uat` · `/user-shakedown` · `/user-walkthrough` |
-| **trim** | "the plan feels bloated / what can we cut" | `/plan-trim` |
-| **decide** | "should we do A or B?" — an operator-only choice | surfaced, then parked |
-| **draft** | "here are rough thoughts" — wants a prompt or a goal | `/user-draft` → `/goal` |
-
-### The core pipeline
-
-Plan → sync → build → ship. Everything else supports this spine.
-
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="_shared/core-pipeline-dark.svg">
-  <img alt="The core pipeline: PLAN (plan-init or plan-feature → plan-review → plan-wrap), then SYNC to GitHub (repo-sync; first run repo-init), then BUILD (build-phase → build-step × N → review gates), then SHIP (acceptance UAT → repo-update)." src="_shared/core-pipeline-light.svg">
-</picture>
-
-`plan-expedite` collapses the middle — `plan-review → plan-redline → plan-wrap → repo-sync →
-handoff` — into one autonomous command, and ends by printing the exact `/goal` + `/build-phase`
-pair to paste next.
-
-Ordering matters in two places:
-
-- **plan-review before repo-sync.** A gap caught *after* issues are minted means editing the plan
-  plus N issue bodies (the "N+1 edit" trap).
-- **repo-sync before build-phase.** build-phase posts live progress to the issues repo-sync
-  created; blank `Issue:` lines kill the audit trail.
-
-### Pick your entry point
-
-| Situation | Start with |
-|---|---|
-| Brand-new project, no code yet | `/plan-init` — §1 |
-| Add a feature to an existing project | `/plan-feature` — §2 |
-| One well-scoped change, no plan needed | `/build-step` — §3 |
-| Stuck in a loop on a bug with the agent | `/user-debug` — §4 |
-| Review a diff or PR | `/review-gauntlet` or `/review-deep` — §5 |
-| A feature just built needs human acceptance | §6 |
-| Several phases ready; run them overnight | `/build-queue` — §7 |
-| "Where were we?" / sitting back down at an open window | §8 |
-| A head full of half-formed observations about a topic | `/user-gateway` — §8 |
-| Plan drifted, or survey what to do next | §9 |
-| Improve the skills or the workspace's memory | §10 |
-| Explore an idea or learn a topic | §11 |
-
+<a id="entry-1"></a>
 <details>
 <summary><strong>1. New project → shipped v1</strong></summary>
 
@@ -275,6 +165,7 @@ Then wrap the phase:
 
 </details>
 
+<a id="entry-2"></a>
 <details>
 <summary><strong>2. Feature on an existing project</strong></summary>
 
@@ -305,6 +196,7 @@ Prefer the à-la-carte version when you want to inspect between stages:
 
 </details>
 
+<a id="entry-3"></a>
 <details>
 <summary><strong>3. One-off change, no plan</strong></summary>
 
@@ -321,6 +213,7 @@ One skill, three independent knobs:
 
 </details>
 
+<a id="entry-4"></a>
 <details>
 <summary><strong>4. Getting unstuck on a bug (user-debug)</strong></summary>
 
@@ -341,6 +234,7 @@ One skill, three independent knobs:
 
 </details>
 
+<a id="entry-5"></a>
 <details>
 <summary><strong>5. Reviewing a diff on its own</strong></summary>
 
@@ -365,6 +259,7 @@ Both review skills also run standalone, outside `build-step`:
 
 </details>
 
+<a id="entry-6"></a>
 <details>
 <summary><strong>6. Acceptance testing (UAT)</strong></summary>
 
@@ -394,6 +289,7 @@ After a build, human-facing verification splits by whether a test script exists.
 
 </details>
 
+<a id="entry-7"></a>
 <details>
 <summary><strong>7. Unattended overnight runs</strong></summary>
 
@@ -409,8 +305,13 @@ After a build, human-facing verification splits by whether a test script exists.
 
 </details>
 
+<a id="entry-8"></a>
 <details>
 <summary><strong>8. Session &amp; context management</strong></summary>
+
+*These session skills assume Claude Code's context harness — auto-compaction, a SessionStart hook that
+re-injects `current.md`, and `/clear` / `/compact`. On hosts without it, they degrade to plain
+checkpoint/handoff files.*
 
 The session doctrine is a **triage front door**: one skill owns the decision; everything else
 is a library it calls or a mode it delegates to.
@@ -457,6 +358,7 @@ across all 8 rails.
 
 </details>
 
+<a id="entry-9"></a>
 <details>
 <summary><strong>9. Plan &amp; portfolio maintenance</strong></summary>
 
@@ -476,6 +378,7 @@ across all 8 rails.
 
 </details>
 
+<a id="entry-10"></a>
 <details>
 <summary><strong>10. Improving the skills (and the workspace's memory)</strong></summary>
 
@@ -507,6 +410,7 @@ Two independent tracks operate on the skills themselves and on the workspace's f
 
 </details>
 
+<a id="entry-11"></a>
 <details>
 <summary><strong>11. Ideation &amp; learning</strong></summary>
 
@@ -525,7 +429,49 @@ These are deliberately conversational — they keep you in the loop instead of r
 they become issues, every build step is gated by independent reviewers, acceptance is evidence-based,
 and even the skills that improve the skills keep a human at the merge gate.*
 
-## Adapt before use
+## Providers & installation
+
+Install commands are in [Quick start](#quick-start) above; this section covers host discovery, auth,
+and flags.
+
+Skills run on two hosts — Claude Code and GitHub Copilot — from one shared source: each skill has a
+provider-neutral behavior contract (`skills/<name>/core.md`) plus a thin per-host adapter that
+installing binds into that host's discovery layout. 47 of 50 skills run on both; three are
+Claude-native (`claude-oauth-auth`, `context-slim`, `judge-motion`) and ship a Claude adapter only.
+
+| Provider | Host | Discovery location |
+|---|---|---|
+| Claude | Claude Code | `<install-home>/.claude/skills/<skill>/` |
+| GPT | GitHub Copilot CLI | `<install-home>/.copilot/skills/<skill>/` |
+
+Authentication is a separate axis from selection: Claude uses the host's own model (no API key); GPT
+authenticates via GitHub Copilot sign-in (`gh auth login`) — **no `OPENAI_API_KEY` required** (it is
+only an optional direct-OpenAI fallback). Install flags: `-Uninstall` removes a profile, `-Force`
+overwrites a colliding non-skill-mesh file (`-Home` aliases `-Destination`, `-Provider` aliases
+`-Profile`). Runtime host auto-detection (`-Provider auto`), the full auth/capability/exclusion
+matrices, and the selection/transport contract:
+[documentation/providers/](documentation/providers/README.md) and
+[architecture.md](documentation/architecture.md) §5.
+
+## Status & adapting
+
+<details>
+<summary><strong>Current status</strong></summary>
+
+- 50 skills; 47 portable across Claude Code + GitHub Copilot behind one behavior contract; 3 Claude-native.
+- Shipped: the canonical `skills/<name>/{core.md,providers/}` source tree, the provider-neutral router
+  (`runtime/skill-router.ps1`), the distribution builder and installer, a repeatable release command
+  with reproducible checksums, and a package-integrity test suite.
+- The original 46 top-level `<skill>/SKILL.md` packages remain as a compatibility surface during a
+  deprecation window — not the canonical source, and not updated by this migration; see
+  [documentation/migration.md](documentation/migration.md).
+- Full contract: [documentation/architecture.md](documentation/architecture.md).
+
+</details>
+
+<a id="adapt-before-use"></a>
+<details>
+<summary><strong>Adapt before use</strong></summary>
 
 - Replace placeholders (`<workspace>`, `<project>`, `<your-org>`) with your own values.
 - Skills that reference a "control plane" or a memory index assume conventions from the source
@@ -541,11 +487,14 @@ and even the skills that improve the skills keep a human at the merge gate.*
   step. A handful of workspace reference files stay unpublished (`shakedown-engine.md`,
   `task-state-schema.md`, the `docs/investigations/` corpus); published skills may point at them —
   treat those as adaptation points, not missing files.
-- The 46 top-level `<skill>/SKILL.md` files from the original public release remain on disk as a
-  compatibility surface, but are not updated by this package's provider-neutral migration — see
-  [`documentation/migration.md`](documentation/migration.md) for what changed and what to point at
-  instead.
 - No secrets or credentials are included.
+
+</details>
+
+## Contributing
+
+Issues and suggestions welcome: [github.com/aberson/skill-mesh/issues](https://github.com/aberson/skill-mesh/issues).
+Shared as an extracted personal toolkit — read [Adapt before use](#adapt-before-use) before filing.
 
 ## License
 
