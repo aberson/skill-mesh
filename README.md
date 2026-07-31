@@ -1,14 +1,22 @@
 # skill-mesh
 
-skill-mesh is a toolkit of agent skills for planning, building, reviewing, and shipping software —
-it treats agent work as a pipeline with quality gates: plans are reviewed before they become issues,
-every build step is gated by independent reviewers, and acceptance is evidence-based. The same skills
-run on two hosts — Claude Code and GitHub Copilot — from one shared behavior contract (47 of 50
-portable; 3 Claude-native). They're the real workflow skills used day to day, extracted from a
-personal workspace and lightly generalized — swap the placeholders (`<workspace>`, `<project>`,
-`<your-org>`) before use (see [Adapt before use](#adapt-before-use)).
+**A toolkit of agent skills for planning, building, reviewing, and shipping software — where agent
+work is run as a pipeline with quality gates.**
+
+- **Gated pipeline** — plans are reviewed before they become issues, every build step is gated by
+  independent reviewers, and acceptance is evidence-based.
+- **Provider-neutral** — the same skills run on Claude Code and GitHub Copilot from one shared
+  behavior contract (47 of 50 portable; 3 Claude-native).
+- **Real, not demo-ware** — the actual workflow skills used day to day, extracted from a personal
+  workspace and lightly generalized for sharing.
+
+Swap the placeholders (`<workspace>`, `<project>`, `<your-org>`) before use — see
+[Adapt before use](#adapt-before-use).
 
 ## Quick start
+
+<details>
+<summary><strong>Install &amp; prerequisites</strong></summary>
 
 Install for your host — the installer and runtime are PowerShell Core (`pwsh`), which runs on Windows,
 macOS, and Linux:
@@ -25,6 +33,8 @@ the same skill is discovered from its installed folder. Skills ship with placeho
 **Prerequisites:** PowerShell 7+ (`pwsh`, cross-platform) to install; an authenticated `gh` CLI for the
 `repo-*` and `build-*` skills (they create repos and post to issues); Playwright for the `--ui` and
 `judge-*` skills.
+
+</details>
 
 ## Workflows
 
@@ -431,27 +441,18 @@ and even the skills that improve the skills keep a human at the merge gate.*
 
 ## Providers & installation
 
-Install commands are in [Quick start](#quick-start) above; this section covers host discovery, auth,
-and flags.
-
-Skills run on two hosts — Claude Code and GitHub Copilot — from one shared source: each skill has a
-provider-neutral behavior contract (`skills/<name>/core.md`) plus a thin per-host adapter that
-installing binds into that host's discovery layout. 47 of 50 skills run on both; three are
-Claude-native (`claude-oauth-auth`, `context-slim`, `judge-motion`) and ship a Claude adapter only.
+Each skill has one provider-neutral behavior contract (`skills/<name>/core.md`) plus a thin per-host
+adapter; installing binds one adapter into that host's discovery layout. 47 of 50 skills run on both
+hosts; 3 are Claude-native (`claude-oauth-auth`, `context-slim`, `judge-motion`).
 
 | Provider | Host | Discovery location |
 |---|---|---|
 | Claude | Claude Code | `<install-home>/.claude/skills/<skill>/` |
 | GPT | GitHub Copilot CLI | `<install-home>/.copilot/skills/<skill>/` |
 
-Authentication is a separate axis from selection: Claude uses the host's own model (no API key); GPT
-authenticates via GitHub Copilot sign-in (`gh auth login`) — **no `OPENAI_API_KEY` required** (it is
-only an optional direct-OpenAI fallback). Install flags: `-Uninstall` removes a profile, `-Force`
-overwrites a colliding non-skill-mesh file (`-Home` aliases `-Destination`, `-Provider` aliases
-`-Profile`). Runtime host auto-detection (`-Provider auto`), the full auth/capability/exclusion
-matrices, and the selection/transport contract:
-[documentation/providers/](documentation/providers/README.md) and
-[architecture.md](documentation/architecture.md) §5.
+- **Install** — see [Quick start](#quick-start). Flags: `-Uninstall`, `-Force`, `-Home`/`-Destination`, `-Provider`/`-Profile`.
+- **Auth** (a separate axis from selection) — Claude uses the host's own model (no key); GPT via GitHub Copilot sign-in (`gh auth login`), **no `OPENAI_API_KEY`** needed.
+- **Deep dive** — router auto-detection, the full auth/capability/exclusion matrices, and the selection/transport contract: [documentation/providers/](documentation/providers/README.md), [architecture.md](documentation/architecture.md) §5.
 
 ## Status & adapting
 
