@@ -43,6 +43,44 @@ Order is load-bearing twice. **plan-review before repo-sync**: a gap caught afte
 means editing the plan plus N issue bodies (the "N+1 edit" trap). **repo-sync before build-phase**:
 build-phase posts live progress to those issues, so blank `Issue:` lines kill the audit trail.
 
+### Inside one build step: the review gate
+
+The core pipeline's BUILD stage is a gated loop, not a straight line. Every `build-step` runs a
+developer agent in an isolated worktree, then clears independent reviewers before anything merges:
+
+```mermaid
+flowchart TD
+    DEV["Developer agent writes code + tests<br/>(isolated worktree, fresh context)"]
+    GATES{"Automated gates:<br/>typecheck, lint, test"}
+    REV["5 independent reviewers, in parallel<br/>correctness, bugs, security, tests, style<br/>every finding cites file:line or is dropped"]
+    AGG{"Deterministic verdict:<br/>zero high AND under two medium = PASS"}
+    MERGE["Merge + post-merge test gate,<br/>then close the issue"]
+    BLOCK["BLOCKED: worktree preserved"]
+    DEV --> GATES
+    GATES -->|fail| DEV
+    GATES -->|pass| REV
+    REV --> AGG
+    AGG -->|"NEEDS-WORK: findings fed back, same worktree"| DEV
+    AGG -->|PASS| MERGE
+    AGG -.->|"max-iter (default 3), or same bug 3x"| BLOCK
+```
+
+- **The producer never grades itself.** The developer works in an isolated worktree and never shares
+  context with the reviewers; automated gates (typecheck, lint, test) must pass *before* any reviewer
+  sees the diff — a gate failure bounces straight back.
+- **Reviewers are independent and evidence-bound.** The `code` lane spawns five reviewers in one
+  parallel batch, one lens each; every finding must cite `file:line` or it is dropped, never counted.
+- **The verdict is a deterministic reducer, not a model** — the same findings always produce the same
+  PASS / NEEDS-WORK, written to a `verdict.json` sidecar.
+- **Bounce-and-iterate is cumulative and bounded.** NEEDS-WORK feeds every finding back to the same
+  developer in the same worktree (up to `--max-iter`, default 3); three repeats of the same bug-shape
+  trip stop-and-audit and the step goes BLOCKED with its worktree preserved. Only a PASS merges — and
+  a post-merge test gate then runs in the main project before the issue closes.
+
+Reviewer lanes scale the scrutiny: `auto` (tests only) · `code` (5 lenses) · `deep` (delegates to
+`review-deep`'s six-lens engine + JSON audit trail) · `runtime` (3 evidence agents on a running app) ·
+`full` (all 8).
+
 ### The routing web
 
 Every operator fragment — a bug report, a half-formed feature idea, a "does this even work?" — lands
@@ -196,8 +234,9 @@ Prefer the à-la-carte version when you want to inspect between stages:
 One skill, three independent knobs:
 
 - `--isolation worktree|docker` — where the developer agent works (worktree default).
-- `--reviewers auto|code|runtime|full` — `auto` = quality gates only; `code` = 4 parallel
-  review-gauntlet agents; `runtime` = 3 evidence-based reviewers; `full` = all seven.
+- `--reviewers auto|code|deep|runtime|full` — `auto` = quality gates only; `code` = 5 parallel
+  review-gauntlet agents; `deep` = one review-deep call; `runtime` = 3 evidence-based reviewers;
+  `full` = all eight (5 code + 3 runtime).
 - `--ui --start-cmd "<cmd>" --url <url>` — Playwright evidence capture for frontend steps.
 
 </details>
