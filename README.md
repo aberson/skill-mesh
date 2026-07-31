@@ -48,22 +48,10 @@ build-phase posts live progress to those issues, so blank `Issue:` lines kill th
 The core pipeline's BUILD stage is a gated loop, not a straight line. Every `build-step` runs a
 developer agent in an isolated worktree, then clears independent reviewers before anything merges:
 
-```mermaid
-flowchart TD
-    DEV["Developer agent writes code + tests<br/>(isolated worktree, fresh context)"]
-    GATES{"Automated gates:<br/>typecheck, lint, test"}
-    REV["5 independent reviewers, in parallel<br/>correctness, bugs, security, tests, style<br/>every finding cites file:line or is dropped"]
-    AGG{"Deterministic verdict:<br/>zero high AND under two medium = PASS"}
-    MERGE["Merge + post-merge test gate,<br/>then close the issue"]
-    BLOCK["BLOCKED: worktree preserved"]
-    DEV --> GATES
-    GATES -->|fail| DEV
-    GATES -->|pass| REV
-    REV --> AGG
-    AGG -->|"NEEDS-WORK: findings fed back, same worktree"| DEV
-    AGG -->|PASS| MERGE
-    AGG -.->|"max-iter (default 3), or same bug 3x"| BLOCK
-```
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="_shared/review-gate-dark.svg">
+  <img alt="Inside one build step, left to right: a developer agent in an isolated worktree, then automated gates (typecheck, lint, test), then five parallel independent reviewers, then a deterministic verdict — which passes forward to merge (plus a post-merge test gate), bounces a fail back from the gates, bounces needs-work back to the developer, or blocks when the iteration cap is hit." src="_shared/review-gate-light.svg">
+</picture>
 
 - **The producer never grades itself.** The developer works in an isolated worktree and never shares
   context with the reviewers; automated gates (typecheck, lint, test) must pass *before* any reviewer
