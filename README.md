@@ -45,29 +45,20 @@ build-phase posts live progress to those issues, so blank `Issue:` lines kill th
 
 ### Inside one build step: the review gate
 
-The core pipeline's BUILD stage is a gated loop, not a straight line. Every `build-step` runs a
-developer agent in an isolated worktree, then clears independent reviewers before anything merges:
+The core pipeline's BUILD box is a gated loop, not a straight line:
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="_shared/review-gate-dark.svg">
   <img alt="Inside one build step, left to right: a developer agent in an isolated worktree, then automated gates (typecheck, lint, test), then five parallel independent reviewers, then a deterministic verdict — which passes forward to merge (plus a post-merge test gate), bounces a fail back from the gates, bounces needs-work back to the developer, or blocks when the iteration cap is hit." src="_shared/review-gate-light.svg">
 </picture>
 
-- **The producer never grades itself.** The developer works in an isolated worktree and never shares
-  context with the reviewers; automated gates (typecheck, lint, test) must pass *before* any reviewer
-  sees the diff — a gate failure bounces straight back.
-- **Reviewers are independent and evidence-bound.** The `code` lane spawns five reviewers in one
-  parallel batch, one lens each; every finding must cite `file:line` or it is dropped, never counted.
-- **The verdict is a deterministic reducer, not a model** — the same findings always produce the same
-  PASS / NEEDS-WORK, written to a `verdict.json` sidecar.
-- **Bounce-and-iterate is cumulative and bounded.** NEEDS-WORK feeds every finding back to the same
-  developer in the same worktree (up to `--max-iter`, default 3); three repeats of the same bug-shape
-  trip stop-and-audit and the step goes BLOCKED with its worktree preserved. Only a PASS merges — and
-  a post-merge test gate then runs in the main project before the issue closes.
+What the diagram can't show: **independence is engineered** — reviewers run in fresh, isolated context
+(the producer never grades itself), and every finding must cite `file:line` or it is dropped; and **the
+verdict is a deterministic reducer, not a model** — the same findings always yield the same result,
+written to a `verdict.json` sidecar.
 
-Reviewer lanes scale the scrutiny: `auto` (tests only) · `code` (5 lenses) · `deep` (delegates to
-`review-deep`'s six-lens engine + JSON audit trail) · `runtime` (3 evidence agents on a running app) ·
-`full` (all 8).
+Lanes scale the scrutiny: `auto` (tests only) → `code` (5 lenses) → `deep` (`review-deep` + audit
+trail) → `runtime` / `full` (evidence on a running app).
 
 ### The routing web
 
