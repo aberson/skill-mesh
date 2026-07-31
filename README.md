@@ -15,82 +15,6 @@ Code and GitHub Copilot from one behavior contract.**
 Swap the placeholders (`<workspace>`, `<project>`, `<your-org>`) before use — see
 [Adapt before use](#adapt-before-use).
 
-## How I work with agents
-
-Agents are fast and confidently wrong. The whole toolkit rests on one bet: never trust an agent's
-output until an independent gate has proven it — so agent work runs as a pipeline where every stage
-hands off through a gate, not a vibe.
-
-- **Plans are gated before they become issues.** A gap caught after issues are minted costs N+1
-  edits, so `plan-review` audits the plan and `plan-wrap` proves it is self-contained for a
-  fresh-context model — before a single issue is cut.
-- **Building is autonomous; acceptance is not.** `build-phase` runs unattended, but every step is
-  cleared by independent, context-isolated reviewers whose findings must cite `file:line`. The human
-  sits at the three gates the pipeline never crosses alone: plan sign-off, UAT acceptance, and any
-  change to the skills themselves.
-- **Even the skills that improve the skills keep a human at the merge gate.** `skill-evolve`
-  A/B-tests variants and prints the PR command; it never opens it. Improvement is
-  explore-then-exploit — brainstorm framings, A/B them, hill-climb the winner.
-
-<details>
-<summary><strong>Why the gates exist</strong></summary>
-
-The gates are not ceremony; each exists because its absence shipped a real bug that tests missed:
-
-- **A storage-shape change silently narrowed an API response from five items to one.** 600+ unit
-  tests passed — the mocks encoded the new shape — and the failing integration tests were "fixed" to
-  assert the new (wrong) count. An independent reviewer reading the diff against *intent*, not the
-  mocks, is what catches that class; it is why `review-deep` carries a producer→consumer lens.
-- **A key-shape change updated the producer but missed one downstream consumer.** Unit tests with
-  mocks on either side couldn't see the drift; it surfaced only in a long soak run. The fix is a
-  discipline the review lenses now enforce: grep every consumer of a changed key/id shape and test
-  the full producer→consumer round trip.
-
-*(Real incidents from the source workspace, project details stripped.)*
-
-</details>
-
-## Under the hood
-
-- **Independent review, not self-review.** `review-deep` dispatches six fresh-context lens reviewers
-  in a single parallel batch — correctness, bugs, security, test-quality, style/conventions, and
-  plan-conformance — each of which must cite `file:line` evidence or have its finding dropped. A
-  deterministic aggregator (fixed dedup + tie/escalation rules) renders the verdict, and the producer
-  never grades itself. (`review-gauntlet` is the lean five-lens profile over the same engine.)
-- **Judges are calibrated, not trusted on faith.** The judging doctrine
-  ([`_shared/judge-core.md`](_shared/judge-core.md)) codifies archetype×dimension selection, anchored
-  low-cardinality rubrics, swap-and-tie for pairwise comparison, and cross-family bias-cancellation. A
-  zero-live-LLM calibration check ([`_shared/calibrate_judge.py`](_shared/calibrate_judge.py)) replays
-  a recorded judge snapshot through freshness, discrimination (known-good must out-score known-bad),
-  and gold-agreement — and fails closed.
-- **Fail-closed and reproducible.** `-Provider auto` selects only from trustworthy host-identity
-  markers and exits with code 2 on ambiguity rather than guessing; credentials are excluded from
-  selection by design. Releases stage from `git ls-files` (tracked content only) and are checksummed
-  byte-for-byte (SHA-256), reproducible across machines regardless of line endings. ~250 tests span
-  seven suites (router, calibration, package-integrity, distributions, release, telemetry, smoke).
-
-<details>
-<summary><strong>See it work — the shape of a review verdict</strong></summary>
-
-Every lens emits findings in one evidence-bound shape, then a fixed verdict; a finding without a
-`file:line` and an excerpt is dropped, never counted:
-
-```text
-file:line — <one-line summary>
-  Severity: Block | Nit | FYI
-  Excerpt: `<exact offending text>`
-  Reasoning: <how it fails, under what condition>
-
-Bugs verdict: NEEDS-WORK (1 Block, 0 Nit)
-```
-
-A lens emits `PASS` only when confident with zero `Block`/`Nit` findings; it can also return
-`UNCERTAIN` (never inferred from absence of evidence) or `NO-EVIDENCE`. `review-deep` writes the full
-six-lens audit trail to a JSON sidecar. *(This is the documented output contract — evidence-bound by
-construction; captured run artifacts stay in the private workspace.)*
-
-</details>
-
 ## Workflows
 
 How these skills **chain together** in practice — every sequence below is a workflow run in
@@ -184,20 +108,20 @@ Links point to each skill's `core.md` behavior contract; the 3 Claude-native ski
 
 ## Pick your entry point
 
-| Start with | Situation | The non-obvious bit |
-|---|---|---|
-| [`/plan-init`](#entry-1) | Brand-new project, no code yet | Gated to greenfield — any existing commit redirects to `plan-feature`. |
-| [`/plan-feature`](#entry-2) | Add a feature to an existing project | `plan-review` finds technical gaps; `plan-wrap` proves the plan is self-contained — different checks. |
-| [`/build-step`](#entry-3) | One well-scoped change, no plan needed | One skill, three orthogonal knobs — isolation, reviewers, UI. |
-| [`/user-debug`](#entry-4) | Stuck in a loop on a bug with the agent | Forces an independent repro before any code change; re-routes to a plan seed if the "bug" is really a feature. |
-| [`/review-gauntlet`](#entry-5) | Review a diff or PR | A thin profile over `review-deep`'s engine — same lenses, terser verdict. |
-| [`/review-uat`](#entry-6) | A feature just built needs human acceptance | Agent runs the mechanical tier and auto-judges; every judgment call is escalated with evidence, never guessed. |
-| [`/build-queue`](#entry-7) | Several phases ready; run them overnight | Every halt parks as a GitHub issue; nothing retries at 3am. |
-| [`/user-wrap`](#entry-8) | "Where were we?" / sitting back down at a window | One skill makes the wrap/continue/clear call; the rest are libraries it calls. |
-| [`/user-gateway`](#entry-8) | A head full of half-formed observations | Sorts a brain-dump across 8 rails, one ledger row per fragment — invents nothing of its own. |
-| [`/user-pm`](#entry-9) | Plan drifted, or survey what to do next | Prescribes but never executes; `plan-trim` is its write path. |
-| [`/skill-evolve`](#entry-10) | Improve the skills or the workspace's memory | Nothing self-approves — it prints the PR command, never opens it. |
-| [`/user-brainstorm`](#entry-11) | Explore an idea or learn a topic | Deliberately conversational — keeps you in the loop. |
+| Start with | What it's for |
+|---|---|
+| [`/plan-init`](#entry-1) | Brand-new project — gated to greenfield; any existing commit redirects to `plan-feature`. |
+| [`/plan-feature`](#entry-2) | Add a feature to existing code — `plan-review` finds gaps, `plan-wrap` proves self-containment. |
+| [`/build-step`](#entry-3) | One well-scoped change, no plan — three orthogonal knobs (isolation, reviewers, UI). |
+| [`/user-debug`](#entry-4) | Stuck circling a bug — forces an independent repro before any code change. |
+| [`/review-gauntlet`](#entry-5) | Review a diff or PR — lean profile over `review-deep`'s engine, terser verdict. |
+| [`/review-uat`](#entry-6) | A build needs human acceptance — agent runs the mechanical tier, escalates judgment calls with evidence. |
+| [`/build-queue`](#entry-7) | Run several phases overnight — every halt parks as a GitHub issue; nothing retries at 3am. |
+| [`/user-wrap`](#entry-8) | Sitting back down / "where were we?" — one skill makes the wrap/continue/clear call. |
+| [`/user-gateway`](#entry-8) | A head full of half-formed observations — sorts the brain-dump across 8 rails, one row each. |
+| [`/user-pm`](#entry-9) | Survey or challenge the plan — prescribes but never executes; `plan-trim` writes. |
+| [`/skill-evolve`](#entry-10) | Improve the skills themselves — A/B variants; prints the PR, never opens it. |
+| [`/user-brainstorm`](#entry-11) | Explore an idea or learn a topic — deliberately conversational. |
 
 <a id="entry-1"></a>
 <details>
@@ -533,8 +457,9 @@ hosts; 3 are Claude-native (`claude-oauth-auth`, `context-slim`, `judge-motion`)
 
 - ~50 skills; 47 portable across Claude Code + GitHub Copilot behind one behavior contract; 3 Claude-native.
 - Shipped: the canonical `skills/<name>/{core.md,providers/}` source tree, the provider-neutral router,
-  and the distribution builder, installer, and release tooling. (Review, calibration, and
-  reproducibility details are above under [Under the hood](#under-the-hood).)
+  and the distribution builder, installer, and release tooling (reproducible SHA-256 checksums over a
+  `git ls-files` stage); ~250 tests across seven suites (router, calibration, package-integrity,
+  distributions, release, telemetry, smoke).
 - The original 46 top-level `<skill>/SKILL.md` packages remain as a compatibility surface during a
   deprecation window — not the canonical source, and not updated by this migration; see
   [documentation/migration.md](documentation/migration.md).
