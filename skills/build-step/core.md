@@ -50,6 +50,8 @@ Any combination is valid. Examples:
 | `--keep-evidence` | no | false | Preserve evidence directory on PASS |
 | `--exercise-cmd` | no | -- | Absolute path to Playwright exercise script |
 | `--exercise-timeout` | no | 30 | Max seconds for exercise script |
+| `--verdict-path` | build-phase only | host temp path | Durable parent-owned verdict path outside the developer worktree |
+| `--verdict-run-id` | build-phase only | generated UUID | Opaque parent-minted identity bound to the durable verdict |
 
 ---
 
@@ -163,6 +165,28 @@ Requires `--start-cmd` and `--url`. Implies `--ui`.
    sub-steps. 50 min wasted before the kiosk PIN gate was identified.
 
 ### Step 1 -- Create isolated environment
+
+Before spawning the developer, establish the verdict channel:
+
+1. `--verdict-path` and `--verdict-run-id` are an all-or-none set. When
+   supplied by build-phase, require both and reject empty values. The path MUST
+   be outside the developer worktree. The parent-local `VERDICT_KEY` is never a
+   CLI/skill argument: the same parent orchestration context retains it in
+   private state while executing this core. If a host runs build-step in a
+   distinct context and cannot carry private parent metadata without recording
+   it in the transcript, halt `required_tool_missing`.
+2. Standalone `/build-step` does not create a machine verdict sidecar; its prose
+   report is for the invoking operator only. All write requirements below apply
+   only when the parent supplied the complete channel.
+3. For a parent-supplied channel, delete any pre-existing target, then
+   atomically initialize it with
+   `write_verdict(... terminal="NEEDS WORK", summary="run incomplete")` from
+   `../../_shared/build_step_verdict.py`, using the parent key.
+   A crash therefore fails closed.
+4. Never include the verdict path, run id, or parent-local `VERDICT_KEY` in
+   developer/reviewer prompts, environment variables, worktree files,
+   container mounts, or durable reports. Child agents do not own or authenticate
+   this channel.
 
 #### Worktree (default)
 
@@ -580,25 +604,27 @@ Verdict:
   at least one reviewer confirms expected behavior was observed
 - **NEEDS WORK** -- any high finding, or 2+ medium findings, or coverage gate failed
 
-#### Emit the machine-readable verdict (verdict.json)
+#### Prepare the machine-readable verdict
 
-**Also write** a verdict sidecar so `/build-phase` can consume the result without re-parsing this
-prose return. This is a **THIN translation** of the normalization table above into a structured
-file — NOT adoption of review-deep's `aggregate.py` (we mirror its `result` enum only).
+Compute the Step 7 result in memory. Do **not** write a durable PASS yet:
+merge and post-merge gates have not run. The durable verdict is finalized on
+every terminal path using
+`../../_shared/build_step_verdict.py::write_verdict`.
 
-Write `<worktree>/.build-step/verdict.json` (the worktree root this step already uses, convention
-`../worktree_<BRANCH>`; create the `.build-step/` dir if absent). The canonical schema and the
-default-deny consume rule both live in `_shared/build_step_verdict.py` — treat that module as the
-single source of truth; this table is its EMIT-side mirror.
+Write only to `--verdict-path`, never inside `<worktree>`. The canonical schema,
+atomic writer, and default-deny consume rule live in
+`../../_shared/build_step_verdict.py`; treat that module as the source of truth.
 
-Schema: `{timestamp, result, halt, summary}`
-- `timestamp` — ISO-8601 of when you wrote the verdict.
-- `result` — enum `PASS | NEEDS-WORK | DEFERRED-TO-UAT` (build-step emits `DEFERRED-TO-UAT`
-  only on the `deep` lane, passing review-deep's aggregated verdict through; it is a valid
-  ADVANCE on the consume side. The other lanes never emit it).
-- `halt` — `POST_MERGE_HALT | SHIP_GATE_HALT | null` (the in-band sentinel from the table above,
-  stripped of its trailing colon; `null` when no halt fired).
+Schema: `{schema_version, timestamp, run_id, writer, result, halt, summary, signature}`
+- `schema_version` — integer `2`.
+- `timestamp` — ISO-8601 of when the terminal verdict was written.
+- `run_id` — exact `--verdict-run-id`.
+- `writer` — locked string `build-step-orchestrator`.
+- `result` — enum `PASS | NEEDS-WORK | DEFERRED-TO-UAT`.
+- `halt` — `POST_MERGE_HALT | SHIP_GATE_HALT | null`.
 - `summary` — one-line human-readable rationale.
+- `signature` — lowercase HMAC-SHA256 over every prior field using the
+  parent-local `VERDICT_KEY`.
 
 Translator mapping (terminal string → `result`):
 
@@ -618,17 +644,17 @@ makes the consumer treat the step as BLOCKED regardless of `result`.
 Example (PASS):
 
 ```json
-{"timestamp": "2026-06-22T10:15:30Z", "result": "PASS", "halt": null, "summary": "zero high, 1 medium; runtime confirmed expected behavior"}
+{"schema_version":2,"timestamp":"2026-06-22T10:15:30Z","run_id":"550e8400-e29b-41d4-a716-446655440000","writer":"build-step-orchestrator","result":"PASS","halt":null,"summary":"post-merge gates passed","signature":"<64 lowercase hex>"}
 ```
 
 Example (post-merge halt):
 
 ```json
-{"timestamp": "2026-06-22T10:15:30Z", "result": "NEEDS-WORK", "halt": "POST_MERGE_HALT", "summary": "main-project test gate red after merge; merge clobbered prior-step changes"}
+{"schema_version":2,"timestamp":"2026-06-22T10:15:30Z","run_id":"550e8400-e29b-41d4-a716-446655440000","writer":"build-step-orchestrator","result":"NEEDS-WORK","halt":"POST_MERGE_HALT","summary":"main-project test gate red after merge","signature":"<64 lowercase hex>"}
 ```
 
-The existing prose verdict (PASS / NEEDS WORK) remains the human-facing return — this sidecar is
-**additive**.
+The prose verdict remains human-facing only. A parent that supplied the durable
+channel never parses prose for authorization.
 
 ### Step 8 -- On PASS
 
@@ -651,11 +677,20 @@ The existing prose verdict (PASS / NEEDS WORK) remains the human-facing return �
    - Worktree-with-UI environment: Step 5's copy loop should ALSO apply this same classification (back-propagated; full-file `cp` in Step 5 is the known loophole — Step 5 sub-step 1 must honor shared-file Edit semantics or this gate is too late). For now, re-verify by sampling: if any shared file shows clobbered prior-step content, HALT.
    - Docker environment: classification predicate runs in `$PROJECT` against the worktree's branch regardless of whether the source is `$WORKTREE` or `workspace/results/`.
    See `dev/.claude/rules/worktree-hygiene.md § 5` (silent no-op when merge runs in wrong worktree — always use `git -C "$PROJECT"`) and `§ 6` (shared-file overwrite risk).
-2. **Post-merge test gate (mandatory):** run the test suite IN the main project (`cd "$PROJECT" && <test_command>`), NOT just in the worktree. If it fails (worktree-green + main-project-red = merge clobbered something), echo the literal sentinel `POST_MERGE_HALT:` followed by the failing tests, do NOT close the issue or declare PASS, exit non-zero. The orchestrator routes `POST_MERGE_HALT:` to the operator as a BLOCKED step — NOT a developer-iteration trigger (the merge mechanics broke; no developer-side fix applies). See Step 7 normalization table.
-3. Clean up worktree/branch (or container)
-4. Clean up evidence (unless `--keep-evidence`)
-5. Restore stash if created
-6. Close issue if `--issue` provided. **Ship-gate re-check** (run the canonical block from Step 5.5) immediately before — avoid closing an issue another session already closed:
+2. **Post-merge test gate (mandatory):** run the test suite IN the main project (`cd "$PROJECT" && <test_command>`), NOT just in the worktree. If it fails, atomically call `write_verdict` with `terminal="NEEDS WORK"`, `halt="POST_MERGE_HALT"`, and the parent run id/path/key **before returning**. Echo the literal sentinel `POST_MERGE_HALT:` followed by the failing tests, do NOT close the issue or declare PASS, exit non-zero. The orchestrator routes the halt to the operator, not developer iteration.
+3. Run the final **ship-gate re-check**. Any `SHIP_GATE_HALT` atomically
+   overwrites the durable verdict with `terminal="NEEDS WORK"` and
+   `halt="SHIP_GATE_HALT"` before returning.
+4. Clean up worktree/branch (or container), clean up evidence (unless
+   `--keep-evidence`), and restore the stash. If any cleanup/restoration fails,
+   atomically write `NEEDS WORK` before returning.
+5. **Finalize PASS only after every merge, post-merge, ship-gate, cleanup, and
+   restoration operation succeeds.** Atomically call `write_verdict` with the
+   parent path/run id/key and the in-memory terminal result (`PASS`, `APPROVED`,
+   or `DEFERRED-TO-UAT`).
+6. Close the issue if `--issue` was provided. Issue closure is best-effort
+   bookkeeping after the code verdict; if it fails, report a warning and leave
+   the authenticated PASS unchanged:
    ```bash
    gh issue close $ISSUE --comment "Completed via build-step. All gates passing."
    ```
@@ -675,10 +710,13 @@ If iterations remain AND the stop-and-audit check did not trigger:
 3. Developer works in the same worktree (cumulative fixes)
 
 If max iterations exhausted: **BLOCKED**
-1. Print remaining findings
-2. Keep worktree alive for manual inspection
-3. Restore stash if created
-4. Report:
+1. Atomically call `write_verdict` with `terminal="NEEDS WORK"`, halt `null`,
+   and a summary naming the terminal reason. This overwrites a planted or stale
+   file.
+2. Print remaining findings
+3. Keep worktree alive for manual inspection
+4. Restore stash if created
+5. Report:
    ```text
    build-step BLOCKED after N/M iterations
 
@@ -689,6 +727,13 @@ If max iterations exhausted: **BLOCKED**
    Worktree: <path>
    Branch: <branch>
    ```
+
+When a parent-supplied channel exists, every other terminal BLOCKED path
+(stop-and-audit, required tool missing,
+reviewer parse failure, merge conflict, or ship-gate halt) MUST call
+`write_verdict` before returning. No terminal path may inherit the initialized
+`run incomplete` verdict or a provisional result. Standalone invocations return
+the same human-facing result without writing a sidecar.
 
 ### Step 10 -- Final report
 
@@ -703,7 +748,7 @@ build-step complete
   Deep review: aggregated <PASS|NEEDS-WORK|DEFERRED-TO-UAT>; audit sidecar .review-deep/<timestamp>.json   (if applicable)
   Runtime: UI OK, backend OK, frontend OK                     (if applicable)
   Tests: X/Y passing
-  Issue: #N closed
+  Issue: #N closed | #N close failed (warning) | not supplied
 ```
 
 > Next-step commands name their target directory, and the proactive project-switch message fires on a cwd≠project mismatch with no pin, per transition-directory-contract.md.

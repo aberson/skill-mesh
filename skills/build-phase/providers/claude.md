@@ -12,6 +12,7 @@ Model: Claude model selected by `.claude/references/model-tiering.md`
 ## Provider-specific instructions
 - Load the core in full before acting. Use Claude Code's Skill tool for named-skill calls and Agent/Workflow tools for isolated agents where core requires those host abstractions.
 - Preserve the core's gates, retry limits, filesystem safety, and exact output contracts.
+- Mint the durable verdict path/run id/HMAC key in the parent context; never serialize the key into skill arguments or child-visible state. Require authenticated run-bound classification and unconditional sidecar cleanup. Never authorize advancement from prose.
 - Use Claude session JSONL, scratchpad identity, Artifact actions, or VS Code deep links only where this wrapper can supply them and core requests the corresponding abstraction.
 
 ## Output normalization

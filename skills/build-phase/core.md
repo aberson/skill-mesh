@@ -501,10 +501,27 @@ EOF
 
 #### 2b. Run build-step
 
-Invoke `/build-step` with the step's problem statement, flags, and issue number. When the step's `Done when:` was extracted in Step 0 sub-bullet 6 as a present, non-sentinel value, forward it as `--acceptance "<done-when>"`; when it was absent or a §3 sentinel, forward NO `--acceptance` — the invocation is then byte-identical to today's (INV-2 no-op):
+Before invoking `/build-step`, generate a UUIDv4 `VERDICT_RUN_ID`, a
+cryptographically random parent-local `VERDICT_KEY` encoded as 64 lowercase hex
+characters, and a durable `VERDICT_PATH` below the platform temp directory:
+`skill-mesh/build-step-verdicts/<VERDICT_RUN_ID>.json`. Retain the key only in
+the parent orchestration state; it MUST NOT be a skill argument, tool argument,
+environment variable, prompt field, file, log, or report. If the host cannot
+retain private parent state while executing build-step, halt
+`required_tool_missing`.
+
+Immediately after creating the channel, wrap the entire per-step flow (§2a
+through §2g) in unconditional finalization. On every return, exception, BLOCKED
+verdict, overlap halt, quality-gate halt, or successful checkpoint, delete
+`VERDICT_PATH`. Failure to delete is a warning; the unique run id/key prevent
+reuse.
+
+Invoke `/build-step` with the step's problem statement, flags, issue number, and
+durable verdict channel. When the step's `Done when:` was extracted in Step 0
+sub-bullet 6 as a present, non-sentinel value, forward it as `--acceptance`.
 
 ```text
-/build-step --problem "<problem>" --issue <N> <flags> [--acceptance "<done-when>"]
+/build-step --problem "<problem>" --issue <N> <flags> [--acceptance "<done-when>"] --verdict-path "<VERDICT_PATH>" --verdict-run-id "<VERDICT_RUN_ID>"
 ```
 
 The `[--acceptance ...]` is optional and advisory: `/build-step` (Step 5 of this plan) routes it into the developer prompt only; it feeds no verdict path, no gate, and no halt.
@@ -513,27 +530,26 @@ The `[--acceptance ...]` is optional and advisory: `/build-step` (Step 5 of this
 
 **Keep the orchestrator window slim** (per `dev/.claude/rules/subagent-economy.md`): `/build-step` returns a terse report and writes detail to its `.build-step/` files. Capture only the verdict + counts (below); read the `.build-step/*` detail files ONLY when a step BLOCKs and you need findings. Do not re-`Read` `plan.md`/`current.md` you've already read this run, and do not paste full diffs or sub-agent reports into the window — anything that lands here stays resident for the rest of the phase (the dominant token cost).
 
-**Primary capture — read the verdict sidecar.** After `/build-step` completes, read its
-machine-readable verdict at `<worktree_path>/.build-step/verdict.json` (the worktree root the step
-used, convention `../worktree_<BRANCH>`) and apply the consume rule **canonically specified and
-tested in `_shared/build_step_verdict.py::classify_verdict`**. That rule is DEFAULT-DENY /
-FAIL-CLOSED:
+**Only capture — read the durable verdict sidecar.** After `/build-step`
+completes, read `VERDICT_PATH` and call
+`classify_verdict(VERDICT_PATH, expected_run_id=VERDICT_RUN_ID,
+expected_secret=VERDICT_KEY)`. The rule is
+canonically specified and tested in
+`../../_shared/build_step_verdict.py` and is
+DEFAULT-DENY / FAIL-CLOSED:
 
 - **ADVANCE** (treat as PASS, proceed to the next step) **only** when `result ∈ {PASS,
   DEFERRED-TO-UAT}` **and** `halt` is `null`.
-- **BLOCKED** for everything else — `result == NEEDS-WORK`, any non-null `halt`
+- **BLOCKED** for everything else — mismatched/missing schema, writer, run id,
+  or HMAC signature;
+  `result == NEEDS-WORK`; any non-null `halt`
   (`POST_MERGE_HALT` / `SHIP_GATE_HALT`, which surface to the operator and do NOT trigger
   developer iteration), an unknown/missing `result`, an unrecognized halt sentinel, or a file that
   is **missing, unreadable, or malformed JSON** (fail closed — never ADVANCE on ambiguity).
 
-Do not re-implement this branching by hand — the two-string `"ADVANCE"` / `"BLOCKED"` outcome is
-exactly what `classify_verdict(verdict_path)` returns; treat that module as the source of truth so
-this prose and the test never drift.
-
-**Fallback (older build-step with no sidecar).** If `verdict.json` is absent (a build-step
-predating this contract), fall back to parsing the prose return for its terminal PASS / NEEDS WORK
-string — and if that prose is ambiguous or unparseable, treat it as **fail-closed NEEDS-WORK
-(BLOCKED)**, never an implicit PASS.
+Do not re-implement this branching by hand and do not parse prose as an
+authorization fallback. Because build-phase always supplies the channel, a
+missing sidecar is BLOCKED. Surface the human report only after classification.
 
 After classifying, capture for the issue comment + checkpoint:
 - Verdict (PASS / BLOCKED) — the consumed `ADVANCE`→PASS / `BLOCKED`→BLOCKED result above
@@ -542,6 +558,10 @@ After classifying, capture for the issue comment + checkpoint:
 - Test results (count, pass/fail)
 - If BLOCKED: remaining findings (and `summary` / `halt` from the sidecar when present)
 - If PASS after iteration > 1: what changed between iterations
+
+Retain the durable verdict until the issue comment, §2f gate, and §2e
+checkpoint/blocked handling finish. The unconditional per-step finalizer owns
+deletion, including every early halt path.
 
 #### 2d. Post result comment to GitHub issue
 

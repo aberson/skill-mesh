@@ -18,6 +18,8 @@ from pathlib import Path
 
 import pytest
 
+SECRET = "11" * 32
+
 # Sibling import - same dir as the module under test.
 THIS_DIR = Path(__file__).resolve().parent
 if str(THIS_DIR) not in sys.path:
@@ -26,8 +28,11 @@ if str(THIS_DIR) not in sys.path:
 from build_step_verdict import (  # noqa: E402  (sys.path tweak above)
     ADVANCE,
     BLOCKED,
+    ORCHESTRATOR_WRITER,
+    SCHEMA_VERSION,
     classify_verdict,
     translate_build_step_verdict,
+    write_verdict,
 )
 
 
@@ -82,6 +87,60 @@ def test_deferred_to_uat_with_null_halt_advances(tmp_path):
         {"timestamp": "t", "result": "DEFERRED-TO-UAT", "halt": None, "summary": "x"},
     )
     assert classify_verdict(p) == ADVANCE
+
+
+def test_expected_run_id_requires_versioned_orchestrator_identity(tmp_path):
+    p = _write_verdict(
+        tmp_path,
+        {
+            "schema_version": SCHEMA_VERSION,
+            "timestamp": "t",
+            "run_id": "run-123",
+            "writer": ORCHESTRATOR_WRITER,
+            "result": "PASS",
+            "halt": None,
+            "summary": "x",
+        },
+    )
+    # Re-write through the authenticated writer; hand-built unsigned payloads fail.
+    write_verdict(
+        p,
+        run_id="run-123",
+        secret=SECRET,
+        terminal="PASS",
+        summary="x",
+    )
+    assert classify_verdict(
+        p, expected_run_id="run-123", expected_secret=SECRET
+    ) == ADVANCE
+    assert classify_verdict(
+        p, expected_run_id="other-run", expected_secret=SECRET
+    ) == BLOCKED
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("schema_version", 1),
+        ("writer", "developer"),
+        ("run_id", ""),
+    ],
+)
+def test_expected_run_id_rejects_identity_tampering(tmp_path, field, value):
+    payload = {
+        "schema_version": SCHEMA_VERSION,
+        "timestamp": "t",
+        "run_id": "run-123",
+        "writer": ORCHESTRATOR_WRITER,
+        "result": "PASS",
+        "halt": None,
+        "summary": "x",
+    }
+    payload[field] = value
+    p = _write_verdict(tmp_path, payload)
+    assert classify_verdict(
+        p, expected_run_id="run-123", expected_secret=SECRET
+    ) == BLOCKED
 
 
 def test_missing_file_blocks(tmp_path):
@@ -260,6 +319,97 @@ def test_translate_output_classifies_consistently(tmp_path):
     assert classify_verdict(p2) == BLOCKED
 
 
+def test_translate_with_run_id_emits_versioned_identity():
+    out = translate_build_step_verdict("PASS", run_id="run-123")
+    assert out["schema_version"] == SCHEMA_VERSION
+    assert out["run_id"] == "run-123"
+    assert out["writer"] == ORCHESTRATOR_WRITER
+
+
+def test_translate_rejects_empty_run_id():
+    with pytest.raises(ValueError):
+        translate_build_step_verdict("PASS", run_id="")
+
+
+def test_write_verdict_atomically_overwrites_planted_pass(tmp_path):
+    p = tmp_path / "durable" / "verdict.json"
+    p.parent.mkdir()
+    p.write_text(
+        '{"result":"PASS","halt":null,"writer":"developer"}',
+        encoding="utf-8",
+    )
+    payload = write_verdict(
+        p,
+        run_id="run-123",
+        secret=SECRET,
+        terminal="NEEDS WORK",
+        summary="iteration limit exhausted",
+    )
+    assert payload["result"] == "NEEDS-WORK"
+    assert classify_verdict(
+        p, expected_run_id="run-123", expected_secret=SECRET
+    ) == BLOCKED
+    assert not list(p.parent.glob("*.tmp"))
+
+
+def test_write_verdict_replaces_stale_pass_with_post_merge_halt(tmp_path):
+    p = tmp_path / "verdict.json"
+    write_verdict(
+        p, run_id="run-123", secret=SECRET, terminal="PASS", summary="provisional"
+    )
+    write_verdict(
+        p,
+        run_id="run-123",
+        secret=SECRET,
+        terminal="NEEDS WORK",
+        halt="POST_MERGE_HALT",
+        summary="main-project tests failed",
+    )
+    data = json.loads(p.read_text(encoding="utf-8"))
+    assert data["halt"] == "POST_MERGE_HALT"
+    assert classify_verdict(
+        p, expected_run_id="run-123", expected_secret=SECRET
+    ) == BLOCKED
+
+
+def test_authenticated_verdict_rejects_payload_tampering(tmp_path):
+    p = tmp_path / "verdict.json"
+    write_verdict(
+        p, run_id="run-123", secret=SECRET, terminal="PASS", summary="clean"
+    )
+    data = json.loads(p.read_text(encoding="utf-8"))
+    data["summary"] = "developer changed this"
+    p.write_text(json.dumps(data), encoding="utf-8")
+    assert classify_verdict(
+        p, expected_run_id="run-123", expected_secret=SECRET
+    ) == BLOCKED
+
+
+@pytest.mark.parametrize("signature", ["é" * 64, "A" * 64, "0" * 63, 123])
+def test_authenticated_verdict_rejects_malformed_signature(tmp_path, signature):
+    p = tmp_path / "verdict.json"
+    write_verdict(
+        p, run_id="run-123", secret=SECRET, terminal="PASS", summary="clean"
+    )
+    data = json.loads(p.read_text(encoding="utf-8"))
+    data["signature"] = signature
+    p.write_text(json.dumps(data), encoding="utf-8")
+    assert classify_verdict(
+        p, expected_run_id="run-123", expected_secret=SECRET
+    ) == BLOCKED
+
+
+@pytest.mark.parametrize("secret", ["", "aa", "not-hex", "11" * 31])
+def test_write_verdict_rejects_invalid_secret(tmp_path, secret):
+    with pytest.raises(ValueError):
+        write_verdict(
+            tmp_path / "verdict.json",
+            run_id="run-123",
+            secret=secret,
+            terminal="PASS",
+        )
+
+
 # ---------------------------------------------------------------------------
 # prose <-> code contract guard
 # ---------------------------------------------------------------------------
@@ -271,7 +421,7 @@ def test_build_step_skill_documents_translator_table():
     "NEEDS WORK" space-form terminal AND the "NEEDS-WORK" hyphen-form result enum,
     proving the mapping rather than just both strings appearing somewhere."""
     skill = (
-        THIS_DIR.parent / "build-step" / "SKILL.md"
+        THIS_DIR.parent / "skills" / "build-step" / "core.md"
     ).read_text(encoding="utf-8")
     assert "verdict.json" in skill, "build-step SKILL.md must mention verdict.json"
 
@@ -284,3 +434,25 @@ def test_build_step_skill_documents_translator_table():
         "build-step SKILL.md must contain a translator-table row mapping "
         "'NEEDS WORK' (space) -> 'NEEDS-WORK' (hyphen) on a single line"
     )
+
+
+def test_build_contract_uses_durable_run_bound_verdict():
+    build_step = (
+        THIS_DIR.parent / "skills" / "build-step" / "core.md"
+    ).read_text(encoding="utf-8")
+    build_phase = (
+        THIS_DIR.parent / "skills" / "build-phase" / "core.md"
+    ).read_text(encoding="utf-8")
+
+    for token in ("--verdict-path", "--verdict-run-id"):
+        assert token in build_step, f"build-step contract missing {token}"
+        assert token in build_phase, f"build-phase contract missing {token}"
+    assert "--verdict-key" not in build_step
+    assert "--verdict-key" not in build_phase
+    assert "parent-local `VERDICT_KEY`" in build_step
+    assert "parent-local `VERDICT_KEY`" in build_phase
+    assert "write_verdict" in build_step
+    assert "expected_run_id" in build_phase
+    assert "expected_secret" in build_phase
+    assert "Fallback (older build-step with no sidecar)" not in build_phase
+    assert "PASS only after" in build_step

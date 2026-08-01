@@ -74,6 +74,8 @@ $ErrorActionPreference = 'Stop'
 $TOOLS_DIR = $PSScriptRoot
 $REPO_ROOT = Split-Path -Parent $TOOLS_DIR
 $SKILLS_ROOT = Join-Path $REPO_ROOT 'skills'
+$SHARED_ROOT = Join-Path $REPO_ROOT '_shared'
+$VERDICT_HELPER_SOURCE = Join-Path $SHARED_ROOT 'build_step_verdict.py'
 $PATH_GUARD = Join-Path $REPO_ROOT 'runtime\path-guard.ps1'
 $PROVENANCE = Join-Path $TOOLS_DIR 'skill-mesh-provenance.ps1'
 
@@ -182,6 +184,24 @@ function Repoint-CoreReference([string]$adapterBody) {
     return $adapterBody.Replace('../core.md', 'core.md')
 }
 
+function Repoint-VerdictHelperReference([string]$coreBody) {
+    # The canonical cores point at the repo-root shared implementation. Generated
+    # host profiles co-locate a provenance-owned copy beside each consuming core.
+    return $coreBody.Replace('../../_shared/build_step_verdict.py',
+                             'build_step_verdict.py')
+}
+
+function Add-PythonProvenance([string]$body, [string]$canonicalSource, [string]$profile) {
+    # Keep __future__ imports legal by inserting the generated marker INSIDE the
+    # module's existing leading docstring rather than prepending a new statement.
+    $marker = New-ProvenanceHeader $canonicalSource $profile
+    $docStart = $body.IndexOf('"""')
+    if ($docStart -lt 0 -or $docStart -gt 256) {
+        throw "build-distributions: Python support source lacks a leading docstring: $canonicalSource"
+    }
+    return $body.Insert($docStart + 3, "`n$marker")
+}
+
 function Write-GeneratedFile([string]$absPath, [string]$content, [string]$profileDir) {
     # Defense in depth: assert the resolved output path stays within the intended
     # profile dir before writing (name validation is the primary guard; this catches
@@ -277,12 +297,37 @@ foreach ($profile in $profiles) {
         # -- Shared core (portable skills only) --
         if ($hasCore) {
             $coreBody = Read-SourceText $coreAbs
+            if ($name -eq 'build-step' -or $name -eq 'build-phase') {
+                $coreBody = Repoint-VerdictHelperReference $coreBody
+            }
             $coreOut = Add-Provenance $coreBody $coreRel $profile
             Write-GeneratedFile (Join-Path $skillOutDir 'core.md') $coreOut $profileDirAbs
             $fileCount++
         }
 
         $skillCount++
+    }
+
+    # Shared durable-verdict helper. Both build-step and build-phase execute it,
+    # but each host discovery package must remain self-contained; co-locate one
+    # generated copy beside each consuming core. Canonical ownership stays at
+    # repo-root _shared/build_step_verdict.py.
+    $verdictHelperAbs = Resolve-SafePath -Path $VERDICT_HELPER_SOURCE -AllowedRoots @($SHARED_ROOT)
+    if (-not (Test-Path -LiteralPath $verdictHelperAbs -PathType Leaf)) {
+        throw "build-distributions: verdict helper source missing: $verdictHelperAbs"
+    }
+    $verdictHelperBody = Read-SourceText $verdictHelperAbs
+    $verdictHelperOut = Add-PythonProvenance $verdictHelperBody '_shared/build_step_verdict.py' $profile
+    foreach ($consumer in @('build-step', 'build-phase')) {
+        $consumerDir = Join-Path $profileDir $consumer
+        if (-not (Test-Path -LiteralPath $consumerDir -PathType Container)) {
+            # Adversarial/minimal manifests legitimately omit one or both build
+            # skills. Emit support only for consumers present in this profile.
+            continue
+        }
+        Write-GeneratedFile (Join-Path $consumerDir 'build_step_verdict.py') `
+                            $verdictHelperOut $profileDirAbs
+        $fileCount++
     }
 
     Write-Host "build-distributions: $profile -> $profileDir ($skillCount skills, $fileCount files)"

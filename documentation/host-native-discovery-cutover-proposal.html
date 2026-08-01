@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Host-Native Discovery and Consumer Cutover</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #f4f6f8;
+      --panel: #ffffff;
+      --ink: #17202a;
+      --muted: #5f6b76;
+      --line: #d8dee4;
+      --accent: #2457d6;
+      --soft: #eaf0ff;
+      --warn: #8a4b08;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #11151b;
+        --panel: #1b222c;
+        --ink: #eef3f8;
+        --muted: #aab5c0;
+        --line: #36414d;
+        --accent: #8eafff;
+        --soft: #202f54;
+        --warn: #ffc078;
+      }
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font: 16px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif;
+    }
+    main { max-width: 980px; margin: 0 auto; padding: 48px 24px 72px; }
+    h1 { font-size: clamp(2rem, 5vw, 3.5rem); line-height: 1.05; margin: 0 0 16px; }
+    h2 { margin-top: 38px; }
+    h3 { margin-bottom: 8px; }
+    p, li { max-width: 78ch; }
+    .eyebrow { color: var(--accent); font-weight: 750; letter-spacing: .08em; text-transform: uppercase; }
+    .lede { color: var(--muted); font-size: 1.18rem; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 20px;
+    }
+    .id {
+      display: inline-block;
+      margin-right: 8px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: var(--soft);
+      color: var(--accent);
+      font-weight: 750;
+    }
+    .timeline { border-left: 3px solid var(--accent); padding-left: 22px; }
+    .timeline article { margin: 0 0 24px; break-inside: avoid; }
+    code { background: var(--soft); padding: 2px 5px; border-radius: 4px; }
+    .risk { color: var(--warn); font-weight: 700; }
+    footer { margin-top: 48px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 18px; }
+    @media print {
+      @page { margin: 14mm; }
+      :root {
+        --bg: #ffffff;
+        --panel: #ffffff;
+        --ink: #111111;
+        --muted: #444444;
+        --line: #cccccc;
+        --accent: #1746a2;
+        --soft: #eef3ff;
+        --warn: #7a3f00;
+      }
+      * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+      body { background: #fff; }
+      main { max-width: none; padding: 0; }
+      .card, .timeline article { break-inside: avoid; }
+      h1, h2, h3 { break-after: avoid; }
+    }
+  </style>
+</head>
+<body>
+<main>
+  <div class="eyebrow">Operator proposal</div>
+  <h1>Host-native discovery, without the legacy ambiguity</h1>
+  <p class="lede">
+    Make the public skill-mesh package the actual source used by both hosts, migrate the
+    private coding-root consumer with rollback, and keep workspace instructions separate
+    from skill discovery and explicit router dispatch.
+  </p>
+
+  <h2>What I heard</h2>
+  <div class="grid">
+    <section class="card">
+      <h3>The GPT path should be explicit</h3>
+      <p>Copilot should discover generated GPT adapters from <code>.copilot/skills</code>,
+      not succeed only because this runtime can see the historical Claude-owned tree.</p>
+    </section>
+    <section class="card">
+      <h3>The Claude path should stay native</h3>
+      <p>Claude Code should discover generated Claude adapters from
+      <code>.claude/skills</code>. Model choice must not determine the skill directory.</p>
+    </section>
+    <section class="card">
+      <h3>Instructions are a separate concern</h3>
+      <p><code>CLAUDE.md</code> and <code>AGENTS.md</code> are host instruction adapters,
+      not skill catalogs. Private content remains in coding-root.</p>
+    </section>
+  </div>
+
+  <h2>Why this shape</h2>
+  <p>
+    The public product repository is clean and canonical, while the live consumer still
+    uses an old router, an ordinary <code>.claude/skills</code> directory, and no
+    <code>.copilot/skills</code> install. A direct forced overwrite would erase evidence
+    and weaken the installer's ownership model. The plan therefore adds inspect, backup,
+    transactional migration, temporary-home acceptance, and only then live cutover.
+  </p>
+
+  <h2>Delivery timeline</h2>
+  <section class="timeline">
+    <article>
+      <h3>Step 42 - Lock the authority map</h3>
+      <p>Document and test the distinct roles of workspace instructions, native skill
+      discovery, and router dispatch.</p>
+    </article>
+    <article>
+      <h3>Step 43 - Inspect before touching</h3>
+      <p>Add a read-only report for ownership, link type, legacy shadows, router version,
+      instruction files, and missing provider profiles.</p>
+    </article>
+    <article>
+      <h3>Step 44 - Migrate as one transaction</h3>
+      <p>Require an external backup directory, install Claude and GPT together, verify both,
+      and restore the original home if either side fails.</p>
+    </article>
+    <article>
+      <h3>Step 45 - Publish the consumer handoff</h3>
+      <p>Replace stale Step-41 guidance and define the separate private instruction cleanup.</p>
+    </article>
+    <article>
+      <h3>Steps 46-47 - Prove, then cut over</h3>
+      <p>First run both real hosts against a temporary home. Only after rollback rehearsal
+      passes, migrate the clean coding-root consumer and capture each discovered path.</p>
+    </article>
+  </section>
+
+  <h2>Operator choices already locked</h2>
+  <div class="grid">
+    <section class="card"><span class="id">P1</span><strong>Canonical source</strong><p>skill-mesh remains provider-neutral and authoritative.</p></section>
+    <section class="card"><span class="id">P2</span><strong>Native profiles</strong><p>Claude and GPT each discover their own generated adapter tree.</p></section>
+    <section class="card"><span class="id">P3</span><strong>Privacy</strong><p>Private coding-root instructions are never published.</p></section>
+  </div>
+
+  <h2>Agent defaults to review</h2>
+  <div class="grid">
+    <section class="card">
+      <span class="id">D1</span><strong>Supersede old Step 41</strong>
+      <p><b>What:</b> replace the unexecuted one-shot cutover with tested preparation and two-stage acceptance.</p>
+      <p><b>Why:</b> the live target is foreign to the installer ledger.</p>
+      <p><b>Tweak:</b> retain Step 41 as a pointer instead of marking it superseded.</p>
+    </section>
+    <section class="card">
+      <span class="id">D3</span><strong>One private instruction source</strong>
+      <p><b>What:</b> make root CLAUDE.md and AGENTS.md thin adapters over one private contract.</p>
+      <p><b>Why:</b> full copies will drift.</p>
+      <p><b>Tweak:</b> keep CLAUDE.md canonical and make AGENTS.md only delegate to it.</p>
+    </section>
+    <section class="card">
+      <span class="id">D4</span><strong>No blind force</strong>
+      <p><b>What:</b> inspect, back up, apply, verify, and support rollback.</p>
+      <p><b>Why:</b> current files lack generated ownership markers.</p>
+      <p><b>Tweak:</b> narrow migration to Claude first, then add GPT in a later transaction.</p>
+    </section>
+  </div>
+
+  <h2>Not in this phase</h2>
+  <ul>
+    <li>Publishing private rules, hooks, memory, or project adapters.</li>
+    <li>Changing skill behavior, model mappings, reviewer gates, or authentication.</li>
+    <li>Using AGENTS.md as a skill registry.</li>
+    <li>Deleting legacy files before both real hosts pass and rollback is rehearsed.</li>
+  </ul>
+
+  <h2>Risks that remain visible</h2>
+  <ul>
+    <li><span class="risk">Host opacity:</span> a host may not reveal which instruction file it loaded; reports must label observed versus inferred facts.</li>
+    <li><span class="risk">Dirty consumer:</span> live migration waits until parallel coding-root work is parked on a clean branch.</li>
+    <li><span class="risk">Private backups:</span> payloads stay outside the repository and release artifacts; reports contain only relative paths and hashes.</li>
+  </ul>
+
+  <h2>Reply grammar</h2>
+  <p>Silence means the plan stands. To change a default, reply with an ID and replacement, for example:</p>
+  <p><code>D3 -&gt; keep CLAUDE.md canonical; AGENTS.md delegates to it</code></p>
+
+  <footer>
+    Source of truth: documentation/host-native-discovery-cutover-plan.md<br>
+    Proposal view: documentation/host-native-discovery-cutover-proposal.html
+  </footer>
+</main>
+</body>
+</html>

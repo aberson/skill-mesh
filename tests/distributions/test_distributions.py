@@ -159,9 +159,10 @@ def test_build_file_counts_match_manifest(dist_root):
     claude_files = list((dist_root / "claude").rglob("*"))
     claude_files = [p for p in claude_files if p.is_file()]
     gpt_files = [p for p in (dist_root / "gpt").rglob("*") if p.is_file()]
-    # claude: portable*(SKILL+core) + native*(SKILL only); gpt: portable*(SKILL+core)
-    assert len(claude_files) == len(portable) * 2 + len(native) * 1
-    assert len(gpt_files) == len(portable) * 2
+    # claude: portable*(SKILL+core) + native*(SKILL only) + 2 verdict helpers;
+    # gpt: portable*(SKILL+core) + 2 verdict helpers.
+    assert len(claude_files) == len(portable) * 2 + len(native) * 1 + 2
+    assert len(gpt_files) == len(portable) * 2 + 2
 
 
 # --------------------------------------------------------------------------- #
@@ -180,6 +181,14 @@ def test_generated_files_carry_provenance(dist_root):
             assert "Canonical source: skills/" in text, md
             # the ownership-authority provenance marker is embedded in every file.
             assert marker in text, f"missing provenance marker in {md}"
+
+    for profile in ("claude", "gpt"):
+        for consumer in ("build-step", "build-phase"):
+            helper = dist_root / profile / consumer / "build_step_verdict.py"
+            text = helper.read_text(encoding="utf-8")
+            assert marker in text
+            assert "Canonical source: _shared/build_step_verdict.py" in text
+            compile(text, str(helper), "exec")
 
 
 # --------------------------------------------------------------------------- #
@@ -212,6 +221,16 @@ def test_launcher_core_reference_is_repointed_and_resolves(dist_root):
         assert "core.md" in launcher, f"{profile}: missing core.md reference"
         assert (skill_dir / "core.md").is_file(), \
             f"{profile}: referenced core.md does not exist in installed tree"
+
+
+def test_build_contract_verdict_helper_reference_is_repointed(dist_root):
+    for profile in ("claude", "gpt"):
+        for consumer in ("build-step", "build-phase"):
+            skill_dir = dist_root / profile / consumer
+            core = (skill_dir / "core.md").read_text(encoding="utf-8")
+            assert "../../_shared/build_step_verdict.py" not in core
+            assert "build_step_verdict.py" in core
+            assert (skill_dir / "build_step_verdict.py").is_file()
 
 
 # --------------------------------------------------------------------------- #

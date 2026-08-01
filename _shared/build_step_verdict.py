@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 """Single source of truth for the build-step -> build-phase verdict contract.
 
-`/build-step` Step 7 ("Aggregate verdict") emits a small sidecar file at
-`<worktree>/.build-step/verdict.json`. `/build-phase` §2c ("Capture result")
-reads it and decides whether to ADVANCE to the next step or treat the step as
-BLOCKED. This module is the ONE place the consume rule lives so the SKILL.md
-prose and the test suite cannot drift apart (per
+`/build-phase` creates a private run id, HMAC key, and durable verdict path
+outside the developer worktree and passes all three to `/build-step`. The build-step orchestrator
+atomically writes that sidecar on every terminal path; the developer and reviewer
+children never receive the path or run id. `/build-phase` §2c ("Capture result")
+reads it with the expected run id/key and decides whether to ADVANCE to the next step
+or treat the step as BLOCKED. This module is the ONE place the emit/consume rule
+lives so the SKILL.md prose and the test suite cannot drift apart (per
 `dev/.claude/rules/code-quality.md` -- "one source of truth for data-shape
 constants" / "grep all downstream consumers when changing a key/id shape").
 
@@ -16,10 +18,14 @@ verdict.json schema
 ::
 
     {
+      "schema_version": 2,
       "timestamp": str,                  # ISO-8601, when build-step wrote the verdict
+      "run_id":    str,                  # parent-minted opaque invocation identity
+      "writer":    "build-step-orchestrator",
       "result":    "PASS" | "NEEDS-WORK" | "DEFERRED-TO-UAT",
       "halt":      "POST_MERGE_HALT" | "SHIP_GATE_HALT" | null,
-      "summary":   str                   # one-line human-readable rationale
+      "summary":   str,                  # one-line human-readable rationale
+      "signature": str                   # HMAC-SHA256 over every prior field
     }
 
 The `result` enum MIRRORS (but does NOT import or adopt) review-deep's
@@ -40,12 +46,18 @@ Consume rule (DEFAULT-DENY / FAIL-CLOSED)
 `classify_verdict` returns exactly `"ADVANCE"` or `"BLOCKED"`. It NEVER raises;
 anything it cannot positively confirm as a clean pass fails closed to
 `"BLOCKED"` (== NEEDS-WORK). ADVANCE happens ONLY when the file exists, parses,
-carries a known passing `result`, AND has no halt.
+carries the expected run identity and orchestrator writer, carries a known
+passing `result`, AND has no halt.
 """
 
 from __future__ import annotations
 
 import json
+import hashlib
+import hmac
+import os
+import tempfile
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -60,9 +72,48 @@ VALID_HALTS = {"POST_MERGE_HALT", "SHIP_GATE_HALT"}
 # Results that clear the gate (when halt is null). NEEDS-WORK is intentionally
 # excluded: it is the explicit "developer must iterate" signal.
 ADVANCING_RESULTS = {"PASS", "DEFERRED-TO-UAT"}
+SCHEMA_VERSION = 2
+ORCHESTRATOR_WRITER = "build-step-orchestrator"
+SIGNED_FIELDS = (
+    "schema_version",
+    "timestamp",
+    "run_id",
+    "writer",
+    "result",
+    "halt",
+    "summary",
+)
 
 
-def classify_verdict(verdict_path: str | Path) -> str:
+def _secret_bytes(secret: str) -> bytes:
+    if not isinstance(secret, str):
+        raise ValueError("verdict secret must be a 64-character hex string")
+    try:
+        value = bytes.fromhex(secret)
+    except ValueError as exc:
+        raise ValueError("verdict secret must be a 64-character hex string") from exc
+    if len(value) != 32:
+        raise ValueError("verdict secret must encode exactly 32 bytes")
+    return value
+
+
+def _signature(payload: dict[str, Any], secret: str) -> str:
+    signed = {field: payload[field] for field in SIGNED_FIELDS}
+    message = json.dumps(
+        signed,
+        separators=(",", ":"),
+        sort_keys=True,
+        ensure_ascii=True,
+    ).encode("ascii")
+    return hmac.new(_secret_bytes(secret), message, hashlib.sha256).hexdigest()
+
+
+def classify_verdict(
+    verdict_path: str | Path,
+    *,
+    expected_run_id: str | None = None,
+    expected_secret: str | None = None,
+) -> str:
     """Apply the default-deny consume rule to a verdict.json file.
 
     Returns the literal string ``"ADVANCE"`` or ``"BLOCKED"`` -- never raises.
@@ -70,12 +121,15 @@ def classify_verdict(verdict_path: str | Path) -> str:
     Fail-closed decision ladder (first match wins):
 
     * file missing / unreadable / not valid JSON / not a JSON object -> BLOCKED
+    * expected identity set and schema/writer/run id/signature mismatch -> BLOCKED
     * ``halt`` present and non-null (any value)                          -> BLOCKED
     * ``result`` not in :data:`VALID_RESULTS` (unknown / missing)        -> BLOCKED
     * ``result`` == ``"NEEDS-WORK"``                                     -> BLOCKED
     * ``result`` in {PASS, DEFERRED-TO-UAT} AND ``halt`` is null         -> ADVANCE
 
-    Accepts a ``str`` path or a :class:`pathlib.Path`.
+    ``expected_run_id`` and ``expected_secret`` are an all-or-none pair for the
+    authenticated v2 channel. Accepts a ``str`` path or a
+    :class:`pathlib.Path`.
     """
     path = Path(verdict_path)
 
@@ -101,6 +155,35 @@ def classify_verdict(verdict_path: str | Path) -> str:
         # A bare list / string / number is not a verdict object.
         return BLOCKED
 
+    # --- invocation identity: parent-minted path + run id, fail closed ---
+    if expected_run_id is not None or expected_secret is not None:
+        if not isinstance(expected_run_id, str) or not expected_run_id:
+            return BLOCKED
+        if not isinstance(expected_secret, str):
+            return BLOCKED
+        if data.get("schema_version") != SCHEMA_VERSION:
+            return BLOCKED
+        if data.get("writer") != ORCHESTRATOR_WRITER:
+            return BLOCKED
+        if data.get("run_id") != expected_run_id:
+            return BLOCKED
+        expected_fields = set(SIGNED_FIELDS) | {"signature"}
+        if set(data) != expected_fields:
+            return BLOCKED
+        signature = data.get("signature")
+        if (
+            not isinstance(signature, str)
+            or len(signature) != 64
+            or any(char not in "0123456789abcdef" for char in signature)
+        ):
+            return BLOCKED
+        try:
+            computed = _signature(data, expected_secret)
+        except (KeyError, TypeError, ValueError):
+            return BLOCKED
+        if not hmac.compare_digest(signature, computed):
+            return BLOCKED
+
     # --- halt fail-closed: any non-null halt blocks (regardless of result) ---
     halt = data.get("halt")
     if halt is not None:
@@ -125,9 +208,11 @@ def classify_verdict(verdict_path: str | Path) -> str:
 
 
 def translate_build_step_verdict(
-    terminal: str,
+    terminal: str | None,
     halt: str | None = None,
     summary: str = "",
+    *,
+    run_id: str | None = None,
 ) -> dict[str, Any]:
     """Translate build-step's Step 7 terminal strings into a verdict.json dict.
 
@@ -146,6 +231,10 @@ def translate_build_step_verdict(
     :data:`VALID_HALTS` raises ``ValueError`` (caught at EMIT time, not at
     consume time -- the consumer's job is to fail closed, the producer's job is
     to emit a well-formed sentinel).
+
+    When ``run_id`` is supplied, the versioned invocation identity fields are
+    included. A caller omitting it receives the legacy translation shape for
+    compatibility with existing standalone users.
 
     Returns a dict missing only ``timestamp`` (the caller stamps that), e.g.::
 
@@ -172,4 +261,71 @@ def translate_build_step_verdict(
             f"or None"
         )
 
-    return {"result": result, "halt": halt, "summary": summary}
+    payload: dict[str, Any] = {
+        "result": result,
+        "halt": halt,
+        "summary": summary,
+    }
+    if run_id is not None:
+        if not isinstance(run_id, str) or not run_id:
+            raise ValueError("run_id must be a non-empty string when supplied")
+        payload = {
+            "schema_version": SCHEMA_VERSION,
+            "run_id": run_id,
+            "writer": ORCHESTRATOR_WRITER,
+            **payload,
+        }
+    return payload
+
+
+def write_verdict(
+    verdict_path: str | Path,
+    *,
+    run_id: str,
+    secret: str,
+    terminal: str,
+    halt: str | None = None,
+    summary: str = "",
+) -> dict[str, Any]:
+    """Atomically write one final orchestrator-owned verdict.
+
+    The target is replaced, never merged with existing content. This makes a
+    stale or producer-planted file irrelevant: every terminal path must call
+    this function, and the parent consumer also verifies ``run_id``.
+    """
+    path = Path(verdict_path)
+    payload = translate_build_step_verdict(
+        terminal,
+        halt=halt,
+        summary=summary,
+        run_id=run_id,
+    )
+    payload["timestamp"] = datetime.now(UTC).isoformat().replace("+00:00", "Z")
+    payload["signature"] = _signature(payload, secret)
+    path.parent.mkdir(parents=True, exist_ok=True)
+
+    temp_name: str | None = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="w",
+            encoding="utf-8",
+            newline="\n",
+            dir=path.parent,
+            prefix=f".{path.name}.",
+            suffix=".tmp",
+            delete=False,
+        ) as handle:
+            temp_name = handle.name
+            json.dump(payload, handle, separators=(",", ":"), ensure_ascii=True)
+            handle.write("\n")
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temp_name, path)
+        temp_name = None
+    finally:
+        if temp_name is not None:
+            try:
+                os.unlink(temp_name)
+            except OSError:
+                pass
+    return payload

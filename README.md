@@ -55,7 +55,8 @@ The core pipeline's BUILD box is a gated loop, not a straight line:
 What the diagram can't show: **independence is engineered** — reviewers run in fresh, isolated context
 (the producer never grades itself), and every finding must cite `file:line` or it is dropped; and **the
 verdict is a deterministic reducer, not a model** — the same findings always yield the same result,
-written to a `verdict.json` sidecar.
+written after all ship/cleanup gates to a durable, run-bound, HMAC-authenticated `verdict.json`
+sidecar. Missing, stale, malformed, or tampered verdicts fail closed on both Claude and GPT.
 
 Lanes scale the scrutiny: `auto` (tests only) → `code` (5 lenses) → `deep` (`review-deep` + audit
 trail) → `runtime` / `full` (evidence on a running app).
@@ -473,7 +474,7 @@ hosts; 3 are Claude-native (`claude-oauth-auth`, `context-slim`, `judge-motion`)
 <details>
 <summary><strong>Current status</strong></summary>
 
-- ~50 skills; 47 portable across Claude Code + GitHub Copilot behind one behavior contract; 3 Claude-native.
+- ~50 skills; 47/47 skills are GPT-capable behind the shared Claude/GPT behavior contract; 3 additional skills are Claude-native.
 - Shipped: the canonical `skills/<name>/{core.md,providers/}` source tree, the provider-neutral router,
   and the distribution builder, installer, and release tooling (reproducible SHA-256 checksums over a
   `git ls-files` stage); ~250 tests across seven suites (router, calibration, package-integrity,
