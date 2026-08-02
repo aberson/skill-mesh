@@ -177,10 +177,8 @@ def test_copilot_path_without_openai_key():
         extra_env={"OPENAI_API_KEY": None, "COPILOT_GITHUB_TOKEN": "test-copilot-token"},
     )
     assert result.returncode == 0, result.stderr
-    assert (
-        "Copilot token:     present "
-        "(COPILOT_GITHUB_TOKEN/GH_TOKEN/GITHUB_TOKEN/gh auth token)"
-    ) in result.stdout
+    # Issue #51: dry-run reports env-var presence + source class, materializing nothing.
+    assert "Copilot token:     present (COPILOT_GITHUB_TOKEN)" in result.stdout
     assert "OPENAI_API_KEY:    NOT SET" in result.stdout
 
 
@@ -189,3 +187,37 @@ def test_invalid_skill_name_rejected():
     result = _run(["-Provider", "claude", "-Skill", "../../evil", "-DryRun"])
     assert result.returncode == 2, (result.returncode, result.stdout, result.stderr)
     assert "SECURITY" in result.stderr
+
+
+def test_dry_run_does_not_invoke_gh_auth_token(tmp_path):
+    # Regression for issue #51: the -DryRun key-presence diagnostic must NOT shell out to
+    # `gh auth token` (which materializes the operator's real GitHub credential from the gh
+    # keyring) when no COPILOT_GITHUB_TOKEN/GH_TOKEN/GITHUB_TOKEN is set. A PATH-shimmed gh
+    # records every invocation; the dry-run must produce zero `auth token` calls. Before the
+    # fix this recorded one `auth token` call per dry-run (Get-CopilotToken's fallback).
+    shim_dir = tmp_path / "ghshim"
+    shim_dir.mkdir()
+    log = tmp_path / "gh-calls.log"
+    (shim_dir / "gh.cmd").write_text(
+        "@echo off\r\n"
+        f'echo %* >> "{log}"\r\n'
+        'if "%~1"=="auth" if "%~2"=="token" echo ghp_FAKEFAKE0000\r\n'
+        'if "%~1"=="auth" if "%~2"=="status" exit /b 0\r\n',
+        encoding="ascii",
+        newline="",
+    )
+    result = _run(
+        ["-Provider", "gpt", "-Skill", "plan-init", "-DryRun"],
+        extra_env={
+            "COPILOT_GITHUB_TOKEN": None,
+            "GH_TOKEN": None,
+            "GITHUB_TOKEN": None,
+            "PATH": str(shim_dir) + os.pathsep + os.environ.get("PATH", ""),
+        },
+    )
+    assert result.returncode == 0, result.stderr
+    assert "Copilot token:" in result.stdout
+    calls = log.read_text(encoding="utf-8", errors="replace") if log.exists() else ""
+    assert "auth token" not in calls, (
+        "dry-run invoked `gh auth token` (issue #51 regression):\n" + calls
+    )
