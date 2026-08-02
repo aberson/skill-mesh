@@ -143,6 +143,7 @@ skip visibly when the host cannot create Windows junctions.
 | `tools/inspect-host-install.ps1` | add | Give operators a read-only truth report before migration | Live inspection required separate commands for roots, link type, provenance, router version, and instruction files |
 | `tools/migrate-legacy-install.ps1` | add | Back up, adopt, replace, and roll back a legacy unowned install without blind overwrite | Existing installer has no adoption path; `-Force` intentionally takes ownership but does not provide legacy backup/rollback |
 | `tools/skill-mesh-provenance.ps1` | reuse | Keep one ownership-marker parser for installer, inspector, and migration without changing its public helper contract | Grep confirmed installer and distribution builder already dot-source this file |
+| `tools/skill-mesh-transaction.ps1` | add | House the state machine, journal, ordered rollback, and idempotent resume once so the installer's two-profile install and the migrator share one atomicity implementation | Installer currently installs both profiles without a shared transaction primitive; the migrator needs the same restore-on-failure guarantee, and two copies would drift |
 | `tests/distributions/test_distributions.py` | extend | Cover inspection and legacy migration lifecycle | Existing distribution tests cover generated profiles and install safety but not real legacy adoption |
 | `tests/fixtures/` | extend | Provide deterministic legacy and mixed-ownership homes | Current smoke fixtures model router behavior, not consumer-home migration |
 | `documentation/host-discovery.md` | add | Explain instruction loading, skill discovery, and router dispatch as separate mechanisms | Live state showed these mechanisms were conflated by folder naming and missing `AGENTS.md` |
@@ -166,6 +167,7 @@ all call sites in `tools/build-distributions.ps1`,
 |---|---|
 | `tools/inspect-host-install.ps1` | Read-only JSON/text inventory of workspace instruction files, Claude/GPT discovery roots, provenance ownership, link types, router version, ledger state, and legacy shadowing |
 | `tools/migrate-legacy-install.ps1` | Dry-run-first migration with backup manifest, exact collision classification, explicit apply, post-install verification, and rollback |
+| `tools/skill-mesh-transaction.ps1` | Shared transaction engine: state machine, append-only journal, ordered rollback, and idempotent resume, dot-sourced by both the installer and the migrator so atomicity has one implementation |
 | `tests/fixtures/legacy-install/` | Synthetic legacy, mixed-owned, foreign, and partially migrated consumer homes |
 | `documentation/host-discovery.md` | Authority map for workspace instructions vs skill discovery vs router dispatch |
 | `documentation/coding-root-cutover-handoff.md` | Copy-pasteable private-consumer follow-up, including the required `AGENTS.md`/`CLAUDE.md` shared-source design |
@@ -199,7 +201,7 @@ present at that path), and `unknown`. The inspector never upgrades
 | `source_release` | object | Commit/tag plus distribution checksums |
 | `consumer_home` | string | Canonical absolute target used only in the local plan file |
 | `backup_dir` | string | Canonical absolute operator-selected backup |
-| `actions` | ordered array | Relative path, provider, action (`backup`, `install`, `retire`, `preserve`), eligibility class, and precondition hash. A `preserve` action records a consumer-only skill or core-holder left byte-untouched (backed up for audit, never overwritten or retired) |
+| `actions` | ordered array | Relative path, provider, action (`backup`, `install`, `retire`, `preserve`, `ledger`), eligibility class, and precondition hash. A `preserve` action records a consumer-only skill or core-holder left byte-untouched (backed up for audit, never overwritten or retired); the single `ledger` action rewrites the ownership ledger, is the last-sequenced action, and captures its pre-image as `original_ledger` |
 | `blocked` | array | Foreign/unsafe paths and stable reason codes |
 
 `BackupManifest` is written before target mutation:
@@ -213,14 +215,96 @@ present at that path), and `unknown`. The inspector never upgrades
 | `original_files` | array | Relative path, size, SHA-256, and backup payload path |
 | `original_ledger` | object or null | Byte-preserved ledger payload path and SHA-256 |
 | `installed_files` | array | Relative path and expected SHA-256 for generated output |
-| `status` | `prepared`, `applied`, `rolled_back` | Transaction state |
+| `status` | `prepared`, `applying`, `applied`, `rolling_back`, `rolled_back`, `failed_incomplete` | Transaction state machine (see `TransactionJournal` below) |
 
 - `migration_id`: `yyyyMMddTHHmmssZ-<8 lowercase hex>`, generated once from UTC
   time plus four cryptographically random bytes; used as the backup directory
   leaf and transaction-log key.
 - Stable warning/reason codes are uppercase snake case, for example
   `FOREIGN_FILE`, `UNSAFE_LINK`, `CORRUPT_LEDGER`, `PROFILE_MISSING`,
-  `CONSUMER_ONLY_SKILL`, and `CORE_HOLDER`.
+  `CONSUMER_ONLY_SKILL`, `CORE_HOLDER`, and `INCOMPLETE_TRANSACTION`.
+
+`TransactionJournal` is an append-only journal written under
+`<backup_dir>/<migration_id>/journal.jsonl`, one record per action attempt,
+flushed to disk BEFORE the corresponding target mutation and again after it
+verifies, so a crash always leaves the last in-flight action on record:
+
+| Field | Type | Purpose |
+|---|---|---|
+| `schema_version` | integer (`1`) | Parser compatibility |
+| `migration_id` | string | Joins plan, backup manifest, and journal |
+| `seq` | integer | Monotonic action index; matches `MigrationPlan.actions` order |
+| `action` | `backup`, `install`, `retire`, `preserve`, `ledger` | Action kind |
+| `rel_path` | string | Target relative path the action touches |
+| `phase` | `begin`, `commit` | `begin` flushed before the mutation; `commit` after post-hash verify |
+| `pre_hash` | string or null | SHA-256 of the target before the mutation |
+| `post_hash` | string or null | SHA-256 of the target after the mutation |
+| `utc` | RFC 3339 UTC string | Audit timestamp |
+
+The transaction engine is the single mechanism that applies an ordered action
+set atomically. Its states (recorded in `BackupManifest.status`) and their only
+legal transitions are:
+
+- `prepared` -- backup payloads and manifest written; no target mutated yet.
+- `applying` -- at least one `begin` record is flushed; targets are being
+  mutated. Reached only from `prepared`.
+- `applied` -- every action committed and post-install verification passed.
+  Reached only from `applying`; terminal success.
+- `rolling_back` -- a failure during `applying` triggered reverse-order undo.
+  Reached only from `applying`.
+- `rolled_back` -- undo restored every original hash and the prior ledger.
+  Reached only from `rolling_back`; terminal success-of-recovery.
+- `failed_incomplete` -- an undo step itself failed; the home is mixed and
+  manual recovery from the retained backup is required (exit `3`). Reached only
+  from `rolling_back`; terminal failure.
+
+**Ordered apply.** Applying is two phases. First, a pre-flight pass in state
+`prepared` re-validates EVERY action's precondition hash against current
+on-disk state (plus the foreign/traversal/junction-escape checks); any drift or
+unsafe condition aborts with exit `2` before the first mutation -- the only
+place exit `2` can occur. Second, the engine transitions to `applying` and runs
+the actions in `MigrationPlan.actions` order; each action (1) flushes a `begin`
+journal record; (2) performs its mutation (an `install` writes the generated
+bytes, a `retire` moves the superseded legacy tree into the backup, the single
+`ledger` action rewrites the ownership ledger, a `backup` was already
+materialized in `prepared`, a `preserve` is audit-only and never mutates);
+(3) recomputes and verifies the post-hash; (4) flushes a `commit` record. Any
+failure or unexpected on-disk change once `applying` has begun -- a mutation
+error or a post-hash mismatch included -- triggers ordered rollback and exits
+`1` (rollback complete) or `3` (rollback failed), never exit `2`.
+
+**Ordered rollback.** Any failure while `applying` walks the committed and
+in-flight journal records in strict REVERSE `seq` order and applies each
+action's inverse: an `install` is removed or the backed-up original restored, a
+`retire` is restored from the backup, the `ledger` action restores
+`original_ledger`, and a `backup`/`preserve` needs no target undo. Because the
+`ledger` action is last-sequenced it is the first reverted, so no window leaves
+a new ledger indexing already-reverted files. Success sets `rolled_back` and
+leaves the original hashes; any failed inverse sets `failed_incomplete` and
+stops, preserving the backup for manual recovery.
+
+**Idempotent re-apply.** An interrupted transaction is resumed explicitly with
+`-Resume -MigrationId <id>`, which reads that transaction's journal and manifest
+and drives it forward. Per action: if on-disk state already equals the expected
+post-state (`post_hash` matches the generated hash), the action is skipped as
+already-applied; a `begin` with no matching `commit` is redone from its
+precondition (every mutation is designed to re-produce the same bytes); an
+action never begun runs normally. A fully `applied` home resumed is a
+byte-for-byte no-op, and a crash mid-`applying` converges to the same terminal
+state on the next `-Resume`. A bare `-Apply` never silently adopts a prior
+transaction: it refuses (exit `2`, `INCOMPLETE_TRANSACTION`) when an unresolved
+transaction for the same `-Home` -- one whose status is not `applied` or
+`rolled_back` (that is, `prepared`, `applying`, `rolling_back`, or the
+known-mixed `failed_incomplete`) -- already exists in `-BackupDir`, naming the
+`-MigrationId` to `-Resume` or `-Rollback`.
+
+**One shared engine.** This state machine, journal, ordered rollback, and
+resume logic live once in `tools/skill-mesh-transaction.ps1`, dot-sourced by
+both `tools/migrate-legacy-install.ps1` and `tools/install-skill-mesh.ps1`
+(whose clean two-profile install is the same ordered-action-set apply with an
+empty backup set), mirroring the shared `tools/skill-mesh-provenance.ps1`
+parser. Neither tool reimplements atomicity, so the Claude+GPT "one
+transaction" guarantee cannot drift between install and migration.
 
 ### New CLI contracts
 
@@ -261,17 +345,36 @@ powershell -File tools\migrate-legacy-install.ps1 `
   -BackupDir "C:\path\to\private-backups" `
   -Rollback `
   -MigrationId "20260731T210000Z-a1b2c3d4"
+
+# Resume an interrupted transaction to the same terminal state (idempotent)
+powershell -File tools\migrate-legacy-install.ps1 `
+  -Home "C:\path\to\consumer" `
+  -DistDir "C:\path\to\release\dist" `
+  -BackupDir "C:\path\to\private-backups" `
+  -Resume `
+  -MigrationId "20260731T210000Z-a1b2c3d4"
 ```
 
-- `-Home`, `-DistDir`, and `-BackupDir` are required for dry-run and apply.
-- `-Apply` consumes the freshly recomputed plan; it aborts if any precondition
-  hash differs from the dry-run/backup state.
-- `-Rollback` is mutually exclusive with `-Apply`, requires `-MigrationId`,
-  and reads release identity and payload locations from `BackupManifest`.
-- No interactive confirmation exists. Omitting `-Apply` is the safe preview.
-- Exit codes are `0` success, `1` operational failure with no incomplete
-  rollback, `2` blocked/unsafe precondition, and `3` rollback failure requiring
-  manual recovery from the retained backup.
+- `-Home` and `-BackupDir` are required for every mode (they locate the
+  transaction folder); `-DistDir` is additionally required for dry-run,
+  `-Apply`, and `-Resume`, which read or write generated bytes.
+- `-Apply` validates every precondition hash in a pre-flight pass and aborts
+  before the first mutation (exit `2`) if any differs from the dry-run/backup
+  state. It mints a fresh `migration_id`, and refuses (exit `2`,
+  `INCOMPLETE_TRANSACTION`) if an unresolved transaction (status not
+  `applied`/`rolled_back`) for the same `-Home` already exists in `-BackupDir`,
+  naming that `-MigrationId`.
+- `-Resume` and `-Rollback` are each mutually exclusive with `-Apply` and with
+  each other, and require `-MigrationId`, reading release identity and payload
+  locations from that transaction's `BackupManifest`. `-Resume` drives an
+  interrupted transaction forward idempotently (redoing generated installs from
+  `-DistDir`); `-Rollback` reverses the transaction from the backup alone.
+- No interactive confirmation exists. Omitting `-Apply`/`-Resume`/`-Rollback`
+  is the safe preview.
+- Exit codes are `0` success, `1` operational failure with the home left clean
+  (rollback complete or nothing mutated), `2` blocked/unsafe precondition or
+  refused incomplete transaction (pre-mutation only), and `3` rollback failure
+  requiring manual recovery from the retained backup.
 
 ## 6. Design Decisions
 
@@ -313,6 +416,22 @@ either profile restores the pre-migration home and ledger. Existing `-Force`
 remains an expert override for isolated collisions, not the documented legacy
 cutover. Unknown foreign files are never silently adopted, overwritten, or
 deleted.
+
+### Transaction mechanics are one shared, journaled, resumable engine
+
+The atomicity the migrator needs -- an ordered action set that either fully
+applies or fully rolls back, survives a crash, and re-applies idempotently --
+lives once in `tools/skill-mesh-transaction.ps1` with an explicit state machine
+(`prepared`/`applying`/`applied`/`rolling_back`/`rolled_back`/`failed_incomplete`),
+an append-only journal, strict reverse-order rollback, and precondition-hash
+resume. Both the migrator and the installer's two-profile install dot-source it,
+so "Claude and GPT install as one transaction" is enforced by one
+implementation rather than restated in each tool. Adopting the shared engine in
+the installer preserves its existing public behavior, ledger, and marker
+ownership -- a refactor behind the same contract, not a behavior change.
+Alternative rejected: describing transactionality only as desired outcomes and
+letting each tool implement backup/rollback its own way, which drifts and leaves
+crash-recovery undefined.
 
 ### Skill eligibility is manifest-driven; migration preserves consumer-only skills
 
@@ -399,9 +518,9 @@ from committing unrelated dirty coding-root state.
 - **Type:** code
 - **Issue:** #
 - **Flags:** --reviewers deep --isolation worktree
-- **Files:** `tools/migrate-legacy-install.ps1`, `tools/install-skill-mesh.ps1`, `config/skill-manifest.json` (read-only eligibility source), `tests/distributions/`, `tests/fixtures/legacy-install/`
-- **Produces:** Dry-run-default migration planning, collision inventory, required external backup directory, byte-preserving backup, source/target manifest and checksums, explicit `-Apply`, transactional Claude+GPT installation, post-install verification, and rollback.
-- **Done when:** A synthetic legacy home migrates to generated `.claude/skills` and `.copilot/skills` as one transaction; `-Apply` without `-BackupDir` fails before mutation; the backup manifest records release identity plus every original and installed hash; unknown foreign files block before mutation; injected failure in either provider restores both profiles and the prior ledger; rerun is idempotent; rollback restores original hashes and removes only migration-owned files; consumer-only skills (`build-observer`, `goblin-sweep`) and the `_shared` core-holder are classified against the manifest and PRESERVED byte-for-byte (never overwritten, retired, or treated as a block) while a genuinely foreign file still blocks; provider-native manifest skills (`core: null`) never trigger a missing-GPT-profile block; installer ownership tests and the full distribution suite pass.
+- **Files:** `tools/skill-mesh-transaction.ps1`, `tools/migrate-legacy-install.ps1`, `tools/install-skill-mesh.ps1`, `config/skill-manifest.json` (read-only eligibility source), `tests/distributions/`, `tests/fixtures/legacy-install/`
+- **Produces:** Dry-run-default migration planning, collision inventory, required external backup directory, byte-preserving backup, source/target manifest and checksums, explicit `-Apply`, a shared `skill-mesh-transaction` engine (state machine + append-only journal) driving transactional Claude+GPT installation, ordered rollback, idempotent crash-resume, and post-install verification, with the installer's two-profile install routed through the same engine.
+- **Done when:** A synthetic legacy home migrates to generated `.claude/skills` and `.copilot/skills` as one transaction; `-Apply` without `-BackupDir` fails before mutation; the backup manifest records release identity plus every original and installed hash; unknown foreign files block before mutation; injected failure in either provider restores both profiles and the prior ledger; rerun is idempotent; rollback restores original hashes and removes only migration-owned files; the transaction advances only through the legal `prepared` -> `applying` -> `applied` (or `applying` -> `rolling_back` -> `rolled_back`) states recorded in the backup manifest, writing an append-only journal record before and after each mutation; a simulated crash mid-`applying` re-applies via `-Resume` to the same terminal state and a failed undo lands `failed_incomplete` with the backup retained (exit `3`); a bare `-Apply` against a `-Home` that already holds an unresolved transaction (status not `applied`/`rolled_back`, `failed_incomplete` included) in `-BackupDir` refuses before mutation (exit `2`, `INCOMPLETE_TRANSACTION`) naming the `MigrationId`; the migrator and the installer's two-profile install share `tools/skill-mesh-transaction.ps1` so atomicity has one implementation while the installer's public behavior, ledger, and marker ownership stay unchanged; consumer-only skills (`build-observer`, `goblin-sweep`) and the `_shared` core-holder are classified against the manifest and PRESERVED byte-for-byte (never overwritten, retired, or treated as a block) while a genuinely foreign file still blocks; provider-native manifest skills (`core: null`) never trigger a missing-GPT-profile block; installer ownership tests and the full distribution suite pass.
 - **Depends on:** 44
 
 ### Step 46: Add consumer cutover handoff and release gates
@@ -438,13 +557,13 @@ from committing unrelated dirty coding-root state.
 | Dirty consumer repository | Applying cutover in the current coding-root branch could sweep unrelated parallel work | Code steps are skill-mesh-only; final handoff requires a clean dedicated coding-root branch/worktree and scoped adds |
 | Legacy foreign files | Existing `.claude/skills` files lack generated provenance | Inspector classifies first; migrator backs up and checksums before explicit apply; unknown files block |
 | Junction and symlink behavior | A legacy junction may escape the intended home or change between scan and write | Reuse `Resolve-SafePath`; re-resolve immediately before mutation; test Windows junction cases |
-| Rollback completeness | Partial migration could leave generated and legacy files mixed | Transaction log plus byte hashes; failure injection tests; rollback is mandatory acceptance |
+| Rollback completeness | Partial migration could leave generated and legacy files mixed | One shared `skill-mesh-transaction` engine with an explicit state machine and append-only journal; strict reverse-order rollback; precondition-hash resume converges a crashed run; a failed undo halts at `failed_incomplete` (exit `3`) with the backup retained; failure-injection and crash-resume tests are mandatory acceptance |
 | Backup disclosure | Legacy skills and instruction-adjacent files may contain private workspace details | Require a backup directory outside the repository and discovery roots; never upload it; record relative paths and hashes rather than file contents in reports; document retention and secure deletion |
 | Instruction duplication | Full `CLAUDE.md` and `AGENTS.md` copies will drift | Consumer handoff mandates one private shared source and thin host adapters |
 | Runtime registry masks missing GPT install | A GPT model can invoke skills through host injection even when `.copilot/skills` is absent | Step 43 proves the native `.copilot/skills` discovery root early, before any migration tooling is built on it; full acceptance (Step 47) and the live cutover (Step 48) re-record the actual discovered `SKILL.md` path and adapter identity |
 | Stale migration docs | Existing Step-41 wording can imply cutover happened or is still safe as originally designed | Step 46 replaces it with current inspector/migrator workflow and links the superseding plan |
 | Deprecated legacy tree retirement | Wholesale removal of `.claude/skills-gpt` can break current sessions AND silently destroy consumer-only entries that live only there (e.g. `goblin-sweep`'s GPT core -- no `.claude/skills` counterpart, no manifest record) | Classify `.claude/skills-gpt` against the manifest and retire only managed entries; back up and preserve consumer-only entries; retire only in the separate coding-root change after both native acceptance checks and rollback rehearsal |
-| Two-profile partial success | Claude replacement may succeed before GPT installation fails | Treat both providers as one migration transaction and restore both profiles plus the prior ledger on any failure |
+| Two-profile partial success | Claude replacement may succeed before GPT installation fails | Both providers are one ordered action set in the shared transaction engine; a GPT failure while `applying` rolls the committed Claude actions back in reverse `seq` order and restores the prior ledger, ending at `rolled_back` |
 | Consumer-only skills dropped or blocking | Private consumer skills (`build-observer`, `goblin-sweep`) and the `_shared` core-holder have no generated counterpart, so a binary owned/foreign split would drop them under `-Force` or block the whole cutover | Manifest-driven four-class eligibility (managed / consumer-only / core-holder / foreign); consumer-only and core-holder trees are preserved byte-for-byte and never block managed migration |
 
 Runtime-provenance rule: when a host does not expose which instruction file it
@@ -488,6 +607,21 @@ discovered generated `SKILL.md` path.
   post-install verification; each path must leave either the original home or a
   rollback-complete home.
 - Reinstall must be idempotent.
+- The transaction advances only through legal state transitions (`prepared` ->
+  `applying` -> `applied`, or `... -> rolling_back -> rolled_back`); an illegal
+  transition or a missing before-mutation journal record fails the test.
+- Simulate a crash (interrupt mid-`applying`) and re-run via `-Resume`: the home
+  must converge to the same `applied` hashes without double-applying, proving
+  precondition-hash resume.
+- A bare `-Apply` whose `-Home`/`-BackupDir` already hold an unresolved
+  transaction (status not `applied`/`rolled_back`, `failed_incomplete` included)
+  must refuse before any mutation with exit `2` and `INCOMPLETE_TRANSACTION`,
+  naming the `MigrationId` to resume or roll back.
+- Force a rollback inverse step to fail: the run must land `failed_incomplete`
+  with the backup intact and exit `3`.
+- The installer's clean two-profile install and the migrator drive the same
+  `skill-mesh-transaction` engine; divergent atomicity behavior between them
+  fails the test.
 - Rollback must restore original hashes and preserve unrelated files.
 - Existing distribution, router, package-integrity, release, telemetry,
   calibration, and smoke suites remain green.
@@ -526,3 +660,4 @@ behavior cannot be proven by unit tests alone.
 | D5 | D | Product work and private consumer edits remain separate repository changes | active |
 | D6 | D | Skill eligibility is manifest-driven; migration classifies four classes and preserves consumer-only skills + the `_shared` core-holder, not the binary owned/foreign split | active |
 | D7 | D | GitHub Copilot's native `.copilot/skills` discovery root is proven from a live session before migration tooling is built on it, not deferred to final acceptance | active |
+| D8 | D | Installer and migrator share one journaled, resumable transaction engine (`tools/skill-mesh-transaction.ps1`) with an explicit state machine and ordered rollback, rather than each tool implementing atomicity | active |
