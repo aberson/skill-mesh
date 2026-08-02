@@ -177,7 +177,7 @@ all call sites in `tools/build-distributions.ps1`,
 | `schema_version` | integer (`1`) | Parser compatibility |
 | `consumer_home` | string | `.` by default; absolute only when explicitly requested |
 | `instruction_files` | array | Relative path, presence, and evidence class for root host instructions |
-| `profiles` | object keyed by `claude`, `gpt` | Discovery root, state, link type, owned/unowned counts, and adapter sample |
+| `profiles` | object keyed by `claude`, `gpt` | Discovery root, state, link type, owned/unowned counts, per-skill eligibility class (`managed`/`consumer-only`/`core-holder`/`foreign`, cross-referenced against `config/skill-manifest.json`), and adapter sample |
 | `ledger` | object | `absent`, `valid`, or `corrupt`; provider names only |
 | `router` | object | Relative path, semantic version when parseable, and `canonical`, `legacy`, or `absent` classification |
 | `legacy_shadows` | array of strings | Relative legacy paths that can still affect resolution |
@@ -197,7 +197,7 @@ present at that path), and `unknown`. The inspector never upgrades
 | `source_release` | object | Commit/tag plus distribution checksums |
 | `consumer_home` | string | Canonical absolute target used only in the local plan file |
 | `backup_dir` | string | Canonical absolute operator-selected backup |
-| `actions` | ordered array | Relative path, provider, action (`backup`, `install`, `retire`), and precondition hash |
+| `actions` | ordered array | Relative path, provider, action (`backup`, `install`, `retire`, `preserve`), eligibility class, and precondition hash. A `preserve` action records a consumer-only skill or core-holder left byte-untouched (backed up for audit, never overwritten or retired) |
 | `blocked` | array | Foreign/unsafe paths and stable reason codes |
 
 `BackupManifest` is written before target mutation:
@@ -217,7 +217,8 @@ present at that path), and `unknown`. The inspector never upgrades
   time plus four cryptographically random bytes; used as the backup directory
   leaf and transaction-log key.
 - Stable warning/reason codes are uppercase snake case, for example
-  `FOREIGN_FILE`, `UNSAFE_LINK`, `CORRUPT_LEDGER`, and `PROFILE_MISSING`.
+  `FOREIGN_FILE`, `UNSAFE_LINK`, `CORRUPT_LEDGER`, `PROFILE_MISSING`,
+  `CONSUMER_ONLY_SKILL`, and `CORE_HOLDER`.
 
 ### New CLI contracts
 
@@ -308,6 +309,47 @@ remains an expert override for isolated collisions, not the documented legacy
 cutover. Unknown foreign files are never silently adopted, overwritten, or
 deleted.
 
+### Skill eligibility is manifest-driven; migration preserves consumer-only skills
+
+`config/skill-manifest.json` is the single source of truth for what is a
+published, host-native-installable skill (50 records: 47 `portable`, 3
+`provider-native`). The inspector and migrator classify every skill tree found
+in the consumer against it, into four classes rather than the binary
+generated-owned/foreign split:
+
+- **Managed** -- the tree's name is a manifest record, so it has a generated
+  counterpart under `dist/`. `portable` records install both a Claude
+  (`.claude/skills`) and a GPT (`.copilot/skills`) profile; `provider-native`
+  records (`core: null`) install a single provider profile only, so the migrator
+  must NOT report a missing GPT profile for them.
+- **Consumer-only** -- a recognized skill (a `SKILL.md`/skill-shaped tree) whose
+  name is NOT in the manifest, for example the private `build-observer` and
+  `goblin-sweep` trees (coupled to dev-observatory and goblin, deliberately
+  unpublished). The migration MUST preserve these in place: never overwrite,
+  never delete, never migrate them into a host-native profile, and never let
+  their presence block the managed-skill migration.
+- **Core-holder** -- the repo-root `_shared` directory holds shared cores and is
+  not a skill (no `SKILL.md`). The generated distribution embeds cores per skill
+  (`dist/<provider>/<skill>/core.md`), so a consumer `_shared` tree is preserved
+  as a core-holder that consumer-only skills may reference, never treated as a
+  skill or a foreign block.
+- **Foreign** -- anything else (no manifest record, no recognized skill shape, no
+  core-holder) remains a hard block before mutation, exactly as today.
+
+Alternative rejected: the binary generated-owned/foreign split, which would
+either block the whole cutover on the first consumer-only skill or, under
+`-Force`, silently drop `build-observer`/`goblin-sweep`/`_shared` and any core a
+consumer-only skill depends on.
+
+This classification applies to every skill-bearing tree in the consumer,
+including the legacy `.claude/skills-gpt` source tree slated for retirement. A
+legacy tree is retired only for its managed entries (those with a generated
+counterpart); consumer-only entries that live ONLY under `.claude/skills-gpt` --
+for example `goblin-sweep`'s `SKILL-core.md`/`SKILL-gpt.md`, which have no
+`.claude/skills` counterpart and no manifest record -- are backed up and
+preserved, never wholesale-deleted. Retirement is classify-then-retire, never a
+blanket directory removal.
+
 ### The consumer repository remains a separate change
 
 This plan produces the tested package and an exact handoff. Permanent changes
@@ -334,9 +376,9 @@ from committing unrelated dirty coding-root state.
 - **Type:** code
 - **Issue:** #
 - **Flags:** --reviewers deep --isolation worktree
-- **Files:** `tools/inspect-host-install.ps1`, `tests/distributions/`, `tests/fixtures/legacy-install/`
-- **Produces:** Text and JSON reports covering root instruction files, `.claude/skills`, `.copilot/skills`, provenance ownership, link type/target, install ledger, router version/source, legacy `.claude/skills-gpt`, and actionable classifications.
-- **Done when:** Fixtures for clean, generated, legacy, mixed-owned, junction, and absent-GPT homes produce stable classifications; the command is read-only under file-hash comparison; output uses consumer-home-relative paths by default, emits absolute paths only behind an explicit diagnostic flag, and never emits secret values; distribution tests pass.
+- **Files:** `tools/inspect-host-install.ps1`, `config/skill-manifest.json` (read-only eligibility source), `tests/distributions/`, `tests/fixtures/legacy-install/`
+- **Produces:** Text and JSON reports covering root instruction files, `.claude/skills`, `.copilot/skills`, provenance ownership, link type/target, install ledger, router version/source, legacy `.claude/skills-gpt`, per-skill manifest-based eligibility class, and actionable classifications.
+- **Done when:** Fixtures for clean, generated, legacy, mixed-owned, junction, absent-GPT, consumer-only (a `SKILL.md` tree absent from `config/skill-manifest.json`, e.g. `build-observer`), and core-holder (`_shared`) homes produce stable classifications, with consumer-only and core-holder each distinct from `foreign`; the command is read-only under file-hash comparison; output uses consumer-home-relative paths by default, emits absolute paths only behind an explicit diagnostic flag, and never emits secret values; distribution tests pass.
 - **Depends on:** 42
 
 ### Step 44: Implement reversible legacy-install migration
@@ -344,9 +386,9 @@ from committing unrelated dirty coding-root state.
 - **Type:** code
 - **Issue:** #
 - **Flags:** --reviewers deep --isolation worktree
-- **Files:** `tools/migrate-legacy-install.ps1`, `tools/install-skill-mesh.ps1`, `tests/distributions/`, `tests/fixtures/legacy-install/`
+- **Files:** `tools/migrate-legacy-install.ps1`, `tools/install-skill-mesh.ps1`, `config/skill-manifest.json` (read-only eligibility source), `tests/distributions/`, `tests/fixtures/legacy-install/`
 - **Produces:** Dry-run-default migration planning, collision inventory, required external backup directory, byte-preserving backup, source/target manifest and checksums, explicit `-Apply`, transactional Claude+GPT installation, post-install verification, and rollback.
-- **Done when:** A synthetic legacy home migrates to generated `.claude/skills` and `.copilot/skills` as one transaction; `-Apply` without `-BackupDir` fails before mutation; the backup manifest records release identity plus every original and installed hash; unknown foreign files block before mutation; injected failure in either provider restores both profiles and the prior ledger; rerun is idempotent; rollback restores original hashes and removes only migration-owned files; installer ownership tests and the full distribution suite pass.
+- **Done when:** A synthetic legacy home migrates to generated `.claude/skills` and `.copilot/skills` as one transaction; `-Apply` without `-BackupDir` fails before mutation; the backup manifest records release identity plus every original and installed hash; unknown foreign files block before mutation; injected failure in either provider restores both profiles and the prior ledger; rerun is idempotent; rollback restores original hashes and removes only migration-owned files; consumer-only skills (`build-observer`, `goblin-sweep`) and the `_shared` core-holder are classified against the manifest and PRESERVED byte-for-byte (never overwritten, retired, or treated as a block) while a genuinely foreign file still blocks; provider-native manifest skills (`core: null`) never trigger a missing-GPT-profile block; installer ownership tests and the full distribution suite pass.
 - **Depends on:** 43
 
 ### Step 45: Add consumer cutover handoff and release gates
@@ -355,7 +397,7 @@ from committing unrelated dirty coding-root state.
 - **Issue:** #
 - **Flags:** --reviewers code --isolation worktree
 - **Files:** `documentation/coding-root-cutover-handoff.md`, `documentation/migration.md`, `documentation/provider-neutral-skill-mesh-plan.md`, `README.md`, `tests/package-integrity/`, `tests/release/`
-- **Produces:** A copy-pasteable handoff that creates one private shared instruction source with thin `CLAUDE.md` and `AGENTS.md` adapters, updates stale status/topology claims, runs inspector then migrator, validates both profiles, and retires `.claude/skills-gpt` plus the old router only after acceptance.
+- **Produces:** A copy-pasteable handoff that creates one private shared instruction source with thin `CLAUDE.md` and `AGENTS.md` adapters, updates stale status/topology claims, runs inspector then migrator, validates both profiles, and (classifying `.claude/skills-gpt` against the manifest first) retires only its managed, generated-superseded entries -- backing up and preserving any consumer-only entries such as `goblin-sweep`'s GPT core -- plus the old router, only after acceptance.
 - **Done when:** Every command names its target repository and expected output; the previous plan's Step 41 is explicitly marked superseded by this plan, and issue #50 is closed as superseded with a link to this plan's new umbrella after `/repo-sync`; no private instruction content or absolute user path is embedded; release tests fail on a missing inspection, backup, rollback, host-acceptance, or separate-coding-root-commit step; package-integrity and release suites pass.
 - **Depends on:** 42, 44
 
@@ -388,8 +430,9 @@ from committing unrelated dirty coding-root state.
 | Instruction duplication | Full `CLAUDE.md` and `AGENTS.md` copies will drift | Consumer handoff mandates one private shared source and thin host adapters |
 | Runtime registry masks missing GPT install | A GPT model can invoke skills through host injection even when `.copilot/skills` is absent | Acceptance records the actual discovered `SKILL.md` path and adapter identity |
 | Stale migration docs | Existing Step-41 wording can imply cutover happened or is still safe as originally designed | Step 45 replaces it with current inspector/migrator workflow and links the superseding plan |
-| Deprecated legacy tree retirement | Removing `.claude/skills-gpt` too early can break current sessions | Retire only in the separate coding-root change after both native acceptance checks and rollback rehearsal |
+| Deprecated legacy tree retirement | Wholesale removal of `.claude/skills-gpt` can break current sessions AND silently destroy consumer-only entries that live only there (e.g. `goblin-sweep`'s GPT core -- no `.claude/skills` counterpart, no manifest record) | Classify `.claude/skills-gpt` against the manifest and retire only managed entries; back up and preserve consumer-only entries; retire only in the separate coding-root change after both native acceptance checks and rollback rehearsal |
 | Two-profile partial success | Claude replacement may succeed before GPT installation fails | Treat both providers as one migration transaction and restore both profiles plus the prior ledger on any failure |
+| Consumer-only skills dropped or blocking | Private consumer skills (`build-observer`, `goblin-sweep`) and the `_shared` core-holder have no generated counterpart, so a binary owned/foreign split would drop them under `-Force` or block the whole cutover | Manifest-driven four-class eligibility (managed / consumer-only / core-holder / foreign); consumer-only and core-holder trees are preserved byte-for-byte and never block managed migration |
 
 Runtime-provenance rule: when a host does not expose which instruction file it
 loaded, the inspector records `host-convention` or `unknown`; it never claims
@@ -468,3 +511,4 @@ behavior cannot be proven by unit tests alone.
 | D3 | D | `AGENTS.md` and `CLAUDE.md` become thin private adapters over one shared consumer instruction source | active |
 | D4 | D | Legacy migration uses inspect, backup, explicit apply, verify, and rollback—not blind `-Force` | active |
 | D5 | D | Product work and private consumer edits remain separate repository changes | active |
+| D6 | D | Skill eligibility is manifest-driven; migration classifies four classes and preserves consumer-only skills + the `_shared` core-holder, not the binary owned/foreign split | active |
