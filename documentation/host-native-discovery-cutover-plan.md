@@ -84,7 +84,9 @@ skip visibly when the host cannot create Windows junctions.
   only this repository.
 - **Consumer workspace:** `aberson/coding-root` at `C:\Users\abero\dev`. It is
   read-only during code steps and temporary-home acceptance, then modified only
-  by the final live-substrate operator step after rollback rehearsal passes.
+  by the final live-substrate operator step (Step 48) after rollback rehearsal
+  passes -- that step is run from coding-root and gated by a parked-work
+  handshake, and coding-root (not this plan) owns the cutover commit.
 - **Private instruction content:** `coding-root/CLAUDE.md`, the future root
   `AGENTS.md`, workspace-specific rules, hooks, memories, and project
   instructions remain private consumer artifacts. This public repository owns
@@ -490,11 +492,21 @@ consumer-only entry is a structural guarantee, not an intention.
 
 ### The consumer repository remains a separate change
 
-This plan produces the tested package and an exact handoff. Permanent changes
-to `coding-root/CLAUDE.md`, new `coding-root/AGENTS.md`, and deletion of legacy
-tracked files occur in a separate coding-root branch/plan after host acceptance.
-This preserves repository ownership and prevents a skill-mesh build worktree
-from committing unrelated dirty coding-root state.
+This plan produces the tested package and an exact handoff. The coding-root
+changes are all coding-root-owned and split in two: the mechanical cutover --
+installing the generated profiles and retiring the legacy tracked files (the
+v1.2 router and the superseded `.claude/skills-gpt` managed entries) -- lands on
+Step 48's own dedicated cutover branch, and the `CLAUDE.md`/`AGENTS.md`
+thin-adapter content refactor is a further coding-root follow-up after host
+acceptance. Neither is made by a skill-mesh build worktree, which preserves
+repository ownership and prevents committing unrelated dirty coding-root state. The live cutover (Step 48)
+crosses the boundary in one direction only: the operator runs it FROM coding-root
+using the reviewed skill-mesh release candidate as an external tool, and
+coding-root owns the resulting cutover branch, commit, and merge. Because
+coding-root carries parallel session work, Step 48 is gated by an explicit
+parked-work handshake -- all competing work landed or parked, no session
+mid-write, and a clean dedicated cutover branch off a known-clean base -- before
+any mutation.
 
 ### Static gates prove structure; operator evidence proves host behavior
 
@@ -569,11 +581,11 @@ not the hosts, was verified.
 - **Depends on:** 46
 
 ### Step 48: Cut over the live coding-root consumer
-- **Problem:** Temporary-home acceptance does not prove the generated profiles can replace the actual legacy coding-root installation without breaking its host hooks, instruction loading, or tracked workspace state.
+- **Problem:** Temporary-home acceptance does not prove the generated profiles can replace the actual legacy coding-root installation without breaking its host hooks, instruction loading, or tracked workspace state. This is the one step that crosses the repository boundary -- it mutates the live coding-root consumer, which carries parallel session work -- so ownership and the branch/parked-work handshake must be explicit, and this skill-mesh plan must never itself commit coding-root state.
 - **Type:** operator
 - **Issue:** #
 - **Produces:** Live-substrate acceptance observations and retained rollback backup only; no authored source-code artifact.
-- **Done when:** After parallel coding-root work is parked and the canonical consumer root is on a clean dedicated branch, the operator runs the inspector, verifies no unrelated dirty paths are in scope, applies the reviewed release candidate with an explicit backup directory outside the repository, opens fresh Claude Code and GitHub Copilot CLI sessions rooted at coding-root, invokes the representative skill in each, records `.claude/skills/<skill>/SKILL.md` for Claude and `.copilot/skills/<skill>/SKILL.md` for GPT, confirms the old v1.2 router and `.claude/skills-gpt` are no longer on an active resolution path, retains the rollback backup, and records PASS. Any failed check triggers rollback and marks the step BLOCKED rather than complete.
+- **Done when:** Ownership is explicit -- the operator runs this step FROM the coding-root consumer repo using the reviewed skill-mesh release candidate as an external tool, and the skill-mesh build never stages or commits coding-root state. First the parked-work handshake completes: all parallel coding-root session work is landed or parked, no other session is mid-write (no fresh `.plan-expedite-state.*`, no competing active worktree, no recent commits on other coding-root branches), and a clean dedicated cutover branch is created off a known-clean coding-root base. Then the operator runs the inspector, verifies no unrelated dirty paths are in scope, applies the reviewed release candidate with an explicit backup directory outside the repository, opens fresh Claude Code and GitHub Copilot CLI sessions rooted at coding-root, invokes the representative skill in each, records `.claude/skills/<skill>/SKILL.md` for Claude and `.copilot/skills/<skill>/SKILL.md` for GPT, confirms the old v1.2 router and `.claude/skills-gpt` are no longer on an active resolution path, and retains the rollback backup. The resulting coding-root working-tree changes (installed profiles, retired legacy tracked files) are committed on the dedicated cutover branch as a coding-root-owned change and merged by the coding-root owner -- never by this skill-mesh plan or its build worktree -- and the step records PASS. Any failed check triggers rollback and marks the step BLOCKED rather than complete.
 - **Depends on:** 47
 
 ## 8. Risks and Open Questions
@@ -581,7 +593,7 @@ not the hosts, was verified.
 | Item | Risk | Mitigation |
 |---|---|---|
 | Host instruction behavior | Copilot CLI may load `CLAUDE.md`, `AGENTS.md`, both, or runtime-injected instructions depending on version | Document only observed/official behavior; native skill proof comes from `.copilot/skills` path capture, not inferred instruction loading |
-| Dirty consumer repository | Applying cutover in the current coding-root branch could sweep unrelated parallel work | Code steps are skill-mesh-only; final handoff requires a clean dedicated coding-root branch/worktree and scoped adds |
+| Dirty consumer repository | Applying cutover in the current coding-root branch could sweep unrelated parallel work | Code steps are skill-mesh-only; Step 48 is gated by a parked-work handshake (competing work landed/parked, no session mid-write, clean dedicated cutover branch off a known-clean base), runs FROM coding-root (which owns the cutover branch/commit/merge), and uses scoped adds only -- never a skill-mesh worktree committing coding-root |
 | Legacy foreign files | Existing `.claude/skills` files lack generated provenance | Inspector classifies first; migrator backs up and checksums before explicit apply; unknown files block |
 | Junction and symlink behavior | A legacy junction may escape the intended home or change between scan and write | Reuse `Resolve-SafePath`; re-resolve immediately before mutation; test Windows junction cases |
 | Rollback completeness | Partial migration could leave generated and legacy files mixed | One shared `skill-mesh-transaction` engine with an explicit state machine and append-only journal; strict reverse-order rollback; precondition-hash resume converges a crashed run; a failed undo halts at `failed_incomplete` (exit `3`) with the backup retained; failure-injection and crash-resume tests are mandatory acceptance |
@@ -702,3 +714,4 @@ behavior cannot be proven by unit tests alone.
 | D8 | D | Installer and migrator share one journaled, resumable transaction engine (`tools/skill-mesh-transaction.ps1`) with an explicit state machine and ordered rollback, rather than each tool implementing atomicity | active |
 | D9 | D | The backup payload set is pinned to the transaction's mutating action set -- byte-untouched consumer-only/core-holder trees are recorded by path+hash only, never copied -- reconciling rollback completeness with disclosure minimization | active |
 | D10 | D | Static release/package-integrity gates assert documentation STRUCTURE only (presence, order, resolvability, no private-content leak); real host acceptance is operator evidence (Steps 43/47/48) that no static test can substitute for | active |
+| D11 | D | The live coding-root cutover (Step 48) is owned by coding-root -- run from that repo against the skill-mesh release candidate, gated by a parked-work handshake and a dedicated cutover branch; the skill-mesh plan never commits coding-root state | active |
