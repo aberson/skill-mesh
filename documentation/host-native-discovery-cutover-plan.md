@@ -562,6 +562,7 @@ not the hosts, was verified.
 - **Produces:** A source-grounded authority map, explicit `AGENTS.md`/`CLAUDE.md` roles, discovery-root table, router role, and package-integrity assertions that the three mechanisms are never documented as interchangeable.
 - **Done when:** Documentation states that model choice does not select a skill tree; Claude discovery resolves `.claude/skills`, GPT discovery resolves `.copilot/skills`, workspace instruction files do not contain skill implementations, and the router is explicit rather than implicit in native invocation; all package-integrity tests pass.
 - **Depends on:** none
+- **Status:** DONE (2026-08-02)
 
 ### Step 43: Prove the GPT host-native discovery root before building migration tooling
 - **Problem:** Every later step architects inspection, migration, and the consumer handoff around the assumption that GitHub Copilot CLI natively discovers skills at `.copilot/skills/<name>/SKILL.md`. Today that is only a documented convention (inspector evidence class `host-convention`), never confirmed against a real Copilot CLI session, and the plan otherwise defers all real-host proof to the very end. A wrong root would surface only after the whole tooling stack -- and the installer's already-shipped `.copilot/skills` GPT target -- was built on it.

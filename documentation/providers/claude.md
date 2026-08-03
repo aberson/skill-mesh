@@ -21,6 +21,20 @@ distribution tests in Step 36.
 The installer emits a generated discovery tree; it never rewrites canonical source
 files.
 
+### Native discovery root
+
+The generated Claude discovery tree is written to
+`<install-home>/.claude/skills/<skill>/` — Claude Code's native skill-discovery
+root. A Claude install populates only `.claude/skills`, never a GPT root. This
+discovered path is what proves a Claude profile is installed; the running model
+does not select the tree.
+
+Claude Code may also load a root `CLAUDE.md` workspace instruction file, but that
+file is an **instruction adapter, not a skill registry**: it does not contain or
+enumerate skill implementations. Instruction loading and skill discovery are
+separate mechanisms — see the host-loading authority map
+[`../host-discovery.md`](../host-discovery.md).
+
 ## Transport / authentication
 
 | Transport | When | Requirement |

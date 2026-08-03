@@ -19,6 +19,23 @@ session cannot accidentally discover the Claude compatibility launcher first.
 Only the 47 portable skills have a GPT adapter. The 3 Claude-native exclusions are
 not installed into a GPT profile.
 
+### Native discovery root
+
+The generated GPT discovery tree is written to
+`<install-home>/.copilot/skills/<skill>/` — GitHub Copilot CLI's native
+skill-discovery root. A GPT install populates only `.copilot/skills`, never a
+Claude root. This discovered path is what proves a GPT profile is installed.
+
+A GPT model answering correctly is **not** proof of a native install: a Copilot CLI
+can expose skills via runtime injection of a `CLAUDE.md` even when no
+`.copilot/skills` tree is present. That is host integration, not native discovery,
+and the running model does not select the skill tree.
+
+A root `AGENTS.md` (or an injected `CLAUDE.md`) is an **instruction adapter, not a
+skill registry**: it does not contain or enumerate skill implementations.
+Instruction loading and skill discovery are separate mechanisms — see the
+host-loading authority map [`../host-discovery.md`](../host-discovery.md).
+
 ## Transport / authentication precedence
 
 Selecting GPT does **not** imply `OPENAI_API_KEY`. `runtime/skill-router.ps1`
