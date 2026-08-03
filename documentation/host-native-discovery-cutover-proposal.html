@@ -117,8 +117,9 @@
     The public product repository is clean and canonical, while the live consumer still
     uses an old router, an ordinary <code>.claude/skills</code> directory, and no
     <code>.copilot/skills</code> install. A direct forced overwrite would erase evidence
-    and weaken the installer's ownership model. The plan therefore adds inspect, backup,
-    transactional migration, temporary-home acceptance, and only then live cutover.
+    and weaken the installer's ownership model. The plan therefore proves the native GPT
+    discovery root first, then adds inspect, backup, transactional migration, temporary-home
+    acceptance, and only then live cutover.
   </p>
 
   <h2>Delivery timeline</h2>
@@ -129,23 +130,29 @@
       discovery, and router dispatch.</p>
     </article>
     <article>
-      <h3>Step 43 - Inspect before touching</h3>
+      <h3>Step 43 - Prove the GPT discovery root</h3>
+      <p>From a real GitHub Copilot CLI session, prove that <code>.copilot/skills</code> is the
+      genuine native discovery root before any inspection or migration tooling is built on it;
+      block and revise if it is not.</p>
+    </article>
+    <article>
+      <h3>Step 44 - Inspect before touching</h3>
       <p>Add a read-only report for ownership, link type, legacy shadows, router version,
       instruction files, and missing provider profiles.</p>
     </article>
     <article>
-      <h3>Step 44 - Migrate as one transaction</h3>
+      <h3>Step 45 - Migrate as one transaction</h3>
       <p>Require an external backup directory, install Claude and GPT together, verify both,
       and restore the original home if either side fails.</p>
     </article>
     <article>
-      <h3>Step 45 - Publish the consumer handoff</h3>
+      <h3>Step 46 - Publish the consumer handoff</h3>
       <p>Replace stale Step-41 guidance and define the separate private instruction cleanup.</p>
     </article>
     <article>
-      <h3>Steps 46-47 - Prove, then cut over</h3>
-      <p>First run both real hosts against a temporary home. Only after rollback rehearsal
-      passes, migrate the clean coding-root consumer and capture each discovered path.</p>
+      <h3>Steps 47-48 - Prove full install, then cut over</h3>
+      <p>First run both real hosts against a full temporary-home install. Only after rollback
+      rehearsal passes, migrate the clean coding-root consumer and capture each discovered path.</p>
     </article>
   </section>
 
