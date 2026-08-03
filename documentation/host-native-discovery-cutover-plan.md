@@ -201,7 +201,7 @@ present at that path), and `unknown`. The inspector never upgrades
 | `source_release` | object | Commit/tag plus distribution checksums |
 | `consumer_home` | string | Canonical absolute target used only in the local plan file |
 | `backup_dir` | string | Canonical absolute operator-selected backup |
-| `actions` | ordered array | Relative path, provider, action (`backup`, `install`, `retire`, `preserve`, `ledger`), eligibility class, and precondition hash. A `preserve` action records a consumer-only skill or core-holder left byte-untouched (backed up for audit, never overwritten or retired); the single `ledger` action rewrites the ownership ledger, is the last-sequenced action, and captures its pre-image as `original_ledger` |
+| `actions` | ordered array | Relative path, provider, action (`backup`, `install`, `retire`, `preserve`, `ledger`), eligibility class, and precondition hash. A `preserve` action records a consumer-only skill or core-holder left byte-untouched (recorded by relative path and SHA-256 for audit, never payload-copied, overwritten, or retired); the single `ledger` action rewrites the ownership ledger, is the last-sequenced action, and captures its pre-image as `original_ledger` |
 | `blocked` | array | Foreign/unsafe paths and stable reason codes |
 
 `BackupManifest` is written before target mutation:
@@ -212,7 +212,8 @@ present at that path), and `unknown`. The inspector never upgrades
 | `migration_id` | string | Joins backup, transaction log, and rollback |
 | `created_utc` | RFC 3339 UTC string | Audit timestamp |
 | `source_release` | object | Same immutable release identity as the plan |
-| `original_files` | array | Relative path, size, SHA-256, and backup payload path |
+| `original_files` | array | The pre-image of every MUTATED target (each `retire` target and each `install` that overwrites an existing file): relative path, size, SHA-256, and backup payload path. Nothing byte-untouched appears here |
+| `preserved_files` | array | Byte-untouched consumer-only/core-holder trees: relative path and SHA-256 only, NO payload copy (audit record, never restored) |
 | `original_ledger` | object or null | Byte-preserved ledger payload path and SHA-256 |
 | `installed_files` | array | Relative path and expected SHA-256 for generated output |
 | `status` | `prepared`, `applying`, `applied`, `rolling_back`, `rolled_back`, `failed_incomplete` | Transaction state machine (see `TransactionJournal` below) |
@@ -223,6 +224,17 @@ present at that path), and `unknown`. The inspector never upgrades
 - Stable warning/reason codes are uppercase snake case, for example
   `FOREIGN_FILE`, `UNSAFE_LINK`, `CORRUPT_LEDGER`, `PROFILE_MISSING`,
   `CONSUMER_ONLY_SKILL`, `CORE_HOLDER`, and `INCOMPLETE_TRANSACTION`.
+
+The backup payload set is pinned to the transaction's mutating action set:
+`original_files` (the pre-image of every overwritten and every retired path)
+plus `original_ledger` cover exactly the paths the transaction overwrites,
+moves, or deletes -- no more and no less.
+Under-collection would break rollback; over-collection would copy private,
+byte-untouched consumer content into the backup for no rollback benefit, so a
+`preserve`d tree is recorded in `preserved_files` by relative path and hash
+only. This makes backup fidelity (every mutated file is restorable) and
+disclosure minimization (nothing untouched is copied) the same rule rather than
+opposing ones.
 
 `TransactionJournal` is an append-only journal written under
 `<backup_dir>/<migration_id>/journal.jsonl`, one record per action attempt,
@@ -470,9 +482,11 @@ including the legacy `.claude/skills-gpt` source tree slated for retirement. A
 legacy tree is retired only for its managed entries (those with a generated
 counterpart); consumer-only entries that live ONLY under `.claude/skills-gpt` --
 for example `goblin-sweep`'s `SKILL-core.md`/`SKILL-gpt.md`, which have no
-`.claude/skills` counterpart and no manifest record -- are backed up and
-preserved, never wholesale-deleted. Retirement is classify-then-retire, never a
-blanket directory removal.
+`.claude/skills` counterpart and no manifest record -- are preserved in place
+via a surgical `preserve` action (recorded by path and hash for audit, never
+payload-copied, retired, or wholesale-deleted). Retirement is
+classify-then-retire, never a blanket directory removal, so a byte-untouched
+consumer-only entry is a structural guarantee, not an intention.
 
 ### The consumer repository remains a separate change
 
@@ -520,7 +534,7 @@ from committing unrelated dirty coding-root state.
 - **Flags:** --reviewers deep --isolation worktree
 - **Files:** `tools/skill-mesh-transaction.ps1`, `tools/migrate-legacy-install.ps1`, `tools/install-skill-mesh.ps1`, `config/skill-manifest.json` (read-only eligibility source), `tests/distributions/`, `tests/fixtures/legacy-install/`
 - **Produces:** Dry-run-default migration planning, collision inventory, required external backup directory, byte-preserving backup, source/target manifest and checksums, explicit `-Apply`, a shared `skill-mesh-transaction` engine (state machine + append-only journal) driving transactional Claude+GPT installation, ordered rollback, idempotent crash-resume, and post-install verification, with the installer's two-profile install routed through the same engine.
-- **Done when:** A synthetic legacy home migrates to generated `.claude/skills` and `.copilot/skills` as one transaction; `-Apply` without `-BackupDir` fails before mutation; the backup manifest records release identity plus every original and installed hash; unknown foreign files block before mutation; injected failure in either provider restores both profiles and the prior ledger; rerun is idempotent; rollback restores original hashes and removes only migration-owned files; the transaction advances only through the legal `prepared` -> `applying` -> `applied` (or `applying` -> `rolling_back` -> `rolled_back`) states recorded in the backup manifest, writing an append-only journal record before and after each mutation; a simulated crash mid-`applying` re-applies via `-Resume` to the same terminal state and a failed undo lands `failed_incomplete` with the backup retained (exit `3`); a bare `-Apply` against a `-Home` that already holds an unresolved transaction (status not `applied`/`rolled_back`, `failed_incomplete` included) in `-BackupDir` refuses before mutation (exit `2`, `INCOMPLETE_TRANSACTION`) naming the `MigrationId`; the migrator and the installer's two-profile install share `tools/skill-mesh-transaction.ps1` so atomicity has one implementation while the installer's public behavior, ledger, and marker ownership stay unchanged; consumer-only skills (`build-observer`, `goblin-sweep`) and the `_shared` core-holder are classified against the manifest and PRESERVED byte-for-byte (never overwritten, retired, or treated as a block) while a genuinely foreign file still blocks; provider-native manifest skills (`core: null`) never trigger a missing-GPT-profile block; installer ownership tests and the full distribution suite pass.
+- **Done when:** A synthetic legacy home migrates to generated `.claude/skills` and `.copilot/skills` as one transaction; `-Apply` without `-BackupDir` fails before mutation; the backup manifest records release identity plus every original and installed hash; the backup payload set equals the transaction's mutating action set -- every `retire`/overwriting-`install` pre-image is backed up while no byte-untouched (`preserve`d) tree's payload is copied (it appears in `preserved_files` by path and hash only); unknown foreign files block before mutation; injected failure in either provider restores both profiles and the prior ledger; rerun is idempotent; rollback restores original hashes and removes only migration-owned files; the transaction advances only through the legal `prepared` -> `applying` -> `applied` (or `applying` -> `rolling_back` -> `rolled_back`) states recorded in the backup manifest, writing an append-only journal record before and after each mutation; a simulated crash mid-`applying` re-applies via `-Resume` to the same terminal state and a failed undo lands `failed_incomplete` with the backup retained (exit `3`); a bare `-Apply` against a `-Home` that already holds an unresolved transaction (status not `applied`/`rolled_back`, `failed_incomplete` included) in `-BackupDir` refuses before mutation (exit `2`, `INCOMPLETE_TRANSACTION`) naming the `MigrationId`; the migrator and the installer's two-profile install share `tools/skill-mesh-transaction.ps1` so atomicity has one implementation while the installer's public behavior, ledger, and marker ownership stay unchanged; consumer-only skills (`build-observer`, `goblin-sweep`) and the `_shared` core-holder are classified against the manifest and PRESERVED byte-for-byte (never overwritten, retired, or treated as a block) while a genuinely foreign file still blocks; provider-native manifest skills (`core: null`) never trigger a missing-GPT-profile block; installer ownership tests and the full distribution suite pass.
 - **Depends on:** 44
 
 ### Step 46: Add consumer cutover handoff and release gates
@@ -529,7 +543,7 @@ from committing unrelated dirty coding-root state.
 - **Issue:** #
 - **Flags:** --reviewers code --isolation worktree
 - **Files:** `documentation/coding-root-cutover-handoff.md`, `documentation/migration.md`, `documentation/provider-neutral-skill-mesh-plan.md`, `README.md`, `tests/package-integrity/`, `tests/release/`
-- **Produces:** A copy-pasteable handoff that creates one private shared instruction source with thin `CLAUDE.md` and `AGENTS.md` adapters, updates stale status/topology claims, runs inspector then migrator, validates both profiles, and (classifying `.claude/skills-gpt` against the manifest first) retires only its managed, generated-superseded entries -- backing up and preserving any consumer-only entries such as `goblin-sweep`'s GPT core -- plus the old router, only after acceptance.
+- **Produces:** A copy-pasteable handoff that creates one private shared instruction source with thin `CLAUDE.md` and `AGENTS.md` adapters, updates stale status/topology claims, runs inspector then migrator, validates both profiles, and (classifying `.claude/skills-gpt` against the manifest first) retires only its managed, generated-superseded entries -- preserving in place any consumer-only entries such as `goblin-sweep`'s GPT core (recorded by path and hash, never payload-copied) -- plus the old router, only after acceptance.
 - **Done when:** Every command names its target repository and expected output; the previous plan's Step 41 is explicitly marked superseded by this plan, and issue #50 is closed as superseded with a link to this plan's new umbrella after `/repo-sync`; no private instruction content or absolute user path is embedded; release tests fail on a missing inspection, backup, rollback, host-acceptance, or separate-coding-root-commit step; package-integrity and release suites pass.
 - **Depends on:** 42, 45
 
@@ -558,11 +572,11 @@ from committing unrelated dirty coding-root state.
 | Legacy foreign files | Existing `.claude/skills` files lack generated provenance | Inspector classifies first; migrator backs up and checksums before explicit apply; unknown files block |
 | Junction and symlink behavior | A legacy junction may escape the intended home or change between scan and write | Reuse `Resolve-SafePath`; re-resolve immediately before mutation; test Windows junction cases |
 | Rollback completeness | Partial migration could leave generated and legacy files mixed | One shared `skill-mesh-transaction` engine with an explicit state machine and append-only journal; strict reverse-order rollback; precondition-hash resume converges a crashed run; a failed undo halts at `failed_incomplete` (exit `3`) with the backup retained; failure-injection and crash-resume tests are mandatory acceptance |
-| Backup disclosure | Legacy skills and instruction-adjacent files may contain private workspace details | Require a backup directory outside the repository and discovery roots; never upload it; record relative paths and hashes rather than file contents in reports; document retention and secure deletion |
+| Backup disclosure | Legacy skills and instruction-adjacent files may contain private workspace details | Require a backup directory outside the repository and discovery roots; never upload it; record relative paths and hashes rather than file contents in reports; document retention and secure deletion; pin the backup payload set to the mutating action set so byte-untouched consumer-only/core-holder trees are recorded by path and hash only and never copied |
 | Instruction duplication | Full `CLAUDE.md` and `AGENTS.md` copies will drift | Consumer handoff mandates one private shared source and thin host adapters |
 | Runtime registry masks missing GPT install | A GPT model can invoke skills through host injection even when `.copilot/skills` is absent | Step 43 proves the native `.copilot/skills` discovery root early, before any migration tooling is built on it; full acceptance (Step 47) and the live cutover (Step 48) re-record the actual discovered `SKILL.md` path and adapter identity |
 | Stale migration docs | Existing Step-41 wording can imply cutover happened or is still safe as originally designed | Step 46 replaces it with current inspector/migrator workflow and links the superseding plan |
-| Deprecated legacy tree retirement | Wholesale removal of `.claude/skills-gpt` can break current sessions AND silently destroy consumer-only entries that live only there (e.g. `goblin-sweep`'s GPT core -- no `.claude/skills` counterpart, no manifest record) | Classify `.claude/skills-gpt` against the manifest and retire only managed entries; back up and preserve consumer-only entries; retire only in the separate coding-root change after both native acceptance checks and rollback rehearsal |
+| Deprecated legacy tree retirement | Wholesale removal of `.claude/skills-gpt` can break current sessions AND silently destroy consumer-only entries that live only there (e.g. `goblin-sweep`'s GPT core -- no `.claude/skills` counterpart, no manifest record) | Classify `.claude/skills-gpt` against the manifest and surgically retire only the managed entry paths, leaving consumer-only entries byte-untouched in place (recorded by path and hash for audit, never payload-copied or deleted); retire only in the separate coding-root change after both native acceptance checks and rollback rehearsal |
 | Two-profile partial success | Claude replacement may succeed before GPT installation fails | Both providers are one ordered action set in the shared transaction engine; a GPT failure while `applying` rolls the committed Claude actions back in reverse `seq` order and restores the prior ledger, ending at `rolled_back` |
 | Consumer-only skills dropped or blocking | Private consumer skills (`build-observer`, `goblin-sweep`) and the `_shared` core-holder have no generated counterpart, so a binary owned/foreign split would drop them under `-Force` or block the whole cutover | Manifest-driven four-class eligibility (managed / consumer-only / core-holder / foreign); consumer-only and core-holder trees are preserved byte-for-byte and never block managed migration |
 
@@ -596,6 +610,12 @@ discovered generated `SKILL.md` path.
 - Dry-run must be a byte-for-byte no-op.
 - Apply must back up every replaced/deleted file and write checksums before the
   first target mutation.
+- The backup payload set must equal the mutating action set: every
+  `retire`/overwriting-`install` pre-image is present, and a `preserve`d
+  (byte-untouched) tree's bytes must NOT appear anywhere in the backup -- only
+  its relative path and hash in `preserved_files`, including a consumer-only
+  entry (e.g. `goblin-sweep`'s GPT core) left in place while its managed
+  `.claude/skills-gpt` siblings are retired.
 - The backup directory is explicit, cannot be inside any discovery tree, and is
   path-canonicalized against symlink/junction escapes.
 - Backup reports contain relative paths, size, and hashes only. Backup payloads
@@ -661,3 +681,4 @@ behavior cannot be proven by unit tests alone.
 | D6 | D | Skill eligibility is manifest-driven; migration classifies four classes and preserves consumer-only skills + the `_shared` core-holder, not the binary owned/foreign split | active |
 | D7 | D | GitHub Copilot's native `.copilot/skills` discovery root is proven from a live session before migration tooling is built on it, not deferred to final acceptance | active |
 | D8 | D | Installer and migrator share one journaled, resumable transaction engine (`tools/skill-mesh-transaction.ps1`) with an explicit state machine and ordered rollback, rather than each tool implementing atomicity | active |
+| D9 | D | The backup payload set is pinned to the transaction's mutating action set -- byte-untouched consumer-only/core-holder trees are recorded by path+hash only, never copied -- reconciling rollback completeness with disclosure minimization | active |
