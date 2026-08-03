@@ -97,8 +97,10 @@ tests/                  calibration, distributions, package-integrity, release, 
 - **Manifest-driven build.** `tools/build-distributions.ps1` reads `config/skill-manifest.json` and
   emits host-native `SKILL.md` discovery trees into `dist/claude` and `dist/gpt`.
 - **Install binds exactly one profile** into a consumer home — Claude at `<home>/.claude/skills/`,
-  GPT at `<home>/.copilot/skills/` — recording an ownership ledger so uninstall only removes files
-  it installed, and refusing foreign-file collisions by default.
+  GPT at `<home>/.github/skills/` (a real GitHub Copilot CLI discovery root; the project-relative
+  `.copilot/skills` target is **retired** per the Step 43 proof, and every generated GPT `SKILL.md`
+  leads with a YAML `name`/`description` frontmatter block) — recording an ownership ledger so
+  uninstall only removes files it installed, and refusing foreign-file collisions by default.
 - **Three host-loading mechanisms are distinct and non-interchangeable**
   (`documentation/host-discovery.md`): workspace instruction injection (`CLAUDE.md` / `AGENTS.md`
   are instruction adapters, never skill registries), host-native skill discovery (the two roots

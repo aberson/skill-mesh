@@ -460,11 +460,12 @@ Each skill has one provider-neutral behavior contract (`skills/<name>/core.md`) 
 adapter; installing binds one adapter into that host's discovery layout. 47 of 50 skills run on both
 hosts; 3 are Claude-native (`claude-oauth-auth`, `context-slim`, `judge-motion`).
 
-| Provider | Host | Discovery location |
+| Provider | Host | Install target |
 |---|---|---|
 | Claude | Claude Code | `<install-home>/.claude/skills/<skill>/` |
-| GPT | GitHub Copilot CLI | `<install-home>/.copilot/skills/<skill>/` |
+| GPT | GitHub Copilot CLI | `<install-home>/.github/skills/<skill>/` |
 
+- **GPT discovery roots** — GitHub Copilot CLI discovers project skills from `.github/skills/`, `.agents/skills/`, and `.claude/skills/` (personal: `~/.copilot/skills/`); this package installs the GPT profile to `.github/skills/`, and every generated `SKILL.md` leads with a YAML frontmatter block (`name`, `description`). The originally-assumed project-relative `.copilot/skills` target is **retired** — it is not a Copilot discovery root (proven in Step 43).
 - **Install** — see [Quick start](#quick-start). Flags: `-Uninstall`, `-Force`, `-Home`/`-Destination`, `-Provider`/`-Profile`.
 - **Auth** (a separate axis from selection) — Claude uses the host's own model (no key); GPT via GitHub Copilot sign-in (`gh auth login`), **no `OPENAI_API_KEY`** needed.
 - **Deep dive** — router auto-detection, the full auth/capability/exclusion matrices, and the selection/transport contract: [documentation/providers/](documentation/providers/README.md), [architecture.md](documentation/architecture.md) §5.

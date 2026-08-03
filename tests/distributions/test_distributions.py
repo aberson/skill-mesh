@@ -36,12 +36,18 @@ def _marker_literal():
     assert m, "marker literal not found in tools/skill-mesh-provenance.ps1"
     return m.group(1)
 
-# Provider-specific discovery subdirectory under the install home (must mirror the
-# $DISCOVERY_SUBDIR map in install-skill-mesh.ps1).
+# Provider-specific install target under the install home (must mirror the
+# $DISCOVERY_SUBDIR map in install-skill-mesh.ps1). GPT installs to .github/skills --
+# a real GitHub Copilot CLI discovery root (Step 43 proof); the project-relative
+# .copilot/skills is the RETIRED wrong target. (`.claude` is written via Path() so
+# this file carries no literal ".claude/" path token -- tests/router/
+# test_no_claude_dependency.py flags load-bearing ".claude/" references in code.)
 DISCOVERY_SUBDIR = {
     "claude": Path(".claude") / "skills",
-    "gpt": Path(".copilot") / "skills",
+    "gpt": Path(".github") / "skills",
 }
+# The retired project-relative GPT target: a GPT install must NEVER write here.
+RETIRED_GPT_SUBDIR = Path(".copilot") / "skills"
 
 pytestmark = pytest.mark.skipif(PWSH is None, reason="powershell is not available on PATH")
 
@@ -84,6 +90,22 @@ def _write_manifest(path, skills):
 def _load_manifest():
     with open(MANIFEST_PATH, encoding="utf-8") as f:
         return json.load(f)
+
+
+GEN_MANIFEST_PATH = REPO_ROOT / "tools" / "gen_manifest.py"
+
+
+def _load_gen_manifest():
+    """Import tools/gen_manifest.py by path (under a private module name so its
+    `if __name__ == '__main__'` guard never fires and no legacy source is needed).
+    Returns the module so tests can read its authoritative DESCRIPTIONS constant."""
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location(
+        "gen_manifest_under_test", GEN_MANIFEST_PATH)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
 
 
 def _skill_partition():
@@ -211,6 +233,166 @@ def test_gpt_discovery_resolves_gpt_adapter(dist_root):
     assert "Claude entry point" not in launcher
 
 
+# --------------------------------------------------------------------------- #
+# GPT SKILL.md YAML frontmatter (Step 44): Copilot requires every SKILL.md to LEAD
+# with a `name`+`description` frontmatter block; the provenance header sits right
+# after the closing `---`.
+# --------------------------------------------------------------------------- #
+
+def _yaml_unescape(s):
+    """Reverse the two escapes ConvertTo-YamlDoubleQuoted emits inside a double-quoted
+    scalar: `\\"`->`"` and `\\\\`->`\\`. A single left-to-right scan (NOT sequential
+    str.replace, which would double-unescape a `\\\\"` sequence). Any other backslash
+    run is left literal -- the builder never emits other escapes."""
+    out = []
+    i = 0
+    while i < len(s):
+        c = s[i]
+        if c == "\\" and i + 1 < len(s) and s[i + 1] in ('"', "\\"):
+            out.append(s[i + 1])
+            i += 2
+            continue
+        out.append(c)
+        i += 1
+    return "".join(out)
+
+
+def _parse_leading_frontmatter(text):
+    """Parse a leading YAML frontmatter block. Returns (mapping, rest_after_block)
+    or None if the text does not begin with a `---\\n ... \\n---\\n` block. Only the
+    simple `key: value` scalars this builder emits are parsed; double-quoted values
+    are unwrapped AND unescaped (so a description containing `"`/`\\` reports its true
+    value). No third-party YAML dependency."""
+    if not text.startswith("---\n"):
+        return None
+    end = text.find("\n---\n", len("---\n"))
+    if end < 0:
+        return None
+    block = text[len("---\n"):end]
+    fm = {}
+    for line in block.splitlines():
+        m = re.match(r"^([A-Za-z0-9_-]+):\s*(.*)$", line)
+        if not m:
+            continue
+        val = m.group(2).strip()
+        if len(val) >= 2 and val[0] == '"' and val[-1] == '"':
+            val = _yaml_unescape(val[1:-1])
+        fm[m.group(1)] = val
+    rest = text[end + len("\n---\n"):]
+    return fm, rest
+
+
+def test_gpt_skill_md_leads_with_frontmatter_then_provenance(dist_root):
+    """Every GPT SKILL.md must begin with a valid YAML frontmatter block whose `name`
+    equals the skill and whose `description` equals THAT skill's per-skill
+    `description` in config/skill-manifest.json (single source of truth -- NOT the
+    generic `<name> (skill-mesh skill).` builder stub), with the provenance header
+    placed IMMEDIATELY after the closing `---`."""
+    portable, _ = _skill_partition()
+    marker = _marker_literal()
+    desc_by_name = {s["name"]: s.get("description") for s in _load_manifest()["skills"]}
+    assert portable, "expected portable skills in the manifest"
+    for name in portable:
+        text = (dist_root / "gpt" / name / "SKILL.md").read_text(encoding="utf-8")
+        parsed = _parse_leading_frontmatter(text)
+        assert parsed is not None, f"gpt/{name}/SKILL.md does not lead with YAML frontmatter"
+        fm, rest = parsed
+        assert fm.get("name") == name, \
+            f"gpt/{name}: frontmatter name is {fm.get('name')!r}, expected {name!r}"
+        # Exact equality against the manifest -- catches a manifest->frontmatter wiring
+        # regression AND the generic stub fallback (which never equals the manifest
+        # value). Two-sided: any other string, blank, or stub fails here.
+        expected_desc = desc_by_name.get(name)
+        assert expected_desc, f"manifest has no description for portable skill {name!r}"
+        assert fm.get("description") == expected_desc, (
+            f"gpt/{name}: frontmatter description {fm.get('description')!r} != "
+            f"manifest description {expected_desc!r} "
+            "(builder stub substituted or manifest->frontmatter wiring regressed)")
+        assert rest.startswith("<!-- GENERATED FILE - DO NOT EDIT."), \
+            f"gpt/{name}: provenance header is not immediately after the frontmatter"
+        assert marker in rest, f"gpt/{name}: missing provenance marker after frontmatter"
+
+
+def test_gpt_frontmatter_anchor_reds_on_missing_or_headerless_block():
+    """ANCHOR: the frontmatter parser must reject a headerless file and a file whose
+    body has no closing `---`, and accept a well-formed block -- otherwise the check
+    above could pass on a SKILL.md that never grew frontmatter."""
+    assert _parse_leading_frontmatter("<!-- GENERATED FILE -->\n# body\n") is None
+    assert _parse_leading_frontmatter("---\nname: x\n# no close\n") is None
+    parsed = _parse_leading_frontmatter('---\nname: x\ndescription: "d"\n---\nrest\n')
+    assert parsed is not None
+    fm, rest = parsed
+    assert fm["name"] == "x" and fm["description"] == "d" and rest == "rest\n"
+
+
+def test_claude_skill_md_not_given_synthesized_frontmatter(dist_root):
+    """Claude output is unchanged: its canonical adapter already ships frontmatter, so
+    the launcher still carries the Claude adapter's own `user-invocable` field -- proof
+    the builder did not synthesize a fresh (name+description-only) GPT-style block over
+    it."""
+    text = (dist_root / "claude" / "build-phase" / "SKILL.md").read_text(encoding="utf-8")
+    parsed = _parse_leading_frontmatter(text)
+    assert parsed is not None, "claude SKILL.md lost its frontmatter"
+    fm, _ = parsed
+    assert "user-invocable" in fm, "claude frontmatter was replaced by a synthesized block"
+
+
+def test_manifest_description_matches_gen_manifest_source_of_truth():
+    """Done-when #3: the per-skill `description` in the COMMITTED
+    config/skill-manifest.json must equal gen_manifest.py's authoritative
+    DESCRIPTIONS constant for EVERY skill. A hand-edited manifest description (which a
+    regen would wipe) or a generator/manifest drift on either side fails here. Runs
+    with NO legacy source -- DESCRIPTIONS is an importable in-module constant."""
+    descriptions = _load_gen_manifest().DESCRIPTIONS
+    manifest = _load_manifest()
+    names = {s["name"] for s in manifest["skills"]}
+
+    # Every committed record's description is present in and equals the source of truth.
+    mismatches = []
+    for s in manifest["skills"]:
+        name = s["name"]
+        assert name in descriptions, \
+            f"gen_manifest.DESCRIPTIONS is missing an entry for committed skill {name!r}"
+        if s.get("description") != descriptions[name]:
+            mismatches.append((name, s.get("description"), descriptions[name]))
+    assert not mismatches, (
+        "manifest/generator description drift (committed != DESCRIPTIONS): "
+        f"{mismatches[:3]}")
+
+    # Symmetric: no generator description without a committed skill, and vice-versa --
+    # so a stale DESCRIPTIONS key or a manifest skill with no source of truth also reds.
+    assert set(descriptions) == names, (
+        "DESCRIPTIONS keys and manifest skills diverge: "
+        f"only-in-gen={sorted(set(descriptions) - names)}, "
+        f"only-in-manifest={sorted(names - set(descriptions))}")
+
+
+def test_gpt_frontmatter_roundtrips_quotes_and_backslashes(tmp_path):
+    """Finding 2 (adversarial): a manifest description containing a literal double-quote
+    AND a backslash must survive ConvertTo-YamlDoubleQuoted's escaping in
+    build-distributions.ps1 and round-trip to the EXACT original string in the emitted
+    GPT frontmatter. Fails if the builder mis-escapes OR if the parser mis-decodes."""
+    raw_desc = 'A "quoted" phrase, a back\\slash, and a colon: still ok.'
+    entry = _real_skill_entry("build-phase")
+    entry["description"] = raw_desc
+    manifest = _write_manifest(tmp_path / "mf_desc.json", [entry])
+    dist = tmp_path / "dist"
+    _build_from_manifest(dist, manifest, provider="gpt")
+
+    text = (dist / "gpt" / "build-phase" / "SKILL.md").read_text(encoding="utf-8")
+    parsed = _parse_leading_frontmatter(text)
+    assert parsed is not None, "generated GPT SKILL.md does not lead with frontmatter"
+    fm, _ = parsed
+    assert fm.get("description") == raw_desc, (
+        f"description did not round-trip: emitted {fm.get('description')!r} != "
+        f"original {raw_desc!r}")
+    # Sanity: the raw block on disk really carries the escaped forms (proves the
+    # round-trip exercised escaping, not a coincidental no-op).
+    head = text[:text.find("\n---\n", 4)]
+    assert '\\"' in head and "\\\\" in head, \
+        "emitted frontmatter did not escape the quote/backslash -- test would be vacuous"
+
+
 def test_launcher_core_reference_is_repointed_and_resolves(dist_root):
     """The launcher references the co-located core.md (not the source '../core.md'),
     and that referenced path exists in the generated tree."""
@@ -282,6 +464,25 @@ def test_install_places_profile_and_resolves_adapter(dist_root, tmp_path, provid
     led = _ledger(home)
     assert led is not None and provider in led["installs"]
     assert len(led["installs"][provider]["owned_files"]) > 0
+
+
+def test_gpt_install_target_is_github_skills_not_copilot(dist_root, tmp_path):
+    """Step 44 retarget: a GPT install writes to <home>/.github/skills/<skill>/ and
+    NEVER to the retired project-relative <home>/.copilot/skills. Two-sided so it
+    fails both if the target regresses AND if nothing is written."""
+    home = tmp_path / "home"
+    r = _install(home, "gpt", dist_dir=dist_root)
+    assert r.returncode == 0, f"gpt install failed:\n{r.stdout}\n{r.stderr}"
+    github_target = home / DISCOVERY_SUBDIR["gpt"] / "build-phase" / "SKILL.md"
+    assert github_target.is_file(), \
+        f"GPT install did not write to {DISCOVERY_SUBDIR['gpt']} (got no SKILL.md at {github_target})"
+    retired = home / RETIRED_GPT_SUBDIR
+    assert not retired.exists(), \
+        f"GPT install wrote to the retired target {RETIRED_GPT_SUBDIR}"
+    # the installer's own ledger records the retargeted subdir
+    led = _ledger(home)
+    assert led is not None and "gpt" in led["installs"]
+    assert led["installs"]["gpt"]["discovery_subdir"] == DISCOVERY_SUBDIR["gpt"].as_posix()
 
 
 def test_reinstall_is_idempotent(dist_root, tmp_path):

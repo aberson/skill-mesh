@@ -175,6 +175,29 @@ function Add-Provenance([string]$body, [string]$canonicalSource, [string]$profil
     return $prov + "`n`n" + $body
 }
 
+function ConvertTo-YamlDoubleQuoted([string]$s) {
+    # A YAML double-quoted scalar: escape backslash then double-quote (order matters),
+    # wrap in quotes. Robust regardless of the description's punctuation (colons,
+    # hashes, leading special chars are all safe inside a double-quoted scalar).
+    $e = $s.Replace('\', '\\').Replace('"', '\"')
+    return '"' + $e + '"'
+}
+
+function New-GptFrontmatter([string]$name, [string]$description) {
+    # GitHub Copilot CLI requires every native SKILL.md to LEAD with a YAML
+    # frontmatter block carrying at least `name` + `description` (Step 43 proof).
+    # `name` and `description` both come from the manifest record (single source of
+    # truth); the description is never re-authored per host.
+    $descYaml = ConvertTo-YamlDoubleQuoted $description
+    $lines = @(
+        '---',
+        "name: $name",
+        "description: $descYaml",
+        '---'
+    )
+    return (($lines -join "`n") + "`n")
+}
+
 function Repoint-CoreReference([string]$adapterBody) {
     # In the canonical tree the adapter lives at skills/<name>/providers/<p>.md and
     # references its core as '../core.md'. In the flat discovery layout core.md is a
@@ -289,6 +312,23 @@ foreach ($profile in $profiles) {
         $adapterBody = Read-SourceText $adapterAbs
         if ($hasCore) {
             $adapterBody = Repoint-CoreReference $adapterBody
+        }
+        # GPT/Copilot native discovery requires the SKILL.md to LEAD with a YAML
+        # frontmatter block (name + description). The canonical gpt.md adapters carry
+        # no frontmatter, so synthesize it from the manifest record here; the
+        # provenance header is then placed immediately AFTER the closing '---' by
+        # Add-Provenance's frontmatter-first path. Skip synthesis if the adapter body
+        # somehow already leads with frontmatter (defensive: avoid double blocks).
+        # Claude output is untouched -- its canonical claude.md already ships
+        # frontmatter and Add-Provenance already sequences behind it.
+        if ($profile -eq 'gpt' -and -not $adapterBody.StartsWith("---`n")) {
+            $desc = [string](Get-Prop $skill 'description')
+            if ([string]::IsNullOrWhiteSpace($desc)) {
+                # Fallback keeps minimal/adversarial manifests (no description field)
+                # producing a valid frontmatter rather than an empty one.
+                $desc = "$name (skill-mesh skill)."
+            }
+            $adapterBody = (New-GptFrontmatter $name $desc) + $adapterBody
         }
         $launcher = Add-Provenance $adapterBody $adapterRel $profile
         Write-GeneratedFile (Join-Path $skillOutDir 'SKILL.md') $launcher $profileDirAbs

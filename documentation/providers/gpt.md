@@ -19,16 +19,35 @@ session cannot accidentally discover the Claude compatibility launcher first.
 Only the 47 portable skills have a GPT adapter. The 3 Claude-native exclusions are
 not installed into a GPT profile.
 
-### Native discovery root
+### Native discovery root and SKILL.md format
 
 The generated GPT discovery tree is written to
-`<install-home>/.copilot/skills/<skill>/` — GitHub Copilot CLI's native
-skill-discovery root. A GPT install populates only `.copilot/skills`, never a
-Claude root. This discovered path is what proves a GPT profile is installed.
+`<install-home>/.github/skills/<skill>/` — a real GitHub Copilot CLI native
+skill-discovery root (proven against a live Copilot CLI v1.0.77 in Step 43, #58).
+This discovered path is what proves a GPT profile is installed.
+
+GitHub Copilot CLI discovers project skills from three roots — `.github/skills/`,
+`.agents/skills/`, and `.claude/skills/` — plus the personal root
+`~/.copilot/skills/`. This package installs the GPT profile to the conventional
+project root `.github/skills/`. Because `.claude/skills/` is **also** a Copilot
+discovery root, a consumer with both profiles installed is doubly exposed; the
+cutover plan's Step 45 proves and resolves that collision before any live
+both-profile migration.
+
+**Every generated GPT `SKILL.md` must lead with a YAML frontmatter block** containing
+at least `name` and `description`; Copilot rejects a `SKILL.md` without it. The
+builder emits that frontmatter first (with the provenance header immediately after
+the closing `---`); `name` and `description` come from the single per-skill
+`description` field in `config/skill-manifest.json`, never re-authored per host.
+
+The originally-assumed project-relative `.copilot/skills` target is **retired**: Step
+43 proved it is **not** a GitHub Copilot CLI discovery root (a planted skill there
+returned `NOT REGISTERED`), so no install writes to it. A pre-retarget
+`.copilot/skills` install is only a legacy wrong-target to migrate off.
 
 A GPT model answering correctly is **not** proof of a native install: a Copilot CLI
 can expose skills via runtime injection of a `CLAUDE.md` even when no
-`.copilot/skills` tree is present. That is host integration, not native discovery,
+`.github/skills` tree is present. That is host integration, not native discovery,
 and the running model does not select the skill tree.
 
 A root `AGENTS.md` (or an injected `CLAUDE.md`) is an **instruction adapter, not a

@@ -112,6 +112,7 @@
     {
       "name": "build-phase",
       "status": "portable",
+      "description": "Orchestrate a multi-step build phase end-to-end: run each plan step through build-step in order, gate quality between steps, and report progress.",
       "core": "skills/build-phase/core.md",
       "providers": {
         "claude": "skills/build-phase/providers/claude.md",
@@ -137,6 +138,7 @@
     {
       "name": "build-queue",
       "status": "portable",
+      "description": "Queue and run multiple pending phase plans unattended, isolating each in its own worktree and parking any halt as a GitHub issue.",
       "core": "skills/build-queue/core.md",
       "providers": {
         "claude": "skills/build-queue/providers/claude.md",
@@ -162,6 +164,7 @@
     {
       "name": "build-step",
       "status": "portable",
+      "description": "Execute one build step end-to-end: a developer agent writes the change, isolated reviewers gate it, and the result merges.",
       "core": "skills/build-step/core.md",
       "providers": {
         "claude": "skills/build-step/providers/claude.md",
@@ -192,6 +195,7 @@
     {
       "name": "claude-oauth-auth",
       "status": "provider-native",
+      "description": "How to authenticate with Claude using a subscription OAuth token instead of an API key.",
       "core": null,
       "providers": {
         "claude": "skills/claude-oauth-auth/providers/claude.md"
@@ -216,6 +220,7 @@
     {
       "name": "context-slim",
       "status": "provider-native",
+      "description": "Audit a project's auto-loaded context files and produce a prioritized progressive-disclosure plan to cut per-turn token cost.",
       "core": null,
       "providers": {
         "claude": "skills/context-slim/providers/claude.md"
@@ -241,6 +246,7 @@
     {
       "name": "goblin-do",
       "status": "portable",
+      "description": "Single front door for a chosen goblin atom: execute a small suggestion or safe UAT task via build-step, or hand a big one to the plan rail.",
       "core": "skills/goblin-do/core.md",
       "providers": {
         "claude": "skills/goblin-do/providers/claude.md",
@@ -271,6 +277,7 @@
     {
       "name": "goblin-suggest",
       "status": "portable",
+      "description": "Produce a grounded, ranked improvement shortlist for a project and persist it as goblin suggestion atoms.",
       "core": "skills/goblin-suggest/core.md",
       "providers": {
         "claude": "skills/goblin-suggest/providers/claude.md",
@@ -301,6 +308,7 @@
     {
       "name": "judge-motion",
       "status": "provider-native",
+      "description": "Capture a UI transition as a slow-motion filmstrip and have a vision-judge render a PASS/FAIL/ESCALATE verdict on motion defects.",
       "core": null,
       "providers": {
         "claude": "skills/judge-motion/providers/claude.md"
@@ -343,6 +351,7 @@
     {
       "name": "judge-ui",
       "status": "portable",
+      "description": "Drive a web UI through a flow, capture screenshots plus a structured read-back, and have an independent vision-judge render PASS/FAIL/UNCERTAIN.",
       "core": "skills/judge-ui/core.md",
       "providers": {
         "claude": "skills/judge-ui/providers/claude.md",
@@ -374,6 +383,7 @@
     {
       "name": "lesson-harvest",
       "status": "portable",
+      "description": "Scan recent git history and run-logs for un-codified regressions and draft codification candidates as a review-ready PR.",
       "core": "skills/lesson-harvest/core.md",
       "providers": {
         "claude": "skills/lesson-harvest/providers/claude.md",
@@ -399,6 +409,7 @@
     {
       "name": "memory-distill",
       "status": "portable",
+      "description": "Review recent feedback memories one at a time and surface the latent principles several of them point at.",
       "core": "skills/memory-distill/core.md",
       "providers": {
         "claude": "skills/memory-distill/providers/claude.md",
@@ -424,6 +435,7 @@
     {
       "name": "observatory-doctor",
       "status": "portable",
+      "description": "Health-check every launcher button on the dev-observatory dashboard and report which project verbs actually work.",
       "core": "skills/observatory-doctor/core.md",
       "providers": {
         "claude": "skills/observatory-doctor/providers/claude.md",
@@ -444,6 +456,7 @@
     {
       "name": "plan-expedite",
       "status": "portable",
+      "description": "Chain plan-review, plan-wrap, repo-sync, and task-handoff into one autonomous prep step before build-phase.",
       "core": "skills/plan-expedite/core.md",
       "providers": {
         "claude": "skills/plan-expedite/providers/claude.md",
@@ -473,6 +486,7 @@
     {
       "name": "plan-feature",
       "status": "portable",
+      "description": "Plan a new feature or phase for an existing project by reading its code and docs, then producing a scoped plan document.",
       "core": "skills/plan-feature/core.md",
       "providers": {
         "claude": "skills/plan-feature/providers/claude.md",
@@ -498,6 +512,7 @@
     {
       "name": "plan-init",
       "status": "portable",
+      "description": "Guide creation of a new project plan through a structured up-front conversation about stack, storage, auth, and tooling.",
       "core": "skills/plan-init/core.md",
       "providers": {
         "claude": "skills/plan-init/providers/claude.md",
@@ -523,6 +538,7 @@
     {
       "name": "plan-merge",
       "status": "portable",
+      "description": "Merge two overlapping plan documents into one coherent plan, resolving sequencing and deleting subsumed phases.",
       "core": "skills/plan-merge/core.md",
       "providers": {
         "claude": "skills/plan-merge/providers/claude.md",
@@ -548,6 +564,7 @@
     {
       "name": "plan-redline",
       "status": "portable",
+      "description": "Render a just-authored plan into an operator-facing proposal with every choice labeled operator-picked or agent-defaulted.",
       "core": "skills/plan-redline/core.md",
       "providers": {
         "claude": "skills/plan-redline/providers/claude.md",
@@ -577,6 +594,7 @@
     {
       "name": "plan-review",
       "status": "portable",
+      "description": "Review a plan for gaps, missing pieces, unresolved decisions, and risks, validating claims against existing code.",
       "core": "skills/plan-review/core.md",
       "providers": {
         "claude": "skills/plan-review/providers/claude.md",
@@ -602,6 +620,7 @@
     {
       "name": "plan-trim",
       "status": "portable",
+      "description": "Investigate a project's state and propose plan items to cut or fold together, then execute the trim once confirmed.",
       "core": "skills/plan-trim/core.md",
       "providers": {
         "claude": "skills/plan-trim/providers/claude.md",
@@ -627,6 +646,7 @@
     {
       "name": "plan-wrap",
       "status": "portable",
+      "description": "Check whether a plan or document is self-contained for a fresh model with no prior conversation history.",
       "core": "skills/plan-wrap/core.md",
       "providers": {
         "claude": "skills/plan-wrap/providers/claude.md",
@@ -652,6 +672,7 @@
     {
       "name": "repo-init",
       "status": "portable",
+      "description": "Publish a local project to GitHub: initialize git, create the remote, add a README, and convert the plan into issues.",
       "core": "skills/repo-init/core.md",
       "providers": {
         "claude": "skills/repo-init/providers/claude.md",
@@ -677,6 +698,7 @@
     {
       "name": "repo-sync",
       "status": "portable",
+      "description": "Sync GitHub issues to match a plan's structure with rich, fresh-context issue bodies.",
       "core": "skills/repo-sync/core.md",
       "providers": {
         "claude": "skills/repo-sync/providers/claude.md",
@@ -702,6 +724,7 @@
     {
       "name": "repo-update",
       "status": "portable",
+      "description": "End-to-end docs and git update after a phase: refresh README and plan, run plan-wrap, update memory, commit, and push.",
       "core": "skills/repo-update/core.md",
       "providers": {
         "claude": "skills/repo-update/providers/claude.md",
@@ -727,6 +750,7 @@
     {
       "name": "research-prospect",
       "status": "portable",
+      "description": "Scan active projects and surface high-value research topic strings per project for hand-off to separate windows.",
       "core": "skills/research-prospect/core.md",
       "providers": {
         "claude": "skills/research-prospect/providers/claude.md",
@@ -753,6 +777,7 @@
     {
       "name": "review-deep",
       "status": "portable",
+      "description": "Six-lens code review (correctness, bugs, security, tests, style, plan-conformance) with severity, evidence, and a JSON audit trail.",
       "core": "skills/review-deep/core.md",
       "providers": {
         "claude": "skills/review-deep/providers/claude.md",
@@ -783,6 +808,7 @@
     {
       "name": "review-gauntlet",
       "status": "portable",
+      "description": "Lean multi-lens code-review profile over review-deep's engine that emits a terse PASS/NEEDS-WORK verdict.",
       "core": "skills/review-gauntlet/core.md",
       "providers": {
         "claude": "skills/review-gauntlet/providers/claude.md",
@@ -809,6 +835,7 @@
     {
       "name": "review-proof",
       "status": "portable",
+      "description": "Enforce evidence-based responses by requiring primary-source verification before making any claim.",
       "core": "skills/review-proof/core.md",
       "providers": {
         "claude": "skills/review-proof/providers/claude.md",
@@ -834,6 +861,7 @@
     {
       "name": "review-uat",
       "status": "portable",
+      "description": "Refine a UAT script so every step is unambiguous and only the checks that genuinely need a human stay on the human.",
       "core": "skills/review-uat/core.md",
       "providers": {
         "claude": "skills/review-uat/providers/claude.md",
@@ -859,6 +887,7 @@
     {
       "name": "session-wrap",
       "status": "portable",
+      "description": "The session-transition front door: triage context, task state, and git, then continue, recycle, or close the window.",
       "core": "skills/session-wrap/core.md",
       "providers": {
         "claude": "skills/session-wrap/providers/claude.md",
@@ -884,6 +913,7 @@
     {
       "name": "skill-eval-setup",
       "status": "portable",
+      "description": "Auto-generate an evaluation framework for a skill by reading its contract, then output a ready-to-run self-improvement loop.",
       "core": "skills/skill-eval-setup/core.md",
       "providers": {
         "claude": "skills/skill-eval-setup/providers/claude.md",
@@ -913,6 +943,7 @@
     {
       "name": "skill-evolve",
       "status": "portable",
+      "description": "A/B-test several variant mutations of a skill in parallel worktrees and compare, pushing the winner for review.",
       "core": "skills/skill-evolve/core.md",
       "providers": {
         "claude": "skills/skill-evolve/providers/claude.md",
@@ -939,6 +970,7 @@
     {
       "name": "skill-iterate",
       "status": "portable",
+      "description": "Serial hill-climb every scorable skill autonomously, capped per skill by wall-clock or iteration budget.",
       "core": "skills/skill-iterate/core.md",
       "providers": {
         "claude": "skills/skill-iterate/providers/claude.md",
@@ -969,6 +1001,7 @@
     {
       "name": "task-handoff",
       "status": "portable",
+      "description": "Checkpoint library that orchestrators call to save session state and regenerate the derived current-task rollup.",
       "core": "skills/task-handoff/core.md",
       "providers": {
         "claude": "skills/task-handoff/providers/claude.md",
@@ -989,6 +1022,7 @@
     {
       "name": "test-prune",
       "status": "portable",
+      "description": "Audit a test suite for redundant, trivial, or mock-theater tests, relocating sole-coverage ones and deleting the rest.",
       "core": "skills/test-prune/core.md",
       "providers": {
         "claude": "skills/test-prune/providers/claude.md",
@@ -1015,6 +1049,7 @@
     {
       "name": "tier-escalate",
       "status": "portable",
+      "description": "Scan skills to find which single load-bearing seed-artifact phase warrants escalating a session to a higher-tier model, and emit a map.",
       "core": "skills/tier-escalate/core.md",
       "providers": {
         "claude": "skills/tier-escalate/providers/claude.md",
@@ -1045,6 +1080,7 @@
     {
       "name": "tier-offload",
       "status": "portable",
+      "description": "Scan skills to find which sub-tasks are safe to offload to a local model, and emit an offload inventory plus a router config.",
       "core": "skills/tier-offload/core.md",
       "providers": {
         "claude": "skills/tier-offload/providers/claude.md",
@@ -1083,6 +1119,7 @@
     {
       "name": "user-afterparty",
       "status": "portable",
+      "description": "Milestone workspace-hygiene front door that chains the hygiene skills into one report and walks the operator through cleanup.",
       "core": "skills/user-afterparty/core.md",
       "providers": {
         "claude": "skills/user-afterparty/providers/claude.md",
@@ -1103,6 +1140,7 @@
     {
       "name": "user-brainstorm",
       "status": "portable",
+      "description": "Brainstorm a topic end-to-end, gap-fill through rounds, then dispatch one sub-agent per topic to write a reference doc set.",
       "core": "skills/user-brainstorm/core.md",
       "providers": {
         "claude": "skills/user-brainstorm/providers/claude.md",
@@ -1129,6 +1167,7 @@
     {
       "name": "user-debug",
       "status": "portable",
+      "description": "Diagnose and fix a bug end-to-end with forced primary-source investigation before any code change.",
       "core": "skills/user-debug/core.md",
       "providers": {
         "claude": "skills/user-debug/providers/claude.md",
@@ -1154,6 +1193,7 @@
     {
       "name": "user-draft",
       "status": "portable",
+      "description": "Refine rough thoughts into a polished prompt or a ready-to-paste goal condition, checkpointing state along the way.",
       "core": "skills/user-draft/core.md",
       "providers": {
         "claude": "skills/user-draft/providers/claude.md",
@@ -1179,6 +1219,7 @@
     {
       "name": "user-gateway",
       "status": "portable",
+      "description": "Pre-work intake gateway that converts an operator vent into routed, ledger-backed work with a ready-to-paste seed per row.",
       "core": "skills/user-gateway/core.md",
       "providers": {
         "claude": "skills/user-gateway/providers/claude.md",
@@ -1204,6 +1245,7 @@
     {
       "name": "user-lavishify",
       "status": "portable",
+      "description": "Escalate the last output into a richer, more thorough on-demand deliverable without changing the default chat-first style.",
       "core": "skills/user-lavishify/core.md",
       "providers": {
         "claude": "skills/user-lavishify/providers/claude.md",
@@ -1224,6 +1266,7 @@
     {
       "name": "user-learn",
       "status": "portable",
+      "description": "Scaffold a hands-on learning ramp for a topic with a knowledge base, runnable notebooks, exercises, and a progress tracker.",
       "core": "skills/user-learn/core.md",
       "providers": {
         "claude": "skills/user-learn/providers/claude.md",
@@ -1250,6 +1293,7 @@
     {
       "name": "user-orient",
       "status": "portable",
+      "description": "Re-orient on the session axis with a verified status snapshot of what we were doing and what is left.",
       "core": "skills/user-orient/core.md",
       "providers": {
         "claude": "skills/user-orient/providers/claude.md",
@@ -1275,6 +1319,7 @@
     {
       "name": "user-pm",
       "status": "portable",
+      "description": "Tight PM-lens overview on the project axis: what shipped, what is planned, what is next, and what could be cut.",
       "core": "skills/user-pm/core.md",
       "providers": {
         "claude": "skills/user-pm/providers/claude.md",
@@ -1300,6 +1345,7 @@
     {
       "name": "user-project",
       "status": "portable",
+      "description": "Pin the session's active project so pipeline skills target the right repo regardless of the current directory.",
       "core": "skills/user-project/core.md",
       "providers": {
         "claude": "skills/user-project/providers/claude.md",
@@ -1320,6 +1366,7 @@
     {
       "name": "user-shakedown",
       "status": "portable",
+      "description": "Shake down a just-built tool or feature to surface rough edges before formal acceptance.",
       "core": "skills/user-shakedown/core.md",
       "providers": {
         "claude": "skills/user-shakedown/providers/claude.md",
@@ -1345,6 +1392,7 @@
     {
       "name": "user-uat",
       "status": "portable",
+      "description": "Run an already-clear UAT block for the operator, executing steps and auto-judging the mechanically checkable ones.",
       "core": "skills/user-uat/core.md",
       "providers": {
         "claude": "skills/user-uat/providers/claude.md",
@@ -1370,6 +1418,7 @@
     {
       "name": "user-walkthrough",
       "status": "portable",
+      "description": "Attended, operator-driven acceptance of a just-built tool where the agent answers from primary source and fixes small things in place.",
       "core": "skills/user-walkthrough/core.md",
       "providers": {
         "claude": "skills/user-walkthrough/providers/claude.md",
@@ -1395,6 +1444,7 @@
     {
       "name": "user-wrap",
       "status": "portable",
+      "description": "The return-moment front door for sitting back down: orient, get a keep-going-or-wrap verdict, and act on it.",
       "core": "skills/user-wrap/core.md",
       "providers": {
         "claude": "skills/user-wrap/providers/claude.md",

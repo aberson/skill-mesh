@@ -9,7 +9,12 @@
     provider-specific discovery location:
 
         claude -> <Home>/.claude/skills/<skill>/{SKILL.md, core.md}
-        gpt    -> <Home>/.copilot/skills/<skill>/{SKILL.md, core.md}
+        gpt    -> <Home>/.github/skills/<skill>/{SKILL.md, core.md}
+
+    (GitHub Copilot CLI discovers project skills from .github/skills, .agents/skills,
+    and .claude/skills, plus the personal ~/.copilot/skills; this installer writes the
+    GPT profile to .github/skills. The project-relative .copilot/skills target used
+    before the Step 43 proof is RETIRED -- Copilot does not discover it.)
 
     OWNERSHIP AUTHORITY = FILE-CONTENT PROVENANCE, NOT THE LEDGER.
     Every generated file carries the provenance marker from tools/skill-mesh-provenance.ps1
@@ -111,10 +116,12 @@ $PROVENANCE = Join-Path $TOOLS_DIR 'skill-mesh-provenance.ps1'
 
 $UTF8_NO_BOM = New-Object System.Text.UTF8Encoding($false)
 
-# Provider-specific discovery subdirectory (relative to Home), POSIX form.
+# Provider-specific install target subdirectory (relative to Home), POSIX form.
+# GPT installs to .github/skills -- a real GitHub Copilot CLI discovery root (proven
+# in Step 43); the retired project-relative .copilot/skills is NOT a Copilot root.
 $DISCOVERY_SUBDIR = @{
     'claude' = '.claude/skills'
-    'gpt'    = '.copilot/skills'
+    'gpt'    = '.github/skills'
 }
 
 $LEDGER_NAME = '.skill-mesh-install.json'
