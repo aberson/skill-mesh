@@ -112,14 +112,21 @@ tests/                  calibration, distributions, package-integrity, release, 
 
 ## Current state
 
-**Phase 7 — Host-Native Discovery & Consumer Cutover, in progress.** Step 42 of Steps 42–48 is
-DONE (the host-loading authority map, locked by 12 package-integrity tests); Steps 43–48 are
-pending, starting with the operator-run GPT discovery-root proof. 285 tests pass, 3 skip.
+**Phase 7 — Host-Native Discovery & Consumer Cutover, in progress.** Steps 42–44 of Steps 42–50
+are DONE: the host-loading authority map (locked by 17 package-integrity tests); the live
+Copilot CLI v1.0.77 discovery-root proof, which **disproved** the assumed `.copilot/skills`
+target; and the resulting GPT retarget to `.github/skills` with YAML-frontmatter `SKILL.md`.
+Steps 45–50 are pending, starting with the both-profile proof and the `.claude/skills` collision
+(Copilot reads that root too). 300 tests across seven suites.
 
 Phases 1–6 delivered the canonical `skills/` source tree, the provider-neutral router, and the
 distribution, installer, and release tooling. Plan:
 `documentation/host-native-discovery-cutover-plan.md` (it supersedes the unexecuted Step 41
-acceptance intent of `documentation/provider-neutral-skill-mesh-plan.md`).
+acceptance intent of `documentation/provider-neutral-skill-mesh-plan.md`). Phase 8 —
+`documentation/provider-expansion-plan.md` (Steps 51–61, Gemini + local lanes) — is PLANNED and
+gated on Phase 7's cutover. It has NOT yet been through plan-review/plan-wrap: a wrap pass found
+3 blockers (9 steps missing `**Type:**`, all `**Issue:**` fields blank, Step 55 unbuildable as
+scoped), so run that pipeline before building from it.
 
 ## Environment requirements
 

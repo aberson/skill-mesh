@@ -9,7 +9,7 @@ A GPT/Copilot installation binds the `gpt` adapter of every portable skill into 
 host's discovery layout:
 
 ```powershell
-pwsh -File tools\install-skill-mesh.ps1 -Provider gpt -Home <gpt-skills-root>
+pwsh -File tools\install-skill-mesh.ps1 -Provider gpt -Home <install-home>
 ```
 
 Each installed skill resolves `skills/<name>/providers/gpt.md`, which references the

@@ -9,7 +9,7 @@ A Claude Code installation binds the `claude` adapter of every skill into Claude
 discovery layout:
 
 ```powershell
-pwsh -File tools\install-skill-mesh.ps1 -Provider claude -Home <claude-skills-root>
+pwsh -File tools\install-skill-mesh.ps1 -Provider claude -Home <install-home>
 ```
 
 Each installed skill resolves `skills/<name>/providers/claude.md`, which references

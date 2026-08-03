@@ -85,7 +85,18 @@
 </head>
 <body>
 <main>
-  <div class="eyebrow">Operator proposal</div>
+  <div class="eyebrow">Operator proposal &mdash; historical, superseded 2026-08-03</div>
+  <p class="lede" style="border-left:4px solid var(--warn);padding-left:14px;color:var(--muted)">
+    <b>Frozen pre-execution record.</b> This page is the proposal as accepted before Step 43 ran.
+    Step 43 disproved its central assumption: GitHub Copilot CLI does <b>not</b> discover skills at
+    the project-relative <code>.copilot/skills</code>. The real roots are
+    <code>.github/skills</code>, <code>.agents/skills</code>, <code>.claude/skills</code> (project)
+    and <code>~/.copilot/skills</code> (personal), and every <code>SKILL.md</code> must lead with a
+    YAML <code>name</code>/<code>description</code> frontmatter block. Step 44 retargeted the
+    installer and builder accordingly, and the step timeline below was re-scoped to Steps 42&ndash;50.
+    Current truth lives in <code>documentation/host-discovery.md</code>; this page is deliberately
+    not edited to match, so the falsified hypothesis stays on the record.
+  </p>
   <h1>Host-native discovery, without the legacy ambiguity</h1>
   <p class="lede">
     Make the public skill-mesh package the actual source used by both hosts, migrate the

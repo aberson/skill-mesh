@@ -63,12 +63,12 @@ The legacy migration source's own `.claude/skills/` and `.claude/skills-gpt/` tr
 `aberson/coding-root`) were **read-only** for the whole of Steps 33-40 — nothing in this
 migration wrote to them. Step 41 has been superseded by
 [`host-native-discovery-cutover-plan.md`](host-native-discovery-cutover-plan.md); the one-time
-cutover is now Steps 43-48 of that plan (Step 42 shipped; Step 43 is next), which install the
+cutover is now Steps 43-50 of that plan (Steps 42-44 shipped; Step 45 is next), which install the
 released `aberson/skill-mesh` package into `coding-root/.claude` via
 `tools/install-skill-mesh.ps1 -Provider claude -Home <coding-root>`, generating a marker-tagged,
 ownership-safe discovery tree rather than hand-edited files.
 
-After Step 48 of the host-native-discovery cutover plan, `coding-root/.claude/skills/` becomes an **installed consumer** of this package, not
+After Step 50 of the host-native-discovery cutover plan, `coding-root/.claude/skills/` becomes an **installed consumer** of this package, not
 an independent source: future skill changes are made in `aberson/skill-mesh` and flow out via a
 re-install (`install-skill-mesh.ps1`, idempotent — see `documentation/architecture.md` §8.2),
 never by hand-editing files under the installed `.claude/skills/` tree directly.

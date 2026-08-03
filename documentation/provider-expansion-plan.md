@@ -12,6 +12,31 @@ This plan is self-contained: every design decision it depends on is restated in 
 ratified from an operator-side MCP/provider investigation (private workspace, 2026-08-02/03);
 no external document is required to execute it.
 
+> **NOT YET REVIEWED — do not run `/build-phase` against this plan.** It was authored and
+> committed without the `plan-review → plan-redline → plan-wrap` sequence. An independent
+> plan-wrap pass on 2026-08-03 returned `NEEDS WORK: 3 blockers, 8 gaps` (+7 minors). One
+> blocker — 9 steps missing `**Type:**` and 2 operator steps missing `**Produces:**` — was
+> fixed in that same wrap, so every step is now shape-complete. **Two blockers remain open:**
+>
+> 1. **Step 55 is unbuildable as scoped.** The `local` column is a four-way duplicated
+>    data-shape constant (`config/model-mapping.json`, `config/skill-manifest.json`,
+>    `tests/package-integrity/expected_inventory.json`, and the real source of truth
+>    `tools/gen_manifest.py`'s `LOCAL_CAPABLE`). The plan names only the first. Four hard
+>    assertions in `test_manifest_contract.py` pin `local_capable == 24` and its exact member
+>    set, and regeneration hard-exits without the private `SKILL_MESH_LEGACY_SOURCE`, so
+>    Step 55's "full suite green" is unreachable in a clean clone. Decide the source of truth
+>    and put all four artifacts in a step's `Produces:` before building.
+> 2. **Every `**Issue:**` field is blank.** Phase 7 holds #56-#63 and #65-#67, so this plan
+>    starts at #68 — but that is `/repo-sync`'s call against live GitHub state, not a value to
+>    hand-write here.
+>
+> Also unowned: Step 54's per-skill `providers/gemini.md` has no declared status against the
+> manifest's closed `{claude, gpt}` provider set (`test_manifest_contract.py:175`), the
+> builder's `ValidateSet('claude','gpt','both')`, or the installer's two-root map — the exact
+> surface Phase 7 Steps 45-50 are still rebuilding.
+>
+> Run `/plan-review` then `/plan-wrap` on this document before `/repo-sync`.
+
 ---
 
 ## 1. What This Feature Does
@@ -45,7 +70,7 @@ designed-not-built profile key. No MCP anywhere: the ratified posture is subproc
 - Tests are the only automated gate (no lint/typecheck by design, `architecture.md` §8.4).
   Baseline: 285 pass / 3 skip at plan time — re-baseline at Phase 8 start, since Phase 7 will
   have grown the suite. `tests/calibration/calibrate.py` exists but its `invoke_model()` is
-  stubbed — no real cross-model call has ever been scored; `phase-3-4-ports.json` covers 35 of
+  stubbed — no real cross-model call has ever been scored; `phase-3-4-ports.json` covers 34 of
   the 50 skills structurally.
 - Known defects this plan fixes: the `providers.local` block points at an Ollama-shaped
   endpoint/model that does not exist on the operator's machine, and `Invoke-LocalModel` ignores
@@ -127,7 +152,7 @@ itself; team-profile implementation (key is designed-not-built); paid Gemini key
    on multi-tool orchestration, so local executes only bounded judge/grader single-call slices.
    The mapping's `local` column is **redefined**: `true` means "this skill has a bounded
    judge/grader single-call slice" (criteria: single completion; fixed JSON verdict schema; no
-   tool use or vision; prompt fits a 30B-class context window), and the ~15 legacy aspirational
+   tool use or vision; prompt fits a 30B-class context window), and the 24 legacy aspirational
    flags are re-derived against those criteria in Step 55.
 7. **Local response handling:** parse the `content` field (never `reasoning_content`, where
    local reasoning models bury answers) and request `max_tokens >= 600`.
@@ -153,6 +178,7 @@ itself; team-profile implementation (key is designed-not-built); paid Gemini key
   package-integrity pytest asserting bidirectional 1:1 sync (every `skills/<name>/` dir has a
   mapping row and manifest entry, and vice versa) plus row sanity (capability values boolean;
   every referenced provider exists in the `providers` block).
+- **Type:** code
 - **Issue:** #
 - **Flags:** --reviewers code
 - **Produces:** `tests/package-integrity/test_mapping_drift.py`
@@ -167,6 +193,7 @@ itself; team-profile implementation (key is designed-not-built); paid Gemini key
   **additively** with a per-provider peer table (Gemini tiers, flash-class defaults per §6.3);
   generalize to a provider-aware resolver with the existing GPT behavior preserved exactly;
   update the `architecture.md` tier-map row.
+- **Type:** code
 - **Issue:** #
 - **Flags:** --reviewers code
 - **Produces:** extended `config/model-tier-map.json`; resolver changes in
@@ -182,6 +209,7 @@ itself; team-profile implementation (key is designed-not-built); paid Gemini key
   enumerate telemetry-writer callers before editing); dispatch branch fires only on explicit
   gemini selection, never as fallback; gemini errors fail open to Claude exit 2; resolve current
   model ids from the live models endpoint during the build.
+- **Type:** code
 - **Issue:** #
 - **Flags:** --reviewers code
 - **Produces:** router + telemetry changes; `providers.gemini` config block; mocked-HTTP tests
@@ -197,6 +225,7 @@ itself; team-profile implementation (key is designed-not-built); paid Gemini key
   `gemini` column to `model-mapping.json` mirroring `gpt` for the 47 portable skills (false for
   the 3 Claude-native); create `documentation/providers/gemini.md` documenting the
   fork-on-failure protocol.
+- **Type:** code
 - **Issue:** #
 - **Flags:** --reviewers code
 - **Produces:** resolver change; mapping column; carrier policy doc; tests
@@ -213,6 +242,7 @@ itself; team-profile implementation (key is designed-not-built); paid Gemini key
   entry-point skill text to the request; parse `content` with `max_tokens >= 600` (§6.7);
   redefine and re-derive the `local` column per §6.6 criteria; local dispatch is limited to
   judge/grader single-call slices.
+- **Type:** code
 - **Issue:** #
 - **Flags:** --reviewers code
 - **Produces:** router + config changes; re-derived local flags with per-row notes; tests
@@ -228,6 +258,7 @@ itself; team-profile implementation (key is designed-not-built); paid Gemini key
   designed-not-built error naming this plan; unknown -> config error). Document in
   `architecture.md`: the profile gates transport + auth + telemetry sink only; router core keeps
   the `(skill, model, input)` contract; telemetry stays behind the writer seam.
+- **Type:** code
 - **Issue:** #
 - **Flags:** --reviewers code
 - **Produces:** config key; startup validation; tests; architecture note
@@ -242,6 +273,7 @@ itself; team-profile implementation (key is designed-not-built); paid Gemini key
   real judge-slice call; assert verdict JSON, and clean defer when the server is down). Skipped
   by default when `GEMINI_API_KEY` is absent / the local endpoint is unreachable, so CI stays
   green without secrets.
+- **Type:** code
 - **Issue:** #
 - **Flags:** --reviewers code
 - **Produces:** smoke legs under `tests/smoke/`
@@ -255,6 +287,7 @@ itself; team-profile implementation (key is designed-not-built); paid Gemini key
   log), and run the Gemini smoke leg — one real call is the programmatic-access verification.
 - **Type:** operator
 - **Issue:** #
+- **Produces:** Live-smoke observations only; no source-code artifact.
 - **Done when:** Gemini leg passes with the real key; telemetry row shows non-zero token counts.
 - **Depends on:** 57-prep
 
@@ -264,16 +297,19 @@ itself; team-profile implementation (key is designed-not-built); paid Gemini key
   run the local smoke leg, then stop the server and confirm the clean-defer path.
 - **Type:** operator
 - **Issue:** #
+- **Produces:** Live-smoke observations only; no source-code artifact.
 - **Done when:** live pass and server-down defer both observed.
 - **Depends on:** 57-prep
 
 ### Step 59: Calibration un-stub, anchor gate, ledger backfill
-- **Problem:** "35/35 calibration tests pass" is file-existence checking: `invoke_model()` in
-  `tests/calibration/calibrate.py` is stubbed and `phase-3-4-ports.json` covers 35 of 50 skills
-  (omitting the 13 heaviest pipeline skills). Implement `invoke_model()` through the production
+- **Problem:** "38/38 calibration tests pass" is file-existence checking: `invoke_model()` in
+  `tests/calibration/calibrate.py` is stubbed and `phase-3-4-ports.json` covers 34 of 50 skills
+  (omitting 16 — the 3 Claude-native skills plus the 13 heaviest plan-/build-/session-family
+  pipeline skills). Implement `invoke_model()` through the production
   router; add the anchor gate (known-good output must outscore known-garbage before any
   baseline number is reported — the gate hard-fails otherwise); backfill the structural ledger
   to all 50 skills.
+- **Type:** code
 - **Issue:** #
 - **Flags:** --reviewers code
 - **Produces:** working `calibrate.py`; 50-entry ledger; extended `test_calibrate.py`
@@ -298,6 +334,7 @@ itself; team-profile implementation (key is designed-not-built); paid Gemini key
 - **Problem:** Bring the docs to 4-family truth: `architecture.md` (Gemini provider section,
   local judge-slice semantics, `deployment.profile`), finalized
   `documentation/providers/gemini.md`, README provider matrix, `migration.md` note.
+- **Type:** code
 - **Issue:** #
 - **Flags:** --reviewers code
 - **Produces:** updated docs
