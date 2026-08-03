@@ -71,7 +71,7 @@ GPT adapters support `filesystem`, `sub-agent`, and `vision`:
   swap-and-tie calibration contract.
 
 The GPT peer model for each skill is resolved from `config/model-tier-map.json` at
-invocation time (lands Step 34).
+invocation time.
 
 ## Host-metadata detection
 

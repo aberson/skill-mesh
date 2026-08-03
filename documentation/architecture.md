@@ -30,35 +30,46 @@ hosts receive *generated* compatibility layouts built from this source.
 ## 2. Canonical directory contract
 
 Every artifact class has exactly one canonical home in this repository. Generated
-host distributions (`dist/`) are the only non-canonical, uncommitted output.
+host distributions (`dist/`) and release staging output (`release-stage/`) are
+uncommitted build artifacts. The 46 legacy top-level `<skill>/SKILL.md` packages
+committed at the repository root are non-canonical compatibility content in a
+deprecation window (see `migration.md`), not canonical sources.
 
 | Artifact class | Canonical location | Owner / notes |
 |---|---|---|
 | Skill core (portable) | `skills/<name>/core.md` | One per portable skill; `null` in the manifest for provider-native skills. |
 | Claude adapter | `skills/<name>/providers/claude.md` | Thin host adapter. Self-contained for provider-native skills. |
 | GPT adapter | `skills/<name>/providers/gpt.md` | Thin host adapter; absent for provider-native skills. |
-| Shared prose assets | `skills/_shared/` | Cross-skill cores/prose referenced by multiple skills. |
+| Shared prose assets | `_shared/` (repo root) | Cross-skill cores/prose referenced by multiple skills. The manifest declares `skills/_shared/` as the eventual canonical home; that directory does not exist yet, so today's references resolve to the repo-root tree. The divergence is deliberate and locked by `tests/package-integrity/test_skill_tree.py::test_shared_dest_divergence_is_intentional`. |
 | Skill manifest | `config/skill-manifest.json` | Single source for distribution, install, integrity, and README counts. |
-| Model capability mapping | `config/model-mapping.json` | Per-skill provider/local capability booleans (lands in Step 34). |
-| Model tier peer mapping | `config/model-tier-map.json` | Claude-tier to GPT-peer mapping (lands in Step 34). |
-| Runtime router | `runtime/skill-router.ps1` | Provider-neutral CLI router (lands in Step 34). |
-| Provider transport adapters | `runtime/providers/` | Host-metadata and transport selection (lands in Step 37). |
-| Telemetry | `runtime/telemetry/` | Neutral telemetry writer/summary (lands in Step 34). |
-| Distribution builder | `tools/build-distributions.ps1` | Generates `dist/claude/`, `dist/gpt/` (lands in Step 36). |
+| Model capability mapping | `config/model-mapping.json` | Per-skill provider/local capability booleans (Step 34). |
+| Model tier peer mapping | `config/model-tier-map.json` | Claude-tier to GPT-peer mapping (Step 34). |
+| Runtime router | `runtime/skill-router.ps1` | Provider-neutral CLI router (Step 34). |
+| Provider transport adapters | `runtime/providers/` | Host-metadata and transport selection (Step 37). |
+| Telemetry | `runtime/telemetry/` | Neutral telemetry writer/summary (Step 34). |
+| Distribution builder | `tools/build-distributions.ps1` | Generates `dist/claude/`, `dist/gpt/` (Step 36). |
 | Installer | `tools/install-skill-mesh.ps1` | Installs a host profile without making canonical files host-owned (Step 36). |
 | Release/export command | `tools/release.ps1` | Reproducible release staging + checksums (Step 38). |
-| Package-integrity tests | `tests/package-integrity/` | Manifest/link/drift/claim gates. Manifest contract gate lands in this step. |
+| Package-integrity tests | `tests/package-integrity/` | Manifest/link/drift/claim gates: `test_manifest_contract.py`, `test_release_gates.py`, `test_host_discovery.py`, `test_skill_tree.py` (93 tests). |
 | Router tests | `tests/router/` | Provider-selection and transport tests (Step 34/37). |
 | Calibration tests | `tests/calibration/` | Neutral home for the existing pytest calibration suite (Step 34). |
 | Telemetry tests | `tests/telemetry/` | Neutral telemetry tests (Step 34). |
 | Distribution tests | `tests/distributions/` | Install/discovery/idempotence tests (Step 36). |
 | Smoke tests + fixtures | `tests/smoke/`, `tests/fixtures/` | Cross-provider workflow smoke (Step 40). |
+| Release-script tests | `tests/release/` | End-to-end `tools/release.ps1` behavior against throwaway repos (Step 38). |
 | Architecture doc | `documentation/architecture.md` | This document. |
 | Provider guides | `documentation/providers/` | Per-provider auth, capabilities, divergences, install. |
+| Host-loading authority map | `documentation/host-discovery.md` | Instruction injection vs. native discovery vs. router dispatch (Step 42). |
 | Migration notes | `documentation/migration.md` | Operator-facing migration narrative (Step 39). |
 | Troubleshooting | `documentation/troubleshooting.md` | Provider/transport diagnostics (Step 37). |
 | Generated Claude layout | `dist/claude/` | Build artifact only; never committed. |
 | Generated GPT layout | `dist/gpt/` | Build artifact only; never committed. |
+| Path guard | `runtime/path-guard.ps1` | Canonical real-path resolution shared by the router and release tooling. |
+| Manifest generator | `tools/gen_manifest.py` | Generates `config/skill-manifest.json` + `tests/package-integrity/expected_inventory.json`. |
+| Skill-tree generator | `tools/gen_skill_tree.py` | Generates the migrated `skills/` tree and its inventory. |
+| Release checker | `tools/release_checks.py` | Static release-gate logic used by `tests/package-integrity/test_release_gates.py`. |
+| Router shim generator | `tools/gen-router-shim.ps1` | Generates backward-compatible launcher shims for retired router paths. |
+| Install provenance | `tools/skill-mesh-provenance.ps1` | Install-provenance stamping shared by the builder and installer. |
 
 Rule: if an artifact does not map to exactly one row above, the manifest or this
 table is wrong. There is no second canonical copy of any core, adapter, mapping,
@@ -86,7 +97,9 @@ skills/<name>/
 
 `core` is `null` in the manifest **only** for provider-native skills. Host-facing
 filenames (`SKILL.md`, `SKILL-claude.md`, `SKILL-gpt.md`) are generated discovery
-outputs; they are never hand-authored canonical files.
+outputs under `dist/`; they are never canonical sources. The 46 legacy top-level
+`<skill>/SKILL.md` files committed at the repository root are pre-migration
+hand-authored content retained for the deprecation window.
 
 ## 4. Host capability matrix
 
@@ -175,11 +188,11 @@ Provider choice and transport authentication are separate axes: selecting GPT do
 not imply `OPENAI_API_KEY`, and Claude host-native execution does not require
 `ANTHROPIC_API_KEY`. See `documentation/providers/`.
 
-### 5.3 Approved host-metadata sources (locked for Step 37 tests)
+### 5.3 Approved host-metadata sources
 
 `-Provider auto` may consult **only explicit host-identity environment variables**
-set by the host itself. These are the complete approved set; Step 37 implements and
-tests exactly these. The machine-readable copy is `host_metadata_sources` in
+set by the host itself. These are the complete approved set; `runtime/providers/`
+implements and `tests/router/` tests exactly these. The machine-readable copy is `host_metadata_sources` in
 `config/skill-manifest.json`.
 
 | Provider | Approved marker variable(s) | Present when |
@@ -314,11 +327,11 @@ and a single truthful `claude` adapter.
 
 All commands are PowerShell on Windows, run from the **skill-mesh repository root**
 (the checkout of `aberson/skill-mesh`; `Set-Location` there first). Commands whose
-target files land in a later step are marked with the step that introduces them;
-they are the locked contract for those steps. No absolute private path is embedded:
+target files land in a later step are marked with the step that introduced them;
+every one of them exists in the repository today. No absolute private path is embedded:
 the pinned interpreter and the legacy source root are supplied by the environment.
 
-### 8.1 Build (distribution generation) — lands Step 36
+### 8.1 Build (distribution generation)
 
 ```powershell
 pwsh -File tools\build-distributions.ps1 -Provider claude
@@ -328,7 +341,7 @@ pwsh -File tools\build-distributions.ps1 -Provider gpt
 Generates `dist\claude\` and `dist\gpt\` from `config\skill-manifest.json`. Output
 is never committed.
 
-### 8.2 Install (host profile) — lands Step 36
+### 8.2 Install (host profile)
 
 ```powershell
 pwsh -File tools\install-skill-mesh.ps1 -Provider claude -Home <host-skills-root>
@@ -341,13 +354,13 @@ pwsh -File tools\install-skill-mesh.ps1 -Provider gpt    -Home <host-skills-root
 or substitute the pinned interpreter path via your own environment — do not hardcode
 a private absolute path).
 
-Package-integrity contract gate introduced by this step:
+Package-integrity contract gate (93 tests):
 
 ```powershell
 python -m pytest tests\package-integrity
 ```
 
-Baseline calibration (existing suite, used until Step 34 lands the neutral path).
+Baseline calibration against the READ-ONLY legacy source (historical; `tests/calibration` is now the live suite).
 The legacy source root is supplied via the `SKILL_MESH_LEGACY_SOURCE` environment
 variable (the READ-ONLY coding-root checkout), never a hardcoded private path:
 
@@ -355,7 +368,7 @@ variable (the READ-ONLY coding-root checkout), never a hardcoded private path:
 python -m pytest $env:SKILL_MESH_LEGACY_SOURCE\.claude\lib\calibration\test_calibrate.py
 ```
 
-Neutral calibration path (after Step 34 migrates the suite):
+Calibration suite (38 tests):
 
 ```powershell
 python -m pytest tests\calibration
@@ -364,8 +377,10 @@ python -m pytest tests\calibration
 ### 8.4 Lint / typecheck
 
 **Not configured.** The repository has no lint command and no typecheck command.
-Do not invent one. Package-integrity plus the existing pytest calibration suite
-are the only automated gates in this phase, consistent with §6 of the plan.
+Do not invent one. The automated gates are the seven pytest suites -- `tests/router`
+(61), `tests/calibration` (38), `tests/package-integrity` (93), `tests/distributions`
+(39), `tests/release` (12), `tests/telemetry` (5), and `tests/smoke` (40): 288 tests
+total, run with `python -m pytest`.
 
 ### 8.5 Regenerating the manifest
 
@@ -380,7 +395,7 @@ $env:SKILL_MESH_LEGACY_SOURCE = "<coding-root>"
 python tools\gen_manifest.py
 ```
 
-### 8.6 Release (staging, integrity gate, checksums) — lands Step 38
+### 8.6 Release (staging, integrity gate, checksums)
 
 ```powershell
 pwsh -File tools\release.ps1
@@ -465,7 +480,8 @@ package rather than how it is built:
 | [`providers/README.md`](providers/README.md), [`providers/claude.md`](providers/claude.md), [`providers/gpt.md`](providers/gpt.md) | Per-provider host binding, transport precedence, capabilities |
 | [`troubleshooting.md`](troubleshooting.md) | Provider-selection and transport-authentication failure modes |
 | [`migration.md`](migration.md) | What changed from the pre-migration layout, where things live now, and the top-level `<skill>/SKILL.md` deprecation window |
-| [`repo-metadata.md`](repo-metadata.md) | Proposed (not yet applied) GitHub repository title/description text for Step 41 |
+| [`repo-metadata.md`](repo-metadata.md) | GitHub repository title/description/topic text, applied to `aberson/skill-mesh` |
+| [`host-discovery.md`](host-discovery.md) | Host-loading authority map: instruction injection vs. native discovery vs. router dispatch |
 
 `tests/package-integrity/test_release_gates.py` (checker logic in
 `tools/release_checks.py`, Step 38) additionally fails on any of:

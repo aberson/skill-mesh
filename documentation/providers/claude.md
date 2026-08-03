@@ -14,9 +14,10 @@ pwsh -File tools\install-skill-mesh.ps1 -Provider claude -Home <claude-skills-ro
 
 Each installed skill resolves `skills/<name>/providers/claude.md`, which references
 the shared `skills/<name>/core.md` (for portable skills). Discovery loads the
-Claude adapter directly; no runtime provider decision is required. Windows junction
-(`mklink /J`) installation is the primary pattern and is exercised by the
-distribution tests in Step 36.
+Claude adapter directly; no runtime provider decision is required. Installation copies the generated
+discovery tree into the host root; junction and symlink targets that escape the
+install home are rejected by `runtime/path-guard.ps1`, and the distribution tests
+assert such an install must FAIL rather than write through the link.
 
 The installer emits a generated discovery tree; it never rewrites canonical source
 files.

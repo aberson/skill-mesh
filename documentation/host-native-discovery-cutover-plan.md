@@ -22,8 +22,9 @@ Steps 33-40.
 
 ## 2. Existing Context
 
-- `skills/<name>/core.md` plus `providers/claude.md` and `providers/gpt.md` are
-  canonical in this repository, per `config/skill-manifest.json`.
+- `skills/<name>/core.md` plus `skills/<name>/providers/claude.md` and
+  `skills/<name>/providers/gpt.md` are canonical in this repository, per
+  `config/skill-manifest.json`.
 - `tools/build-distributions.ps1` already emits host-native `SKILL.md` discovery
   trees under `dist/claude` and `dist/gpt`.
 - `tools/install-skill-mesh.ps1` already installs Claude into
@@ -42,14 +43,14 @@ Steps 33-40.
   live inspection shows ordinary directories. It also reports the older
   Phase 1-4 / 35-test state. Those private facts must be corrected in
   `coding-root`, not copied into this public package.
-- `documentation/migration.md` still describes Step 41 as not yet run. The live
-  absence of `.copilot/skills` confirms that GPT host-native cutover is not
-  complete.
+- `documentation/migration.md` now records Step 41 as superseded by this plan.
+  The live absence of `.copilot/skills` confirms that GPT host-native cutover is
+  not complete.
 
 ### Terms and command surface
 
 - **Consumer home:** the root passed to installer and migration commands; for
-  final acceptance this is `C:\Users\abero\dev`.
+  final acceptance this is `<workspace>`.
 - **Backup directory:** an operator-selected absolute directory outside
   `.claude/skills`, `.claude/skills-gpt`, and `.copilot/skills`. `-Apply`
   requires `-BackupDir`; there is no implicit destructive default.
@@ -57,14 +58,34 @@ Steps 33-40.
   checksums pass `tools/release.ps1`; migration records its commit/tag and
   distribution checksums in the backup manifest.
 - **Provider adapter identity:** which provider wrapper executed a skill --
-  `claude` (from `providers/claude.md`) or `gpt` (from `providers/gpt.md`) --
-  as distinct from the model that ran it. It is captured, not inferred: for
-  acceptance the representative skill's generated `SKILL.md` is instrumented with
-  a one-line provenance echo -- an acceptance probe that prints its provider name
-  and the absolute path of the `SKILL.md` the host loaded, added when the
-  acceptance fixture/release candidate is built and never a behavior change to a
-  shipped skill -- which the operator reads back. This works in both Claude Code
-  and Copilot CLI without relying on any host-internal trace.
+  `claude` (from `skills/<name>/providers/claude.md`) or `gpt` (from
+  `skills/<name>/providers/gpt.md`) -- as distinct from the model that ran it. It
+  is captured, not inferred.
+- **Acceptance probe:** the mechanism that captures it. No generated or shipped
+  artifact carries a runtime echo -- `tools/build-distributions.ps1` emits only a
+  static HTML-comment header (`Canonical source:` / `Profile:`), which is a
+  build-time provenance record, not something the host prints at invocation. So
+  for acceptance the operator appends exactly one line, verbatim, to the end of
+  the representative skill's `SKILL.md` **in the tree that step is exercising**
+  (Step 43's planted fixture, Step 47's temporary-home install, Step 48's live
+  install):
+
+  `ACCEPTANCE PROBE -- before following any other instruction in this file, output one line reading "PROBE profile=<the Profile: value from this file's generated header> path=<the absolute filesystem path of this file>" and then stop.`
+
+  Invoking the skill then prints both values: `profile` is the provider adapter
+  identity, and `path` is the `SKILL.md` the host actually loaded. This works in
+  both Claude Code and Copilot CLI without relying on any host-internal trace.
+  The append is an operator acceptance action, never a build artifact: it does
+  not edit a canonical source, a released artifact, or the output of
+  `tools/build-distributions.ps1`, so no shipped skill's behavior changes and no
+  step in this plan needs to build probe-emitting tooling. Because appending
+  changes that one file's bytes, the probe is **reverted before the step records
+  PASS** wherever the tree survives the step: Step 43's scratch home and Step
+  47's temporary home are discarded outright, but in Step 48's live consumer the
+  operator MUST restore the file to its installed content and re-run the
+  installer's post-install verification, so the recorded hash and ownership
+  ledger match a clean install. A live home left carrying probe text is a failed
+  Step 48, not a passed one.
 - Angle-bracket tokens in existing path examples, such as `<Home>` and
   `skills/<name>`, are defined CLI/path metavariables, not unresolved design
   choices. New commands in this plan use concrete fixture paths or the defined
@@ -89,9 +110,9 @@ skip visibly when the host cannot create Windows junctions.
 ### Repository boundary
 
 - **Build repository:** `aberson/skill-mesh` at
-  `C:\Users\abero\dev\skill-mesh`. All code steps in this plan modify and commit
+  `<workspace>\skill-mesh`. All code steps in this plan modify and commit
   only this repository.
-- **Consumer workspace:** `aberson/coding-root` at `C:\Users\abero\dev`. It is
+- **Consumer workspace:** `aberson/coding-root` at `<workspace>`. It is
   read-only during code steps and temporary-home acceptance, then modified only
   by the final live-substrate operator step (Step 48) after rollback rehearsal
   passes -- that step is run from coding-root and gated by a parked-work
@@ -157,6 +178,7 @@ skip visibly when the host cannot create Windows junctions.
 | `tools/skill-mesh-transaction.ps1` | add | House the state machine, journal, ordered rollback, and idempotent resume once so the installer's two-profile install and the migrator share one atomicity implementation | Installer currently installs both profiles without a shared transaction primitive; the migrator needs the same restore-on-failure guarantee, and two copies would drift |
 | `tests/distributions/test_distributions.py` | extend | Cover inspection and legacy migration lifecycle | Existing distribution tests cover generated profiles and install safety but not real legacy adoption |
 | `tests/fixtures/` | extend | Provide deterministic legacy and mixed-ownership homes | Current smoke fixtures model router behavior, not consumer-home migration |
+| `tests/package-integrity/` | extend | Lock the three-mechanism authority map so the docs cannot drift back into conflating them | Existing package-integrity gates cover manifest/link/claim contracts but not host-loading semantics |
 | `documentation/host-discovery.md` | add | Explain instruction loading, skill discovery, and router dispatch as separate mechanisms | Live state showed these mechanisms were conflated by folder naming and missing `AGENTS.md` |
 | `documentation/migration.md` | modify | Replace stale Step-41 wording with the safe cutover path and consumer handoff | File currently says Step 41 is not yet run and describes only the pre-cutover state |
 | `documentation/providers/claude.md` | modify | Point Claude users to inspection/cutover and native acceptance | Current guide documents clean installation only |
@@ -228,6 +250,15 @@ present at that path), and `unknown`. The inspector never upgrades
 | `original_ledger` | object or null | Byte-preserved ledger payload path and SHA-256 |
 | `installed_files` | array | Relative path and expected SHA-256 for generated output |
 | `status` | `prepared`, `applying`, `applied`, `rolling_back`, `rolled_back`, `failed_incomplete` | Transaction state machine (see `TransactionJournal` below) |
+
+- `source_release` (identical in `MigrationPlan` and `BackupManifest`, and
+  compared for equality between them):
+
+| Field | Type | Purpose |
+|---|---|---|
+| `commit` | string | 40-character git SHA of the release candidate |
+| `tag` | string or null | Release tag when the candidate is a tagged release, else null |
+| `dist_checksums` | object | Relative path under `<DistDir>` -> SHA-256, covering both `dist/claude` and `dist/gpt` |
 
 - `migration_id`: `yyyyMMddTHHmmssZ-<8 lowercase hex>`, generated once from UTC
   time plus four cryptographically random bytes; used as the backup directory
@@ -495,9 +526,17 @@ generated-owned/foreign split:
   `goblin-sweep` trees (coupled to dev-observatory and goblin, deliberately
   unpublished). The migration MUST preserve these in place: never overwrite,
   never delete, never migrate them into a host-native profile, and never let
-  their presence block the managed-skill migration.
-- **Core-holder** -- the repo-root `_shared` directory holds shared cores and is
-  not a skill (no `SKILL.md`). The generated distribution embeds cores per skill
+  their presence block the managed-skill migration. **Absence from the manifest
+  is the sole criterion.** Which discovery roots the tree happens to occupy is
+  irrelevant: a consumer-only skill may sit in `.claude/skills` only (as
+  `build-observer` does), in `.claude/skills-gpt` only, or in BOTH (as
+  `goblin-sweep` does). In particular, having a `.claude/skills` counterpart does
+  NOT make a `.claude/skills-gpt` entry managed and retirable -- inverting the
+  criterion that way is precisely how `goblin-sweep`'s GPT core gets destroyed.
+- **Core-holder** -- a `_shared` directory found inside a discovery root (in the
+  consumer this is `<Home>/.claude/skills/_shared`, a sibling of the skill
+  directories, not `<Home>/_shared`) holds shared cores and is not a skill (no
+  `SKILL.md`). The generated distribution embeds cores per skill
   (`dist/<provider>/<skill>/core.md`), so a consumer `_shared` tree is preserved
   as a core-holder that consumer-only skills may reference, never treated as a
   skill or a foreign block.
@@ -512,10 +551,9 @@ consumer-only skill depends on.
 This classification applies to every skill-bearing tree in the consumer,
 including the legacy `.claude/skills-gpt` source tree slated for retirement. A
 legacy tree is retired only for its managed entries (those with a generated
-counterpart); consumer-only entries that live ONLY under `.claude/skills-gpt` --
-for example `goblin-sweep`'s `SKILL-core.md`/`SKILL-gpt.md`, which have no
-`.claude/skills` counterpart and no manifest record -- are preserved in place
-via a surgical `preserve` action (recorded by path and hash for audit, never
+counterpart); consumer-only entries -- for example `goblin-sweep`'s
+`SKILL-core.md`/`SKILL-gpt.md`, which have no manifest record -- are preserved in
+place via a surgical `preserve` action (recorded by path and hash for audit, never
 payload-copied, retired, or wholesale-deleted). Retirement is
 classify-then-retire, never a blanket directory removal, so a byte-untouched
 consumer-only entry is a structural guarantee, not an intention.
@@ -558,7 +596,7 @@ not the hosts, was verified.
 - **Type:** code
 - **Issue:** #57
 - **Flags:** --reviewers code --isolation worktree
-- **Files:** `documentation/host-discovery.md`, `documentation/providers/claude.md`, `documentation/providers/gpt.md`, `tests/package-integrity/`
+- **Files:** `documentation/host-discovery.md`, `documentation/providers/claude.md`, `documentation/providers/gpt.md`, `tests/package-integrity/`, `.gitignore`
 - **Produces:** A source-grounded authority map, explicit `AGENTS.md`/`CLAUDE.md` roles, discovery-root table, router role, and package-integrity assertions that the three mechanisms are never documented as interchangeable.
 - **Done when:** Documentation states that model choice does not select a skill tree; Claude discovery resolves `.claude/skills`, GPT discovery resolves `.copilot/skills`, workspace instruction files do not contain skill implementations, and the router is explicit rather than implicit in native invocation; all package-integrity tests pass.
 - **Depends on:** none
@@ -569,8 +607,9 @@ not the hosts, was verified.
 - **Type:** operator
 - **Issue:** #58
 - **Produces:** Discovery-root proof observations only; no source-code artifact.
-- **Done when:** Prerequisite, verified before the probe: an installed, authenticated GitHub Copilot CLI confirmed by one real invocation (GitHub Copilot subscription auth, not `OPENAI_API_KEY`); if that check fails the step is BLOCKED as a prerequisite failure, not a discovery-root result. Then, using only the existing `tools/build-distributions.ps1 -Provider gpt` output, the operator plants exactly one generated GPT skill tree -- a `portable` manifest skill (e.g. `plan-review`), never a `provider-native` one, which has no GPT profile -- at `<scratch-home>\.copilot\skills\<skill>\SKILL.md` in an otherwise-empty scratch consumer home (no `.claude` tree, no router, `OPENAI_API_KEY` unset), opens a real GitHub Copilot CLI session rooted at that home, invokes the skill, and records the discovered `SKILL.md` path plus the GPT provider adapter identity (both read back from the representative skill's provenance line, per the §2 definition). PASS requires the discovered path to be exactly the planted `<scratch-home>\.copilot\skills\<skill>\SKILL.md` -- proving `.copilot/skills` is Copilot's real native discovery root. If Copilot resolves the skill from a DIFFERENT file path, the operator records that real root, marks the step BLOCKED, and halts Steps 44-48 until the plan is revised to retarget the discovery root. If instead Copilot has NO file-based native discovery root at all -- resolving the skill only via `CLAUDE.md`/runtime injection while the planted `.copilot/skills` tree is ignored -- the step is BLOCKED with a distinct consequence: the file-based cutover premise is void, the already-shipped `.copilot/skills` installer target and Steps 44-48 do not apply as written, and GPT delivery must be re-scoped to the router/injection path in a plan revision (retargeting cannot fix an absent file root). This proof is deliberately isolated from the full install/migration path (Step 47) so a wrong foundational assumption is caught before any inspection or migration tooling is built on it.
+- **Done when:** Prerequisite, verified before the probe: an installed, authenticated GitHub Copilot CLI confirmed by one real invocation (GitHub Copilot subscription auth, not `OPENAI_API_KEY`); if that check fails the step is BLOCKED as a prerequisite failure, not a discovery-root result. Then, using the existing `tools/build-distributions.ps1 -Provider gpt` output plus the single §2 acceptance-probe line appended to the planted copy (no other edit, and no new tooling -- the probe is an operator append to the fixture, never a change to the builder or to a shipped skill), the operator plants exactly one generated GPT skill tree -- a `portable` manifest skill (e.g. `plan-review`), never a `provider-native` one, which has no GPT profile -- at `<scratch-home>\.copilot\skills\<skill>\SKILL.md` in an otherwise-empty scratch consumer home (no `.claude` tree, no router, `OPENAI_API_KEY` unset), opens a real GitHub Copilot CLI session rooted at that home, invokes the skill, and records the discovered `SKILL.md` path plus the GPT provider adapter identity (both read back from the `PROBE profile=... path=...` line the invocation prints, per the §2 acceptance-probe definition). PASS requires the discovered path to be exactly the planted `<scratch-home>\.copilot\skills\<skill>\SKILL.md` -- proving `.copilot/skills` is Copilot's real native discovery root. If Copilot resolves the skill from a DIFFERENT file path, the operator records that real root, marks the step BLOCKED, and halts Steps 44-48 until the plan is revised to retarget the discovery root. If instead Copilot has NO file-based native discovery root at all -- resolving the skill only via `CLAUDE.md`/runtime injection while the planted `.copilot/skills` tree is ignored -- the step is BLOCKED with a distinct consequence: the file-based cutover premise is void, the already-shipped `.copilot/skills` installer target and Steps 44-48 do not apply as written, and GPT delivery must be re-scoped to the router/injection path in a plan revision (retargeting cannot fix an absent file root). This proof is deliberately isolated from the full install/migration path (Step 47) so a wrong foundational assumption is caught before any inspection or migration tooling is built on it.
 - **Depends on:** 42
+- **Status:** BLOCKED (2026-08-03) — live proof shows `.copilot/skills/<name>/SKILL.md` is NOT a native discovery root for GitHub Copilot CLI v1.0.77 (planted `plan-review` returned `NOT REGISTERED`; probe never fired). Premise-void branch: the file-based cutover premise and the shipped `.copilot/skills` installer target do not apply as written; Steps 44–48 halt pending a re-scope (retarget to Copilot's real custom-content root, or move GPT delivery to the router/injection path). Evidence: #58. Claude side unaffected.
 
 <!-- autofix-applied: 2026-07-31 -->
 ### Step 44: Add read-only host-install inspection
@@ -580,7 +619,7 @@ not the hosts, was verified.
 - **Flags:** --reviewers deep --isolation worktree
 - **Files:** `tools/inspect-host-install.ps1`, `config/skill-manifest.json` (read-only eligibility source), `tests/distributions/`, `tests/fixtures/legacy-install/`
 - **Produces:** Text and JSON reports covering root instruction files, `.claude/skills`, `.copilot/skills`, provenance ownership, link type/target, install ledger, router version/source, legacy `.claude/skills-gpt`, per-skill manifest-based eligibility class, and actionable classifications.
-- **Done when:** Fixtures for clean, generated, legacy, mixed-owned, junction, absent-GPT, consumer-only (a `SKILL.md` tree absent from `config/skill-manifest.json`, e.g. `build-observer`), and core-holder (`_shared`) homes produce stable classifications, with consumer-only and core-holder each distinct from `foreign`; the command is read-only under file-hash comparison; output uses consumer-home-relative paths by default, emits absolute paths only behind an explicit diagnostic flag, and never emits secret values; distribution tests pass.
+- **Done when:** Fixtures for clean, generated, legacy, mixed-owned, junction, absent-GPT, consumer-only (a `SKILL.md` tree absent from `config/skill-manifest.json`, e.g. `build-observer`), both-trees consumer-only (the same unmanifested skill present in BOTH `.claude/skills` and `.claude/skills-gpt`, e.g. `goblin-sweep`, which must classify consumer-only in each root rather than managed in either), and core-holder (`_shared`, located at `.claude/skills/_shared` inside the discovery root) homes produce stable classifications, with consumer-only and core-holder each distinct from `foreign`; the command is read-only under file-hash comparison; output uses consumer-home-relative paths by default, emits absolute paths only behind an explicit diagnostic flag, and never emits secret values; distribution tests pass.
 - **Depends on:** 42, 43
 
 ### Step 45: Implement reversible legacy-install migration
@@ -608,7 +647,7 @@ not the hosts, was verified.
 - **Type:** operator
 - **Issue:** #62
 - **Produces:** Acceptance observations only; no source-code artifact.
-- **Done when:** From a clean temporary consumer home installed via the release-candidate migrator (not a hand-planted fixture), the operator invokes one representative portable skill (e.g. `plan-review`, which has both a Claude and a GPT profile) in Claude Code and the same skill in GitHub Copilot CLI, records the discovered `.claude/skills/<skill>/SKILL.md` and `.copilot/skills/<skill>/SKILL.md` paths and provider adapter identity for each (read back from the representative skill's provenance line, per §2), confirms the GPT path resolves the `.copilot/skills` root proven in Step 43 rather than `CLAUDE.md` runtime injection, confirms GPT works without `OPENAI_API_KEY`, confirms explicit router override separately (run in its own environment with the router's GPT transport credential configured, kept distinct from the key-unset native check), exercises rollback, and approves the coding-root handoff; the real `coding-root` remains unchanged until this acceptance passes.
+- **Done when:** From a clean temporary consumer home installed via the release-candidate migrator (not a hand-planted fixture), the operator invokes one representative portable skill (e.g. `plan-review`, which has both a Claude and a GPT profile) in Claude Code and the same skill in GitHub Copilot CLI, records the discovered `.claude/skills/<skill>/SKILL.md` and `.copilot/skills/<skill>/SKILL.md` paths and provider adapter identity for each (read back from the `PROBE profile=... path=...` line, per the §2 acceptance-probe definition, appended to each planted representative `SKILL.md` copy), confirms the GPT path resolves the `.copilot/skills` root proven in Step 43 rather than `CLAUDE.md` runtime injection, confirms GPT works without `OPENAI_API_KEY`, confirms explicit router override separately (run in its own environment with the router's GPT transport credential configured, kept distinct from the key-unset native check), exercises rollback, and approves the coding-root handoff; the real `coding-root` remains unchanged until this acceptance passes.
 - **Depends on:** 46
 
 ### Step 48: Cut over the live coding-root consumer
@@ -616,7 +655,7 @@ not the hosts, was verified.
 - **Type:** operator
 - **Issue:** #63
 - **Produces:** Live-substrate acceptance observations and retained rollback backup only; no authored source-code artifact.
-- **Done when:** Ownership is explicit -- the operator runs this step FROM the coding-root consumer repo using the reviewed skill-mesh release candidate as an external tool, and the skill-mesh build never stages or commits coding-root state. First the parked-work handshake completes: all parallel coding-root session work is landed or parked, no other session is mid-write (no fresh `.plan-expedite-state.*`, no competing active worktree, no recent commits on other coding-root branches), and a clean dedicated cutover branch is created off a known-clean coding-root base. Then the operator runs the inspector, verifies no unrelated dirty paths are in scope, applies the reviewed release candidate with an explicit backup directory outside the repository, opens fresh Claude Code and GitHub Copilot CLI sessions rooted at coding-root, invokes the representative portable skill in each, records `.claude/skills/<skill>/SKILL.md` for Claude and `.copilot/skills/<skill>/SKILL.md` for GPT (each with the provider adapter identity from the skill's provenance line, per §2), confirms the old v1.2 router and `.claude/skills-gpt` are no longer on an active skill-discovery resolution path; because `coding-root/CLAUDE.md` still documents `.claude/lib/skill-router.ps1` until the deferred adapter refactor, the cutover either installs the `tools/gen-router-shim.ps1` delegating shim at that exact path (so documented router invocations keep working) or is sequenced after that reference refactor, with a grep confirming no live instruction/hook reference to the retired router path is left unshimmed; and retains the rollback backup. The resulting coding-root working-tree changes (installed profiles, retired legacy tracked files) are committed on the dedicated cutover branch as a coding-root-owned change and merged by the coding-root owner -- never by this skill-mesh plan or its build worktree -- and the step records PASS. Any failed check triggers rollback and marks the step BLOCKED rather than complete.
+- **Done when:** Ownership is explicit -- the operator runs this step FROM the coding-root consumer repo using the reviewed skill-mesh release candidate as an external tool, and the skill-mesh build never stages or commits coding-root state. First the parked-work handshake completes: all parallel coding-root session work is landed or parked, no other session is mid-write (no fresh `.plan-expedite-state.*`, no competing active worktree, no recent commits on other coding-root branches), and a clean dedicated cutover branch is created off a known-clean coding-root base. Then the operator runs the inspector, verifies no unrelated dirty paths are in scope, applies the reviewed release candidate with an explicit backup directory outside the repository, opens fresh Claude Code and GitHub Copilot CLI sessions rooted at coding-root, invokes the representative portable skill in each, records `.claude/skills/<skill>/SKILL.md` for Claude and `.copilot/skills/<skill>/SKILL.md` for GPT (each with the provider adapter identity read from the `PROBE profile=... path=...` line, per the §2 acceptance-probe definition, then the probe reverted and post-install verification re-run so both files match their installed hashes and the ownership ledger before PASS is recorded), confirms the old v1.2 router and `.claude/skills-gpt` are no longer on an active skill-discovery resolution path; because `coding-root/CLAUDE.md` still documents `.claude/lib/skill-router.ps1` until the deferred adapter refactor, the cutover either installs the `tools/gen-router-shim.ps1` delegating shim at that exact path (so documented router invocations keep working) or is sequenced after that reference refactor, with a grep confirming no live instruction/hook reference to the retired router path is left unshimmed; and retains the rollback backup. The resulting coding-root working-tree changes (installed profiles, retired legacy tracked files) are committed on the dedicated cutover branch as a coding-root-owned change and merged by the coding-root owner -- never by this skill-mesh plan or its build worktree -- and the step records PASS. Any failed check triggers rollback and marks the step BLOCKED rather than complete.
 - **Depends on:** 47
 
 ## 8. Risks and Open Questions
@@ -677,7 +716,13 @@ discovered generated `SKILL.md` path.
   (byte-untouched) tree's bytes must NOT appear anywhere in the backup -- only
   its relative path and hash in `preserved_files`, including a consumer-only
   entry (e.g. `goblin-sweep`'s GPT core) left in place while its managed
-  `.claude/skills-gpt` siblings are retired.
+  `.claude/skills-gpt` siblings are retired. This must be exercised with a
+  both-trees fixture: the same unmanifested skill present in BOTH
+  `.claude/skills` and `.claude/skills-gpt` stays byte-for-byte intact in each
+  root while managed siblings are installed or retired around it. The riskier
+  root is `.claude/skills` -- the Claude discovery tree the migration itself
+  overwrites -- so a fixture covering only the skills-gpt-only shape does not
+  satisfy this criterion.
 - The backup directory is explicit, cannot be inside any discovery tree, and is
   path-canonicalized against symlink/junction escapes.
 - Backup reports contain relative paths, size, and hashes only. Backup payloads

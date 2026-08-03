@@ -45,10 +45,10 @@ release claims so they describe files and behavior that actually ship.
 ### Repository boundary
 
 - **Build repository:** `aberson/skill-mesh` at
-  `C:\Users\abero\dev\skill-mesh`. Run Steps 33-40 from this repository and
+  `<workspace>\skill-mesh`. Run Steps 33-40 from this repository and
   commit only to it.
 - **Legacy migration source:** `aberson/coding-root` at
-  `C:\Users\abero\dev`. Its `.claude/skills/`, `.claude/skills-gpt/`,
+  `<workspace>`. Its `.claude/skills/`, `.claude/skills-gpt/`,
   `.claude/lib/`, `.claude/references/`, and `documentation/multi-model/`
   trees are read-only inputs during Steps 33-40.
 - **Compatibility installation:** Step 41 installs the released package back
@@ -217,15 +217,15 @@ existing deterministic/rubric comparison that checks adapter parity.
 
 ### Builder quickstart
 
-1. `Set-Location C:\Users\abero\dev\skill-mesh`.
+1. `Set-Location <workspace>\skill-mesh`.
 2. Verify `git branch --show-current` reports the intended skill-mesh branch and
    `git remote get-url origin` reports `aberson/skill-mesh`.
 3. Confirm the read-only legacy source exists at
-   `C:\Users\abero\dev\.claude`; do not edit it during Steps 33-40.
+   `<workspace>\.claude`; do not edit it during Steps 33-40.
 4. Run `/plan-expedite --plan documentation/provider-neutral-skill-mesh-plan.md`.
 5. Run the emitted `/build-phase` command from the skill-mesh repository.
 6. During implementation, use the existing calibration baseline command
-   `python -m pytest C:\Users\abero\dev\.claude\lib\calibration\test_calibrate.py`
+   `python -m pytest <workspace>\.claude\lib\calibration\test_calibrate.py`
    until Step 34 lands the neutral test path; thereafter use the neutral command
    recorded by Step 33.
 7. No lint or typecheck command is currently configured. Do not invent one;

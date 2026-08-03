@@ -13,6 +13,7 @@ pipeline is identical; only host-specific exceptions differ.
 
 - [claude.md](claude.md) — Claude Code host binding, transport, capabilities.
 - [gpt.md](gpt.md) — GPT/Copilot host binding, transport precedence, capabilities.
+- [../host-discovery.md](../host-discovery.md) — host-loading authority map: instruction injection vs. native discovery vs. router dispatch.
 
 ## Capability & exclusion matrix
 

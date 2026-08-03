@@ -19,6 +19,7 @@ Runnable via pytest (`python -m pytest tests/package-integrity`) or standalone
 import json
 import os
 import re
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -369,23 +370,81 @@ def test_architecture_lint_typecheck_not_configured():
 # No absolute private paths in committed docs/config/tests (finding #8)
 # --------------------------------------------------------------------------- #
 
-def test_no_absolute_private_paths_committed():
-    targets = [
-        MANIFEST_PATH,
-        FIXTURE_PATH,
-        ARCH_PATH,
-        Path(__file__).resolve(),
-        REPO_ROOT / "documentation" / "providers" / "README.md",
-        REPO_ROOT / "documentation" / "providers" / "claude.md",
-        REPO_ROOT / "documentation" / "providers" / "gpt.md",
-        REPO_ROOT / "tools" / "gen_manifest.py",
-    ]
-    pat = re.compile(r"[A-Za-z]:\\Users\\")
-    for p in targets:
-        if not p.is_file():
+# A real Windows home path, either separator. The negative lookahead keeps the
+# documented placeholder form (`C:/Users/<user>/...`) legal -- docs are supposed
+# to show the shape, and flagging the placeholder would push authors back toward
+# writing a real path.
+PRIVATE_PATH_RE = re.compile(r"[A-Za-z]:[\\/]Users[\\/](?!<)")
+
+# Files that MUST contain the pattern to do their job. Each needs a reason; a
+# path is not exempt because it is inconvenient to fix.
+PRIVATE_PATH_EXEMPT = {
+    # Implements _scrub_private(); its regexes must spell the path out.
+    "tools/gen_skill_tree.py",
+    # Red-on-garbage anchors for that scrubber: they assert the detector fires
+    # on a real home path, so they must contain one.
+    "tests/package-integrity/test_skill_tree.py",
+}
+
+
+def _tracked_text_files():
+    """Every git-tracked file, minus binaries. Enumerated, never hand-listed.
+
+    Same principle as release staging (`git ls-files`, not a denylist): a new
+    committed file is covered the moment it is tracked, so the gate cannot go
+    quietly false-green on a document nobody remembered to add.
+    """
+    r = subprocess.run(["git", "ls-files"], cwd=REPO_ROOT,
+                       capture_output=True, text=True, check=True)
+    skip_suffix = {".svg", ".png", ".jpg", ".jpeg", ".gif", ".ico", ".pyc", ".zip"}
+    for rel in r.stdout.splitlines():
+        rel = rel.strip()
+        if not rel or rel in PRIVATE_PATH_EXEMPT:
             continue
-        text = p.read_text(encoding="utf-8")
-        assert not pat.search(text), f"absolute private path committed in {p}"
+        p = REPO_ROOT / rel
+        if not p.is_file() or p.suffix.lower() in skip_suffix:
+            continue
+        yield rel, p
+
+
+@pytest.mark.skipif(not (REPO_ROOT / ".git").exists(),
+                    reason="not a git working tree (e.g. release stage)")
+def test_no_absolute_private_paths_committed():
+    offenders = []
+    for rel, p in _tracked_text_files():
+        try:
+            text = p.read_text(encoding="utf-8")
+        except (UnicodeDecodeError, OSError):
+            continue
+        for i, line in enumerate(text.splitlines(), 1):
+            if PRIVATE_PATH_RE.search(line):
+                offenders.append(f"{rel}:{i}")
+    assert not offenders, (
+        "absolute private path committed in: " + ", ".join(offenders[:20])
+    )
+
+
+def test_private_path_gate_reds_on_a_planted_path(tmp_path):
+    """Red-on-garbage anchor: the sweep must actually fail on a planted path.
+
+    Without this, a regex or enumeration bug turns the gate above into a
+    permanent green that inspects nothing.
+    """
+    # Built at runtime: this file is itself swept, so it must not contain a
+    # literal instance of the pattern under test.
+    sep = chr(92)
+    planted = tmp_path / "doc.md"
+    planted.write_text(f"run it from C:{sep}Users{sep}someone{sep}dev\n", encoding="utf-8")
+    hits = [i for i, line in enumerate(planted.read_text(encoding="utf-8").splitlines(), 1)
+            if PRIVATE_PATH_RE.search(line)]
+    assert hits == [1]
+    # ...and stays quiet on the placeholder forms the docs are supposed to use.
+    clean = tmp_path / "clean.md"
+    clean.write_text(
+        f"run it from <workspace>{sep}dev\n"
+        "or C:/Users/<user>/AppData/Local/Temp/\n",
+        encoding="utf-8")
+    assert not PRIVATE_PATH_RE.search(clean.read_text(encoding="utf-8"))
 
 
 # --------------------------------------------------------------------------- #

@@ -13,7 +13,7 @@ For the underlying design and the full canonical-location table, see
 |---|---|
 | 46 top-level single-file `<skill>/SKILL.md` packages (Claude-only content, no GPT adapter, no shared core) | `skills/<name>/core.md` (neutral behavior contract) + `skills/<name>/providers/{claude,gpt}.md` (thin host adapters), 47 portable + 3 Claude-native exclusions = 50 skills |
 | No router, no provider selection, no install tooling shipped in the public repo | `runtime/skill-router.ps1` (`-Provider auto\|claude\|gpt\|local`), `tools/build-distributions.ps1`, `tools/install-skill-mesh.ps1`, `tools/release.ps1` |
-| README documented `OPENAI_API_KEY` as required for the GPT path | GPT selects GitHub Copilot authentication first; `OPENAI_API_KEY` is an optional direct-OpenAI fallback only (see the README's [authentication matrix](../README.md#authentication-matrix)) |
+| README documented `OPENAI_API_KEY` as required for the GPT path | GPT selects GitHub Copilot authentication first; `OPENAI_API_KEY` is an optional direct-OpenAI fallback only (see the README's [Providers & installation](../README.md#providers--installation) section) |
 | README framed Claude as the primary/default provider | README leads with the shared pipeline; Claude and GPT get parallel, equally-weighted installation paths |
 | No package-integrity gate — the README could (and did) drift from what the package actually ships | `tests/package-integrity/` fails the build on a broken link, a missing adapter, stale generated output, a mismatched skill count, or an unsupported README claim |
 
@@ -34,8 +34,7 @@ Every artifact class has exactly one canonical home, enumerated in
 
 None of this was previously in the public repository at all — it was implemented in a private
 workspace (`aberson/coding-root`, referred to below as the legacy migration source) and read-only
-migrated in during Steps 33-38. That source repository is not part of this public package and is
-not referenced by any shipped file.
+migrated in during Steps 33-38. That source repository is not part of this public package.
 
 ## The legacy top-level `<skill>/SKILL.md` layout (deprecation window)
 
@@ -53,7 +52,7 @@ canonical tree being authoritative.
 
 **If you have an existing install or bookmark:** switch it to point at `skills/<name>/core.md`
 (or install via `tools/install-skill-mesh.ps1` — see the README's
-[installation matrix](../README.md#installation-matrix)) rather than the top-level path. Retiring
+[Quick start](../README.md#quick-start)) rather than the top-level path. Retiring
 the top-level compatibility directories entirely is tracked as a follow-up beyond this docs-only
 step (Step 39 only rewrites documentation and does not delete or regenerate files outside
 `README.md`, `documentation/`, or the manifest).
@@ -62,12 +61,14 @@ step (Step 39 only rewrites documentation and does not delete or regenerate file
 
 The legacy migration source's own `.claude/skills/` and `.claude/skills-gpt/` trees (in
 `aberson/coding-root`) were **read-only** for the whole of Steps 33-40 — nothing in this
-migration wrote to them. Step 41 (operator, not yet run as of this document) performs the one-time
-cutover: installing the released `aberson/skill-mesh` package back into `coding-root/.claude` via
+migration wrote to them. Step 41 has been superseded by
+[`host-native-discovery-cutover-plan.md`](host-native-discovery-cutover-plan.md); the one-time
+cutover is now Steps 43-48 of that plan (Step 42 shipped; Step 43 is next), which install the
+released `aberson/skill-mesh` package into `coding-root/.claude` via
 `tools/install-skill-mesh.ps1 -Provider claude -Home <coding-root>`, generating a marker-tagged,
 ownership-safe discovery tree rather than hand-edited files.
 
-After Step 41, `coding-root/.claude/skills/` becomes an **installed consumer** of this package, not
+After Step 48 of the host-native-discovery cutover plan, `coding-root/.claude/skills/` becomes an **installed consumer** of this package, not
 an independent source: future skill changes are made in `aberson/skill-mesh` and flow out via a
 re-install (`install-skill-mesh.ps1`, idempotent — see `documentation/architecture.md` §8.2),
 never by hand-editing files under the installed `.claude/skills/` tree directly.
@@ -78,10 +79,10 @@ Earlier public guidance said "set `OPENAI_API_KEY` to activate the GPT path." Th
 accurate to the shipped router and has been corrected: GPT selection uses GitHub Copilot
 authentication by default (`gh auth login`, or `GH_TOKEN` / `COPILOT_GITHUB_TOKEN`) and only falls
 back to a direct OpenAI API call — using `OPENAI_API_KEY` — if Copilot is unavailable or fails.
-See the README's [authentication matrix](../README.md#authentication-matrix) and
+See the README's [Providers & installation](../README.md#providers--installation) section and
 [`providers/gpt.md`](providers/gpt.md) for the full transport-precedence contract.
 
 ## Repository metadata
 
-Proposed (not yet applied) GitHub repository title/description text for the operator to apply in
-Step 41: [`repo-metadata.md`](repo-metadata.md).
+GitHub repository title/description text, applied to the live repository:
+[`repo-metadata.md`](repo-metadata.md).
