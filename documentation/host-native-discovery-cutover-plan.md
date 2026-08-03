@@ -496,6 +496,19 @@ tracked files occur in a separate coding-root branch/plan after host acceptance.
 This preserves repository ownership and prevents a skill-mesh build worktree
 from committing unrelated dirty coding-root state.
 
+### Static gates prove structure; operator evidence proves host behavior
+
+Package-integrity and release tests are hermetic: they assert that the cutover
+documentation contains and correctly orders the inspection, backup, rollback,
+host-acceptance, and separate-coding-root-commit steps, that every documented
+command and link resolves, and that no private content leaks. They CANNOT prove
+that a real Claude Code or GitHub Copilot CLI discovered a generated profile --
+that is operator evidence captured in Steps 43, 47, and 48. The two are kept
+separate: a green release suite is a necessary precondition, never a substitute
+for the operator PASS. Alternative rejected: a release test that claims to gate
+on host acceptance, which would give a false green when only the documentation,
+not the hosts, was verified.
+
 ## 7. Build Steps
 
 ### Step 42: Lock and test the host-loading authority map
@@ -544,7 +557,7 @@ from committing unrelated dirty coding-root state.
 - **Flags:** --reviewers code --isolation worktree
 - **Files:** `documentation/coding-root-cutover-handoff.md`, `documentation/migration.md`, `documentation/provider-neutral-skill-mesh-plan.md`, `README.md`, `tests/package-integrity/`, `tests/release/`
 - **Produces:** A copy-pasteable handoff that creates one private shared instruction source with thin `CLAUDE.md` and `AGENTS.md` adapters, updates stale status/topology claims, runs inspector then migrator, validates both profiles, and (classifying `.claude/skills-gpt` against the manifest first) retires only its managed, generated-superseded entries -- preserving in place any consumer-only entries such as `goblin-sweep`'s GPT core (recorded by path and hash, never payload-copied) -- plus the old router, only after acceptance.
-- **Done when:** Every command names its target repository and expected output; the previous plan's Step 41 is explicitly marked superseded by this plan, and issue #50 is closed as superseded with a link to this plan's new umbrella after `/repo-sync`; no private instruction content or absolute user path is embedded; release tests fail on a missing inspection, backup, rollback, host-acceptance, or separate-coding-root-commit step; package-integrity and release suites pass.
+- **Done when:** Every command names its target repository and expected output; the previous plan's Step 41 is explicitly marked superseded by this plan, and issue #50 is closed as superseded with a link to this plan's new umbrella after `/repo-sync`; no private instruction content or absolute user path is embedded; the release tests assert STRUCTURE only -- failing when the handoff/migration docs omit or mis-order an inspection step, a backup requirement, a rollback command, a host-acceptance gate, or a separate-coding-root-commit step, or when any named command or link is unresolvable -- but they never execute those steps nor assert that host acceptance passed (that remains operator evidence -- the discovery-root proof in Step 43 and full host acceptance in Steps 47-48); package-integrity and release suites pass.
 - **Depends on:** 42, 45
 
 ### Step 47: Run full host-native acceptance against the release candidate
@@ -594,6 +607,12 @@ discovered generated `SKILL.md` path.
 - Assert all documented commands and local links resolve in the release tree.
 - Assert no private absolute paths, instruction content, tokens, or consumer
   memory references enter the package.
+- Assert that the release and package-integrity gates verify STRUCTURE only --
+  the presence, ordering, and resolvability of the documented cutover steps and
+  the absence of private content -- and never assert that inspection, migration,
+  rollback, or host acceptance actually ran or passed. Real host behavior is
+  operator evidence (Steps 43, 47, 48) that a static suite cannot stand in for;
+  a green release suite is necessary but not sufficient for cutover.
 
 ### Inspector tests
 
@@ -682,3 +701,4 @@ behavior cannot be proven by unit tests alone.
 | D7 | D | GitHub Copilot's native `.copilot/skills` discovery root is proven from a live session before migration tooling is built on it, not deferred to final acceptance | active |
 | D8 | D | Installer and migrator share one journaled, resumable transaction engine (`tools/skill-mesh-transaction.ps1`) with an explicit state machine and ordered rollback, rather than each tool implementing atomicity | active |
 | D9 | D | The backup payload set is pinned to the transaction's mutating action set -- byte-untouched consumer-only/core-holder trees are recorded by path+hash only, never copied -- reconciling rollback completeness with disclosure minimization | active |
+| D10 | D | Static release/package-integrity gates assert documentation STRUCTURE only (presence, order, resolvability, no private-content leak); real host acceptance is operator evidence (Steps 43/47/48) that no static test can substitute for | active |
