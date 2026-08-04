@@ -81,8 +81,8 @@ config/                 skill-manifest.json (inventory + eligibility), model-map
 documentation/          architecture.md (the contract), host-discovery.md, migration.md,
                         providers/, troubleshooting.md, and the phase plans
 runtime/                skill-router.ps1, path-guard.ps1, providers/, telemetry/
-tools/                  build-distributions, install-skill-mesh, release, release_checks,
-                        gen_manifest, gen_skill_tree, gen-router-shim, provenance
+tools/                  build-distributions, install-skill-mesh, inspect-host-install, release,
+                        release_checks, gen_manifest, gen_skill_tree, gen-router-shim, provenance
 tests/                  calibration, distributions, package-integrity, release, router,
                         smoke, telemetry (+ fixtures/)
 ```
@@ -112,15 +112,16 @@ tests/                  calibration, distributions, package-integrity, release, 
 
 ## Current state
 
-**Phase 7 — Host-Native Discovery & Consumer Cutover, in progress.** Steps 42–45 of Steps 42–50
+**Phase 7 — Host-Native Discovery & Consumer Cutover, in progress.** Steps 42–46 of Steps 42–50
 are DONE: the host-loading authority map (locked by 17 package-integrity tests); the live
 Copilot CLI v1.0.77 discovery-root proof, which **disproved** the assumed `.copilot/skills`
 target; the resulting GPT retarget to `.github/skills` with YAML-frontmatter `SKILL.md`; and the
 both-profile discovery proof (Step 45, #67) — with both profiles installed, Copilot dedups skills
 by name and the `.github/skills` GPT profile wins the `.claude/skills` collision by discovery-root
 precedence (`.github/skills` scanned first), so the migrator may install both profiles without the
-GPT skill being shadowed. Steps 46–50 are pending, starting with read-only host-install inspection
-(Step 46). 300 tests across seven suites. (Step 45 also surfaced #69: the Claude-profile `SKILL.md`
+GPT skill being shadowed; and read-only host-install inspection (Step 46, #59) — `tools/inspect-host-install.ps1`
+plus `tests/distributions/test_host_inspect.py` (28 tests). Steps 47–50 are pending, starting with
+reversible legacy-install migration (Step 47). 329 tests across seven suites. (Step 45 also surfaced #69: the Claude-profile `SKILL.md`
 frontmatter emits `description`/`argument` unquoted, so a colon-bearing value fails Copilot's YAML
 parse — a bounded builder defect, does not block the cutover.)
 
@@ -129,9 +130,11 @@ distribution, installer, and release tooling. Plan:
 `documentation/host-native-discovery-cutover-plan.md` (it supersedes the unexecuted Step 41
 acceptance intent of `documentation/provider-neutral-skill-mesh-plan.md`). Phase 8 —
 `documentation/provider-expansion-plan.md` (Steps 51–61, Gemini + local lanes) — is PLANNED and
-gated on Phase 7's cutover. It has NOT yet been through plan-review/plan-wrap: a wrap pass found
-3 blockers (9 steps missing `**Type:**`, all `**Issue:**` fields blank, Step 55 unbuildable as
-scoped), so run that pipeline before building from it.
+gated on Phase 7's cutover. It has been through `/plan-expedite` (commit 5f3d9af): plan-review autofix
+resolved both authoring blockers (Step 55 re-scoped around `tools/gen_manifest.py`'s `LOCAL_CAPABLE`;
+Step 54 given a fork-on-failure provider-set obligation), plan-wrap returned READY (0 blockers, 0 gaps),
+and repo-sync minted umbrella #70 plus step issues #71–#82 — every step now carries `**Type:**` and a
+populated `**Issue:**`. The plan is build-ready; the only thing outstanding is the Phase 7 Step 50 gate.
 
 ## Environment requirements
 

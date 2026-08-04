@@ -30,9 +30,10 @@ GitHub Copilot CLI discovers project skills from three roots — `.github/skills
 `.agents/skills/`, and `.claude/skills/` — plus the personal root
 `~/.copilot/skills/`. This package installs the GPT profile to the conventional
 project root `.github/skills/`. Because `.claude/skills/` is **also** a Copilot
-discovery root, a consumer with both profiles installed is doubly exposed; the
-cutover plan's Step 45 proves and resolves that collision before any live
-both-profile migration.
+discovery root, a consumer with both profiles installed is doubly exposed; Step 45 (#67) resolved
+that collision against a live Copilot CLI v1.0.77 — Copilot dedups by name and scans
+`.github/skills` before `.claude/skills`, so the GPT profile stably wins and is never shadowed.
+Installing both profiles is safe.
 
 **Every generated GPT `SKILL.md` must lead with a YAML frontmatter block** containing
 at least `name` and `description`; Copilot rejects a `SKILL.md` without it. The

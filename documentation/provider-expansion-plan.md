@@ -32,7 +32,9 @@ no external document is required to execute it.
 > obligation (its carrier doc must extend `test_manifest_contract.py:175`, the builder `ValidateSet`,
 > and the installer root map WHEN a fork is authored — no Phase 8 code step authors one, so the
 > closed `{claude, gpt}` manifest set stays valid throughout Phase 8). §27 stakes-aware routing
-> escalated the four router-touching steps (52/53/54/55) to `--reviewers deep`.
+> escalated the four Gemini/local transport steps (52/53/54/55) to `--reviewers deep`. NOTE: Step 56
+> also modifies `runtime/skill-router.ps1` (fail-loud startup validation of `deployment.profile`) and
+> deliberately remains `--reviewers code`.
 >
 > **Still gated:** `/build-phase` for this plan must NOT run until Phase 7 Step 50 (live coding-root
 > cutover) is DONE. `/repo-sync` (issue minting) may proceed now.
@@ -181,7 +183,12 @@ itself; team-profile implementation (key is designed-not-built); paid Gemini key
 - **Type:** code
 - **Issue:** #71
 - **Flags:** --reviewers code
-- **Produces:** `tests/package-integrity/test_mapping_drift.py`
+- **Produces:** `tests/package-integrity/test_mapping_drift.py` — which MUST additionally assert that
+  `tools/gen_manifest.py`'s `LOCAL_CAPABLE` set (imported by path, exactly as
+  `tests/distributions/test_distributions.py:98 _load_gen_manifest()` already does) equals the
+  `local_capable` membership of `config/skill-manifest.json` and the `local: true` rows of
+  `config/model-mapping.json`. Today `grep -rn LOCAL_CAPABLE tests/` returns ZERO hits, so the
+  source of truth Step 55 designates is CI-unenforced and free to re-drift.
 - **Done when:** the test goes red when a synthetic skill dir (tmp fixture) is added without a
   mapping row, and when a mapping row has no dir; full suite green at or above the re-baselined
   floor.
@@ -275,7 +282,11 @@ itself; team-profile implementation (key is designed-not-built); paid Gemini key
   plus the exact member array at :66). Re-deriving the 24 legacy-aspirational flags against the
   strict §6.6 criteria WILL likely change the membership (and therefore the count away from 24),
   which trips the hard assertions `test_manifest_contract.py:105` (`== 24`), `:129`
-  (exact-set vs the fixture), and `:153` (per-skill). **Because `gen_manifest.py:369` hard-exits
+  (exact-set vs the fixture), and `:153` (per-skill). A FOURTH pinned assertion, `:210`
+  `test_vision_or_subagent_implies_not_local`, is a hard CONSTRAINT on the re-derivation rather than a
+  follower of it: no skill declaring `vision` or `sub-agent` may be marked `local`. §6.6's "no tool use
+  or vision" criterion MUST therefore be read as also excluding all 16 `sub-agent` skills (today's
+  24-member set has zero overlap with the 16 `sub-agent` / 2 `vision` skills — keep it that way). **Because `gen_manifest.py:369` hard-exits
   without the private `SKILL_MESH_LEGACY_SOURCE`, a clean `/build-phase` worktree CANNOT
   regenerate** — so this step HAND-EDITS all four artifacts consistently (the manifest-contract
   and drift tests read the committed artifacts and never regenerate, so hand-editing is the
@@ -288,7 +299,10 @@ itself; team-profile implementation (key is designed-not-built); paid Gemini key
 - **Produces:** router local-transport repoint (skill-text injection, `content`-field parse,
   `max_tokens >= 600`, env-overridable URL) + the re-derived `local` set applied consistently to
   ALL FOUR data-shape artifacts (`gen_manifest.py LOCAL_CAPABLE` source + the three derived copies)
-  with per-row rationale notes, the updated `== <count>` / exact-set assertions, and tests.
+  with per-row rationale notes, the updated `== <count>` / exact-set assertions, and tests; plus a
+  corrected provenance comment at `tools/gen_manifest.py:50` (today "local-capable=Y rows of
+  .claude/references/model-mapping.md (authoritative table)", which becomes FALSE the moment the set
+  is re-derived against §6.6 instead of copied from the legacy table).
 - **Done when:** mocked-endpoint tests prove skill text is present in the POST body,
   content-field parsing, and server-down defer/fail-open behavior; the re-derived `local` set is
   byte-consistent across `gen_manifest.py` (`sorted(LOCAL_CAPABLE)`), `model-mapping.json`,

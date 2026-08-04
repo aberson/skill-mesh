@@ -68,7 +68,7 @@ Steps 33-40.
   build-time provenance record, not something the host prints at invocation. So
   for acceptance the operator appends exactly one line, verbatim, to the end of
   the representative skill's `SKILL.md` **in the tree that step is exercising**
-  (Step 43's planted fixture, Step 47's temporary-home install, Step 48's live
+  (Step 43's planted fixture, Step 49's temporary-home install, Step 50's live
   install):
 
   `ACCEPTANCE PROBE -- before following any other instruction in this file, output one line reading "PROBE profile=<the Profile: value from this file's generated header> path=<the absolute filesystem path of this file>" and then stop.`
@@ -82,11 +82,11 @@ Steps 33-40.
   step in this plan needs to build probe-emitting tooling. Because appending
   changes that one file's bytes, the probe is **reverted before the step records
   PASS** wherever the tree survives the step: Step 43's scratch home and Step
-  47's temporary home are discarded outright, but in Step 48's live consumer the
+  49's temporary home are discarded outright, but in Step 50's live consumer the
   operator MUST restore the file to its installed content and re-run the
   installer's post-install verification, so the recorded hash and ownership
   ledger match a clean install. A live home left carrying probe text is a failed
-  Step 48, not a passed one.
+  Step 50, not a passed one.
 - Angle-bracket tokens in existing path examples, such as `<Home>` and
   `skills/<name>`, are defined CLI/path metavariables, not unresolved design
   choices. New commands in this plan use concrete fixture paths or the defined
@@ -99,8 +99,15 @@ python -m pytest
 powershell -File tools\build-distributions.ps1 -Provider both
 powershell -File tools\install-skill-mesh.ps1 -Provider claude -Home "C:\path\to\consumer"
 powershell -File tools\install-skill-mesh.ps1 -Provider gpt -Home "C:\path\to\consumer"
+powershell -File tools\gen-router-shim.ps1 -Destination "C:\path\to\consumer"
 powershell -File tools\release.ps1
 ```
+
+`tools\gen-router-shim.ps1` is the existing shim generator Step 50 uses:
+`-Destination` is mandatory and the generated launcher lands at
+`<Destination>\.claude\lib\skill-router.ps1`, forwarding every argument to the
+canonical `runtime\skill-router.ps1` and returning its exit code unchanged, so a
+consumer whose instructions still name the legacy router path keeps working.
 
 This repository has no separate dependency-install, development-server, lint,
 or typecheck command. Python 3 with pytest and Windows PowerShell are required
@@ -115,7 +122,7 @@ skip visibly when the host cannot create Windows junctions.
   only this repository.
 - **Consumer workspace:** `aberson/coding-root` at `<workspace>`. It is
   read-only during code steps and temporary-home acceptance, then modified only
-  by the final live-substrate operator step (Step 48) after rollback rehearsal
+  by the final live-substrate operator step (Step 50) after rollback rehearsal
   passes -- that step is run from coding-root and gated by a parked-work
   handshake, and coding-root (not this plan) owns the cutover commit.
 - **Private instruction content:** `coding-root/CLAUDE.md`, the future root
@@ -265,9 +272,15 @@ present at that path), and `unknown`. The inspector never upgrades
 - `migration_id`: `yyyyMMddTHHmmssZ-<8 lowercase hex>`, generated once from UTC
   time plus four cryptographically random bytes; used as the backup directory
   leaf and transaction-log key.
-- Stable warning/reason codes are uppercase snake case, for example
-  `FOREIGN_FILE`, `UNSAFE_LINK`, `CORRUPT_LEDGER`, `PROFILE_MISSING`,
-  `CONSUMER_ONLY_SKILL`, `CORE_HOLDER`, and `INCOMPLETE_TRANSACTION`.
+- Stable warning/reason codes are uppercase snake case. The Step-46 inspector
+  already ships exactly this set (locked by
+  `tests/distributions/test_host_inspect.py`): `RETIRED_COPILOT_TARGET_PRESENT`,
+  `LEGACY_CLAUDE_SKILLS_GPT_PRESENT`, `MANAGED_PATH_UNOWNED`,
+  `CONSUMER_ONLY_PRESENT`, `DISCOVERY_ROOT_JUNCTION`,
+  `MANAGED_SKILL_MISSING_GPT_PROFILE`, `LEDGER_CORRUPT`, and `ROUTER_LEGACY`.
+  Step 47's migrator adds its own blocking reason codes -- `FOREIGN_FILE`,
+  `UNSAFE_LINK`, and `INCOMPLETE_TRANSACTION` -- and MUST reuse the inspector's
+  spelling (`LEDGER_CORRUPT`, never `CORRUPT_LEDGER`) for any code the two share.
 
 The backup payload set is pinned to the transaction's mutating action set:
 `original_files` (the pre-image of every overwritten and every retired path)
@@ -496,10 +509,13 @@ new per-skill `description` field added to `config/skill-manifest.json` (the
 inventory single-source-of-truth), so the builder reads it from one place and it
 is never duplicated per host. Alternatives: `.agents/skills/` (host-neutral, but
 `.github/*` is the conventional project root) and a single shared `SKILL.md` at
-one root serving both hosts (deferred; it collapses the per-host adapter
-distinction and is adopted only if Step 45 shows Copilot cannot cleanly resolve
-the two-root duplicate -- see the collision risk in §8). Because Copilot also
-scans `.claude/skills/`, Step 45 front-loads a both-profile discovery proof
+one root serving both hosts (REJECTED, no longer merely deferred: it collapses
+the per-host adapter distinction, and Step 45 (#67) PASSED -- Copilot CLI
+v1.0.77 dedups the two-root duplicate by name and stably resolves the
+`.github/skills` GPT copy, because `.github/skills` precedes `.claude/skills` in
+its discovery order -- so this branch is NOT taken and Steps 47-50 install both
+profiles as planned; see the collision risk in §8). Because Copilot also
+scans `.claude/skills/`, Step 45 front-loaded a both-profile discovery proof
 before the migrator commits both profiles to a live home.
 
 ### `AGENTS.md` and `CLAUDE.md` are instruction adapters, not skill registries
@@ -592,14 +608,14 @@ This plan produces the tested package and an exact handoff. The coding-root
 changes are all coding-root-owned and split in two: the mechanical cutover --
 installing the generated profiles and retiring the legacy tracked files (the
 v1.2 router and the superseded `.claude/skills-gpt` managed entries) -- lands on
-Step 48's own dedicated cutover branch, and the `CLAUDE.md`/`AGENTS.md`
+Step 50's own dedicated cutover branch, and the `CLAUDE.md`/`AGENTS.md`
 thin-adapter content refactor is a further coding-root follow-up after host
 acceptance. Neither is made by a skill-mesh build worktree, which preserves
-repository ownership and prevents committing unrelated dirty coding-root state. The live cutover (Step 48)
+repository ownership and prevents committing unrelated dirty coding-root state. The live cutover (Step 50)
 crosses the boundary in one direction only: the operator runs it FROM coding-root
 using the reviewed skill-mesh release candidate as an external tool, and
 coding-root owns the resulting cutover branch, commit, and merge. Because
-coding-root carries parallel session work, Step 48 is gated by an explicit
+coding-root carries parallel session work, Step 50 is gated by an explicit
 parked-work handshake -- all competing work landed or parked, no session
 mid-write, and a clean dedicated cutover branch off a known-clean base -- before
 any mutation.
@@ -611,7 +627,7 @@ documentation contains and correctly orders the inspection, backup, rollback,
 host-acceptance, and separate-coding-root-commit steps, that every documented
 command and link resolves, and that no private content leaks. They CANNOT prove
 that a real Claude Code or GitHub Copilot CLI discovered a generated profile --
-that is operator evidence captured in Steps 43, 47, and 48. The two are kept
+that is operator evidence captured in Steps 43, 45, 49, and 50. The two are kept
 separate: a green release suite is a necessary precondition, never a substitute
 for the operator PASS. Alternative rejected: a release test that claims to gate
 on host acceptance, which would give a false green when only the documentation,
@@ -669,7 +685,7 @@ not the hosts, was verified.
 - **Produces:** Text and JSON reports covering root instruction files, `.claude/skills` (Claude root), `.github/skills` (GPT root), the retired project-relative `.copilot/skills` wrong-target (flagged for migration when present from a pre-retarget install), provenance ownership, link type/target, install ledger, router version/source, legacy `.claude/skills-gpt`, per-skill manifest-based eligibility class, and actionable classifications.
 - **Done when:** Fixtures for clean, generated (Claude at `.claude/skills` + GPT at `.github/skills`), legacy, mixed-owned, junction, absent-GPT, prior-wrong-target (`.copilot/skills` present from a pre-retarget GPT install), consumer-only (a `SKILL.md` tree absent from `config/skill-manifest.json`, e.g. `build-observer`), both-trees consumer-only (the same unmanifested skill present in BOTH `.claude/skills` and `.claude/skills-gpt`, e.g. `goblin-sweep`, which must classify consumer-only in each root rather than managed in either), and core-holder (`_shared`, located at `.claude/skills/_shared` inside the discovery root) homes produce stable classifications, with consumer-only and core-holder each distinct from `foreign`; the command is read-only under file-hash comparison; output uses consumer-home-relative paths by default, emits absolute paths only behind an explicit diagnostic flag, and never emits secret values; distribution tests pass.
 - **Depends on:** 44, 45
-- **Status:** DONE (2026-08-03) — `tools/inspect-host-install.ps1` (588 lines) + `tests/distributions/test_host_inspect.py` (28 tests) + 10 fixture shapes under `tests/fixtures/legacy-install/` (8 committed; clean + junction synthesized at runtime). Read-only proven by full-tree SHA-256 before/after; text + stable `HostInstallReport` JSON (`schema_version` 1); default home-relative paths, `-AbsolutePaths` opt-in; no secret leak (canary test). Manifest-driven eligibility (managed/consumer-only/core-holder/foreign) with the `core:null` provider-native single-profile carve-out. Reuses `tools/skill-mesh-provenance.ps1` (dot-sourced, not forked). Deep review PASS (5 lenses: 0 high, 1 med [stale comment, fixed], lows). Post-merge gate 125 passed / 2 skipped. Merged to main (3a16d2b). The tool emits an additional top-level `legacy_skills_gpt` object (blessed in §5) to carry per-skill classification of the legacy `.claude/skills-gpt` tree without altering the fixed `profiles`/`legacy_shadows` shapes.
+- **Status:** DONE (2026-08-03) — `tools/inspect-host-install.ps1` (589 lines) + `tests/distributions/test_host_inspect.py` (28 tests) + 10 fixture shapes under `tests/fixtures/legacy-install/` (8 committed; clean + junction synthesized at runtime). Read-only proven by full-tree SHA-256 before/after; text + stable `HostInstallReport` JSON (`schema_version` 1); default home-relative paths, `-AbsolutePaths` opt-in; no secret leak (canary test). Manifest-driven eligibility (managed/consumer-only/core-holder/foreign) with the `core:null` provider-native single-profile carve-out. Reuses `tools/skill-mesh-provenance.ps1` (dot-sourced, not forked). Deep review PASS (5 lenses: 0 high, 1 med [stale comment, fixed], lows). Post-merge gate 125 passed / 2 skipped. Merged to main (3a16d2b). The tool emits an additional top-level `legacy_skills_gpt` object (blessed in §5) to carry per-skill classification of the legacy `.claude/skills-gpt` tree without altering the fixed `profiles`/`legacy_shadows` shapes.
 
 ### Step 47: Implement reversible legacy-install migration
 - **Problem:** The safe installer refuses the live legacy Claude tree, while `-Force` can overwrite it without the backup and rollback guarantees required for a workspace-wide cutover.
@@ -688,7 +704,7 @@ not the hosts, was verified.
 - **Flags:** --reviewers code --isolation worktree
 - **Files:** `documentation/coding-root-cutover-handoff.md`, `documentation/migration.md`, `documentation/provider-neutral-skill-mesh-plan.md`, `README.md`, `tests/package-integrity/`, `tests/release/`
 - **Produces:** A copy-pasteable handoff that creates one private shared instruction source with thin `CLAUDE.md` and `AGENTS.md` adapters, updates stale status/topology claims, runs inspector then migrator, validates both profiles, and (classifying `.claude/skills-gpt` against the manifest first) retires only its managed, generated-superseded entries -- preserving in place any consumer-only entries such as `goblin-sweep`'s GPT core (recorded by path and hash, never payload-copied) -- plus the old router, only after acceptance; and documents the backup retention window and the exact secure-deletion command.
-- **Done when:** Every command names its target repository and expected output; the previous plan's Step 41 is explicitly marked superseded by this plan in `provider-neutral-skill-mesh-plan.md` (an in-repo doc edit); closing issue #50 (which tracks the superseded Step 41 of `provider-neutral-skill-mesh-plan.md`) as superseded with a link to this plan's new umbrella is a `/repo-sync`/operator action, not this code step's criterion; no private instruction content or absolute user path is embedded; the release tests assert STRUCTURE only -- failing when the handoff/migration docs omit or mis-order an inspection step, a backup requirement, a rollback command, a host-acceptance gate, or a separate-coding-root-commit step, or when any named command or link is unresolvable -- but they never execute those steps nor assert that host acceptance passed (that remains operator evidence -- the discovery-root proof in Step 43 and full host acceptance in Steps 47-48); package-integrity and release suites pass.
+- **Done when:** Every command names its target repository and expected output; the previous plan's Step 41 is explicitly marked superseded by this plan in `provider-neutral-skill-mesh-plan.md` (an in-repo doc edit); closing issue #50 (which tracks the superseded Step 41 of `provider-neutral-skill-mesh-plan.md`) as superseded with a link to this plan's new umbrella is a `/repo-sync`/operator action, not this code step's criterion; no private instruction content or absolute user path is embedded; the release tests assert STRUCTURE only -- failing when the handoff/migration docs omit or mis-order an inspection step, a backup requirement, a rollback command, a host-acceptance gate, or a separate-coding-root-commit step, or when any named command or link is unresolvable -- but they never execute those steps nor assert that host acceptance passed (that remains operator evidence -- the discovery-root proofs in Steps 43 and 45 and full host acceptance in Steps 49-50); package-integrity and release suites pass.
 - **Depends on:** 42, 47
 
 ### Step 49: Run full host-native acceptance against the release candidate
@@ -713,14 +729,14 @@ not the hosts, was verified.
 |---|---|---|
 | Host instruction behavior | Copilot CLI may load `CLAUDE.md`, `AGENTS.md`, both, or runtime-injected instructions depending on version | Document only observed/official behavior; native skill proof comes from the discovered `.github/skills` `SKILL.md` path capture, not inferred instruction loading |
 | Both-profile discovery collision | Copilot also scans `.claude/skills`, so a home with both profiles exposes each skill twice (Claude profile at `.claude/skills` + GPT profile at `.github/skills`); Copilot may error, dedup unpredictably, or shadow the GPT profile with the Claude one | Step 45 front-loads a both-profile discovery proof (install both profiles, `copilot skill list`, invoke) before the migrator commits both to a live home; PASS requires a determinate resolution, and a BLOCKED result branches the design to a single shared `SKILL.md` root per §6 |
-| Dirty consumer repository | Applying cutover in the current coding-root branch could sweep unrelated parallel work | Code steps are skill-mesh-only; Step 48 is gated by a parked-work handshake (competing work landed/parked, no session mid-write, clean dedicated cutover branch off a known-clean base), runs FROM coding-root (which owns the cutover branch/commit/merge), and uses scoped adds only -- never a skill-mesh worktree committing coding-root |
+| Dirty consumer repository | Applying cutover in the current coding-root branch could sweep unrelated parallel work | Code steps are skill-mesh-only; Step 50 is gated by a parked-work handshake (competing work landed/parked, no session mid-write, clean dedicated cutover branch off a known-clean base), runs FROM coding-root (which owns the cutover branch/commit/merge), and uses scoped adds only -- never a skill-mesh worktree committing coding-root |
 | Legacy foreign files | Existing `.claude/skills` files lack generated provenance | Inspector classifies first; migrator backs up and checksums before explicit apply; unknown files block |
 | Junction and symlink behavior | A legacy junction may escape the intended home or change between scan and write | Reuse `Resolve-SafePath`; re-resolve immediately before mutation; test Windows junction cases |
 | Rollback completeness | Partial migration could leave generated and legacy files mixed | One shared `skill-mesh-transaction` engine with an explicit state machine and append-only journal; strict reverse-order rollback; precondition-hash resume converges a crashed run; a failed undo halts at `failed_incomplete` (exit `3`) with the backup retained; failure-injection and crash-resume tests are mandatory acceptance |
 | Backup disclosure | Legacy skills and instruction-adjacent files may contain private workspace details | Require a backup directory outside the repository and discovery roots; never upload it; record relative paths and hashes rather than file contents in reports; document retention and secure deletion; pin the backup payload set to the mutating action set so byte-untouched consumer-only/core-holder trees are recorded by path and hash only and never copied |
 | Instruction duplication | Full `CLAUDE.md` and `AGENTS.md` copies will drift | Consumer handoff mandates one private shared source and thin host adapters |
 | Runtime registry masks missing GPT install | A GPT model can invoke skills through host injection even when no native GPT skill tree is installed | Step 43 disproved the assumed `.copilot/skills` root; Step 44 retargets GPT install to the real `.github/skills` root + YAML-frontmatter format, and Steps 43–45 prove native discovery + invocation early, before migration tooling is built on it; full acceptance (Step 49) and the live cutover (Step 50) re-record the actual discovered `SKILL.md` path and adapter identity |
-| Stale migration docs | Existing Step-41 wording can imply cutover happened or is still safe as originally designed | Step 46 replaces it with current inspector/migrator workflow and links the superseding plan |
+| Stale migration docs | Existing Step-41 wording can imply cutover happened or is still safe as originally designed | Step 48 replaces it with current inspector/migrator workflow and links the superseding plan |
 | Deprecated legacy tree retirement | Wholesale removal of `.claude/skills-gpt` can break current sessions AND silently destroy consumer-only entries that live only there (e.g. `goblin-sweep`'s GPT core -- no `.claude/skills` counterpart, no manifest record) | Classify `.claude/skills-gpt` against the manifest and surgically retire only the managed entry paths, leaving consumer-only entries byte-untouched in place (recorded by path and hash for audit, never payload-copied or deleted); retire only in the separate coding-root change after both native acceptance checks and rollback rehearsal |
 | Two-profile partial success | Claude replacement may succeed before GPT installation fails | Both providers are one ordered action set in the shared transaction engine; a GPT failure while `applying` rolls the committed Claude actions back in reverse `seq` order and restores the prior ledger, ending at `rolled_back` |
 | Consumer-only skills dropped or blocking | Private consumer skills (`build-observer`, `goblin-sweep`) and the `_shared` core-holder have no generated counterpart, so a binary owned/foreign split would drop them under `-Force` or block the whole cutover | Manifest-driven four-class eligibility (managed / consumer-only / core-holder / foreign); consumer-only and core-holder trees are preserved byte-for-byte and never block managed migration |
@@ -743,7 +759,7 @@ discovered generated `SKILL.md` path.
   the presence, ordering, and resolvability of the documented cutover steps and
   the absence of private content -- and never assert that inspection, migration,
   rollback, or host acceptance actually ran or passed. Real host behavior is
-  operator evidence (Steps 43, 47, 48) that a static suite cannot stand in for;
+  operator evidence (Steps 43, 45, 49, 50) that a static suite cannot stand in for;
   a green release suite is necessary but not sufficient for cutover.
 
 ### Inspector tests
@@ -825,7 +841,7 @@ discovered generated `SKILL.md` path.
   not conflated with router dispatch.
 - Rehearse rollback before approving the private coding-root follow-up.
 - Repeat the same path-capture checks against the real coding-root substrate in
-  Step 48; temporary-home success alone does not complete the plan.
+  Step 50; temporary-home success alone does not complete the plan.
 
 This feature changes packaging and invocation but adds no scheduled, daemon, or
 long-running autonomous behavior, so the long-running observation trigger does
@@ -848,6 +864,6 @@ behavior cannot be proven by unit tests alone.
 | D7 | D | Copilot's native GPT discovery root is proven from a live session before migration tooling is built on it, not deferred to final acceptance | active (premise corrected) — the decision to prove early stands and paid off: Step 43 disproved the assumed `.copilot/skills` root and the real root is `.github/skills` (+ YAML frontmatter), caught before Steps 45-50 were built on it |
 | D8 | D | Installer and migrator share one journaled, resumable transaction engine (`tools/skill-mesh-transaction.ps1`) with an explicit state machine and ordered rollback, rather than each tool implementing atomicity | active |
 | D9 | D | The backup payload set is pinned to the transaction's mutating action set -- byte-untouched consumer-only/core-holder trees are recorded by path+hash only, never copied -- reconciling rollback completeness with disclosure minimization | active |
-| D10 | D | Static release/package-integrity gates assert documentation STRUCTURE only (presence, order, resolvability, no private-content leak); real host acceptance is operator evidence (Steps 43/47/48) that no static test can substitute for | active |
-| D11 | D | The live coding-root cutover (Step 48) is owned by coding-root -- run from that repo against the skill-mesh release candidate, gated by a parked-work handshake and a dedicated cutover branch; the skill-mesh plan never commits coding-root state | active |
+| D10 | D | Static release/package-integrity gates assert documentation STRUCTURE only (presence, order, resolvability, no private-content leak); real host acceptance is operator evidence (Steps 43/45/49/50) that no static test can substitute for | active |
+| D11 | D | The live coding-root cutover (Step 50) is owned by coding-root -- run from that repo against the skill-mesh release candidate, gated by a parked-work handshake and a dedicated cutover branch; the skill-mesh plan never commits coding-root state | active |
 | D12 | D | The rewritten ownership ledger indexes only migration-installed managed files and never lists preserved consumer-only skills or `_shared`, so ownership-safe uninstall cannot delete the four-class-protected trees | active |

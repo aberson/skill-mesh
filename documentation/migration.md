@@ -30,7 +30,7 @@ Every artifact class has exactly one canonical home, enumerated in
 - **Build/install/release tooling**: `tools/build-distributions.ps1`, `tools/install-skill-mesh.ps1`,
   `tools/release.ps1`.
 - **Tests**: `tests/package-integrity/`, `tests/router/`, `tests/calibration/`,
-  `tests/distributions/`, `tests/telemetry/`, `tests/release/`.
+  `tests/distributions/`, `tests/telemetry/`, `tests/release/`, `tests/smoke/`.
 
 None of this was previously in the public repository at all — it was implemented in a private
 workspace (`aberson/coding-root`, referred to below as the legacy migration source) and read-only
@@ -63,7 +63,7 @@ The legacy migration source's own `.claude/skills/` and `.claude/skills-gpt/` tr
 `aberson/coding-root`) were **read-only** for the whole of Steps 33-40 — nothing in this
 migration wrote to them. Step 41 has been superseded by
 [`host-native-discovery-cutover-plan.md`](host-native-discovery-cutover-plan.md); the one-time
-cutover is now Steps 43-50 of that plan (Steps 42-44 shipped; Step 45 is next), which install the
+cutover is now Steps 43-50 of that plan (Steps 42-46 shipped; Step 47 is next), which install the
 released `aberson/skill-mesh` package into `coding-root/.claude` via
 `tools/install-skill-mesh.ps1 -Provider claude -Home <coding-root>`, generating a marker-tagged,
 ownership-safe discovery tree rather than hand-edited files.

@@ -49,6 +49,7 @@ deprecation window (see `migration.md`), not canonical sources.
 | Telemetry | `runtime/telemetry/` | Neutral telemetry writer/summary (Step 34). |
 | Distribution builder | `tools/build-distributions.ps1` | Generates `dist/claude/`, `dist/gpt/` (Step 36). |
 | Installer | `tools/install-skill-mesh.ps1` | Installs a host profile without making canonical files host-owned (Step 36). |
+| Host-install inspector | `tools/inspect-host-install.ps1` | Read-only `HostInstallReport` (text or JSON, `schema_version` 1): workspace instruction files, Claude/GPT discovery roots, provenance ownership, link type, ledger state, router version, and legacy shadowing (Step 46). |
 | Release/export command | `tools/release.ps1` | Reproducible release staging + checksums (Step 38). |
 | Package-integrity tests | `tests/package-integrity/` | Manifest/link/drift/claim gates: `test_manifest_contract.py`, `test_release_gates.py`, `test_host_discovery.py`, `test_skill_tree.py` (99 tests). |
 | Router tests | `tests/router/` | Provider-selection and transport tests (Step 34/37). |
@@ -386,7 +387,7 @@ python -m pytest tests\calibration
 **Not configured.** The repository has no lint command and no typecheck command.
 Do not invent one. The automated gates are the seven pytest suites -- `tests/router`
 (61), `tests/calibration` (38), `tests/package-integrity` (99), `tests/distributions`
-(45), `tests/release` (12), `tests/telemetry` (5), and `tests/smoke` (40): 300 tests
+(73), `tests/release` (12), `tests/telemetry` (5), and `tests/smoke` (40): 329 tests
 total, run with `python -m pytest`.
 
 ### 8.5 Regenerating the manifest

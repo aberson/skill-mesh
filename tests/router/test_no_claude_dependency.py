@@ -27,7 +27,18 @@ EXCLUDE_NAMES = {
 
 # A load-bearing reference is `.claude` immediately followed by a path separator.
 # Property access like `$v.claude` (no separator) is not a path and is ignored.
-PATH_RE = re.compile(r"\.claude[\\/]")
+#
+# EXCEPT the host discovery roots. This guard exists to stop the neutral package
+# depending on the legacy coding-root SOURCE layout (`.claude/lib/`,
+# `.claude/references/`, `.claude/projects/`). Since Phase 7, `.claude/skills` is
+# the Claude profile's INSTALL TARGET and `.claude/skills-gpt` is a legacy tree the
+# inspector classifies -- both are first-class product surfaces the installer,
+# inspector, and their fixtures must name (documentation/host-discovery.md).
+# Naming an install target is not a source-root dependency, so those two prefixes
+# are allowed while every other `.claude/<path>` still fails.
+# Narrowing the PATTERN rather than excluding whole files keeps those files scanned
+# for real source-root references.
+PATH_RE = re.compile(r"\.claude[\\/](?!skills[\\/]|skills-gpt[\\/]|skills\b|skills-gpt\b)")
 JSON_PROVENANCE_KEY = re.compile(r'"(description|note|notes|legacy_[a-z_]+|source|dest)"\s*:')
 
 
@@ -83,6 +94,32 @@ def test_no_load_bearing_claude_path_in_neutral_tree():
         "load-bearing '.claude/...' path reference found in neutral runtime code "
         f"(comment/docstring/provenance mentions are allowed): {offenders}"
     )
+
+
+def test_pattern_still_catches_legacy_source_roots():
+    """Red-on-garbage anchor for the discovery-root carve-out above.
+
+    Without this, widening PATH_RE to permit `.claude/skills` could silently
+    permit every `.claude/...` path and turn the guard into a permanent green.
+    """
+    dot = "." + "claude"  # assembled so this file carries no literal path itself
+    must_fail = [
+        f"{dot}/lib/skill-router.ps1",
+        f"{dot}/references/model-mapping.md",
+        f"{dot}\\lib\\calibration\\test_calibrate.py",
+        f"{dot}/projects/some-slug/memory/",
+    ]
+    for s in must_fail:
+        assert PATH_RE.search(s), f"guard no longer catches legacy source path: {s}"
+
+    must_pass = [
+        f"{dot}/skills/build-phase/SKILL.md",
+        f"{dot}/skills-gpt/goblin-sweep/SKILL.md",
+        f"{dot}\\skills\\build-phase",
+        f'"discovery_subdir": "{dot}/skills"',
+    ]
+    for s in must_pass:
+        assert not PATH_RE.search(s), f"guard wrongly flags a host discovery root: {s}"
 
 
 def test_scan_covers_the_runtime_router():

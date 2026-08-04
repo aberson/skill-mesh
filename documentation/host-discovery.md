@@ -58,8 +58,10 @@ provider to a provider-specific **install target**:
 This package installs the GPT profile to the conventional project root
 `.github/skills/`. Note that `.claude/skills/` is **also** a Copilot discovery
 root, so a consumer with both profiles installed exposes each skill to Copilot at
-both `.claude/skills` and `.github/skills` — that both-profile collision is proven
-and resolved in the cutover plan's Step 45 before any live both-profile migration.
+both `.claude/skills` and `.github/skills`. Step 45 (#67) resolved that collision against a live
+GitHub Copilot CLI v1.0.77: `copilot skill list` dedups by name, and `.github/skills` precedes
+`.claude/skills` in Copilot's discovery order, so the GPT profile is a stable ordering-based winner
+and is never shadowed by the Claude profile. Installing both profiles is therefore safe.
 
 **Every generated `SKILL.md` must lead with a YAML frontmatter block** containing at
 least `name` and `description`; GitHub Copilot CLI rejects a `SKILL.md` without it

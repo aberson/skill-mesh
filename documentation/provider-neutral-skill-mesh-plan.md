@@ -322,6 +322,16 @@ existing deterministic/rubric comparison that checks adapter parity.
 - **Status:** DONE (2026-07-27)
 
 ### Step 41: Perform host-native acceptance and publish
+
+> **Do not execute this step as written.** Its unexecuted acceptance intent is superseded by
+> [`host-native-discovery-cutover-plan.md`](host-native-discovery-cutover-plan.md), where the work is
+> now Steps 49 (acceptance against the release candidate) and 50 (live coding-root cutover). Step 43
+> of that plan disproved the discovery-root assumption this step was written against. The formal
+> `**Status:** SUPERSEDED` marker and the closure of issue #50 are deliverables of that plan's
+> Step 48; this note exists so a fresh reader does not treat Step 41 and Steps 49-50 as two live
+> units. The repository description referenced below has already been updated
+> ([`repo-metadata.md`](repo-metadata.md)).
+
 - **Problem:** The final goal depends on real host discovery behavior that fixtures cannot fully establish.
 - **Type:** operator
 - **Issue:** #50
@@ -405,7 +415,7 @@ in addition to automated tests.
 | P1 | P | Skill-mesh is provider-neutral: Claude sessions use Claude adapters and GPT sessions use GPT adapters | active |
 | P2 | P | Shared skills and routing infrastructure must not be canonically owned by `.claude/` | active |
 | P3 | P | GPT usage must not be documented as universally requiring `OPENAI_API_KEY` | active |
-| D1 | D | `aberson/skill-mesh` becomes the canonical source; `coding-root/.claude` becomes an installed compatibility consumer after Step 41 | proposed |
+| D1 | D | `aberson/skill-mesh` becomes the canonical source; `coding-root/.claude` becomes an installed compatibility consumer after Step 50 of `host-native-discovery-cutover-plan.md` (this plan's Step 41 is superseded — see the note at Step 41) | proposed |
 | D2 | D | Each portable skill uses `skills/<name>/core.md` plus sibling `providers/claude.md` and `providers/gpt.md` adapters | proposed |
 | D3 | D | Host-bound adapters are primary; router `auto` uses only trustworthy metadata and errors on ambiguity instead of defaulting to Claude | proposed |
 | D4 | D | Generated Claude/GPT distributions are release artifacts with checksums, not committed source | proposed |
