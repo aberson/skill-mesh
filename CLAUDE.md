@@ -112,12 +112,17 @@ tests/                  calibration, distributions, package-integrity, release, 
 
 ## Current state
 
-**Phase 7 — Host-Native Discovery & Consumer Cutover, in progress.** Steps 42–44 of Steps 42–50
+**Phase 7 — Host-Native Discovery & Consumer Cutover, in progress.** Steps 42–45 of Steps 42–50
 are DONE: the host-loading authority map (locked by 17 package-integrity tests); the live
 Copilot CLI v1.0.77 discovery-root proof, which **disproved** the assumed `.copilot/skills`
-target; and the resulting GPT retarget to `.github/skills` with YAML-frontmatter `SKILL.md`.
-Steps 45–50 are pending, starting with the both-profile proof and the `.claude/skills` collision
-(Copilot reads that root too). 300 tests across seven suites.
+target; the resulting GPT retarget to `.github/skills` with YAML-frontmatter `SKILL.md`; and the
+both-profile discovery proof (Step 45, #67) — with both profiles installed, Copilot dedups skills
+by name and the `.github/skills` GPT profile wins the `.claude/skills` collision by discovery-root
+precedence (`.github/skills` scanned first), so the migrator may install both profiles without the
+GPT skill being shadowed. Steps 46–50 are pending, starting with read-only host-install inspection
+(Step 46). 300 tests across seven suites. (Step 45 also surfaced #69: the Claude-profile `SKILL.md`
+frontmatter emits `description`/`argument` unquoted, so a colon-bearing value fails Copilot's YAML
+parse — a bounded builder defect, does not block the cutover.)
 
 Phases 1–6 delivered the canonical `skills/` source tree, the provider-neutral router, and the
 distribution, installer, and release tooling. Plan:
