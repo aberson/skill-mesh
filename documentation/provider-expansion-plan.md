@@ -12,30 +12,30 @@ This plan is self-contained: every design decision it depends on is restated in 
 ratified from an operator-side MCP/provider investigation (private workspace, 2026-08-02/03);
 no external document is required to execute it.
 
-> **NOT YET REVIEWED — do not run `/build-phase` against this plan.** It was authored and
-> committed without the `plan-review → plan-redline → plan-wrap` sequence. An independent
-> plan-wrap pass on 2026-08-03 returned `NEEDS WORK: 3 blockers, 8 gaps` (+7 minors). One
-> blocker — 9 steps missing `**Type:**` and 2 operator steps missing `**Produces:**` — was
-> fixed in that same wrap, so every step is now shape-complete. **Two blockers remain open:**
+> **Plan-review processed 2026-08-03** (via `/plan-expedite`; Phase 7 Step 45 PASS recorded, ceiling
+> re-verified at Step 50 so no renumber needed). The two blockers flagged at authoring are resolved
+> in place:
 >
-> 1. **Step 55 is unbuildable as scoped.** The `local` column is a four-way duplicated
->    data-shape constant (`config/model-mapping.json`, `config/skill-manifest.json`,
->    `tests/package-integrity/expected_inventory.json`, and the real source of truth
->    `tools/gen_manifest.py`'s `LOCAL_CAPABLE`). The plan names only the first. Four hard
->    assertions in `test_manifest_contract.py` pin `local_capable == 24` and its exact member
->    set, and regeneration hard-exits without the private `SKILL_MESH_LEGACY_SOURCE`, so
->    Step 55's "full suite green" is unreachable in a clean clone. Decide the source of truth
->    and put all four artifacts in a step's `Produces:` before building.
-> 2. **Every `**Issue:**` field is blank.** Do not hand-write numbers here — `/repo-sync` mints
->    them against live GitHub state, which keeps moving (Phase 7 and its wrap issues already run
->    through #68). Read the next free number at sync time.
+> 1. **Step 55 (four-way `local` data-shape constant) — RESOLVED by re-scope.** Source of truth
+>    fixed as `tools/gen_manifest.py:51 LOCAL_CAPABLE`; Step 55's Files/Produces/Done-when now name
+>    all four artifacts (`gen_manifest.py` source + `config/model-mapping.json`,
+>    `config/skill-manifest.json`, `tests/package-integrity/expected_inventory.json`) plus the pinned
+>    `test_manifest_contract.py` assertions, and specify the clean-clone HAND-EDIT path — a clean
+>    `/build-phase` worktree cannot regenerate because `gen_manifest.py:369` hard-exits without the
+>    private `SKILL_MESH_LEGACY_SOURCE`, and the contract/drift tests read the committed artifacts
+>    rather than regenerating. See Step 55.
+> 2. **Blank `**Issue:**` fields — expected pre-`/repo-sync`, not a defect.** `/repo-sync` mints them
+>    against live GitHub state (Phase 7 + its wrap/sibling issues already run through #69). Read the
+>    next free number at sync time; never hand-write.
 >
-> Also unowned: Step 54's per-skill `providers/gemini.md` has no declared status against the
-> manifest's closed `{claude, gpt}` provider set (`test_manifest_contract.py:175`), the
-> builder's `ValidateSet('claude','gpt','both')`, or the installer's two-root map — the exact
-> surface Phase 7 Steps 45-50 are still rebuilding.
+> Step 54's `providers/gemini.md` provider-set gap is assigned an explicit fork-on-failure ownership
+> obligation (its carrier doc must extend `test_manifest_contract.py:175`, the builder `ValidateSet`,
+> and the installer root map WHEN a fork is authored — no Phase 8 code step authors one, so the
+> closed `{claude, gpt}` manifest set stays valid throughout Phase 8). §27 stakes-aware routing
+> escalated the four router-touching steps (52/53/54/55) to `--reviewers deep`.
 >
-> Run `/plan-review` then `/plan-wrap` on this document before `/repo-sync`.
+> **Still gated:** `/build-phase` for this plan must NOT run until Phase 7 Step 50 (live coding-root
+> cutover) is DONE. `/repo-sync` (issue minting) may proceed now.
 
 ---
 
@@ -179,7 +179,7 @@ itself; team-profile implementation (key is designed-not-built); paid Gemini key
   mapping row and manifest entry, and vice versa) plus row sanity (capability values boolean;
   every referenced provider exists in the `providers` block).
 - **Type:** code
-- **Issue:** #
+- **Issue:** #71
 - **Flags:** --reviewers code
 - **Produces:** `tests/package-integrity/test_mapping_drift.py`
 - **Done when:** the test goes red when a synthetic skill dir (tmp fixture) is added without a
@@ -187,6 +187,7 @@ itself; team-profile implementation (key is designed-not-built); paid Gemini key
   floor.
 - **Depends on:** none
 
+<!-- autofix-applied: 2026-08-03 -->
 ### Step 52: Provider-aware tier-peer resolution
 - **Problem:** `config/model-tier-map.json` maps Claude tiers to GPT peers only, and
   `Resolve-GptPeer` (:324, sole caller :899) hardcodes that shape. Extend the schema
@@ -194,14 +195,15 @@ itself; team-profile implementation (key is designed-not-built); paid Gemini key
   generalize to a provider-aware resolver with the existing GPT behavior preserved exactly;
   update the `architecture.md` tier-map row.
 - **Type:** code
-- **Issue:** #
-- **Flags:** --reviewers code
+- **Issue:** #72
+- **Flags:** --reviewers deep
 - **Produces:** extended `config/model-tier-map.json`; resolver changes in
   `runtime/skill-router.ps1`; router tests
 - **Done when:** regression tests prove GPT peer resolution is byte-identical to before; Gemini
   peer resolution tested incl. missing-file fail-open warning; full suite green.
 - **Depends on:** 51
 
+<!-- autofix-applied: 2026-08-03 -->
 ### Step 53: Gemini transport, explicit-invoke-only
 - **Problem:** No Gemini transport exists. Add `providers.gemini` to `model-mapping.json`;
   implement `Invoke-GeminiModel` per §5/§6 (REST, legacy structured-output pair, GEMINI_API_KEY
@@ -210,14 +212,15 @@ itself; team-profile implementation (key is designed-not-built); paid Gemini key
   gemini selection, never as fallback; gemini errors fail open to Claude exit 2; resolve current
   model ids from the live models endpoint during the build.
 - **Type:** code
-- **Issue:** #
-- **Flags:** --reviewers code
+- **Issue:** #73
+- **Flags:** --reviewers deep
 - **Produces:** router + telemetry changes; `providers.gemini` config block; mocked-HTTP tests
 - **Done when:** mocked-transport tests cover: happy path; structured output parse; missing-key
   fail-loud; 5xx -> Claude fallback (exit 2); telemetry row carries non-zero token counts from
   mocked `usageMetadata`; full suite green.
 - **Depends on:** 52
 
+<!-- autofix-applied: 2026-08-03 -->
 ### Step 54: Proxy-first Gemini carrier
 - **Problem:** No per-skill Gemini entry points exist and, per §6.5, none should be authored
   upfront. Extend `Resolve-SkillEntryPoint` (:670, 6 callers) with a `gemini` variant:
@@ -226,13 +229,30 @@ itself; team-profile implementation (key is designed-not-built); paid Gemini key
   the 3 Claude-native); create `documentation/providers/gemini.md` documenting the
   fork-on-failure protocol.
 - **Type:** code
-- **Issue:** #
-- **Flags:** --reviewers code
-- **Produces:** resolver change; mapping column; carrier policy doc; tests
+- **Issue:** #74
+- **Flags:** --reviewers deep
+- **Produces:** resolver change; the per-skill `gemini` capability column in
+  `config/model-mapping.json` (NOT the manifest `providers` block — see the carrier-doc obligation
+  below); carrier policy doc; tests
 - **Done when:** entry-point tests prove proxy fallback and explicit-override precedence; the
-  Step 51 drift test is extended to validate the new column; full suite green.
+  Step 51 drift test is extended to validate the new column; full suite green. The `gemini`
+  column added here is a `model-mapping.json` capability flag ONLY and does NOT touch
+  `config/skill-manifest.json`'s `providers` block, so the closed-provider-set assertion
+  `tests/package-integrity/test_manifest_contract.py:175`
+  (`assert set(prov.keys()) == {"claude", "gpt"}`) stays green throughout Phase 8's code steps
+  (no per-skill `providers/gemini.md` is authored here — §6.5 proxy-first).
+- **Provider-set-extension ownership (fork-on-failure obligation):** `documentation/providers/gemini.md`
+  MUST document that authoring a per-skill `providers/gemini.md` fork (deferred to fork-on-failure,
+  Step 60 disposition) is the point that opens the closed provider set, and that such a fork
+  is NOT complete until it also extends, in the same change: (1) the manifest-contract assertion
+  `test_manifest_contract.py:175` from `{claude, gpt}` to include `gemini`; (2) the builder's
+  `ValidateSet('claude','gpt','both')` in `tools/build-distributions.ps1`; and (3) the installer's
+  provider→root map in `tools/install-skill-mesh.ps1`. No Phase 8 code step authors a fork, so
+  these three enforcement points are unchanged by Phase 8's code steps — the obligation is
+  recorded for the future fork, closing the "unowned status" gap flagged at plan authoring.
 - **Depends on:** 51, 53
 
+<!-- autofix-applied: 2026-08-03 -->
 ### Step 55: Local lane repoint, judge-slice semantics
 - **Problem:** `providers.local` targets a nonexistent Ollama-shaped endpoint and
   `Invoke-LocalModel` (:694; callers :1012, :1049) ignores `SkillEntryPoint`, so no skill text
@@ -243,12 +263,38 @@ itself; team-profile implementation (key is designed-not-built); paid Gemini key
   redefine and re-derive the `local` column per §6.6 criteria; local dispatch is limited to
   judge/grader single-call slices.
 - **Type:** code
-- **Issue:** #
-- **Flags:** --reviewers code
-- **Produces:** router + config changes; re-derived local flags with per-row notes; tests
+- **Issue:** #75
+- **Flags:** --reviewers deep
+- **Source of truth for the `local`/`local_capable` shape (four-way duplication — resolve before
+  building).** The `local` capability is a duplicated data-shape constant with ONE source of
+  truth: `tools/gen_manifest.py:51 LOCAL_CAPABLE` (the generator set; `:229` writes
+  `local_capable = name in LOCAL_CAPABLE`, `:238`/`:344` derive the count and sorted member list).
+  Its three DERIVED copies are `config/model-mapping.json` (per-skill `local` boolean column,
+  currently 24 `true`), `config/skill-manifest.json` (per-skill `local_capable` + the summary
+  count), and `tests/package-integrity/expected_inventory.json` (`"local_capable": <count>` at :7
+  plus the exact member array at :66). Re-deriving the 24 legacy-aspirational flags against the
+  strict §6.6 criteria WILL likely change the membership (and therefore the count away from 24),
+  which trips the hard assertions `test_manifest_contract.py:105` (`== 24`), `:129`
+  (exact-set vs the fixture), and `:153` (per-skill). **Because `gen_manifest.py:369` hard-exits
+  without the private `SKILL_MESH_LEGACY_SOURCE`, a clean `/build-phase` worktree CANNOT
+  regenerate** — so this step HAND-EDITS all four artifacts consistently (the manifest-contract
+  and drift tests read the committed artifacts and never regenerate, so hand-editing is the
+  supported clean-clone path), and updates `test_manifest_contract.py`'s hardcoded `== 24` at :105
+  to the re-derived count (the `:129` exact-set assertion auto-follows because it reads the count
+  and member set from `expected_inventory.json`).
+- **Files:** `runtime/skill-router.ps1`, `config/model-mapping.json`, `config/skill-manifest.json`,
+  `tools/gen_manifest.py`, `tests/package-integrity/expected_inventory.json`,
+  `tests/package-integrity/test_manifest_contract.py`, `tests/router/`
+- **Produces:** router local-transport repoint (skill-text injection, `content`-field parse,
+  `max_tokens >= 600`, env-overridable URL) + the re-derived `local` set applied consistently to
+  ALL FOUR data-shape artifacts (`gen_manifest.py LOCAL_CAPABLE` source + the three derived copies)
+  with per-row rationale notes, the updated `== <count>` / exact-set assertions, and tests.
 - **Done when:** mocked-endpoint tests prove skill text is present in the POST body,
-  content-field parsing, and server-down defer/fail-open behavior; drift test green; full suite
-  green.
+  content-field parsing, and server-down defer/fail-open behavior; the re-derived `local` set is
+  byte-consistent across `gen_manifest.py` (`sorted(LOCAL_CAPABLE)`), `model-mapping.json`,
+  `skill-manifest.json`, and `expected_inventory.json`; `test_manifest_contract.py`'s count and
+  exact-set assertions match the re-derived set (count updated from 24 if membership changed);
+  the Step 51 drift test green; full suite green.
 - **Depends on:** 51
 
 ### Step 56: deployment.profile key + seam hygiene
@@ -259,7 +305,7 @@ itself; team-profile implementation (key is designed-not-built); paid Gemini key
   `architecture.md`: the profile gates transport + auth + telemetry sink only; router core keeps
   the `(skill, model, input)` contract; telemetry stays behind the writer seam.
 - **Type:** code
-- **Issue:** #
+- **Issue:** #76
 - **Flags:** --reviewers code
 - **Produces:** config key; startup validation; tests; architecture note
 - **Done when:** profile tests (absent/solo/team/junk) pass; full suite green.
@@ -274,7 +320,7 @@ itself; team-profile implementation (key is designed-not-built); paid Gemini key
   by default when `GEMINI_API_KEY` is absent / the local endpoint is unreachable, so CI stays
   green without secrets.
 - **Type:** code
-- **Issue:** #
+- **Issue:** #77
 - **Flags:** --reviewers code
 - **Produces:** smoke legs under `tests/smoke/`
 - **Done when:** harness green in skip mode; code review confirms both legs enter via
@@ -286,7 +332,7 @@ itself; team-profile implementation (key is designed-not-built); paid Gemini key
   set `GEMINI_API_KEY` as a user environment variable (never committed, never echoed to any
   log), and run the Gemini smoke leg — one real call is the programmatic-access verification.
 - **Type:** operator
-- **Issue:** #
+- **Issue:** #78
 - **Produces:** Live-smoke observations only; no source-code artifact.
 - **Done when:** Gemini leg passes with the real key; telemetry row shows non-zero token counts.
 - **Depends on:** 57-prep
@@ -296,7 +342,7 @@ itself; team-profile implementation (key is designed-not-built); paid Gemini key
   stack (operator-owned; WSL2 `llama-server` behind llama-swap with the localhost keep-alive),
   run the local smoke leg, then stop the server and confirm the clean-defer path.
 - **Type:** operator
-- **Issue:** #
+- **Issue:** #79
 - **Produces:** Live-smoke observations only; no source-code artifact.
 - **Done when:** live pass and server-down defer both observed.
 - **Depends on:** 57-prep
@@ -310,7 +356,7 @@ itself; team-profile implementation (key is designed-not-built); paid Gemini key
   baseline number is reported — the gate hard-fails otherwise); backfill the structural ledger
   to all 50 skills.
 - **Type:** code
-- **Issue:** #
+- **Issue:** #80
 - **Flags:** --reviewers code
 - **Produces:** working `calibrate.py`; 50-entry ledger; extended `test_calibrate.py`
 - **Done when:** anchor gate demonstrably goes red on garbage (self-test); ledger count equals
@@ -324,7 +370,7 @@ itself; team-profile implementation (key is designed-not-built); paid Gemini key
   families) x claude/gpt/gemini, plus the judge-slice on local; review the anchored scores;
   record which skills (if any) need a forked `providers/gemini.md` per the Step 54 protocol.
 - **Type:** operator
-- **Issue:** #
+- **Issue:** #81
 - **Produces:** recorded baseline results + operator disposition notes (data, not code)
 - **Done when:** baseline recorded with the anchor gate green; the fork-on-failure list
   (possibly empty) is written into `documentation/providers/gemini.md`.
@@ -335,7 +381,7 @@ itself; team-profile implementation (key is designed-not-built); paid Gemini key
   local judge-slice semantics, `deployment.profile`), finalized
   `documentation/providers/gemini.md`, README provider matrix, `migration.md` note.
 - **Type:** code
-- **Issue:** #
+- **Issue:** #82
 - **Flags:** --reviewers code
 - **Produces:** updated docs
 - **Done when:** docs match shipped behavior; package-integrity (public-safety) and full suite
