@@ -26,9 +26,9 @@ no external document is required to execute it.
 >    set, and regeneration hard-exits without the private `SKILL_MESH_LEGACY_SOURCE`, so
 >    Step 55's "full suite green" is unreachable in a clean clone. Decide the source of truth
 >    and put all four artifacts in a step's `Produces:` before building.
-> 2. **Every `**Issue:**` field is blank.** Phase 7 holds #56-#63 and #65-#67, so this plan
->    starts at #68 — but that is `/repo-sync`'s call against live GitHub state, not a value to
->    hand-write here.
+> 2. **Every `**Issue:**` field is blank.** Do not hand-write numbers here — `/repo-sync` mints
+>    them against live GitHub state, which keeps moving (Phase 7 and its wrap issues already run
+>    through #68). Read the next free number at sync time.
 >
 > Also unowned: Step 54's per-skill `providers/gemini.md` has no declared status against the
 > manifest's closed `{claude, gpt}` provider set (`test_manifest_contract.py:175`), the
