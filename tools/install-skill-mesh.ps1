@@ -300,14 +300,18 @@ function Write-Ledger([string]$homeAbs, $ledger) {
     # rename), so a crash mid-write can never corrupt the now load-bearing ledger and
     # two concurrent installs against the same home (claude + gpt in parallel) cannot
     # lost-update via a shared temp name.
-    $path = Get-LedgerPath $homeAbs
-    $tmp = "$path.$PID.$([Guid]::NewGuid().ToString('N')).tmp"
+    # Re-resolved through the path guard immediately before the write, like every
+    # other consumer-home mutation here: the ledger is a file in the install home,
+    # so a junction planted on the home between scan and commit would otherwise
+    # redirect it.
+    $safeLedger = Resolve-Contained (Get-LedgerPath $homeAbs) $homeAbs
+    $safeTmp = "$safeLedger.$PID.$([Guid]::NewGuid().ToString('N')).tmp"
     $json = $ledger | ConvertTo-Json -Depth 8
     try {
-        [System.IO.File]::WriteAllText($tmp, $json, $UTF8_NO_BOM)
-        Move-Item -LiteralPath $tmp -Destination $path -Force
+        [System.IO.File]::WriteAllText($safeTmp, $json, $UTF8_NO_BOM)
+        Move-Item -LiteralPath $safeTmp -Destination $safeLedger -Force
     } finally {
-        if (Test-Path -LiteralPath $tmp) { Remove-Item -LiteralPath $tmp -Force }
+        if (Test-Path -LiteralPath $safeTmp) { Remove-Item -LiteralPath $safeTmp -Force }
     }
 }
 
@@ -416,7 +420,8 @@ function Remove-OwnedFiles([string]$homeAbs, $entry) {
                 "content does NOT bear the skill-mesh marker (foreign/operator file); NOT deleting.")
             continue
         }
-        Remove-Item -LiteralPath $abs -Force
+        $safeTarget = Resolve-Contained $abs $homeAbs
+        Remove-Item -LiteralPath $safeTarget -Force
     }
 }
 
@@ -436,7 +441,8 @@ function Remove-CreatedDirs([string]$homeAbs, $entry) {
         if (Test-Path -LiteralPath $abs) {
             $remaining = @(Get-ChildItem -LiteralPath $abs -Force)
             if ($remaining.Count -eq 0) {
-                Remove-Item -LiteralPath $abs -Force
+                $safeDir = Resolve-Contained $abs $homeAbs
+                Remove-Item -LiteralPath $safeDir -Force
             }
         }
     }
@@ -508,7 +514,8 @@ function Invoke-MarkerFallbackUninstall([string]$homeAbs) {
             continue
         }
         if (Test-FileHasMarker $safe) {
-            Remove-Item -LiteralPath $safe -Force
+            $safeTarget = Resolve-Contained $safe $homeAbs
+            Remove-Item -LiteralPath $safeTarget -Force
             $removed++
         }
     }
@@ -548,9 +555,9 @@ function Invoke-Uninstall([string]$homeAbs) {
     # so its created-dir removal (last) can succeed on a full uninstall.
     Remove-InstallEntry $ledger $Provider
     if (Test-InstallsEmpty $ledger) {
-        $ledgerPath = Get-LedgerPath $homeAbs
-        if (Test-Path -LiteralPath $ledgerPath) {
-            Remove-Item -LiteralPath $ledgerPath -Force
+        $safeLedger = Resolve-Contained (Get-LedgerPath $homeAbs) $homeAbs
+        if (Test-Path -LiteralPath $safeLedger) {
+            Remove-Item -LiteralPath $safeLedger -Force
         }
     } else {
         Write-Ledger $homeAbs $ledger
@@ -705,7 +712,8 @@ function Invoke-Install([string]$homeAbs) {
                 if (-not $writtenSet.Contains($r)) {
                     $abs = Get-ContainedAbs $r $homeAbs
                     if ($null -ne $abs -and (Test-Path -LiteralPath $abs) -and (Test-FileHasMarker $abs)) {
-                        Remove-Item -LiteralPath $abs -Force
+                        $safeStale = Resolve-Contained $abs $homeAbs
+                        Remove-Item -LiteralPath $safeStale -Force
                     }
                 }
             }
@@ -754,6 +762,26 @@ function Get-ExistingOwned($rels, [string]$homeAbs) {
 # -- Entry point --------------------------------------------------------------
 
 $homeAbs = Resolve-HomeRoot $TargetHome
+
+# -- #89: normalize -Provider ONCE, at the parameter boundary -----------------
+# PowerShell's [ValidateSet] matches case-insensitively and does NOT normalize, so
+# `-Provider CLAUDE` previously flowed through verbatim: it keyed the ledger
+# 'CLAUDE', wrote provider='CLAUDE', and (via build-distributions) stamped
+# `Profile: CLAUDE` into every generated file -- making DISTRIBUTION BYTES vary by
+# invocation casing in a repository that advertises reproducible releases.
+# Resolve-SkillMeshProvider is the shared ordinal, case-insensitive matcher in
+# tools/skill-mesh-discovery.ps1 (the same one the inspector uses), and it returns
+# the vocabulary's OWN spelling. From here on $Provider is canonical, so the ledger
+# key, the provider field, and the value handed to the builder all agree.
+$canonicalProvider = Resolve-SkillMeshProvider $Provider @($DISCOVERY_SUBDIR.Keys)
+if ($null -eq $canonicalProvider) {
+    # Unreachable through the CLI (ValidateSet already restricted the value); kept
+    # so a future vocabulary change fails loudly instead of writing a stray slug.
+    [Console]::Error.WriteLine(
+        "install-skill-mesh: '$Provider' is not a known provider slug.")
+    exit 2
+}
+$Provider = $canonicalProvider
 
 if ($Uninstall) {
     Invoke-Uninstall $homeAbs

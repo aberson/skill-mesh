@@ -177,28 +177,13 @@ function Get-SafeLabel([string]$value, [int]$max = $SAFE_LABEL_MAX) {
 }
 
 function Resolve-KnownProvider([string]$value) {
-    # Match a consumer-supplied provider token against the manifest vocabulary and
-    # return the CANONICAL slug -- never the caller's spelling.
-    #
-    # Two traps make the obvious `-contains` wrong here:
-    #   1. `-contains` is CULTURE-aware, not ordinal, so it treats 'claude' plus a
-    #      run of Unicode-ignorable characters (U+00AD and friends) as equal to
-    #      'claude'. Echoing the matched token then puts unbounded non-ASCII
-    #      consumer bytes into the report under the guise of a known provider --
-    #      exactly the leak class this validation exists to close.
-    #   2. It is also case-INSENSITIVE, which we WANT for matching: the installer's
-    #      [ValidateSet('claude','gpt')] accepts -Provider CLAUDE and writes that
-    #      spelling into the ledger verbatim, so a case-sensitive match would file a
-    #      legitimate install as unrecognized -- a false-clean preflight, worse than
-    #      the leak. So: match case-insensitively but ORDINALLY, and emit the
-    #      manifest's own slug so the report's vocabulary stays closed either way.
-    if ([string]::IsNullOrEmpty($value)) { return $null }
-    foreach ($p in $script:KnownProviders) {
-        if ([string]::Equals($p, $value, [System.StringComparison]::OrdinalIgnoreCase)) {
-            return $p
-        }
-    }
-    return $null
+    # Delegates to the SHARED normalizer in tools/skill-mesh-discovery.ps1, which
+    # now owns provider-slug resolution for the installer, this inspector, and the
+    # migrator. The semantics are unchanged and still test-locked: ordinal but
+    # case-insensitive matching, returning the manifest's OWN slug, so a legitimate
+    # `-Provider CLAUDE` install is recognized and normalized while a culture-equal
+    # lookalike padded with ignorable characters is refused outright.
+    return (Resolve-SkillMeshProvider $value $script:KnownProviders)
 }
 
 function Get-ProfileHeaderTag([string]$headText) {

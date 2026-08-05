@@ -219,10 +219,122 @@ function New-ResultDocument([string]$status, [string]$migrationId, $blocked) {
     }
 }
 
-# -- Small helpers ------------------------------------------------------------
+# -- THE PATH INVARIANT -------------------------------------------------------
+#
+#   No path may read or mutate a consumer-home target without re-resolving
+#   containment, and no path may destroy or overwrite bytes without first proving
+#   those bytes are ours.
+#
+# Both halves are enforced STRUCTURALLY, in one place each, because enforcing them
+# per call site is what failed: three review rounds each found the guard missing at
+# a NEW site whose sibling branch already had it.
+#
+#   Containment  -> Resolve-HomeTarget / Resolve-HomeTargetForRead (this section)
+#                   and Resolve-TxPayloadPath for the transaction directory.
+#   Byte identity -> Assert-OurBytesAtTarget (one function, called by every undo
+#                   branch).
+#
+# The convention the structural gate keys off:
+#   * every mutating primitive (Copy-Item / Remove-Item / Move-Item /
+#     [IO.File]::Write*) takes its path from a variable named $safe*;
+#   * a $safe* variable is only ever assigned from one of the resolvers above.
+# tests/distributions/test_legacy_migration.py::
+# test_every_mutating_primitive_resolves_through_the_choke_point walks every
+# git-tracked .ps1 and fails on any violation, so a sixth site cannot appear.
 
-function Join-HomePath([string]$relPosix) {
+function Join-HomePathLexical([string]$relPosix) {
+    # LEXICAL ONLY: no reparse-point resolution, no containment proof, nothing that
+    # makes the result safe to hand to the filesystem.
+    #
+    # Its ONLY sanctioned caller is Resolve-HomeTarget below. It is named this way
+    # on purpose -- the previous name (Join-HomePath) read like a safe path builder,
+    # and a `Copy-Item -LiteralPath (Join-HomePath $a.rel_path)` in the backup
+    # materialization loop survived a whole review round looking perfectly ordinary
+    # while silently capturing a pre-image from OUTSIDE the home.
     return (Join-Path $script:HomeAbs ($relPosix -replace '/', '\'))
+}
+
+function Resolve-HomeTarget {
+    <#
+      THE choke point for every consumer-home path this tool touches -- read or
+      write, mutate or undo, prepare or clean up.
+
+      Re-resolves the parent AND the target through the path guard, which follows
+      junctions and symlinks component by component, and asserts the real path is
+      still inside the consumer home RIGHT NOW. Scan-time classification is not
+      enough: a reparse point planted on an ancestor after the scan redirects the
+      real path before the mutation runs, which is the whole TOCTOU window.
+
+      Throws on escape. Returns the verified absolute path, which callers assign to
+      a $safe* variable and hand to the filesystem.
+    #>
+    param(
+        [Parameter(Mandatory = $true)][string]$RelPosix,
+        [string]$Operation = 'touch it'
+    )
+    $abs = Join-HomePathLexical $RelPosix
+    $parent = Split-Path -Parent $abs
+    if (-not [string]::IsNullOrWhiteSpace($parent) -and -not (Test-ContainedInHome $parent)) {
+        throw ("migrate-legacy-install: SECURITY -- the parent of '$RelPosix' resolves outside " +
+               "the consumer home (junction or symlink escape); refusing to $Operation.")
+    }
+    if (-not (Test-ContainedInHome $abs)) {
+        throw ("migrate-legacy-install: SECURITY -- '$RelPosix' resolves outside the consumer " +
+               "home (junction or symlink escape); refusing to $Operation.")
+    }
+    return $abs
+}
+
+function Resolve-HomeTargetForRead([string]$relPosix) {
+    # The read side of the SAME gate. Returns $null instead of throwing, because a
+    # read is not a mutation: a redirected path simply has no readable content here,
+    # and Get-SkillMeshFileSha256 $null yields $null -- which then fails whatever
+    # hash comparison the caller was making. A read never silently succeeds against
+    # a file outside the home.
+    try {
+        return (Resolve-HomeTarget -RelPosix $relPosix -Operation 'read it')
+    } catch {
+        return $null
+    }
+}
+
+function Get-HomeRelHash([string]$relPosix) {
+    # The one way this tool hashes a consumer-home path: gated, and $null for both
+    # "absent" and "escapes the home".
+    return (Get-SkillMeshFileSha256 (Resolve-HomeTargetForRead $relPosix))
+}
+
+function Assert-OurBytesAtTarget {
+    <#
+      THE content-identity rule, in one place, called by EVERY undo branch.
+
+      Before destroying or overwriting bytes at a consumer-home path, the bytes
+      that are there must be exactly the ones this transaction left there
+      ($ExpectedHash, i.e. the action's post_hash) -- or nothing at all.
+
+      An absent target is fine: there is nothing to destroy. Anything else means
+      the content changed after this transaction wrote it, so undoing would destroy
+      an edit this transaction did not make. That is never the lesser evil: the
+      throw lands failed_incomplete with the backup retained, which tells the
+      operator the truth instead of reporting `rolled_back` over a home that was
+      silently clobbered.
+
+      This lived as per-branch inline checks and predictably drifted: the `install`
+      overwrite branch and the `ledger` branch each lacked the check their sibling
+      branch had.
+    #>
+    param(
+        [string]$SafePath,
+        $ExpectedHash,
+        [string]$RelPath,
+        [string]$Operation
+    )
+    $current = Get-SkillMeshFileSha256 $SafePath
+    if ($null -eq $current) { return }
+    if ([string]$current -eq [string]$ExpectedHash) { return }
+    throw ("migrate-legacy-install: refusing to $Operation '$RelPath' -- the bytes there are no " +
+           "longer the ones this migration wrote, so undoing would destroy content this " +
+           "transaction did not create.")
 }
 
 function ConvertTo-HomeRel([string]$absPath) {
@@ -260,6 +372,14 @@ function Read-FileHead([string]$absPath, [int]$maxBytes = 8192) {
 
 function Test-FileHasMarker([string]$absPath) {
     # Ownership authority: the ANCHORED shared parser, never a substring scan.
+    #
+    # The empty guard is load-bearing, not defensive noise: callers now pass the
+    # result of Resolve-HomeTargetForRead, which is $null when the path escapes the
+    # home. A $null coerces to '' here, and `Test-Path -LiteralPath ''` THROWS a
+    # ParameterBindingValidationException in PowerShell 5.1 -- so without this the
+    # gated-read refactor would turn a refused path into a crash. An unresolvable
+    # path is simply not a marker-bearing file.
+    if ([string]::IsNullOrWhiteSpace($absPath)) { return $false }
     if (-not (Test-Path -LiteralPath $absPath -PathType Leaf)) { return $false }
     try {
         $head = Read-FileHead $absPath 8192
@@ -270,26 +390,41 @@ function Test-FileHasMarker([string]$absPath) {
 }
 
 function New-DirectoryFor([string]$absFilePath) {
+    # Callers always pass an already-resolved $safe* value; the empty guard keeps a
+    # refused ($null) path from reaching Split-Path/Test-Path.
+    if ([string]::IsNullOrWhiteSpace($absFilePath)) { return }
     $dir = Split-Path -Parent $absFilePath
     if (-not [string]::IsNullOrWhiteSpace($dir) -and -not (Test-Path -LiteralPath $dir)) {
         New-Item -ItemType Directory -Path $dir -Force | Out-Null
     }
 }
 
-function Get-PayloadAbs([string]$payloadRel) {
-    # Containment-gated in ONE place, so every caller (prepare, mutate, undo, the
-    # resume predicate) inherits it. On -Resume/-Rollback the payload path is read
-    # back out of plan.json, which lives on disk in an operator-writable directory
-    # and is therefore untrusted input: a tampered or traversal-shaped
-    # `backup_payload` would otherwise let a restore read from -- or a backup write
-    # to -- any path on the machine.
-    $abs = Join-Path $script:TxDir ($payloadRel -replace '/', '\')
+function Resolve-TxPath([string]$relPath) {
+    # THE choke point for the transaction directory -- the sibling of
+    # Resolve-HomeTarget for everything under <BackupDir>/<migration_id>: payloads,
+    # plan.json, backup-manifest.json, journal.jsonl.
+    #
+    # Gated in ONE place so every caller (prepare, mutate, undo, the resume
+    # predicate, the JSON writers) inherits it. On -Resume/-Rollback these paths are
+    # read back out of plan.json, which lives in an operator-writable directory and
+    # is therefore untrusted input: a tampered or traversal-shaped `backup_payload`
+    # would otherwise let a restore read from -- or a backup write to -- any path on
+    # the machine.
+    if ([string]::IsNullOrWhiteSpace($script:TxDir)) {
+        throw 'migrate-legacy-install: internal error -- transaction directory is not set.'
+    }
+    $abs = Join-Path $script:TxDir ($relPath -replace '/', '\')
     try {
         return (Resolve-SafePath -Path $abs -AllowedRoots @($script:TxDir))
     } catch {
-        throw ("migrate-legacy-install: SECURITY -- backup payload '$payloadRel' resolves outside " +
+        throw ("migrate-legacy-install: SECURITY -- transaction path '$relPath' resolves outside " +
                "the transaction directory; refusing to read or write it.")
     }
+}
+
+function Resolve-TxPayloadPath([string]$payloadRel) {
+    # Backup payloads are transaction-directory paths like any other.
+    return (Resolve-TxPath $payloadRel)
 }
 
 # -- Manifest -----------------------------------------------------------------
@@ -337,16 +472,9 @@ function Read-Manifest {
 }
 
 function Resolve-KnownProvider([string]$value) {
-    # Return the manifest's OWN slug for a consumer-supplied provider token, or
-    # $null. ORDINAL (not -contains, which is culture-aware and would accept a
-    # token padded with Unicode-ignorable characters) but case-INSENSITIVE (the
-    # installer's ValidateSet accepts -Provider CLAUDE and writes that spelling
-    # verbatim into the ledger). Same discipline as inspect-host-install.ps1.
-    if ([string]::IsNullOrEmpty($value)) { return $null }
-    foreach ($p in $script:KnownProviders) {
-        if ([string]::Equals($p, $value, [System.StringComparison]::OrdinalIgnoreCase)) { return $p }
-    }
-    return $null
+    # Delegates to the SHARED normalizer in tools/skill-mesh-discovery.ps1 -- one
+    # owner for provider-slug resolution across installer, inspector, and migrator.
+    return (Resolve-SkillMeshProvider $value $script:KnownProviders)
 }
 
 function Get-DirEligibility([string]$name, [bool]$hasSkillMd) {
@@ -410,12 +538,15 @@ function Get-RootScan([string]$rootRel) {
     # @{ blocked; preserve; managed_files } where every entry is a home-relative
     # POSIX path. Purely read-only.
     $result = @{ blocked = @(); preserve = @(); managed_files = @() }
-    $rootAbs = Join-HomePath $rootRel
-    if (-not (Test-Path -LiteralPath $rootAbs)) { return $result }
-    if (-not (Test-ContainedInHome $rootAbs)) {
+    # Gated resolve FIRST: $null means the root escapes the home, which is a block,
+    # not an absence. Only a resolved path is ever handed to Test-Path.
+    $rootAbs = Resolve-HomeTargetForRead $rootRel
+    if ($null -eq $rootAbs) {
         $result.blocked += New-Block 'UNSAFE_LINK' $rootRel `
             'the discovery root resolves outside the consumer home (junction or symlink escape); refusing to migrate through it'
         return $result
+    }
+    if (-not (Test-Path -LiteralPath $rootAbs)) { return $result
     }
     if (-not (Test-Path -LiteralPath $rootAbs -PathType Container)) {
         $result.blocked += New-Block 'FOREIGN_FILE' $rootRel `
@@ -524,8 +655,8 @@ function New-MigrationPlan([string]$distAbs, [string]$backupAbs, [string]$migrat
             }
             $distSkills["$p/$skill"] = $true
             $targetRel = "$($providerRoots[$p])/$relFromProfile"
-            $targetAbs = Join-HomePath $targetRel
-            if (-not (Test-ContainedInHome $targetAbs)) {
+            $targetAbs = Resolve-HomeTargetForRead $targetRel
+            if ($null -eq $targetAbs) {
                 $blocked += New-Block 'UNSAFE_LINK' $targetRel `
                     'the install target resolves outside the consumer home (junction or symlink escape)'
                 continue
@@ -567,20 +698,20 @@ function New-MigrationPlan([string]$distAbs, [string]$backupAbs, [string]$migrat
         # The retired .copilot/skills target: every marker-bearing file there is a
         # pre-retarget install Copilot cannot see. A NON-marker file is operator
         # content and is left strictly alone.
-        if (Test-FileHasMarker (Join-HomePath $rel)) { $retires += $rel }
+        if (Test-FileHasMarker (Resolve-HomeTargetForRead $rel)) { $retires += $rel }
     }
     foreach ($rel in @($managedRels)) {
         if ($installRels.Contains($rel)) { continue }
         # A stale generated file inside a managed skill dir (a skill or file the
         # current distribution no longer emits). Only OUR files are retired; a
         # hand-authored file inside a managed dir is left untouched.
-        if (Test-FileHasMarker (Join-HomePath $rel)) { $retires += $rel }
+        if (Test-FileHasMarker (Resolve-HomeTargetForRead $rel)) { $retires += $rel }
     }
     $retires = @($retires | Sort-Object -Unique)
 
     # -- Ledger rewrite --
     $ledgerRel = $LEDGER_NAME
-    $ledgerAbs = Join-HomePath $ledgerRel
+    $ledgerAbs = Resolve-HomeTargetForRead $ledgerRel
     $createdDirs = Get-CreatedDirs $installs
     $ledgerJson = New-LedgerJson $installs $providerRoots $createdDirs (Get-PriorCreatedDirs $ledgerAbs)
     $ledgerPostHash = Get-SkillMeshStringSha256 $ledgerJson
@@ -614,7 +745,7 @@ function New-MigrationPlan([string]$distAbs, [string]$backupAbs, [string]$migrat
     }
 
     foreach ($rel in @($preserveRels | Sort-Object -Unique)) {
-        $h = Get-SkillMeshFileSha256 (Join-HomePath $rel)
+        $h = Get-HomeRelHash $rel
         $actions += [PSCustomObject]@{
             seq = $seq; action = 'preserve'; rel_path = $rel; provider = ''
             eligibility = 'preserved'; pre_hash = $h; post_hash = $h
@@ -626,7 +757,7 @@ function New-MigrationPlan([string]$distAbs, [string]$backupAbs, [string]$migrat
     foreach ($rel in @($retires)) {
         $actions += [PSCustomObject]@{
             seq = $seq; action = 'retire'; rel_path = $rel; provider = ''
-            eligibility = 'managed'; pre_hash = (Get-SkillMeshFileSha256 (Join-HomePath $rel))
+            eligibility = 'managed'; pre_hash = (Get-HomeRelHash $rel)
             post_hash = $null; source = ''; backup_payload = "$PAYLOAD_DIR/$rel"
         }
         $seq++
@@ -681,7 +812,7 @@ function Get-CreatedDirs($installs) {
         $current = ''
         for ($k = 0; $k -lt $segments.Count - 1; $k++) {
             $current = $(if ($current -eq '') { $segments[$k] } else { "$current/$($segments[$k])" })
-            if (-not (Test-Path -LiteralPath (Join-HomePath $current))) { [void]$set.Add($current) }
+            if (-not (Test-Path -LiteralPath (Join-HomePathLexical $current))) { [void]$set.Add($current) }
         }
     }
     return , @(@($set) | Sort-Object)
@@ -755,7 +886,7 @@ function New-BackupManifest($plan) {
     $originals = @()
     foreach ($a in @($plan.actions)) {
         if ($a.action -ne 'retire' -and -not ($a.action -eq 'install' -and $null -ne $a.pre_hash)) { continue }
-        $abs = Join-HomePath $a.rel_path
+        $abs = Resolve-HomeTargetForRead $a.rel_path
         $size = 0
         if (Test-Path -LiteralPath $abs -PathType Leaf) { $size = (Get-Item -LiteralPath $abs -Force).Length }
         $originals += [PSCustomObject]@{
@@ -796,15 +927,22 @@ function New-BackupManifest($plan) {
     }
 }
 
-function Write-JsonFile([string]$absPath, $object) {
-    New-DirectoryFor $absPath
+function Write-TxJsonFile([string]$txRelName, $object) {
+    # Takes a TRANSACTION-RELATIVE name and resolves it through Resolve-TxPath, so
+    # a JSON writer cannot be handed a lexically-built absolute that escapes the
+    # transaction directory. Atomic (temp + rename), as before.
+    $safeTarget = Resolve-TxPath $txRelName
+    New-DirectoryFor $safeTarget
     $json = ($object | ConvertTo-Json -Depth 12)
-    $tmp = "$absPath.$PID.tmp"
-    [System.IO.File]::WriteAllText($tmp, $json, $UTF8_NO_BOM)
-    Move-Item -LiteralPath $tmp -Destination $absPath -Force
+    $safeTmp = "$safeTarget.$PID.tmp"
+    [System.IO.File]::WriteAllText($safeTmp, $json, $UTF8_NO_BOM)
+    Move-Item -LiteralPath $safeTmp -Destination $safeTarget -Force
 }
 
 function Read-JsonFile([string]$absPath) {
+    # Same empty guard as Test-FileHasMarker: a gated read can hand us $null, and
+    # `Test-Path -LiteralPath ''` throws rather than returning false.
+    if ([string]::IsNullOrWhiteSpace($absPath)) { return $null }
     if (-not (Test-Path -LiteralPath $absPath -PathType Leaf)) { return $null }
     try {
         return ([System.IO.File]::ReadAllText($absPath, [System.Text.Encoding]::UTF8) | ConvertFrom-Json)
@@ -816,67 +954,38 @@ function Read-JsonFile([string]$absPath) {
 # -- Transaction action handlers ----------------------------------------------
 
 function Get-ActionTargetAbs($action) {
-    # LEXICAL join only. Safe for READ-ONLY use (hashing, existence checks): a
-    # redirected read yields a wrong hash, which fails a verification rather than
-    # damaging anything. EVERY write or delete must go through
-    # Assert-SafeActionTarget instead.
-    return (Join-HomePath $action.rel_path)
+    # Gated READ resolve. $null when the path escapes the home, so a redirected
+    # read yields no content rather than silently reading a file outside it.
+    # EVERY write or delete goes through Assert-SafeActionTarget instead.
+    return (Resolve-HomeTargetForRead $action.rel_path)
 }
 
 function Assert-SafeActionTarget($action, [string]$operation) {
-    <#
-      THE mutate-time / undo-time containment gate, and the ONLY path by which a
-      target reaches a write or a delete.
-
-      Get-RootScan validates containment at SCAN time, but a directory junction or
-      symlink planted on an ancestor AFTER the scan redirects the real path before
-      the mutation runs -- the junction-on-ancestor TOCTOU the installer documents
-      and re-resolves against on every copy. Resolve-SafePath (via
-      Test-ContainedInHome) FOLLOWS reparse points component by component, so
-      calling it immediately before each mutation is what closes that window.
-
-      Both the parent and the target are re-resolved: a reparse point on the parent
-      redirects a create/copy even when the leaf name is untouched.
-
-      This applies to the UNDO branches too. Rollback is the highest-stakes path in
-      this tool -- it is what runs after a crash, possibly days later, when a home
-      has had every opportunity to change underneath the recorded plan -- so a
-      redirected undo would overwrite or delete a real file outside the consumer
-      home. A refusal here fails the undo, which lands failed_incomplete with the
-      backup retained: the correct outcome, because writing outside the home is
-      never the lesser evil.
-    #>
-    $abs = Get-ActionTargetAbs $action
-    $parent = Split-Path -Parent $abs
-    if (-not [string]::IsNullOrWhiteSpace($parent) -and -not (Test-ContainedInHome $parent)) {
-        throw ("migrate-legacy-install: SECURITY -- the parent of '$($action.rel_path)' resolves " +
-               "outside the consumer home (junction or symlink escape); refusing to $operation.")
-    }
-    if (-not (Test-ContainedInHome $abs)) {
-        throw ("migrate-legacy-install: SECURITY -- '$($action.rel_path)' resolves outside the " +
-               "consumer home (junction or symlink escape); refusing to $operation.")
-    }
-    return $abs
+    # Thin adapter: an action carries its target as a home-relative path, so the
+    # gate is THE choke point (Resolve-HomeTarget) applied to that rel_path. It
+    # exists only so call sites read naturally and holds no logic of its own --
+    # which is the point: there is exactly ONE containment implementation.
+    return (Resolve-HomeTarget -RelPosix $action.rel_path -Operation $operation)
 }
 
 function Invoke-ActionMutate($action) {
-    $targetAbs = Get-ActionTargetAbs $action
     switch ($action.action) {
         'preserve' {
             # Audit-only: never mutates, so there is nothing to gate. Its hash is
             # re-verified by post-install verification (Test-PostInstall), which is
-            # the only check that covers a preserved tree -- the engine's per-action
-            # post-hash check sees only mutating actions.
+            # the only check that covers a preserved tree -- the engine per-action
+            # post-hash check sees mutating actions only.
             return
         }
         'backup' {
-            $payload = Get-PayloadAbs $action.backup_payload
-            if ((Get-SkillMeshFileSha256 $payload) -eq $action.post_hash) { return }
-            # READ side of the copy still gets the gate: a redirected source would
-            # pull a file from outside the home INTO the backup.
-            $safeTarget = Assert-SafeActionTarget $action 'back it up'
-            New-DirectoryFor $payload
-            Copy-Item -LiteralPath $safeTarget -Destination $payload -Force
+            $safePayload = Resolve-TxPayloadPath $action.backup_payload
+            if ((Get-SkillMeshFileSha256 $safePayload) -eq $action.post_hash) { return }
+            # The READ side of the copy is gated too: a redirected source would pull
+            # a file from outside the home INTO the backup, corrupting the pre-image
+            # that rollback depends on.
+            $safeSource = Assert-SafeActionTarget $action 'back it up'
+            New-DirectoryFor $safePayload
+            Copy-Item -LiteralPath $safeSource -Destination $safePayload -Force
             return
         }
         'retire' {
@@ -884,11 +993,11 @@ function Invoke-ActionMutate($action) {
             # in at least one place, so a crash between the two is recoverable in
             # either direction. BOTH steps are separate mutation points, so both
             # re-resolve containment immediately before they run.
-            $payload = Get-PayloadAbs $action.backup_payload
-            if ((Get-SkillMeshFileSha256 $payload) -ne $action.pre_hash) {
+            $safePayload = Resolve-TxPayloadPath $action.backup_payload
+            if ((Get-SkillMeshFileSha256 $safePayload) -ne $action.pre_hash) {
                 $safeSource = Assert-SafeActionTarget $action 'retire it'
-                New-DirectoryFor $payload
-                Copy-Item -LiteralPath $safeSource -Destination $payload -Force
+                New-DirectoryFor $safePayload
+                Copy-Item -LiteralPath $safeSource -Destination $safePayload -Force
             }
             $safeTarget = Assert-SafeActionTarget $action 'delete it'
             if (Test-Path -LiteralPath $safeTarget -PathType Leaf) {
@@ -900,19 +1009,19 @@ function Invoke-ActionMutate($action) {
             # Gate BEFORE creating the parent chain and again AFTER, because
             # New-DirectoryFor materializes directories that did not exist at the
             # first check and the leaf write is a second mutation point.
-            $null = Assert-SafeActionTarget $action 'install over it'
-            New-DirectoryFor $targetAbs
+            $safeTargetPreCreate = Assert-SafeActionTarget $action 'install over it'
+            New-DirectoryFor $safeTargetPreCreate
             $safeTarget = Assert-SafeActionTarget $action 'install over it'
             Copy-Item -LiteralPath $action.source -Destination $safeTarget -Force
             return
         }
         'ledger' {
-            $null = Assert-SafeActionTarget $action 'rewrite the ledger'
-            New-DirectoryFor $targetAbs
+            $safeTargetPreCreate = Assert-SafeActionTarget $action 'rewrite the ledger'
+            New-DirectoryFor $safeTargetPreCreate
             $safeTarget = Assert-SafeActionTarget $action 'rewrite the ledger'
-            $tmp = "$safeTarget.$PID.tmp"
-            [System.IO.File]::WriteAllText($tmp, $script:LedgerJson, $UTF8_NO_BOM)
-            Move-Item -LiteralPath $tmp -Destination $safeTarget -Force
+            $safeTmp = "$safeTarget.$PID.tmp"
+            [System.IO.File]::WriteAllText($safeTmp, $script:LedgerJson, $UTF8_NO_BOM)
+            Move-Item -LiteralPath $safeTmp -Destination $safeTarget -Force
             return
         }
     }
@@ -920,7 +1029,13 @@ function Invoke-ActionMutate($action) {
 }
 
 function Invoke-ActionUndo($action) {
-    $targetAbs = Get-ActionTargetAbs $action
+    <#
+      EVERY branch obeys the same two rules, and neither is written inline:
+        containment   -> Assert-SafeActionTarget (THE choke point)
+        byte identity -> Assert-OurBytesAtTarget (THE content-identity rule)
+      Both are called on every branch that destroys or overwrites, so a branch
+      cannot drift from its siblings the way install-overwrite and ledger did.
+    #>
     switch ($action.action) {
         'preserve' { return }
         'backup' { return }
@@ -930,69 +1045,64 @@ function Invoke-ActionUndo($action) {
             # ran, and a retire is the one kind whose payload is produced BY the
             # mutation (installs and the ledger are backed up during `prepared`).
             # If the target still holds its pre-image, nothing moved: a no-op, not a
-            # missing-payload error. Without this a failure injected at a retire seq
-            # would land failed_incomplete on a home that was never touched.
-            if ([string](Get-SkillMeshFileSha256 $targetAbs) -eq [string]$action.pre_hash) {
+            # missing-payload error.
+            if ([string](Get-HomeRelHash $action.rel_path) -eq [string]$action.pre_hash) {
                 return
             }
-            $payload = Get-PayloadAbs $action.backup_payload
-            if (-not (Test-Path -LiteralPath $payload -PathType Leaf)) {
+            $safePayload = Resolve-TxPayloadPath $action.backup_payload
+            if (-not (Test-Path -LiteralPath $safePayload -PathType Leaf)) {
                 throw "migrate-legacy-install: cannot restore retired '$($action.rel_path)' -- backup payload is missing."
             }
-            $null = Assert-SafeActionTarget $action 'restore it'
-            New-DirectoryFor $targetAbs
             $safeTarget = Assert-SafeActionTarget $action 'restore it'
-            Copy-Item -LiteralPath $payload -Destination $safeTarget -Force
+            # post_hash for a retire is $null (the target should be ABSENT), so this
+            # refuses when another file has since appeared at the retired path.
+            Assert-OurBytesAtTarget $safeTarget $action.post_hash $action.rel_path 'restore over'
+            New-DirectoryFor $safeTarget
+            $safeTarget = Assert-SafeActionTarget $action 'restore it'
+            Copy-Item -LiteralPath $safePayload -Destination $safeTarget -Force
             return
         }
         'install' {
+            $safeTarget = Assert-SafeActionTarget $action 'undo the install of'
+            # ONE rule for BOTH cases. Whether this migration created the file or
+            # overwrote an existing one, the bytes there must still be the ones it
+            # wrote. Previously only the created-case checked, so the overwrite case
+            # silently clobbered a legitimate post-migration edit and still reported
+            # rolled_back.
+            Assert-OurBytesAtTarget $safeTarget $action.post_hash $action.rel_path 'undo the install of'
             if ($null -eq $action.pre_hash) {
-                # The target did not exist before the migration, so undoing means
-                # removing it -- but ONLY while it still holds the bytes this
-                # transaction wrote. Deleting a file whose content is no longer ours
-                # would destroy someone else's edit.
-                if (Test-Path -LiteralPath $targetAbs -PathType Leaf) {
-                    if ((Get-SkillMeshFileSha256 $targetAbs) -eq $action.post_hash) {
-                        $safeTarget = Assert-SafeActionTarget $action 'remove it'
-                        Remove-Item -LiteralPath $safeTarget -Force
-                        return
-                    }
-                    # Foreign bytes at a path this migration created: the undo CANNOT
-                    # complete, and silently returning would let the transaction
-                    # report `rolled_back` over a home that is not restored -- the
-                    # worst possible lie from a rollback. Fail loudly so the state
-                    # machine lands failed_incomplete with the backup retained.
-                    throw ("migrate-legacy-install: cannot undo the install of " +
-                           "'$($action.rel_path)' -- the file no longer holds the bytes this " +
-                           "migration wrote, so removing it would destroy content this " +
-                           "transaction did not create.")
-                }
-                return
-            }
-            $payload = Get-PayloadAbs $action.backup_payload
-            if (-not (Test-Path -LiteralPath $payload -PathType Leaf)) {
-                throw "migrate-legacy-install: cannot restore overwritten '$($action.rel_path)' -- backup payload is missing."
-            }
-            $null = Assert-SafeActionTarget $action 'restore it'
-            New-DirectoryFor $targetAbs
-            $safeTarget = Assert-SafeActionTarget $action 'restore it'
-            Copy-Item -LiteralPath $payload -Destination $safeTarget -Force
-            return
-        }
-        'ledger' {
-            if ($null -eq $action.pre_hash) {
-                if (Test-Path -LiteralPath $targetAbs -PathType Leaf) {
-                    $safeTarget = Assert-SafeActionTarget $action 'remove the ledger'
+                # Created by this migration: undoing means removing it.
+                if (Test-Path -LiteralPath $safeTarget -PathType Leaf) {
                     Remove-Item -LiteralPath $safeTarget -Force
                 }
                 return
             }
-            $payload = Get-PayloadAbs $action.backup_payload
-            if (-not (Test-Path -LiteralPath $payload -PathType Leaf)) {
+            $safePayload = Resolve-TxPayloadPath $action.backup_payload
+            if (-not (Test-Path -LiteralPath $safePayload -PathType Leaf)) {
+                throw "migrate-legacy-install: cannot restore overwritten '$($action.rel_path)' -- backup payload is missing."
+            }
+            New-DirectoryFor $safeTarget
+            $safeTarget = Assert-SafeActionTarget $action 'restore it'
+            Copy-Item -LiteralPath $safePayload -Destination $safeTarget -Force
+            return
+        }
+        'ledger' {
+            $safeTarget = Assert-SafeActionTarget $action 'undo the ledger rewrite of'
+            Assert-OurBytesAtTarget $safeTarget $action.post_hash $action.rel_path 'undo the ledger rewrite of'
+            if ($null -eq $action.pre_hash) {
+                # There was no ledger before this migration, so undoing means
+                # removing the one it wrote -- and only while it still holds the
+                # bytes it wrote, which the assertion above just proved.
+                if (Test-Path -LiteralPath $safeTarget -PathType Leaf) {
+                    Remove-Item -LiteralPath $safeTarget -Force
+                }
+                return
+            }
+            $safePayload = Resolve-TxPayloadPath $action.backup_payload
+            if (-not (Test-Path -LiteralPath $safePayload -PathType Leaf)) {
                 throw "migrate-legacy-install: cannot restore the prior ledger -- backup payload is missing."
             }
-            $safeTarget = Assert-SafeActionTarget $action 'restore the ledger'
-            Copy-Item -LiteralPath $payload -Destination $safeTarget -Force
+            Copy-Item -LiteralPath $safePayload -Destination $safeTarget -Force
             return
         }
     }
@@ -1008,12 +1118,12 @@ function Test-ActionAlreadyApplied($action) {
     switch ($action.action) {
         'preserve' { return ([string]$current -eq [string]$action.post_hash) }
         'backup' {
-            return ((Get-SkillMeshFileSha256 (Get-PayloadAbs $action.backup_payload)) -eq $action.post_hash)
+            return ((Get-SkillMeshFileSha256 (Resolve-TxPayloadPath $action.backup_payload)) -eq $action.post_hash)
         }
         'retire' {
             # Target gone AND the payload safely holds its bytes.
             if ($null -ne $current) { return $false }
-            return ((Get-SkillMeshFileSha256 (Get-PayloadAbs $action.backup_payload)) -eq $action.pre_hash)
+            return ((Get-SkillMeshFileSha256 (Resolve-TxPayloadPath $action.backup_payload)) -eq $action.pre_hash)
         }
     }
     # install / ledger: the generated bytes are already in place.
@@ -1030,7 +1140,7 @@ function Test-Preconditions($plan) {
     # (the current state of rel_path in the home), so no kind is exempt.
     $drift = @()
     foreach ($a in @($plan.actions)) {
-        $current = Get-SkillMeshFileSha256 (Join-HomePath $a.rel_path)
+        $current = Get-HomeRelHash $a.rel_path
         if ([string]$current -ne [string]$a.pre_hash) { $drift += $a.rel_path }
     }
     return , @($drift | Sort-Object -Unique)
@@ -1041,7 +1151,7 @@ function Test-PostInstall($plan) {
     # hash, and every retired path is gone.
     $bad = @()
     foreach ($a in @($plan.actions)) {
-        $current = Get-SkillMeshFileSha256 (Join-HomePath $a.rel_path)
+        $current = Get-HomeRelHash $a.rel_path
         if ($a.action -eq 'install' -or $a.action -eq 'ledger') {
             if ([string]$current -ne [string]$a.post_hash) { $bad += $a.rel_path }
         } elseif ($a.action -eq 'retire') {
@@ -1172,7 +1282,10 @@ function Invoke-Apply([string]$distAbs, [string]$backupAbs) {
     # so a blocked -Apply is a true no-op in the backup tree as well as in the home.
     $script:TxDir = Join-Path $backupAbs $migrationId
     $script:LedgerJson = $plan.ledger_json
+    # The transaction dir is created under the operator-supplied -BackupDir and then
+    # re-resolved so every later Resolve-TxPath is anchored to its REAL path.
     New-Item -ItemType Directory -Path $script:TxDir -Force | Out-Null
+    $script:TxDir = Resolve-SafePath -Path $script:TxDir -AllowedRoots @($backupAbs)
 
     # ---- PREPARED: materialize backup payloads + the manifest, mutate nothing --
     # No `exit` inside this try: a flow-control exit interacting with catch/finally
@@ -1181,15 +1294,20 @@ function Invoke-Apply([string]$distAbs, [string]$backupAbs) {
     $prepError = $null
     try {
         foreach ($a in @($plan.actions | Where-Object { $_.action -eq 'backup' })) {
-            $payload = Get-PayloadAbs $a.backup_payload
-            New-DirectoryFor $payload
-            Copy-Item -LiteralPath (Join-HomePath $a.rel_path) -Destination $payload -Force
-            if ((Get-SkillMeshFileSha256 $payload) -ne $a.pre_hash) {
+            # The pre-image READ is gated exactly like a write. Following a junction
+            # here would capture a file from OUTSIDE the home as the "pre-image",
+            # corrupting the one artifact rollback depends on -- and it would do so
+            # silently, because the payload would still hash-verify against itself.
+            $safeSource = Resolve-HomeTarget -RelPosix $a.rel_path -Operation 'back it up'
+            $safePayload = Resolve-TxPayloadPath $a.backup_payload
+            New-DirectoryFor $safePayload
+            Copy-Item -LiteralPath $safeSource -Destination $safePayload -Force
+            if ((Get-SkillMeshFileSha256 $safePayload) -ne $a.pre_hash) {
                 throw "backup payload for '$($a.rel_path)' did not verify."
             }
         }
-        Write-JsonFile (Join-Path $script:TxDir $PLAN_FILE) $plan
-        Write-JsonFile (Join-Path $script:TxDir $BACKUP_MANIFEST_FILE) (New-BackupManifest $plan)
+        Write-TxJsonFile $PLAN_FILE $plan
+        Write-TxJsonFile $BACKUP_MANIFEST_FILE (New-BackupManifest $plan)
     } catch {
         $prepError = $_
     }
@@ -1213,28 +1331,31 @@ function Invoke-Apply([string]$distAbs, [string]$backupAbs) {
 }
 
 function Remove-TransactionDir {
-    if (-not [string]::IsNullOrWhiteSpace($script:TxDir) -and (Test-Path -LiteralPath $script:TxDir)) {
-        Remove-Item -LiteralPath $script:TxDir -Recurse -Force
-    }
+    if ([string]::IsNullOrWhiteSpace($script:TxDir)) { return }
+    if (-not (Test-Path -LiteralPath $script:TxDir)) { return }
+    # Re-resolved immediately before the recursive delete: this removes a whole tree,
+    # so it is the single most destructive primitive in the tool.
+    $safeTxDir = Resolve-SafePath -Path $script:TxDir -AllowedRoots @($script:BackupAbs)
+    Remove-Item -LiteralPath $safeTxDir -Recurse -Force
 }
 
 function Invoke-TransactionRun($plan, [string]$startStatus, [bool]$isResume) {
     # The single apply path, shared by -Apply and -Resume.
-    $manifestPath = Join-Path $script:TxDir $BACKUP_MANIFEST_FILE
+    $manifestName = $BACKUP_MANIFEST_FILE
     $statusWriter = {
         param($status)
-        $m = Read-JsonFile $manifestPath
+        $m = Read-JsonFile (Resolve-TxPath $manifestName)
         if ($null -eq $m) { return }
         $m.status = $status
-        Write-JsonFile $manifestPath $m
+        Write-TxJsonFile $manifestName $m
     }.GetNewClosure()
 
     $tx = New-SkillMeshTransaction -MigrationId $plan.migration_id `
-        -JournalPath (Join-Path $script:TxDir $JOURNAL_FILE) `
+        -JournalPath (Resolve-TxPath $JOURNAL_FILE) `
         -Status $startStatus -StatusWriter $statusWriter
 
-    $getPre = { param($a) Get-SkillMeshFileSha256 (Join-HomePath $a.rel_path) }
-    $getPost = { param($a) Get-SkillMeshFileSha256 (Join-HomePath $a.rel_path) }
+    $getPre = { param($a) Get-HomeRelHash $a.rel_path }
+    $getPost = { param($a) Get-HomeRelHash $a.rel_path }
     $mutate = { param($a) Invoke-ActionMutate $a }
     $undo = { param($a) Invoke-ActionUndo $a }
     $skip = $null
@@ -1269,11 +1390,11 @@ function Invoke-TransactionRun($plan, [string]$startStatus, [bool]$isResume) {
     # convention; like those, it can only affect a process the caller already started.
     $tamper = [Environment]::GetEnvironmentVariable('SKILL_MESH_MIGRATE_TAMPER_AFTER_APPLY')
     if (-not [string]::IsNullOrWhiteSpace($tamper)) {
-        $tamperAbs = Join-HomePath $tamper.Trim()
-        if (Test-Path -LiteralPath $tamperAbs -PathType Leaf) {
+        $safeTamper = Resolve-HomeTargetForRead $tamper.Trim()
+        if ($null -ne $safeTamper -and (Test-Path -LiteralPath $safeTamper -PathType Leaf)) {
             [Console]::Error.WriteLine(
                 "migrate-legacy-install: TEST SEAM -- tampering with '$($tamper.Trim())' before post-install verification.")
-            [System.IO.File]::AppendAllText($tamperAbs, "`n# tampered by test seam`n", $UTF8_NO_BOM)
+            [System.IO.File]::AppendAllText($safeTamper, "`n# tampered by test seam`n", $UTF8_NO_BOM)
         }
     }
 
@@ -1321,14 +1442,16 @@ function Remove-EmptiedRetiredDirs($plan) {
     # this transaction emptied by retiring their last file, and only while they are
     # empty. Nothing that still holds a file is ever removed, so preserved and
     # untouched operator content always keeps its directory.
+    # Collected as home-RELATIVE paths so the removal below can re-resolve each one
+    # through the choke point immediately before deleting it, rather than deleting a
+    # lexically-derived absolute captured earlier in the run.
     $dirs = @()
     foreach ($a in @($plan.actions | Where-Object { $_.action -eq 'retire' })) {
-        $d = Split-Path -Parent (Join-HomePath $a.rel_path)
-        while (-not [string]::IsNullOrWhiteSpace($d) -and
-               $d.Length -gt $script:HomeAbs.Length -and
-               (Test-ContainedInHome $d)) {
-            $dirs += $d
-            $d = Split-Path -Parent $d
+        $rel = [string]$a.rel_path
+        while ($rel.Contains('/')) {
+            $rel = $rel.Substring(0, $rel.LastIndexOf('/'))
+            if ([string]::IsNullOrWhiteSpace($rel)) { break }
+            $dirs += $rel
         }
     }
     # De-duplicate on the PATH, then order deepest-first on a SEPARATE sort.
@@ -1341,9 +1464,11 @@ function Remove-EmptiedRetiredDirs($plan) {
     $dirs = @(@($dirs | Sort-Object -Unique) |
         Sort-Object -Property @{ Expression = { ([string]$_ -split '[\\/]').Count } } -Descending)
     foreach ($d in $dirs) {
-        if (-not (Test-Path -LiteralPath $d -PathType Container)) { continue }
-        if (@(Get-ChildItem -LiteralPath $d -Force).Count -eq 0) {
-            Remove-Item -LiteralPath $d -Force
+        $safeDir = Resolve-HomeTargetForRead ([string]$d)
+        if ($null -eq $safeDir) { continue }
+        if (-not (Test-Path -LiteralPath $safeDir -PathType Container)) { continue }
+        if (@(Get-ChildItem -LiteralPath $safeDir -Force).Count -eq 0) {
+            Remove-Item -LiteralPath $safeDir -Force
         }
     }
 }
@@ -1365,15 +1490,18 @@ function Get-TransactionContext([string]$backupAbs) {
     }
     $txDir = Join-Path $backupAbs $MigrationId
     try {
-        $null = Resolve-SafePath -Path $txDir -AllowedRoots @($backupAbs)
+        # RESOLVED, not merely checked: the real path becomes $script:TxDir, so every
+        # later Resolve-TxPath is anchored to it rather than to the lexical join.
+        $txDir = Resolve-SafePath -Path $txDir -AllowedRoots @($backupAbs)
     } catch {
         Exit-Blocked 'UNSAFE_LINK' 'the transaction directory resolves outside -BackupDir.'
     }
     if (-not (Test-Path -LiteralPath $txDir -PathType Container)) {
         Exit-Blocked 'UNKNOWN_TRANSACTION' "no transaction $MigrationId exists in the backup directory."
     }
-    $plan = Read-JsonFile (Join-Path $txDir $PLAN_FILE)
-    $manifest = Read-JsonFile (Join-Path $txDir $BACKUP_MANIFEST_FILE)
+    $script:TxDir = $txDir
+    $plan = Read-JsonFile (Resolve-TxPath $PLAN_FILE)
+    $manifest = Read-JsonFile (Resolve-TxPath $BACKUP_MANIFEST_FILE)
     if ($null -eq $plan -or $null -eq $manifest) {
         Exit-Blocked 'UNKNOWN_TRANSACTION' "transaction $MigrationId is missing or has an unparseable plan/manifest."
     }
@@ -1442,22 +1570,22 @@ function Invoke-Rollback([string]$backupAbs) {
         Exit-Blocked 'TRANSACTION_RESOLVED' "migration $MigrationId is already in terminal state '$status'."
     }
 
-    $manifestPath = Join-Path $script:TxDir $BACKUP_MANIFEST_FILE
+    $manifestName = $BACKUP_MANIFEST_FILE
     $statusWriter = {
         param($s)
-        $m = Read-JsonFile $manifestPath
+        $m = Read-JsonFile (Resolve-TxPath $manifestName)
         if ($null -eq $m) { return }
         $m.status = $s
-        Write-JsonFile $manifestPath $m
+        Write-TxJsonFile $manifestName $m
     }.GetNewClosure()
     $tx = New-SkillMeshTransaction -MigrationId $plan.migration_id `
-        -JournalPath (Join-Path $script:TxDir $JOURNAL_FILE) `
+        -JournalPath (Resolve-TxPath $JOURNAL_FILE) `
         -Status $status -StatusWriter $statusWriter
 
     # The undo set is what the JOURNAL says was BEGUN -- the authoritative record
     # of what may have mutated a target -- intersected with the plan, in apply
     # order. Invoke-SkillMeshTxRollback then walks it in reverse.
-    $begun = Get-SkillMeshTxBegunSeqs (Read-SkillMeshTxJournal (Join-Path $script:TxDir $JOURNAL_FILE))
+    $begun = Get-SkillMeshTxBegunSeqs (Read-SkillMeshTxJournal (Resolve-TxPath $JOURNAL_FILE))
     $undoSet = @(@($plan.actions) | Where-Object { $begun.Contains([int]$_.seq) })
 
     $undo = { param($a) Invoke-ActionUndo $a }
@@ -1479,11 +1607,11 @@ function Remove-EmptyCreatedDirs($plan) {
         Sort-Object -Property @{ Expression = { ([string]$_ -split '/').Count } } -Descending)
     foreach ($rel in $dirs) {
         if ([string]::IsNullOrWhiteSpace([string]$rel)) { continue }
-        $abs = Join-HomePath ([string]$rel)
-        if (-not (Test-ContainedInHome $abs)) { continue }
-        if (-not (Test-Path -LiteralPath $abs -PathType Container)) { continue }
-        if (@(Get-ChildItem -LiteralPath $abs -Force).Count -eq 0) {
-            Remove-Item -LiteralPath $abs -Force
+        $safeDir = Resolve-HomeTargetForRead ([string]$rel)
+        if ($null -eq $safeDir) { continue }
+        if (-not (Test-Path -LiteralPath $safeDir -PathType Container)) { continue }
+        if (@(Get-ChildItem -LiteralPath $safeDir -Force).Count -eq 0) {
+            Remove-Item -LiteralPath $safeDir -Force
         }
     }
 }
@@ -1491,6 +1619,7 @@ function Remove-EmptyCreatedDirs($plan) {
 # -- Entry point --------------------------------------------------------------
 
 $script:TxDir = ''
+$script:BackupAbs = ''
 $script:LedgerJson = ''
 $script:RunMode = 'dry-run'
 if ($Apply) { $script:RunMode = 'apply' }
@@ -1523,6 +1652,7 @@ if ([string]::IsNullOrWhiteSpace($BackupDir)) {
 }
 try {
     $backupAbs = ([System.IO.Path]::GetFullPath($BackupDir)).TrimEnd('\', '/')
+    $script:BackupAbs = $backupAbs
 } catch {
     Exit-Blocked 'BACKUP_DIR_REQUIRED' "-BackupDir is not a valid path ($($_.Exception.GetType().Name))."
 }

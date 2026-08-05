@@ -1402,3 +1402,232 @@ def test_installer_install_really_runs_through_the_shared_engine(tmp_path):
                  ["-Home", str(tmp_path / "h2"), "-Provider", "claude", "-DistDir", str(dist)])
     assert clean.returncode == 0, f"{clean.stdout}\n{clean.stderr}"
     assert (tmp_path / "h2" / ".claude" / "skills").is_dir()
+
+
+# --------------------------------------------------------------------------- #
+# Content identity: undo never destroys bytes that are not ours
+# --------------------------------------------------------------------------- #
+
+def test_rollback_refuses_to_clobber_a_post_migration_edit(mini_dist, tmp_path):
+    """The overwrite case used to restore the backup payload UNCONDITIONALLY.
+
+    A legitimate edit made after the migration was silently destroyed and the run
+    still reported exit 0 / `rolled_back`. The rule is now one shared function that
+    every undo branch calls, so the overwrite case cannot drift from the
+    created case (which always checked)."""
+    home = fx.migration_home(tmp_path / "h")
+    backup = tmp_path / "b"
+    assert _apply(home, backup, mini_dist).returncode == 0
+    tx = _only_tx(backup)
+
+    # A path this migration OVERWROTE (a legacy hand-authored launcher), now edited
+    # by the operator the way any consumer might after a cutover.
+    edited_rel = f"{CLAUDE_ROOT}/{fx.MIGRATION_MANAGED[0]}/SKILL.md"
+    plan = _plan_of(tx)
+    overwritten = [a["rel_path"] for a in plan["actions"]
+                   if a["action"] == "install" and a["pre_hash"] is not None]
+    assert edited_rel in overwritten, "fixture no longer overwrites this path"
+    edit = "\n# operator edit made after the migration\n"
+    (Path(home) / edited_rel).write_text(
+        (Path(home) / edited_rel).read_text(encoding="utf-8") + edit, encoding="utf-8")
+    after_edit = _sha256(Path(home) / edited_rel)
+
+    r = _migrate(home, backup, mode="-Rollback", migration_id=tx.name)
+    assert r.returncode == 3, (
+        f"rollback silently clobbered a post-migration edit (exit {r.returncode}):"
+        f"\n{r.stdout}\n{r.stderr}")
+    assert _manifest_of(tx)["status"] == "failed_incomplete"
+    assert _sha256(Path(home) / edited_rel) == after_edit, \
+        "the operator's edit was destroyed by rollback"
+
+
+def test_rollback_still_restores_when_nothing_was_edited(mini_dist, tmp_path):
+    """Red-on-garbage pair: the identity check must not make every rollback refuse."""
+    home = fx.migration_home(tmp_path / "h")
+    backup = tmp_path / "b"
+    before = _tree_digest(home)
+    assert _apply(home, backup, mini_dist).returncode == 0
+    tx = _only_tx(backup)
+    r = _migrate(home, backup, mode="-Rollback", migration_id=tx.name)
+    assert r.returncode == 0, f"{r.stdout}\n{r.stderr}"
+    assert _tree_digest(home) == before
+
+
+# --------------------------------------------------------------------------- #
+# Coverage gap D1: a home that never had a ledger
+# --------------------------------------------------------------------------- #
+
+def test_migration_into_a_home_with_no_prior_ledger(mini_dist, tmp_path):
+    """`legacy_ledger` defaulted True in every fixture, so the ledger action's
+    pre_hash==null path -- the genuinely-legacy shape, a consumer who never ran this
+    installer -- had never executed across the whole suite.
+
+    Its undo branch DELETES the ledger the migration created, which is the only undo
+    in the tool that removes a file it created at a path that did not exist."""
+    home = fx.migration_home(tmp_path / "h", legacy_ledger=False)
+    assert not (Path(home) / LEDGER_NAME).exists(), "fixture still wrote a ledger"
+    backup = tmp_path / "b"
+    before = _tree_digest(home)
+
+    plan = _plan(home, backup, mini_dist)
+    ledger_actions = [a for a in plan["actions"] if a["action"] == "ledger"]
+    assert len(ledger_actions) == 1
+    assert ledger_actions[0]["pre_hash"] is None, \
+        "this fixture is supposed to exercise the no-prior-ledger branch"
+    # With no prior ledger there is nothing to back up for it.
+    assert ledger_actions[0]["backup_payload"] == ""
+
+    assert _apply(home, backup, mini_dist).returncode == 0
+    tx = _only_tx(backup)
+    assert _manifest_of(tx)["original_ledger"] is None
+    assert (Path(home) / LEDGER_NAME).is_file(), "the migration wrote no ledger"
+
+    r = _migrate(home, backup, mode="-Rollback", migration_id=tx.name)
+    assert r.returncode == 0, f"{r.stdout}\n{r.stderr}"
+    assert not (Path(home) / LEDGER_NAME).exists(), \
+        "rollback left behind the ledger it created in a home that never had one"
+    assert _tree_digest(home) == before
+
+
+def test_no_prior_ledger_undo_refuses_when_the_ledger_was_edited(mini_dist, tmp_path):
+    """The same branch, content-identity side: if the created ledger no longer holds
+    the bytes this migration wrote, deleting it would destroy someone else's file."""
+    home = fx.migration_home(tmp_path / "h", legacy_ledger=False)
+    backup = tmp_path / "b"
+    assert _apply(home, backup, mini_dist).returncode == 0
+    tx = _only_tx(backup)
+    ledger_path = Path(home) / LEDGER_NAME
+    ledger_path.write_text(ledger_path.read_text(encoding="utf-8") + "\n", encoding="utf-8")
+    r = _migrate(home, backup, mode="-Rollback", migration_id=tx.name)
+    assert r.returncode == 3, f"exit {r.returncode}: {r.stderr}"
+    assert ledger_path.is_file(), "an edited ledger was deleted by rollback"
+
+
+# --------------------------------------------------------------------------- #
+# Coverage gap D2: the APPLY-TIME containment gate (the real TOCTOU window)
+# --------------------------------------------------------------------------- #
+
+def test_junction_planted_after_planning_is_caught_at_apply_time(mini_dist, tmp_path):
+    """Every other junction test plants the link BEFORE the first scan, so
+    Get-RootScan catches it and the apply-time re-check never runs.
+
+    This one plants it in the real window. `-Resume` reads the plan from disk and
+    does NOT re-scan, so scan-time classification cannot help: only the choke point
+    called immediately before each mutation can catch it."""
+    home = fx.migration_home(tmp_path / "h")
+    backup = tmp_path / "b"
+    outside = tmp_path / "out"
+    outside.mkdir()
+    (outside / "victim.md").write_text("a real file outside the home\n", encoding="utf-8")
+    before_outside = _tree_digest(outside)
+
+    plan = _plan(home, backup, mini_dist)
+    gpt_installs = [a for a in plan["actions"]
+                    if a["action"] == "install" and a["rel_path"].startswith(GPT_ROOT + "/")]
+    assert gpt_installs, "no GPT-profile installs to redirect"
+    crash_seq = _seq_of(plan, "install")[0]
+
+    assert _apply(home, backup, mini_dist,
+                  env={"SKILL_MESH_TX_CRASH_AT": f"{crash_seq}:after-begin"}).returncode == 9
+    tx = _only_tx(backup)
+    assert _manifest_of(tx)["status"] == "applying"
+
+    # NOW redirect the whole GPT discovery root, after planning is done.
+    gpt_root = Path(home) / GPT_ROOT
+    if gpt_root.exists():
+        shutil.rmtree(gpt_root)
+    _junction_or_skip(gpt_root, outside)
+
+    r = _migrate(home, backup, mini_dist, mode="-Resume", migration_id=tx.name)
+    assert r.returncode != 0, "resume wrote through a junction planted after planning"
+    assert "SECURITY" in r.stderr, r.stderr
+    assert _tree_digest(outside) == before_outside, \
+        "the migrator wrote into a real directory outside the consumer home"
+
+
+# --------------------------------------------------------------------------- #
+# #89: the installer normalizes -Provider to the canonical slug
+# --------------------------------------------------------------------------- #
+
+def _install(home, provider, dist):
+    return _run(INSTALL_SCRIPT, ["-Home", str(home), "-Provider", provider,
+                                 "-DistDir", str(dist)])
+
+
+def test_provider_casing_produces_byte_identical_installs(tmp_path):
+    """PowerShell's [ValidateSet] matches case-insensitively and does NOT normalize,
+    so `-Provider CLAUDE` used to key the ledger 'CLAUDE', write provider='CLAUDE',
+    and stamp `Profile: CLAUDE` into every generated file -- making DISTRIBUTION
+    BYTES depend on invocation casing in a repo that advertises reproducible
+    releases (#89)."""
+    dist = tmp_path / "d"
+    assert _run(BUILD_SCRIPT, ["-OutputDir", str(dist), "-Provider", "claude"]).returncode == 0
+
+    lower, upper = tmp_path / "hl", tmp_path / "hu"
+    assert _install(lower, "claude", dist).returncode == 0
+    assert _install(upper, "CLAUDE", dist).returncode == 0
+
+    assert _tree_digest(lower) == _tree_digest(upper), \
+        "install bytes differ by the casing of -Provider"
+
+    for home in (lower, upper):
+        ledger = json.loads((home / LEDGER_NAME).read_text(encoding="utf-8"))
+        assert list(ledger["installs"]) == ["claude"], \
+            f"ledger key is not the canonical slug: {list(ledger['installs'])}"
+        assert ledger["installs"]["claude"]["provider"] == "claude"
+    body = (upper / CLAUDE_ROOT / fx.MIGRATION_MANAGED[0] / "SKILL.md").read_text(encoding="utf-8")
+    assert "Profile: claude" in body
+    assert "Profile: CLAUDE" not in body, "generated bytes still carry the caller's casing"
+
+
+def test_uninstall_works_against_a_mixed_case_ledger(tmp_path):
+    """A home installed by the PREVIOUS build carries a 'CLAUDE' ledger key. The
+    normalization must not strand it: uninstall still has to find and remove it."""
+    dist = tmp_path / "d"
+    assert _run(BUILD_SCRIPT, ["-OutputDir", str(dist), "-Provider", "claude"]).returncode == 0
+    home = tmp_path / "h"
+    assert _install(home, "claude", dist).returncode == 0
+
+    ledger_path = home / LEDGER_NAME
+    doc = json.loads(ledger_path.read_text(encoding="utf-8"))
+    doc["installs"] = {"CLAUDE": doc["installs"]["claude"]}
+    ledger_path.write_text(json.dumps(doc, indent=2), encoding="utf-8")
+
+    r = _run(INSTALL_SCRIPT, ["-Home", str(home), "-Provider", "claude", "-Uninstall"])
+    assert r.returncode == 0, f"{r.stdout}\n{r.stderr}"
+    assert not list((home / CLAUDE_ROOT).rglob("*.md")) if (home / CLAUDE_ROOT).exists() else True, \
+        "uninstall did not remove files tracked under a mixed-case ledger key"
+
+
+def test_provider_normalizer_has_one_owner_and_keeps_its_semantics():
+    """The normalizer lives in the shared discovery module; the inspector's private
+    copy now delegates to it. Its two locked behaviors: ordinal (so a lookalike
+    padded with Unicode-ignorable characters is refused) but case-insensitive (so a
+    real `-Provider CLAUDE` install is recognized, not dropped)."""
+    # Scoped to the function body: OrdinalIgnoreCase is legitimately used elsewhere
+    # in the inspector for path comparison, so a whole-file sweep would be a false
+    # positive. What must be gone is a private COMPARISON inside the resolver.
+    for tool in ("inspect-host-install.ps1", "migrate-legacy-install.ps1"):
+        src = _strip_ps_comments((REPO_ROOT / "tools" / tool).read_text(encoding="utf-8"))
+        start = src.index("function Resolve-KnownProvider")
+        body = src[start:src.index("\nfunction ", start + 1)]
+        assert "Resolve-SkillMeshProvider" in body, \
+            f"{tool} does not delegate to the shared normalizer"
+        assert "[string]::Equals" not in body, \
+            f"{tool} kept a private copy of the provider comparison"
+        assert "foreach" not in body, f"{tool} kept a private matching loop"
+
+    lookalike = "claude" + chr(0x00AD) * 5
+    r = _engine_script(DISCOVERY_SCRIPT,
+                       "$v = @('claude','gpt'); "
+                       "(Resolve-SkillMeshProvider 'CLAUDE' $v) + '|' + "
+                       "(Resolve-SkillMeshProvider 'claude' $v) + '|' + "
+                       "[string](Resolve-SkillMeshProvider ('claude' + "
+                       "([string][char]0x00AD * 5)) $v) + '|' + "
+                       "[string](Resolve-SkillMeshProvider 'nope' $v)")
+    assert r.returncode == 0, r.stderr
+    upper, lower, ignorable, unknown = r.stdout.strip().split("|")
+    assert upper == "claude", "a legitimate mixed-case slug was not normalized"
+    assert lower == "claude"
+    assert ignorable == "", f"a culture-equal lookalike was accepted: {lookalike!r}"
+    assert unknown == ""

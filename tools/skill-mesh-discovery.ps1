@@ -71,6 +71,47 @@ function Get-SkillMeshDiscoveryRoot {
     return $null
 }
 
+function Resolve-SkillMeshProvider {
+    <#
+      Match a caller-supplied provider token against a closed vocabulary and return
+      the VOCABULARY'S OWN spelling -- never the caller's. The single owner for
+      provider-slug normalization across the installer, the inspector, and the
+      migrator (it replaced the inspector's private Resolve-KnownProvider rather
+      than becoming a fourth copy of it).
+
+      $Vocabulary is supplied by the caller because each tool already holds the
+      authoritative list: the inspector and migrator read the manifest's own
+      top-level `providers` object, the installer uses the keys of the map above.
+      Passing it in keeps this function from needing a manifest path and keeps the
+      vocabulary sourced from one place per tool.
+
+      Two traps make the obvious `-contains` wrong, and BOTH behaviors are
+      test-locked -- do not "simplify" either away:
+
+        1. `-contains` is CULTURE-aware, so it treats 'claude' plus a run of
+           Unicode-ignorable characters (U+00AD and friends) as EQUAL to 'claude'.
+           Echoing the matched token would then put unbounded non-ASCII consumer
+           bytes into a report under the guise of a known provider. So the
+           comparison is ORDINAL.
+        2. It is also case-INSENSITIVE, which we WANT: the installer's
+           [ValidateSet('claude','gpt')] accepts -Provider CLAUDE, so a
+           case-sensitive match would drop a legitimate install -- a false-clean
+           preflight, worse than the leak.
+
+      Match case-insensitively but ORDINALLY, and emit the vocabulary's own slug so
+      the closed vocabulary holds either way. Returns $null when there is no match.
+    #>
+    param([string]$Value, [string[]]$Vocabulary)
+    if ([string]::IsNullOrEmpty($Value)) { return $null }
+    if ($null -eq $Vocabulary) { return $null }
+    foreach ($p in $Vocabulary) {
+        if ([string]::Equals($p, $Value, [System.StringComparison]::OrdinalIgnoreCase)) {
+            return $p
+        }
+    }
+    return $null
+}
+
 function Get-SkillMeshRetiredCopilotRoot {
     # The RETIRED project-relative GPT target. Named here so the inspector's
     # "present -- likely a pre-retarget install" warning and the migrator's retire
