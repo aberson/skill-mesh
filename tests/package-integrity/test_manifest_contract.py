@@ -388,14 +388,23 @@ PRIVATE_PATH_EXEMPT = {
 
 
 def _tracked_text_files():
-    """Every git-tracked file, minus binaries. Enumerated, never hand-listed.
+    """Every git-tracked file PLUS every untracked-but-not-ignored one, minus
+    binaries. Enumerated, never hand-listed.
 
     Same principle as release staging (`git ls-files`, not a denylist): a new
     committed file is covered the moment it is tracked, so the gate cannot go
     quietly false-green on a document nobody remembered to add.
+
+    `--others --exclude-standard` closes an ENUMERATION-TIMING hole that a
+    tracked-only sweep leaves open, and which bit this repository for real: a new
+    file authored during a change is untracked while the suite runs, so every gate
+    built on this helper reports green — and then goes red the moment the file is
+    committed, i.e. exactly when the author has stopped looking. A full-suite pass
+    before `git add` must actually mean the gates hold after it. Ignored paths stay
+    excluded, so local scratch and build output (`dist/`) are still out of scope.
     """
-    r = subprocess.run(["git", "ls-files"], cwd=REPO_ROOT,
-                       capture_output=True, text=True, check=True)
+    r = subprocess.run(["git", "ls-files", "--cached", "--others", "--exclude-standard"],
+                       cwd=REPO_ROOT, capture_output=True, text=True, check=True)
     skip_suffix = {".svg", ".png", ".jpg", ".jpeg", ".gif", ".ico", ".pyc", ".zip"}
     for rel in r.stdout.splitlines():
         rel = rel.strip()

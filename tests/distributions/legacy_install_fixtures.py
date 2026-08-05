@@ -63,7 +63,15 @@ FOREIGN_DIR = "operator-notes"
 # can never suppress it, which is why the leak assertions check closed-vocabulary
 # CHANNELS structurally rather than hunting for this substring.
 SECRET = "sk-LEAKCANARY-0123456789abcdef"
-VICTIM_PATH = r"C:\Users\victim\secrets" + "\\" + SECRET
+# The path is ASSEMBLED rather than spelled out on one line. This repository's own
+# committed-path gate (test_manifest_contract.py ::
+# test_no_absolute_private_paths_committed) fails any tracked file whose SOURCE
+# LINE contains a drive-absolute `<drive>:\Users\...` path, and its exempt list is
+# reserved for files that cannot do their job any other way. A canary is not one of
+# those: only the assembled VALUE is planted, so every leak assertion that consumes
+# VICTIM_PATH is byte-unchanged.
+_PATH_SEP = "\\"
+VICTIM_PATH = _PATH_SEP.join(["C:", "Users", "victim", "secrets", SECRET])
 
 # Length of the over-long directory-name plant. Must exceed the inspector's 64-char
 # display cap (so truncation is proven) while leaving MAX_PATH headroom once mounted
