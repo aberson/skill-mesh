@@ -743,6 +743,18 @@ After aggregation, the orchestrator writes one JSON file at `<--output-dir>/<tim
 
 After writing the sidecar, the aggregator prints a human-readable markdown summary to stdout (suitable for paste into PR comments). The canonical renderer lives in `scripts/aggregate.py` (`render_markdown`). Structure: a header line (`# review-deep: PASS` / `NEEDS-WORK` / `DEFERRED-TO-UAT` / `NEEDS-WORK + DEFERRED-TO-UAT`), a `## Lens verdicts` subsection with one line per lens (`- <lens_id>: <overall_verdict> (<finding-count> findings, model: <model_tier>)`; SKIPPED lenses are shown explicitly so the operator always sees the full 6-lens trace; a runtime-downgrade line follows when the auth-gate probe fired), a `## Findings` subsection grouped by severity (`### Block`, `### Nit`, `### FYI`) where each finding renders as `- **<file_line>** (<lens_id>[, anti-pattern: <name>]): <rationale>` followed by the `excerpt` as a fenced sub-block (severity subsections with zero findings are omitted), an optional `## Deferred to operator UAT` subsection present only when `deferred_uat_items[]` is non-empty (rendering per the Scope-boundary deferral § Markdown rendering contract — H3 per item, covered-lenses bullet, needs-verification bullet, commands fenced powershell block), an explicit `Please run M<N> next.` cue line when deferrals exist (lowest M-number in the sidecar), and a final `Audit-trail JSON: .review-deep/<timestamp>.json` pointer. Markdown shape changes MUST touch both `scripts/aggregate.py` AND this paragraph in the same diff.
 
+### Cross-round oscillation check (orchestrator-level, advisory)
+
+Aggregator rule 6 detects persistent disagreement *between lenses* across runs. This check covers its structural blind spot: contradiction *between rounds*. The loop-breaking signal is round N+1 Blocking the very change round N's Block demanded — a five-round review of one branch once failed to converge on exactly this, because each fresh-context round silently filled in a different unwritten premise (both rounds were "right" under their own reading of what a status claimed), and nothing was comparing demands across rounds.
+
+When `--prior-sidecar` is supplied, the ORCHESTRATOR — not `scripts/aggregate.py`; this check touches neither the aggregator nor the sidecar schema, and it NEVER changes `aggregated_verdict.result` — runs one additional pass after aggregation: for each current `Block` finding whose `file_line` falls inside the diff under review, look for a prior-sidecar `Block` finding on the same file with an overlapping or adjacent region. For each such pair, compare the two rationales; if the current Block objects to behavior the prior Block demanded (or vice versa), append to the orchestrator's report, immediately after the markdown summary:
+
+```text
+OSCILLATION: <current file_line> vs prior <prior file_line> — this round Blocks what the prior round's Block demanded. Two premises are in play, not one defect: each round is filling in an unwritten policy (e.g. what a status or return value honestly claims). Another fix round cannot converge this at any model tier. Route to a decision: write the disputed premise down, decide it, land it in the plan, then run ONE bounded confirming round.
+```
+
+Fail-open and advisory: an absent, unreadable, or schema-mismatched prior sidecar skips the check silently; the check never blocks, never escalates a severity, and adds no halt class. Consumers (e.g. `/build-step` Step 9) treat the `OSCILLATION:` line as a precomputed input to their own oscillation triggers — the response (re-scope, diagnosis escalation, or halt) is owned by the consumer's contract, not by this check.
+
 ---
 
 ## Calibration
