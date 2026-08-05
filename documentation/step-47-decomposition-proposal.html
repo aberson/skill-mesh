@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Step 47 Decomposition — Operator Proposal</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #f4f6f8;
+      --panel: #ffffff;
+      --ink: #17202a;
+      --muted: #5f6b76;
+      --line: #d8dee4;
+      --accent: #2457d6;
+      --soft: #eaf0ff;
+      --warn: #8a4b08;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #11151b;
+        --panel: #1b222c;
+        --ink: #eef3f8;
+        --muted: #aab5c0;
+        --line: #36414d;
+        --accent: #8eafff;
+        --soft: #202f54;
+        --warn: #ffc078;
+      }
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font: 16px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif;
+    }
+    main { max-width: 980px; margin: 0 auto; padding: 48px 24px 72px; }
+    h1 { font-size: clamp(2rem, 5vw, 3.2rem); line-height: 1.05; margin: 0 0 16px; }
+    h2 { margin-top: 38px; }
+    h3 { margin-bottom: 8px; }
+    p, li { max-width: 78ch; }
+    .eyebrow { color: var(--accent); font-weight: 750; letter-spacing: .08em; text-transform: uppercase; }
+    .lede { color: var(--muted); font-size: 1.18rem; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 20px;
+    }
+    .id {
+      display: inline-block;
+      margin-right: 8px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: var(--soft);
+      color: var(--accent);
+      font-weight: 750;
+    }
+    .timeline { border-left: 3px solid var(--accent); padding-left: 22px; }
+    .timeline article { margin: 0 0 24px; break-inside: avoid; }
+    code { background: var(--soft); padding: 2px 5px; border-radius: 4px; }
+    .risk { color: var(--warn); font-weight: 700; }
+    footer { margin-top: 48px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 18px; }
+    @media print {
+      @page { margin: 14mm; }
+      :root {
+        --bg: #ffffff;
+        --panel: #ffffff;
+        --ink: #111111;
+        --muted: #444444;
+        --line: #cccccc;
+        --accent: #1746a2;
+        --soft: #eef3ff;
+        --warn: #7a3f00;
+      }
+      * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+      body { background: #fff; }
+      main { max-width: none; padding: 0; }
+      .card, .timeline article { break-inside: avoid; }
+      h1, h2, h3 { break-after: avoid; }
+    }
+  </style>
+</head>
+<body>
+<main>
+  <div class="eyebrow">Operator proposal &mdash; Step 47 revision, published 2026-08-05</div>
+  <h1>Stop patching Step 47. Decide the policy, split the gate, merge the migrator.</h1>
+  <p class="lede">
+    Five review rounds could not converge one step doing two unrelated jobs. This revision
+    decides the transaction drift policy once, sends the migrator back through one bounded
+    round, and moves the static containment gate to its own step off the cutover critical path.
+    Full rationale: <code>documentation/step-47-decomposition-decision.md</code>.
+  </p>
+
+  <h2>What I heard</h2>
+  <div class="grid">
+    <section class="card">
+      <h3>Do not run a sixth round</h3>
+      <p>Rounds 1&ndash;5 each patched what the previous round found, and the recurring
+      defect shape was introduced <em>by fix rounds</em> three times. The deliverable is a
+      decision, not another diff.</p>
+    </section>
+    <section class="card">
+      <h3>The branch is not mergeable as-is</h3>
+      <p><code>build-step-1785890195</code> holds real wins, but round 5 proved its final
+      commit regressed the exact path it was built to repair.</p>
+    </section>
+    <section class="card">
+      <h3>The sibling-asymmetry shape is the enemy</h3>
+      <p>A consumer-home path escaping a check its sibling branch already performs &mdash;
+      operator-flagged, and the thing every round kept reintroducing.</p>
+    </section>
+  </div>
+
+  <h2>Why this shape</h2>
+  <p>
+    Round 4 (reviewing <code>5ef1045</code>) returned a <b>single</b> Block demanding that
+    preserve-drift escalate; round 5 (reviewing the fix) condemned exactly that escalation.
+    Two consecutive independent rounds Block'd opposite policies on the same hunk &mdash;
+    proof the drift policy was never decided, and that the code's two conflicting undo
+    wrappers were encoding a disagreement no patch could resolve. Separately, the static
+    containment gate (born mid-build as a stop-and-audit remedy) sat in no step's Done-when,
+    so gate-completeness findings had no acceptance criteria to be bounded against and kept
+    blocking the migrator's merge.
+  </p>
+
+  <h2>Delivery timeline</h2>
+  <section class="timeline">
+    <article>
+      <h3>Now &mdash; Step 47 resumes from the branch</h3>
+      <p>Restore the two round-5-changed files to <code>5ef1045</code> (the tree round 4
+      found one Block from clean), implement the three-case drift policy, add the missing
+      shared-rollback-path coverage via the existing <code>SKILL_MESH_TX_CRASH_AT</code>
+      seam. Afterwards: one bounded confirming review, then merge.</p>
+    </article>
+    <article>
+      <h3>Unchanged &mdash; Steps 48&ndash;50</h3>
+      <p>Handoff docs, temporary-home acceptance, live cutover. Step 48 still depends on
+      42 and 47 only; nothing new sits on the cutover critical path.</p>
+    </article>
+    <article>
+      <h3>Off the critical path &mdash; Step 47b</h3>
+      <p>Re-land the gate hardening without the proven weakening (differential corpus that
+      the rejected <code>bde8a5f</code> gate demonstrably fails), add the content-identity
+      tripwire, document the blind-spot classes. Dispatched via <code>/build-step</code>
+      directly; may land in parallel with or after the cutover.</p>
+    </article>
+  </section>
+
+  <h2>Operator choices</h2>
+  <div class="grid">
+    <section class="card"><span class="id">P4</span><strong>Decide, don't patch</strong>
+      <p>No sixth patch-and-review round on Step 47; the decomposition decision precedes any
+      further code. (From the session handoff directive.)</p></section>
+  </div>
+
+  <h2>Agent defaults to review</h2>
+  <div class="grid">
+    <section class="card">
+      <span class="id">D13</span><strong>Split tool from gate</strong>
+      <p><b>What:</b> Step 47 keeps the migrator + engine and merges alone; the containment
+      gate's improvement becomes Step 47b with its own Done-when, off the 48&ndash;50 critical path.</p>
+      <p><b>Why:</b> the two jobs fail for different reasons, and the plan-orphaned gate kept
+      blocking the migrator's merge with findings no acceptance criteria bounded.</p>
+      <p><b>Tweak:</b> keep one step and bound review scope by instruction only, or merge 47+47b
+      as one unit (both considered and rebutted in the decision doc's Alternatives).</p>
+    </section>
+    <section class="card">
+      <span class="id">D14</span><strong>Three-case drift policy</strong>
+      <p><b>What:</b> escalate to <code>failed_incomplete</code> only for (1) mutated-path
+      content-identity violations and (2) post-install verification failures on preserved paths
+      after a fully-applied transaction (bounded to the failure set, with a corrected message).
+      (3) Preserve drift during a pre-completion abort lands <code>rolled_back</code> + an
+      advisory; a follow-up bare <code>-Apply</code> re-plans and converges.</p>
+      <p><b>Why:</b> <code>rolled_back</code> honestly claims only "every byte this tool mutated
+      is restored" &mdash; the no-payload preserve design makes any broader claim unprovable.
+      This adjudicates the round-4/round-5 oscillation.</p>
+      <p><b>Tweak:</b> escalate on all preserve drift (round 4's position), or demote case 2 to
+      advisory as well.</p>
+    </section>
+    <section class="card">
+      <span class="id">D15</span><strong>Resume from 5ef1045</strong>
+      <p><b>What:</b> restore both round-5-changed files to their <code>5ef1045</code> state and
+      build the policy from there; the branch's earlier wins (choke-point fix, shared
+      content-identity rule, <code>skill-mesh-discovery.ps1</code>, ~100 tests, #89) all predate
+      that commit and are kept.</p>
+      <p><b>Why:</b> round 4 found that tree one Block from clean; the <code>bde8a5f</code> delta
+      is the round that regressed.</p>
+      <p><b>Tweak:</b> keep <code>bde8a5f</code> and patch forward instead.</p>
+    </section>
+    <section class="card">
+      <span class="id">D16</span><strong>Gate demoted; AST deferred</strong>
+      <p><b>What:</b> the gate becomes an honest best-effort tripwire (completeness claim
+      removed, blind-spot classes documented); the sound AST-based rewrite is deferred behind a
+      named trigger &mdash; a live false negative in either half of the invariant.</p>
+      <p><b>Why:</b> every known hole is latent (zero live instances), runtime protections are
+      the consumer-machine controls, and an AST mini-tool's own review burden is the exact
+      dynamic that consumed rounds 3&ndash;5.</p>
+      <p><b>Tweak:</b> schedule the AST rewrite now, or delete the gate entirely.</p>
+    </section>
+    <section class="card">
+      <span class="id">D17</span><strong>47b acceptance = differential corpus + tripwire</strong>
+      <p><b>What:</b> 47b's no-weakening criterion is keyed to a committed corpus containing the
+      round-5 counterexamples, which the rejected <code>bde8a5f</code> gate must demonstrably
+      fail; plus a content-identity tripwire enumerating <code>Invoke-ActionUndo</code>'s
+      destroying/overwriting branches.</p>
+      <p><b>Why:</b> a plain no-weakening check over the real tree is vacuous (both gates flag
+      zero there), and the defect class fix rounds actually minted &mdash; missing byte-identity
+      checks &mdash; is invisible to any path gate.</p>
+      <p><b>Tweak:</b> drop the tripwire and rely on review convention, or widen the corpus.</p>
+    </section>
+    <section class="card">
+      <span class="id">D18</span><strong>47b rides issue #60, manual dispatch</strong>
+      <p><b>What:</b> Step 47b shares #60 (the gate's full history lives there); a dedicated
+      issue is minted via <code>gh issue create</code> or at the first post-cutover
+      <code>/repo-sync</code>. Its <code>47b</code> heading is invisible to
+      <code>/build-phase</code>'s numeric walker &mdash; documented in the step; dispatch via
+      <code>/build-step</code> directly.</p>
+      <p><b>Why:</b> renumbering Steps 48&ndash;50 now would break the frozen issue mappings
+      (#61&ndash;#63), and <code>/repo-sync</code> is banned this session (#87 link defect).</p>
+      <p><b>Tweak:</b> renumber at the next repo-sync instead of keeping the suffix long-term.</p>
+    </section>
+  </div>
+
+  <h2>Not in this revision</h2>
+  <ul>
+    <li>Merging <code>build-step-1785890195</code> (happens only after the revised Step 47 build + its bounded review).</li>
+    <li>Any code change &mdash; this revision is a decision document plus plan edits.</li>
+    <li>Posting round 5's outcome to issue #60 (outward-facing; awaiting your go-ahead).</li>
+    <li>Steps 49&ndash;50 operator acceptance work.</li>
+  </ul>
+
+  <h2>Risks that remain visible</h2>
+  <ul>
+    <li><span class="risk">Latent gate blind spots:</span> until 47b lands, alias-spelled and multi-command shapes are uncaught by the static gate (zero live instances today; runtime protections unaffected).</li>
+    <li><span class="risk">Content-identity convention:</span> the invariant's other half stays convention-guarded until 47b's tripwire; Step 47's confirming review asks the question explicitly.</li>
+    <li><span class="risk">Case-2 message:</span> the kept escalation path still needs its "MIXED" wording corrected in the build, or it reproduces the round-5 harm in a rarely-reachable branch.</li>
+  </ul>
+
+  <h2>Reply grammar</h2>
+  <p>Silence means the plan stands. To change a default, reply with an ID and replacement, for example:</p>
+  <p><code>D14 -&gt; case 2 also lands rolled_back + advisory</code></p>
+
+  <footer>
+    Source of truth: documentation/host-native-discovery-cutover-plan.md<br>
+    Decision record: documentation/step-47-decomposition-decision.md<br>
+    Proposal view: documentation/step-47-decomposition-proposal.html (publication 1, 2026-08-05)<br>
+    Prior proposal (frozen historical record): documentation/host-native-discovery-cutover-proposal.html
+  </footer>
+</main>
+</body>
+</html>

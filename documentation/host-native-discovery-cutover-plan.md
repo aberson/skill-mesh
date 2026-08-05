@@ -2,7 +2,7 @@
 
 ## 1. What This Feature Does
 
-**Proposal:** `documentation/host-native-discovery-cutover-proposal.html`
+**Proposal:** `documentation/step-47-decomposition-proposal.html` (Step 47 revision, 2026-08-05; the original phase proposal `documentation/host-native-discovery-cutover-proposal.html` is a deliberately frozen pre-execution record and is not updated)
 
 This feature closes the gap between the provider-neutral package shipped by
 `aberson/skill-mesh` and the still-active legacy installation under
@@ -889,3 +889,10 @@ behavior cannot be proven by unit tests alone.
 | D10 | D | Static release/package-integrity gates assert documentation STRUCTURE only (presence, order, resolvability, no private-content leak); real host acceptance is operator evidence (Steps 43/45/49/50) that no static test can substitute for | active |
 | D11 | D | The live coding-root cutover (Step 50) is owned by coding-root -- run from that repo against the skill-mesh release candidate, gated by a parked-work handshake and a dedicated cutover branch; the skill-mesh plan never commits coding-root state | active |
 | D12 | D | The rewritten ownership ledger indexes only migration-installed managed files and never lists preserved consumer-only skills or `_shared`, so ownership-safe uninstall cannot delete the four-class-protected trees | active |
+| P4 | P | No sixth patch-and-review round on Step 47 — the decomposition decision precedes any further code (session handoff directive, 2026-08-05) | active |
+| D13 | D | Step 47 splits: migrator + engine keep Step 47 and merge alone; the containment gate's improvement becomes Step 47b, off the 48→50 critical path (`step-47-decomposition-decision.md` §D1) | active |
+| D14 | D | Three-case preserve-drift policy: escalate only mutated-path content-identity violations and post-install verification failures on preserved paths after a fully-applied transaction (bounded to the failure set, corrected message); pre-completion preserve drift lands `rolled_back` + advisory (§D2) | active |
+| D15 | D | Step 47's build resumes from branch `build-step-1785890195`, restoring both round-5-changed files to `5ef1045` (§D4) | active |
+| D16 | D | The containment gate is demoted to an honest best-effort tripwire with documented blind-spot classes; the AST rewrite is deferred behind a named two-half trigger (§D3, §D5) | active |
+| D17 | D | Step 47b acceptance is keyed to a committed differential corpus the rejected `bde8a5f` gate demonstrably fails, plus a content-identity tripwire over `Invoke-ActionUndo`'s destroying/overwriting branches (§D5) | active |
+| D18 | D | Step 47b shares issue #60 and is dispatched via `/build-step` directly (its `47b` heading is invisible to `/build-phase`'s numeric walker — documented in the step); a dedicated issue is minted via `gh issue create` or at the first post-cutover `/repo-sync` | active |
