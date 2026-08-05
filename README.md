@@ -478,12 +478,14 @@ hosts; 3 are Claude-native (`claude-oauth-auth`, `context-slim`, `judge-motion`)
 - ~50 skills; 47/47 skills are GPT-capable behind the shared Claude/GPT behavior contract; 3 additional skills are Claude-native.
 - Shipped: the canonical `skills/<name>/{core.md,providers/}` source tree, the provider-neutral router,
   and the distribution builder, installer, and release tooling (reproducible SHA-256 checksums over a
-  `git ls-files` stage); 329 tests across seven suites (router, calibration, package-integrity,
+  `git ls-files` stage); 440 tests across seven suites (router, calibration, package-integrity,
   distributions, release, telemetry, smoke).
 - In progress: host-native discovery and consumer cutover — making the three host-loading mechanisms
   explicitly distinct (instruction injection, native skill discovery, router dispatch) and adding a
   reversible migration path off legacy installs. See
-  [documentation/host-discovery.md](documentation/host-discovery.md).
+  [documentation/host-discovery.md](documentation/host-discovery.md). The migration step (Step 47)
+  was re-scoped 2026-08-05 after a five-round review deadlock — decision record:
+  [documentation/step-47-decomposition-decision.md](documentation/step-47-decomposition-decision.md).
 - The original 46 top-level `<skill>/SKILL.md` packages remain as a compatibility surface during a
   deprecation window — not the canonical source, and not updated by this migration; see
   [documentation/migration.md](documentation/migration.md).
