@@ -101,21 +101,26 @@ $ErrorActionPreference = 'Stop'
 $TOOLS_DIR = $PSScriptRoot
 $REPO_ROOT = Split-Path -Parent $TOOLS_DIR
 $PROVENANCE = Join-Path $TOOLS_DIR 'skill-mesh-provenance.ps1'
+$DISCOVERY = Join-Path $TOOLS_DIR 'skill-mesh-discovery.ps1'
 $MANIFEST_REL = 'config/skill-manifest.json'
 $MANIFEST_PATH = Join-Path $REPO_ROOT 'config\skill-manifest.json'
 
 # Shared, single-source-of-truth provenance parser (Test-SkillMeshProvenance).
 # Dot-source with no args so only its functions load.
 . $PROVENANCE
+# Shared, single-source-of-truth discovery-root map. These paths used to be
+# hand-mirrored here from the installer; that duplicate-shape-constant now has ONE
+# owner (see tools/skill-mesh-discovery.ps1 for the rationale).
+. $DISCOVERY
 
 $SCHEMA_VERSION = 1
 
-# Discovery roots (POSIX form), mirrored from install-skill-mesh.ps1 $DISCOVERY_SUBDIR.
-$CLAUDE_ROOT_REL = '.claude/skills'
-$GPT_ROOT_REL = '.github/skills'
-# Legacy / retired resolution shadows.
-$LEGACY_SKILLS_GPT_REL = '.claude/skills-gpt'
-$RETIRED_COPILOT_REL = '.copilot/skills'
+# Discovery roots (home-relative, POSIX form) and the legacy/retired resolution
+# shadows, all read from the shared owner rather than re-spelled.
+$CLAUDE_ROOT_REL = Get-SkillMeshDiscoveryRoot 'claude'
+$GPT_ROOT_REL = Get-SkillMeshDiscoveryRoot 'gpt'
+$LEGACY_SKILLS_GPT_REL = Get-SkillMeshLegacySkillsGptRoot
+$RETIRED_COPILOT_REL = Get-SkillMeshRetiredCopilotRoot
 $LEDGER_NAME = '.skill-mesh-install.json'
 $LEGACY_ROUTER_REL = '.claude/lib/skill-router.ps1'
 $CANONICAL_ROUTER_REL = 'runtime/skill-router.ps1'

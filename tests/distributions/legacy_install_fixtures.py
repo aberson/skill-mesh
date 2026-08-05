@@ -401,8 +401,23 @@ def legacy_skill_md(name):
     )
 
 
+# Two MANIFEST skill names of EQUAL character length. Planted as sibling retired
+# trees they produce two emptied directories whose paths are the same length, which
+# is the exact input that a `Sort-Object -Property @{Expression={...}} -Unique` on a
+# calculated length key silently collapses to one. Equal length is asserted in
+# test_legacy_migration.py so a rename cannot quietly defuse the regression test.
+EQUAL_LENGTH_RETIRED = ("repo-init", "repo-sync")
+
+# A consumer directory name that is over-long AND carries the ', ' separator a
+# report joins names with -- the migrator's blocked-path channel must bound both.
+# Length only has to exceed the 64-char display cap; every extra character is
+# charged against MAX_PATH once mounted under a pytest tmp_path.
+HOSTILE_DIR = "z" * 80 + ",injected"
+
+
 def migration_home(home, foreign=False, retired_copilot=True, consumer_only=True,
-                   core_holder=True, legacy_ledger=True, stale_generated=False):
+                   core_holder=True, legacy_ledger=True, stale_generated=False,
+                   equal_length_retired=False, hostile_foreign_name=False):
     """A consumer home in the pre-cutover state the migrator has to handle.
 
     Every flag isolates ONE classification input, so a test can build the same home
@@ -429,11 +444,23 @@ def migration_home(home, foreign=False, retired_copilot=True, consumer_only=True
         # a managed skill dir: skill-mesh's own, therefore retired, not blocked.
         write(home, CLAUDE_ROOT + "/" + MIGRATION_MANAGED[0] + "/stale-core.md",
               generated_core_md("claude"))
+    if equal_length_retired:
+        # Two sibling retired trees whose directory names are the SAME length, so
+        # the emptied-directory cleanup has to remove both.
+        for name in EQUAL_LENGTH_RETIRED:
+            write(home, RETIRED_COPILOT_ROOT + "/" + name + "/SKILL.md",
+                  generated_skill_md(name, "gpt"))
     if foreign:
         # The ONE input that must BLOCK: not a manifest name, no SKILL.md, not
         # `_shared`.
         write(home, CLAUDE_ROOT + "/" + FOREIGN_DIR + "/README.md",
               "# operator notes\n\nNot a skill, not managed, not the core-holder.\n")
+    if hostile_foreign_name:
+        # A blocking (foreign) directory whose NAME is the hostile payload, so the
+        # bounded-report assertion runs against the channel that actually carries a
+        # consumer-controlled name into a report an operator may paste.
+        write(home, CLAUDE_ROOT + "/" + HOSTILE_DIR + "/README.md",
+              "# not a skill\n")
     if legacy_ledger:
         write(home, LEDGER_NAME, ledger(["claude"]))
     return home

@@ -28,6 +28,7 @@ on machines without LongPathsEnabled.
 import hashlib
 import json
 import os
+import re
 import shutil
 import subprocess
 from pathlib import Path
@@ -73,6 +74,11 @@ CLAUDE_ROOT = fx.CLAUDE_ROOT
 GPT_ROOT = fx.GPT_ROOT
 COPILOT_ROOT = fx.RETIRED_COPILOT_ROOT
 LEDGER_NAME = fx.LEDGER_NAME
+
+# A bounded display segment: the skill-name charset, capped, with an optional
+# truncation marker. Same shape tests/distributions/test_host_inspect.py pins for the
+# inspector, so the two tools' report-bounding contracts cannot diverge.
+SAFE_NAME_RE = re.compile(r"\A(<unnamed>|[A-Za-z0-9._-]{1,64}~?)\Z")
 
 
 # --------------------------------------------------------------------------- #
@@ -235,7 +241,12 @@ def test_tracked_powershell_sources_are_ascii_without_bom():
 def test_ascii_gate_reds_on_a_non_ascii_source():
     """Red-on-garbage anchor for the gate above: prove the predicate actually
     fires, so a future refactor cannot leave it passing on everything."""
-    assert _has_high_byte("Set-StrictMode\n# em dash — here\n".encode("utf-8"))
+    # The em dash is written as an ESCAPE, never as a literal byte: this module is
+    # itself a tracked source file, and a raw non-ASCII character in it is invisible
+    # in an editor and survives copy/paste into places it must never reach. Same
+    # discipline legacy_install_fixtures.py uses for its U+00AD lookalike plant.
+    em_dash = "\u2014"
+    assert _has_high_byte(("Set-StrictMode\n# em dash " + em_dash + " here\n").encode("utf-8"))
     assert not _has_high_byte(b"Set-StrictMode -Version Latest\n")
 
 
@@ -265,11 +276,15 @@ def test_migration_fixture_names_match_the_manifest():
 # Transaction engine: state machine (the dot-sourced library, run for real)
 # --------------------------------------------------------------------------- #
 
-def _engine(snippet):
-    """Dot-source the REAL engine and run `snippet` against it."""
-    script = ". '" + str(TRANSACTION_SCRIPT).replace("'", "''") + "'\n" + snippet
+def _engine_script(script_path, snippet):
+    """Dot-source a REAL shared library and run `snippet` against it."""
+    script = ". '" + str(script_path).replace("'", "''") + "'\n" + snippet
     return subprocess.run([PWSH, "-NonInteractive", "-Command", script],
                           capture_output=True, text=True)
+
+
+def _engine(snippet):
+    return _engine_script(TRANSACTION_SCRIPT, snippet)
 
 
 def test_state_machine_matches_the_engines_own_vocabulary():
@@ -863,6 +878,460 @@ def test_resume_rejects_a_transaction_from_another_home(mini_dist, tmp_path):
     r = _migrate(other, backup, mini_dist, mode="-Resume", migration_id=tx.name)
     assert r.returncode == 2, "a transaction was replayed against a different home"
     assert "HOME_MISMATCH" in r.stderr
+
+
+# --------------------------------------------------------------------------- #
+# UNSAFE_LINK: junction/symlink escape, at every reachable site
+#
+# Junctions are created with `cmd /c mklink /J` and the test SKIPS when the
+# environment refuses -- the same technique and fallback tests/distributions/
+# test_host_inspect.py uses for the read-only inspector.
+# --------------------------------------------------------------------------- #
+
+def _make_junction(link: Path, target: Path) -> bool:
+    link.parent.mkdir(parents=True, exist_ok=True)
+    r = subprocess.run(["cmd", "/c", "mklink", "/J", str(link), str(target)],
+                       capture_output=True, text=True)
+    return r.returncode == 0
+
+
+def _junction_or_skip(link: Path, target: Path):
+    if not _make_junction(link, target):
+        pytest.skip("cannot create a Windows junction in this environment")
+
+
+def _blocked_codes(payload):
+    return {b["code"] for b in payload["blocked"]}
+
+
+@pytest.mark.parametrize("site", [
+    "discovery-root",     # the provider root itself is a junction out of the home
+    "skill-dir",          # a per-skill directory under the root is a junction
+    "nested-dir",         # a junction nested INSIDE a classified skill directory
+    "install-target",     # an ancestor of a not-yet-existing install target
+])
+def test_junction_escape_blocks_with_unsafe_link(site, mini_dist, tmp_path):
+    """UNSAFE_LINK is one of the three blocking codes the plan names, and a wrong
+    classification here is what would let the migrator read, write, or back up
+    OUTSIDE the consumer home.
+
+    Each parameter plants the escape at a different point in the path so a guard
+    that only covers one site cannot pass all four."""
+    outside = tmp_path / "out"
+    outside.mkdir()
+    (outside / "victim.md").write_text("real file outside the home\n", encoding="utf-8")
+    home = Path(tmp_path / "h")
+    home.mkdir()
+
+    if site == "discovery-root":
+        _junction_or_skip(home / ".claude" / "skills", outside)
+    elif site == "skill-dir":
+        (home / ".claude" / "skills").mkdir(parents=True)
+        _junction_or_skip(home / ".claude" / "skills" / fx.MIGRATION_MANAGED[0], outside)
+    elif site == "nested-dir":
+        skill = home / ".claude" / "skills" / fx.MIGRATION_MANAGED[0]
+        skill.mkdir(parents=True)
+        (skill / "SKILL.md").write_text(fx.legacy_skill_md(fx.MIGRATION_MANAGED[0]),
+                                        encoding="utf-8")
+        _junction_or_skip(skill / "sub", outside)
+    else:
+        # `.github` redirects, so `.github/skills` does not exist under the home and
+        # the root scan sees nothing -- only the per-install-target containment check
+        # can catch this one.
+        _junction_or_skip(home / ".github", outside)
+
+    before_outside = _tree_digest(outside)
+    r = _migrate(home, tmp_path / "b", mini_dist)
+    assert r.returncode == 2, f"{site}: expected exit 2, got {r.returncode}:\n{r.stdout}"
+    plan = json.loads(r.stdout)
+    assert "UNSAFE_LINK" in _blocked_codes(plan), f"{site}: blocked={plan['blocked']}"
+
+    # -Apply must refuse identically, and touch nothing on either side of the link.
+    ra = _apply(home, tmp_path / "b", mini_dist)
+    assert ra.returncode == 2, f"{site}: -Apply did not refuse ({ra.returncode})"
+    assert "UNSAFE_LINK" in ra.stderr
+    assert _tree_digest(outside) == before_outside, \
+        f"{site}: the migrator touched a real file OUTSIDE the consumer home"
+    assert not (tmp_path / "b").exists(), f"{site}: a refused run created a backup"
+
+
+def test_junction_gate_reds_on_a_target_inside_the_home(mini_dist, tmp_path):
+    """Red-on-garbage anchor for all four cases above.
+
+    The identical junction pointing INSIDE the home must NOT block -- otherwise
+    UNSAFE_LINK could be firing on the mere presence of a reparse point rather than
+    on the escape, and the four tests above would prove nothing."""
+    home = Path(tmp_path / "h")
+    (home / ".claude" / "skills").mkdir(parents=True)
+    backing = home / "backing"
+    backing.mkdir()
+    _junction_or_skip(home / ".claude" / "skills" / fx.MIGRATION_MANAGED[0], backing)
+    (backing / "SKILL.md").write_text(fx.legacy_skill_md(fx.MIGRATION_MANAGED[0]),
+                                      encoding="utf-8")
+    plan = _plan(home, tmp_path / "b", mini_dist)
+    assert "UNSAFE_LINK" not in _blocked_codes(plan), plan["blocked"]
+    assert plan["blocked"] == [], plan["blocked"]
+
+
+def test_transaction_directory_escape_blocks_with_unsafe_link(mini_dist, tmp_path):
+    """The fifth UNSAFE_LINK site: -Rollback/-Resume join -MigrationId into a path
+    under -BackupDir, so a transaction directory that is a junction out of the
+    backup tree must be refused before anything is read from it."""
+    home = fx.migration_home(tmp_path / "h")
+    backup = tmp_path / "b"
+    backup.mkdir()
+    outside = tmp_path / "out"
+    outside.mkdir()
+    fake_id = "20260101T000000Z-0000abcd"
+    _junction_or_skip(backup / fake_id, outside)
+    r = _migrate(home, backup, mini_dist, mode="-Resume", migration_id=fake_id)
+    assert r.returncode == 2, f"expected exit 2, got {r.returncode}:\n{r.stdout}\n{r.stderr}"
+    assert "UNSAFE_LINK" in r.stderr, r.stderr
+
+
+def test_undo_refuses_a_target_redirected_out_of_the_home(mini_dist, tmp_path):
+    """Rollback is the highest-stakes path: it runs after a crash, possibly much
+    later, when the home has had every chance to change under the recorded plan.
+
+    Apply cleanly, THEN plant a junction that redirects an installed skill directory
+    outside the home, then roll back. The undo must refuse rather than delete or
+    overwrite the real file behind the link."""
+    home = fx.migration_home(tmp_path / "h")
+    backup = tmp_path / "b"
+    assert _apply(home, backup, mini_dist).returncode == 0
+    tx = _only_tx(backup)
+
+    skill_dir = Path(home) / CLAUDE_ROOT / fx.MIGRATION_MANAGED[0]
+    outside = tmp_path / "out"
+    outside.mkdir()
+    (outside / "SKILL.md").write_text("a real operator file outside the home\n",
+                                      encoding="utf-8")
+    before_outside = _tree_digest(outside)
+    shutil.rmtree(skill_dir)
+    _junction_or_skip(skill_dir, outside)
+
+    r = _migrate(home, backup, mode="-Rollback", migration_id=tx.name)
+    assert r.returncode == 3, (
+        f"undo did not refuse the redirected target (exit {r.returncode}); "
+        f"a rollback that follows a junction writes outside the home:\n{r.stderr}")
+    assert _manifest_of(tx)["status"] == "failed_incomplete"
+    assert _tree_digest(outside) == before_outside, \
+        "rollback wrote through the junction to a file outside the consumer home"
+
+
+# --------------------------------------------------------------------------- #
+# Post-install verification (the only check that covers a `preserve` action)
+# --------------------------------------------------------------------------- #
+
+def test_post_install_verification_catches_a_corrupted_preserved_tree(mini_dist, tmp_path):
+    """A `preserve` action is audit-only: the engine's per-action post-hash check
+    runs for MUTATING actions only, so post-install verification is the ONLY place a
+    preserved consumer-only skill or the `_shared` core-holder is re-checked.
+
+    The seam corrupts a preserved file after the engine's loop commits and before
+    verification runs -- the one window nothing else covers."""
+    home = fx.migration_home(tmp_path / "h")
+    backup = tmp_path / "b"
+    preserved_rel = f"{CLAUDE_ROOT}/{fx.MIGRATION_CONSUMER_ONLY[0]}/SKILL.md"
+    assert (Path(home) / preserved_rel).is_file(), "fixture did not plant the preserved file"
+    before = _tree_digest(home)
+
+    r = _apply(home, backup, mini_dist,
+               env={"SKILL_MESH_MIGRATE_TAMPER_AFTER_APPLY": preserved_rel})
+    assert "post-install verification FAILED" in r.stderr, r.stderr
+    # A preserved tree has NO backup payload by design (nothing byte-untouched is
+    # copied), so rollback structurally cannot restore it. The honest terminal state
+    # is failed_incomplete with the backup retained -- NOT `rolled_back`, which would
+    # claim a clean home over a mixed one.
+    assert r.returncode == 3, (
+        f"a rollback that cannot restore reported success (exit {r.returncode}):"
+        f"\n{r.stdout}\n{r.stderr}")
+    tx = _only_tx(backup)
+    assert _manifest_of(tx)["status"] == "failed_incomplete"
+    assert (Path(tx) / "payload").is_dir(), "the backup was discarded on an unrestorable rollback"
+
+    # Everything rollback DOES own was still restored: only the tampered preserved
+    # path differs from the pre-migration tree.
+    after = _tree_digest(home)
+    differing = {rel for rel in set(before) | set(after) if before.get(rel) != after.get(rel)}
+    assert differing == {preserved_rel}, (
+        f"rollback left more than the unrestorable preserved path changed: {differing}")
+
+
+def test_post_install_verification_catches_a_corrupted_installed_file(mini_dist, tmp_path):
+    """The mirror case: a file the migration CREATED is corrupted before
+    verification. Undo refuses to delete bytes that are no longer ours (that would
+    destroy someone else's edit) and therefore cannot complete, which is again
+    failed_incomplete rather than a false `rolled_back`."""
+    home = fx.migration_home(tmp_path / "h")
+    backup = tmp_path / "b"
+    plan = _plan(home, backup, mini_dist)
+    created = [a["rel_path"] for a in plan["actions"]
+               if a["action"] == "install" and a["pre_hash"] is None]
+    assert created, "no newly-created install targets in this fixture"
+    installed_rel = created[0]
+    r = _apply(home, backup, mini_dist,
+               env={"SKILL_MESH_MIGRATE_TAMPER_AFTER_APPLY": installed_rel})
+    assert "post-install verification FAILED" in r.stderr, r.stderr
+    assert r.returncode == 3, f"exit {r.returncode}:\n{r.stdout}\n{r.stderr}"
+    tx = _only_tx(backup)
+    assert _manifest_of(tx)["status"] == "failed_incomplete"
+    # The tampered file is LEFT IN PLACE -- deleting content this migration did not
+    # write is exactly what the guard exists to prevent.
+    assert (Path(home) / installed_rel).is_file()
+    assert (Path(tx) / "payload").is_dir(), "the backup was discarded"
+
+
+def test_post_install_seam_is_inert_when_unset(mini_dist, tmp_path):
+    """Red-on-garbage anchor for the two tests above: without the seam the identical
+    home applies cleanly, so the failures they assert come from the injected
+    corruption and not from the fixture or the seam merely existing."""
+    home = fx.migration_home(tmp_path / "h")
+    backup = tmp_path / "b"
+    r = _apply(home, backup, mini_dist)
+    assert r.returncode == 0, f"{r.stdout}\n{r.stderr}"
+    assert _manifest_of(_only_tx(backup))["status"] == "applied"
+    assert "post-install verification FAILED" not in r.stderr
+
+
+# --------------------------------------------------------------------------- #
+# Emptied-directory cleanup
+# --------------------------------------------------------------------------- #
+
+def test_equal_length_retired_dirs_are_both_cleaned(mini_dist, tmp_path):
+    """`Sort-Object -Property @{Expression={...}} -Unique` de-duplicates on the
+    CALCULATED key, so two directories whose paths are the same length collapsed to
+    one and the survivor was silently never removed.
+
+    Two sibling retired trees with equal-length manifest names reproduce it."""
+    a, b = fx.EQUAL_LENGTH_RETIRED
+    assert len(a) == len(b), "the fixture names must be equal length or this proves nothing"
+    home = fx.migration_home(tmp_path / "h", equal_length_retired=True)
+    for name in (a, b):
+        assert (Path(home) / COPILOT_ROOT / name / "SKILL.md").is_file(), name
+    assert _apply(home, tmp_path / "b", mini_dist).returncode == 0
+    leftovers = [name for name in (a, b) if (Path(home) / COPILOT_ROOT / name).exists()]
+    assert not leftovers, f"emptied retired directories were not cleaned: {leftovers}"
+    assert not (Path(home) / COPILOT_ROOT).exists()
+
+
+# --------------------------------------------------------------------------- #
+# Operator guidance on the terminal failure state
+# --------------------------------------------------------------------------- #
+
+def test_failed_incomplete_guidance_does_not_send_the_operator_to_dead_ends(
+        mini_dist, tmp_path):
+    """`failed_incomplete` is unresolved (a bare -Apply must still refuse) but also
+    TERMINAL: -Resume refuses it and -Rollback refuses it, both by design. The
+    refusal must therefore not offer those two commands as the remedy -- and this
+    test proves both really do bounce, so the guidance is checked against behavior
+    rather than against its own wording."""
+    home = fx.migration_home(tmp_path / "h")
+    backup = tmp_path / "b"
+    plan = _plan(home, backup, mini_dist)
+    installs = _seq_of(plan, "install")
+    assert _apply(home, backup, mini_dist, env={
+        "SKILL_MESH_TX_FAIL_AT": str(installs[-1]),
+        "SKILL_MESH_TX_FAIL_UNDO_AT": str(installs[0]),
+    }).returncode == 3
+    tx = _only_tx(backup)
+    assert _manifest_of(tx)["status"] == "failed_incomplete"
+
+    blocked = _apply(home, backup, mini_dist)
+    assert blocked.returncode == 2
+    msg = blocked.stderr
+    assert "INCOMPLETE_TRANSACTION" in msg
+    # Both commands the generic message used to advise really are dead ends here.
+    assert _migrate(home, backup, mini_dist, mode="-Resume",
+                    migration_id=tx.name).returncode == 2
+    assert _migrate(home, backup, mode="-Rollback",
+                    migration_id=tx.name).returncode == 2
+    assert "-Resume -MigrationId" not in msg, \
+        "the refusal advises -Resume, which refuses a failed_incomplete transaction"
+    assert "MANUALLY" in msg or "manual" in msg.lower(), \
+        "the refusal does not name manual recovery from the retained backup"
+    assert tx.name in msg, "the refusal does not name the MigrationId"
+
+
+def test_unresolved_but_resumable_transaction_still_gets_the_resume_remedy(
+        mini_dist, tmp_path):
+    """Red-on-garbage pair: for a genuinely resumable status the message must still
+    offer -Resume, or the fix above would have silently removed useful guidance from
+    every path instead of the one where it is wrong."""
+    home = fx.migration_home(tmp_path / "h")
+    backup = tmp_path / "b"
+    assert _apply(home, backup, mini_dist,
+                  env={"SKILL_MESH_TX_CRASH_AT": "0:after-begin"}).returncode == 9
+    tx = _only_tx(backup)
+    assert _manifest_of(tx)["status"] == "applying"
+    r = _apply(home, backup, mini_dist)
+    assert r.returncode == 2
+    assert "-Resume -MigrationId" in r.stderr, r.stderr
+    assert tx.name in r.stderr
+
+
+# --------------------------------------------------------------------------- #
+# Explicit -Rollback against a NON-applied transaction
+# --------------------------------------------------------------------------- #
+
+def test_rollback_of_a_crashed_applying_transaction_restores_the_home(
+        mini_dist, tmp_path):
+    """-Rollback is the documented recovery route for a crashed migration, and the
+    state machine legalizes `applying -> rolling_back` for exactly that. Every other
+    rollback test here drives an already-`applied` transaction, so this covers the
+    crash-recovery entry."""
+    home = fx.migration_home(tmp_path / "h", stale_generated=True)
+    backup = tmp_path / "b"
+    plan = _plan(home, backup, mini_dist)
+    before = _tree_digest(home)
+    crash_seq = _seq_of(plan, "install")[0]
+    assert _apply(home, backup, mini_dist,
+                  env={"SKILL_MESH_TX_CRASH_AT": f"{crash_seq}:after-mutate"}).returncode == 9
+    tx = _only_tx(backup)
+    assert _manifest_of(tx)["status"] == "applying"
+    assert _tree_digest(home) != before, "the crash left the home untouched -- nothing to undo"
+
+    r = _migrate(home, backup, mode="-Rollback", migration_id=tx.name)
+    assert r.returncode == 0, f"{r.stdout}\n{r.stderr}"
+    assert _manifest_of(tx)["status"] == "rolled_back"
+    assert _tree_digest(home) == before, "rollback of a crashed transaction did not restore"
+
+
+def test_rollback_of_a_prepared_transaction_is_a_clean_no_op(mini_dist, tmp_path):
+    """`prepared -> rolling_back` is the other operator-initiated entry: a
+    transaction that never mutated anything must be discardable, leaving the home
+    byte-identical."""
+    home = fx.migration_home(tmp_path / "h")
+    backup = tmp_path / "b"
+    before = _tree_digest(home)
+    assert _apply(home, backup, mini_dist,
+                  env={"SKILL_MESH_TX_CRASH_AT": "0:before-begin"}).returncode == 9
+    tx = _only_tx(backup)
+    # A crash during preparation legitimately leaves `prepared` on disk; the engine
+    # flips to `applying` before its first action, so the status is reset here to
+    # model the earlier crash window rather than to fake an unreachable state.
+    manifest_path = Path(tx) / "backup-manifest.json"
+    doc = json.loads(manifest_path.read_text(encoding="utf-8"))
+    doc["status"] = "prepared"
+    manifest_path.write_text(json.dumps(doc, indent=2), encoding="utf-8")
+
+    r = _migrate(home, backup, mode="-Rollback", migration_id=tx.name)
+    assert r.returncode == 0, f"{r.stdout}\n{r.stderr}"
+    assert _manifest_of(tx)["status"] == "rolled_back"
+    assert _tree_digest(home) == before
+
+
+# --------------------------------------------------------------------------- #
+# Report bounding for consumer-supplied path text
+# --------------------------------------------------------------------------- #
+
+def test_blocked_rel_path_is_bounded(mini_dist, tmp_path):
+    """A blocked finding is the channel an operator reads, pastes, and forwards, and
+    its rel_path is a consumer-controlled directory name. Same discipline
+    inspect-host-install.ps1 adopted for #84: charset-bounded segments and a length
+    cap, so a hostile or hand-edited home cannot inject separators, list commas, or
+    control characters into a report."""
+    home = fx.migration_home(tmp_path / "h", hostile_foreign_name=True)
+    plan = _blocked_plan(home, tmp_path / "b", mini_dist)
+    assert plan["blocked"], "the hostile directory did not block at all"
+    for b in plan["blocked"]:
+        for segment in b["rel_path"].split("/"):
+            assert SAFE_NAME_RE.match(segment), f"unbounded segment {segment!r}"
+    blob = json.dumps(plan["blocked"])
+    assert "," not in "".join(b["rel_path"] for b in plan["blocked"]), \
+        "a list separator survived into a blocked rel_path"
+    assert fx.HOSTILE_DIR not in blob, "the raw hostile directory name reached the report"
+    text = _migrate(home, tmp_path / "b", mini_dist, fmt="text").stdout
+    assert fx.HOSTILE_DIR not in text
+    assert "z" * 80 not in text, "an over-long name was not capped in the text report"
+
+
+def test_operational_rel_paths_stay_verbatim(mini_dist, tmp_path):
+    """The bounding above is DISPLAY-only on purpose. `actions[].rel_path` and the
+    backup manifest's records are OPERATIONAL -- undo resolves its target from them
+    and restore fidelity requires the exact original bytes -- so bounding them would
+    trade a formatting nit for data loss. This pins that boundary."""
+    home = fx.migration_home(tmp_path / "h")
+    backup = tmp_path / "b"
+    assert _apply(home, backup, mini_dist).returncode == 0
+    tx = _only_tx(backup)
+    for action in _plan_of(tx)["actions"]:
+        if action["action"] == "preserve":
+            assert (Path(home) / action["rel_path"]).is_file(), \
+                f"operational rel_path {action['rel_path']!r} no longer resolves"
+    for record in _manifest_of(tx)["preserved_files"]:
+        assert (Path(home) / record["rel_path"]).is_file(), record
+
+
+# --------------------------------------------------------------------------- #
+# One owner for the discovery-root shape
+# --------------------------------------------------------------------------- #
+
+DISCOVERY_SCRIPT = REPO_ROOT / "tools" / "skill-mesh-discovery.ps1"
+ROOT_LITERALS = ["'.claude/skills'", "'.github/skills'",
+                 "'.copilot/skills'", "'.claude/skills-gpt'"]
+
+
+def _strip_ps_comments(text):
+    """Drop block and line comments, mirroring tests/router/test_no_claude_dependency.py.
+
+    Documentation comments may legitimately spell a root; only EXECUTABLE code is
+    held to the single-owner rule."""
+    text = re.sub(r"<#.*?#>", "", text, flags=re.S)
+    return re.sub(r"#.*", "", text)
+
+
+def test_discovery_roots_have_exactly_one_owner():
+    """`.claude/rules/code-quality.md` -- "any constant defining data shape must
+    have ONE source of truth ... Duplicate definitions always drift". These roots
+    previously lived as three hand-maintained mirrors, and this repository already
+    paid for that drift class once in the Step 43/44 GPT retarget.
+
+    Enumerated from `git ls-files`, never hand-listed, so a fourth copy added
+    tomorrow fails the moment it is tracked."""
+    tracked = subprocess.run(["git", "ls-files", "*.ps1"], cwd=REPO_ROOT,
+                             capture_output=True, text=True, check=True).stdout.split("\n")
+    files = [REPO_ROOT / f.strip() for f in tracked if f.strip()]
+    assert files, "git ls-files matched no .ps1 files -- the gate would be vacuous"
+    offenders = {}
+    for p in files:
+        if p.resolve() == DISCOVERY_SCRIPT.resolve():
+            continue
+        code = _strip_ps_comments(p.read_text(encoding="utf-8"))
+        hits = [lit for lit in ROOT_LITERALS if lit in code]
+        if hits:
+            offenders[str(p.relative_to(REPO_ROOT))] = hits
+    assert not offenders, (
+        "discovery-root literals are duplicated outside their single owner "
+        f"(tools/skill-mesh-discovery.ps1): {offenders}")
+
+
+def test_single_owner_gate_reds_on_a_duplicate():
+    """Red-on-garbage anchor: the gate's own detector must fire on a planted copy,
+    and must not fire on a comment that merely documents a root."""
+    assert any(lit in _strip_ps_comments("$GPT = '.github/skills'\n") for lit in ROOT_LITERALS)
+    assert not any(lit in _strip_ps_comments("# GPT installs to '.github/skills' today\n")
+                   for lit in ROOT_LITERALS)
+
+
+def test_the_owner_actually_defines_every_root():
+    """The complement of the gate: proving nobody ELSE spells a root is only
+    meaningful if the owner does, and if the values are the ones the tools use."""
+    code = _strip_ps_comments(DISCOVERY_SCRIPT.read_text(encoding="utf-8"))
+    for lit in ROOT_LITERALS:
+        assert lit in code, f"the owner does not define {lit}"
+    r = _engine_script(DISCOVERY_SCRIPT,
+                       "(Get-SkillMeshDiscoveryRoot 'claude') + '|' + "
+                       "(Get-SkillMeshDiscoveryRoot 'gpt') + '|' + "
+                       "(Get-SkillMeshRetiredCopilotRoot) + '|' + "
+                       "(Get-SkillMeshLegacySkillsGptRoot) + '|' + "
+                       "[string](Get-SkillMeshDiscoveryRoot 'nope')")
+    assert r.returncode == 0, r.stderr
+    claude, gpt, retired, legacy, unknown = r.stdout.strip().split("|")
+    assert (claude, gpt) == (CLAUDE_ROOT, GPT_ROOT)
+    assert retired == COPILOT_ROOT
+    assert legacy == fx.LEGACY_SKILLS_GPT_ROOT
+    assert unknown == "", "an unknown provider must resolve to $null, not a guess"
 
 
 # --------------------------------------------------------------------------- #

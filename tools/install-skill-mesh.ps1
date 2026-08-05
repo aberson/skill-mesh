@@ -108,12 +108,16 @@ $BUILD_SCRIPT = Join-Path $TOOLS_DIR 'build-distributions.ps1'
 $PATH_GUARD = Join-Path $REPO_ROOT 'runtime\path-guard.ps1'
 $PROVENANCE = Join-Path $TOOLS_DIR 'skill-mesh-provenance.ps1'
 $TRANSACTION = Join-Path $TOOLS_DIR 'skill-mesh-transaction.ps1'
+$DISCOVERY = Join-Path $TOOLS_DIR 'skill-mesh-discovery.ps1'
 
 # Reuse the Step-34 path guard (traversal/junction/symlink rejection). Dot-source
 # with no -Path so only its functions load (Resolve-SafePath in this scope).
 . $PATH_GUARD
 # Shared provenance marker (single source of truth; defines Get-SkillMeshMarker).
 . $PROVENANCE
+# Shared discovery-root map (single source of truth for the provider -> root shape;
+# also dot-sourced by inspect-host-install.ps1 and migrate-legacy-install.ps1).
+. $DISCOVERY
 # Shared transaction engine (single source of truth for ordered apply + journal +
 # post-mutation verification), also dot-sourced by tools/migrate-legacy-install.ps1
 # so atomicity mechanics cannot drift between install and migration.
@@ -122,12 +126,11 @@ $TRANSACTION = Join-Path $TOOLS_DIR 'skill-mesh-transaction.ps1'
 $UTF8_NO_BOM = New-Object System.Text.UTF8Encoding($false)
 
 # Provider-specific install target subdirectory (relative to Home), POSIX form.
-# GPT installs to .github/skills -- a real GitHub Copilot CLI discovery root (proven
-# in Step 43); the retired project-relative .copilot/skills is NOT a Copilot root.
-$DISCOVERY_SUBDIR = @{
-    'claude' = '.claude/skills'
-    'gpt'    = '.github/skills'
-}
+# GPT installs to the real GitHub Copilot CLI project discovery root proven in
+# Step 43; the retired project-relative Copilot tree is NOT a Copilot root. The
+# literal map lives in tools/skill-mesh-discovery.ps1 (ONE owner, shared with the
+# inspector and the migrator) -- see that file for why it is not spelled here.
+$DISCOVERY_SUBDIR = Get-SkillMeshDiscoveryRoots
 
 $LEDGER_NAME = '.skill-mesh-install.json'
 
