@@ -129,7 +129,13 @@ committed fixture `SKILL.md` files sitting at real discovery paths, which made t
 publish phantom skills into its own host. Consumer-home fixtures are now synthesized at test time by
 `tests/distributions/legacy_install_fixtures.py` and a `git ls-files` gate keeps them from coming
 back. Steps 47–50 are pending, starting with
-reversible legacy-install migration (Step 47). 440 tests across seven suites. (Step 45 also surfaced #69: the Claude-profile `SKILL.md`
+reversible legacy-install migration (Step 47) — re-scoped 2026-08-05 by
+`documentation/step-47-decomposition-decision.md` after five review rounds of the unmerged
+`build-step-1785890195` branch failed to converge: Step 47 keeps the migrator/engine with a decided
+three-case preserve-drift policy and merges alone (build resumes from the branch, restoring the two
+round-5-changed files to `5ef1045`), while new Step 47b — off the Step 48→50 critical path — owns
+the containment gate's hardening (differential corpus + content-identity tripwire; AST rewrite
+deferred with a named trigger). 440 tests across seven suites. (Step 45 also surfaced #69: the Claude-profile `SKILL.md`
 frontmatter emits `description`/`argument` unquoted, so a colon-bearing value fails Copilot's YAML
 parse — a bounded builder defect, does not block the cutover. #87 fixed `/repo-sync`'s hardcoded
 default branch in minted issue-body links; its data-repair half is done for #56–#82, while #1–#37
