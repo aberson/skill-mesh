@@ -448,6 +448,60 @@ def test_private_path_gate_reds_on_a_planted_path(tmp_path):
 
 
 # --------------------------------------------------------------------------- #
+# No hardcoded default-branch assumption in minted link templates (#87)
+# --------------------------------------------------------------------------- #
+
+# A doc link that assumes the repository's default branch. GitHub has defaulted
+# new repos to `main` since 2020, so a skill that mints a link naming the old
+# default produces links that 404 on essentially every repo it is pointed at --
+# and `/build-phase` uses exactly those links to find the step it is executing.
+# Both the pattern AND the prose above avoid spelling a branch-bearing link out:
+# this file is swept by its own gate, so a literal example here would flag it.
+_BRANCH_ASSUMING_LINK_RE = re.compile(r"blob/(?:" + "master" + r"|main)/")
+
+
+@pytest.mark.skipif(not (REPO_ROOT / ".git").exists(),
+                    reason="not a git working tree (e.g. release stage)")
+def test_no_hardcoded_default_branch_in_link_templates():
+    """Sweep every tracked file for a branch-assuming doc-link template.
+
+    Hardcoding `main` instead of `master` would merely invert the same defect, so
+    both are caught; the legal form is the `<default-branch>` placeholder that
+    /repo-sync resolves via `gh repo view --json defaultBranchRef`.
+    """
+    offenders = []
+    for rel, p in _tracked_text_files():
+        try:
+            text = p.read_text(encoding="utf-8")
+        except (UnicodeDecodeError, OSError):
+            continue
+        for i, line in enumerate(text.splitlines(), 1):
+            if _BRANCH_ASSUMING_LINK_RE.search(line):
+                offenders.append(f"{rel}:{i}")
+    assert not offenders, (
+        "doc-link template hardcodes a default branch (use the "
+        "'<default-branch>' placeholder, resolved via gh): " + ", ".join(offenders[:20])
+    )
+
+
+def test_default_branch_gate_reds_on_a_planted_link(tmp_path):
+    """Red-on-garbage anchor: without it, a regex bug makes the sweep a permanent
+    green that inspects nothing."""
+    planted = tmp_path / "skill.md"
+    planted.write_text(
+        "see [plan.md](../blob/" + "master" + "/plan.md)\n"
+        "and [other](../blob/" + "main" + "/other.md)\n",
+        encoding="utf-8")
+    hits = [i for i, line in enumerate(planted.read_text(encoding="utf-8").splitlines(), 1)
+            if _BRANCH_ASSUMING_LINK_RE.search(line)]
+    assert hits == [1, 2], "the gate must catch a hardcoded branch in a link template"
+    # ...and stays quiet on the placeholder form the templates are supposed to use.
+    clean = tmp_path / "clean.md"
+    clean.write_text("see [plan.md](../blob/<default-branch>/plan.md)\n", encoding="utf-8")
+    assert not _BRANCH_ASSUMING_LINK_RE.search(clean.read_text(encoding="utf-8"))
+
+
+# --------------------------------------------------------------------------- #
 # Optional migration-source verification (skips if source absent)
 # --------------------------------------------------------------------------- #
 

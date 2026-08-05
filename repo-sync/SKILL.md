@@ -265,7 +265,7 @@ The disambiguator is the body footer `/repo-sync` writes.
 There are TWO footer shapes — both encode the source-plan
 path and the parser must recognize both. In the rendered
 issue body the plan path is a markdown link (square-bracket
-label wrapping the path, parenthesis URL `../blob/master/`
+label wrapping the path, parenthesis URL `../blob/<default-branch>/`
 plus that same path) so the path is clickable from the
 GitHub issue — never a code-spanned path followed by a
 parenthetical "linked to" phrase.
@@ -422,7 +422,7 @@ The Create / Update / Close templates below all assume this delivery method.
 ```markdown
 **Umbrella:** #<master-plan-umbrella-issue-if-exists>
 **Blocked by:** Phase <prerequisite-phase-if-any>
-**Build doc:** `<build-doc-path>` (linked to `../blob/master/<build-doc-path>`)
+**Build doc:** `<build-doc-path>` (linked to `../blob/<default-branch>/<build-doc-path>`)
 **Track:** <track-from-plan>
 
 ## Goal
@@ -455,7 +455,7 @@ The Create / Update / Close templates below all assume this delivery method.
 ```markdown
 ## Build step N of M — Phase <X> (umbrella #<umbrella-issue>)
 
-**Build doc:** `<build-doc-path>` (linked to `../blob/master/<build-doc-path>`) §<section> Step <X.N>
+**Build doc:** `<build-doc-path>` (linked to `../blob/<default-branch>/<build-doc-path>`) §<section> Step <X.N>
 
 ### What to build
 <full description from plan, not abbreviated>
@@ -503,7 +503,7 @@ collapsing to strictly sequential.>
   `/build-phase`.
 
 ---
-*Synced from `<plan>` (linked to `../blob/master/<plan>`) by /repo-sync at <git-short-sha>*
+*Synced from `<plan>` (linked to `../blob/<default-branch>/<plan>`) by /repo-sync at <git-short-sha>*
 ```
 
 The footer with the source path + SHA helps a future LLM verify whether

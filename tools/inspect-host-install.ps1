@@ -9,7 +9,9 @@
     Test-Path / Get-Item / Get-ChildItem and a bounded head-read of each SKILL.md.
 
     It reports:
-      - root instruction files (CLAUDE.md / AGENTS.md) with an evidence class;
+      - root instruction files (CLAUDE.md / AGENTS.md) with an evidence class
+        (host-convention when present, unknown when absent -- NEVER 'observed',
+        which is reserved for a host that exposes runtime provenance);
       - the Claude discovery root (.claude/skills) and the GPT discovery root
         (.github/skills), each with its state, link type/target, and a per-skill
         eligibility classification cross-referenced against config/skill-manifest.json;
@@ -45,6 +47,32 @@
     NEVER emits secret values or file contents -- only presence classes, counts,
     provider names, and stable classification labels.
 
+    OUTPUT SANITATION. Every scalar in the report is one of two classes.
+      CLOSED VOCABULARY -- provider slugs (from the manifest's `providers` object),
+        manifest skill names, classification labels, warning codes. A value outside
+        its vocabulary is DROPPED and counted, never echoed; a value INSIDE it is
+        emitted as the manifest's OWN slug, never the consumer's spelling of it
+        (a provider match is ordinal and case-insensitive, so a legitimate
+        `-Provider CLAUDE` install is recognized and normalized rather than dropped,
+        while a culture-equal lookalike padded with ignorable characters is not
+        admitted at all). This covers the two
+        channels that could carry arbitrary bytes: install-ledger keys (free-form
+        text in a hand-editable file, proven able to carry an absolute path) and the
+        `Profile:` header token (whose charset happily spells a credential).
+      CONSUMER PATH TEXT -- skill directory names and link targets. These are
+        in-contract (naming what is installed is the report's job) but are bounded
+        per segment to the skill-name charset and a length cap, so a hostile or
+        hand-edited home cannot inject separators, list commas, control characters,
+        or a 255-character name into the report.
+    The raw -Home value and this checkout's absolute manifest path are never echoed,
+    on stdout or stderr -- an invalid -Home is reported without quoting it back.
+
+    EXPLICIT NON-GOAL: a skill DIRECTORY NAME is reported (bounded, per above), not
+    withheld. Naming what is installed is the report's entire purpose, so a consumer
+    who names a directory after a credential will see that name in the report. The
+    guarantee is that no name can carry an absolute path, exceed its cap, or inject
+    separators/control characters -- not that path text is suppressed.
+
     -Home is REQUIRED. Exit 0 on success; nonzero (2) when -Home is missing,
     unreadable, or not a directory. The command NEVER prompts.
 
@@ -73,6 +101,7 @@ $ErrorActionPreference = 'Stop'
 $TOOLS_DIR = $PSScriptRoot
 $REPO_ROOT = Split-Path -Parent $TOOLS_DIR
 $PROVENANCE = Join-Path $TOOLS_DIR 'skill-mesh-provenance.ps1'
+$MANIFEST_REL = 'config/skill-manifest.json'
 $MANIFEST_PATH = Join-Path $REPO_ROOT 'config\skill-manifest.json'
 
 # Shared, single-source-of-truth provenance parser (Test-SkillMeshProvenance).
@@ -126,13 +155,61 @@ function Test-HeadOwned([string]$headText) {
     return (Test-SkillMeshProvenance $headText)
 }
 
-function Get-ProfileHeaderTag([string]$headText) {
-    # The generated provenance header carries a `Profile: <profile>` line. That value
-    # (claude|gpt) is metadata, not a secret, and is a stable adapter fingerprint.
-    if ([string]::IsNullOrEmpty($headText)) { return $null }
-    $m = [regex]::Match($headText, 'Profile:\s*([A-Za-z0-9_-]+)')
-    if ($m.Success) { return $m.Groups[1].Value }
+# -- Output sanitation --------------------------------------------------------
+
+$SAFE_LABEL_MAX = 64
+
+function Get-SafeLabel([string]$value, [int]$max = $SAFE_LABEL_MAX) {
+    # Bound ONE consumer-supplied path segment for display: the legal skill-name
+    # charset, a length cap, and no separators, quotes, list commas, or control
+    # characters. Replacement (not redaction) keeps a real consumer-only skill
+    # identifiable while making the segment unable to corrupt the report. Mirrors
+    # the Get-SanitizedSessionId idiom in runtime/skill-router.ps1.
+    if ([string]::IsNullOrEmpty($value)) { return '<unnamed>' }
+    $clean = [regex]::Replace($value, '[^A-Za-z0-9._-]', '_')
+    if ($clean.Length -gt $max) { $clean = $clean.Substring(0, $max) + '~' }
+    return $clean
+}
+
+function Resolve-KnownProvider([string]$value) {
+    # Match a consumer-supplied provider token against the manifest vocabulary and
+    # return the CANONICAL slug -- never the caller's spelling.
+    #
+    # Two traps make the obvious `-contains` wrong here:
+    #   1. `-contains` is CULTURE-aware, not ordinal, so it treats 'claude' plus a
+    #      run of Unicode-ignorable characters (U+00AD and friends) as equal to
+    #      'claude'. Echoing the matched token then puts unbounded non-ASCII
+    #      consumer bytes into the report under the guise of a known provider --
+    #      exactly the leak class this validation exists to close.
+    #   2. It is also case-INSENSITIVE, which we WANT for matching: the installer's
+    #      [ValidateSet('claude','gpt')] accepts -Provider CLAUDE and writes that
+    #      spelling into the ledger verbatim, so a case-sensitive match would file a
+    #      legitimate install as unrecognized -- a false-clean preflight, worse than
+    #      the leak. So: match case-insensitively but ORDINALLY, and emit the
+    #      manifest's own slug so the report's vocabulary stays closed either way.
+    if ([string]::IsNullOrEmpty($value)) { return $null }
+    foreach ($p in $script:KnownProviders) {
+        if ([string]::Equals($p, $value, [System.StringComparison]::OrdinalIgnoreCase)) {
+            return $p
+        }
+    }
     return $null
+}
+
+function Get-ProfileHeaderTag([string]$headText) {
+    # The generated provenance header carries a `Profile: <profile>` line. Only a
+    # value the manifest DECLARES as a provider is returned: build-distributions.ps1
+    # is the sole emitter of this line and writes nothing else, so any other token is
+    # hand-edited or hostile -- and the token charset [A-Za-z0-9_-] spells most
+    # credential shapes verbatim. The scan starts AT the generated header, so a decoy
+    # `Profile:` planted ABOVE it cannot win (Test-SkillMeshProvenance matches the
+    # header block anywhere in the head, not only at offset 0).
+    if ([string]::IsNullOrEmpty($headText)) { return $null }
+    $start = $headText.IndexOf((Get-SkillMeshHeaderOpen), [System.StringComparison]::Ordinal)
+    if ($start -lt 0) { return $null }
+    $m = [regex]::Match($headText.Substring($start), 'Profile:\s*([A-Za-z0-9_-]+)')
+    if (-not $m.Success) { return $null }
+    return (Resolve-KnownProvider $m.Groups[1].Value)
 }
 
 # -- Path display -------------------------------------------------------------
@@ -155,6 +232,18 @@ function Format-DisplayPath([string]$absPath) {
     return '<external>'
 }
 
+function Format-LinkTargetPath([string]$absPath) {
+    # A link target's RELATIVE rendering is composed of consumer directory names, so
+    # each segment is bounded before display. (discovery_root and rel_path are built
+    # from this script's own root constants plus an already-bounded skill name, so
+    # they need no second pass.) '<external>' still covers any target outside the
+    # home, and -AbsolutePaths still shows the real path verbatim.
+    $shown = Format-DisplayPath $absPath
+    if ([string]::IsNullOrEmpty($shown)) { return $shown }
+    if ($AbsolutePaths -or $shown -eq '<external>' -or $shown -eq '.') { return $shown }
+    return ((($shown -split '/') | ForEach-Object { Get-SafeLabel $_ }) -join '/')
+}
+
 function Join-HomePath([string]$relPosix) {
     return (Join-Path $script:HomeAbs ($relPosix -replace '/', '\'))
 }
@@ -172,13 +261,15 @@ function Get-LinkInfo([string]$absDir) {
     if (-not $isReparse) {
         return @{ link_type = 'directory'; link_target = $null }
     }
+    # link_type is a CLOSED set: directory | junction | symlink | reparse | absent.
+    # Anything else the OS reports (a mount point, an AppExeCLink) stays 'reparse'
+    # rather than passing an OS-supplied string through as a new label.
     $lt = 'reparse'
     $ltMember = $item | Get-Member -Name LinkType -ErrorAction SilentlyContinue
     if ($ltMember -and $item.LinkType) {
         switch -Regex ($item.LinkType) {
             'Junction'     { $lt = 'junction' }
             'SymbolicLink' { $lt = 'symlink' }
-            default        { $lt = ([string]$item.LinkType).ToLowerInvariant() }
         }
     }
     $targetDisplay = $null
@@ -190,7 +281,7 @@ function Get-LinkInfo([string]$absDir) {
                 $parent = [System.IO.Path]::GetDirectoryName($absDir)
                 $rawTarget = [System.IO.Path]::Combine($parent, $rawTarget)
             }
-            $targetDisplay = Format-DisplayPath $rawTarget
+            $targetDisplay = Format-LinkTargetPath $rawTarget
         }
     }
     return @{ link_type = $lt; link_target = $targetDisplay }
@@ -199,17 +290,23 @@ function Get-LinkInfo([string]$absDir) {
 # -- Manifest -----------------------------------------------------------------
 
 function Read-Manifest {
-    # name -> @{ status; single_profile } for managed/consumer-only + the
-    # provider-native single-profile carve-out. Missing/unparseable manifest is a
-    # hard input error (the inspector cannot classify without it).
+    # Returns @{ skills = <name -> @{ status; single_profile }>; providers = <slugs> }.
+    # `providers` is the CLOSED vocabulary every provider-slug check validates
+    # against, read from the manifest's own top-level `providers` object rather than
+    # duplicated here -- so a provider added in a later phase is honored without
+    # editing this tool (a hardcoded {claude, gpt} would silently report zero
+    # providers for a new lane, a false-clean preflight). Missing/unparseable
+    # manifest is a hard input error (the inspector cannot classify without it).
+    # Diagnostics name the repo-RELATIVE manifest path: this checkout's absolute
+    # path is never echoed, not even on stderr.
     if (-not (Test-Path -LiteralPath $MANIFEST_PATH -PathType Leaf)) {
-        Exit-Invalid "manifest not found at $MANIFEST_PATH"
+        Exit-Invalid "manifest not found at $MANIFEST_REL (relative to the skill-mesh checkout)"
     }
     try {
         $raw = [System.IO.File]::ReadAllText($MANIFEST_PATH, [System.Text.Encoding]::UTF8)
         $parsed = $raw | ConvertFrom-Json
     } catch {
-        Exit-Invalid "manifest at $MANIFEST_PATH is unparseable: $($_.Exception.Message)"
+        Exit-Invalid "$MANIFEST_REL is unparseable ($($_.Exception.GetType().Name))"
     }
     $map = @{}
     foreach ($s in @($parsed.skills)) {
@@ -221,7 +318,15 @@ function Read-Manifest {
         $single = ($status -eq 'provider-native') -or $coreNull
         $map[$name] = @{ status = $status; single_profile = $single }
     }
-    return $map
+    $providers = @()
+    $provProp = $parsed.PSObject.Properties['providers']
+    if ($null -ne $provProp -and $null -ne $provProp.Value) {
+        $providers = @($provProp.Value.PSObject.Properties | ForEach-Object { $_.Name } | Sort-Object)
+    }
+    if ($providers.Count -eq 0) {
+        Exit-Invalid "$MANIFEST_REL declares no providers; provider slugs cannot be validated"
+    }
+    return @{ skills = $map; providers = @($providers) }
 }
 
 # -- Per-root skill classification --------------------------------------------
@@ -280,15 +385,21 @@ function Get-RootAnalysis([string]$rootRel) {
         if ($owned) { $ownedCount++ }
         elseif ($hasSkillMd) { $unownedCount++ }
 
+        # A manifest name is already a closed-vocabulary value; anything else is a
+        # consumer-created directory name and is bounded before it reaches output.
+        $safeName = if ($inManifest) { $name } else { Get-SafeLabel $name }
+
         if ($null -eq $adapterSample -and $eligibility -eq 'managed' -and $owned) {
             $tag = Get-ProfileHeaderTag $head
             if ([string]::IsNullOrEmpty($tag)) { $tag = 'unknown' }
-            $adapterSample = [PSCustomObject]@{ skill = $name; profile_header = $tag }
+            $adapterSample = [PSCustomObject]@{ skill = $safeName; profile_header = $tag }
         }
 
         $entries += [PSCustomObject]@{
-            name            = $name
-            rel_path        = (Format-DisplayPath $dir.FullName)
+            name            = $safeName
+            # Composed from this script's root constant plus the bounded name, so
+            # rel_path can never diverge from the name it describes.
+            rel_path        = $(if ($AbsolutePaths) { Format-DisplayPath $dir.FullName } else { "$rootRel/$safeName" })
             eligibility     = $eligibility
             has_skill_md    = $hasSkillMd
             owned           = $owned
@@ -316,9 +427,12 @@ function Get-InstructionFiles {
     foreach ($rel in @('CLAUDE.md', 'AGENTS.md')) {
         $abs = Join-HomePath $rel
         $present = Test-Path -LiteralPath $abs -PathType Leaf
-        # NEVER upgrade host-convention to observed: observed ONLY when the file is
-        # actually on disk; otherwise it is a known host convention path, not observed.
-        $evidence = if ($present) { 'observed' } else { 'host-convention' }
+        # Runtime-provenance rule (plan section 7): this inspector never learns which
+        # instruction file a host actually LOADED -- it only runs Test-Path -- so it
+        # NEVER claims 'observed'. 'observed' is reserved for a host that exposes
+        # runtime provenance. A file present at a documented convention path is
+        # 'host-convention'; an absent one is 'unknown'.
+        $evidence = if ($present) { 'host-convention' } else { 'unknown' }
         $out += [PSCustomObject]@{
             rel_path       = $rel
             present        = $present
@@ -333,26 +447,38 @@ function Get-InstructionFiles {
 function Get-LedgerState {
     $path = Join-HomePath $LEDGER_NAME
     if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
-        return [PSCustomObject]@{ state = 'absent'; providers = @() }
+        return [PSCustomObject]@{ state = 'absent'; providers = @(); unrecognized_provider_count = 0 }
     }
     try {
         $raw = [System.IO.File]::ReadAllText($path, [System.Text.Encoding]::UTF8)
         $parsed = $raw | ConvertFrom-Json
     } catch {
-        return [PSCustomObject]@{ state = 'corrupt'; providers = @() }
+        return [PSCustomObject]@{ state = 'corrupt'; providers = @(); unrecognized_provider_count = 0 }
     }
     $installsProp = $parsed.PSObject.Properties['installs']
     if ($null -eq $installsProp -or
         -not ($installsProp.Value -is [System.Management.Automation.PSCustomObject])) {
-        return [PSCustomObject]@{ state = 'corrupt'; providers = @() }
+        return [PSCustomObject]@{ state = 'corrupt'; providers = @(); unrecognized_provider_count = 0 }
     }
     $verProp = $parsed.PSObject.Properties['ledger_version']
     if ($null -eq $verProp -or ([string]$verProp.Value) -ne ([string]$LEDGER_VERSION_EXPECTED)) {
-        return [PSCustomObject]@{ state = 'corrupt'; providers = @() }
+        return [PSCustomObject]@{ state = 'corrupt'; providers = @(); unrecognized_provider_count = 0 }
     }
-    # Provider NAMES only -- never any owned_files / created_dirs payload.
-    $providers = @($installsProp.Value.PSObject.Properties | ForEach-Object { $_.Name } | Sort-Object)
-    return [PSCustomObject]@{ state = 'valid'; providers = @($providers) }
+    # Provider NAMES only -- never any owned_files / created_dirs payload -- AND only
+    # names the manifest declares. An `installs` key is written solely from the
+    # installer's ValidateSet-bound -Provider, so a key outside that vocabulary is
+    # hand-edited or hostile; echoing keys verbatim put a real absolute path into the
+    # default report (#84). Unrecognized keys are counted, never printed.
+    $allKeys = @($installsProp.Value.PSObject.Properties | ForEach-Object { $_.Name })
+    $resolved = @($allKeys | ForEach-Object { Resolve-KnownProvider $_ })
+    # The CANONICAL slug is emitted, never the ledger's spelling of it.
+    $providers = @($resolved | Where-Object { $null -ne $_ } | Sort-Object -Unique)
+    $unrecognized = @($resolved | Where-Object { $null -eq $_ }).Count
+    return [PSCustomObject]@{
+        state                       = 'valid'
+        providers                   = @($providers)
+        unrecognized_provider_count = $unrecognized
+    }
 }
 
 # -- Router -------------------------------------------------------------------
@@ -375,7 +501,10 @@ function Get-RouterInfo {
         $relPath = Format-DisplayPath $found
         $head = Get-HeadTextSafe $found
         $m = [regex]::Match($head, '\$ROUTER_VERSION\s*=\s*''([^'']+)''')
-        if ($m.Success -and ($m.Groups[1].Value -match '^\d+\.\d+\.\d+$')) {
+        # \A..\z, not ^..$: in .NET '$' also matches BEFORE a trailing newline, so a
+        # version ending in LF passed the old gate and split the text report onto two
+        # lines. [0-9], not \d, so Unicode digits cannot pass. {1,4} caps the length.
+        if ($m.Success -and ($m.Groups[1].Value -match '\A[0-9]{1,4}\.[0-9]{1,4}\.[0-9]{1,4}\z')) {
             $version = $m.Groups[1].Value
         }
     }
@@ -392,22 +521,28 @@ function Get-RouterInfo {
 if ([string]::IsNullOrWhiteSpace($TargetHome)) {
     Exit-Invalid "-Home is required (path to the consumer home to inspect)."
 }
+# The -Home value is NEVER quoted back. It is an absolute path by construction and
+# may carry newlines or control characters, so echoing it wrote an attacker- or
+# accident-shaped line into stderr -- a stream a caller may fold into a pasted
+# report. The caller just supplied the value, so repeating it adds nothing.
 try {
     $script:HomeAbs = ([System.IO.Path]::GetFullPath($TargetHome)).TrimEnd('\', '/')
 } catch {
-    Exit-Invalid "-Home '$TargetHome' is not a valid path: $($_.Exception.Message)"
+    Exit-Invalid "-Home is not a valid path ($($_.Exception.GetType().Name))."
 }
 if ([string]::IsNullOrWhiteSpace($script:HomeAbs)) {
-    Exit-Invalid "-Home '$TargetHome' resolves to an empty path."
+    Exit-Invalid "-Home resolves to an empty path."
 }
 if (-not (Test-Path -LiteralPath $script:HomeAbs)) {
-    Exit-Invalid "-Home '$TargetHome' does not exist."
+    Exit-Invalid "-Home does not exist."
 }
 if (-not (Test-Path -LiteralPath $script:HomeAbs -PathType Container)) {
-    Exit-Invalid "-Home '$TargetHome' is not a directory."
+    Exit-Invalid "-Home is not a directory."
 }
 
-$script:ManifestMap = Read-Manifest
+$manifest = Read-Manifest
+$script:ManifestMap = $manifest.skills
+$script:KnownProviders = @($manifest.providers)
 
 # -- Gather --
 $instructionFiles = Get-InstructionFiles
@@ -430,13 +565,20 @@ function Add-Warning([string]$code, [string]$message) {
     $script:warnings += [PSCustomObject]@{ code = $code; message = $message }
 }
 
-function Format-NameList($names, [int]$cap = 10) {
-    $arr = @($names | Sort-Object -Unique)
+function Format-NameList($names, [int]$cap = 10, [int]$maxChars = 400) {
+    # Bound every name before joining: an unbounded name would otherwise put ~2.5 KB
+    # of consumer bytes into one warning, and a name containing this function's own
+    # ', ' separator would render indistinguishably from two names. The count cap
+    # alone did neither.
+    $arr = @(@($names | ForEach-Object { Get-SafeLabel ([string]$_) }) | Sort-Object -Unique)
     if ($arr.Count -eq 0) { return '' }
     if ($arr.Count -gt $cap) {
-        return (($arr[0..($cap - 1)] -join ', ') + ", ... (+$($arr.Count - $cap) more)")
+        $text = (($arr[0..($cap - 1)] -join ', ') + ", ... (+$($arr.Count - $cap) more)")
+    } else {
+        $text = ($arr -join ', ')
     }
-    return ($arr -join ', ')
+    if ($text.Length -gt $maxChars) { $text = $text.Substring(0, $maxChars) + ' ...' }
+    return $text
 }
 
 if (Test-Path -LiteralPath (Join-HomePath $RETIRED_COPILOT_REL)) {
@@ -506,6 +648,10 @@ if ($missingGpt.Count -gt 0) {
 if ($ledger.state -eq 'corrupt') {
     Add-Warning 'LEDGER_CORRUPT' "the install ledger ($LEDGER_NAME) is unparseable or an unknown schema; ownership tracking is lost."
 }
+if ($ledger.state -eq 'valid' -and $ledger.unrecognized_provider_count -gt 0) {
+    Add-Warning 'LEDGER_UNKNOWN_PROVIDER' `
+        "the install ledger names $($ledger.unrecognized_provider_count) install key(s) that are not declared providers; the key names are withheld from this report."
+}
 if ($router.classification -eq 'legacy') {
     Add-Warning 'ROUTER_LEGACY' "the router at $($router.rel_path) is the legacy path ($LEGACY_ROUTER_REL); the canonical router is $CANONICAL_ROUTER_REL."
 }
@@ -574,7 +720,7 @@ Add-ProfileLines 'gpt profile' $report.profiles.gpt
 $lines.Add('')
 Add-ProfileLines 'legacy .claude/skills-gpt' $report.legacy_skills_gpt
 $lines.Add('')
-$lines.Add("ledger: state=$($report.ledger.state) providers=[$(@($report.ledger.providers) -join ', ')]")
+$lines.Add("ledger: state=$($report.ledger.state) providers=[$(@($report.ledger.providers) -join ', ')] unrecognized=$($report.ledger.unrecognized_provider_count)")
 $routerVer = if ($null -ne $report.router.version) { $report.router.version } else { '-' }
 $routerPath = if ($null -ne $report.router.rel_path) { $report.router.rel_path } else { '-' }
 $lines.Add("router: classification=$($report.router.classification) version=$routerVer path=$routerPath")

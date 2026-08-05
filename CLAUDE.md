@@ -120,10 +120,21 @@ both-profile discovery proof (Step 45, #67) — with both profiles installed, Co
 by name and the `.github/skills` GPT profile wins the `.claude/skills` collision by discovery-root
 precedence (`.github/skills` scanned first), so the migrator may install both profiles without the
 GPT skill being shadowed; and read-only host-install inspection (Step 46, #59) — `tools/inspect-host-install.ps1`
-plus `tests/distributions/test_host_inspect.py` (28 tests). Steps 47–50 are pending, starting with
-reversible legacy-install migration (Step 47). 329 tests across seven suites. (Step 45 also surfaced #69: the Claude-profile `SKILL.md`
+plus `tests/distributions/test_host_inspect.py`, since **hardened** against the four defects a
+full-suite wrap found in it (#83–#86, closed 2026-08-04): the `evidence_class` inversion that let a
+bare `Test-Path` claim `observed`; ten channels echoing untrusted consumer bytes into the default
+report; four untested behaviors (no `foreign` fixture, the corrupt-ledger paths, router
+`canonical`/`legacy`, the `<external>` junction sentinel); and — highest blast radius — twelve
+committed fixture `SKILL.md` files sitting at real discovery paths, which made this repository
+publish phantom skills into its own host. Consumer-home fixtures are now synthesized at test time by
+`tests/distributions/legacy_install_fixtures.py` and a `git ls-files` gate keeps them from coming
+back. Steps 47–50 are pending, starting with
+reversible legacy-install migration (Step 47). 440 tests across seven suites. (Step 45 also surfaced #69: the Claude-profile `SKILL.md`
 frontmatter emits `description`/`argument` unquoted, so a colon-bearing value fails Copilot's YAML
-parse — a bounded builder defect, does not block the cutover.)
+parse — a bounded builder defect, does not block the cutover. #87 fixed `/repo-sync`'s hardcoded
+default branch in minted issue-body links; its data-repair half is done for #56–#82, while #1–#37
+still point at a plan doc that is not on any pushed branch of `aberson/coding-root` — a publishing
+gap in that repo, not a branch-name defect.)
 
 Phases 1–6 delivered the canonical `skills/` source tree, the provider-neutral router, and the
 distribution, installer, and release tooling. Plan:

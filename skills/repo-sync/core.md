@@ -171,11 +171,23 @@ subdirectory. Resolve and echo the repo before any mutating call:
 ```bash
 cd <absolute-project-dir>
 REPO=$(gh repo view --json nameWithOwner -q .nameWithOwner)
-echo "Target repo: $REPO"
+DEFAULT_BRANCH=$(gh repo view --json defaultBranchRef -q .defaultBranchRef.name)
+echo "Target repo: $REPO (default branch: $DEFAULT_BRANCH)"
 ```
 
 Confirm the printed `Target repo:` matches the intended project. If it
 does not, stop — the cwd is wrong.
+
+`$DEFAULT_BRANCH` is the `<default-branch>` placeholder every body
+template below interpolates into its `../blob/<default-branch>/` doc
+links. **Resolve it — never assume.** GitHub has defaulted new repos to
+`main` since 2020, so a hardcoded `master` 404s every minted build-doc
+link, and a hardcoded `main` merely inverts the same defect for a repo
+that genuinely still uses `master`. When the build doc lives in a
+DIFFERENT repo than the issues (a cross-repo plan), resolve that repo's
+branch instead — `gh repo view <owner>/<repo> --json defaultBranchRef -q
+.defaultBranchRef.name` — because the link must resolve against the repo
+that actually hosts the doc.
 
 > Wrong-directory guard: before this gh issue sync, warn if the resolved target project repo != the repo `gh` resolves from cwd's remote (advisory, never blocks) — per working-directory.md § Wrong-directory guard; reference impl `Test-WrongDirGuard`.
 
@@ -273,7 +285,7 @@ The disambiguator is the body footer `/repo-sync` writes.
 There are TWO footer shapes — both encode the source-plan
 path and the parser must recognize both. In the rendered
 issue body the plan path is a markdown link (square-bracket
-label wrapping the path, parenthesis URL `../blob/master/`
+label wrapping the path, parenthesis URL `../blob/<default-branch>/`
 plus that same path) so the path is clickable from the
 GitHub issue — never a code-spanned path followed by a
 parenthetical "linked to" phrase.
@@ -430,7 +442,7 @@ The Create / Update / Close templates below all assume this delivery method.
 ```markdown
 **Umbrella:** #<master-plan-umbrella-issue-if-exists>
 **Blocked by:** Phase <prerequisite-phase-if-any>
-**Build doc:** `<build-doc-path>` (linked to `../blob/master/<build-doc-path>`)
+**Build doc:** `<build-doc-path>` (linked to `../blob/<default-branch>/<build-doc-path>`)
 **Track:** <track-from-plan>
 
 ## Goal
@@ -463,7 +475,7 @@ The Create / Update / Close templates below all assume this delivery method.
 ```markdown
 ## Build step N of M — Phase <X> (umbrella #<umbrella-issue>)
 
-**Build doc:** `<build-doc-path>` (linked to `../blob/master/<build-doc-path>`) §<section> Step <X.N>
+**Build doc:** `<build-doc-path>` (linked to `../blob/<default-branch>/<build-doc-path>`) §<section> Step <X.N>
 
 ### What to build
 <full description from plan, not abbreviated>
@@ -511,7 +523,7 @@ collapsing to strictly sequential.>
   `/build-phase`.
 
 ---
-*Synced from `<plan>` (linked to `../blob/master/<plan>`) by /repo-sync at <git-short-sha>*
+*Synced from `<plan>` (linked to `../blob/<default-branch>/<plan>`) by /repo-sync at <git-short-sha>*
 ```
 
 The footer with the source path + SHA helps a future LLM verify whether
