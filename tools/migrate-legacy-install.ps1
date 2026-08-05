@@ -265,8 +265,11 @@ function Resolve-HomeTarget {
       enough: a reparse point planted on an ancestor after the scan redirects the
       real path before the mutation runs, which is the whole TOCTOU window.
 
-      Throws on escape. Returns the verified absolute path, which callers assign to
-      a $safe* variable and hand to the filesystem.
+      Throws on escape. Returns the CANONICAL RESOLVED path -- never the lexical one
+      it started from -- which callers assign to a $safe* variable and hand to the
+      filesystem. Returning the lexical path would leave the TOCTOU window open: the
+      OS would re-resolve it at operation time, following whatever reparse points
+      exist then, which is exactly the race this function exists to close.
     #>
     param(
         [Parameter(Mandatory = $true)][string]$RelPosix,
@@ -278,11 +281,12 @@ function Resolve-HomeTarget {
         throw ("migrate-legacy-install: SECURITY -- the parent of '$RelPosix' resolves outside " +
                "the consumer home (junction or symlink escape); refusing to $Operation.")
     }
-    if (-not (Test-ContainedInHome $abs)) {
+    $resolved = Get-ContainedHomePath $abs
+    if ($null -eq $resolved) {
         throw ("migrate-legacy-install: SECURITY -- '$RelPosix' resolves outside the consumer " +
                "home (junction or symlink escape); refusing to $Operation.")
     }
-    return $abs
+    return $resolved
 }
 
 function Resolve-HomeTargetForRead([string]$relPosix) {
@@ -344,17 +348,31 @@ function ConvertTo-HomeRel([string]$absPath) {
     return ($rel -replace '\\', '/')
 }
 
-function Test-ContainedInHome([string]$absPath) {
+function Get-ContainedHomePath([string]$absPath) {
     # Re-resolve through the path guard (which FOLLOWS junctions/symlinks) and
-    # assert the real path is still inside the home. Used at scan time AND again
-    # immediately before every write, so a junction planted on an ancestor between
-    # the two cannot redirect a mutation out of the home.
+    # return the CANONICAL REAL PATH when it is still inside the home, else $null.
+    #
+    # Returning the resolved value -- rather than discarding it and answering a mere
+    # boolean -- is the whole point. A caller that validates one string and then
+    # hands a DIFFERENT (lexical) string to the filesystem has not closed the TOCTOU
+    # window it thinks it closed: the OS re-resolves the lexical path at operation
+    # time, following whatever reparse points exist THEN. Handing the filesystem the
+    # already-canonicalized path is what makes the check load-bearing.
+    #
+    # Safe for targets that do not exist yet: Get-CanonicalRealPath appends a
+    # non-existing tail verbatim to the resolved existing prefix (path-guard.ps1).
     try {
-        $null = Resolve-SafePath -Path $absPath -AllowedRoots @($script:HomeAbs)
-        return $true
+        return (Resolve-SafePath -Path $absPath -AllowedRoots @($script:HomeAbs))
     } catch {
-        return $false
+        return $null
     }
+}
+
+function Test-ContainedInHome([string]$absPath) {
+    # Boolean face of Get-ContainedHomePath, for the scan-time call sites that only
+    # need the yes/no. Anything that goes on to TOUCH the path must use the resolved
+    # path from Get-ContainedHomePath / Resolve-HomeTarget instead.
+    return ($null -ne (Get-ContainedHomePath $absPath))
 }
 
 function Read-FileHead([string]$absPath, [int]$maxBytes = 8192) {
@@ -812,7 +830,14 @@ function Get-CreatedDirs($installs) {
         $current = ''
         for ($k = 0; $k -lt $segments.Count - 1; $k++) {
             $current = $(if ($current -eq '') { $segments[$k] } else { "$current/$($segments[$k])" })
-            if (-not (Test-Path -LiteralPath (Join-HomePathLexical $current))) { [void]$set.Add($current) }
+            # Read side of the choke point, not the lexical joiner: a junction on an
+            # ancestor would otherwise make this existence probe answer about a
+            # directory OUTSIDE the home, and the answer decides what the ownership
+            # ledger claims to have created (and may later delete). A path that
+            # resolves outside is $null here, which is correctly "not present" --
+            # this run did not create it, so it is never recorded as ours.
+            $probe = Resolve-HomeTargetForRead $current
+            if ($null -ne $probe -and -not (Test-Path -LiteralPath $probe)) { [void]$set.Add($current) }
         }
     }
     return , @(@($set) | Sort-Object)
@@ -888,7 +913,14 @@ function New-BackupManifest($plan) {
         if ($a.action -ne 'retire' -and -not ($a.action -eq 'install' -and $null -ne $a.pre_hash)) { continue }
         $abs = Resolve-HomeTargetForRead $a.rel_path
         $size = 0
-        if (Test-Path -LiteralPath $abs -PathType Leaf) { $size = (Get-Item -LiteralPath $abs -Force).Length }
+        # $abs is $null when the path resolves outside the home (a junction planted
+        # since the scan). PS 5.1 coerces $null to '' for -LiteralPath and THROWS,
+        # which would surface a raw ParameterBindingValidationException and exit 1,
+        # preempting this tool's own PRECONDITION_DRIFT / exit-2 handling. Size 0 is
+        # the honest answer: there is no readable original inside the home.
+        if ($null -ne $abs -and (Test-Path -LiteralPath $abs -PathType Leaf)) {
+            $size = (Get-Item -LiteralPath $abs -Force).Length
+        }
         $originals += [PSCustomObject]@{
             rel_path       = $a.rel_path
             size           = $size

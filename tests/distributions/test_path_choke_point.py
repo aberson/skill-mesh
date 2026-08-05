@@ -52,13 +52,31 @@ MUTATING = re.compile(
 )
 
 # Which argument actually RECEIVES the mutation. For Copy-Item/Move-Item that is
-# -Destination: -LiteralPath is the source being READ, and it is legitimately a
-# generated dist file outside the consumer home. For everything else the path
-# argument is the thing being written or deleted.
+# -Destination; for everything else the path argument is the thing written or deleted.
 DESTINATION_IS_TARGET = ("Copy-Item", "Move-Item")
 DEST_ARG = re.compile(r"-Destination\s+(?P<arg>\S+)")
 PATH_ARG = re.compile(r"-LiteralPath\s+(?P<arg>\S+)|-Path\s+(?P<arg2>\S+)")
 DOTNET_FIRST_ARG = re.compile(r"::\w+\(\s*(?P<arg>[^,\)]+)")
+
+# ...but the SOURCE of a Copy-Item/Move-Item is NOT out of scope, and an earlier
+# version of this gate wrongly assumed it was ("-LiteralPath is the source being
+# READ, and it is legitimately a generated dist file"). That assumption is what let
+# the decisive defect through three review rounds:
+#
+#     Copy-Item -LiteralPath (Join-HomePathLexical $a.rel_path) -Destination $payload
+#
+# The destination there is a perfectly gated backup payload; the SOURCE is a
+# consumer-home path built lexically, so an ancestor junction redirects the READ and
+# the "pre-image" captured into the backup is a file from outside the home --
+# corrupting the exact artifact rollback depends on.
+#
+# A dist-file source really is legitimate, so the rule is not "sources must be
+# $safe*". It is narrower and exact: a LEXICAL CONSUMER-HOME PATH MAY NEVER REACH
+# THE FILESYSTEM, in any argument of any mutating primitive. Anything built from the
+# lexical joiner or from the raw home root, and not laundered through a resolver, is
+# a violation wherever it appears.
+LEXICAL_HOME = re.compile(r"Join-HomePathLexical|\$script:HomeAbs\b|\$HomeAbs\b")
+SOURCE_ARG = re.compile(r"-LiteralPath\s+(?P<arg>\S+)|-Path\s+(?P<arg2>\S+)")
 
 SAFE_VAR = re.compile(r"\A\$safe[A-Za-z0-9_]*\Z", re.I)
 
@@ -203,6 +221,49 @@ def safe_var_assignments(text):
     return out
 
 
+def ungated_reason(var, assigns, seen=None):
+    """None if `var` is TRANSITIVELY born from an approved resolver, else why not.
+
+    Follows `$safeB = $safeA` chains to their origin. Stopping at one hop -- the
+    earlier behaviour, a bare `continue  # derived from another gated value` -- meant
+    a two-link alias chain (`$safeA = $rawPath; $safeB = $safeA`) laundered a raw
+    path into a name the gate trusted, so the gate could be defeated by renaming.
+    A cycle counts as ungated: `$safeA = $safeB; $safeB = $safeA` proves nothing.
+    """
+    key = var.lower()
+    seen = set() if seen is None else seen
+    if key in seen:
+        return f"{var} is part of an assignment cycle, which proves nothing"
+    seen = seen | {key}
+    rhs_list = assigns.get(key)
+    if not rhs_list:
+        return f"{var} is never assigned in this file"
+    for rhs in rhs_list:
+        if any(r in rhs for r in APPROVED_RESOLVERS):
+            continue
+        parents = re.findall(r"\$safe[A-Za-z0-9_]*", rhs, re.I)
+        if parents:
+            for p in parents:
+                why = ungated_reason(p, assigns, seen)
+                if why:
+                    return f"{var} derives from {why}"
+            continue
+        return f"{var} is assigned from an ungated expression ({rhs})"
+    return None
+
+
+def _check_expression(rel, line_no, stripped, arg, assigns, bad, role):
+    """Assert one path expression is a transitively-gated $safe* value."""
+    found = re.findall(r"\$safe[A-Za-z0-9_]*", arg, re.I)
+    if not found:
+        bad.append(f"{rel}:{line_no}: {role} is not a $safe* value ({arg}): {stripped}")
+        return
+    for var in found:
+        why = ungated_reason(var, assigns)
+        if why:
+            bad.append(f"{rel}:{line_no}: {why}, so the $safe* name is not proof of anything")
+
+
 def violations_in(rel, text):
     """Sites in `rel` that break the convention, as human-readable strings."""
     if rel in FILE_EXEMPT:
@@ -212,28 +273,32 @@ def violations_in(rel, text):
     for _, line_no, stripped, arg in scan_source(rel, text):
         if (rel, stripped) in SITE_EXEMPT:
             continue
+
+        # Rule 1: no lexical consumer-home path may reach the filesystem, in ANY
+        # argument -- source or destination. This is the rule that would have caught
+        # the prepared-phase backup read.
+        m = MUTATING.search(strip_ps_comments(stripped))
+        if LEXICAL_HOME.search(stripped):
+            bad.append(f"{rel}:{line_no}: a lexical consumer-home path reaches the "
+                       f"filesystem un-resolved: {stripped}")
+            continue
+
+        # Rule 2: the argument RECEIVING the mutation is a transitively-gated $safe*.
         if arg is None:
             bad.append(f"{rel}:{line_no}: cannot identify the path argument: {stripped}")
             continue
         # `"$safeTarget.$PID.tmp"` and a bare `$safeTarget` both count; a raw
         # expression, a lexical join, or any other variable does not.
-        found = re.findall(r"\$safe[A-Za-z0-9_]*", arg, re.I)
-        if not found:
-            bad.append(f"{rel}:{line_no}: path is not a $safe* value ({arg}): {stripped}")
-            continue
-        for var in found:
-            rhs_list = assigns.get(var.lower())
-            if not rhs_list:
-                bad.append(f"{rel}:{line_no}: {var} is never assigned in this file")
-                continue
-            for rhs in rhs_list:
-                if any(r in rhs for r in APPROVED_RESOLVERS):
-                    continue
-                if re.search(r"\$safe[A-Za-z0-9_]*", rhs, re.I):
-                    continue  # derived from another gated value
-                bad.append(
-                    f"{rel}: {var} is assigned from an ungated expression ({rhs}), "
-                    f"so the $safe* name at line {line_no} is not proof of anything")
+        _check_expression(rel, line_no, stripped, arg, assigns, bad, "path")
+
+        # Rule 3: for Copy-Item/Move-Item the SOURCE is checked too -- but only for
+        # the lexical-home shape (rule 1), since a dist-file source is legitimate.
+        # A source naming a $safe* variable must still be gated transitively.
+        if m and m.group("cmdlet") in DESTINATION_IS_TARGET:
+            sm = SOURCE_ARG.search(stripped, m.end())
+            src = (sm.group("arg") or sm.group("arg2")).strip() if sm else None
+            if src and re.search(r"\$safe[A-Za-z0-9_]*", src, re.I):
+                _check_expression(rel, line_no, stripped, src, assigns, bad, "source")
     return bad
 
 
@@ -327,6 +392,51 @@ def test_gate_would_have_caught_the_five_escaped_sites():
     for label, line in escaped.items():
         bad = violations_in("tools/migrate-legacy-install.ps1", line)
         assert bad, f"the gate would NOT have caught the {label} site: {line}"
+
+
+def test_gate_catches_a_lexical_home_path_used_as_a_COPY_SOURCE():
+    """The exact defect that escaped three review rounds.
+
+    An earlier version of this gate inspected only -Destination for Copy-Item,
+    reasoning that the source is "legitimately a generated dist file". The decisive
+    defect was a consumer-home pre-image read through the lexical joiner, with a
+    perfectly gated destination -- so the gate returned zero violations on the very
+    line it was written to prevent. Assembled from fragments so this module's own
+    text carries no unguarded mutating call.
+    """
+    line = ("Copy-Item " + "-LiteralPath " + "(Join-HomePathLexical $a.rel_path) "
+            + "-Destination $safePayload -Force")
+    src = "$safePayload = Resolve-TxPayloadPath $a.backup_payload\n" + line
+    bad = violations_in("tools/migrate-legacy-install.ps1", src)
+    assert bad, "the gate must flag a lexical consumer-home path used as a copy SOURCE"
+    assert any("lexical consumer-home path" in b for b in bad), bad
+
+
+def test_gate_follows_safe_alias_chains_transitively():
+    """A two-hop alias chain must not launder a raw path into a trusted name.
+
+    `$safeA = $rawPath; $safeB = $safeA` previously produced zero violations, so the
+    gate could be defeated by renaming -- which made "a sixth unguarded site is
+    impossible" untrue.
+    """
+    two_hop = ("$safeA = $rawPath\n"
+               "$safeB = $safeA\n"
+               + "Remove-Item " + "-LiteralPath " + "$safeB -Force")
+    bad = violations_in("tools/migrate-legacy-install.ps1", two_hop)
+    assert bad, "the gate must follow $safe* alias chains to their origin"
+    assert any("derives from" in b for b in bad), bad
+
+    # ...and a chain that bottoms out in a real resolver is still accepted.
+    good = ("$safeA = Resolve-HomeTarget -RelPosix $rel\n"
+            "$safeB = $safeA\n"
+            + "Remove-Item " + "-LiteralPath " + "$safeB -Force")
+    assert violations_in("tools/migrate-legacy-install.ps1", good) == []
+
+    # An assignment cycle proves nothing and must not be mistaken for gated.
+    cycle = ("$safeA = $safeB\n"
+             "$safeB = $safeA\n"
+             + "Remove-Item " + "-LiteralPath " + "$safeA -Force")
+    assert violations_in("tools/migrate-legacy-install.ps1", cycle), "a cycle is not proof"
 
 
 def test_allowlist_entries_are_live_and_carry_a_reason():
