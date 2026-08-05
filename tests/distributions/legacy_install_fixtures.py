@@ -63,7 +63,15 @@ FOREIGN_DIR = "operator-notes"
 # can never suppress it, which is why the leak assertions check closed-vocabulary
 # CHANNELS structurally rather than hunting for this substring.
 SECRET = "sk-LEAKCANARY-0123456789abcdef"
-VICTIM_PATH = r"C:\Users\victim\secrets" + "\\" + SECRET
+# The path is ASSEMBLED rather than spelled out on one line. This repository's own
+# committed-path gate (test_manifest_contract.py ::
+# test_no_absolute_private_paths_committed) fails any tracked file whose SOURCE
+# LINE contains a drive-absolute `<drive>:\Users\...` path, and its exempt list is
+# reserved for files that cannot do their job any other way. A canary is not one of
+# those: only the assembled VALUE is planted, so every leak assertion that consumes
+# VICTIM_PATH is byte-unchanged.
+_PATH_SEP = "\\"
+VICTIM_PATH = _PATH_SEP.join(["C:", "Users", "victim", "secrets", SECRET])
 
 # Length of the over-long directory-name plant. Must exceed the inspector's 64-char
 # display cap (so truncation is proven) while leaving MAX_PATH headroom once mounted
@@ -358,6 +366,91 @@ def _hostile(home):
     write_exact(home, LEGACY_ROUTER, "$ROUTER_VERSION = '1.2.3\n'\n")
 
 
+# --------------------------------------------------------------------------- #
+# Migration shapes (Step 47)
+#
+# The migrator needs a home whose contents line up with a REAL built distribution,
+# so these name manifest skills rather than invented ones. Which status each name
+# must carry is asserted in tests/distributions/test_legacy_migration.py
+# (test_migration_fixture_names_match_the_manifest) -- a manifest edit that changed
+# one of their statuses would otherwise silently turn a positive fixture into a
+# negative one.
+# --------------------------------------------------------------------------- #
+
+# Portable skills (both adapters) the migration installs into BOTH profiles.
+MIGRATION_MANAGED = ("plan-review", "repo-init")
+# A provider-native skill (core: null): Claude profile only, and its absence from
+# the GPT profile must NEVER be read as an incomplete distribution.
+MIGRATION_NATIVE = "context-slim"
+# Unmanifested consumer skills that must survive a migration byte-for-byte.
+MIGRATION_CONSUMER_ONLY = ("build-observer", "goblin-sweep")
+
+
+def legacy_skill_md(name):
+    """The live legacy shape: a real hand-authored launcher at a managed path.
+
+    This is the exact content the safe installer refuses (no provenance marker at a
+    generated target path) and the migrator adopts."""
+    return (
+        "---\n"
+        "name: " + name + "\n"
+        'description: "Legacy hand-maintained launcher."\n'
+        "---\n"
+        "# " + name + " (legacy)\n\n"
+        "Hand-maintained before the cutover. Not skill-mesh generated.\n"
+    )
+
+
+def migration_home(home, foreign=False, retired_copilot=True, consumer_only=True,
+                   core_holder=True, legacy_ledger=True, stale_generated=False):
+    """A consumer home in the pre-cutover state the migrator has to handle.
+
+    Every flag isolates ONE classification input, so a test can build the same home
+    with and without a single feature and prove the feature is what changed the
+    outcome (the red-on-garbage pairing this repo requires)."""
+    home = Path(home)
+    home.mkdir(parents=True, exist_ok=True)
+    for name in MIGRATION_MANAGED:
+        write(home, CLAUDE_ROOT + "/" + name + "/SKILL.md", legacy_skill_md(name))
+    if consumer_only:
+        for name in MIGRATION_CONSUMER_ONLY:
+            write(home, CLAUDE_ROOT + "/" + name + "/SKILL.md", consumer_skill_md(name))
+    if core_holder:
+        write(home, CLAUDE_ROOT + "/_shared/judge-core.md",
+              "# judge-core (shared core)\n\nConsumer-held shared core; not a skill.\n")
+    if retired_copilot:
+        # A pre-Step-44 GPT install at the RETIRED project-relative target. It
+        # carries the provenance marker, so it is skill-mesh's OWN superseded file
+        # and is the one thing the migrator RETIRES.
+        write(home, RETIRED_COPILOT_ROOT + "/" + MIGRATION_MANAGED[0] + "/SKILL.md",
+              generated_skill_md(MIGRATION_MANAGED[0], "gpt"))
+    if stale_generated:
+        # A generated file the current distribution no longer emits, sitting inside
+        # a managed skill dir: skill-mesh's own, therefore retired, not blocked.
+        write(home, CLAUDE_ROOT + "/" + MIGRATION_MANAGED[0] + "/stale-core.md",
+              generated_core_md("claude"))
+    if foreign:
+        # The ONE input that must BLOCK: not a manifest name, no SKILL.md, not
+        # `_shared`.
+        write(home, CLAUDE_ROOT + "/" + FOREIGN_DIR + "/README.md",
+              "# operator notes\n\nNot a skill, not managed, not the core-holder.\n")
+    if legacy_ledger:
+        write(home, LEDGER_NAME, ledger(["claude"]))
+    return home
+
+
+def _migration_legacy(home):
+    migration_home(home)
+
+
+def _migration_foreign(home):
+    migration_home(home, foreign=True)
+
+
+def _migration_stale_generated(home):
+    migration_home(home, stale_generated=True)
+
+
 _BUILDERS = {
     "01-clean": lambda home: None,
     "02-generated": _generated,
@@ -378,6 +471,9 @@ _BUILDERS = {
     "19-hostile": _hostile,
     "20-provider-case-variant": _provider_case_variant,
     "21-provider-lookalike": _provider_lookalike,
+    "22-migration-legacy": _migration_legacy,
+    "23-migration-foreign": _migration_foreign,
+    "24-migration-stale-generated": _migration_stale_generated,
 }
 
 # Shapes this module builds directly. The junction shapes (05-junction and

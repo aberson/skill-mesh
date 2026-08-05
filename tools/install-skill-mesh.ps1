@@ -107,12 +107,17 @@ $REPO_ROOT = Split-Path -Parent $TOOLS_DIR
 $BUILD_SCRIPT = Join-Path $TOOLS_DIR 'build-distributions.ps1'
 $PATH_GUARD = Join-Path $REPO_ROOT 'runtime\path-guard.ps1'
 $PROVENANCE = Join-Path $TOOLS_DIR 'skill-mesh-provenance.ps1'
+$TRANSACTION = Join-Path $TOOLS_DIR 'skill-mesh-transaction.ps1'
 
 # Reuse the Step-34 path guard (traversal/junction/symlink rejection). Dot-source
 # with no -Path so only its functions load (Resolve-SafePath in this scope).
 . $PATH_GUARD
 # Shared provenance marker (single source of truth; defines Get-SkillMeshMarker).
 . $PROVENANCE
+# Shared transaction engine (single source of truth for ordered apply + journal +
+# post-mutation verification), also dot-sourced by tools/migrate-legacy-install.ps1
+# so atomicity mechanics cannot drift between install and migration.
+. $TRANSACTION
 
 $UTF8_NO_BOM = New-Object System.Text.UTF8Encoding($false)
 
@@ -615,34 +620,80 @@ function Invoke-Install([string]$homeAbs) {
             [void]$createdSet.Add('.')
         }
 
+        # The copy loop runs through the SHARED transaction engine
+        # (tools/skill-mesh-transaction.ps1): ordered action set, an append-only
+        # journal record before and after each write, and a post-write hash
+        # verification. This is behind-the-contract only -- no new parameter, no
+        # migration_id, no backup directory, and the same exit codes.
+        #
+        # -NoRollback is DELIBERATE. This command's published contract on a partial
+        # copy is a RECONCILED RECOVERY LEDGER (files already written stay on disk
+        # and a retry resumes without -Force), not an undo. The engine therefore
+        # rethrows and the existing catch below owns recovery, exactly as before.
+        # The journal lives in a per-run OS-temp directory removed on every exit
+        # path -- nothing new is ever written into the install home.
+        $txStateDir = Join-Path ([System.IO.Path]::GetTempPath()) `
+            ("skill-mesh-tx-" + [System.Guid]::NewGuid().ToString('N'))
+        $txActions = @()
+        $txSeq = 0
+        foreach ($pair in $pairs) {
+            $txActions += [PSCustomObject]@{
+                seq       = $txSeq
+                action    = 'install'
+                rel_path  = $pair[2]
+                source    = $pair[0]
+                target    = $pair[1]
+                post_hash = (Get-SkillMeshFileSha256 $pair[0])
+            }
+            $txSeq++
+        }
+        $txGetHash = {
+            param($a)
+            # Re-resolve rather than trusting the scan-time path, so the hash is
+            # taken from the same real path the mutation will write.
+            Get-SkillMeshFileSha256 (Resolve-Contained $a.target $homeAbs)
+        }
+        $txMutate = {
+            param($a)
+            $rel = $a.rel_path
+
+            # Re-resolve containment on the PARENT immediately before creating it
+            # (junction-on-ancestor TOCTOU).
+            $targetDir = Split-Path -Parent $a.target
+            $safeDir = Resolve-Contained $targetDir $homeAbs
+            New-TrackedDir $safeDir $homeAbs $createdSet
+
+            # Re-resolve containment on the TARGET immediately before the copy.
+            $safeTarget = Resolve-Contained $a.target $homeAbs
+
+            # Marker TOCTOU guard: a foreign file may have appeared here AFTER the
+            # scan. Overwrite only a non-existent target or a marker-bearing one.
+            if ((Test-Path -LiteralPath $safeTarget) -and
+                (-not (Test-FileHasMarker $safeTarget)) -and
+                (-not $writtenSet.Contains($rel)) -and
+                (-not $Force)) {
+                throw ("install-skill-mesh: SECURITY -- a foreign (non-marker) file " +
+                       "appeared at '$rel' after the pre-scan; aborting to avoid " +
+                       "clobbering it (pass -Force to override).")
+            }
+
+            Copy-Item -LiteralPath $a.source -Destination $safeTarget -Force
+            $writtenRel.Add($rel)
+            [void]$writtenSet.Add($rel)
+        }
+
         try {
-            foreach ($pair in $pairs) {
-                $srcFull = $pair[0]
-                $rel = $pair[2]
-
-                # Re-resolve containment on the PARENT immediately before creating it
-                # (junction-on-ancestor TOCTOU).
-                $targetDir = Split-Path -Parent $pair[1]
-                $safeDir = Resolve-Contained $targetDir $homeAbs
-                New-TrackedDir $safeDir $homeAbs $createdSet
-
-                # Re-resolve containment on the TARGET immediately before the copy.
-                $safeTarget = Resolve-Contained $pair[1] $homeAbs
-
-                # Marker TOCTOU guard: a foreign file may have appeared here AFTER the
-                # scan. Overwrite only a non-existent target or a marker-bearing one.
-                if ((Test-Path -LiteralPath $safeTarget) -and
-                    (-not (Test-FileHasMarker $safeTarget)) -and
-                    (-not $writtenSet.Contains($rel)) -and
-                    (-not $Force)) {
-                    throw ("install-skill-mesh: SECURITY -- a foreign (non-marker) file " +
-                           "appeared at '$rel' after the pre-scan; aborting to avoid " +
-                           "clobbering it (pass -Force to override).")
+            try {
+                $tx = New-SkillMeshTransaction `
+                    -MigrationId (New-SkillMeshMigrationId) `
+                    -JournalPath (Join-Path $txStateDir 'journal.jsonl')
+                Invoke-SkillMeshTxApply -Transaction $tx -Actions $txActions `
+                    -GetPreHash $txGetHash -Mutate $txMutate -GetPostHash $txGetHash `
+                    -NoRollback
+            } finally {
+                if (Test-Path -LiteralPath $txStateDir) {
+                    Remove-Item -LiteralPath $txStateDir -Recurse -Force
                 }
-
-                Copy-Item -LiteralPath $srcFull -Destination $safeTarget -Force
-                $writtenRel.Add($rel)
-                [void]$writtenSet.Add($rel)
             }
 
             # Copy fully succeeded -> remove STALE prior-owned files (owned before but
