@@ -43,8 +43,10 @@
     has one implementation.
 
     PROVIDER VOCABULARY comes from the manifest's own top-level `providers`
-    object (never a hardcoded {claude, gpt}); the per-provider discovery root is
-    mirrored from install-skill-mesh.ps1's $DISCOVERY_SUBDIR. A manifest provider
+    object (never a hardcoded {claude, gpt}); the per-provider discovery root comes
+    from tools/skill-mesh-discovery.ps1, the ONE owner of that map, which the
+    installer and the inspector also read (it is no longer mirrored per tool -- a
+    duplicated shape constant always drifts). A manifest provider
     with no known discovery root BLOCKS rather than being silently skipped -- a
     silent skip would be a false-clean migration that half-migrated the home.
 
@@ -1389,7 +1391,28 @@ function Invoke-TransactionRun($plan, [string]$startStatus, [bool]$isResume) {
     $getPre = { param($a) Get-HomeRelHash $a.rel_path }
     $getPost = { param($a) Get-HomeRelHash $a.rel_path }
     $mutate = { param($a) Invoke-ActionMutate $a }
-    $undo = { param($a) Invoke-ActionUndo $a }
+    # A `preserve` action has NO backup payload -- by design, so a byte-untouched
+    # consumer tree is never copied into the backup. The consequence is that if such
+    # a tree drifted during the transaction, rollback structurally CANNOT restore it,
+    # and reporting `rolled_back` would claim a clean home that is actually mixed.
+    #
+    # The explicit -Rollback path escalates exactly this (its own wrapper, built from
+    # Test-PostInstall's failure set). This is the SHARED apply/resume path, whose
+    # failure-triggered rollback runs from inside Invoke-SkillMeshTxApply's catch --
+    # so it needs the same escalation or it lands a FALSE `rolled_back`. Checked
+    # per action here rather than from a precomputed set, because on this path the
+    # drift is discovered mid-apply.
+    $undo = {
+        param($a)
+        Invoke-ActionUndo $a
+        if ($a.action -eq 'preserve') {
+            $now = Get-HomeRelHash $a.rel_path
+            if ([string]$now -ne [string]$a.pre_hash) {
+                throw ("migrate-legacy-install: preserved path '$($a.rel_path)' changed during " +
+                       "the transaction and has no backup payload by design; it cannot be restored.")
+            }
+        }
+    }
     $skip = $null
     if ($isResume) { $skip = { param($a) Test-ActionAlreadyApplied $a } }
 
