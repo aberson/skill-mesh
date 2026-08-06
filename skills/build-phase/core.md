@@ -40,7 +40,7 @@ The 5 conditions under which `/build-phase` is permitted to halt mid-run. Anythi
 
 1. **Conditional-step predicate errored or returned non-binary.** A `Type: conditional` step's `Condition:` shell expression exited with a code build-phase cannot interpret as run-or-skip (command-not-found ≥126, syntax error, signal-terminated ≥128, or a predicate that outputs but never exits). See "Conditional step handling" below for the dispatch table.
 2. **Quality-gate hard fail.** typecheck error count > 0, test count regressed below baseline, lint produced a blocker-class finding — OR (per Step 1's race-condition defense in sections 2d/2e) `origin` advanced with commits overlapping the step's modified file set. All four are integrity-class failures: the worktree's claim that "this step ships these changes against this baseline" no longer holds. The race-condition extension is documented as a sub-case of this halt class, NOT a new (6th) halt class — preserves the 5-item allowlist.
-3. **Stop-and-audit triggered.** Third instance of the same bug-shape in this session, per `/build-step`'s stop-and-audit rule. Whack-a-mole is wasting time; STOP iterating and audit the codebase for siblings before continuing.
+3. **Stop-and-audit triggered.** Third instance of the same bug-shape in this session, per `/build-step`'s stop-and-audit rule. Whack-a-mole is wasting time; STOP iterating, audit the codebase for siblings, and fix the shared structural invariant in one refactor rather than re-patching each named line.
 4. **Wait-type step reached.** A step declared `Type: wait` is long-running observation work (a soak test, a benchmark run). The orchestrator halts intentionally so wall-clock waiting doesn't burn context window. Resume in a fresh session via `--resume <next-step>` after the wait completes.
 5. **Worktree merge conflict.** A surgical-edit conflict from earlier steps overlapping the current step's files. Requires human resolution before continuing.
 
@@ -49,12 +49,13 @@ The 5 conditions under which `/build-phase` is permitted to halt mid-run. Anythi
 - Plan has `Type: conditional` step without `**Condition:**` field (caught at Step 0 sub-bullet 6; upstream catches: `/plan-review` §23 + `/plan-wrap` §12).
 - Plan has `Type: operator` step with code-shaped `Produces:` but plan-review/plan-wrap autofix didn't run (caught at Step 0 sub-bullet 7's runtime safety net).
 - Plan step declares `--reviewers full|runtime` without `--start-cmd`+`--url` (caught at Step 0 sub-bullet 8's Step-flags pre-flight validation, per Step 2 of BP plan).
+- Plan file at the `--plan` path missing or unreadable (caught at build-phase Step 0 sub-bullet 1's fail-loud existence check, mirroring build-queue Step 0).
 
 Mid-run halts outside this list are defects to fix upstream — examples that are NOT in the allowlist: mid-run `(y/n)` confirmation prompts, "Should I continue?" gates, mid-phase operator halts that are NOT the auto-split N-half or the deferred-UAT bundle. See `dev/.claude/rules/code-quality.md § "Build-phase halt contract"` for the full anti-pattern list and the upstream-defect framing.
 
 ## Constraints
 
-See `## Halt contract` above for the 5 halt classes + 3 defect-of-input classes. Autonomous-by-default per workspace `plan-and-issue-flow.md § "Autonomous-by-default skills"` — no mid-run prompts; preview-only behavior via `--dry-run`.
+See `## Halt contract` above for the 5 halt classes + 4 defect-of-input classes. Autonomous-by-default per workspace `plan-and-issue-flow.md § "Autonomous-by-default skills"` — no mid-run prompts; preview-only behavior via `--dry-run`.
 
 ---
 
@@ -155,7 +156,14 @@ build-phase walks 4 outer steps: Step 0 (parse), Step 1 (pre-flight), Step 2 (di
 
 ### Step 0 -- Parse plan
 
-1. Read the plan document at `--plan` path.
+1. Read the plan document at `--plan` path. **Fail-loud existence check first:** resolve the path to absolute; if the file does not exist or is unreadable, halt with the fenced pre-flight Blocker below (defect-of-input class, same shape as the missing-`Condition:` and Step-flags Blockers; mirrors build-queue Step 0's "verify plan files exist" check). Do NOT proceed to Step 1 pre-flight.
+
+   ```
+   build-phase: pre-flight Blocker — plan file not found (or unreadable) at <abs-plan-path>.
+   This must be fixed before /build-phase can proceed: verify the --plan path (relative
+   paths resolve against cwd; a concurrent session may have moved the plan) and re-invoke.
+   Nothing was dispatched.
+   ```
 2. If `--phase` is specified, extract only that phase's steps.
 3. If `--steps` is specified, filter to those step numbers.
 4. If `--resume` is specified, mark earlier steps as already done.
@@ -786,6 +794,13 @@ After each successful step:
 <typecheck_command> && <lint_command> && <test_command>
 ```
 
+> Scope: `<test_command>` here runs the FULL suite — every test root/suite the project
+> declares, not the subset the step iterated against. `count >= baseline` over a subset
+> cannot see a cross-suite regression; the step report names WHICH suites ran, and if
+> the full suite is too slow per-step, the checkpoint states that explicitly instead of
+> quoting a subset count as the gate (see workspace memory
+> `feedback_subset_gate_hides_cross_suite_regression`).
+
 - If gates pass and test count >= baseline: update baseline, continue.
 - If gates fail: stop, report which gate failed, suggest fix.
 - If test count decreased: stop, report which tests were lost.
@@ -805,6 +820,8 @@ After all steps complete:
 ```bash
 <typecheck_command> && <lint_command> && <test_command>
 ```
+
+> Scope: FULL suite, same rule as §2f — the final report names which suites ran.
 
 ### Step 4 -- Report
 
