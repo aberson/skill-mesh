@@ -23,7 +23,7 @@ This is the UP-direction sibling of `tier-offload` (which finds the slices safe 
 
 The escalation's one governing rule (the operator's tiering policy, encoded from the 2026-07-09 42-skill scan): **escalate a session to the fable-tier only for a single load-bearing seed-artifact — a phase whose one output is the deliverable's quality ceiling AND where a diversity committee (parallel reviewers/iterations) cannot substitute for a stronger single reasoner.** The three canonical seed-artifact shapes: greenfield architecture authoring (`plan-init`), hard root-cause diagnosis (`user-debug`), deep multi-source cited synthesis (`deep-research`). Everywhere reviewer/iteration DIVERSITY carries quality (the review-*, build-*, skill-* pipelines), opus-tier orchestration + sonnet-tier fan-out stays — a stronger model there adds cost, not quality.
 
-The policy owner is the model paragraph in the workspace `CLAUDE.md` (`## Environment`), with long-form provenance in the `user-model-preference` memory. This skill *derives* a map from the current skill set against that policy; it never becomes the policy.
+The policy owner is the workspace model-tiering rule (`.claude/references/model-tiering.md`; the `CLAUDE.md` `## Environment` model paragraph is its stub), with long-form provenance in the `user-model-preference` memory. This skill *derives* a map from the current skill set against that policy; it never becomes the policy.
 
 ### Taxonomy + classification protocol — shared reference
 
@@ -31,7 +31,7 @@ Classification follows `../../references/skill-role-taxonomy.md`: its **§1 taxo
 
 ### The four up-corrections (apply them — a naive "hard skill → stronger model" read is wrong)
 
-1. **Fan-out arms are NEVER fable-tier.** Arms use the sonnet-tier; diversity beats per-arm strength. A JUDGES array, a reviewer committee, or parallel dev retries get their quality from *independent perspectives* — escalating the arms multiplies cost with no ceiling gain. Escalation applies to a solo seed phase, never to an array.
+1. **Fan-out arms are NEVER fable-tier.** Arms use the sonnet-tier; diversity beats per-arm strength. A JUDGES array, a reviewer committee, or parallel dev retries get their quality from *independent perspectives* — escalating the arms multiplies cost with no ceiling gain. Escalation applies to a solo seed phase, never to an array. (A **solo named-trigger diagnosis arm** — one read-only sub-agent, one sanctioned trigger, at most one spawn per run, e.g. build-step's Step 9 phone-a-friend arm — is a sanctioned seed-artifact shape under the workspace model-tiering rule, not a fan-out arm; arrays remain never-fable.)
 2. **Do NOT fan out single-mind synthesis to get it "for free".** A synthesis phase that must hold one coherent voice/judgment (e.g. `memory-distill`'s final latent-principle consolidation step) is a SOLO/GATE-shaped *candidate for escalation*, not for parallelization. Splitting it across arms destroys the coherence that made it valuable; the correct question is "does this one pass warrant a stronger reasoner?", never "can we committee it?".
 3. **Conditional escalations must NAME THEIR TRIGGER.** An escalation that applies only sometimes (e.g. a large cross-cutting `plan-feature`, a deep-conflict 3+ `plan-merge`, a high-stakes substrate/schema `review-deep`) is only actionable if the map states the concrete trigger condition. "Escalate when it feels big" is not a verdict — a CONDITIONAL row without a stated trigger is incomplete and must be resolved to FABLE-SEED, STAY, or a named trigger.
 4. **Session escalation cascades into unpinned arms — check the dispatch layer.** Invoking the host's model-switch primitive or restarting with the fable-tier configured changes the model for EVERY fresh-context task/workflow arm a skill dispatches unless the skill pins its arms explicitly to a tier. A FABLE-SEED verdict for a skill that fans out is only actionable if its arms are pinned to the sonnet-tier; otherwise the map row must carry an **`arms-unpinned`** flag and its how-to-apply becomes "pin the arms first, then escalate." (Evidence 2026-07-12: `/deep-research` on a fable-tier session ran 104/104 workflow tasks on the fable-tier — ~101 were fan-out arms; ~5x cost plus a session-limit blowout mid-run. Fixed by the owned override `deep-research-pinned` (canonical `dev/.claude/workflows/deep-research-pinned.js`, deployed per-project into `<project>/.claude/workflows/`), which pins search/fetch/verify arms to the sonnet-tier and lets only scope+synthesize inherit. Note the distinct name: built-ins silently shadow same-named local workflows, so a local `deep-research.js` would never resolve.)
@@ -94,8 +94,8 @@ Next (per-session, NOT done by this skill):
   fable-tier configured, run the seed phase, then return to the pinned default tier.
   For a CONDITIONAL skill: escalate only when its named trigger holds. Practical
   constraints (retention and model-pin resets):
-  see the model paragraph in CLAUDE.md ## Environment — the policy owner this map is
-  derived from.
+  see the workspace model-tiering rule (.claude/references/model-tiering.md; the CLAUDE.md
+  ## Environment model paragraph is its stub) — the policy owner this map is derived from.
 ```
 
 End with the exact standalone line:
@@ -106,7 +106,7 @@ End with the exact standalone line:
 
 - **No config file is emitted.** tier-offload writes a machine-loadable switchboard config because a client consumes it; the escalation map has no machine consumer — it is for the operator, so the markdown map is the whole artifact.
 - **No safety gate / gate-precondition concept.** Routing *down* has a correctness failure mode (a weak model on a gate), so tier-offload carries a hard invariant. Escalating *up* to the fable-tier is never unsafe, only wasteful — the failure mode is cost, not correctness — so there is no gate analogue; the up-corrections guard against waste, not danger.
-- **The practical constraint worth noting:** The provider model resolved for the fable-tier may have retention requirements, and auto-updates can silently reset a model-tier pin. The workspace `CLAUDE.md` model paragraph is the policy owner for these — cite it in the map rather than restating it wholesale.
+- **The practical constraint worth noting:** The provider model resolved for the fable-tier may have retention requirements, and auto-updates can silently reset a model-tier pin. The workspace model-tiering rule (`.claude/references/model-tiering.md`) is the policy owner for these (the `CLAUDE.md` model paragraph is its stub) — cite it in the map rather than restating it wholesale.
 
 ## Constraints
 
