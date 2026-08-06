@@ -102,6 +102,9 @@ Code-lens-only: like `code`, requires NO `--start-cmd`/`--url`. Automated gates
 Model tiers are review-deep's own per-lens defaults — do NOT re-pin arms here (review-deep
 owns its lens-to-tier map). Conditional high-tier escalation stays an operator call per
 the workspace tier policy — never auto-set it.
+Sole carve-out: Step 9's phone-a-friend diagnosis arm — a solo, named-trigger, read-only,
+advisory fable-tier spawn the workspace tier policy sanctions explicitly; it never
+re-tiers reviewer arms or any gate.
 
 ### `runtime`
 Run three parallel evidence-based reviewers:
@@ -682,7 +685,7 @@ channel never parses prose for authorization.
    - Worktree-with-UI environment: Step 5's copy loop should ALSO apply this same classification (back-propagated; full-file `cp` in Step 5 is the known loophole — Step 5 sub-step 1 must honor shared-file Edit semantics or this gate is too late). For now, re-verify by sampling: if any shared file shows clobbered prior-step content, HALT.
    - Docker environment: classification predicate runs in `$PROJECT` against the worktree's branch regardless of whether the source is `$WORKTREE` or `workspace/results/`.
    See `dev/.claude/rules/worktree-hygiene.md § 5` (silent no-op when merge runs in wrong worktree — always use `git -C "$PROJECT"`) and `§ 6` (shared-file overwrite risk).
-2. **Post-merge test gate (mandatory):** run the test suite IN the main project (`cd "$PROJECT" && <test_command>`), NOT just in the worktree. If it fails, atomically call `write_verdict` with `terminal="NEEDS WORK"`, `halt="POST_MERGE_HALT"`, and the parent run id/path/key **before returning**. Echo the literal sentinel `POST_MERGE_HALT:` followed by the failing tests, do NOT close the issue or declare PASS, exit non-zero. The orchestrator routes the halt to the operator, not developer iteration.
+2. **Post-merge test gate (mandatory):** run the FULL test suite — every test root/suite the project declares, not the subset this step iterated against — IN the main project (`cd "$PROJECT" && <test_command>`), NOT just in the worktree. The gate evidence names WHICH suites ran, not just a pass count; if the full suite is too slow here, say so explicitly instead of reporting a subset count as the gate (see workspace memory `feedback_subset_gate_hides_cross_suite_regression`). If it fails, atomically call `write_verdict` with `terminal="NEEDS WORK"`, `halt="POST_MERGE_HALT"`, and the parent run id/path/key **before returning**. Echo the literal sentinel `POST_MERGE_HALT:` followed by the failing tests, do NOT close the issue or declare PASS, exit non-zero. The orchestrator routes the halt to the operator, not developer iteration.
 3. Run the final **ship-gate re-check**. Any `SHIP_GATE_HALT` atomically
    overwrites the durable verdict with `terminal="NEEDS WORK"` and
    `halt="SHIP_GATE_HALT"` before returning.
@@ -706,6 +709,35 @@ Compile findings from ALL reviewers into a single block — read each lens's ful
 
 **Stop-and-audit check (run BEFORE iterating):** If the SAME bug-shape (same invariant violated, same anti-pattern, same producer/consumer drift, same constant duplicated) has been flagged in **three** iterations in a row -- even at different file locations -- STOP iterating, do NOT spawn the developer for another whack-a-mole fix. Instead, follow the Stop-and-audit rule below: grep the entire codebase for the bug-shape, enumerate every site, and report ONE comprehensive audit finding plus a structural regression-test proposal (e.g. assert single source of truth via CI grep, assert object identity not equality). Mark the run **BLOCKED (audit required)** and skip to the BLOCKED report.
 
+> **Same-defect re-scope check (run alongside):** distinct trigger, different response —
+> if the SAME defect (same failing test, same reviewer finding) has survived TWO fix
+> iterations — or two consecutive rounds are OSCILLATING (each round's new finding sits in
+> the hunk written to close the previous round's finding) — do not dispatch a third
+> line-scoped patch. Iteration 3 is **re-scoped**:
+> the developer prompt leads with structural-invariant diagnosis — what invariant is
+> violated, which sites share it — and one refactor of the shared invariant, not another
+> patch of the named line. This re-scopes the next iteration inside the existing
+> `--max-iter` cap; it is NOT a new halt class and does not change the STOP condition
+> above (which remains same-shape-3x).
+
+> **Phone-a-friend diagnosis arm (solo, read-only, advisory — at most ONE spawn per run):**
+> At the re-scope check (above — same-defect-2x or oscillation), BEFORE dispatching the
+> re-scoped iteration 3: if `<worktree>/.build-step/diagnosis.md` already exists (the ran-once
+> marker), skip silently; otherwise spawn ONE read-only fresh-context diagnosis arm at the
+> fable-tier (the workspace tier policy's sanctioned solo-diagnosis dispatch — resolve the
+> tier via the tier map, never a hard-coded model id). Its prompt reuses user-debug Step 1's
+> Diagnosis Block shape — require all six fields (Symptom, Reproduction, Primary sources,
+> Suspected root cause, Confidence, Memory entries that apply) — and feeds it the defect
+> (failing test / finding text verbatim), the iteration history (each attempted fix and why
+> it failed), and the worktree path. The arm is ADVISORY and never gates: write its
+> Diagnosis Block to `<worktree>/.build-step/diagnosis.md` and PREPEND the block to the
+> re-scoped iteration-3 developer prompt as evidence the developer weighs — not a verdict:
+> the developer treats the Block as a HYPOTHESIS and verifies its claims against primary
+> source before implementing (the friend's answer gets the same adversarial treatment as
+> anyone's).
+> Fail-open: dispatch rejection or any error → print one line
+> `phone-a-friend: diagnosis arm skipped (<reason>)` and dispatch iteration 3 unchanged.
+
 If iterations remain AND the stop-and-audit check did not trigger:
 1. If UI evidence was captured: revert copied files in main project
    ```bash
@@ -721,16 +753,38 @@ If max iterations exhausted: **BLOCKED**
 2. Print remaining findings
 3. Keep worktree alive for manual inspection
 4. Restore stash if created
-5. Report:
+5. **Phone-a-friend fallback (report-only):** if `<worktree>/.build-step/diagnosis.md`
+   does not exist (the re-scope hook never fired — the two hook points are mutually
+   exclusive), spawn the same solo fable-tier diagnosis arm once, writing its Diagnosis
+   Block to that path; additionally feed it the per-round finding counts and, when review
+   sidecars exist, the cross-round trend (non-monotonic counts and the minimum-findings
+   revision — the revert/base candidate) plus any oscillation note. Its Block lands in
+   the BLOCKED report only (no iterations remain to feed), marked UNVERIFIED —
+   pressure-test rather than accept. Same fail-open rule: on rejection or error print
+   `phone-a-friend: diagnosis arm skipped (<reason>)` and continue to the report
+   unchanged.
+6. Report:
    ```text
    build-step BLOCKED after N/M iterations
 
    Remaining findings:
      <per-reviewer summaries>
 
+   Diagnosis: .build-step/diagnosis.md    (if the diagnosis arm ran)
    Evidence: .ui-review-evidence/run-N/   (if applicable)
    Worktree: <path>
    Branch: <branch>
+
+   --- phone-a-friend handoff (paste into a fresh high-tier session per the workspace tier policy) ---
+   /user-debug --symptom "<defect one-liner; failing test / finding text verbatim>" --repro "<failing test command>"
+   State pin: <git rev-parse HEAD> on <branch> — if this differs when you arrive, this brief is stale; re-orient first.
+   Deliverable: a DECISION (verified diagnosis + fix design or plan revision) — do NOT start another fix round.
+   Context: build-step BLOCKED after N/M iterations on <step title / issue #>.
+   Iteration history (incl. refuted dead ends — do not re-attempt):
+     <one line per iteration: fix attempted -> why it failed / why refuted>
+   Out of scope: no merge, no repo-sync, no issue posts without operator OK.
+   Preserved artifacts: worktree <path>; review sidecars (if any);
+     prior diagnosis .build-step/diagnosis.md (if present) — UNVERIFIED, pressure-test rather than accept.
    ```
 
 When a parent-supplied channel exists, every other terminal BLOCKED path
@@ -834,7 +888,7 @@ The 5 conditions under which `/build-phase` is permitted to halt mid-run. Anythi
 
 1. **Conditional-step predicate errored or returned non-binary.** A `Type: conditional` step's `Condition:` shell expression exited with a code build-phase cannot interpret as run-or-skip (command-not-found ≥126, syntax error, signal-terminated ≥128, or a predicate that outputs but never exits). See "Conditional step handling" below for the dispatch table.
 2. **Quality-gate hard fail.** typecheck error count > 0, test count regressed below baseline, lint produced a blocker-class finding — OR (per Step 1's race-condition defense in sections 2d/2e) `origin` advanced with commits overlapping the step's modified file set. All four are integrity-class failures: the worktree's claim that "this step ships these changes against this baseline" no longer holds. The race-condition extension is documented as a sub-case of this halt class, NOT a new (6th) halt class — preserves the 5-item allowlist.
-3. **Stop-and-audit triggered.** Third instance of the same bug-shape in this session, per `/build-step`'s stop-and-audit rule. Whack-a-mole is wasting time; STOP iterating and audit the codebase for siblings before continuing.
+3. **Stop-and-audit triggered.** Third instance of the same bug-shape in this session, per `/build-step`'s stop-and-audit rule. Whack-a-mole is wasting time; STOP iterating, audit the codebase for siblings, and fix the shared structural invariant in one refactor rather than re-patching each named line.
 4. **Wait-type step reached.** A step declared `Type: wait` is long-running observation work (a soak test, a benchmark run). The orchestrator halts intentionally so wall-clock waiting doesn't burn context window. Resume in a fresh session via `--resume <next-step>` after the wait completes.
 5. **Worktree merge conflict.** A surgical-edit conflict from earlier steps overlapping the current step's files. Requires human resolution before continuing.
 
@@ -843,6 +897,7 @@ The 5 conditions under which `/build-phase` is permitted to halt mid-run. Anythi
 - Plan has `Type: conditional` step without `**Condition:**` field (caught at Step 0 sub-bullet 6; upstream catches: `/plan-review` §23 + `/plan-wrap` §12).
 - Plan has `Type: operator` step with code-shaped `Produces:` but plan-review/plan-wrap autofix didn't run (caught at Step 0 sub-bullet 7's runtime safety net).
 - Plan step declares `--reviewers full|runtime` without `--start-cmd`+`--url` (caught at Step 0 sub-bullet 8's Step-flags pre-flight validation, per Step 2 of BP plan).
+- Plan file at the `--plan` path missing or unreadable (caught at build-phase Step 0 sub-bullet 1's fail-loud existence check, mirroring build-queue Step 0).
 
 Mid-run halts outside this list are defects to fix upstream — examples that are NOT in the allowlist: mid-run `(y/n)` confirmation prompts, "Should I continue?" gates, operator-step halts for code-Produces steps (auto-split handles these), pure-observation operator-step halts mid-phase (deferred-UAT bundle handles these). See `dev/.claude/rules/code-quality.md § "Build-phase halt contract"` for the full anti-pattern list and the upstream-defect framing.
 
@@ -865,6 +920,13 @@ bug shape:
   re-introducing the pattern impossible (e.g., assert object identity instead of
   value equality, assert single source of truth via grep in CI, lint rule that bans
   the literal).
+- **Same DEFECT surviving two fix iterations, or two oscillating rounds** (one failing
+  test or finding, two failed fixes — or each round's new finding sitting in the hunk
+  that closed the previous one; distinct from same-shape-across-locations): re-scope
+  iteration 3 as
+  structural-invariant diagnosis plus one refactor of the shared invariant (see
+  Step 9's same-defect re-scope check). Re-scope only — the STOP condition stays
+  same-shape-3x; the halt allowlist is untouched.
 
 ## Limitations
 
