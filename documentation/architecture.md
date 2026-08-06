@@ -386,8 +386,8 @@ python -m pytest tests\calibration
 
 **Not configured.** The repository has no lint command and no typecheck command.
 Do not invent one. The automated gates are the seven pytest suites -- `tests/router`
-(61), `tests/calibration` (38), `tests/package-integrity` (99), `tests/distributions`
-(73), `tests/release` (12), `tests/telemetry` (5), and `tests/smoke` (40): 329 tests
+(62), `tests/calibration` (38), `tests/package-integrity` (145), `tests/distributions`
+(285), `tests/release` (12), `tests/telemetry` (5), and `tests/smoke` (40): 587 tests
 total, run with `python -m pytest`.
 
 ### 8.5 Regenerating the manifest

@@ -641,6 +641,40 @@ not the hosts, was verified.
 
 ## 7. Build Steps
 
+### Phase roll-up (2026-08-06)
+
+**Every code step on the cutover path has landed. What remains is operator-only.**
+
+| Step | Type | Status |
+|---|---|---|
+| 42 Host-loading authority map | code | DONE (one criterion since falsified by Step 43 — see the step) |
+| 43 Prove the GPT discovery root | operator | DONE — **disproved** the assumed `.copilot/skills` root |
+| 44 Retarget GPT to `.github/skills` + YAML frontmatter | code | DONE |
+| 45 Prove both-profile discovery | operator | DONE — `.github/skills` wins the collision |
+| 46 Read-only host-install inspection | code | DONE (hardened post-wrap, #83-#86) |
+| 47 Reversible legacy-install migration | code | DONE — merge `29d73dc` |
+| 47b Harden the containment gate | code | **PENDING — off the 48->50 critical path** |
+| 48 Consumer cutover handoff + release gates | code | DONE — merge `f377c54` |
+| 49 Full host-native acceptance | **operator** | **PENDING** |
+| 50 Cut over the live coding-root consumer | **operator** | **PENDING** |
+
+Steps 49 and 50 are `Type: operator` by design: they are acceptance against real
+Claude Code and GitHub Copilot CLI hosts. No test in this repository stands in for
+that evidence (§9's static/operator split), so a green suite is necessary but not
+sufficient, and neither step is agent-attemptable. Step 50 additionally crosses the
+repository boundary into the live `coding-root` consumer and opens with a parked-work
+handshake; it is owned and committed by coding-root, never by this plan.
+
+Step 49's **mechanical** half has been rehearsed end to end against throwaway homes
+(`343843b`): the migrator came out clean (rollback byte-identical, re-apply
+convergent, ledger free of preserved-tree entries), and the rehearsal found and fixed
+seven defects in the handoff document itself -- including a step-order trap in Step
+49's own Done-when that left a home MIXED and unrecoverable. The rehearsal is not the
+step: the host-acceptance half is still outstanding.
+
+**Step 47b is not a blocker for the cutover.** It carries no dependency from Steps 48,
+49, or 50 and may land in parallel with them or after the cutover completes.
+
 ### Step 42: Lock and test the host-loading authority map
 - **Problem:** Operators cannot distinguish workspace instruction injection, host-native skill discovery, and router dispatch, so a GPT model running successfully can be mistaken for a correctly installed GPT profile.
 - **Type:** code

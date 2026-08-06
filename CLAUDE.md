@@ -15,16 +15,20 @@ installed skill tree. Installing produces a host-native discovery tree in a cons
 |---|---|
 | Skill sources | Markdown — `skills/<name>/core.md` + `providers/{claude,gpt}.md` |
 | Manifest / config | JSON — `config/skill-manifest.json` (authoritative skill inventory) |
-| Build / install / release tooling | PowerShell (`pwsh`) — `tools/*.ps1` |
+| Build / install / release tooling | Windows PowerShell 5.1 floor (`powershell`) — `tools/*.ps1` |
 | Manifest + release checks | Python 3 — `tools/gen_manifest.py`, `tools/release_checks.py` |
 | Tests | pytest — 7 suites under `tests/` |
 | Lint / typecheck | **Not configured** (deliberate — see Key commands) |
 
 ## Key commands
 
-Run from the repository root.
+Run from the repository root. **Commands are spelled `powershell`, not `pwsh`** — PowerShell 7 is
+not installed on this machine, and every tool invocation spelled `pwsh` fails with `The term 'pwsh'
+is not recognized`. Windows PowerShell 5.1 is the floor all `.ps1` tooling targets (ASCII-only, no
+BOM) and the executable the test suites shell out to. (`documentation/architecture.md` §8 spells the
+same commands with the PowerShell 7 name; that is the same command in the other spelling.)
 
-Full test suite (~13 minutes — the release, distribution, and smoke suites shell out to PowerShell):
+Full test suite (~25 minutes — the release, distribution, and smoke suites shell out to PowerShell):
 
 ```
 python -m pytest tests/
@@ -39,22 +43,22 @@ python -m pytest tests/package-integrity
 Build host distributions (writes `dist/`, which is gitignored and never committed):
 
 ```
-pwsh -File tools/build-distributions.ps1 -Provider claude
-pwsh -File tools/build-distributions.ps1 -Provider gpt
+powershell -File tools/build-distributions.ps1 -Provider claude
+powershell -File tools/build-distributions.ps1 -Provider gpt
 ```
 
 Install one host profile into a consumer home:
 
 ```
-pwsh -File tools/install-skill-mesh.ps1 -Provider claude -Home <install-home>
-pwsh -File tools/install-skill-mesh.ps1 -Provider gpt    -Home <install-home>
+powershell -File tools/install-skill-mesh.ps1 -Provider claude -Home <install-home>
+powershell -File tools/install-skill-mesh.ps1 -Provider gpt    -Home <install-home>
 ```
 
 Release — stage from `git ls-files`, build, run the integrity check inside the staged tree, then
 SHA-256 every file under the generated `dist/`:
 
 ```
-pwsh -File tools/release.ps1
+powershell -File tools/release.ps1
 ```
 
 Regenerate the manifest (only when the legacy source or the authoritative constants change; the
@@ -79,10 +83,14 @@ _shared/                Shared cores (judge-core, intake-engine), grader/verdict
 config/                 skill-manifest.json (inventory + eligibility), model-mapping.json,
                         model-tier-map.json
 documentation/          architecture.md (the contract), host-discovery.md, migration.md,
+                        coding-root-cutover-handoff.md (the operator cutover sequence),
                         providers/, troubleshooting.md, and the phase plans
 runtime/                skill-router.ps1, path-guard.ps1, providers/, telemetry/
 tools/                  build-distributions, install-skill-mesh, inspect-host-install, release,
-                        release_checks, gen_manifest, gen_skill_tree, gen-router-shim, provenance
+                        release_checks, gen_manifest, gen_skill_tree, gen-router-shim, provenance,
+                        migrate-legacy-install + skill-mesh-transaction (the reversible migrator
+                        and its shared journaled engine), skill-mesh-discovery (sole owner of the
+                        provider-to-discovery-root map)
 tests/                  calibration, distributions, package-integrity, release, router,
                         smoke, telemetry (+ fixtures/)
 ```
@@ -112,8 +120,9 @@ tests/                  calibration, distributions, package-integrity, release, 
 
 ## Current state
 
-**Phase 7 — Host-Native Discovery & Consumer Cutover, in progress.** Steps 42–46 of Steps 42–50
-are DONE: the host-loading authority map (locked by 17 package-integrity tests); the live
+**Phase 7 — Host-Native Discovery & Consumer Cutover, in progress.** Steps 42–48 of Steps 42–50
+are DONE — every code step on the cutover path has landed, and the two that remain (49, 50) are
+operator-only. Steps 42–46: the host-loading authority map (locked by 17 package-integrity tests); the live
 Copilot CLI v1.0.77 discovery-root proof, which **disproved** the assumed `.copilot/skills`
 target; the resulting GPT retarget to `.github/skills` with YAML-frontmatter `SKILL.md`; and the
 both-profile discovery proof (Step 45, #67) — with both profiles installed, Copilot dedups skills

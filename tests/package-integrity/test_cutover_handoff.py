@@ -1378,17 +1378,38 @@ def test_step_48_status_reader_distinguishes_the_two_claims():
     assert step_48_status_claim("Steps 48-50 remain.") is None
 
 
+def plan_step_48_status():
+    """'done' / 'in progress' -- what the cutover PLAN records for Step 48.
+
+    The plan's own `### Step 48:` block is the authoritative status record; the
+    narrative documents restate it. Deriving the expectation from that block
+    instead of hardcoding a literal is deliberate: this assertion originally
+    pinned 'in progress' as an invariant, which meant the merge of Step 48 could
+    not be written into the docs without turning the gate red -- a gate that
+    enforced a stale claim rather than agreement.
+    """
+    text = _read(CUTOVER_PLAN)
+    idx = text.find("### Step 48:")
+    assert idx >= 0, "the cutover plan no longer has a Step 48"
+    nxt = text.find("\n### ", idx + 1)
+    block = text[idx:nxt if nxt > 0 else len(text)]
+    match = re.search(r"^-\s*\*\*Status:\*\*\s*(\S+)", block, re.M)
+    assert match, "the cutover plan's Step 48 carries no **Status:** marker"
+    return "done" if match.group(1).upper().startswith("DONE") else "in progress"
+
+
 def test_readme_and_migration_doc_agree_on_step_48():
     """They shipped contradictory status in the same delta once -- README said DONE
-    while migration.md said in progress. Step 48 is not merged, so 'in progress' is
-    the accurate one and both must carry it."""
+    while migration.md said in progress. Both must agree, and both must match the
+    status the cutover plan actually records for the step."""
+    expected = plan_step_48_status()
     readme = step_48_status_claim(_read(README))
     migration = step_48_status_claim(_read(MIGRATION))
     assert readme == migration, (
         f"README claims Step 48 is {readme!r} but migration.md claims {migration!r}")
-    assert readme == "in progress", (
-        "Step 48 is not merged; both documents must say so, not "
-        f"{readme!r}")
+    assert readme == expected, (
+        f"the cutover plan records Step 48 as {expected!r}; both narrative "
+        f"documents must say so, not {readme!r}")
 
 
 def test_cutover_plan_step_48_still_owns_this_handoff():

@@ -68,10 +68,12 @@ an explicit `**Status:** SUPERSEDED` marker in
 cutover is now Steps 42-50 of the **host-native-discovery cutover plan** (the first link above —
 `provider-neutral-skill-mesh-plan.md` has no Steps 42-50).
 
-**Status:** Steps 42-47 have shipped — the host-loading authority map, the live Copilot CLI
+**Status:** Steps 42-48 have shipped — the host-loading authority map, the live Copilot CLI
 discovery-root proof, the GPT retarget, the both-profile discovery proof, read-only host-install
-inspection, and the reversible migrator. Step 48 (this handoff) is in progress; Steps 49-50 are
-the operator acceptance steps that follow it.
+inspection, the reversible migrator, and Step 48 (this handoff) is done. Every code step on the
+cutover path has landed; what remains is operator-only — Steps 49-50, the host acceptance steps,
+first against a clean temporary home and then against the live consumer. Step 47b (containment-gate
+hardening) is pending and deliberately off that critical path.
 
 **Topology correction.** A consumer gets **two** discovery roots, not one, and the legacy GPT
 core tree is neither of them:
