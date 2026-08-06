@@ -16,6 +16,9 @@ tmp/
 # build-step sidecars (per-step dev/reviewer reports + verdicts; may embed local paths)
 .build-step/
 
+# review-deep sidecars (per-lens verdicts + aggregated audit trail; same rationale)
+.review-deep/
+
 # generated host distributions (build-distributions.ps1 default staging output)
 dist/
 

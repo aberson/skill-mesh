@@ -107,22 +107,30 @@ $REPO_ROOT = Split-Path -Parent $TOOLS_DIR
 $BUILD_SCRIPT = Join-Path $TOOLS_DIR 'build-distributions.ps1'
 $PATH_GUARD = Join-Path $REPO_ROOT 'runtime\path-guard.ps1'
 $PROVENANCE = Join-Path $TOOLS_DIR 'skill-mesh-provenance.ps1'
+$TRANSACTION = Join-Path $TOOLS_DIR 'skill-mesh-transaction.ps1'
+$DISCOVERY = Join-Path $TOOLS_DIR 'skill-mesh-discovery.ps1'
 
 # Reuse the Step-34 path guard (traversal/junction/symlink rejection). Dot-source
 # with no -Path so only its functions load (Resolve-SafePath in this scope).
 . $PATH_GUARD
 # Shared provenance marker (single source of truth; defines Get-SkillMeshMarker).
 . $PROVENANCE
+# Shared discovery-root map (single source of truth for the provider -> root shape;
+# also dot-sourced by inspect-host-install.ps1 and migrate-legacy-install.ps1).
+. $DISCOVERY
+# Shared transaction engine (single source of truth for ordered apply + journal +
+# post-mutation verification), also dot-sourced by tools/migrate-legacy-install.ps1
+# so atomicity mechanics cannot drift between install and migration.
+. $TRANSACTION
 
 $UTF8_NO_BOM = New-Object System.Text.UTF8Encoding($false)
 
 # Provider-specific install target subdirectory (relative to Home), POSIX form.
-# GPT installs to .github/skills -- a real GitHub Copilot CLI discovery root (proven
-# in Step 43); the retired project-relative .copilot/skills is NOT a Copilot root.
-$DISCOVERY_SUBDIR = @{
-    'claude' = '.claude/skills'
-    'gpt'    = '.github/skills'
-}
+# GPT installs to the real GitHub Copilot CLI project discovery root proven in
+# Step 43; the retired project-relative Copilot tree is NOT a Copilot root. The
+# literal map lives in tools/skill-mesh-discovery.ps1 (ONE owner, shared with the
+# inspector and the migrator) -- see that file for why it is not spelled here.
+$DISCOVERY_SUBDIR = Get-SkillMeshDiscoveryRoots
 
 $LEDGER_NAME = '.skill-mesh-install.json'
 
@@ -292,14 +300,18 @@ function Write-Ledger([string]$homeAbs, $ledger) {
     # rename), so a crash mid-write can never corrupt the now load-bearing ledger and
     # two concurrent installs against the same home (claude + gpt in parallel) cannot
     # lost-update via a shared temp name.
-    $path = Get-LedgerPath $homeAbs
-    $tmp = "$path.$PID.$([Guid]::NewGuid().ToString('N')).tmp"
+    # Re-resolved through the path guard immediately before the write, like every
+    # other consumer-home mutation here: the ledger is a file in the install home,
+    # so a junction planted on the home between scan and commit would otherwise
+    # redirect it.
+    $safeLedger = Resolve-Contained (Get-LedgerPath $homeAbs) $homeAbs
+    $safeTmp = "$safeLedger.$PID.$([Guid]::NewGuid().ToString('N')).tmp"
     $json = $ledger | ConvertTo-Json -Depth 8
     try {
-        [System.IO.File]::WriteAllText($tmp, $json, $UTF8_NO_BOM)
-        Move-Item -LiteralPath $tmp -Destination $path -Force
+        [System.IO.File]::WriteAllText($safeTmp, $json, $UTF8_NO_BOM)
+        Move-Item -LiteralPath $safeTmp -Destination $safeLedger -Force
     } finally {
-        if (Test-Path -LiteralPath $tmp) { Remove-Item -LiteralPath $tmp -Force }
+        if (Test-Path -LiteralPath $safeTmp) { Remove-Item -LiteralPath $safeTmp -Force }
     }
 }
 
@@ -408,7 +420,8 @@ function Remove-OwnedFiles([string]$homeAbs, $entry) {
                 "content does NOT bear the skill-mesh marker (foreign/operator file); NOT deleting.")
             continue
         }
-        Remove-Item -LiteralPath $abs -Force
+        $safeTarget = Resolve-Contained $abs $homeAbs
+        Remove-Item -LiteralPath $safeTarget -Force
     }
 }
 
@@ -428,7 +441,8 @@ function Remove-CreatedDirs([string]$homeAbs, $entry) {
         if (Test-Path -LiteralPath $abs) {
             $remaining = @(Get-ChildItem -LiteralPath $abs -Force)
             if ($remaining.Count -eq 0) {
-                Remove-Item -LiteralPath $abs -Force
+                $safeDir = Resolve-Contained $abs $homeAbs
+                Remove-Item -LiteralPath $safeDir -Force
             }
         }
     }
@@ -500,7 +514,8 @@ function Invoke-MarkerFallbackUninstall([string]$homeAbs) {
             continue
         }
         if (Test-FileHasMarker $safe) {
-            Remove-Item -LiteralPath $safe -Force
+            $safeTarget = Resolve-Contained $safe $homeAbs
+            Remove-Item -LiteralPath $safeTarget -Force
             $removed++
         }
     }
@@ -540,9 +555,9 @@ function Invoke-Uninstall([string]$homeAbs) {
     # so its created-dir removal (last) can succeed on a full uninstall.
     Remove-InstallEntry $ledger $Provider
     if (Test-InstallsEmpty $ledger) {
-        $ledgerPath = Get-LedgerPath $homeAbs
-        if (Test-Path -LiteralPath $ledgerPath) {
-            Remove-Item -LiteralPath $ledgerPath -Force
+        $safeLedger = Resolve-Contained (Get-LedgerPath $homeAbs) $homeAbs
+        if (Test-Path -LiteralPath $safeLedger) {
+            Remove-Item -LiteralPath $safeLedger -Force
         }
     } else {
         Write-Ledger $homeAbs $ledger
@@ -615,34 +630,80 @@ function Invoke-Install([string]$homeAbs) {
             [void]$createdSet.Add('.')
         }
 
+        # The copy loop runs through the SHARED transaction engine
+        # (tools/skill-mesh-transaction.ps1): ordered action set, an append-only
+        # journal record before and after each write, and a post-write hash
+        # verification. This is behind-the-contract only -- no new parameter, no
+        # migration_id, no backup directory, and the same exit codes.
+        #
+        # -NoRollback is DELIBERATE. This command's published contract on a partial
+        # copy is a RECONCILED RECOVERY LEDGER (files already written stay on disk
+        # and a retry resumes without -Force), not an undo. The engine therefore
+        # rethrows and the existing catch below owns recovery, exactly as before.
+        # The journal lives in a per-run OS-temp directory removed on every exit
+        # path -- nothing new is ever written into the install home.
+        $txStateDir = Join-Path ([System.IO.Path]::GetTempPath()) `
+            ("skill-mesh-tx-" + [System.Guid]::NewGuid().ToString('N'))
+        $txActions = @()
+        $txSeq = 0
+        foreach ($pair in $pairs) {
+            $txActions += [PSCustomObject]@{
+                seq       = $txSeq
+                action    = 'install'
+                rel_path  = $pair[2]
+                source    = $pair[0]
+                target    = $pair[1]
+                post_hash = (Get-SkillMeshFileSha256 $pair[0])
+            }
+            $txSeq++
+        }
+        $txGetHash = {
+            param($a)
+            # Re-resolve rather than trusting the scan-time path, so the hash is
+            # taken from the same real path the mutation will write.
+            Get-SkillMeshFileSha256 (Resolve-Contained $a.target $homeAbs)
+        }
+        $txMutate = {
+            param($a)
+            $rel = $a.rel_path
+
+            # Re-resolve containment on the PARENT immediately before creating it
+            # (junction-on-ancestor TOCTOU).
+            $targetDir = Split-Path -Parent $a.target
+            $safeDir = Resolve-Contained $targetDir $homeAbs
+            New-TrackedDir $safeDir $homeAbs $createdSet
+
+            # Re-resolve containment on the TARGET immediately before the copy.
+            $safeTarget = Resolve-Contained $a.target $homeAbs
+
+            # Marker TOCTOU guard: a foreign file may have appeared here AFTER the
+            # scan. Overwrite only a non-existent target or a marker-bearing one.
+            if ((Test-Path -LiteralPath $safeTarget) -and
+                (-not (Test-FileHasMarker $safeTarget)) -and
+                (-not $writtenSet.Contains($rel)) -and
+                (-not $Force)) {
+                throw ("install-skill-mesh: SECURITY -- a foreign (non-marker) file " +
+                       "appeared at '$rel' after the pre-scan; aborting to avoid " +
+                       "clobbering it (pass -Force to override).")
+            }
+
+            Copy-Item -LiteralPath $a.source -Destination $safeTarget -Force
+            $writtenRel.Add($rel)
+            [void]$writtenSet.Add($rel)
+        }
+
         try {
-            foreach ($pair in $pairs) {
-                $srcFull = $pair[0]
-                $rel = $pair[2]
-
-                # Re-resolve containment on the PARENT immediately before creating it
-                # (junction-on-ancestor TOCTOU).
-                $targetDir = Split-Path -Parent $pair[1]
-                $safeDir = Resolve-Contained $targetDir $homeAbs
-                New-TrackedDir $safeDir $homeAbs $createdSet
-
-                # Re-resolve containment on the TARGET immediately before the copy.
-                $safeTarget = Resolve-Contained $pair[1] $homeAbs
-
-                # Marker TOCTOU guard: a foreign file may have appeared here AFTER the
-                # scan. Overwrite only a non-existent target or a marker-bearing one.
-                if ((Test-Path -LiteralPath $safeTarget) -and
-                    (-not (Test-FileHasMarker $safeTarget)) -and
-                    (-not $writtenSet.Contains($rel)) -and
-                    (-not $Force)) {
-                    throw ("install-skill-mesh: SECURITY -- a foreign (non-marker) file " +
-                           "appeared at '$rel' after the pre-scan; aborting to avoid " +
-                           "clobbering it (pass -Force to override).")
+            try {
+                $tx = New-SkillMeshTransaction `
+                    -MigrationId (New-SkillMeshMigrationId) `
+                    -JournalPath (Join-Path $txStateDir 'journal.jsonl')
+                Invoke-SkillMeshTxApply -Transaction $tx -Actions $txActions `
+                    -GetPreHash $txGetHash -Mutate $txMutate -GetPostHash $txGetHash `
+                    -NoRollback
+            } finally {
+                if (Test-Path -LiteralPath $txStateDir) {
+                    Remove-Item -LiteralPath $txStateDir -Recurse -Force
                 }
-
-                Copy-Item -LiteralPath $srcFull -Destination $safeTarget -Force
-                $writtenRel.Add($rel)
-                [void]$writtenSet.Add($rel)
             }
 
             # Copy fully succeeded -> remove STALE prior-owned files (owned before but
@@ -651,7 +712,8 @@ function Invoke-Install([string]$homeAbs) {
                 if (-not $writtenSet.Contains($r)) {
                     $abs = Get-ContainedAbs $r $homeAbs
                     if ($null -ne $abs -and (Test-Path -LiteralPath $abs) -and (Test-FileHasMarker $abs)) {
-                        Remove-Item -LiteralPath $abs -Force
+                        $safeStale = Resolve-Contained $abs $homeAbs
+                        Remove-Item -LiteralPath $safeStale -Force
                     }
                 }
             }
@@ -700,6 +762,26 @@ function Get-ExistingOwned($rels, [string]$homeAbs) {
 # -- Entry point --------------------------------------------------------------
 
 $homeAbs = Resolve-HomeRoot $TargetHome
+
+# -- #89: normalize -Provider ONCE, at the parameter boundary -----------------
+# PowerShell's [ValidateSet] matches case-insensitively and does NOT normalize, so
+# `-Provider CLAUDE` previously flowed through verbatim: it keyed the ledger
+# 'CLAUDE', wrote provider='CLAUDE', and (via build-distributions) stamped
+# `Profile: CLAUDE` into every generated file -- making DISTRIBUTION BYTES vary by
+# invocation casing in a repository that advertises reproducible releases.
+# Resolve-SkillMeshProvider is the shared ordinal, case-insensitive matcher in
+# tools/skill-mesh-discovery.ps1 (the same one the inspector uses), and it returns
+# the vocabulary's OWN spelling. From here on $Provider is canonical, so the ledger
+# key, the provider field, and the value handed to the builder all agree.
+$canonicalProvider = Resolve-SkillMeshProvider $Provider @($DISCOVERY_SUBDIR.Keys)
+if ($null -eq $canonicalProvider) {
+    # Unreachable through the CLI (ValidateSet already restricted the value); kept
+    # so a future vocabulary change fails loudly instead of writing a stray slug.
+    [Console]::Error.WriteLine(
+        "install-skill-mesh: '$Provider' is not a known provider slug.")
+    exit 2
+}
+$Provider = $canonicalProvider
 
 if ($Uninstall) {
     Invoke-Uninstall $homeAbs

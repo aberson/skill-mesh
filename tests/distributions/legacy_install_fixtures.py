@@ -366,6 +366,118 @@ def _hostile(home):
     write_exact(home, LEGACY_ROUTER, "$ROUTER_VERSION = '1.2.3\n'\n")
 
 
+# --------------------------------------------------------------------------- #
+# Migration shapes (Step 47)
+#
+# The migrator needs a home whose contents line up with a REAL built distribution,
+# so these name manifest skills rather than invented ones. Which status each name
+# must carry is asserted in tests/distributions/test_legacy_migration.py
+# (test_migration_fixture_names_match_the_manifest) -- a manifest edit that changed
+# one of their statuses would otherwise silently turn a positive fixture into a
+# negative one.
+# --------------------------------------------------------------------------- #
+
+# Portable skills (both adapters) the migration installs into BOTH profiles.
+MIGRATION_MANAGED = ("plan-review", "repo-init")
+# A provider-native skill (core: null): Claude profile only, and its absence from
+# the GPT profile must NEVER be read as an incomplete distribution.
+MIGRATION_NATIVE = "context-slim"
+# Unmanifested consumer skills that must survive a migration byte-for-byte.
+MIGRATION_CONSUMER_ONLY = ("build-observer", "goblin-sweep")
+
+
+def legacy_skill_md(name):
+    """The live legacy shape: a real hand-authored launcher at a managed path.
+
+    This is the exact content the safe installer refuses (no provenance marker at a
+    generated target path) and the migrator adopts."""
+    return (
+        "---\n"
+        "name: " + name + "\n"
+        'description: "Legacy hand-maintained launcher."\n'
+        "---\n"
+        "# " + name + " (legacy)\n\n"
+        "Hand-maintained before the cutover. Not skill-mesh generated.\n"
+    )
+
+
+# Two MANIFEST skill names of EQUAL character length. Planted as sibling retired
+# trees they produce two emptied directories whose paths are the same length, which
+# is the exact input that a `Sort-Object -Property @{Expression={...}} -Unique` on a
+# calculated length key silently collapses to one. Equal length is asserted in
+# test_legacy_migration.py so a rename cannot quietly defuse the regression test.
+EQUAL_LENGTH_RETIRED = ("repo-init", "repo-sync")
+
+# A consumer directory name that is over-long AND carries the ', ' separator a
+# report joins names with -- the migrator's blocked-path channel must bound both.
+# Length only has to exceed the 64-char display cap; every extra character is
+# charged against MAX_PATH once mounted under a pytest tmp_path.
+HOSTILE_DIR = "z" * 80 + ",injected"
+
+
+def migration_home(home, foreign=False, retired_copilot=True, consumer_only=True,
+                   core_holder=True, legacy_ledger=True, stale_generated=False,
+                   equal_length_retired=False, hostile_foreign_name=False):
+    """A consumer home in the pre-cutover state the migrator has to handle.
+
+    Every flag isolates ONE classification input, so a test can build the same home
+    with and without a single feature and prove the feature is what changed the
+    outcome (the red-on-garbage pairing this repo requires)."""
+    home = Path(home)
+    home.mkdir(parents=True, exist_ok=True)
+    for name in MIGRATION_MANAGED:
+        write(home, CLAUDE_ROOT + "/" + name + "/SKILL.md", legacy_skill_md(name))
+    if consumer_only:
+        for name in MIGRATION_CONSUMER_ONLY:
+            write(home, CLAUDE_ROOT + "/" + name + "/SKILL.md", consumer_skill_md(name))
+    if core_holder:
+        write(home, CLAUDE_ROOT + "/_shared/judge-core.md",
+              "# judge-core (shared core)\n\nConsumer-held shared core; not a skill.\n")
+    if retired_copilot:
+        # A pre-Step-44 GPT install at the RETIRED project-relative target. It
+        # carries the provenance marker, so it is skill-mesh's OWN superseded file
+        # and is the one thing the migrator RETIRES.
+        write(home, RETIRED_COPILOT_ROOT + "/" + MIGRATION_MANAGED[0] + "/SKILL.md",
+              generated_skill_md(MIGRATION_MANAGED[0], "gpt"))
+    if stale_generated:
+        # A generated file the current distribution no longer emits, sitting inside
+        # a managed skill dir: skill-mesh's own, therefore retired, not blocked.
+        write(home, CLAUDE_ROOT + "/" + MIGRATION_MANAGED[0] + "/stale-core.md",
+              generated_core_md("claude"))
+    if equal_length_retired:
+        # Two sibling retired trees whose directory names are the SAME length, so
+        # the emptied-directory cleanup has to remove both.
+        for name in EQUAL_LENGTH_RETIRED:
+            write(home, RETIRED_COPILOT_ROOT + "/" + name + "/SKILL.md",
+                  generated_skill_md(name, "gpt"))
+    if foreign:
+        # The ONE input that must BLOCK: not a manifest name, no SKILL.md, not
+        # `_shared`.
+        write(home, CLAUDE_ROOT + "/" + FOREIGN_DIR + "/README.md",
+              "# operator notes\n\nNot a skill, not managed, not the core-holder.\n")
+    if hostile_foreign_name:
+        # A blocking (foreign) directory whose NAME is the hostile payload, so the
+        # bounded-report assertion runs against the channel that actually carries a
+        # consumer-controlled name into a report an operator may paste.
+        write(home, CLAUDE_ROOT + "/" + HOSTILE_DIR + "/README.md",
+              "# not a skill\n")
+    if legacy_ledger:
+        write(home, LEDGER_NAME, ledger(["claude"]))
+    return home
+
+
+def _migration_legacy(home):
+    migration_home(home)
+
+
+def _migration_foreign(home):
+    migration_home(home, foreign=True)
+
+
+def _migration_stale_generated(home):
+    migration_home(home, stale_generated=True)
+
+
 _BUILDERS = {
     "01-clean": lambda home: None,
     "02-generated": _generated,
@@ -386,6 +498,9 @@ _BUILDERS = {
     "19-hostile": _hostile,
     "20-provider-case-variant": _provider_case_variant,
     "21-provider-lookalike": _provider_lookalike,
+    "22-migration-legacy": _migration_legacy,
+    "23-migration-foreign": _migration_foreign,
+    "24-migration-stale-generated": _migration_stale_generated,
 }
 
 # Shapes this module builds directly. The junction shapes (05-junction and
