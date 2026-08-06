@@ -128,14 +128,20 @@ report; four untested behaviors (no `foreign` fixture, the corrupt-ledger paths,
 committed fixture `SKILL.md` files sitting at real discovery paths, which made this repository
 publish phantom skills into its own host. Consumer-home fixtures are now synthesized at test time by
 `tests/distributions/legacy_install_fixtures.py` and a `git ls-files` gate keeps them from coming
-back. Steps 47–50 are pending, starting with
-reversible legacy-install migration (Step 47) — re-scoped 2026-08-05 by
-`documentation/step-47-decomposition-decision.md` after five review rounds of the unmerged
-`build-step-1785890195` branch failed to converge: Step 47 keeps the migrator/engine with a decided
-three-case preserve-drift policy and merges alone (build resumes from the branch, restoring the two
-round-5-changed files to `5ef1045`), while new Step 47b — off the Step 48→50 critical path — owns
-the containment gate's hardening (differential corpus + content-identity tripwire; AST rewrite
-deferred with a named trigger). 440 tests across seven suites. (Step 45 also surfaced #69: the Claude-profile `SKILL.md`
+back. **Step 47 (reversible legacy-install migration, #60) is DONE** — merged `29d73dc` on
+2026-08-05. It had been re-scoped the same day by `documentation/step-47-decomposition-decision.md`
+after five review rounds of the unmerged `build-step-1785890195` branch failed to converge; the
+re-scoped step restored the two round-5-changed files to `5ef1045`, implemented the decided
+three-case preserve-drift policy, and merged alone. Its ONE bounded confirming round returned
+**0 Block findings across all six lenses** (the Block trend across rounds 1–6 was 4 → 5 → 4 → 1 → 6
+→ 0); all 6 Nits it did raise were fixed pre-merge. The load-bearing correction: a `rolled_back`
+status now claims only what it can prove — *every byte this tool mutated was restored* — because
+`preserve` actions carry no backup payload by design, so a consumer editing their own preserved
+skill during downtime gets an advisory naming the path and both hashes rather than a false "the
+consumer home is MIXED" claim that invited restoring a stale backup over their newer bytes.
+Steps 48–50 remain, plus **Step 47b** — off the Step 48→50 critical path — which owns the
+containment gate's hardening (differential corpus + content-identity tripwire; AST rewrite deferred
+with a named trigger). 540 tests across seven suites. (Step 45 also surfaced #69: the Claude-profile `SKILL.md`
 frontmatter emits `description`/`argument` unquoted, so a colon-bearing value fails Copilot's YAML
 parse — a bounded builder defect, does not block the cutover. #87 fixed `/repo-sync`'s hardcoded
 default branch in minted issue-body links; its data-repair half is done for #56–#82, while #1–#37
