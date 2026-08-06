@@ -102,6 +102,7 @@ def _read(path):
 REQUIRED_STEPS = (
     ("inspection step", "inspect the consumer home"),
     ("backup requirement", "external backup directory"),
+    ("acceptance-probe revert", "revert the acceptance probe"),
     ("rollback command", "roll back the migration"),
     ("host-acceptance gate", "host-acceptance gate"),
     ("separate coding-root commit", "commit the coding-root change"),
@@ -158,6 +159,80 @@ def test_handoff_exists():
 def test_handoff_declares_every_required_step_in_order():
     defects = ordering_defects(_read(HANDOFF))
     assert not defects, "handoff step contract violated:\n" + "\n".join(defects)
+
+
+_PROBE_REVERT_HEADING = "## 10. Revert the acceptance probe before any rollback"
+_ROLLBACK_HEADING = "## 11. Roll back the migration"
+
+
+def probe_revert_ordering_defects(text):
+    """The probe revert must be instructed BEFORE the rollback section, and it must
+    say how to prove the revert landed.
+
+    This is not a style point. tools/migrate-legacy-install.ps1's
+    Assert-OurBytesAtTarget refuses to undo any path whose bytes are no longer the
+    ones the transaction wrote, so a rollback run while an acceptance probe is still
+    appended to an installed SKILL.md exits 3 and strands the transaction in
+    failed_incomplete -- a state -Resume, -Rollback and a bare -Apply all refuse.
+    Reproduced end to end before this assertion was written. A handoff that presents
+    these two in the other order teaches the operator to destroy their own rollback
+    rehearsal."""
+    low = text.lower()
+    revert_at = low.find(_PROBE_REVERT_HEADING.lower())
+    rollback_at = low.find(_ROLLBACK_HEADING.lower())
+    defects = []
+    if revert_at < 0:
+        defects.append(f"missing probe-revert section: {_PROBE_REVERT_HEADING!r}")
+    if rollback_at < 0:
+        defects.append(f"missing rollback section: {_ROLLBACK_HEADING!r}")
+    if defects:
+        return defects
+    if revert_at > rollback_at:
+        defects.append(
+            "the probe-revert section appears AFTER the rollback section "
+            f"(offsets {revert_at} > {rollback_at}) -- rollback over a probed file "
+            "exits 3 into failed_incomplete")
+    section = section_block(text, _PROBE_REVERT_HEADING, stop_prefixes=("\n## ",))
+    slow = re.sub(r"\s+", " ", section).lower()
+    for needle, why in (
+            ("backup-manifest.json", "does not name the manifest the restore is verified against"),
+            ("installed_files", "does not name the manifest array holding the installed hashes"),
+            ("sha256", "does not require a hash comparison"),
+            ("match=true", "states no PASS condition for the verification"),
+    ):
+        if needle not in slow:
+            defects.append(f"the probe-revert section {why}")
+    return defects
+
+
+def test_probe_revert_ordering_gate_reds_on_the_reversed_order():
+    # ANCHOR: the gate must accept the real document, flag the two sections in the
+    # wrong order, and flag a revert section that proves nothing.
+    text = _read(HANDOFF)
+    assert probe_revert_ordering_defects(text) == [], probe_revert_ordering_defects(text)
+
+    revert = section_block(text, _PROBE_REVERT_HEADING, stop_prefixes=("\n## ",))
+    rollback = section_block(text, _ROLLBACK_HEADING, stop_prefixes=("\n## ",))
+    assert revert and rollback, "both sections must be sliceable for this anchor to mean anything"
+    # section_block stops just before the newline that opens the next heading, so
+    # the two slices are joined by exactly one "\n" in the source.
+    original = revert + "\n" + rollback
+    assert original in text, "the two sections are not adjacent -- the swap probe is invalid"
+    swapped = text.replace(original, rollback + "\n" + revert)
+    assert swapped != text, "the swap probe did not change the document"
+    assert any("AFTER the rollback section" in d
+               for d in probe_revert_ordering_defects(swapped)), \
+        "the ordering gate accepts a probe revert that follows the rollback section"
+
+    gutted = text.replace(revert, _PROBE_REVERT_HEADING + "\n\nRemove the probe.\n\n")
+    assert any("hash comparison" in d or "PASS condition" in d
+               for d in probe_revert_ordering_defects(gutted)), \
+        "the gate accepts a revert section that never verifies the restore"
+
+
+def test_handoff_reverts_the_probe_before_it_rolls_back():
+    defects = probe_revert_ordering_defects(_read(HANDOFF))
+    assert not defects, "probe-revert ordering violated:\n" + "\n".join(defects)
 
 
 # `-Apply` as a FLAG, not as the tail of an ordinary word. An unanchored
@@ -713,6 +788,16 @@ def exit_three_defects(text):
     if "do not restore a backup" not in low:
         defects.append("the exit-3 section does not warn against restoring a backup "
                        "in the preserved-path case")
+    # The exit 3 an operator is most likely to hit prints NEITHER of the two
+    # quoted diagnostics above: Assert-OurBytesAtTarget's refusal
+    # ("refusing to undo the install of '<path>' -- the bytes there are no longer
+    # the ones this migration wrote") is what an appended acceptance probe
+    # produces, and a table that does not carry it sends the operator matching
+    # against rows that cannot match. Reproduced end to end.
+    if "no longer the ones this migration wrote" not in low:
+        defects.append("the exit-3 section does not carry the byte-drift refusal "
+                       "diagnostic (Assert-OurBytesAtTarget), which is the exit 3 an "
+                       "appended acceptance probe actually produces")
     return defects
 
 
@@ -1011,6 +1096,213 @@ def test_handoff_defers_host_acceptance_to_the_operator_steps():
         "handoff must state host acceptance is operator evidence, not a test result"
     assert "parked-work handshake" in low, \
         "handoff must make the parked-work handshake an explicit gate"
+
+
+_SPELLING_HEADING = "## 0. Precondition: resolve your PowerShell executable"
+
+
+def powershell_spelling_defects(text):
+    """The handoff must resolve the PowerShell executable BEFORE its first tool
+    invocation, and every block must then be spelled the way that probe decided.
+
+    `pwsh` is PowerShell 7 and is NOT present on a stock Windows install; Windows
+    PowerShell 5.1 is the floor every tool in this repository is written for and is
+    what the test suites shell out to. A document whose first command block is
+    unrunnable strands the operator at step one -- so the probe comes first and the
+    blocks carry the spelling that always resolves. (documentation/architecture.md
+    keeps the `pwsh` spelling in its command contract; the probe's table states the
+    substitution both ways, so the two documents agree rather than conflict.)"""
+    defects = []
+    low = text.lower()
+    heading_at = low.find(_SPELLING_HEADING.lower())
+    if heading_at < 0:
+        return [f"missing spelling precondition section: {_SPELLING_HEADING!r}"]
+    lines = text.splitlines()
+    first_tool_line = None
+    for line in command_lines(text):
+        if _PS1_IN_SPAN.search(_command_head(line)):
+            first_tool_line = line
+            break
+    if first_tool_line is None:
+        return ["the handoff invokes no tool at all -- this gate would be vacuous"]
+    if text.find(first_tool_line) < heading_at:
+        defects.append("a tool is invoked before the PowerShell-spelling precondition: "
+                       + first_tool_line.strip())
+    for i, line in enumerate(lines):
+        if re.search(r"(?<![\w.-])pwsh\s+-File\b", line, re.I):
+            defects.append(f"line {i + 1}: a command block is spelled `pwsh -File`, which "
+                           "does not resolve on a stock Windows install: " + line.strip())
+    section = section_block(text, _SPELLING_HEADING, stop_prefixes=("\n## ",))
+    slow = re.sub(r"\s+", " ", section).lower()
+    if "get-command pwsh" not in slow:
+        defects.append("the precondition never actually probes for pwsh")
+    if "substitution" not in slow:
+        defects.append("the precondition states no substitution rule")
+    return defects
+
+
+def test_spelling_gate_reds_on_a_pwsh_block_and_on_a_missing_probe():
+    # ANCHOR: the gate must accept the real document and flag each failure shape.
+    text = _read(HANDOFF)
+    assert powershell_spelling_defects(text) == [], powershell_spelling_defects(text)
+
+    relapsed = text.replace("powershell -File tools/inspect-host-install.ps1",
+                            "pwsh -File tools/inspect-host-install.ps1", 1)
+    assert relapsed != text, "no inspector invocation to mutate -- probe is invalid"
+    assert any("`pwsh -File`" in d for d in powershell_spelling_defects(relapsed)), \
+        "the spelling gate accepts a block spelled pwsh -File"
+
+    dropped = text.replace(_SPELLING_HEADING, "## 0. Something else")
+    assert any("missing spelling precondition" in d
+               for d in powershell_spelling_defects(dropped)), \
+        "the spelling gate passes silently when its section is renamed away"
+
+
+def test_handoff_resolves_the_powershell_executable_before_its_first_tool_call():
+    defects = powershell_spelling_defects(_read(HANDOFF))
+    assert not defects, "PowerShell spelling contract violated:\n" + "\n".join(defects)
+
+
+_COMMIT_SECTION = "## 14. Commit the coding-root change"
+
+
+def staging_split_defects(text):
+    """`git add` and `git commit` must live in SEPARATE fenced blocks, and the add
+    list must carry the ownership ledger.
+
+    Operators paste a whole fenced block. `git add` is atomic on an unmatched
+    pathspec -- one absent file (AGENTS.md, on a first cutover) fails the add with
+    exit 128 and stages nothing -- but a `commit` in the same paste still runs and
+    records whatever the index already held. Reproduced: `94 files changed, 94
+    deletions(-)`, i.e. the legacy tree retired and nothing installed, on the cutover
+    branch. Separate blocks are the workspace's command-presentation rule for
+    sequential-with-observation commands, and here they are the whole defense.
+
+    The ledger (.skill-mesh-install.json) is the only untracked row a clean migration
+    leaves behind; omitting it from the add list makes the section's own "any
+    unrelated path means stop" rule fire falsely on it."""
+    section = section_block(text, _COMMIT_SECTION, stop_prefixes=("\n## ",))
+    if not section:
+        return [f"section not found: {_COMMIT_SECTION!r}"]
+    lines = section.splitlines()
+    add_blocks, commit_blocks = set(), set()
+    for n, (open_i, close_i) in enumerate(command_blocks(section)):
+        body = " ".join(lines[open_i + 1:close_i])
+        if re.search(r"\bgit\b[^|;]*\badd\b", body):
+            add_blocks.add(n)
+        if re.search(r"\bgit\b[^|;]*\bcommit\b", body):
+            commit_blocks.add(n)
+    defects = []
+    if not add_blocks:
+        defects.append("the commit section stages nothing -- this gate would be vacuous")
+    if not commit_blocks:
+        defects.append("the commit section commits nothing -- this gate would be vacuous")
+    shared = add_blocks & commit_blocks
+    if shared:
+        defects.append("`git add` and `git commit` share one fenced block, so a failed "
+                       "add still commits: block index "
+                       + ", ".join(str(i) for i in sorted(shared)))
+    ledger = "." + "skill-mesh-install.json"
+    if not any(ledger in " ".join(lines[o + 1:c])
+               for o, c in command_blocks(section)
+               if re.search(r"\bgit\b[^|;]*\badd\b", " ".join(lines[o + 1:c]))):
+        defects.append(f"the `git add` pathspec list omits the ownership ledger {ledger}")
+    return defects
+
+
+def test_staging_split_gate_reds_on_a_shared_add_commit_block():
+    # ANCHOR: the real section must pass; a merged block and a dropped ledger must
+    # each go red.
+    text = _read(HANDOFF)
+    assert staging_split_defects(text) == [], staging_split_defects(text)
+
+    merged = text.replace(
+        "```\n\n**Expect:** `add` prints **nothing**",
+        "git -C '<consumer-home>' commit -m 'x'\n```\n\n**Expect:** `add` prints **nothing**",
+        1)
+    assert merged != text, "the merge probe did not change the document"
+    assert any("share one fenced block" in d for d in staging_split_defects(merged)), \
+        "the staging gate accepts add and commit in one pasteable block"
+
+    ledger = "." + "skill-mesh-install.json"
+    no_ledger = text.replace(f" '{ledger}'", "", 1)
+    assert no_ledger != text, "the ledger probe did not change the document"
+    assert any("ownership ledger" in d for d in staging_split_defects(no_ledger)), \
+        "the staging gate accepts an add list with no ownership ledger"
+
+
+def test_handoff_stages_and_commits_in_separate_blocks():
+    defects = staging_split_defects(_read(HANDOFF))
+    assert not defects, "staging contract violated:\n" + "\n".join(defects)
+
+
+def test_handoff_pins_the_expected_copilot_yaml_error_to_one_named_skill():
+    """Copilot prints a YAML parse failure for exactly one skill of 50 (issue #69:
+    an unquoted colon-bearing `argument:` value in the Claude adapter's
+    frontmatter). An operator told only "expect some YAML noise" cannot tell that
+    from a real discovery failure, so the discriminator has to be a NAME."""
+    low = re.sub(r"\s+", " ", _read(HANDOFF)).lower()
+    assert "context-slim" in low, \
+        "the handoff never names the one skill whose YAML error is expected"
+    assert "#69" in low, "the handoff does not tie the expected error to its issue"
+    assert "any other skill" in low, \
+        ("the handoff gives no discriminator between the one expected YAML error and a "
+         "real one")
+
+
+def test_handoff_warns_that_a_repeat_apply_is_not_a_no_op():
+    """A second bare -Apply on an already-migrated home mints a NEW transaction whose
+    backup pre-images are the GENERATED files, so rolling that id back leaves the home
+    fully cut over. Only the FIRST transaction id restores the legacy home."""
+    low = re.sub(r"\s+", " ", _read(HANDOFF)).lower()
+    assert "not a no-op" in low or "is **not** a no-op" in low, \
+        "the handoff never says a repeat -Apply is not a no-op"
+    assert "only the first" in low, \
+        "the handoff never says only the first transaction id restores the legacy home"
+
+
+def test_handoff_rescues_the_router_before_the_shim_overwrites_it():
+    """tools/gen-router-shim.ps1 overwrites <consumer-home>/.claude/lib/skill-router.ps1
+    unconditionally, and the migrator's backup never covers .claude/lib -- so without
+    an explicit copy first there is no recovery source at all for a locally-edited
+    router."""
+    text = _read(HANDOFF)
+    section = section_block(text, "### 13.3 Retire the old router")
+    assert section, "the router-retirement section is gone -- this gate would be vacuous"
+    lines = command_lines(section)
+    rooted = _backup_rooted_names(lines)
+    copy_at = next((i for i, ln in enumerate(lines)
+                    if re.search(r"\bCopy-Item\b", ln, re.I)
+                    and ("<backup-dir>" in ln or any(v in ln for v in rooted))),
+                   None)
+    shim_at = next((i for i, ln in enumerate(lines) if "gen-router-shim.ps1" in ln), None)
+    assert shim_at is not None, "the section no longer runs the shim generator"
+    assert copy_at is not None, \
+        "the shim overwrite has no copy of the existing router into <backup-dir>"
+    assert copy_at < shim_at, \
+        "the router rescue copy runs AFTER the shim has already overwritten the file"
+    assert "git restore" in re.sub(r"\s+", " ", section).lower(), \
+        "the section does not name git restore as the second recovery source"
+
+
+def test_handoff_parked_work_probes_are_satisfiable():
+    """Two of the four handshake probes cannot go green as absence checks on a mature
+    consumer: archived `.plan-expedite-state.*` files and long-lived worktrees exist
+    by design. A gate that can never pass gets waved through, which is worse than no
+    gate -- so they are freshness / idleness probes instead."""
+    text = _read(HANDOFF)
+    section = section_block(text, "## 2. Preconditions: the parked-work handshake",
+                            stop_prefixes=("\n## ",))
+    assert section, "the parked-work handshake section is gone"
+    joined = " ".join(command_lines(section))
+    assert "LastWriteTimeUtc" in joined and "AddHours(-8)" in joined, \
+        ("the expedite-state probe is a bare existence check; archived state files make "
+         "that unsatisfiable")
+    low = re.sub(r"\s+", " ", section).lower()
+    assert "idle" in low, \
+        "the worktree probe is not stated as an idleness check"
+    assert "dirty=0" in joined or "dirty=0" in low, \
+        "the worktree probe states no per-worktree PASS condition"
 
 
 def test_handoff_documents_backup_retention_and_secure_deletion():

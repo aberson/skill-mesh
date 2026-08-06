@@ -81,12 +81,18 @@ Steps 33-40.
   `tools/build-distributions.ps1`, so no shipped skill's behavior changes and no
   step in this plan needs to build probe-emitting tooling. Because appending
   changes that one file's bytes, the probe is **reverted before the step records
-  PASS** wherever the tree survives the step: Step 43's scratch home and Step
-  49's temporary home are discarded outright, but in Step 50's live consumer the
-  operator MUST restore the file to its installed content and re-run the
-  installer's post-install verification, so the recorded hash and ownership
-  ledger match a clean install. A live home left carrying probe text is a failed
-  Step 50, not a passed one.
+  PASS in every step that also rolls back or survives**: Step 43's scratch home
+  is discarded outright and never rolled back, so no revert is required there;
+  Step 49's temporary home IS discarded, but only after a rollback rehearsal on
+  the probed home, so the revert is mandatory there too and must precede the
+  rollback; and in Step 50's live consumer the operator MUST restore the file to
+  its installed content and re-run the installer's post-install verification, so
+  the recorded hash and ownership ledger match a clean install. A live home left
+  carrying probe text is a failed Step 50, not a passed one. The mechanism that
+  makes the revert load-bearing rather than cosmetic is
+  `Assert-OurBytesAtTarget`, which refuses to undo any path whose bytes drifted
+  after the transaction wrote them: a rollback over a probed file exits `3` and
+  strands the transaction in `failed_incomplete`, which no tool mode clears.
 - Angle-bracket tokens in existing path examples, such as `<Home>` and
   `skills/<name>`, are defined CLI/path metavariables, not unresolved design
   choices. New commands in this plan use concrete fixture paths or the defined
@@ -735,7 +741,7 @@ not the hosts, was verified.
 - **Type:** operator
 - **Issue:** #62
 - **Produces:** Acceptance observations only; no source-code artifact.
-- **Done when:** From a clean temporary consumer home installed via the release-candidate migrator (not a hand-planted fixture), the operator invokes one representative portable skill (e.g. `plan-review`, which has both a Claude and a GPT profile) in Claude Code and the same skill in GitHub Copilot CLI, records the discovered `.claude/skills/<skill>/SKILL.md` and `.github/skills/<skill>/SKILL.md` paths and provider adapter identity for each (read back from the `PROBE profile=... path=...` line, per the §2 acceptance-probe definition, appended to each planted representative `SKILL.md` copy), confirms the GPT path resolves the `.github/skills` root proven in Steps 43–45 rather than `.claude/skills` shadowing or `CLAUDE.md` runtime injection, confirms GPT works without `OPENAI_API_KEY`, confirms explicit router override separately (run in its own environment with the router's GPT transport credential configured, kept distinct from the key-unset native check), exercises rollback, and approves the coding-root handoff; the real `coding-root` remains unchanged until this acceptance passes.
+- **Done when:** From a clean temporary consumer home installed via the release-candidate migrator (not a hand-planted fixture), the operator invokes one representative portable skill (e.g. `plan-review`, which has both a Claude and a GPT profile) in Claude Code and the same skill in GitHub Copilot CLI, records the discovered `.claude/skills/<skill>/SKILL.md` and `.github/skills/<skill>/SKILL.md` paths and provider adapter identity for each (read back from the `PROBE profile=... path=...` line, per the §2 acceptance-probe definition, appended to each planted representative `SKILL.md` copy), confirms the GPT path resolves the `.github/skills` root proven in Steps 43–45 rather than `.claude/skills` shadowing or `CLAUDE.md` runtime injection, confirms GPT works without `OPENAI_API_KEY`, confirms explicit router override separately (run in its own environment with the router's GPT transport credential configured, kept distinct from the key-unset native check), THEN reverts the acceptance probe from every `SKILL.md` copy it was appended to and proves each restored file's SHA-256 equals that path's `installed_files[].sha256` in `<backup-dir>/<migration-id>/backup-manifest.json` (save a pre-image copy before appending; the revert is the restore source), and ONLY THEN exercises rollback, and approves the coding-root handoff; the real `coding-root` remains unchanged until this acceptance passes. The probe-revert-before-rollback ORDER is load-bearing and is a criterion, not hygiene: `Assert-OurBytesAtTarget` in `tools/migrate-legacy-install.ps1` refuses to undo any path whose bytes are no longer the ones the transaction wrote, so a rollback run with the probe still in place stops at the first probed file, exits `3`, and leaves the temporary home genuinely MIXED in status `failed_incomplete` -- a terminal-and-unresolved state that `-Resume`, `-Rollback` and a bare `-Apply` all refuse, so the rollback rehearsal cannot then be performed at all. If it is hit anyway, the escape is to copy anything still needed out of `<backup-dir>/<migration-id>`, remove that transaction directory, and re-run the dry run, which returns `blocked (0)` with a fresh plan over the mixed home (`documentation/coding-root-cutover-handoff.md` §10 and §11).
 - **Depends on:** 48
 
 ### Step 50: Cut over the live coding-root consumer
