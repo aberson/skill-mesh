@@ -326,16 +326,25 @@ existing deterministic/rubric comparison that checks adapter parity.
 > **Do not execute this step as written.** Its unexecuted acceptance intent is superseded by
 > [`host-native-discovery-cutover-plan.md`](host-native-discovery-cutover-plan.md), where the work is
 > now Steps 49 (acceptance against the release candidate) and 50 (live coding-root cutover). Step 43
-> of that plan disproved the discovery-root assumption this step was written against. The formal
-> `**Status:** SUPERSEDED` marker and the closure of issue #50 are deliverables of that plan's
-> Step 48; this note exists so a fresh reader does not treat Step 41 and Steps 49-50 as two live
-> units. The repository description referenced below has already been updated
-> ([`repo-metadata.md`](repo-metadata.md)).
+> of that plan disproved the discovery-root assumption this step was written against. This note
+> exists so a fresh reader does not treat Step 41 and Steps 49-50 as two live units. The repository
+> description referenced below has already been updated ([`repo-metadata.md`](repo-metadata.md)).
 
 - **Problem:** The final goal depends on real host discovery behavior that fixtures cannot fully establish.
 - **Type:** operator
 - **Issue:** #50
-- **Done when:** The operator invokes one representative skill from a Claude session and one from a GPT/Copilot session, confirms each loaded its matching adapter and shared core, confirms explicit cross-provider override behavior, approves the README, publishes the release, and updates the GitHub repository description to provider-neutral wording.
+- **Status:** SUPERSEDED (2026-08-05) by
+  [`host-native-discovery-cutover-plan.md`](host-native-discovery-cutover-plan.md) — marked by that
+  plan's Step 48. The acceptance intent below is carried by that plan's Steps 49 (acceptance against
+  the release candidate, from a clean temporary consumer home) and 50 (live coding-root cutover), and
+  the operator sequence they consume is
+  [`coding-root-cutover-handoff.md`](coding-root-cutover-handoff.md). Nothing in this step is live:
+  do not schedule it, do not build it, and do not treat its Done-when as an outstanding obligation.
+  **Issue #50 needs nothing further: it was already closed on 2026-08-03**, superseded against
+  umbrella #56. That closure was a `/repo-sync`/operator action and was deliberately never a
+  criterion of Step 48, which is a code step and owns only this in-repo marker — so it is neither
+  an outstanding obligation nor a claim this plan makes about its own work.
+- **Done when:** ~~The operator invokes one representative skill from a Claude session and one from a GPT/Copilot session, confirms each loaded its matching adapter and shared core, confirms explicit cross-provider override behavior, approves the README, publishes the release, and updates the GitHub repository description to provider-neutral wording.~~ Superseded — see the Status above.
 - **Depends on:** 40
 
 ## 8. Risks and Open Questions

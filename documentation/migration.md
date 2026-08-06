@@ -62,11 +62,46 @@ step (Step 39 only rewrites documentation and does not delete or regenerate file
 The legacy migration source's own `.claude/skills/` and `.claude/skills-gpt/` trees (in
 `aberson/coding-root`) were **read-only** for the whole of Steps 33-40 — nothing in this
 migration wrote to them. Step 41 has been superseded by
-[`host-native-discovery-cutover-plan.md`](host-native-discovery-cutover-plan.md); the one-time
-cutover is now Steps 43-50 of that plan (Steps 42-46 shipped; Step 47 is next), which install the
-released `aberson/skill-mesh` package into `coding-root/.claude` via
-`tools/install-skill-mesh.ps1 -Provider claude -Home <coding-root>`, generating a marker-tagged,
-ownership-safe discovery tree rather than hand-edited files.
+[`host-native-discovery-cutover-plan.md`](host-native-discovery-cutover-plan.md) and now carries
+an explicit `**Status:** SUPERSEDED` marker in
+[`provider-neutral-skill-mesh-plan.md`](provider-neutral-skill-mesh-plan.md); the one-time
+cutover is now Steps 42-50 of the **host-native-discovery cutover plan** (the first link above —
+`provider-neutral-skill-mesh-plan.md` has no Steps 42-50).
+
+**Status:** Steps 42-47 have shipped — the host-loading authority map, the live Copilot CLI
+discovery-root proof, the GPT retarget, the both-profile discovery proof, read-only host-install
+inspection, and the reversible migrator. Step 48 (this handoff) is in progress; Steps 49-50 are
+the operator acceptance steps that follow it.
+
+**Topology correction.** A consumer gets **two** discovery roots, not one, and the legacy GPT
+core tree is neither of them:
+
+| Tree | Role today |
+|---|---|
+| `<consumer-home>/.claude/skills/` | Claude Code discovery root — the Claude profile's install target |
+| `<consumer-home>/.github/skills/` | GitHub Copilot CLI discovery root — the GPT profile's install target |
+| `<consumer-home>/.claude/skills-gpt/` | **Legacy** hand-authored GPT core tree. Superseded by the generated `.github/skills` profile; retired entry-by-entry at cutover, never wholesale |
+
+The full authority map — and why a running GPT model is not evidence of an installed GPT
+profile — is [`host-discovery.md`](host-discovery.md).
+
+## The one-time consumer cutover
+
+The exact operator sequence lives in
+[`coding-root-cutover-handoff.md`](coding-root-cutover-handoff.md). Four properties of it are
+worth knowing before you open it:
+
+- **Inspect before you migrate.** `tools/inspect-host-install.ps1` is a read-only preflight that
+  classifies every skill-bearing tree; the migrator's dry run comes next, and only then
+  `-Apply`. Nothing mutates until two separate read-only passes have reported.
+- **The backup is mandatory and external.** `tools/migrate-legacy-install.ps1` requires
+  `-BackupDir` in every mode and refuses a directory inside the consumer home. Retention and the
+  exact secure-deletion command are in the handoff's last section.
+- **Retirement is classify-then-retire.** Only `managed` entries — those with a manifest record
+  and a generated counterpart — are retired from `.claude/skills-gpt`. Consumer-only entries are
+  preserved byte-for-byte in place and recorded by path and hash, never payload-copied.
+- **Host acceptance is operator evidence.** The handoff prepares Steps 49-50; it does not perform
+  them, and no test in this repository asserts that a host discovered anything.
 
 After Step 50 of the host-native-discovery cutover plan, `coding-root/.claude/skills/` becomes an **installed consumer** of this package, not
 an independent source: future skill changes are made in `aberson/skill-mesh` and flow out via a
