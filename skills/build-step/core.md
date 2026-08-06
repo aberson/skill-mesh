@@ -306,10 +306,15 @@ Always run, regardless of review style:
 
 ```bash
 cd "$WORKTREE"  # or container
-<typecheck_command> 2>&1 | tail -20
-<lint_command> 2>&1 | tail -10
-<test_command> 2>&1 | tail -15
+mkdir -p .build-step
+<typecheck_command> > .build-step/gate-typecheck.log 2>&1; TYPECHECK_RC=$?; tail -20 .build-step/gate-typecheck.log
+<lint_command> > .build-step/gate-lint.log 2>&1; LINT_RC=$?; tail -10 .build-step/gate-lint.log
+<test_command> > .build-step/gate-test.log 2>&1; TEST_RC=$?; tail -15 .build-step/gate-test.log
 ```
+
+Pass/fail is judged on the captured `*_RC` exit codes, never on the tailed output: piping
+a gate through `tail` makes the shell report the pipe's exit status, so a failed suite
+reads as a pass (see workspace memory `feedback_pytest_exit_code_masked_by_pipe`).
 
 If any fail and `--reviewers auto`: this IS the rejection. Pass errors back to
 developer, go to Step 2. No reviewer agents needed.
