@@ -478,7 +478,7 @@ hosts; 3 are Claude-native (`claude-oauth-auth`, `context-slim`, `judge-motion`)
 - ~50 skills; 47/47 skills are GPT-capable behind the shared Claude/GPT behavior contract; 3 additional skills are Claude-native.
 - Shipped: the canonical `skills/<name>/{core.md,providers/}` source tree, the provider-neutral router,
   and the distribution builder, installer, and release tooling (reproducible SHA-256 checksums over a
-  `git ls-files` stage); 540 tests across seven suites (router, calibration, package-integrity,
+  `git ls-files` stage); 577 tests across seven suites (router, calibration, package-integrity,
   distributions, release, telemetry, smoke).
 - In progress: host-native discovery and consumer cutover — making the three host-loading mechanisms
   explicitly distinct (instruction injection, native skill discovery, router dispatch) and adding a
@@ -487,8 +487,14 @@ hosts; 3 are Claude-native (`claude-oauth-auth`, `context-slim`, `judge-motion`)
   is **DONE** — it was re-scoped 2026-08-05 after a five-round review deadlock, then converged in
   one bounded confirming round with zero blocking findings. Decision record:
   [documentation/step-47-decomposition-decision.md](documentation/step-47-decomposition-decision.md).
-  Remaining: the consumer handoff and host acceptance (Steps 48–50), plus Step 47b, which hardens
-  the containment gate off the critical path.
+  The consumer handoff (Step 48) is **in progress** on its own branch and is not merged yet: the
+  copy-pasteable operator sequence lives at
+  [documentation/coding-root-cutover-handoff.md](documentation/coding-root-cutover-handoff.md) —
+  build → inspect → dry-run → apply → verify → roll back → host acceptance → retire → commit, with a
+  backup retention window and a secure-deletion command. Remaining: host acceptance against a clean
+  temporary home and then the live consumer (Steps 49–50, both operator steps whose evidence no test
+  in this repository stands in for), plus Step 47b, which hardens the containment gate off the
+  critical path.
 - The original 46 top-level `<skill>/SKILL.md` packages remain as a compatibility surface during a
   deprecation window — not the canonical source, and not updated by this migration; see
   [documentation/migration.md](documentation/migration.md).
