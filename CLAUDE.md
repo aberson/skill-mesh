@@ -139,9 +139,21 @@ status now claims only what it can prove — *every byte this tool mutated was r
 `preserve` actions carry no backup payload by design, so a consumer editing their own preserved
 skill during downtime gets an advisory naming the path and both hashes rather than a false "the
 consumer home is MIXED" claim that invited restoring a stale backup over their newer bytes.
-Steps 48–50 remain, plus **Step 47b** — off the Step 48→50 critical path — which owns the
-containment gate's hardening (differential corpus + content-identity tripwire; AST rewrite deferred
-with a named trigger). 540 tests across seven suites. (Step 45 also surfaced #69: the Claude-profile `SKILL.md`
+**Step 48 (#61) is also DONE** — merged `f377c54` on 2026-08-06. It produced
+`documentation/coding-root-cutover-handoff.md`, the copy-pasteable sequence Steps 49–50 execute, plus
+a structure gate (`tests/package-integrity/test_cutover_handoff.py`) that fails on an omitted **or
+mis-ordered** required unit and resolves every backticked command and path token — closing a real gap,
+since markdown links were already checked but command tokens were checked nowhere. Its four-lens
+review caught **two operator-safety Blocks**, both fixed pre-merge: the handoff sent an operator who
+hit exit 3 into `-Resume`/`-Rollback`, which both *refuse* `failed_incomplete` (unresolved AND
+terminal) — two dead ends and a blocked home; and the untracked-deletion fallback destroyed the
+managed legacy GPT tree while claiming backups that provably do not cover it.
+
+**The critical path is now operator-only: Steps 49 and 50 are `Type: operator`** host acceptance
+against real Claude Code and GitHub Copilot CLI — never agent-attempted. Step 50 mutates the live
+coding-root consumer and opens with a parked-work handshake. **Step 47b** remains pending and off
+that path (containment-gate hardening: differential corpus + content-identity tripwire; AST rewrite
+deferred with a named trigger). 577 tests across seven suites. (Step 45 also surfaced #69: the Claude-profile `SKILL.md`
 frontmatter emits `description`/`argument` unquoted, so a colon-bearing value fails Copilot's YAML
 parse — a bounded builder defect, does not block the cutover. #87 fixed `/repo-sync`'s hardcoded
 default branch in minted issue-body links; its data-repair half is done for #56–#82, while #1–#37
