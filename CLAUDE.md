@@ -153,7 +153,14 @@ managed legacy GPT tree while claiming backups that provably do not cover it.
 against real Claude Code and GitHub Copilot CLI — never agent-attempted. Step 50 mutates the live
 coding-root consumer and opens with a parked-work handshake. **Step 47b** remains pending and off
 that path (containment-gate hardening: differential corpus + content-identity tripwire; AST rewrite
-deferred with a named trigger). 577 tests across seven suites. (Step 45 also surfaced #69: the Claude-profile `SKILL.md`
+deferred with a named trigger). **Step 49's mechanical half has been rehearsed end to end** against
+throwaway homes (`343843b`): the migrator came out clean — rollback byte-identical, re-apply
+convergent, ledger free of preserved-tree entries — while the rehearsal found and fixed seven
+handoff defects, including a step-order trap in Step 49's own Done-when that left a home MIXED and
+unrecoverable, and `pwsh` not existing on this machine though every command block named it. Copilot
+CLI 1.0.77 also resolved the migrated home at full scale (53 skills, 0 duplicates, `.github/skills`
+winning the collision), extending Step 45's single-skill proof. 587 tests across seven suites.
+(Step 45 also surfaced #69: the Claude-profile `SKILL.md`
 frontmatter emits `description`/`argument` unquoted, so a colon-bearing value fails Copilot's YAML
 parse — a bounded builder defect, does not block the cutover. #87 fixed `/repo-sync`'s hardcoded
 default branch in minted issue-body links; its data-repair half is done for #56–#82, while #1–#37
