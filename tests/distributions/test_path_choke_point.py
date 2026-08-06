@@ -12,10 +12,65 @@ The invariant, stated once:
     containment, and no path may destroy or overwrite bytes without first proving
     those bytes are ours.
 
-This module makes the containment half MECHANICAL. It walks every git-tracked
-``.ps1``, finds every mutating filesystem primitive, and fails if any of them
-operates on a path that did not come from a resolver. The enumeration is what turns
-"we fixed the five we found" into "a sixth cannot appear".
+This module makes part of the containment half MECHANICAL. It walks every git-tracked
+``.ps1``, finds every mutating filesystem primitive, and fails if any of them operates
+on a path that did not come from a resolver.
+
+WHAT IT DOES NOT PROVE
+----------------------
+It is a best-effort TRIPWIRE, not a completeness proof. This file used to claim the
+enumeration turned "we fixed the five we found" into "a sixth cannot appear"; that
+claim is retracted, because the mechanism cannot support it. Two limits are
+structural:
+
+* **It is a regex over source TEXT, line by line.** Anything the line-oriented
+  patterns cannot parse is invisible to it (see the blind spots below). A sound
+  version would walk the PowerShell AST; that rewrite is deliberately deferred (see
+  ``documentation/step-47-decomposition-decision.md`` D5) behind a named trigger --
+  a live false negative in either half of the invariant.
+* **It covers only the CONTAINMENT half of the invariant.** The byte-identity half --
+  "no path may destroy or overwrite bytes without first proving those bytes are
+  ours" -- has no mechanical enforcement here. It is guarded by convention: every
+  destroying branch of ``Invoke-ActionUndo`` calls ``Assert-OurBytesAtTarget``. Two
+  of the historical defect instances were exactly this shape, correctly ``$safe*``
+  -gated yet missing the byte check, and no static path gate can see them. Step 47b
+  adds that tripwire.
+
+KNOWN BLIND SPOTS (accepted, all latent -- zero instances in the tracked tree)
+-----------------------------------------------------------------------------
+Recorded so a future round does not rediscover them as news, and so nobody reads a
+green run as proof of absence:
+
+1. **Inline resolver splice** -- the resolver called directly in the argument rather
+   than through a ``$safe*`` name.
+2. **Mutating-primitive argument expressions** -- a path built inside the call.
+3. **``$null = <cmd>`` capture position.**
+4. **String-literal suffixes** appended to an otherwise-gated variable.
+5. **A second primitive on the same line** -- the line-oriented match reports one
+   site, so a later ungated cmdlet on that line can be shadowed.
+6. **Aliased copy/move source** (``cp``/``copy``/``mv``/``rm`` spellings are not in
+   ``MUTATING``), and primitives absent from that list entirely (``Rename-Item``,
+   ``Clear-Content``, ``>``/``>>`` redirection, ``[IO.Directory]::Delete``, external
+   tools such as robocopy).
+7. **Helper-call laundering** -- a raw path passed to a mutating helper whose own
+   primitive is ``SITE_EXEMPT`` on an unverified "every caller passes ``$safe*``".
+8. **The hand-maintained ``LEXICAL_HOME`` joiner-name list** -- a renamed or newly
+   added lexical joiner is invisible until someone adds it here. This is the one
+   blind spot that contradicts the doctrine in the paragraph below, and it is called
+   out rather than quietly tolerated.
+9. **Cross-file flow** -- ``$safe*`` assignment tracking is per file, so a resolver
+   result returned from a helper in another file is not followed.
+
+A calibration result worth keeping (a round-5 skeptic re-derived it the expensive
+way): extending the mixed-operand check to resolver CALLS produces 36 violations
+against correct shipped code, because resolver arguments are inputs, not path
+prefixes. The short-circuit that looks like a bug is structurally required; closing
+that hole needs resolver-call stripping, which is AST-shaped work.
+
+What the gate is genuinely worth: it caught the containment shapes of the historical
+defect class, its sweep over the real tree is non-vacuous, and the runtime choke
+point (``Resolve-HomeTarget``) -- not this gate -- is what actually protects a
+consumer machine.
 
 THE CONVENTION IT ENFORCES
 --------------------------
@@ -45,31 +100,10 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 # (Get-Content, Get-ChildItem, Test-Path, [IO.File]::Read*, OpenRead) are out of
 # scope: a redirected read yields wrong bytes, which fails a hash comparison, while
 # a redirected write destroys something.
-# Aliases are included deliberately: `rm`, `del`, `ri`, `cpi`, `mi` are the SAME
-# cmdlets, and a gate that only knows the long names can be sidestepped -- by
-# accident as easily as on purpose. Same for Rename-Item and the
-# [IO.Directory] / [IO.File] statics.
-#
-# Aliases are recognised ONLY in command position (line start, or after `;`/`{`/`|`)
-# and only when followed by an argument. Matching them anywhere would make `md` fire
-# on every `SKILL.md` and `CLAUDE.md` in the repo -- the gate would drown in false
-# positives and get switched off, which is worse than not having it.
-ALIAS_TO_CMDLET = {
-    "rm": "Remove-Item", "del": "Remove-Item", "erase": "Remove-Item",
-    "rd": "Remove-Item", "rmdir": "Remove-Item", "ri": "Remove-Item",
-    "cpi": "Copy-Item", "cp": "Copy-Item", "copy": "Copy-Item",
-    "mi": "Move-Item", "mv": "Move-Item", "move": "Move-Item",
-    "ni": "New-Item", "md": "New-Item", "mkdir": "New-Item",
-    "sc": "Set-Content", "ac": "Add-Content",
-    "rni": "Rename-Item", "ren": "Rename-Item",
-}
 MUTATING = re.compile(
-    r"\b(?P<cmdlet>Copy-Item|Remove-Item|Move-Item|New-Item|Rename-Item"
-    r"|Set-Content|Add-Content|Out-File)\b"
-    r"|\[(?:System\.)?IO\.(?:File|Directory)\]::(?P<dotnet>WriteAllText|WriteAllBytes"
-    r"|WriteAllLines|AppendAllText|AppendAllLines|Delete|Move|Copy|CreateDirectory)"
-    r"|(?:^|[;{|])\s*(?P<alias>" + "|".join(sorted(ALIAS_TO_CMDLET, key=len, reverse=True))
-    + r")(?=\s+[-$'\"@(])"
+    r"\b(?P<cmdlet>Copy-Item|Remove-Item|Move-Item|New-Item|Set-Content|Add-Content|Out-File)\b"
+    r"|\[(?:System\.)?IO\.File\]::(?P<dotnet>WriteAllText|WriteAllBytes|WriteAllLines"
+    r"|AppendAllText|AppendAllLines|Delete|Move|Copy)"
 )
 
 # Which argument actually RECEIVES the mutation. For Copy-Item/Move-Item that is
@@ -211,7 +245,7 @@ def _path_argument(line, match):
     if match.group("dotnet"):
         m = DOTNET_FIRST_ARG.search(line, match.start())
         return m.group("arg").strip() if m else None
-    cmdlet = match.group("cmdlet") or ALIAS_TO_CMDLET.get((match.group("alias") or "").lower())
+    cmdlet = match.group("cmdlet")
     if cmdlet in DESTINATION_IS_TARGET:
         m = DEST_ARG.search(line, match.end())
         return m.group("arg").strip() if m else None
@@ -268,16 +302,6 @@ def ungated_reason(var, assigns, seen=None):
                 why = ungated_reason(p, assigns, seen)
                 if why:
                     return f"{var} derives from {why}"
-            # A gated PARENT is not enough: `$safeT = $safeBase + $rawSuffix` and
-            # `$safeT = Join-Path $safeBase $rawSuffix` both mix a resolved value
-            # with an unresolved one, and the result is no longer proven to be
-            # inside the home. Every other variable operand must be gated too.
-            others = [v for v in re.findall(r"\$[A-Za-z_][A-Za-z0-9_:]*", rhs)
-                      if not re.match(r"\A\$safe", v, re.I)
-                      and v.lower() not in ("$_", "$true", "$false", "$null", "$pid")]
-            if others:
-                return (f"{var} mixes gated value(s) with unresolved operand(s) "
-                        f"{', '.join(sorted(set(others)))} in ({rhs})")
             continue
         return f"{var} is assigned from an ungated expression ({rhs})"
     return None
@@ -447,8 +471,9 @@ def test_gate_follows_safe_alias_chains_transitively():
     """A two-hop alias chain must not launder a raw path into a trusted name.
 
     `$safeA = $rawPath; $safeB = $safeA` previously produced zero violations, so the
-    gate could be defeated by renaming -- which made "a sixth unguarded site is
-    impossible" untrue.
+    gate could be defeated by a rename -- laundering a raw path into a trusted name
+    through nothing but an alias. Following the chain to its origin closes that hole;
+    it does not make the gate complete (see the module docstring's KNOWN BLIND SPOTS).
     """
     two_hop = ("$safeA = $rawPath\n"
                "$safeB = $safeA\n"
@@ -468,38 +493,6 @@ def test_gate_follows_safe_alias_chains_transitively():
              "$safeB = $safeA\n"
              + "Remove-Item " + "-LiteralPath " + "$safeA -Force")
     assert violations_in("tools/migrate-legacy-install.ps1", cycle), "a cycle is not proof"
-
-
-def test_gate_catches_a_gated_value_mixed_with_an_unresolved_operand():
-    """A gated PARENT does not make the whole expression gated.
-
-    `$safeT = $safeBase + $rawSuffix` splices unresolved text onto a resolved path,
-    so the result is no longer proven inside the home -- but an earlier version
-    accepted it because it found one `$safe*` ancestor that traced to a resolver.
-    """
-    for rhs in ("$safeBase + $rawSuffix", "Join-Path $safeBase $rawSuffix",
-                '"$safeBase\\$rawSuffix"'):
-        src = ("$safeBase = Resolve-HomeTarget -RelPosix $rel\n"
-               "$safeT = " + rhs + "\n"
-               + "Remove-Item " + "-LiteralPath " + "$safeT -Force")
-        bad = violations_in("tools/migrate-legacy-install.ps1", src)
-        assert bad, f"the gate must reject a gated value mixed with an unresolved operand: {rhs}"
-        assert any("unresolved operand" in b for b in bad), bad
-
-    # ...and a purely-gated composition is still accepted.
-    ok = ("$safeBase = Resolve-HomeTarget -RelPosix $rel\n"
-          '$safeT = "$safeBase.$PID.tmp"\n'
-          + "Remove-Item " + "-LiteralPath " + "$safeT -Force")
-    assert violations_in("tools/migrate-legacy-install.ps1", ok) == []
-
-
-def test_gate_knows_the_cmdlet_aliases():
-    """`rm`/`del`/`cpi` are the same cmdlets. A gate that only knows the long names
-    can be sidestepped by accident as easily as on purpose."""
-    for verb in ("rm", "del", "ri", "mv", "cpi", "Rename-Item"):
-        src = verb + " " + "-LiteralPath " + "$rawPath -Force"
-        bad = violations_in("tools/migrate-legacy-install.ps1", src)
-        assert bad, f"the gate must recognise '{verb}' as a mutating primitive"
 
 
 def test_allowlist_entries_are_live_and_carry_a_reason():

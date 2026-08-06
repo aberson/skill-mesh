@@ -756,6 +756,16 @@ def test_failed_undo_lands_failed_incomplete_with_the_backup_retained(mini_dist,
     assert (Path(tx) / "payload").is_dir(), "the backup was discarded on a failed undo"
     assert (Path(tx) / "backup-manifest.json").is_file()
 
+    # This is the GENUINELY-mixed branch: an undo of a MUTATED path threw, so bytes
+    # this tool wrote are still on disk. D2 corrects the false-MIXED message for a
+    # preserve-only remainder while requiring it stay intact here -- "without
+    # weakening it for a genuine undo failure that really did leave the home mixed".
+    # Without this positive assertion, an over-correction that stripped the wording
+    # from this branch too would pass the suite, since every other MIXED assertion in
+    # this file is a negative one.
+    assert "MIXED" in r.stderr, r.stderr
+    assert "recover from it manually" in r.stderr, r.stderr
+
 
 @pytest.mark.parametrize("status_env,expected_status", [
     ({"SKILL_MESH_TX_CRASH_AT": "0:after-begin"}, "applying"),
@@ -794,6 +804,52 @@ def test_bare_apply_refuses_a_failed_incomplete_transaction(mini_dist, tmp_path)
     r = _apply(home, backup, mini_dist)
     assert r.returncode == 2, r.stdout
     assert "INCOMPLETE_TRANSACTION" in r.stderr
+
+
+def test_explicit_rollback_advises_on_preserve_drift_without_changing_its_exit_code(
+        mini_dist, tmp_path):
+    """The advisory's SECOND call site: the explicit `-Rollback` path.
+
+    Decision D2 case 3 covers both rollback paths -- the failure-triggered shared one
+    (exit 1) and this operator-initiated one, which keeps exit 0. Every other rollback
+    test runs with no drifted preserved file, so the call is a silent no-op in all of
+    them and the suite passing proves nothing about this site. Here the consumer edits
+    their own preserved skill after a clean apply and before rolling back: the advisory
+    must name it, the exit code must stay 0, and their bytes must survive."""
+    home = fx.migration_home(tmp_path / "h")
+    backup = tmp_path / "b"
+    plan = _plan(home, backup, mini_dist)
+    preserves = [a for a in plan["actions"] if a["action"] == "preserve"]
+    assert preserves, "no preserve action in this fixture -- the test would be vacuous"
+    preserved_rel = preserves[0]["rel_path"]
+    planned_hash = preserves[0]["post_hash"]
+
+    assert _apply(home, backup, mini_dist).returncode == 0
+    tx = _only_tx(backup)
+
+    target = Path(home) / preserved_rel
+    target.write_text(target.read_text(encoding="utf-8") + "\nconsumer edit before rollback\n",
+                      encoding="utf-8")
+    edited_hash = _sha256(target)
+    assert edited_hash != planned_hash, "the edit did not change the file"
+
+    r = _migrate(home, backup, mode="-Rollback", migration_id=tx.name)
+    assert r.returncode == 0, (
+        f"the advisory changed the explicit rollback's exit code "
+        f"({r.returncode}):\n{r.stdout}\n{r.stderr}")
+    assert _manifest_of(tx)["status"] == "rolled_back"
+    json.loads(r.stdout)  # -Format json still emits exactly one document
+
+    advisories = [ln for ln in r.stderr.splitlines() if "ADVISORY" in ln]
+    assert len(advisories) == 1, f"expected exactly one advisory line, got {advisories}"
+    adv = advisories[0]
+    assert preserved_rel in adv, adv
+    assert planned_hash in adv, adv
+    assert edited_hash in adv, adv
+    assert "ADVISORY UNAVAILABLE" not in adv, "the drift check failed to run"
+
+    # Rollback holds no payload for a preserved path, so the consumer's edit stands.
+    assert _sha256(target) == edited_hash, "rollback overwrote the consumer's own edit"
 
 
 def test_rollback_restores_original_hashes_and_removes_only_migration_files(
@@ -1020,16 +1076,18 @@ def test_undo_refuses_a_target_redirected_out_of_the_home(mini_dist, tmp_path):
 
 
 # --------------------------------------------------------------------------- #
-# Post-install verification (the only check that covers a `preserve` action)
+# Post-install verification -- decision D2 case 2 (the one escalating drift case)
 # --------------------------------------------------------------------------- #
 
 def test_post_install_verification_catches_a_corrupted_preserved_tree(mini_dist, tmp_path):
-    """A `preserve` action is audit-only: the engine's per-action post-hash check
-    runs for MUTATING actions only, so post-install verification is the ONLY place a
-    preserved consumer-only skill or the `_shared` core-holder is re-checked.
+    """Decision D2 case 2: a preserved path that fails post-install verification
+    AFTER the transaction fully applied escalates to `failed_incomplete` (exit 3).
 
-    The seam corrupts a preserved file after the engine's loop commits and before
-    verification runs -- the one window nothing else covers."""
+    The engine's per-action post-hash check is kind-blind, so it already covers a
+    preserved path edited while the apply loop is running (that is case 3 -- see
+    test_a_preserved_file_edited_during_the_crash_window_rolls_back_with_an_advisory).
+    The seam here corrupts a preserved file after the loop commits and before
+    verification runs -- the one window the loop structurally cannot see."""
     home = fx.migration_home(tmp_path / "h")
     backup = tmp_path / "b"
     preserved_rel = f"{CLAUDE_ROOT}/{fx.MIGRATION_CONSUMER_ONLY[0]}/SKILL.md"
@@ -1050,12 +1108,103 @@ def test_post_install_verification_catches_a_corrupted_preserved_tree(mini_dist,
     assert _manifest_of(tx)["status"] == "failed_incomplete"
     assert (Path(tx) / "payload").is_dir(), "the backup was discarded on an unrestorable rollback"
 
+    # D2 corrects this branch's MESSAGE while keeping its exit code. Rollback runs in
+    # strict reverse seq order and the plan emits backup < preserve < retire < install
+    # < ledger, so every MUTATING action was undone before the preserve throw -- which
+    # the tree comparison below independently proves. Claiming the home is MIXED and
+    # telling the operator to recover from the backup would invite restoring a stale
+    # payload over the consumer's own newer bytes: the round-5 regression.
+    assert "MIXED" not in r.stderr, r.stderr
+    assert "recover from it manually" not in r.stderr, r.stderr
+    assert "every path this tool mutated was restored" in r.stderr, r.stderr
+    assert preserved_rel in r.stderr, "the escalation did not name the unrestorable path"
+
     # Everything rollback DOES own was still restored: only the tampered preserved
     # path differs from the pre-migration tree.
     after = _tree_digest(home)
     differing = {rel for rel in set(before) | set(after) if before.get(rel) != after.get(rel)}
     assert differing == {preserved_rel}, (
         f"rollback left more than the unrestorable preserved path changed: {differing}")
+
+
+def test_a_preserved_file_edited_during_the_crash_window_rolls_back_with_an_advisory(
+        mini_dist, tmp_path):
+    """Decision D2 case 3 -- and the only coverage of the SHARED apply/resume rollback
+    path, which no assertion reached before this test.
+
+    A consumer edits their own preserved skill while the migration is down between a
+    crash and the `-Resume`. The engine's per-action post-hash check is kind-blind and
+    a `preserve` action carries post_hash == pre_hash, so the edited file fails
+    verification mid-apply and aborts the resume -- the drift IS the trigger. That is a
+    PRE-COMPLETION abort, so it must not escalate: `rolled_back` is the honest status
+    (every path this tool mutated was restored; the consumer's file was never touched),
+    the drift is disclosed as an advisory naming the path and both hashes, and the
+    documented remedy -- a plain `-Apply`, which re-plans against the new contents --
+    converges.
+
+    Round 4's only Block demanded escalation here; round 5's headline Block condemned
+    exactly that escalation. This test pins the adjudicated answer so a later round
+    cannot silently flip it back."""
+    home = fx.migration_home(tmp_path / "h")
+    backup = tmp_path / "b"
+    plan = _plan(home, backup, mini_dist)
+    preserves = [a for a in plan["actions"] if a["action"] == "preserve"]
+    assert preserves, "no preserve action in this fixture -- the test would be vacuous"
+    preserved_rel = preserves[0]["rel_path"]
+    planned_hash = preserves[0]["post_hash"]
+    target = Path(home) / preserved_rel
+    assert target.is_file(), f"fixture did not plant the preserved file {preserved_rel}"
+
+    # Crash at seq 0 (the seam defaults to after-begin), leaving `applying` on disk.
+    assert _apply(home, backup, mini_dist,
+                  env={"SKILL_MESH_TX_CRASH_AT": "0"}).returncode == 9
+    tx = _only_tx(backup)
+    assert _manifest_of(tx)["status"] == "applying"
+
+    # The consumer edits THEIR OWN file, out of process, during the downtime.
+    target.write_text(target.read_text(encoding="utf-8") + "\nconsumer edit during downtime\n",
+                      encoding="utf-8")
+    edited_hash = _sha256(target)
+    assert edited_hash != planned_hash, "the edit did not change the file"
+
+    r = _migrate(home, backup, mini_dist, mode="-Resume", migration_id=tx.name)
+    assert r.returncode == 1, (
+        f"a pre-completion abort escalated instead of rolling back "
+        f"(exit {r.returncode}):\n{r.stdout}\n{r.stderr}")
+    assert _manifest_of(tx)["status"] == "rolled_back"
+
+    # The advisory names the path and BOTH hashes. Assert against the ADVISORY LINE
+    # itself, not the whole stream: the engine's own "post-mutation verification
+    # FAILED ... expected hash X but found Y" message is echoed earlier on this same
+    # path and already contains the path and both hashes, so whole-stream assertions
+    # would stay green even if the advisory's payload were stripped entirely.
+    advisories = [ln for ln in r.stderr.splitlines() if "ADVISORY" in ln]
+    assert len(advisories) == 1, f"expected exactly one advisory line, got {advisories}"
+    adv = advisories[0]
+    assert preserved_rel in adv, f"the advisory did not name the drifted path: {adv}"
+    assert planned_hash in adv, f"the advisory did not report the expected hash: {adv}"
+    assert edited_hash in adv, f"the advisory did not report the observed hash: {adv}"
+    # ...while nothing claims a mixed home or sends the operator to restore a backup
+    # over their own newer bytes (the round-5 regression), and the status line makes
+    # only the narrow claim.
+    assert "MIXED" not in r.stderr, r.stderr
+    assert "recover from it manually" not in r.stderr, r.stderr
+    assert "restored to its pre-migration state" not in r.stderr, r.stderr
+    assert "every path this tool mutated was restored" in r.stderr, r.stderr
+
+    # The consumer's edit survived: rollback holds no payload for a preserved path.
+    assert _sha256(target) == edited_hash, "rollback overwrote the consumer's own edit"
+
+    # The documented remedy converges -- `rolled_back` is terminal, so a bare -Apply
+    # is not refused as an unresolved transaction and re-plans against the new bytes.
+    before_dirs = {d.name for d in _tx_dirs(backup)}
+    r2 = _apply(home, backup, mini_dist)
+    assert r2.returncode == 0, (
+        f"the follow-up -Apply did not converge ({r2.returncode}):\n{r2.stdout}\n{r2.stderr}")
+    fresh = [d for d in _tx_dirs(backup) if d.name not in before_dirs]
+    assert len(fresh) == 1, f"expected exactly one new transaction, got {[d.name for d in fresh]}"
+    assert _manifest_of(fresh[0])["status"] == "applied"
+    assert _sha256(target) == edited_hash, "the follow-up apply clobbered the preserved edit"
 
 
 def test_post_install_verification_catches_a_corrupted_installed_file(mini_dist, tmp_path):

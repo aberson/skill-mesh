@@ -72,8 +72,13 @@
 .NOTES
     Exit codes: 0 success; 1 operational failure with the home left clean
     (rollback completed, or nothing was mutated); 2 blocked / unsafe precondition
-    / refused incomplete transaction, always PRE-MUTATION; 3 rollback itself
-    failed -- the home is mixed and the retained backup is the recovery source.
+    / refused incomplete transaction, always PRE-MUTATION; 3 rollback did not
+    complete -- either a MUTATED path could not be restored (the home is mixed and
+    the retained backup is the recovery source) or a PRESERVED path changed and
+    carries no backup payload by design (every mutated path was restored; those
+    bytes are the consumer's own and are already intact). The run's diagnostics
+    say which -- see decision D2 in
+    documentation/step-47-decomposition-decision.md.
 
     ASCII-only, no BOM (PowerShell 5.1 reads a no-BOM .ps1 as ANSI/cp1252).
 #>
@@ -240,9 +245,13 @@ function New-ResultDocument([string]$status, [string]$migrationId, $blocked) {
 #   * every mutating primitive (Copy-Item / Remove-Item / Move-Item /
 #     [IO.File]::Write*) takes its path from a variable named $safe*;
 #   * a $safe* variable is only ever assigned from one of the resolvers above.
-# tests/distributions/test_legacy_migration.py::
+# tests/distributions/test_path_choke_point.py::
 # test_every_mutating_primitive_resolves_through_the_choke_point walks every
-# git-tracked .ps1 and fails on any violation, so a sixth site cannot appear.
+# git-tracked .ps1 and fails on any violation it can parse. It is a best-effort
+# tripwire over source TEXT, not a proof of completeness: see that module's
+# KNOWN BLIND SPOTS section for the expression shapes it cannot see, and note it
+# covers only the containment half -- byte identity is convention-guarded by the
+# Assert-OurBytesAtTarget call in every destroying undo branch.
 
 function Join-HomePathLexical([string]$relPosix) {
     # LEXICAL ONLY: no reparse-point resolution, no containment proof, nothing that
@@ -1005,10 +1014,19 @@ function Assert-SafeActionTarget($action, [string]$operation) {
 function Invoke-ActionMutate($action) {
     switch ($action.action) {
         'preserve' {
-            # Audit-only: never mutates, so there is nothing to gate. Its hash is
-            # re-verified by post-install verification (Test-PostInstall), which is
-            # the only check that covers a preserved tree -- the engine per-action
-            # post-hash check sees mutating actions only.
+            # Audit-only: never mutates, so there is nothing to gate.
+            #
+            # A preserved path is checked TWICE, and neither check is kind-filtered.
+            # The engine's per-action post-hash comparison runs for every action it
+            # does not skip -- it branches on hashes, never on action kind -- and a
+            # preserve action carries post_hash = pre_hash, so a preserved file edited
+            # while the apply loop is still running fails THERE (decision D2 case 3:
+            # advisory + rolled_back, never an escalation). Test-PostInstall then
+            # re-checks it after the loop commits (D2 case 2).
+            #
+            # The one gap is a RESUME: an action whose post-state already holds is
+            # skipped before the engine's comparison, so for an UNCHANGED preserved
+            # path on a resume, post-install verification is the only remaining check.
             return
         }
         'backup' {
@@ -1197,6 +1215,59 @@ function Test-PostInstall($plan) {
     return , @($bad)
 }
 
+function Format-HashLabel($hash) {
+    # $null is this codebase's "path does not exist" marker (Get-HomeRelHash), and a
+    # bare empty string in a diagnostic reads like a bug rather than an absence.
+    if ([string]::IsNullOrEmpty([string]$hash)) { return '<absent>' }
+    return [string]$hash
+}
+
+function Write-PreserveDriftAdvisory($plan) {
+    # ADVISORY ONLY. It never changes a status, an exit code, or the blocked set --
+    # decision D2 case 3, and the reason the round-4/round-5 oscillation resolved this
+    # way rather than by escalating.
+    #
+    # What `rolled_back` claims is narrow and provable: every byte this tool mutated
+    # was restored from backup and every file it created was removed. It does NOT
+    # claim the home is byte-identical on paths the tool never touched. A `preserve`
+    # action carries no backup payload -- deliberate disclosure minimization, so a
+    # byte-untouched consumer tree is never copied into the backup -- which makes the
+    # broader claim structurally unprovable and therefore unenforceable. When a
+    # preserved path has drifted, the honest move is to NAME it (with hashes, so the
+    # operator can tell their own edit from corruption) and leave their bytes alone.
+    #
+    # Emitted on both rollback paths: the failure-triggered shared path (exit 1) and
+    # the explicit -Rollback (exit 0). Neither exit code changes because of it.
+    #
+    # The per-action try/catch is what makes that last sentence STRUCTURAL rather than
+    # aspirational. This runs AFTER the rollback has completed and the manifest is
+    # durable, so an advisory that threw would convert a finished exit-0 rollback into
+    # an unhandled error (exit 1, and zero JSON emitted under -Format json) over a
+    # purely informational line. Two real triggers: Get-HomeRelHash opens the file, so
+    # a preserved SKILL.md held by an editor or an AV scanner throws even though
+    # Test-Path succeeded; and plan.json comes from an operator-writable directory, so
+    # under Set-StrictMode a missing post_hash throws PropertyNotFoundException --
+    # which is also why the field is read through Get-SkillMeshTxField here.
+    foreach ($a in @(@($plan.actions) | Where-Object { $_.action -eq 'preserve' })) {
+        try {
+            $expected = Get-SkillMeshTxField $a 'post_hash'
+            $observed = Get-HomeRelHash $a.rel_path
+            if ([string]$observed -eq [string]$expected) { continue }
+            Write-Diag ("ADVISORY -- preserved path '$(Get-SafeRelPathLabel $a.rel_path)' changed outside " +
+                        "this transaction (expected $(Format-HashLabel $expected), observed " +
+                        "$(Format-HashLabel $observed)). It carries no backup payload by design, so it was " +
+                        "left exactly as found and nothing this tool restored depends on it. If that edit " +
+                        "was yours, re-run -Apply: planning re-reads the file and converges.")
+        } catch {
+            # Deliberately swallowed: a diagnostic must never be the reason a completed
+            # rollback reports failure. Say that the disclosure itself failed.
+            Write-Diag ("ADVISORY UNAVAILABLE -- could not read preserved path " +
+                        "'$(Get-SafeRelPathLabel $a.rel_path)' to check it for drift. The rollback " +
+                        "itself is unaffected; this line reports only that the check did not run.")
+        }
+    }
+}
+
 # -- Transaction discovery ----------------------------------------------------
 
 function Get-TransactionDirs([string]$backupAbs) {
@@ -1284,10 +1355,21 @@ function Invoke-Apply([string]$distAbs, [string]$backupAbs) {
         # the operator round two dead ends before they could discover the real
         # answer, in exactly the rare state where clear instructions matter most.
         if ($unresolved.status -eq 'failed_incomplete') {
-            $remedy = ("Its rollback did NOT complete, so the home is MIXED and neither -Resume nor " +
-                       "-Rollback will act on it (both refuse a terminal transaction). Recover " +
-                       "MANUALLY from the retained backup payloads under the transaction directory " +
-                       "named below, then remove that directory to clear this block.")
+            # `failed_incomplete` has TWO producers and they need different remedies, so
+            # this text must not assert either one. (1) An undo genuinely failed and the
+            # home IS mixed -- restore from the payloads. (2) D2 case 2: post-install
+            # verification failed on a PRESERVED path, where every mutated path was
+            # already restored and the only "unrestorable" bytes are the consumer's own.
+            # Telling case 2 to recover manually from the backup is exactly the
+            # destructive advice D2 removed from the escalation message itself, so the
+            # remedy names both and points at the run's own diagnostics to disambiguate.
+            $remedy = ("Its rollback did NOT complete, and neither -Resume nor -Rollback will act " +
+                       "on it (both refuse a terminal transaction). Check that run's diagnostics: " +
+                       "if a path this tool MUTATED could not be restored the home is mixed -- " +
+                       "recover MANUALLY from the retained backup payloads under the transaction " +
+                       "directory named below. If instead a PRESERVED path changed (it carries no " +
+                       "backup payload by design), those bytes are yours and are already intact; " +
+                       "nothing needs restoring. Either way, remove that directory to clear this block.")
         } else {
             $remedy = ("Re-run with -Resume -MigrationId $($unresolved.migration_id) to drive it " +
                        "forward, or -Rollback -MigrationId $($unresolved.migration_id) to reverse it.")
@@ -1391,28 +1473,7 @@ function Invoke-TransactionRun($plan, [string]$startStatus, [bool]$isResume) {
     $getPre = { param($a) Get-HomeRelHash $a.rel_path }
     $getPost = { param($a) Get-HomeRelHash $a.rel_path }
     $mutate = { param($a) Invoke-ActionMutate $a }
-    # A `preserve` action has NO backup payload -- by design, so a byte-untouched
-    # consumer tree is never copied into the backup. The consequence is that if such
-    # a tree drifted during the transaction, rollback structurally CANNOT restore it,
-    # and reporting `rolled_back` would claim a clean home that is actually mixed.
-    #
-    # The explicit -Rollback path escalates exactly this (its own wrapper, built from
-    # Test-PostInstall's failure set). This is the SHARED apply/resume path, whose
-    # failure-triggered rollback runs from inside Invoke-SkillMeshTxApply's catch --
-    # so it needs the same escalation or it lands a FALSE `rolled_back`. Checked
-    # per action here rather than from a precomputed set, because on this path the
-    # drift is discovered mid-apply.
-    $undo = {
-        param($a)
-        Invoke-ActionUndo $a
-        if ($a.action -eq 'preserve') {
-            $now = Get-HomeRelHash $a.rel_path
-            if ([string]$now -ne [string]$a.pre_hash) {
-                throw ("migrate-legacy-install: preserved path '$($a.rel_path)' changed during " +
-                       "the transaction and has no backup payload by design; it cannot be restored.")
-            }
-        }
-    }
+    $undo = { param($a) Invoke-ActionUndo $a }
     $skip = $null
     if ($isResume) { $skip = { param($a) Test-ActionAlreadyApplied $a } }
 
@@ -1431,18 +1492,42 @@ function Invoke-TransactionRun($plan, [string]$startStatus, [bool]$isResume) {
                         "MigrationId $($plan.migration_id); recover from it manually.")
             Complete-Run 'failed_incomplete' $plan.migration_id 3
         }
-        Write-Diag "the consumer home was restored to its pre-migration state (status $($tx.status))."
+        # Decision D2 case 3: a PRE-COMPLETION abort never escalates on preserve
+        # drift. Because the engine's post-hash check is kind-blind, an edited
+        # preserved file is typically the very thing that TRIGGERED this path -- and
+        # the correct response is to disclose it, not to claim a mixed home. Rollback
+        # never touched that file, and no backup payload exists that could.
+        Write-PreserveDriftAdvisory $plan
+        # Narrow claim only (D2). The old wording -- "restored to its pre-migration
+        # state" -- overclaimed on preserved paths, which carry no payload to restore.
+        #
+        # Gated on `rolled_back` because that is the only status under which the claim
+        # is PROVABLE. The engine sets it after every undo succeeded; a status still
+        # reading `prepared`/`applying` here means the rollback never ran (its status
+        # writer threw), and asserting a completed restore then would be the same
+        # species of overclaim this line was rewritten to remove.
+        if ($tx.status -eq 'rolled_back') {
+            Write-Diag ("every path this tool mutated was restored from backup and every file it " +
+                        "created was removed (status $($tx.status)).")
+        } else {
+            Write-Diag ("the transaction did not reach a rolled-back state (status $($tx.status)); " +
+                        "the backup is retained at MigrationId $($plan.migration_id).")
+        }
         Complete-Run $tx.status $plan.migration_id 1
     }
 
     # TEST SEAM (inert unless set): corrupt one home-relative path AFTER the engine's
-    # per-action loop has committed and BEFORE post-install verification runs. This
-    # is the only way to reach Test-PostInstall's failure branch from outside, and it
-    # is the only check that covers a `preserve` action -- the engine verifies post
-    # hashes for MUTATING actions only, so a preserved consumer-only skill or the
-    # _shared core-holder changing mid-transaction is detectable here and nowhere
-    # else. See tools/skill-mesh-transaction.ps1's TEST SEAMS note for the
-    # convention; like those, it can only affect a process the caller already started.
+    # per-action loop has committed and BEFORE post-install verification runs. This is
+    # the only way to reach Test-PostInstall's failure branch from outside.
+    #
+    # It does NOT model "the only check that covers a preserve action" -- the engine's
+    # per-action post-hash check is kind-blind, so a preserved path edited while the
+    # loop is still running already fails there (D2 case 3: advisory, rolled_back).
+    # What this seam models is the one window the loop structurally cannot see: drift
+    # that lands after the last action commits, which only post-install verification
+    # catches, and which D2 case 2 escalates. See tools/skill-mesh-transaction.ps1's
+    # TEST SEAMS note for the convention; like those, it can only affect a process the
+    # caller already started.
     $tamper = [Environment]::GetEnvironmentVariable('SKILL_MESH_MIGRATE_TAMPER_AFTER_APPLY')
     if (-not [string]::IsNullOrWhiteSpace($tamper)) {
         $safeTamper = Resolve-HomeTargetForRead $tamper.Trim()
@@ -1456,29 +1541,55 @@ function Invoke-TransactionRun($plan, [string]$startStatus, [bool]$isResume) {
     $bad = Test-PostInstall $plan
     if (@($bad).Count -gt 0) {
         Write-Diag "post-install verification FAILED for $(@($bad).Count) path(s); rolling back."
-        # A `preserve` action has NO backup payload -- by design, so a byte-untouched
-        # consumer tree is never copied into the backup (disclosure minimization).
-        # The consequence is that if one of those trees is what failed verification,
-        # rollback structurally CANNOT restore it, and reporting `rolled_back` would
-        # claim a clean home that is actually mixed. This wrapper escalates exactly
-        # that case to failed_incomplete (exit 3, backup retained) while leaving every
-        # other rollback -- including a later explicit -Rollback, where a consumer's
-        # own later edit to their own skill is none of this tool's business --
-        # completely unaffected.
+        # Decision D2 case 2 -- the ONE preserve-drift case that escalates. The
+        # boundary is STRUCTURAL, not trigger-site-based: reaching here means the
+        # transaction was FULLY APPLIED and this tool's own post-install acceptance
+        # then failed on a path it holds no backup payload for (a `preserve` action
+        # never copies a byte-untouched consumer tree into the backup -- disclosure
+        # minimization). A pre-completion abort is case 3 and never arrives here.
+        #
+        # What it does NOT mean is a mixed home. Rollback walks strict reverse seq
+        # order and New-MigrationPlan emits backup < preserve < retire < install <
+        # ledger, so by the time this wrapper throws on a preserve action every
+        # MUTATING action has already been undone; only backup actions remain below
+        # it, and their undo touches nothing in the home. Saying MIXED here would
+        # invite restoring a backup over the consumer's own newer bytes -- the exact
+        # round-5 regression this branch was corrected to remove.
         $badSet = New-Object 'System.Collections.Generic.HashSet[string]' ([System.StringComparer]::OrdinalIgnoreCase)
         foreach ($b in @($bad)) { [void]$badSet.Add([string]$b) }
+        # Reference type, so the closure's Add is visible out here after the throw --
+        # this is what lets the message below distinguish an unrestorable-but-clean
+        # preserve remainder from a genuine undo failure that DID leave the home mixed.
+        $unrestorable = New-Object 'System.Collections.Generic.List[string]'
         $verifyUndo = {
             param($a)
             Invoke-ActionUndo $a
             if ($a.action -eq 'preserve' -and $badSet.Contains([string]$a.rel_path)) {
+                [void]$unrestorable.Add([string]$a.rel_path)
                 throw ("migrate-legacy-install: preserved path '$($a.rel_path)' changed during " +
                        "the transaction and has no backup payload by design; it cannot be restored.")
             }
         }.GetNewClosure()
         $failure = Invoke-SkillMeshTxRollback $tx @($plan.actions) $verifyUndo
         if ($null -ne $failure) {
-            Write-Diag ("ROLLBACK INCOMPLETE -- $($failure.Exception.Message) The backup is retained " +
-                        "at MigrationId $($plan.migration_id); recover from it manually.")
+            if ($unrestorable.Count -gt 0) {
+                # Name EVERY unrestorable preserved path, not just the one that threw.
+                # Rollback breaks on its first failure, so $unrestorable can only ever
+                # hold one entry -- but Test-PostInstall's $bad set holds all of them,
+                # and D2 bounds this escalation to exactly that set. Reporting one of
+                # three drifted paths would be true and useless.
+                $names = (@(@($plan.actions) |
+                    Where-Object { $_.action -eq 'preserve' -and $badSet.Contains([string]$_.rel_path) } |
+                    ForEach-Object { "'" + (Get-SafeRelPathLabel $_.rel_path) + "'" }) -join ', ')
+                Write-Diag ("every path this tool mutated was restored from backup and every file it " +
+                            "created was removed. Preserved path(s) $names changed during the " +
+                            "transaction and carry no backup payload by design, so this tool cannot " +
+                            "restore them -- those bytes are yours and were left exactly as found. " +
+                            "The backup is retained at MigrationId $($plan.migration_id).")
+            } else {
+                Write-Diag ("ROLLBACK INCOMPLETE -- $($failure.Exception.Message) The backup is retained " +
+                            "at MigrationId $($plan.migration_id); recover from it manually.")
+            }
             Complete-Run 'failed_incomplete' $plan.migration_id 3
         }
         Complete-Run 'rolled_back' $plan.migration_id 1
@@ -1605,8 +1716,12 @@ function Invoke-Resume([string]$backupAbs, [string]$distAbs) {
         Exit-Blocked 'TRANSACTION_RESOLVED' "migration $MigrationId was rolled back; it cannot be resumed."
     }
     if ($status -eq 'failed_incomplete') {
+        # Same two-producer caveat as the INCOMPLETE_TRANSACTION remedy above: this
+        # status means the rollback did not complete, which is a mixed home only when
+        # the unrestorable path was one this tool MUTATED (D2 case 1). A preserved-path
+        # failure (case 2) leaves the consumer's own bytes intact.
         Exit-Blocked 'TRANSACTION_RESOLVED' `
-            "migration $MigrationId ended failed_incomplete; the home is mixed and requires manual recovery from the retained backup."
+            "migration $MigrationId ended failed_incomplete; its rollback did not complete. See that run's diagnostics: a mutated path that could not be restored means the home is mixed and needs manual recovery from the retained backup, while a changed PRESERVED path (no backup payload by design) means those bytes are yours and are already intact."
     }
     if (-not (Test-SkillMeshTxMember @('prepared', 'applying') $status)) {
         Exit-Blocked 'TRANSACTION_RESOLVED' "migration $MigrationId has an unknown status '$status'."
@@ -1651,6 +1766,12 @@ function Invoke-Rollback([string]$backupAbs) {
         Complete-Run 'failed_incomplete' $plan.migration_id 3
     }
     Remove-EmptyCreatedDirs $plan
+    Write-PreserveDriftAdvisory $plan
+    # AUDITED against D2's narrow-claim rule (the second of the two status lines that
+    # decision names): "N action(s) reversed" states only what the undo pass did and
+    # asserts nothing about paths this tool never mutated, so unlike the shared path's
+    # old "restored to its pre-migration state" it needs no rewording. The advisory
+    # above carries the preserve-drift disclosure; the exit code stays 0.
     Write-Outcome "migration $($plan.migration_id) ROLLED BACK ($(@($undoSet).Count) action(s) reversed)."
     Complete-Run 'rolled_back' $plan.migration_id 0
 }
