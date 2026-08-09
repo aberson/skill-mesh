@@ -429,6 +429,29 @@ proves the other. Discovery proof is §12.
 
 ---
 
+## 9.1 Host-trace acceptance amendment (2026-08-09)
+
+For pending Steps 49 and 50, do not append the legacy `ACCEPTANCE PROBE` text
+to an installed `SKILL.md`. Claude Code 2.1.212 correctly rejects that dynamic
+instruction as prompt injection, so a model's response is not an acceptable
+path-discovery signal.
+
+Use host-generated records instead. Claude Code's native session JSONL must
+show the consumer-home `cwd`, the `Skill` invocation, its tool-supplied base
+directory under `.claude/skills/<skill>`, the loaded wrapper's `Profile:
+claude`, and `attributionSkill=<skill>`. With `OPENAI_API_KEY` unset,
+`copilot -C <home> skill list --json` must show one enabled project `plan-review` entry
+with an exact `.github/skills/plan-review` path and the GPT wrapper description;
+then perform a no-write invocation of that discovered entry. Check the
+representative installed-file hashes against `backup-manifest.json` before and
+after the host observations. These paths are native host output, not model
+claims.
+
+This amendment supersedes the probe append/revert instructions in this section
+for the pending runs. The remaining material below documents the historical
+rollback failure mode; it still applies to any pre-existing home where probe
+text was appended before this amendment.
+
 ## 10. Revert the acceptance probe before any rollback
 
 **This section runs before §11 and it is not optional.** Host acceptance (§12) works by
