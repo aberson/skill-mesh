@@ -147,6 +147,22 @@ foreach ($wt in $worktrees) { $dirty = @(git -C $wt status --porcelain).Count; $
 Any other line names a worktree whose session is still live — land or park that work and
 re-run. The count of worktrees is not itself a failure.
 
+### 2.1 Verified-parking exception for recent commits
+
+The recent-commit probe is an idleness signal, not a wall-clock hold. A non-empty result normally
+blocks the cutover because it may identify a live, unknown session. It may be cleared for a
+specific run only when the operator records every recent commit and its branch, verifies every
+worktree is `dirty=0`, verifies no fresh expedite-state file exists, and creates an external Git
+bundle containing the named refs before any consumer mutation. Those commits are then explicitly
+parked rather than silently ignored. Any unaccounted recent commit, dirty worktree, fresh state
+file, or missing bundle remains a hard blocker.
+
+For the 2026-08-09 coding-root cutover, the verified parked refs are
+`utility-project-surfaces-33-35`, `switchboard-operator-surfaces-70-73`,
+`surface-program-runbook-and-hookup`, and `citation-needed-skill-wrappers`; the bundle is held
+outside the consumer home. This amendment supersedes the “all three print nothing” expectation
+above for that recorded run only.
+
 Then cut a dedicated branch off the known-clean base. Name the base explicitly rather than
 inheriting whatever branch happens to be checked out: `git switch <base>` first (the consumer's
 default integration branch), confirm it is clean, and record its SHA alongside the acceptance
