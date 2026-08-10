@@ -19,6 +19,25 @@
                                      only), so the launcher's reference resolves.
       dist/gpt/<skill>/SKILL.md      GPT/Copilot discovery launcher (providers/gpt.md).
       dist/gpt/<skill>/core.md       The shared canonical core (portable only).
+      dist/<p>/_shared/<asset>       The shared support payload (judge-core.md,
+                                     score-skill.md, the scoring/grader scripts, the
+                                     scoring Workflow), ONE copy per profile at the
+                                     profile root as a sibling of the skill dirs.
+
+    SHARED REFERENCES. Canonical sources cite the payload from two levels down
+    (skills/<n>/core.md -> ../../_shared/x) or three (skills/<n>/providers/<p>.md ->
+    ../../../_shared/x). Nothing exists above a host discovery root, so every emitted
+    file -- skill dirs and the payload alike -- sits exactly ONE level below it and
+    every such reference is repointed to ../_shared/x. The rewrite is
+    longest-token-first because '../../../_shared/' contains '../../_shared/', and it
+    is NOT conditional on the skill having a core (judge-motion is core: null and
+    still cites the payload).
+
+    The payload SET is the transitive closure re-walked from this profile's own
+    emitted sources on every run, not a committed list, and every emitted asset is
+    stamped with the same provenance marker as the markdown (.js via
+    Add-JsProvenance, which wraps the identical header in /* */) so the installer can
+    own -- and uninstall can remove -- every byte of it.
 
     Provider-native skills (manifest status 'provider-native' / core == null) get
     ONLY their truthful supported adapter: they appear in dist/claude/ with no core
@@ -75,6 +94,14 @@ $TOOLS_DIR = $PSScriptRoot
 $REPO_ROOT = Split-Path -Parent $TOOLS_DIR
 $SKILLS_ROOT = Join-Path $REPO_ROOT 'skills'
 $SHARED_ROOT = Join-Path $REPO_ROOT '_shared'
+# The shared payload ships at the PROFILE ROOT, as a sibling of the skill dirs (D1):
+# one copy per profile instead of one per consuming skill, and one level below the
+# discovery root -- exactly the depth every '../_shared/x' repoint assumes.
+$SHARED_DEST = '_shared'
+# A '_shared/<leaf>' asset reference in any spelling the sources use: bare
+# ('_shared/x'), or anchored at depth 2 / depth 3 ('../../_shared/x',
+# '../../../_shared/x'). The capture is the leaf, which is all the emitter needs.
+$SHARED_REF_RE = [regex]'(?:\.\./)*_shared/([A-Za-z0-9][A-Za-z0-9._-]*)'
 $VERDICT_HELPER_SOURCE = Join-Path $SHARED_ROOT 'build_step_verdict.py'
 $PATH_GUARD = Join-Path $REPO_ROOT 'runtime\path-guard.ps1'
 $PROVENANCE = Join-Path $TOOLS_DIR 'skill-mesh-provenance.ps1'
@@ -121,6 +148,27 @@ function Test-SafeSegment([string]$name) {
 function Resolve-RepoPath([string]$relPosix) {
     # Manifest paths are POSIX ('skills/x/core.md'); resolve under the repo root.
     return (Join-Path $REPO_ROOT ($relPosix -replace '/', '\'))
+}
+
+function Resolve-SafeSharedSource([string]$leaf) {
+    # SECOND scoped resolve, pinned to the canonical _shared/ root. Deliberately NOT a
+    # widening of Resolve-SafeSource below: that guard stays pinned to skills/ so a
+    # manifest-declared skill source can never be read from anywhere else. A shared
+    # asset name is harvested from PROSE (a reference inside a core/adapter body), so it
+    # is validated as a single safe path segment FIRST and then re-resolved inside
+    # $SHARED_ROOT -- two independent guards, neither relaxing the other.
+    if (-not (Test-SafeSegment $leaf)) {
+        throw ("build-distributions: SECURITY -- unsafe shared-asset name '$leaf' " +
+               "harvested from a source reference (must be a single path segment: no " +
+               "separators, no '..', not absolute). Refusing to read.")
+    }
+    $abs = Join-Path $SHARED_ROOT $leaf
+    try {
+        return (Resolve-SafePath -Path $abs -AllowedRoots @($SHARED_ROOT))
+    } catch {
+        throw ("build-distributions: SECURITY -- shared asset '$leaf' escapes the " +
+               "canonical _shared/ root; refusing to read. " + $_.Exception.Message)
+    }
 }
 
 function Resolve-SafeSource([string]$relPosix, [string]$name, [string]$role) {
@@ -214,6 +262,120 @@ function Repoint-VerdictHelperReference([string]$coreBody) {
                              'build_step_verdict.py')
 }
 
+function Repoint-SharedReference([string]$body) {
+    # Canonical cores/adapters cite the repo-root shared assets from inside
+    # skills/<name>/ (depth 2 -> '../../_shared/x') or skills/<name>/providers/
+    # (depth 3 -> '../../../_shared/x'). A built profile puts every generated file
+    # exactly ONE level below the discovery root -- dist/<p>/<skill>/ and, for the
+    # shared payload itself, dist/<p>/_shared/ -- so the one correct spelling in an
+    # emitted file is '../_shared/x'.
+    #
+    # LONGEST TOKEN FIRST is load-bearing (design decision D2): '../../../_shared/'
+    # literally CONTAINS '../../_shared/', so replacing the two-dot form first
+    # rewrites judge-motion's depth-3 references into still-broken depth-2
+    # references, silently, with nothing objecting. There ARE live depth-3
+    # references (skills/judge-motion/providers/claude.md), and judge-motion is a
+    # core: null skill -- so callers must NOT gate this on a core being present.
+    $out = $body.Replace('../../../_shared/', '../_shared/')
+    return $out.Replace('../../_shared/', '../_shared/')
+}
+
+# A BARE '_shared/x' token: the namespace named without a relative anchor. The
+# negative lookbehind keeps it from matching the '_shared/' that is already the tail
+# of a longer path -- '../_shared/x' (this function's own output, so the rewrite is
+# idempotent) or a host-home citation like '<dot>claude/skills/_shared/x', which
+# names the consumer home and is not ours to repoint.
+$BARE_SHARED_REF_RE = [regex]'(?<![\w/\\.-])_shared/'
+
+function Repoint-SharedAssetReference([string]$body) {
+    # The repoint for a file emitted INTO dist/<p>/_shared/. On top of the anchored
+    # rewrite above it also normalizes BARE '_shared/x' tokens, which the skill-side
+    # rewrite deliberately leaves alone.
+    #
+    # Why the asymmetry: a bare token inside a SKILL core is frozen in the link gate's
+    # allowlist as class `shared_bare`, and rewriting it there would make the frozen
+    # entry neither repairable (it still would not resolve under its frozen spelling)
+    # nor retirable (its bytes survive inside the longer token) -- an unwinnable
+    # position for that gate. A file emitted into dist/<p>/_shared/ has no frozen
+    # entries at all: it is new in this step, so its own references must simply
+    # RESOLVE, and '_shared/x' resolved from dist/<p>/_shared/ would mean
+    # dist/<p>/_shared/_shared/x, which does not exist.
+    $out = Repoint-SharedReference $body
+    return $BARE_SHARED_REF_RE.Replace($out, '../_shared/')
+}
+
+function Test-PytestModuleName([string]$leaf) {
+    # pytest's default collection patterns (`test_*.py`, `*_test.py`). Named as the
+    # predicate it is so the emit-side refusal below reads as one condition.
+    return ($leaf -match '^test_.*\.py$') -or ($leaf -match '.*_test\.py$')
+}
+
+function Get-SharedCanonicalLabel([string]$leaf) {
+    # ONE spelling of the 'Canonical source:' value for a _shared/-sourced file.
+    #
+    # Spelled '<repo>/_shared/<leaf>', NOT '_shared/<leaf>': the header ships INSIDE
+    # the generated file, and a bare '_shared/x' token there is a REFERENCE that
+    # resolves from the emitting file's own directory (dist/<p>/_shared/_shared/x --
+    # absent). The '<repo>/' prefix names the identical canonical path while making
+    # the token unambiguously repo-rooted rather than relative.
+    return "<repo>/_shared/$leaf"
+}
+
+function Get-SharedLeafReference([string]$text) {
+    # Every '_shared/<leaf>' asset named by $text, in any anchored or bare spelling.
+    $out = @()
+    foreach ($m in $SHARED_REF_RE.Matches($text)) { $out += $m.Groups[1].Value }
+    return $out
+}
+
+function Get-SharedClosure([string[]]$seeds) {
+    # RE-WALK the transitive closure at build time rather than shipping a list.
+    #
+    # Seeds are the '_shared/<leaf>' tokens harvested from the skill sources this
+    # profile actually emits, so a profile that emits no consumer (an adversarial or
+    # minimal manifest) legitimately ships no shared payload at all. From each
+    # markdown asset already in the closure, two further edges are followed:
+    #   * another '_shared/<leaf>' token, and
+    #   * a BARE mention of a file that exists in the canonical _shared/ root --
+    #     which is how judge-core.md reaches grader_prompt.py / calibrate_judge.py /
+    #     score_skill.workflow.js and score-skill.md reaches score_skill_absolute.py.
+    #     Those are sibling citations inside _shared/, so they carry no namespace
+    #     prefix to match on.
+    # Only markdown is walked: .py/.js assets are payload leaves, and their bodies are
+    # code, not the prose a reader follows.
+    #
+    # The walk is deliberately allowed to OVER-include: an asset it pulls in that has
+    # no emitter for its extension makes the build THROW (see the emit block), so an
+    # unexpected edge is loud rather than a silently unstamped file.
+    $found = New-Object 'System.Collections.Generic.HashSet[string]' ([System.StringComparer]::Ordinal)
+    $queue = New-Object 'System.Collections.Generic.Queue[string]'
+    foreach ($s in $seeds) {
+        if ($found.Add($s)) { $queue.Enqueue($s) }
+    }
+    $sharedNames = @(Get-ChildItem -LiteralPath $SHARED_ROOT -File |
+                     ForEach-Object { $_.Name } | Sort-Object)
+    while ($queue.Count -gt 0) {
+        $leaf = $queue.Dequeue()
+        if (-not $leaf.ToLowerInvariant().EndsWith('.md')) { continue }
+        $abs = Resolve-SafeSharedSource $leaf
+        if (-not (Test-Path -LiteralPath $abs -PathType Leaf)) {
+            throw "build-distributions: shared asset source missing: _shared/$leaf"
+        }
+        $body = Read-SourceText $abs
+        $next = @(Get-SharedLeafReference $body)
+        foreach ($n in $sharedNames) {
+            if ($n -eq $leaf) { continue }
+            $pattern = '(?<![\w/\\.-])' + [regex]::Escape($n) + '(?![\w-])'
+            if ([regex]::IsMatch($body, $pattern)) { $next += $n }
+        }
+        foreach ($n in $next) {
+            if ($found.Add($n)) { $queue.Enqueue($n) }
+        }
+    }
+    # Sorted: the emitted file SET and the emit ORDER must both be deterministic.
+    return @($found | Sort-Object)
+}
+
 function Add-PythonProvenance([string]$body, [string]$canonicalSource, [string]$profile) {
     # Keep __future__ imports legal by inserting the generated marker INSIDE the
     # module's existing leading docstring rather than prepending a new statement.
@@ -264,6 +426,10 @@ foreach ($profile in $profiles) {
 
     $skillCount = 0
     $fileCount = 0
+    # Seeds for this profile's shared-payload closure, harvested from the sources this
+    # profile actually emits. Per-profile, not global: the GPT profile omits the
+    # provider-native skills, and a minimal manifest may emit nothing at all.
+    $sharedSeeds = @()
 
     foreach ($skill in $skills) {
         $name = [string](Get-Prop $skill 'name')
@@ -310,9 +476,14 @@ foreach ($profile in $profiles) {
 
         # -- Launcher (SKILL.md) -- (all sources validated above)
         $adapterBody = Read-SourceText $adapterAbs
+        # Harvest closure seeds from the CANONICAL text, before any repoint.
+        $sharedSeeds += @(Get-SharedLeafReference $adapterBody)
         if ($hasCore) {
             $adapterBody = Repoint-CoreReference $adapterBody
         }
+        # NOT gated on $hasCore: judge-motion is core: null in the manifest and its
+        # adapter still carries depth-3 '../../../_shared/' references (D2).
+        $adapterBody = Repoint-SharedReference $adapterBody
         # GPT/Copilot native discovery requires the SKILL.md to LEAD with a YAML
         # frontmatter block (name + description). The canonical gpt.md adapters carry
         # no frontmatter, so synthesize it from the manifest record here; the
@@ -337,9 +508,16 @@ foreach ($profile in $profiles) {
         # -- Shared core (portable skills only) --
         if ($hasCore) {
             $coreBody = Read-SourceText $coreAbs
+            $sharedSeeds += @(Get-SharedLeafReference $coreBody)
+            # ORDER IS LOAD-BEARING (D2): the verdict-helper repoint runs FIRST,
+            # because it consumes the longest token of all
+            # ('../../_shared/build_step_verdict.py' -> the co-located copy). Running
+            # the generic shared repoint first would turn it into
+            # '../_shared/build_step_verdict.py' and this repoint would never match.
             if ($name -eq 'build-step' -or $name -eq 'build-phase') {
                 $coreBody = Repoint-VerdictHelperReference $coreBody
             }
+            $coreBody = Repoint-SharedReference $coreBody
             $coreOut = Add-Provenance $coreBody $coreRel $profile
             Write-GeneratedFile (Join-Path $skillOutDir 'core.md') $coreOut $profileDirAbs
             $fileCount++
@@ -348,16 +526,84 @@ foreach ($profile in $profiles) {
         $skillCount++
     }
 
+    # -- Shared payload: dist/<profile>/_shared/ (D1) --
+    # One copy per profile, at the profile root, so every emitted '../_shared/x'
+    # reference resolves inside the discovery root a consumer home actually has.
+    # The SET is the transitive closure RE-WALKED from this profile's own sources,
+    # never a committed list -- a hand-maintained payload list is the workspace's
+    # canonical false-green shape.
+    $sharedClosure = Get-SharedClosure $sharedSeeds
+    $sharedOutDir = Join-Path $profileDir $SHARED_DEST
+    foreach ($leaf in $sharedClosure) {
+        $sharedAbs = Resolve-SafeSharedSource $leaf
+        if (-not (Test-Path -LiteralPath $sharedAbs -PathType Leaf)) {
+            throw "build-distributions: shared asset source missing: _shared/$leaf"
+        }
+        if (Test-PytestModuleName $leaf) {
+            # Fail LOUD rather than silently filtering. The default OutputDir is
+            # <repo>/dist, which sits INSIDE this repository's own pytest rootdir, and
+            # this repository has no pytest config to exclude it -- so shipping a test
+            # module would make the project's declared DONE gate (repo-root
+            # `python -m pytest`) collect two extra copies of it under duplicate
+            # basenames and error out. A shared doc that merely NAMES its unit-test
+            # module drags it into the closure, so the remedy is at the citation:
+            # describe it as repo-only prose, the same disposition the two workspace
+            # citations in score-skill.md already carry.
+            throw ("build-distributions: shared asset '_shared/$leaf' is a pytest " +
+                   "module and must not ship into a discovery profile (it would be " +
+                   "collected by this repository's own repo-root pytest run). A " +
+                   "_shared/*.md file cites it by name; convert that citation to " +
+                   "prose that does not name the file.")
+        }
+        # REPOINT EVERY EXTENSION, not just markdown, and BEFORE stamping (so the
+        # header's own 'Canonical source' value is never rewritten by it). A
+        # '_shared/<leaf>' token inside a .py docstring or a .js comment is a reference
+        # a reader follows exactly like a markdown one, and left alone it resolves from
+        # dist/<p>/_shared/ to dist/<p>/_shared/_shared/<leaf> -- a path that exists in
+        # NEITHER profile. Applying the repoint only on the .md branch shipped one such
+        # token live (_shared/score_skill_composite.py cites _shared/score-skill.md).
+        $sharedBody = Repoint-SharedAssetReference (Read-SourceText $sharedAbs)
+        $sharedLabel = Get-SharedCanonicalLabel $leaf
+        $ext = [System.IO.Path]::GetExtension($leaf).ToLowerInvariant()
+        if ($ext -eq '.md') {
+            $sharedOut = Add-Provenance $sharedBody $sharedLabel $profile
+        } elseif ($ext -eq '.py') {
+            $sharedOut = Add-PythonProvenance $sharedBody $sharedLabel $profile
+        } elseif ($ext -eq '.js') {
+            # Add-JsProvenance wraps the SAME header verbatim in /* */ so
+            # Test-SkillMeshProvenance holds for the .js exactly as for .md/.py --
+            # without it the shipped payload is foreign to install, absent from
+            # owned_files, and undeletable by uninstall.
+            $sharedOut = Add-JsProvenance $sharedBody (New-ProvenanceHeader $sharedLabel $profile)
+        } else {
+            # Fail LOUD. Every shipped file must carry a provenance marker or the
+            # installer cannot own it; silently copying an unstampable extension
+            # would plant an orphan that a no-orphan gate still reports as clean.
+            throw ("build-distributions: no provenance emitter for shared asset " +
+                   "'_shared/$leaf' (extension '$ext'); refusing to ship an " +
+                   "unstamped file.")
+        }
+        Write-GeneratedFile (Join-Path $sharedOutDir $leaf) $sharedOut $profileDirAbs
+        $fileCount++
+    }
+
     # Shared durable-verdict helper. Both build-step and build-phase execute it,
     # but each host discovery package must remain self-contained; co-locate one
-    # generated copy beside each consuming core. Canonical ownership stays at
+    # generated copy beside each consuming core (decision: KEEP co-location -- the
+    # profile-root _shared/ copy above is the reference copy, the co-located one is
+    # what build-step's own contract executes). Canonical ownership stays at
     # repo-root _shared/build_step_verdict.py.
     $verdictHelperAbs = Resolve-SafePath -Path $VERDICT_HELPER_SOURCE -AllowedRoots @($SHARED_ROOT)
     if (-not (Test-Path -LiteralPath $verdictHelperAbs -PathType Leaf)) {
         throw "build-distributions: verdict helper source missing: $verdictHelperAbs"
     }
-    $verdictHelperBody = Read-SourceText $verdictHelperAbs
-    $verdictHelperOut = Add-PythonProvenance $verdictHelperBody '_shared/build_step_verdict.py' $profile
+    # Same repoint as the payload copy above: the co-located copy also sits exactly one
+    # level below the discovery root (dist/<p>/<consumer>/), so '../_shared/x' is the one
+    # correct spelling there too. Applying it here keeps the two copies byte-identical by
+    # construction -- they cannot drift into two different reference shapes.
+    $verdictHelperBody = Repoint-SharedAssetReference (Read-SourceText $verdictHelperAbs)
+    $verdictHelperOut = Add-PythonProvenance $verdictHelperBody `
+                            (Get-SharedCanonicalLabel 'build_step_verdict.py') $profile
     foreach ($consumer in @('build-step', 'build-phase')) {
         $consumerDir = Join-Path $profileDir $consumer
         if (-not (Test-Path -LiteralPath $consumerDir -PathType Container)) {

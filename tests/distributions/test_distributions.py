@@ -13,6 +13,7 @@ Style matches tests/router/ and tests/package-integrity/: shell out to
 powershell.exe via subprocess, use tmp_path, and gate cleanly (skipif) when
 powershell is not on PATH. On this Windows host powershell IS present, so these RUN.
 """
+import hashlib
 import json
 import re
 import shutil
@@ -22,6 +23,9 @@ from pathlib import Path
 import pytest
 
 PWSH = shutil.which("powershell")
+# Used ONLY by the JavaScript parse gate. Its test skips (visibly) when node is absent
+# rather than passing vacuously -- a green run with no parser is not evidence.
+NODE = shutil.which("node")
 REPO_ROOT = Path(__file__).resolve().parents[2]
 BUILD_SCRIPT = REPO_ROOT / "tools" / "build-distributions.ps1"
 INSTALL_SCRIPT = REPO_ROOT / "tools" / "install-skill-mesh.ps1"
@@ -51,6 +55,181 @@ RETIRED_GPT_SUBDIR = Path(".copilot") / "skills"
 
 pytestmark = pytest.mark.skipif(PWSH is None, reason="powershell is not available on PATH")
 
+# --------------------------------------------------------------------------- #
+# The shared payload (Step 64). D1 ships `_shared/` ONCE per profile, at the profile
+# root as a sibling of the skill dirs, so every emitted `../_shared/x` reference
+# resolves inside a consumer's discovery root.
+# --------------------------------------------------------------------------- #
+
+SHARED_SRC = REPO_ROOT / "_shared"
+SHARED_DEST = "_shared"
+
+# The payload as it stands today. This is a VALUE pin, not the authority on the SET:
+# `test_shared_payload_matches_an_independent_closure_walk` re-derives the closure and
+# compares it against a real build, so a builder walk that narrows (or widens) reds
+# there even if this literal were edited to agree with it.
+EXPECTED_SHARED_PAYLOAD = frozenset({
+    "judge-core.md",
+    "score-skill.md",
+    "build_step_verdict.py",
+    "calibrate_judge.py",
+    "grader_prompt.py",
+    "score_skill_absolute.py",
+    "score_skill_composite.py",
+    "score_skill.workflow.js",
+})
+
+# A `_shared/<leaf>` asset reference in any spelling the canonical sources use: bare,
+# or anchored at depth 2 / depth 3.
+_SHARED_REF_RE = re.compile(r"(?:\.\./)*_shared/([A-Za-z0-9][A-Za-z0-9._-]*)")
+# A BARE `_shared/` token -- the namespace named with no relative anchor. Mirrors
+# `$BARE_SHARED_REF_RE` in the builder, INCLUDING the negative lookbehind: the
+# lookbehind is what keeps `../_shared/x` (the rewrite's own output) and the provenance
+# header's `<repo>/_shared/x` label from matching.
+_BARE_SHARED_RE = re.compile(r"(?<![\w/\\.-])_shared/")
+# pytest's default collection patterns. `dist/` is the builder's DEFAULT output
+# directory and sits inside this repository's pytest rootdir with no config excluding
+# it, so a shipped test module would be collected twice under a duplicate basename and
+# break the project's own repo-root DONE gate.
+_PYTEST_MODULE_RE = re.compile(r"\A(?:test_.*\.py|.*_test\.py)\Z")
+
+
+def _independent_shared_closure(provider):
+    """Re-derive the shared payload from the canonical sources, in Python.
+
+    Deliberately a SECOND implementation of the walk `build-distributions.ps1`
+    performs, so the emitted set is compared against something other than itself. A
+    builder-side narrowing (or a stray new edge) shows up as a set difference here
+    even if the frozen literal above were edited to match the narrowed builder.
+    """
+    manifest = _load_manifest()
+    names = sorted(p.name for p in SHARED_SRC.iterdir() if p.is_file())
+    seeds = []
+    for skill in sorted(manifest["skills"], key=lambda r: r["name"]):
+        core = skill.get("core")
+        native = skill.get("status") == "provider-native" or core is None
+        if provider == "gpt" and native:
+            continue
+        adapter = (skill.get("providers") or {}).get(provider)
+        if not adapter:
+            continue
+        for rel in [adapter] + ([core] if core else []):
+            seeds += _SHARED_REF_RE.findall(
+                (REPO_ROOT / rel).read_text(encoding="utf-8"))
+
+    found, queue = set(), list(seeds)
+    while queue:
+        leaf = queue.pop()
+        if leaf in found:
+            continue
+        found.add(leaf)
+        if not leaf.lower().endswith(".md"):
+            continue  # .py/.js assets are payload leaves, not prose to follow
+        body = (SHARED_SRC / leaf).read_text(encoding="utf-8")
+        queue += _SHARED_REF_RE.findall(body)
+        for name in names:
+            # A sibling citation inside `_shared/` carries no namespace prefix -- it is
+            # how judge-core.md reaches grader_prompt.py and score-skill.md reaches
+            # score_skill_absolute.py.
+            if name == leaf:
+                continue
+            if re.search(r"(?<![\w/\\.-])" + re.escape(name) + r"(?![\w-])", body):
+                queue.append(name)
+    return found
+
+
+def _repoint_shared_asset(body):
+    """The ONLY transformations the builder is permitted to apply to a payload body.
+
+    A second implementation of `Repoint-SharedAssetReference`, deliberately spelled out
+    here rather than parsed out of the `.ps1`: the content-fidelity assertion below is
+    "the shipped bytes ARE the canonical asset, modulo exactly this", so re-deriving the
+    modulo from the code under test would make it vacuous. Longest token first (D2).
+    """
+    out = body.replace("../../../_shared/", "../_shared/")
+    out = out.replace("../../_shared/", "../_shared/")
+    return _BARE_SHARED_RE.sub("../_shared/", out)
+
+
+def _canonical_shared_body(name):
+    """`_shared/<name>` as the builder is expected to emit its BODY.
+
+    Read exactly as `Read-SourceText` reads it -- BOM stripped (`utf-8-sig`) and line
+    endings normalized to LF -- then repointed.
+    """
+    raw = (SHARED_SRC / name).read_text(encoding="utf-8-sig")
+    return _repoint_shared_asset(raw.replace("\r\n", "\n").replace("\r", "\n"))
+
+
+_PROV_OPEN = "<!-- GENERATED FILE - DO NOT EDIT."
+
+
+def _strip_provenance_header(text, name):
+    """The emitted payload body with the generated header (and only it) removed.
+
+    One branch per emitter in `build-distributions.ps1`, each asserting the placement it
+    expects rather than searching loosely -- an emitter that moved the header somewhere
+    else must red here, not be silently accommodated.
+    """
+    if name.endswith(".js"):
+        # Add-JsProvenance: an optional hashbang line, then `/*` + header + `*/` + blank.
+        prefix = ""
+        rest = text
+        if rest.startswith("#!"):
+            nl = rest.index("\n") + 1
+            prefix, rest = rest[:nl], rest[nl:]
+        assert rest.startswith("/*\n" + _PROV_OPEN), rest[:80]
+        head, sep, body = rest.partition("\n*/\n\n")
+        assert sep, "the JS provenance comment is not terminated as emitted"
+        return prefix + body
+    if name.endswith(".py"):
+        # Add-PythonProvenance: inserted INSIDE the leading docstring, right after `"""`.
+        i = text.index('"""')
+        head, rest = text[:i + 3], text[i + 3:]
+        assert rest.startswith("\n" + _PROV_OPEN), rest[:80]
+        return head + rest[rest.index("-->") + 3:]
+    # Add-Provenance (markdown): prepended, then a blank line. No `_shared/` asset opens
+    # with YAML frontmatter today; assert that premise instead of quietly taking the
+    # other branch, which would strip nothing and make the comparison lie.
+    assert not text.startswith("---\n"), f"{name} grew frontmatter; update this stripper"
+    assert text.startswith(_PROV_OPEN), text[:80]
+    body = text[text.index("-->") + 3:]
+    assert body.startswith("\n\n"), repr(body[:20])
+    return body[2:]
+
+
+def _provenance_verdicts(root, tmp_path):
+    """{relative posix path: bool} from the REAL Test-SkillMeshProvenance.
+
+    Shells out to the shipped predicate rather than re-implementing the header shape
+    in Python: the whole point of the .js emitter is that ONE anchored check decides
+    ownership for every extension, so the test must ask that check.
+    """
+    probe = tmp_path / "provenance_probe.ps1"
+    probe.parent.mkdir(parents=True, exist_ok=True)
+    probe.write_text(
+        "param([string]$Root)\n"
+        "Set-StrictMode -Version Latest\n"
+        "$ErrorActionPreference = 'Stop'\n"
+        f". '{PROVENANCE_SCRIPT}'\n"
+        "Get-ChildItem -LiteralPath $Root -Recurse -File | "
+        "Sort-Object -Property FullName | ForEach-Object {\n"
+        "    $t = [System.IO.File]::ReadAllText($_.FullName)\n"
+        "    $rel = $_.FullName.Substring($Root.Length).TrimStart('\\','/')\n"
+        "    Write-Output (($rel -replace '\\\\','/') + '|' + "
+        "(Test-SkillMeshProvenance $t))\n"
+        "}\n",
+        encoding="ascii")
+    r = _run(probe, ["-Root", str(root)])
+    assert r.returncode == 0, f"provenance probe failed:\n{r.stdout}\n{r.stderr}"
+    out = {}
+    for line in r.stdout.splitlines():
+        if "|" not in line:
+            continue
+        rel, verdict = line.rsplit("|", 1)
+        out[rel.strip()] = verdict.strip() == "True"
+    return out
+
 
 # --------------------------------------------------------------------------- #
 # Helpers
@@ -70,12 +249,17 @@ def _build(out_dir, provider="both"):
     return r
 
 
-def _install(home, provider, dist_dir=None, uninstall=False, force=False):
+def _install(home, provider, dist_dir=None, uninstall=False, force=False,
+             force_shared=False, backup_dir=None):
     args = ["-Home", str(home), "-Provider", provider]
     if dist_dir is not None:
         args += ["-DistDir", str(dist_dir)]
     if force:
         args.append("-Force")
+    if force_shared:
+        args.append("-ForceShared")
+    if backup_dir is not None:
+        args += ["-BackupDir", str(backup_dir)]
     if uninstall:
         args.append("-Uninstall")
     return _run(INSTALL_SCRIPT, args)
@@ -181,10 +365,17 @@ def test_build_file_counts_match_manifest(dist_root):
     claude_files = list((dist_root / "claude").rglob("*"))
     claude_files = [p for p in claude_files if p.is_file()]
     gpt_files = [p for p in (dist_root / "gpt").rglob("*") if p.is_file()]
-    # claude: portable*(SKILL+core) + native*(SKILL only) + 2 verdict helpers;
-    # gpt: portable*(SKILL+core) + 2 verdict helpers.
-    assert len(claude_files) == len(portable) * 2 + len(native) * 1 + 2
-    assert len(gpt_files) == len(portable) * 2 + 2
+    # claude: portable*(SKILL+core) + native*(SKILL only) + 2 verdict helpers
+    #         + the shared payload at the profile root (Step 64);
+    # gpt: portable*(SKILL+core) + 2 verdict helpers + the same shared payload.
+    # RECOMPUTED, deliberately still EXACT: relaxing this to `>=` would silently
+    # permit a future accidental emission, which is the whole reason the count is
+    # asserted at all. The shared term is a length, not a directory listing --
+    # `test_shared_payload_matches_an_independent_closure_walk` is what proves the
+    # SET, from a re-walk rather than from this literal.
+    shared = len(EXPECTED_SHARED_PAYLOAD)
+    assert len(claude_files) == len(portable) * 2 + len(native) * 1 + 2 + shared
+    assert len(gpt_files) == len(portable) * 2 + 2 + shared
 
 
 # --------------------------------------------------------------------------- #
@@ -199,8 +390,18 @@ def test_generated_files_carry_provenance(dist_root):
             assert "GENERATED FILE - DO NOT EDIT" in text, md
             assert "config/skill-manifest.json" in text, md
             assert f"Profile: {profile}" in text, md
-            # canonical source path names the real skills/<name>/... source.
-            assert "Canonical source: skills/" in text, md
+            # canonical source path names the real source the file was copied from.
+            # AMENDED for Step 64: a `_shared/`-sourced doc is not a skills/ file, so
+            # asserting the `skills/` prefix over EVERY dist markdown would have been
+            # false. It is narrowed per origin rather than dropped -- and the shared
+            # spelling carries a `<repo>/` prefix on purpose, because a bare
+            # `_shared/x` token INSIDE a shipped file is itself a reference, one that
+            # resolves from the file's own directory to `_shared/_shared/x`.
+            rel = md.relative_to(dist_root / profile)
+            if rel.parts[0] == SHARED_DEST:
+                assert f"Canonical source: <repo>/_shared/{rel.name}" in text, md
+            else:
+                assert "Canonical source: skills/" in text, md
             # the ownership-authority provenance marker is embedded in every file.
             assert marker in text, f"missing provenance marker in {md}"
 
@@ -209,8 +410,368 @@ def test_generated_files_carry_provenance(dist_root):
             helper = dist_root / profile / consumer / "build_step_verdict.py"
             text = helper.read_text(encoding="utf-8")
             assert marker in text
-            assert "Canonical source: _shared/build_step_verdict.py" in text
+            assert "Canonical source: <repo>/_shared/build_step_verdict.py" in text
             compile(text, str(helper), "exec")
+
+
+# --------------------------------------------------------------------------- #
+# Shared payload: dist/<profile>/_shared/ (Step 64)
+# --------------------------------------------------------------------------- #
+
+def test_shared_payload_matches_an_independent_closure_walk(dist_root):
+    """The emitted payload equals the closure re-derived from the canonical sources.
+
+    Two independent derivations plus one frozen value: the builder's PowerShell walk
+    (what shipped), this module's Python walk (a second implementation), and
+    EXPECTED_SHARED_PAYLOAD (the value pin). Editing the literal to match a narrowed
+    builder still reds, because the literal is not what the emitted set is compared to
+    first.
+
+    SCOPE, stated so a reader does not over-trust this: it compares the SET. All eight
+    live assets are DIRECT seeds from `skills/**`, so a narrowing that does not change
+    today's emitted set stays green here -- dropping either transitive walk edge does
+    exactly that. The individual EDGES are covered by the synthetic tests below
+    (`..._follows_a_sibling_mention`, `..._bare_shared_token_...`,
+    `..._seeds_from_the_adapter_...`), one per edge.
+    """
+    for profile in ("claude", "gpt"):
+        shared_dir = dist_root / profile / SHARED_DEST
+        assert shared_dir.is_dir(), f"{profile}: no shared payload was emitted"
+        emitted = {p.name for p in shared_dir.iterdir() if p.is_file()}
+        assert emitted == _independent_shared_closure(profile), (
+            f"{profile}: the emitted shared payload differs from the closure "
+            "re-walked from the canonical sources")
+        assert emitted == set(EXPECTED_SHARED_PAYLOAD), (
+            f"{profile}: shared payload {sorted(emitted)} != the frozen expectation")
+        # Nothing nested: the payload is a flat directory of leaf assets.
+        assert not [p for p in shared_dir.iterdir() if p.is_dir()], \
+            f"{profile}: the shared payload grew a subdirectory"
+
+
+def test_shared_payload_carries_valid_provenance_for_every_extension(dist_root, tmp_path):
+    """`Test-SkillMeshProvenance` is TRUE for every emitted `_shared/*` file.
+
+    Regardless of extension, and the `.js` asset is the one that matters: a marker of
+    our own JS-flavoured wording would look fine by eye while making the shipped file
+    foreign to install, absent from `owned_files`, and undeletable by uninstall -- an
+    orphan a no-orphan gate still reports as clean.
+    """
+    marker = _marker_literal()
+    for profile in ("claude", "gpt"):
+        shared_dir = dist_root / profile / SHARED_DEST
+        verdicts = _provenance_verdicts(shared_dir, tmp_path / profile)
+        assert set(verdicts) == {p.name for p in shared_dir.iterdir() if p.is_file()}
+        bad = sorted(rel for rel, ok in verdicts.items() if not ok)
+        assert not bad, (
+            f"{profile}: emitted shared assets whose provenance marker is NOT "
+            f"well-formed: {bad}")
+        for name in verdicts:
+            text = (shared_dir / name).read_text(encoding="utf-8")
+            assert marker in text, f"{profile}/{name}"
+            if name.endswith(".py"):
+                compile(text, name, "exec")
+    # And specifically the .js: the header is wrapped VERBATIM, so the whole marker
+    # block sits inside one /* */ comment and the payload below it is untouched.
+    js = (dist_root / "claude" / SHARED_DEST / "score_skill.workflow.js").read_text(
+        encoding="utf-8")
+    assert js.startswith("/*\n<!-- GENERATED FILE - DO NOT EDIT."), js[:80]
+    header, _, body = js.partition("\n*/\n")
+    assert "*/" not in header, "the wrapped header would close its own comment early"
+    assert body.lstrip().startswith("export const meta"), body[:80]
+
+
+def test_shared_payload_ships_no_pytest_module(dist_root):
+    """No emitted profile contains a pytest module.
+
+    `dist/` is the builder's default output directory and lives inside this
+    repository's pytest rootdir, which has no configuration excluding it. A shipped
+    `test_*.py` would therefore be collected twice, under a basename that already
+    exists in `_shared/`, and error out the repo-root run this phase's DONE gate uses.
+    The builder refuses to emit one; this asserts the refusal held.
+    """
+    for profile in ("claude", "gpt"):
+        offenders = sorted(p.name for p in (dist_root / profile).rglob("*")
+                           if p.is_file() and _PYTEST_MODULE_RE.match(p.name))
+        assert not offenders, f"{profile} ships pytest modules: {offenders}"
+
+
+def test_shared_payload_bytes_are_the_canonical_asset(dist_root):
+    """CONTENT FIDELITY: the shipped bytes ARE the canonical asset.
+
+    Every other assertion in this section checks the payload's NAMES (the closure walk),
+    its MARKERS (the provenance predicate) or its REFERENCE SHAPE (the repoint). All
+    three are satisfied by correctly-named, correctly-stamped, correctly-repointed
+    STUBS: truncating the markdown bodies to a dozen lines takes judge-core.md from
+    20,800 B to 1,681 B -- most of the remainder being the provenance header -- with
+    nothing objecting. The payload IS the deliverable of this step (a consumer must be
+    able to READ judge-core.md out of their own discovery root), so the bytes need a
+    control of their own.
+
+    The comparison is exact, not a floor: body after the header == canonical body,
+    modulo exactly the documented transformations (BOM strip, CRLF->LF, and the
+    `_shared` reference repoints) and nothing else.
+    """
+    mismatched = []
+    for profile in ("claude", "gpt"):
+        shared_dir = dist_root / profile / SHARED_DEST
+        for f in sorted(shared_dir.iterdir()):
+            if not f.is_file():
+                continue
+            emitted = _strip_provenance_header(f.read_text(encoding="utf-8"), f.name)
+            expected = _canonical_shared_body(f.name)
+            if emitted != expected:
+                mismatched.append(
+                    f"{profile}/{SHARED_DEST}/{f.name}: emitted body is "
+                    f"{len(emitted)} chars, canonical is {len(expected)}")
+    assert not mismatched, (
+        "the emitted shared payload is not the canonical asset: " + "; ".join(mismatched))
+
+    # The co-located verdict-helper copies are produced from the same source, with the
+    # same label and the same repoint, so they cannot drift from the payload copy.
+    for profile in ("claude", "gpt"):
+        payload = (dist_root / profile / SHARED_DEST / "build_step_verdict.py").read_bytes()
+        for consumer in ("build-step", "build-phase"):
+            co = dist_root / profile / consumer / "build_step_verdict.py"
+            assert co.read_bytes() == payload, \
+                f"{profile}/{consumer}/build_step_verdict.py drifted from the payload copy"
+
+
+def test_shared_references_are_repointed_and_resolve(dist_root):
+    """Zero deep `_shared` references survive, and every emitted one resolves.
+
+    Both halves matter and neither implies the other: a rewrite that produced
+    `../_shared/x` for an asset the build does not ship would satisfy the first and
+    fail the second, and a build that shipped the payload without rewriting anything
+    would satisfy the second vacuously.
+
+    WIDENED for Step 64 from `.md` to EVERY emitted file. The `.md`-only filter was a
+    live blind spot, not a hypothetical one: the `.py` emit branch applied no repoint, so
+    `_shared/score_skill_composite.py` shipped a bare `` `_shared/score-skill.md` ``
+    token that resolves, from `dist/<p>/_shared/`, to
+    `dist/<p>/_shared/_shared/score-skill.md` -- a path present in NEITHER profile. A
+    reference is a reference whatever the extension of the file carrying it.
+    """
+    deep, unresolved, bare = [], [], []
+    for profile in ("claude", "gpt"):
+        profile_dir = dist_root / profile
+        for f in sorted(profile_dir.rglob("*")):
+            if not f.is_file():
+                continue
+            text = f.read_text(encoding="utf-8")
+            rel = f.relative_to(profile_dir).as_posix()
+            for token in ("../../_shared/", "../../../_shared/"):
+                if token in text:
+                    deep.append(f"{profile}/{rel}: {token}")
+            for leaf in re.findall(r"\.\./_shared/([A-Za-z0-9][A-Za-z0-9._-]*)", text):
+                if not (f.parent / ".." / "_shared" / leaf).resolve().is_file():
+                    unresolved.append(f"{profile}/{rel} -> ../_shared/{leaf}")
+            # BARE `_shared/x` tokens, checked inside the payload only. The asymmetry is
+            # the builder's and is deliberate: a bare token in a SKILL core is frozen in
+            # the link gate's allowlist as class `shared_bare` and must keep its
+            # spelling, while a payload file is new in this step and owes only that its
+            # own references RESOLVE.
+            if rel.split("/")[0] == SHARED_DEST:
+                for m in _BARE_SHARED_RE.finditer(text):
+                    bare.append(f"{profile}/{rel}: ...{text[m.start():m.start() + 40]!r}")
+    assert not deep, f"deep `_shared` references survived the repoint: {deep[:10]}"
+    assert not unresolved, f"emitted `../_shared/x` that does not exist: {unresolved[:10]}"
+    assert not bare, f"un-repointed bare `_shared/x` inside the payload: {bare[:10]}"
+
+
+def _synthetic_build_repo(tmp_path, shared_files, core_body, adapter_body=None):
+    """A minimal, fully SYNTHETIC repo the real builder can run inside.
+
+    The builder resolves `_shared/` and `skills/` from its own `$PSScriptRoot`, so the
+    only way to exercise its refusal paths is to give it a different repo. Nothing is
+    planted in this checkout -- a stray file at a real source path is its own defect
+    class here (#83-#86).
+    """
+    repo = tmp_path / "srepo"
+    for sub in ("tools", "runtime", "config", "_shared", "skills/demo/providers"):
+        (repo / sub).mkdir(parents=True, exist_ok=True)
+    for name in ("build-distributions.ps1", "skill-mesh-provenance.ps1"):
+        shutil.copy2(REPO_ROOT / "tools" / name, repo / "tools" / name)
+    shutil.copy2(REPO_ROOT / "runtime" / "path-guard.ps1",
+                 repo / "runtime" / "path-guard.ps1")
+    # The builder reads the durable-verdict helper unconditionally (it only SKIPS the
+    # per-consumer copy when the consumer skill is absent), so the synthetic tree must
+    # carry one. It is never part of the closure here: nothing cites it.
+    (repo / "_shared" / "build_step_verdict.py").write_text(
+        '"""synthetic verdict helper."""\n\nVERDICT = "ok"\n', encoding="utf-8")
+    (repo / "skills" / "demo" / "core.md").write_text(core_body, encoding="utf-8")
+    (repo / "skills" / "demo" / "providers" / "claude.md").write_text(
+        adapter_body or "# demo adapter\n\nLoads ../core.md in full.\n", encoding="utf-8")
+    for name, body in shared_files.items():
+        (repo / "_shared" / name).write_text(body, encoding="utf-8")
+    _write_manifest(repo / "config" / "skill-manifest.json", [{
+        "name": "demo", "status": "portable", "core": "skills/demo/core.md",
+        "providers": {"claude": "skills/demo/providers/claude.md"},
+    }])
+    return repo
+
+
+def _synthetic_build(repo, out_dir):
+    return _run(repo / "tools" / "build-distributions.ps1",
+                ["-OutputDir", str(out_dir), "-Provider", "claude"])
+
+
+def test_shared_closure_follows_a_sibling_mention(tmp_path):
+    """An asset reached only through a `_shared/*.md` sibling citation still ships.
+
+    This is the transitive half of the walk, and it is the half a "just ship what the
+    skills cite" implementation silently drops: `judge-core.md` names
+    `grader_prompt.py` as a bare sibling, with no `_shared/` prefix to match on.
+    """
+    repo = _synthetic_build_repo(
+        tmp_path,
+        {"doc.md": "# doc\n\nRuns [`helper.py`](helper.py) for grading.\n",
+         "helper.py": '"""helper."""\n\nVALUE = 1\n'},
+        "# demo core\n\nSee `_shared/doc.md`.\n")
+    out = tmp_path / "out"
+    r = _synthetic_build(repo, out)
+    assert r.returncode == 0, f"{r.stdout}\n{r.stderr}"
+    emitted = {p.name for p in (out / "claude" / SHARED_DEST).iterdir() if p.is_file()}
+    assert emitted == {"doc.md", "helper.py"}, emitted
+
+
+def test_bare_shared_token_inside_a_shared_asset_is_repointed(tmp_path):
+    """A bare `_shared/x` token inside a SHIPPED asset is normalized to `../_shared/x`.
+
+    Left alone it would resolve, from `dist/<p>/_shared/`, to
+    `dist/<p>/_shared/_shared/x` -- a brand new dangling reference introduced by the
+    very step that exists to remove them.
+    """
+    repo = _synthetic_build_repo(
+        tmp_path,
+        {"doc.md": "# doc\n\nRun `_shared/helper.py` to grade.\n",
+         "helper.py": '"""helper."""\n\nVALUE = 1\n'},
+        "# demo core\n\nSee `_shared/doc.md`.\n")
+    out = tmp_path / "out"
+    assert _synthetic_build(repo, out).returncode == 0
+    # WALK EDGE (b): the anchored `_shared/<leaf>` token is the ONLY way helper.py can
+    # reach this closure -- the bare-sibling edge cannot see it, because its negative
+    # lookbehind rejects the `/`-prefixed occurrence. Without this line the whole edge
+    # has no control at all: the repoint below is unconditional, so it stays green with
+    # `$next = @(Get-SharedLeafReference $body)` replaced by `@()`.
+    assert (out / "claude" / SHARED_DEST / "helper.py").is_file(), \
+        "the anchored `_shared/x` walk edge did not pull the asset into the closure"
+    emitted = (out / "claude" / SHARED_DEST / "doc.md").read_text(encoding="utf-8")
+    assert "`../_shared/helper.py`" in emitted, emitted
+    # ...and idempotently: no `../_shared/../_shared/` or `.././_shared/` mangling.
+    assert emitted.count("../_shared/helper.py") == 1
+    assert "_shared/_shared/" not in emitted
+    # The provenance header's own canonical-source value must survive the repoint.
+    assert "Canonical source: <repo>/_shared/doc.md" in emitted
+
+
+def test_shared_closure_seeds_from_the_adapter_as_well_as_the_core(tmp_path):
+    """WALK EDGE: the seed harvest reads the ADAPTER body, not only the core body.
+
+    judge-motion is `core: null` and cites the payload from its adapter alone, so an
+    implementation that harvested seeds from cores only would drop that skill's payload.
+    On the live tree the loss is invisible -- every asset judge-motion cites is also
+    cited by some skill that HAS a core -- so the edge needs a fixture where the adapter
+    is the only citer.
+    """
+    repo = _synthetic_build_repo(
+        tmp_path,
+        {"doc.md": "# doc\n\nDoctrine.\n"},
+        "# demo core\n\nNo shared citation here.\n",
+        adapter_body="# demo adapter\n\nLoads ../core.md in full. See `_shared/doc.md`.\n")
+    out = tmp_path / "out"
+    r = _synthetic_build(repo, out)
+    assert r.returncode == 0, f"{r.stdout}\n{r.stderr}"
+    shared_dir = out / "claude" / SHARED_DEST
+    assert shared_dir.is_dir(), "an adapter-only citation shipped no payload at all"
+    emitted = {p.name for p in shared_dir.iterdir() if p.is_file()}
+    assert emitted == {"doc.md"}, emitted
+
+
+@pytest.mark.skipif(NODE is None, reason="node is not available on PATH")
+def test_emitted_javascript_still_parses(dist_root, tmp_path):
+    """PARSE validity, which provenance validity does not imply.
+
+    `Add-JsProvenance` displaces whatever was on line 1. Nothing else in `tests/` runs a
+    JavaScript parser, so an unparseable-but-marker-valid `.js` would ship green: the
+    marker assertions would pass, the installer would own it, uninstall would remove it,
+    and the consumer would get a file their runtime refuses to load.
+    """
+    real = dist_root / "claude" / SHARED_DEST / "score_skill.workflow.js"
+    r = subprocess.run([NODE, "--check", str(real)], capture_output=True, text=True)
+    assert r.returncode == 0, f"the emitted payload .js does not parse:\n{r.stderr}"
+
+    # The latent case the real asset does not exercise: a `#!` hashbang is legal ONLY on
+    # line 1, so a prepended comment block makes the file unparseable.
+    repo = _synthetic_build_repo(
+        tmp_path,
+        {"tool.js": "#!/usr/bin/env node\nconst x = 1;\nconsole.log(x);\n"},
+        "# demo core\n\nSee `_shared/tool.js`.\n")
+    out = tmp_path / "out"
+    rb = _synthetic_build(repo, out)
+    assert rb.returncode == 0, f"{rb.stdout}\n{rb.stderr}"
+    emitted = out / "claude" / SHARED_DEST / "tool.js"
+    text = emitted.read_text(encoding="utf-8")
+    assert text.startswith("#!/usr/bin/env node\n"), text[:60]
+    assert _marker_literal() in text, "the hashbang branch dropped the provenance marker"
+    rc = subprocess.run([NODE, "--check", str(emitted)], capture_output=True, text=True)
+    assert rc.returncode == 0, f"a stamped hashbang .js does not parse:\n{rc.stderr}"
+
+
+def test_builder_refuses_a_shared_asset_it_cannot_stamp(tmp_path):
+    """An asset with no provenance emitter fails the BUILD, loudly.
+
+    Copying it unstamped would plant a file the installer cannot own and uninstall
+    cannot remove -- an orphan that a no-orphan gate still reports as clean.
+    """
+    repo = _synthetic_build_repo(
+        tmp_path,
+        {"notes.txt": "plain text asset\n"},
+        "# demo core\n\nSee `_shared/notes.txt`.\n")
+    r = _synthetic_build(repo, tmp_path / "out")
+    assert r.returncode != 0, "an unstampable shared asset was shipped silently"
+    assert "no provenance emitter" in (r.stdout + r.stderr)
+
+
+def test_builder_refuses_to_ship_a_pytest_module(tmp_path):
+    """A `_shared/*.md` that names its unit-test module must not drag it into dist/.
+
+    `dist/` is the default output directory and sits inside this repository's pytest
+    rootdir, so a shipped `test_*.py` is collected a second time under a duplicate
+    basename and errors out the repo-root DONE gate.
+    """
+    repo = _synthetic_build_repo(
+        tmp_path,
+        {"doc.md": "# doc\n\nFixtures live in `test_helper.py`.\n",
+         "test_helper.py": '"""tests."""\n\ndef test_x():\n    assert True\n'},
+        "# demo core\n\nSee `_shared/doc.md`.\n")
+    r = _synthetic_build(repo, tmp_path / "out")
+    assert r.returncode != 0, "a pytest module was shipped into a discovery profile"
+    assert "pytest module" in (r.stdout + r.stderr)
+
+
+def test_core_null_adapter_is_repointed_at_depth_three(dist_root):
+    """judge-motion is `core: null`, and its ADAPTER carries depth-3 `_shared` refs.
+
+    The rewrite must not be gated on the skill having a core, and it must be
+    longest-token-first: `../../../_shared/` literally contains `../../_shared/`, so a
+    two-dot-first replace leaves `../_shared/` prefixed by a stray `../` -- still
+    broken, and nothing else in this file would notice.
+    """
+    _, native = _skill_partition()
+    assert "judge-motion" in native, "judge-motion is no longer provider-native"
+    source = (SKILLS_ROOT / "judge-motion" / "providers" / "claude.md").read_text(
+        encoding="utf-8")
+    assert "../../../_shared/" in source, \
+        "the depth-3 fixture this test relies on is gone from the canonical adapter"
+
+    launcher = dist_root / "claude" / "judge-motion" / "SKILL.md"
+    text = launcher.read_text(encoding="utf-8")
+    assert not (launcher.parent / "core.md").exists(), "judge-motion gained a core.md"
+    assert "../../../_shared/" not in text and "../../_shared/" not in text
+    leaves = set(re.findall(r"\.\./_shared/([A-Za-z0-9][A-Za-z0-9._-]*)", text))
+    assert leaves, "judge-motion's depth-3 references vanished instead of being repointed"
+    for leaf in sorted(leaves):
+        assert (dist_root / "claude" / SHARED_DEST / leaf).is_file(), leaf
 
 
 # --------------------------------------------------------------------------- #
@@ -665,6 +1226,13 @@ def test_force_overwrites_and_owns_colliding_file(dist_root, tmp_path):
     r = _install(home, "claude", dist_dir=dist_root, force=True)
     assert r.returncode == 0, f"forced install failed:\n{r.stderr}"
     assert target.read_text(encoding="utf-8") != "CUSTOM-USER-CONTENT"
+    # Plain -Force still destroys operator bytes with NO backup -- that contract is
+    # deliberately unchanged (see the `.PARAMETER Force` help). The loud per-path
+    # warning is therefore the ONLY protection there is, so it is pinned here rather
+    # than left as documentation.
+    warned = r.stdout + r.stderr
+    assert "NO backup" in warned, warned[-600:]
+    assert "build-phase/SKILL.md" in warned, warned[-600:]
     led = json.loads((home / ".skill-mesh-install.json").read_text(encoding="utf-8"))
     owned = led["installs"]["claude"]["owned_files"]
     assert any(o.endswith("build-phase/SKILL.md") for o in owned)
@@ -673,6 +1241,272 @@ def test_force_overwrites_and_owns_colliding_file(dist_root, tmp_path):
     ru = _install(home, "claude", uninstall=True)
     assert ru.returncode == 0, f"uninstall failed:\n{ru.stderr}"
     assert not target.exists(), "forced-owned file survived uninstall"
+
+
+# --------------------------------------------------------------------------- #
+# -ForceShared: SCOPED take-ownership of the `_shared/` payload (Step 64).
+#
+# The real consumer home already holds a hand-authored `_shared/` tree whose files
+# carry no marker, so the first install after this step would REFUSE outright. The
+# four guardrails the decision requires -- back up first, scope to the payload, leave
+# every other file byte-unchanged, and prove ownership actually landed -- each get an
+# assertion here.
+# --------------------------------------------------------------------------- #
+
+_PRESEEDED_PAYLOAD = "judge-core.md"          # collides with the shipped payload
+_PRESEEDED_BYSTANDER = "README.md"            # in `_shared/`, but not shipped
+
+
+def _backup_runs(backup):
+    """Every take-ownership manifest under a `-BackupDir`, as parsed JSON.
+
+    Each RUN owns a `<provider>-<run id>/` subdirectory (the sibling migrator's
+    precedent), so this returns a LIST: a `-BackupDir` legitimately holds more than one
+    record, and the whole point of the per-run scoping is that a second run cannot
+    replace the first one's.
+    """
+    out = []
+    for m in sorted(Path(backup).glob("*/take-ownership-backup.json")):
+        out.append((m.parent, json.loads(m.read_text(encoding="utf-8"))))
+    return out
+
+
+def _make_junction(link, target):
+    """A real NTFS directory junction (no admin rights needed, unlike a symlink)."""
+    Path(target).mkdir(parents=True, exist_ok=True)
+    Path(link).parent.mkdir(parents=True, exist_ok=True)
+    r = subprocess.run(["cmd", "/c", "mklink", "/J", str(link), str(target)],
+                       capture_output=True, text=True)
+    assert r.returncode == 0, f"mklink failed: {r.stdout}\n{r.stderr}"
+
+
+def _preseed_shared(home, provider="claude"):
+    """A consumer `_shared/` holding one colliding file and one bystander, no markers."""
+    shared = _installed_root(home, provider) / "_shared"
+    shared.mkdir(parents=True, exist_ok=True)
+    payload = shared / _PRESEEDED_PAYLOAD
+    bystander = shared / _PRESEEDED_BYSTANDER
+    payload.write_text("# operator's own judge doctrine\n", encoding="utf-8")
+    bystander.write_text("# operator's own shared README\n", encoding="utf-8")
+    return payload, bystander
+
+
+def test_force_shared_backs_up_takes_ownership_and_spares_bystanders(dist_root, tmp_path):
+    home = tmp_path / "home"
+    backup = tmp_path / "backup"
+    payload, bystander = _preseed_shared(home)
+    before_payload = payload.read_bytes()
+    before_bystander = bystander.read_bytes()
+
+    # GUARDRAIL 1 + 2: authorized because the collision is inside the payload.
+    r = _install(home, "claude", dist_dir=dist_root, force_shared=True, backup_dir=backup)
+    assert r.returncode == 0, f"scoped take-ownership failed:\n{r.stdout}\n{r.stderr}"
+
+    # GUARDRAIL 1: the pre-overwrite bytes, hash and size are recorded and restorable.
+    runs = _backup_runs(backup)
+    assert len(runs) == 1, [str(d) for d, _ in runs]
+    run_dir, manifest = runs[0]
+    rows = {f["rel_path"]: f for f in manifest["files"]}
+    rel = next(k for k in rows if k.endswith(f"_shared/{_PRESEEDED_PAYLOAD}"))
+    assert rows[rel]["sha256"] == hashlib.sha256(before_payload).hexdigest()
+    assert rows[rel]["size_bytes"] == len(before_payload)
+    assert (run_dir / "files" / rel).read_bytes() == before_payload, \
+        "the backup does not hold the ORIGINAL bytes"
+    assert not any(k.endswith(_PRESEEDED_BYSTANDER) for k in rows), \
+        "a file that was never overwritten was recorded as taken over"
+
+    # GUARDRAIL 3: the non-payload file in the same directory is byte-unchanged. This
+    # is a per-FILE claim, never a directory-wide one.
+    assert bystander.read_bytes() == before_bystander
+
+    # GUARDRAIL 4: ownership actually landed -- marker in the bytes AND in owned_files,
+    # so uninstall can remove it. Ownership without the marker is just an orphan.
+    marker = _marker_literal()
+    assert marker in payload.read_text(encoding="utf-8")
+    assert payload.read_bytes() != before_payload
+    owned = _ledger(home)["installs"]["claude"]["owned_files"]
+    assert rel in owned, f"{rel} was overwritten but not recorded as owned"
+
+    ru = _install(home, "claude", uninstall=True)
+    assert ru.returncode == 0, ru.stderr
+    assert not payload.exists(), "the taken-over payload file survived uninstall"
+    assert bystander.read_bytes() == before_bystander, \
+        "uninstall deleted or altered a file skill-mesh never owned"
+
+
+def test_force_shared_still_refuses_a_collision_outside_the_payload(dist_root, tmp_path):
+    """GUARDRAIL 2, stated as a refusal: the scope is not a global override.
+
+    A foreign file at a SKILL path is untouched and the whole install is a true no-op --
+    including the backup, which must not be written for a run that never mutates.
+    """
+    home = tmp_path / "home"
+    backup = tmp_path / "backup"
+    payload, _ = _preseed_shared(home)
+    outside = _installed_root(home, "claude") / "build-phase" / "SKILL.md"
+    outside.parent.mkdir(parents=True, exist_ok=True)
+    outside.write_text("CUSTOM-USER-CONTENT", encoding="utf-8")
+    before_payload = payload.read_bytes()
+
+    r = _install(home, "claude", dist_dir=dist_root, force_shared=True, backup_dir=backup)
+    assert r.returncode != 0, "-ForceShared authorized a collision outside the payload"
+    assert "REFUS" in (r.stdout + r.stderr)
+    assert outside.read_text(encoding="utf-8") == "CUSTOM-USER-CONTENT"
+    assert payload.read_bytes() == before_payload, "a refused run still overwrote bytes"
+    assert not _backup_runs(backup), \
+        "a refused run wrote a backup, so a later run cannot tell it apart from a real one"
+    assert not (home / ".skill-mesh-install.json").exists()
+
+
+def test_force_shared_scope_is_decided_on_the_resolved_target_not_the_source_path(
+        dist_root, tmp_path):
+    """GUARDRAIL 2 against a directory JUNCTION at the payload root.
+
+    `-ForceShared`'s authorization used to be computed from the SOURCE-relative path
+    (`_shared\\x`, which starts with `_shared` by construction) while the overwrite
+    landed on the reparse-point-RESOLVED target. With `<installRoot>/_shared` junctioned
+    to a sibling directory, that authorized clobbering an operator file at a path with
+    no `_shared` segment at all, and adopted eight paths under the operator's own
+    namespace into `owned_files` -- which a later `-Uninstall` would then delete.
+
+    Containment was never the hole (a junction pointing OUTSIDE the home is refused by
+    path-guard); the SCOPE PREDICATE was.
+    """
+    home = tmp_path / "home"
+    backup = tmp_path / "backup"
+    victim_dir = _installed_root(home, "claude") / "victim"
+    victim = victim_dir / _PRESEEDED_PAYLOAD
+    victim_dir.mkdir(parents=True, exist_ok=True)
+    victim.write_text("IRREPLACEABLE OPERATOR JUDGE DOCTRINE\n", encoding="utf-8")
+    before = victim.read_bytes()
+    _make_junction(_installed_root(home, "claude") / "_shared", victim_dir)
+
+    r = _install(home, "claude", dist_dir=dist_root, force_shared=True, backup_dir=backup)
+    assert r.returncode != 0, \
+        "-ForceShared took ownership through a junction, outside the payload"
+    assert victim.read_bytes() == before, "an operator file outside `_shared/` was clobbered"
+    assert not _backup_runs(backup), "a refused run wrote a backup"
+    led = home / ".skill-mesh-install.json"
+    if led.exists():
+        owned = json.loads(led.read_text(encoding="utf-8"))["installs"]["claude"]["owned_files"]
+        assert not [o for o in owned if "/victim/" in o], \
+            f"paths in the operator's own namespace were adopted into owned_files: {owned}"
+
+
+def test_two_profiles_into_one_backup_dir_keep_both_restore_records(dist_root, tmp_path):
+    """Both providers' restore records survive one shared `-BackupDir`.
+
+    A fixed `<BackupDir>/take-ownership-backup.json` is overwritten by the second run:
+    the pre-overwrite BYTES survive under `files/`, but the `rel_path`/`sha256`/
+    `size_bytes` rows that make a restore VERIFIABLE exist only for the last provider,
+    both runs exit 0, and nothing warns. Steps 70/71 are exactly this shape -- two
+    profiles, one external backup destination.
+    """
+    home = tmp_path / "home"
+    backup = tmp_path / "backup"
+    claude_payload, _ = _preseed_shared(home, "claude")
+    gpt_payload, _ = _preseed_shared(home, "gpt")
+    claude_payload.write_text("# claude-side operator doctrine\n", encoding="utf-8")
+    gpt_payload.write_text("# gpt-side operator doctrine, DIFFERENT\n", encoding="utf-8")
+    before = {
+        "claude": claude_payload.read_bytes(),
+        "gpt": gpt_payload.read_bytes(),
+    }
+
+    for provider in ("claude", "gpt"):
+        r = _install(home, provider, dist_dir=dist_root, force_shared=True,
+                     backup_dir=backup)
+        assert r.returncode == 0, f"{provider}:\n{r.stdout}\n{r.stderr}"
+
+    runs = _backup_runs(backup)
+    assert len(runs) == 2, \
+        f"one run's restore record was destroyed by the other: {[str(d) for d, _ in runs]}"
+    by_provider = {m["provider"]: (d, m) for d, m in runs}
+    assert set(by_provider) == {"claude", "gpt"}, sorted(by_provider)
+    for provider, (run_dir, manifest) in by_provider.items():
+        rows = {f["rel_path"]: f for f in manifest["files"]}
+        rel = next(k for k in rows if k.endswith(f"_shared/{_PRESEEDED_PAYLOAD}"))
+        # The VERIFICATION METADATA, not just the bytes: a restore is only a restore if
+        # the recorded hash still proves what is being put back.
+        assert rows[rel]["sha256"] == hashlib.sha256(before[provider]).hexdigest(), provider
+        assert rows[rel]["size_bytes"] == len(before[provider]), provider
+        assert (run_dir / "files" / rel).read_bytes() == before[provider], provider
+        # Same home, so the same non-disclosing identifier, and never an absolute path.
+        assert manifest["home_id"] == by_provider["claude"][1]["home_id"]
+        assert not re.search(r"[A-Za-z]:[\\/]", json.dumps(manifest)), \
+            "an absolute install path leaked into the backup manifest"
+
+
+def test_backup_dir_reaching_into_the_home_through_a_junction_is_refused(
+        dist_root, tmp_path):
+    """The outside-the-home assertion must resolve reparse points, not compare strings.
+
+    `[System.IO.Path]::GetFullPath` + `StartsWith` walks straight through a junction, so
+    a `-BackupDir` spelled OUTSIDE the home whose target is INSIDE it passed the check
+    and landed the backup inside the very tree it exists to undo.
+    """
+    home = tmp_path / "home"
+    payload, _ = _preseed_shared(home)
+    before = payload.read_bytes()
+    inside = home / "sneaky-backup"
+    link = tmp_path / "outside-link"
+    _make_junction(link, inside)
+
+    r = _install(home, "claude", dist_dir=dist_root, force_shared=True, backup_dir=link)
+    assert r.returncode != 0, "a -BackupDir junctioned into the install home was accepted"
+    assert "OUTSIDE" in (r.stdout + r.stderr)
+    assert payload.read_bytes() == before
+    assert not _backup_runs(inside), "a backup landed inside the home it protects"
+
+
+def test_unscoped_force_also_backs_up_when_given_a_backup_dir(dist_root, tmp_path):
+    """`-BackupDir` is not a `-ForceShared`-only affordance.
+
+    Documented in the installer's help, so it needs a test: the unscoped `-Force`
+    remains unscoped (that contract is unchanged and covered above), but when the
+    operator supplies a backup destination, every path it clobbers is recorded the
+    same way -- otherwise the blunt instrument would be the one with no restore path.
+    """
+    home = tmp_path / "home"
+    backup = tmp_path / "backup"
+    target = _installed_root(home, "claude") / "build-phase" / "SKILL.md"
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text("CUSTOM-USER-CONTENT", encoding="utf-8")
+    before = target.read_bytes()
+
+    r = _install(home, "claude", dist_dir=dist_root, force=True, backup_dir=backup)
+    assert r.returncode == 0, f"{r.stdout}\n{r.stderr}"
+    runs = _backup_runs(backup)
+    assert len(runs) == 1, [str(d) for d, _ in runs]
+    run_dir, manifest = runs[0]
+    rows = {f["rel_path"]: f for f in manifest["files"]}
+    rel = next(k for k in rows if k.endswith("build-phase/SKILL.md"))
+    assert rows[rel]["sha256"] == hashlib.sha256(before).hexdigest()
+    assert (run_dir / "files" / rel).read_bytes() == before
+    assert target.read_bytes() != before
+
+
+def test_force_shared_requires_a_backup_dir(dist_root, tmp_path):
+    """GUARDRAIL 1 as a precondition: no restore path, no take-ownership."""
+    home = tmp_path / "home"
+    payload, _ = _preseed_shared(home)
+    before = payload.read_bytes()
+    r = _install(home, "claude", dist_dir=dist_root, force_shared=True)
+    assert r.returncode != 0, "-ForceShared ran without a backup destination"
+    assert "-BackupDir" in (r.stdout + r.stderr)
+    assert payload.read_bytes() == before
+
+
+def test_backup_dir_inside_the_install_home_is_refused(dist_root, tmp_path):
+    """A backup stored inside the tree it protects is not a restore path."""
+    home = tmp_path / "home"
+    payload, _ = _preseed_shared(home)
+    before = payload.read_bytes()
+    r = _install(home, "claude", dist_dir=dist_root, force_shared=True,
+                 backup_dir=home / "backup")
+    assert r.returncode != 0, "a backup dir inside the install home was accepted"
+    assert "OUTSIDE" in (r.stdout + r.stderr)
+    assert payload.read_bytes() == before
 
 
 # --------------------------------------------------------------------------- #
@@ -959,6 +1793,13 @@ def test_zero_file_provider_install_completes_cleanly(tmp_path):
     }])
     dist = _build_from_manifest(tmp_path / "d", manifest, provider="gpt")
     assert not list((dist / "gpt").rglob("*.md")), "expected an empty gpt profile"
+    # ...and the shared payload does not appear either. Step 64's closure is re-walked
+    # from the sources THIS profile emits, so a profile that emits nothing has no seeds
+    # and ships nothing. An unconditional `_shared/` emit would break this case AND
+    # would put judge-core.md in a home whose ledger owns nothing else.
+    assert not (dist / "gpt" / SHARED_DEST).exists(), \
+        "the shared payload shipped into a profile with no skills to consume it"
+    assert not list((dist / "gpt").rglob("*")), "expected a completely empty gpt profile"
 
     home = tmp_path / "home"  # fresh, does not exist yet
     r = _install(home, "gpt", dist_dir=dist)
@@ -1061,10 +1902,14 @@ def test_uninstall_partial_removal_preexisting_tree_never_deletes_home(tmp_path)
     null/empty created_dirs entry, and a retry must NEVER delete the operator's
     pre-existing home directory via such an entry."""
     home = tmp_path / "home"
-    # Operator pre-creates the WHOLE discovery tree (home + subdirs + the skill dir),
-    # so skill-mesh creates NO directory during install -> created_dirs == [].
+    # Operator pre-creates the WHOLE discovery tree (home + subdirs + the skill dir
+    # + the profile-root `_shared/` payload dir Step 64 added), so skill-mesh creates
+    # NO directory during install -> created_dirs == []. The `_shared` mkdir is a
+    # FIXTURE correction, not a weakened assertion: "the whole tree pre-existed" is
+    # the premise, and the tree grew a directory.
     skill_dir = home / DISCOVERY_SUBDIR["claude"] / "build-phase"
     skill_dir.mkdir(parents=True)
+    (home / DISCOVERY_SUBDIR["claude"] / SHARED_DEST).mkdir(parents=True, exist_ok=True)
     dist = _build_from_manifest(tmp_path / "d",
                                 _write_manifest(tmp_path / "m.json",
                                                 [_real_skill_entry("build-phase")]),

@@ -1330,44 +1330,25 @@ def evaluate_gate(detected, known, frozen):
 KNOWN_DANGLING = (
     ('_shared/judge-core.md', '_shared/calibrate_judge.py', 'backtick'),
     ('_shared/judge-core.md', '_shared/grader_prompt.py', 'backtick'),
-    ('_shared/score-skill.md', '../../../docs/investigations/skill-iterate-hill-climbing/01-score-against-golden-bad-examples.md', 'link'),
-    ('_shared/score-skill.md', '../skill-eval-setup/scripts/generate_bad_examples.py', 'link'),
     ('_shared/skill-role-taxonomy.md', '../rules/code-quality.md', 'link'),
-    ('dist/claude/build-phase/core.md', '../../_shared/judge-core.md', 'link'),
     ('dist/claude/build-phase/core.md', '../../references/step-authoring.md', 'backtick'),
-    ('dist/claude/build-step/core.md', '../../_shared/judge-core.md', 'link'),
-    ('dist/claude/judge-motion/SKILL.md', '../../../_shared/judge-core.md', 'link'),
     ('dist/claude/judge-motion/SKILL.md', '../../build-step/core.md', 'link'),
     ('dist/claude/judge-motion/SKILL.md', '../../judge-ui/core.md', 'link'),
     ('dist/claude/judge-motion/SKILL.md', '../../user-uat/core.md', 'link'),
     ('dist/claude/judge-motion/SKILL.md', '_shared/judge-core.md', 'backtick'),
-    ('dist/claude/judge-ui/core.md', '../../_shared/judge-core.md', 'link'),
     ('dist/claude/judge-ui/core.md', '_shared/judge-core.md', 'backtick'),
     ('dist/claude/plan-feature/core.md', '../../references/step-authoring.md', 'backtick'),
     ('dist/claude/plan-init/core.md', '../../references/step-authoring.md', 'backtick'),
     ('dist/claude/plan-review/core.md', '../../references/step-authoring.md', 'backtick'),
     ('dist/claude/repo-update/core.md', '../../references/step-authoring.md', 'backtick'),
-    ('dist/claude/review-deep/core.md', '../../_shared/judge-core.md', 'link'),
     ('dist/claude/review-deep/core.md', '_shared/calibrate_judge.py', 'bare'),
     ('dist/claude/review-deep/core.md', '_shared/judge-core.md', 'backtick'),
-    ('dist/claude/review-gauntlet/core.md', '../../_shared/judge-core.md', 'link'),
     ('dist/claude/review-gauntlet/core.md', '_shared/judge-core.md', 'backtick'),
-    ('dist/claude/review-proof/core.md', '../../_shared/judge-core.md', 'link'),
     ('dist/claude/review-proof/core.md', '_shared/judge-core.md', 'backtick'),
     ('dist/claude/skill-eval-setup/core.md', '_shared/score-skill.md', 'backtick'),
     ('dist/claude/skill-eval-setup/core.md', '_shared/score_skill_composite.py', 'backtick'),
-    ('dist/claude/skill-evolve/core.md', '../../_shared/score-skill.md', 'backtick'),
-    ('dist/claude/skill-evolve/core.md', '../../_shared/score-skill.md', 'link'),
-    ('dist/claude/skill-evolve/core.md', '../../_shared/score_skill.workflow.js', 'backtick'),
-    ('dist/claude/skill-evolve/core.md', '../../_shared/score_skill.workflow.js', 'link'),
     ('dist/claude/skill-iterate/core.md', '../../../docs/investigations/skill-iterate-hill-climbing/06-adversarial-mutation-grader-discrimination-tests.md', 'backtick'),
     ('dist/claude/skill-iterate/core.md', '../../../docs/investigations/skill-iterate-hill-climbing/07-failed-assertion-targeted-brainstorm-prompts.md', 'backtick'),
-    ('dist/claude/skill-iterate/core.md', '../../_shared/score-skill.md', 'backtick'),
-    ('dist/claude/skill-iterate/core.md', '../../_shared/score-skill.md', 'link'),
-    ('dist/claude/skill-iterate/core.md', '../../_shared/score_skill.workflow.js', 'backtick'),
-    ('dist/claude/skill-iterate/core.md', '../../_shared/score_skill.workflow.js', 'link'),
-    ('dist/claude/skill-iterate/core.md', '../../_shared/score_skill_composite.py', 'backtick'),
-    ('dist/claude/skill-iterate/core.md', '../../_shared/score_skill_composite.py', 'link'),
     ('dist/claude/skill-iterate/core.md', '_shared/grader_prompt.py', 'backtick'),
     ('dist/claude/skill-iterate/core.md', '_shared/score-skill.md', 'backtick'),
     ('dist/claude/skill-iterate/core.md', '_shared/score_skill.workflow.js', 'bare'),
@@ -1380,39 +1361,22 @@ KNOWN_DANGLING = (
     ('dist/claude/user-afterparty/core.md', '../context-slim/providers/claude.md', 'link'),
     ('dist/claude/user-gateway/core.md', '../../references/intake-engine.md', 'backtick'),
     ('dist/claude/user-gateway/core.md', '../../references/skill-pipeline.md', 'backtick'),
-    ('dist/claude/user-uat/core.md', '../../_shared/judge-core.md', 'link'),
     ('dist/claude/user-uat/core.md', '_shared/judge-core.md', 'backtick'),
     ('dist/claude/user-wrap/core.md', '../../references/task-state-schema.md', 'backtick'),
-    ('dist/gpt/build-phase/core.md', '../../_shared/judge-core.md', 'link'),
     ('dist/gpt/build-phase/core.md', '../../references/step-authoring.md', 'backtick'),
-    ('dist/gpt/build-step/core.md', '../../_shared/judge-core.md', 'link'),
-    ('dist/gpt/judge-ui/core.md', '../../_shared/judge-core.md', 'link'),
     ('dist/gpt/judge-ui/core.md', '_shared/judge-core.md', 'backtick'),
     ('dist/gpt/plan-feature/core.md', '../../references/step-authoring.md', 'backtick'),
     ('dist/gpt/plan-init/core.md', '../../references/step-authoring.md', 'backtick'),
     ('dist/gpt/plan-review/core.md', '../../references/step-authoring.md', 'backtick'),
     ('dist/gpt/repo-update/core.md', '../../references/step-authoring.md', 'backtick'),
-    ('dist/gpt/review-deep/core.md', '../../_shared/judge-core.md', 'link'),
     ('dist/gpt/review-deep/core.md', '_shared/calibrate_judge.py', 'bare'),
     ('dist/gpt/review-deep/core.md', '_shared/judge-core.md', 'backtick'),
-    ('dist/gpt/review-gauntlet/core.md', '../../_shared/judge-core.md', 'link'),
     ('dist/gpt/review-gauntlet/core.md', '_shared/judge-core.md', 'backtick'),
-    ('dist/gpt/review-proof/core.md', '../../_shared/judge-core.md', 'link'),
     ('dist/gpt/review-proof/core.md', '_shared/judge-core.md', 'backtick'),
     ('dist/gpt/skill-eval-setup/core.md', '_shared/score-skill.md', 'backtick'),
     ('dist/gpt/skill-eval-setup/core.md', '_shared/score_skill_composite.py', 'backtick'),
-    ('dist/gpt/skill-evolve/core.md', '../../_shared/score-skill.md', 'backtick'),
-    ('dist/gpt/skill-evolve/core.md', '../../_shared/score-skill.md', 'link'),
-    ('dist/gpt/skill-evolve/core.md', '../../_shared/score_skill.workflow.js', 'backtick'),
-    ('dist/gpt/skill-evolve/core.md', '../../_shared/score_skill.workflow.js', 'link'),
     ('dist/gpt/skill-iterate/core.md', '../../../docs/investigations/skill-iterate-hill-climbing/06-adversarial-mutation-grader-discrimination-tests.md', 'backtick'),
     ('dist/gpt/skill-iterate/core.md', '../../../docs/investigations/skill-iterate-hill-climbing/07-failed-assertion-targeted-brainstorm-prompts.md', 'backtick'),
-    ('dist/gpt/skill-iterate/core.md', '../../_shared/score-skill.md', 'backtick'),
-    ('dist/gpt/skill-iterate/core.md', '../../_shared/score-skill.md', 'link'),
-    ('dist/gpt/skill-iterate/core.md', '../../_shared/score_skill.workflow.js', 'backtick'),
-    ('dist/gpt/skill-iterate/core.md', '../../_shared/score_skill.workflow.js', 'link'),
-    ('dist/gpt/skill-iterate/core.md', '../../_shared/score_skill_composite.py', 'backtick'),
-    ('dist/gpt/skill-iterate/core.md', '../../_shared/score_skill_composite.py', 'link'),
     ('dist/gpt/skill-iterate/core.md', '_shared/grader_prompt.py', 'backtick'),
     ('dist/gpt/skill-iterate/core.md', '_shared/score-skill.md', 'backtick'),
     ('dist/gpt/skill-iterate/core.md', '_shared/score_skill.workflow.js', 'bare'),
@@ -1425,7 +1389,6 @@ KNOWN_DANGLING = (
     ('dist/gpt/user-afterparty/core.md', '../context-slim/providers/claude.md', 'link'),
     ('dist/gpt/user-gateway/core.md', '../../references/intake-engine.md', 'backtick'),
     ('dist/gpt/user-gateway/core.md', '../../references/skill-pipeline.md', 'backtick'),
-    ('dist/gpt/user-uat/core.md', '../../_shared/judge-core.md', 'link'),
     ('dist/gpt/user-uat/core.md', '_shared/judge-core.md', 'backtick'),
     ('dist/gpt/user-wrap/core.md', '../../references/task-state-schema.md', 'backtick'),
     ('skills/build-phase/core.md', '../../_shared/build_step_verdict.py', 'backtick'),
@@ -2605,11 +2568,29 @@ def test_shipped_leaves_matches_a_real_build(dist_root):
     writes `build_step_verdict.py` into the consumer skill dirs, so a `_shared/**`
     citation of `../build-step/build_step_verdict.py` would have been called dangling
     even though it ships.
+
+    AMENDED for Step 64. `SHIPPED_LEAVES` is documented above as "the leaf FILENAMES a
+    built host profile contains PER SKILL DIR", and Step 64 adds a directory that is not
+    a skill dir: `dist/<p>/_shared/`, the shared payload, which D1 places at the profile
+    root as a SIBLING of the skill dirs. Its leaves are asset names (judge-core.md,
+    score_skill.workflow.js, ...), not per-skill leaves, and `ships_into_discovery_root`
+    never consults SHIPPED_LEAVES for them -- it returns True for any `_shared/**` target
+    on its own first branch, ahead of the two-segment leaf test. Folding those names into
+    SHIPPED_LEAVES would therefore change nothing about `_shared` resolution while
+    WIDENING what counts as shipping for `<skill>/<leaf>` paths, e.g. crediting a
+    citation of `<skill>/grader_prompt.py`, which no profile contains. So `_shared` is
+    excluded from the per-skill loop, and asserted present separately below so the
+    exclusion cannot become a hole that hides the payload not shipping at all.
     """
+    shared_seen = {}
     seen = set()
     for provider in PROFILES:
         for skill_dir in sorted((Path(dist_root) / provider).iterdir()):
             if not skill_dir.is_dir():
+                continue
+            if skill_dir.name == "_shared":
+                shared_seen[provider] = {p.name for p in skill_dir.rglob("*")
+                                         if p.is_file()}
                 continue
             names = {p.name for p in skill_dir.rglob("*") if p.is_file()}
             unlisted = sorted(names - set(SHIPPED_LEAVES))
@@ -2621,6 +2602,16 @@ def test_shipped_leaves_matches_a_real_build(dist_root):
     assert seen == set(SHIPPED_LEAVES), (
         f"SHIPPED_LEAVES lists {sorted(set(SHIPPED_LEAVES) - seen)}, which no built "
         "profile actually contains -- the list drifted the other way")
+    # The exclusion above is only sound while the payload is actually there. Both
+    # profiles must carry a non-empty `_shared/`, or `ships_into_discovery_root`'s
+    # unconditional "`_shared/**` ships" branch is crediting a tree that does not exist.
+    assert set(shared_seen) == set(PROFILES), (
+        f"the shared payload is missing from {sorted(set(PROFILES) - set(shared_seen))} "
+        "-- `ships_into_discovery_root` credits every `_shared/**` target as shipping, "
+        "so an absent payload makes this gate green over references that dangle in "
+        "every consumer home")
+    for provider, names in sorted(shared_seen.items()):
+        assert names, f"{provider}/_shared/ is empty"
 
 
 # --------------------------------------------------------------------------- #

@@ -1506,7 +1506,24 @@ def test_both_tools_dot_source_the_one_shared_engine():
 
 def test_installer_gains_no_required_backupdir_and_emits_no_migration_id(tmp_path):
     """The installer's public CLI, required parameters, and output are unchanged by
-    the routing: a clean install still needs only -Provider and -Home."""
+    the routing: a clean install still needs only -Provider and -Home.
+
+    AMENDED in Step 64, which added an OPTIONAL `-BackupDir` to the installer by an
+    explicit operator decision (the `-Force` take-ownership guardrails: adopting an
+    operator's existing `_shared/` files must record their bytes and hashes first).
+    The original assertion banned the SUBSTRING `BackupDir` anywhere in the script,
+    which was a proxy for this test's own declared contract -- its name says "no
+    REQUIRED backupdir" -- and the substring ban is strictly weaker than the property
+    it stood in for: it would have passed for a mandatory parameter spelled anything
+    else, and it fails for an optional one spelled this way.
+
+    So the check is made exact rather than dropped: the parameter must be declared
+    optional with an empty default and must not be Mandatory, an install given
+    neither -BackupDir nor -ForceShared must still succeed (asserted above), and such
+    a run must write NO backup artifact anywhere. The routing contract this test was
+    written for -- no migration_id, no journal, no migrator-shaped ledger -- is
+    untouched below.
+    """
     dist = tmp_path / "d"
     r = _run(BUILD_SCRIPT, ["-OutputDir", str(dist), "-Provider", "claude"])
     assert r.returncode == 0, r.stderr
@@ -1516,7 +1533,20 @@ def test_installer_gains_no_required_backupdir_and_emits_no_migration_id(tmp_pat
     assert ri.returncode == 0, f"{ri.stdout}\n{ri.stderr}"
 
     text = INSTALL_SCRIPT.read_text(encoding="utf-8")
-    assert "BackupDir" not in text, "the installer grew a -BackupDir parameter"
+    assert re.search(r"^\s*\[string\]\$BackupDir\s*=\s*''\s*,?\s*$", text, re.M), \
+        "the installer's -BackupDir is no longer declared optional with an empty default"
+    # ...and carries no parameter ATTRIBUTES. In PowerShell those sit between the
+    # previous parameter's comma and this one's type, so that whole span is the
+    # declaration: reading only the `[string]$BackupDir` token itself would be a
+    # vacuous check that a `[Parameter(Mandatory = $true)]` on the line above evades.
+    at = text.index("[string]$BackupDir")
+    decl = text[text.rindex(",", 0, at) + 1:at]
+    assert "Parameter(" not in decl and "Mandatory" not in decl, \
+        f"the installer's -BackupDir grew parameter attributes: {decl.strip()!r}"
+    # A plain install writes no backup artifact: take-ownership is opt-in only, so a
+    # run that took ownership of nothing must leave nothing behind to restore from.
+    strays = sorted(p.name for p in tmp_path.rglob("take-ownership-backup.json"))
+    assert not strays, f"a plain install produced a take-ownership backup: {strays}"
     # No transaction identity leaks into the installer's output or its ledger.
     assert "migration_id" not in (ri.stdout + ri.stderr)
     ledger_text = (home / LEDGER_NAME).read_text(encoding="utf-8")
