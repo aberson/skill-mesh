@@ -17,7 +17,7 @@ installed skill tree. Installing produces a host-native discovery tree in a cons
 | Manifest / config | JSON — `config/skill-manifest.json` (authoritative skill inventory) |
 | Build / install / release tooling | Windows PowerShell 5.1 floor (`powershell`) — `tools/*.ps1` |
 | Manifest + release checks | Python 3 — `tools/gen_manifest.py`, `tools/release_checks.py` |
-| Tests | pytest — 7 suites under `tests/` |
+| Tests | pytest — 7 suites under `tests/` plus 3 root-only test roots; the DONE gate is the repo-root `python -m pytest` (see Key commands) |
 | Lint / typecheck | **Not configured** (deliberate — see Key commands) |
 
 ## Key commands
@@ -28,17 +28,35 @@ is not recognized`. Windows PowerShell 5.1 is the floor all `.ps1` tooling targe
 BOM) and the executable the test suites shell out to. (`documentation/architecture.md` §8 spells the
 same commands with the PowerShell 7 name; that is the same command in the other spelling.)
 
-Full test suite (~25 minutes — the release, distribution, and smoke suites shell out to PowerShell):
+**DONE gate — the full suite is the repo-root invocation, with no path argument.** It is slow
+(the release, distribution, and smoke suites shell out to PowerShell once or more per test);
+`documentation/phase-75-baseline.md` owns the measured wall clock. Run it from the repository
+root, and report its real summary line:
+
+```
+python -m pytest
+```
+
+A path argument narrows collection. `python -m pytest tests/` reaches only the seven suites
+under `tests/`; it never collects the three root-only test roots — `_shared/`,
+`skill-iterate/scripts/`, and `skill-eval-setup/scripts/` — so it cannot see a regression
+there. Those roots are real production code (the shared verdict engine and the two
+calibration/eval script packages), so a `tests/`-only run is an iteration gate, never the
+gate that flips a step or a phase DONE.
+
+Fast iteration gates — use these while developing, never as the DONE gate:
 
 ```
 python -m pytest tests/
 ```
 
-Fast contract gate — use this during iteration, not as a release gate:
-
 ```
 python -m pytest tests/package-integrity
 ```
+
+Measured collected / passed / failed / skipped counts for both invocations, and the date
+they were measured, are owned by `documentation/phase-75-baseline.md`. That file is the
+single source; this one deliberately restates no numbers.
 
 Build host distributions (writes `dist/`, which is gitignored and never committed):
 
@@ -165,7 +183,10 @@ own discovery root, and preserved the legacy `-Model` router path through the ge
 shim. The external backup is retained; the coding-root-owned cutover branch retires 47 managed legacy GPT
 entries, preserves the consumer-only `goblin-sweep` tree by hash, and carries the GPT `judge-ui`
 calibration note forward byte-for-byte. **Step 47b** remains pending and off the completed cutover path.
-The seven pytest suites collect 587 tests; the latest full run passed **584** and skipped **3**.
+Current collected / passed / skipped counts for both the repo-root DONE gate and the
+`tests/` iteration gate live in `documentation/phase-75-baseline.md` (the one owner) — this
+section deliberately restates none of them, because a count copied into a status paragraph
+is a count that drifts.
 
 (Step 45 also surfaced #69: the Claude-profile `SKILL.md` frontmatter emits `description`/`argument`
 unquoted, so a colon-bearing value fails Copilot's YAML parse — a bounded builder defect, does not

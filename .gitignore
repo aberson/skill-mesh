@@ -13,6 +13,13 @@ Thumbs.db
 
 # run artifacts
 tmp/
+
+# plan-expedite resume state (one sidecar per plan, e.g.
+# .plan-expedite-state.<plan-slug>-<date>). It belongs to whichever plan is being
+# expedited, never to a build-phase checkpoint commit -- and build-phase's
+# checkpoint runs `git add -A`, which would otherwise sweep another phase's state
+# into this phase's history.
+.plan-expedite-state.*
 # build-step sidecars (per-step dev/reviewer reports + verdicts; may embed local paths)
 .build-step/
 

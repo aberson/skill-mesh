@@ -15,6 +15,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 import adversarial_calibration
 from adversarial_calibration import (
@@ -526,22 +527,41 @@ class ConstantsTest(unittest.TestCase):
 
 
 class SkillsRootResolutionTest(unittest.TestCase):
-    """Pin the workspace-layout invariant for ``_SKILLS_ROOT``.
+    """Pin the package-layout invariant for ``_SKILLS_ROOT``.
 
     Catches the off-by-one drift that bit ``generate_bad_examples.py`` Step 8
-    (``parents[3]`` resolved to ``.claude`` instead of the workspace root, so
-    ``_SKILLS_ROOT`` evaluated to a nonexistent ``.claude/.claude/skills``).
-    Iter-2 fixes both modules to use ``parents[2]`` directly; this test pins
-    the fix.
+    (``parents[3]`` resolved one level too high, so ``_SKILLS_ROOT`` evaluated
+    to a nonexistent ``.claude/.claude/skills``, ``auto_discover_skills()``
+    silently returned ``[]``, and the fleet was empty forever). Iter-2 fixed
+    both modules to use ``parents[2]`` directly; this test pins the fix.
+
+    The guard asserts the STRUCTURAL property that makes ``_SKILLS_ROOT``
+    usable — it is a real directory that actually holds this module's own
+    skill package plus the sibling package the module dereferences — instead
+    of two hard-coded directory NAMES (``skills`` under ``.claude``). The
+    names pinned one particular host workspace: they are wrong in this
+    repository, where the skill packages sit at the repo root, and wrong again
+    in any git worktree or renamed checkout. The round trip below is strictly
+    stronger than the names were: any ``parents[]`` drift makes
+    ``_SKILLS_ROOT / "skill-iterate" / "scripts"`` stop being this module's
+    own directory, which is exactly the Step 8 bug shape.
     """
 
     def test_skills_root_resolves_to_real_directory(self) -> None:
-        self.assertTrue(
-            adversarial_calibration._SKILLS_ROOT.is_dir(),
-            f"_SKILLS_ROOT does not exist: {adversarial_calibration._SKILLS_ROOT}",
+        root = adversarial_calibration._SKILLS_ROOT
+        self.assertTrue(root.is_dir(), f"_SKILLS_ROOT does not exist: {root}")
+        # Own package round trip — the off-by-one detector.
+        self.assertEqual(
+            (root / "skill-iterate" / "scripts").resolve(),
+            Path(adversarial_calibration.__file__).resolve().parent,
+            f"_SKILLS_ROOT does not hold this module's own package: {root}",
         )
-        self.assertEqual(adversarial_calibration._SKILLS_ROOT.name, "skills")
-        self.assertEqual(adversarial_calibration._SKILLS_ROOT.parent.name, ".claude")
+        # Sibling package dereferenced by calibrate_fleet for the cross-skill
+        # ``from generate_bad_examples import auto_discover_skills`` wiring.
+        self.assertTrue(
+            (root / "skill-eval-setup" / "scripts" / "generate_bad_examples.py").is_file(),
+            f"cross-skill import target missing under _SKILLS_ROOT: {root}",
+        )
 
 
 # --- Fleet auto-discover default-arg coverage -------------------------------
@@ -553,28 +573,88 @@ class CalibrateFleetAutoDiscoverDefaultTest(unittest.TestCase):
     The existing ``CalibrateFleetTest::test_aggregates_two_ok_one_broken``
     injects ``skills_root=root`` and bypasses the cross-skill
     ``sys.path.insert`` + ``from generate_bad_examples import auto_discover_skills``
-    wiring. This test calls ``calibrate_fleet(score_fn=...)`` with NO
-    ``skills_root`` argument so the production import path is exercised end-to-end.
-    Catches silent breakage of the cross-skill wiring (the Step 8 path bug
-    would have made this fail with ``total == 0``).
+    wiring. This test omits ``skills_root`` so the production default path runs
+    end-to-end. Two properties are asserted, and the Step 8 path bug
+    (``_SKILLS_ROOT`` pointing at a nonexistent directory, after which the
+    fleet was silently empty forever) breaks both:
+
+    1. The cross-skill import target resolved from ``_SKILLS_ROOT`` really
+       holds ``generate_bad_examples.py``, and the module ``calibrate_fleet``
+       imports is that file — not a same-named module reached through some
+       unrelated ``sys.path`` entry.
+    2. With ``skills_root`` omitted, discovery runs against ``_SKILLS_ROOT``
+       and its result is what the aggregate counts.
+
+    Property 2 is proved against a synthesized skills tree that
+    ``_SKILLS_ROOT`` is pointed at for the duration of the call. This
+    repository ships no ``evals/evals.json`` anywhere, so the original
+    ``total >= 1`` against the live root was really asserting that some
+    *other* directory happened to contain eval fixtures — true in the
+    authoring workspace, unsatisfiable here. Relaxing it to ``>= 0`` would be
+    a tautology, so instead the default-arg *routing* is proved by a spy on
+    the production discovery function (it must be called exactly once, with
+    the module-level root) and the aggregation is proved against a root that
+    really does contain scorable skills.
     """
 
     def test_calibrate_fleet_uses_auto_discover_when_skills_root_default(self) -> None:
-        def score_fn(content: str) -> float:
-            # Cheap stub: 1.0 for baseline, 0.5 for anything different. Half
-            # the mutations may be caught depending on layout — verdict isn't
-            # what we're testing here, only that auto-discover found skills.
-            return 1.0 if "GAMMA_MARKER" in content else 0.5
+        live_root = adversarial_calibration._SKILLS_ROOT
+        eval_setup_scripts = live_root / "skill-eval-setup" / "scripts"
+        # (1) the cross-skill import target must resolve from _SKILLS_ROOT.
+        self.assertTrue(
+            (eval_setup_scripts / "generate_bad_examples.py").is_file(),
+            f"cross-skill import target missing under _SKILLS_ROOT: {live_root}",
+        )
+        # Bind the same module object calibrate_fleet's local import binds, so
+        # the spy below is installed on the production import target.
+        if str(eval_setup_scripts) not in sys.path:
+            sys.path.insert(0, str(eval_setup_scripts))
+        import generate_bad_examples  # noqa: E402 (import-after-path-mutation, as production does)
 
-        result = calibrate_fleet(score_fn=score_fn, num_mutations=1)
-        # Production workspace has dozens of scorable skills; if auto-discover
-        # silently returned [] (Step 8 path bug shape), total would be 0.
-        self.assertGreaterEqual(result["summary"]["total"], 1)
+        self.assertEqual(
+            Path(generate_bad_examples.__file__).resolve(),
+            (eval_setup_scripts / "generate_bad_examples.py").resolve(),
+            "calibrate_fleet's import target is not the module under _SKILLS_ROOT",
+        )
+
+        def score_fn(content: str) -> float:
+            # Baseline scores 0.5, any mutation 0.1 -> every mutation caught.
+            return 0.5 if content == RICH_SKILL_MD else 0.1
+
+        seen_roots: list[Path | None] = []
+        real_auto_discover = generate_bad_examples.auto_discover_skills
+
+        def spy(skills_root: Path | None = None) -> list[str]:
+            seen_roots.append(skills_root)
+            return real_auto_discover(skills_root=skills_root)
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            fixture_root = Path(tmpdir) / "skills"
+            for name in ("alpha", "beta"):
+                skill_dir = fixture_root / name
+                (skill_dir / "evals").mkdir(parents=True, exist_ok=True)
+                (skill_dir / "evals" / "evals.json").write_text("{}", encoding="utf-8")
+                (skill_dir / "SKILL.md").write_text(RICH_SKILL_MD, encoding="utf-8")
+
+            # sys.path is swapped for an equivalent copy so calibrate_fleet's
+            # own insert cannot leave a deleted tempdir on the real path.
+            with mock.patch.object(sys, "path", list(sys.path)), \
+                    mock.patch.object(
+                        adversarial_calibration, "_SKILLS_ROOT", fixture_root), \
+                    mock.patch.object(
+                        generate_bad_examples, "auto_discover_skills", spy):
+                result = calibrate_fleet(score_fn=score_fn, num_mutations=1)
+
+        # (2) skills_root defaulted to None, so _SKILLS_ROOT is what discovery ran on.
+        self.assertEqual(seen_roots, [fixture_root])
         self.assertTrue(result["fleet"])
+        self.assertEqual(result["summary"]["total"], 2)
+        self.assertEqual(result["summary"]["calibrated"], 2)
         self.assertEqual(
             result["summary"]["total"],
             result["summary"]["calibrated"] + result["summary"]["broken"],
         )
+        self.assertEqual([r["skill"] for r in result["per_skill"]], ["alpha", "beta"])
 
 
 # --- Constraint-marker word-boundary regression -----------------------------

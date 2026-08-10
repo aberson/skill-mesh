@@ -609,23 +609,43 @@ class AutoDiscoverSkillsTest(unittest.TestCase):
 
 
 class SkillsRootResolutionTest(unittest.TestCase):
-    """Pin the workspace-layout invariant for ``_SKILLS_ROOT``.
+    """Pin the package-layout invariant for ``_SKILLS_ROOT``.
 
-    Step 8 originally shipped with ``parents[3]`` resolving to ``.claude``
-    rather than the workspace root, so ``_SKILLS_ROOT`` evaluated to a
-    nonexistent ``.claude/.claude/skills`` and ``auto_discover_skills()``
-    silently returned ``[]``. Iter-2 fixes the path to resolve via
-    ``parents[2]`` directly; this test pins the fix so any future drift fails
-    in unit tests rather than at operator-fleet-run time.
+    Step 8 originally shipped with ``parents[3]`` resolving one level too
+    high, so ``_SKILLS_ROOT`` evaluated to a nonexistent
+    ``.claude/.claude/skills``, ``auto_discover_skills()`` silently returned
+    ``[]``, and every fleet run was empty. Iter-2 fixes the path to resolve
+    via ``parents[2]`` directly; this test pins the fix so any future drift
+    fails in unit tests rather than at operator-fleet-run time.
+
+    The guard asserts the STRUCTURAL property that makes ``_SKILLS_ROOT``
+    usable — it is a real directory that actually holds this module's own
+    skill package, i.e. the directory whose children ``auto_discover_skills``
+    enumerates as skill packages — instead of two hard-coded directory NAMES
+    (``skills`` under ``.claude``). The names pinned one particular host
+    workspace: they are wrong in this repository, where the skill packages sit
+    at the repo root, and wrong again in any git worktree or renamed checkout.
+    The round trip below is strictly stronger than the names were: any
+    ``parents[]`` drift makes ``_SKILLS_ROOT / "skill-eval-setup" / "scripts"``
+    stop being this module's own directory, which is exactly the Step 8 bug
+    shape and the reason discovery went silently empty.
     """
 
     def test_skills_root_resolves_to_real_directory(self) -> None:
-        self.assertTrue(
-            generate_bad_examples._SKILLS_ROOT.is_dir(),
-            f"_SKILLS_ROOT does not exist: {generate_bad_examples._SKILLS_ROOT}",
+        root = generate_bad_examples._SKILLS_ROOT
+        self.assertTrue(root.is_dir(), f"_SKILLS_ROOT does not exist: {root}")
+        # Own package round trip — the off-by-one detector.
+        self.assertEqual(
+            (root / "skill-eval-setup" / "scripts").resolve(),
+            Path(generate_bad_examples.__file__).resolve().parent,
+            f"_SKILLS_ROOT does not hold this module's own package: {root}",
         )
-        self.assertEqual(generate_bad_examples._SKILLS_ROOT.name, "skills")
-        self.assertEqual(generate_bad_examples._SKILLS_ROOT.parent.name, ".claude")
+        # The sibling package that drives discovery through calibrate_fleet
+        # must be a peer under the same root, or the cross-skill wiring is dead.
+        self.assertTrue(
+            (root / "skill-iterate" / "scripts" / "adversarial_calibration.py").is_file(),
+            f"sibling skill package missing under _SKILLS_ROOT: {root}",
+        )
 
 
 # --- generate_fleet ----------------------------------------------------------

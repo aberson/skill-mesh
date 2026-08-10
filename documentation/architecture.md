@@ -362,7 +362,23 @@ The install-target table and the full set of Copilot discovery roots are owned b
 or substitute the pinned interpreter path via your own environment — do not hardcode
 a private absolute path).
 
-Package-integrity contract gate (99 tests):
+**The DONE gate is the repo-root invocation.** Run from the repository root with no
+path argument, so collection reaches the seven suites under `tests` *and* the three
+test roots a `tests`-scoped run never touches — `_shared`, `skill-iterate/scripts`,
+and `skill-eval-setup/scripts`, all of which hold production modules this project
+edits:
+
+```powershell
+python -m pytest
+```
+
+A path-scoped run is a fast iteration gate, never the gate that flips a step or a
+phase DONE — it cannot observe a regression in the root-only roots. The measured
+collected / passed / failed / skipped counts for both invocations, and the date they
+were measured, are owned by [`phase-75-baseline.md`](phase-75-baseline.md); it is the
+single source and no other document restates them.
+
+Package-integrity contract gate — fast iteration subset:
 
 ```powershell
 python -m pytest tests\package-integrity
@@ -376,7 +392,7 @@ variable (the READ-ONLY coding-root checkout), never a hardcoded private path:
 python -m pytest $env:SKILL_MESH_LEGACY_SOURCE\.claude\lib\calibration\test_calibrate.py
 ```
 
-Calibration suite (38 tests):
+Calibration suite — fast iteration subset:
 
 ```powershell
 python -m pytest tests\calibration
@@ -385,10 +401,14 @@ python -m pytest tests\calibration
 ### 8.4 Lint / typecheck
 
 **Not configured.** The repository has no lint command and no typecheck command.
-Do not invent one. The automated gates are the seven pytest suites -- `tests/router`
-(62), `tests/calibration` (38), `tests/package-integrity` (145), `tests/distributions`
-(285), `tests/release` (12), `tests/telemetry` (5), and `tests/smoke` (40): 587 tests
-total, run with `python -m pytest`.
+Do not invent one. pytest is the only automated gate: the seven suites under `tests`
+(`tests/router`, `tests/calibration`, `tests/package-integrity`, `tests/distributions`,
+`tests/release`, `tests/telemetry`, `tests/smoke`) plus the three root-only test roots
+described in section 8.3, all collected by the repo-root `python -m pytest`. Per-suite
+and total counts are NOT restated here -- they live in
+[`phase-75-baseline.md`](phase-75-baseline.md), which is the one owner of the measured
+numbers. An earlier revision of this paragraph attributed a path-scoped total to the
+repo-root command; that is the drift the single-owner rule exists to stop.
 
 ### 8.5 Regenerating the manifest
 
