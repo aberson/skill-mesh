@@ -361,7 +361,9 @@ dispatcher:
 
 The Python script is pure-Python; no LLM inside, no sub-agent dispatch.
 This separation keeps the aggregator unit-testable with deterministic
-verdict fixtures (see `test_score_skill_absolute.py`).
+verdict fixtures: they live in the repo-only sibling module
+`./test_score_skill_absolute.py`, which sits beside this file in the
+skill-mesh repository and never ships into a host profile.
 
 ---
 
@@ -437,8 +439,10 @@ SIHC Step 12 anti-sycophancy guard: if the grader cannot tell the
 hand-curated `good.md` apart from any `bad_*.md` in the same corpus, the
 grader is structurally sycophantic for this skill and the /skill-iterate loop
 should park the skill rather than burning N iterations against meaningless
-deltas. The design rationale lives at
-[`docs/investigations/skill-iterate-hill-climbing/01-score-against-golden-bad-examples.md`](../../../docs/investigations/skill-iterate-hill-climbing/01-score-against-golden-bad-examples.md).
+deltas. The design rationale lives in the workspace investigation
+`docs/investigations/skill-iterate-hill-climbing/01-score-against-golden-bad-examples.md`,
+which is not vendored into skill-mesh (prose, not a link: this file now SHIPS into
+consumer homes, where nothing exists above the discovery root).
 
 ### When it runs
 
@@ -454,8 +458,8 @@ fleet goldens).
 
 Per-skill location: `<skill_dir>/evals/golden/`. The loader reads `good.md`
 and every file matching the glob `bad_*.md`. All other files in the
-directory (notably `manifest.json` written by
-[`skill-eval-setup/scripts/generate_bad_examples.py`](../skill-eval-setup/scripts/generate_bad_examples.py)
+directory (notably `manifest.json` written by the repo-only helper
+`skill-eval-setup/scripts/generate_bad_examples.py`, which no host profile ships,
 and any ad-hoc operator notes) are ignored.
 
 ### Accept criterion

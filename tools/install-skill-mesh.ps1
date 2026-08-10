@@ -11,6 +11,13 @@
         claude -> <Home>/.claude/skills/<skill>/{SKILL.md, core.md}
         gpt    -> <Home>/.github/skills/<skill>/{SKILL.md, core.md}
 
+    ...plus the shared support payload the builder emits at the PROFILE ROOT, as a
+    sibling of the skill dirs, so every generated '../_shared/x' reference resolves
+    inside the discovery root a consumer home actually has:
+
+        claude -> <Home>/.claude/skills/_shared/<asset>
+        gpt    -> <Home>/.github/skills/_shared/<asset>
+
     (GitHub Copilot CLI discovers project skills from .github/skills, .agents/skills,
     and .claude/skills, plus the personal ~/.copilot/skills; this installer writes the
     GPT profile to .github/skills. The project-relative .copilot/skills target used
@@ -64,8 +71,41 @@
     Optional pre-built dist root (containing a <provider>/ subtree).
 
 .PARAMETER Force
-    Overwrite AND take ownership of a pre-existing non-marker (foreign) file at a
-    colliding target path (explicit opt-in).
+    Overwrite AND take ownership of a pre-existing non-marker (foreign) file at ANY
+    colliding target path (explicit opt-in, UNSCOPED). This is the blunt instrument
+    and is NOT the sanctioned way to adopt an existing consumer _shared/ tree -- use
+    -ForceShared for that.
+
+    -BackupDir is OPTIONAL here, and WITHOUT it this switch destroys the operator's
+    original bytes irrecoverably (a loud per-path warning is emitted, and that warning
+    is the only protection there is). Pair it with -BackupDir unless you mean that.
+
+.PARAMETER ForceShared
+    SCOPED take-ownership: overwrite AND take ownership of foreign files ONLY where the
+    collision is inside the profile's `_shared/` payload. A foreign collision anywhere
+    else still REFUSES the whole install, unchanged. Requires -BackupDir.
+
+    Why the scope exists: a real consumer home holds a hand-authored `_shared/` tree,
+    only some of whose files skill-mesh now ships. Adoption must be a per-FILE claim
+    over exactly the payload -- never a directory-wide one, and never a licence to
+    clobber a colliding SKILL.md somewhere else in the same run.
+
+    The scope is decided on BOTH the source-relative path and the reparse-point-resolved
+    target, so a junction planted at <installRoot>/_shared cannot redirect the
+    authorization onto a path outside the payload.
+
+.PARAMETER BackupDir
+    Directory to write pre-overwrite backups into before any foreign file is taken
+    over. Each RUN gets its own subdirectory <BackupDir>/<provider>-<run id>/ (the
+    sibling migrator's <BackupDir>/<migration_id>/ precedent) holding the original bytes
+    at files/<rel> plus take-ownership-backup.json, which records the provider, a
+    non-disclosing home_id, and each rel_path with its pre-overwrite sha256 and size.
+    Per-run scoping is what lets a two-profile / two-home cutover share ONE -BackupDir
+    without the second run erasing the first run's restore record.
+
+    Mandatory with -ForceShared (take-ownership without a restore path is data loss with
+    extra steps); optional with -Force, where supplying it backs up every forced path
+    the same way.
 
 .PARAMETER Uninstall
     Remove a previously-installed provider profile (marker- + ledger-gated).
@@ -93,6 +133,10 @@ param(
     [string]$DistDir = '',
 
     [switch]$Force,
+
+    [switch]$ForceShared,
+
+    [string]$BackupDir = '',
 
     [switch]$Uninstall
 )
@@ -195,6 +239,118 @@ function Resolve-Contained([string]$path, [string]$homeAbs) {
     # stays within the install home RIGHT NOW. Throws on escape. Called immediately
     # before each dir-create and each copy to close the write-time TOCTOU.
     return (Resolve-SafePath -Path $path -AllowedRoots @($homeAbs))
+}
+
+function Test-SharedPayloadRel([string]$relFromSource) {
+    # Is this source-relative path part of the shipped _shared/ payload?
+    #
+    # Read off the SOURCE tree's own layout (build-distributions.ps1 emits the payload
+    # at <profile>/_shared/<asset>), never a list of asset names -- a hand-maintained
+    # payload list here would drift from the builder's re-walked closure and would
+    # silently start authorizing, or refusing, the wrong files.
+    if ([string]::IsNullOrWhiteSpace($relFromSource)) { return $false }
+    $segments = @(($relFromSource -replace '\\', '/').Split('/') |
+                  Where-Object { -not [string]::IsNullOrEmpty($_) })
+    if ($segments.Count -lt 2) { return $false }
+    return ($segments[0] -eq '_shared')
+}
+
+function Test-UnderPayloadRoot([string]$safeTarget, [string]$payloadRootAbs) {
+    # SECOND half of the -ForceShared scope decision, read off the RESOLVED target.
+    #
+    # Test-SharedPayloadRel above reads the SOURCE spelling ('_shared\x'), which always
+    # starts with '_shared' by construction; $safeTarget is the real path AFTER
+    # reparse-point resolution. A directory junction at <installRoot>/_shared makes the
+    # two disagree -- and authorizing on the source spelling alone took ownership of a
+    # file with NO '_shared' segment at all, adopting the operator's own namespace into
+    # owned_files (so a later -Uninstall would delete it). One concept, two path
+    # spellings, and the security decision must read the one the write lands on.
+    if ([string]::IsNullOrWhiteSpace($safeTarget) -or
+        [string]::IsNullOrWhiteSpace($payloadRootAbs)) { return $false }
+    $prefix = $payloadRootAbs.TrimEnd('\', '/') + [System.IO.Path]::DirectorySeparatorChar
+    return $safeTarget.StartsWith($prefix, [System.StringComparison]::OrdinalIgnoreCase)
+}
+
+function Get-InstallHomeId([string]$homeAbs) {
+    # A STABLE, NON-DISCLOSING identifier for an install home: the leading 16 hex chars
+    # of SHA-256 over its case-folded absolute path. It lets one -BackupDir hold restore
+    # records for several homes without any of them being mistakable for another, while
+    # keeping the manifest free of the operator's absolute path so it can still be
+    # pasted into a cutover record or an issue.
+    $norm = $homeAbs.TrimEnd('\', '/').ToLowerInvariant()
+    $sha = [System.Security.Cryptography.SHA256]::Create()
+    try {
+        $hash = $sha.ComputeHash([System.Text.Encoding]::UTF8.GetBytes($norm))
+    } finally {
+        $sha.Dispose()
+    }
+    return ((([System.BitConverter]::ToString($hash)) -replace '-', '').ToLowerInvariant()).Substring(0, 16)
+}
+
+function Write-ForceBackup($forcePairs, [string]$backupDir, [string]$provider, [string]$homeAbs) {
+    # Pre-overwrite backup for every foreign file this run is about to take ownership
+    # of: the ORIGINAL BYTES under <backupDir>/files/<rel>, plus a manifest recording
+    # each rel_path with its pre-overwrite sha256 and size.
+    #
+    # Runs during VALIDATE, before a single byte of the install home is touched, so a
+    # backup failure leaves the home exactly as it was. Restoring is then a plain copy
+    # of <run>/files/<rel> back over <home>/<rel>, verified against the recorded hash.
+    #
+    # PER-RUN SUBDIRECTORY, following the sibling migrator's <BackupDir>/<migration_id>/
+    # precedent. A fixed <BackupDir>/take-ownership-backup.json is overwritten by the
+    # NEXT run into the same -BackupDir -- and the two-profile, two-home cutover this
+    # flag exists for is exactly two runs. The pre-overwrite BYTES survived under
+    # files/, but the rel_path + sha256 + size_bytes rows that make a restore VERIFIABLE
+    # were destroyed for the first run, both runs exited 0, and nothing warned. Each run
+    # now owns its own directory, so no run can erase another's record.
+    $backupAbs = [System.IO.Path]::GetFullPath($backupDir)
+    if (-not (Test-Path -LiteralPath $backupAbs)) {
+        New-Item -ItemType Directory -Path $backupAbs -Force | Out-Null
+    }
+    $runLeaf = $provider + '-' + (New-SkillMeshMigrationId)
+    $safeRunRoot = Resolve-SafePath -Path (Join-Path $backupAbs $runLeaf) -AllowedRoots @($backupAbs)
+    if (-not (Test-Path -LiteralPath $safeRunRoot)) {
+        New-Item -ItemType Directory -Path $safeRunRoot -Force | Out-Null
+    }
+    $filesRoot = Join-Path $safeRunRoot 'files'
+    $records = @()
+    foreach ($p in $forcePairs) {
+        $srcAbs = $p[0]
+        $rel = $p[1]
+        $dest = Join-Path $filesRoot ($rel -replace '/', '\')
+        $safeBackupDest = Resolve-SafePath -Path $dest -AllowedRoots @($safeRunRoot)
+        $safeBackupDestDir = Split-Path -Parent $safeBackupDest
+        if (-not (Test-Path -LiteralPath $safeBackupDestDir)) {
+            New-Item -ItemType Directory -Path $safeBackupDestDir -Force | Out-Null
+        }
+        Copy-Item -LiteralPath $srcAbs -Destination $safeBackupDest -Force
+        $records += [PSCustomObject]@{
+            rel_path   = $rel
+            sha256     = (Get-SkillMeshFileSha256 $srcAbs)
+            size_bytes = (Get-Item -LiteralPath $srcAbs).Length
+            backup_rel = 'files/' + $rel
+        }
+    }
+    # HOME-RELATIVE rel_paths only -- no absolute install path is recorded, so the
+    # manifest can be pasted into a cutover record or an issue without leaking the
+    # operator's home. `home_id` is a one-way digest of that path for the same reason:
+    # two homes backed up into one -BackupDir must be TELLABLE APART (restoring home
+    # two's bytes over home one is the failure this identifier exists to prevent)
+    # without either home's path appearing in the artifact.
+    $manifest = [PSCustomObject]@{
+        tool     = 'install-skill-mesh.ps1'
+        kind     = 'take-ownership-backup'
+        provider = $provider
+        home_id  = (Get-InstallHomeId $homeAbs)
+        run_id   = $runLeaf
+        files    = @($records)
+    }
+    $safeManifestPath = Resolve-SafePath -Path (Join-Path $safeRunRoot 'take-ownership-backup.json') `
+                                         -AllowedRoots @($safeRunRoot)
+    $json = ($manifest | ConvertTo-Json -Depth 6)
+    [System.IO.File]::WriteAllText($safeManifestPath, $json, (New-Object System.Text.UTF8Encoding($false)))
+    Write-Host ("install-skill-mesh: took ownership of $($records.Count) foreign file(s); " +
+                "pre-overwrite bytes + hashes recorded under backup run '$runLeaf'.")
 }
 
 function ConvertTo-PosixRel([string]$absPath, [string]$homeAbs) {
@@ -588,8 +744,47 @@ function Invoke-Install([string]$homeAbs) {
         $installRoot = Join-Path $homeAbs ($subdir -replace '/', '\')
         $srcFiles = @(Get-ChildItem -LiteralPath $sourceDir -Recurse -File | Sort-Object -Property FullName)
 
+        if ($ForceShared -and [string]::IsNullOrWhiteSpace($BackupDir)) {
+            throw ("install-skill-mesh: -ForceShared requires -BackupDir. Taking " +
+                   "ownership of an operator's existing _shared/ files without first " +
+                   "recording their bytes and hashes is data loss with extra steps.")
+        }
+        if (-not [string]::IsNullOrWhiteSpace($BackupDir)) {
+            # The backup must survive the thing it is a backup OF. A -BackupDir inside
+            # the install home would be an install target's neighbour: subject to the
+            # same stale-removal and uninstall passes, and restorable only from inside
+            # the tree it exists to undo.
+            #
+            # CANONICALIZED on both sides (Get-CanonicalRealPath follows junctions and
+            # symlinks), not a GetFullPath string compare: every other containment check
+            # in this file resolves reparse points precisely because a lexical compare
+            # walks straight through one. A -BackupDir spelled as a junction OUTSIDE the
+            # home whose target is INSIDE it passed the string test and landed the
+            # backup inside the tree it exists to undo.
+            $backupProbe = Get-CanonicalRealPath -InputPath $BackupDir
+            $homeReal = Get-CanonicalRealPath -InputPath $homeAbs
+            $homePrefix = $homeReal.TrimEnd('\', '/') + [System.IO.Path]::DirectorySeparatorChar
+            if ($backupProbe.Equals($homeReal, [System.StringComparison]::OrdinalIgnoreCase) -or
+                $backupProbe.StartsWith($homePrefix, [System.StringComparison]::OrdinalIgnoreCase)) {
+                throw ("install-skill-mesh: -BackupDir must be OUTSIDE the install home; " +
+                       "a backup stored inside the tree it protects is not a restore path.")
+            }
+        }
+
+        # The ONE real path -ForceShared may take ownership under. Ancestors are
+        # canonicalized (a junction on '.claude' or the home itself is legitimate and
+        # must not de-authorize the payload), but the '_shared' leaf is appended
+        # LITERALLY -- resolving it would follow a junction planted AT the payload root
+        # and hand the flag's authorization to whatever it points at.
+        $payloadRootAbs = Join-Path (Get-CanonicalRealPath -InputPath $installRoot) '_shared'
+
         $pairs = @()          # each: @(srcFull, safeTarget, rel)
         $foreign = @()
+        # Home-relative rels this run is permitted to overwrite DESPITE being foreign.
+        # Computed once here so the pre-scan refusal and the TOCTOU guard inside the
+        # copy loop cannot disagree about what was authorized.
+        $forceRels = New-CIStringSet
+        $forcePairs = @()     # each: @(safeTarget, rel) -- the backup set
         foreach ($f in $srcFiles) {
             $relFromSrc = $f.FullName.Substring($sourceDir.Length).TrimStart('\', '/')
             $target = Join-Path $installRoot $relFromSrc
@@ -600,17 +795,54 @@ function Invoke-Install([string]$homeAbs) {
             # ledger is NOT consulted here (a poisoned ledger cannot launder a foreign
             # file into "owned").
             if ((Test-Path -LiteralPath $safeTarget) -and (-not (Test-FileHasMarker $safeTarget))) {
-                $foreign += $rel
+                # -Force authorizes every collision; -ForceShared authorizes ONLY the
+                # ones inside the shipped _shared/ payload -- a per-FILE claim derived
+                # from the SOURCE tree's own layout, never a directory-wide one. A file
+                # sitting in the consumer's _shared/ that this profile does not ship is
+                # not a target at all, so it is never seen here and never touched.
+                #
+                # BOTH spellings must agree: the SOURCE-relative path says this file is
+                # part of the shipped payload, and the RESOLVED target says the write
+                # actually lands inside <installRoot>/_shared. Checking only the source
+                # let a junction at the payload root redirect the take-ownership onto an
+                # operator path with no '_shared' segment at all.
+                $isSharedPayload = (Test-SharedPayloadRel $relFromSrc) -and
+                                   (Test-UnderPayloadRoot $safeTarget $payloadRootAbs)
+                if ($Force -or ($ForceShared -and $isSharedPayload)) {
+                    [void]$forceRels.Add($rel)
+                    $forcePairs += , @($safeTarget, $rel)
+                } else {
+                    $foreign += $rel
+                }
             }
         }
 
-        if ($foreign.Count -gt 0 -and -not $Force) {
+        if ($foreign.Count -gt 0) {
             $list = ($foreign | Sort-Object) -join "`n  "
             throw ("install-skill-mesh: REFUSING to install -- $($foreign.Count) target " +
                    "path(s) already exist and are NOT skill-mesh-generated (no provenance " +
                    "marker); installing would overwrite operator content:`n  $list`n" +
                    "Pass -Force to overwrite AND take ownership of these paths, or remove " +
-                   "them first. Nothing was written; prior state is unchanged.")
+                   "them first. (-ForceShared covers only the _shared/ payload and does " +
+                   "NOT authorize the paths above.) Nothing was written; prior state is " +
+                   "unchanged.")
+        }
+
+        # Back up every authorized-overwrite target BEFORE any mutation. Still inside
+        # the VALIDATE phase: if the backup itself fails, nothing in the install home
+        # has been touched and the refusal is a true no-op.
+        if ($forcePairs.Count -gt 0 -and -not [string]::IsNullOrWhiteSpace($BackupDir)) {
+            Write-ForceBackup $forcePairs $BackupDir $Provider $homeAbs
+        } elseif ($forcePairs.Count -gt 0) {
+            # Reachable only via plain -Force, whose -BackupDir is optional. NOT a
+            # refusal: -Force's unscoped contract predates this step and is unchanged.
+            # But documentation is not a control -- an operator who clobbers their own
+            # files must at least be TOLD, per path, on stderr, that the originals were
+            # not recorded anywhere.
+            $lost = (($forcePairs | ForEach-Object { $_[1] }) | Sort-Object) -join "`n  "
+            Write-Warning ("install-skill-mesh: -Force is overwriting $($forcePairs.Count) " +
+                           "operator file(s) with NO backup (-BackupDir was not supplied). " +
+                           "The original bytes are unrecoverable after this run:`n  $lost")
         }
 
         # ================= COMMIT (mutation, recoverable) =======================
@@ -677,14 +909,18 @@ function Invoke-Install([string]$homeAbs) {
             $safeTarget = Resolve-Contained $a.target $homeAbs
 
             # Marker TOCTOU guard: a foreign file may have appeared here AFTER the
-            # scan. Overwrite only a non-existent target or a marker-bearing one.
+            # scan. Overwrite only a non-existent target or a marker-bearing one --
+            # or one this run explicitly authorized and BACKED UP during VALIDATE.
+            # Keyed off $forceRels, not the raw switches: an unscoped -ForceShared
+            # check here would authorize a path the pre-scan refused.
             if ((Test-Path -LiteralPath $safeTarget) -and
                 (-not (Test-FileHasMarker $safeTarget)) -and
                 (-not $writtenSet.Contains($rel)) -and
-                (-not $Force)) {
+                (-not $forceRels.Contains($rel))) {
                 throw ("install-skill-mesh: SECURITY -- a foreign (non-marker) file " +
                        "appeared at '$rel' after the pre-scan; aborting to avoid " +
-                       "clobbering it (pass -Force to override).")
+                       "clobbering it (pass -Force, or -ForceShared -BackupDir <dir> " +
+                       "when the path is inside the _shared/ payload, to override).")
             }
 
             Copy-Item -LiteralPath $a.source -Destination $safeTarget -Force

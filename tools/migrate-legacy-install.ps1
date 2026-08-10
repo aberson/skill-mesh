@@ -676,6 +676,19 @@ function New-MigrationPlan([string]$distAbs, [string]$backupAbs, [string]$migrat
         foreach ($f in @(Get-ChildItem -LiteralPath $profileAbs -Recurse -File | Sort-Object -Property FullName)) {
             $relFromProfile = ($f.FullName.Substring($profileAbs.Length).TrimStart('\', '/') -replace '\\', '/')
             $skill = @($relFromProfile.Split('/'))[0]
+            if ($skill -eq '_shared') {
+                # The distribution's shared payload is NOT a skill directory: it is a
+                # profile-root sibling of them, so the manifest has no record for it and
+                # the FOREIGN_FILE stop below would fire on skill-mesh's own generated
+                # bytes. Skipped here DELIBERATELY and CONSERVATIVELY: this migrator does
+                # not install it in this step, which leaves an existing consumer _shared/
+                # exactly where it is today -- preserved, not managed, not overwritten.
+                # Reclassifying it as MANAGED (install + retire + uninstall coverage, and
+                # the marker guard this install path still lacks) is Step 65's whole job
+                # and must land as one piece; doing half of it here would hand the
+                # migrator permission to overwrite consumer bytes with no marker check.
+                continue
+            }
             if (-not $script:ManifestMap.ContainsKey($skill)) {
                 $blocked += New-Block 'FOREIGN_FILE' "$p/$relFromProfile" `
                     ("the supplied distribution contains skill directory '$skill', which is not a record in " +

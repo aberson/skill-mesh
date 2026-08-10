@@ -218,6 +218,13 @@ SITE_EXEMPT = {
     ("tools/install-skill-mesh.ps1",
      "Remove-Item -LiteralPath $txStateDir -Recurse -Force"):
         "Removes the per-run OS-temp transaction-state dir; not a consumer-home path.",
+    ("tools/install-skill-mesh.ps1",
+     "New-Item -ItemType Directory -Path $backupAbs -Force | Out-Null"):
+        "Creates the operator-supplied -BackupDir root for take-ownership backups, "
+        "which is asserted OUTSIDE the install home at argument-validation time (the "
+        "install path throws before any scan when -BackupDir resolves inside $homeAbs). "
+        "Every path written UNDER it is re-resolved through Resolve-SafePath against "
+        "$backupAbs on the next lines. Mirrors the migrator's -BackupDir exemption.",
 }
 
 
