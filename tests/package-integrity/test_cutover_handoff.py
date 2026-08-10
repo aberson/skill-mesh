@@ -962,17 +962,19 @@ def test_handoff_retires_on_a_managed_allowlist_and_preserves_consumer_only():
         "handoff must name the legacy GPT core tree it retires from"
 
 
-def test_readme_points_at_the_handoff_without_claiming_acceptance():
-    """The README is where a reader learns the project's current state. It must name
-    the handoff and must not read as though host acceptance already happened."""
+def test_readme_points_at_the_handoff_with_the_completed_cutover_status():
+    """The README keeps the reusable handoff discoverable and records accepted evidence."""
     text = _read(README)
     low = re.sub(r"\s+", " ", text).lower()
     assert "documentation/coding-root-cutover-handoff.md" in text, \
         "README does not point at the cutover handoff"
-    assert "steps 49" in low, "README must name the remaining operator acceptance steps"
-    for overclaim in ("host acceptance passed", "acceptance is complete",
-                      "cutover is complete", "steps 48-50 are done"):
-        assert overclaim not in low, f"README overclaims: {overclaim}"
+    assert "phase 7 complete" in low, "README does not record the accepted Phase 7 result"
+    assert "issues #62" in low and "#63 closed" in low, \
+        "README does not identify the closed acceptance/cutover issues"
+    assert "step 48 is done" in low, \
+        "README no longer records the completed handoff status"
+    assert "what remains is operator-only" not in low, \
+        "README still presents completed host acceptance as pending"
 
 
 def test_handoff_names_both_discovery_roots_and_the_legacy_router():

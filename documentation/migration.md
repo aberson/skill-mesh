@@ -68,12 +68,13 @@ an explicit `**Status:** SUPERSEDED` marker in
 cutover is now Steps 42-50 of the **host-native-discovery cutover plan** (the first link above —
 `provider-neutral-skill-mesh-plan.md` has no Steps 42-50).
 
-**Status:** Steps 42-48 have shipped — the host-loading authority map, the live Copilot CLI
+**Status:** Steps 42-50 are complete — the host-loading authority map, the live Copilot CLI
 discovery-root proof, the GPT retarget, the both-profile discovery proof, read-only host-install
-inspection, the reversible migrator, and Step 48 (this handoff) is done. Every code step on the
-cutover path has landed; what remains is operator-only — Steps 49-50, the host acceptance steps,
-first against a clean temporary home and then against the live consumer. Step 47b (containment-gate
-hardening) is pending and deliberately off that critical path.
+inspection, reversible migrator, operator host acceptance, and live consumer cutover. On 2026-08-09,
+the operator accepted a clean temporary-home installation and rollback, then cut over the live
+consumer on its own dedicated branch with an external backup retained. **Step 48 (this handoff) is
+DONE.** Step 47b (containment-gate
+hardening) remains pending and deliberately off the completed cutover path.
 
 **Topology correction.** A consumer gets **two** discovery roots, not one, and the legacy GPT
 core tree is neither of them:
@@ -105,7 +106,7 @@ worth knowing before you open it:
 - **Host acceptance is operator evidence.** The handoff prepares Steps 49-50; it does not perform
   them, and no test in this repository asserts that a host discovered anything.
 
-After Step 50 of the host-native-discovery cutover plan, `coding-root/.claude/skills/` becomes an **installed consumer** of this package, not
+With Step 50 of the host-native-discovery cutover plan complete, `coding-root/.claude/skills/` is an **installed consumer** of this package, not
 an independent source: future skill changes are made in `aberson/skill-mesh` and flow out via a
 re-install (`install-skill-mesh.ps1`, idempotent — see `documentation/architecture.md` §8.2),
 never by hand-editing files under the installed `.claude/skills/` tree directly.

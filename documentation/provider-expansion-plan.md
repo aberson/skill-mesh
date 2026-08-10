@@ -1,8 +1,8 @@
 # Provider Expansion Plan — Gemini + Local Lanes (Phase 8, Steps 51-61)
 
-**Status:** PLANNED. **Prerequisite:** Phase 7 (host-native discovery & consumer cutover,
-`documentation/host-native-discovery-cutover-plan.md`) must be DONE through its final cutover
-step before `/build-phase` runs this plan. Step numbering continues from Phase 7's highest step
+**Status:** BUILD-READY (not yet started). **Prerequisite satisfied:** Phase 7 (host-native discovery
+& consumer cutover, `documentation/host-native-discovery-cutover-plan.md`) completed through its final
+cutover step on 2026-08-09. Step numbering continues from Phase 7's highest step
 — **currently 50** after the 2026-08-03 re-scope for the proven GPT discovery retarget. Phase 7
 has grown twice (42-48, then 42-50); **before `/repo-sync` mints issues for this plan, re-verify
 Phase 7's final highest step number and renumber this plan upward if Phase 7 grew past 50**
@@ -36,8 +36,8 @@ no external document is required to execute it.
 > also modifies `runtime/skill-router.ps1` (fail-loud startup validation of `deployment.profile`) and
 > deliberately remains `--reviewers code`.
 >
-> **Still gated:** `/build-phase` for this plan must NOT run until Phase 7 Step 50 (live coding-root
-> cutover) is DONE. `/repo-sync` (issue minting) may proceed now.
+> **Gate satisfied:** Phase 7 Step 50 (live coding-root cutover) is DONE, so `/build-phase` may run
+> this plan. `/repo-sync` (issue minting) may proceed when its live issue state is rechecked.
 
 ---
 
@@ -64,11 +64,11 @@ designed-not-built profile key. No MCP anywhere: the ratified posture is subproc
   `config/skill-manifest.json` (authoritative inventory).
 - `skills/<name>/core.md` + `providers/{claude,gpt}.md` is the carrier pattern; 47 portable
   skills, 3 Claude-native.
-- Phase 7 state at plan time: Step 42 DONE; Step 43 proved the real Copilot discovery roots
+- Phase 7 result: Steps 42-50 are DONE. Step 43 proved the real Copilot discovery roots
   (`.github/skills/`, `.agents/skills/`, `.claude/skills/`; YAML frontmatter required) and
-  forced a re-scope; Steps 44-50 pending. Phase 7 owns discovery/install/migration/cutover;
-  this plan owns transports/providers/calibration — the file surfaces are disjoint except for
-  additive test suites and sequential doc edits.
+  forced a re-scope; Steps 49-50 then recorded real-host acceptance and the live consumer cutover.
+  Phase 7 owns discovery/install/migration/cutover; this plan owns transports/providers/calibration
+  — the file surfaces are disjoint except for additive test suites and sequential doc edits.
 - Tests are the only automated gate (no lint/typecheck by design, `architecture.md` §8.4).
   Baseline: 285 pass / 3 skip at plan time — re-baseline at Phase 8 start, since Phase 7 will
   have grown the suite. `tests/calibration/calibrate.py` exists but its `invoke_model()` is

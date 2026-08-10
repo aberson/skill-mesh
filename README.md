@@ -480,26 +480,17 @@ hosts; 3 are Claude-native (`claude-oauth-auth`, `context-slim`, `judge-motion`)
 - ~50 skills; 47/47 skills are GPT-capable behind the shared Claude/GPT behavior contract; 3 additional skills are Claude-native.
 - Shipped: the canonical `skills/<name>/{core.md,providers/}` source tree, the provider-neutral router,
   and the distribution builder, installer, and release tooling (reproducible SHA-256 checksums over a
-  `git ls-files` stage); 587 tests across seven suites (router, calibration, package-integrity,
-  distributions, release, telemetry, smoke).
-- In progress: host-native discovery and consumer cutover — making the three host-loading mechanisms
-  explicitly distinct (instruction injection, native skill discovery, router dispatch) and adding a
-  reversible migration path off legacy installs. See
-  [documentation/host-discovery.md](documentation/host-discovery.md). **All the code steps have
-  landed.** The migration step (Step 47) is **DONE** — it was re-scoped 2026-08-05 after a
-  five-round review deadlock, then converged in one bounded confirming round with zero blocking
-  findings. Decision record:
-  [documentation/step-47-decomposition-decision.md](documentation/step-47-decomposition-decision.md).
-  The consumer handoff (Step 48) is **DONE** too: the copy-pasteable operator sequence lives at
-  [documentation/coding-root-cutover-handoff.md](documentation/coding-root-cutover-handoff.md) —
-  build → inspect → dry-run → apply → verify → roll back → host acceptance → retire → commit, with a
-  backup retention window and a secure-deletion command, and a structure gate that fails on an
-  omitted or mis-ordered step.
-- What remains is **operator-only**: host acceptance against a clean temporary home and then against
-  the live consumer (Steps 49–50, whose evidence no test in this repository stands in for — a green
-  suite is necessary but not sufficient). The mechanical half of Step 49 has been rehearsed
-  end-to-end against throwaway homes; the migrator came out clean and the rehearsal fixed seven
-  defects in the handoff itself. Off that critical path, Step 47b still hardens the containment gate.
+  `git ls-files` stage). The seven pytest suites collect 587 tests; the latest full run passed 584 and
+  skipped 3.
+- **Phase 7 complete — issues #62–#63 closed.** Real Claude Code and GitHub Copilot CLI acceptance
+  verified a generated `plan-review` profile from each host-native discovery root; the live
+  `coding-root` cutover installed 50 Claude and 47 GPT generated entries, preserved consumer-only
+  material, retained an external rollback backup, and kept the legacy router callable through the
+  generated compatibility shim. **Step 48 is DONE;** its reusable operator handoff remains at
+  [documentation/coding-root-cutover-handoff.md](documentation/coding-root-cutover-handoff.md). See
+  [documentation/host-native-discovery-cutover-plan.md](documentation/host-native-discovery-cutover-plan.md).
+- **Phase 8 is build-ready.** The Phase 7 cutover prerequisite is satisfied; Step 47b remains the
+  separately scheduled containment-gate hardening follow-up and is off the completed cutover path.
 - The original 46 top-level `<skill>/SKILL.md` packages remain as a compatibility surface during a
   deprecation window — not the canonical source, and not updated by this migration; see
   [documentation/migration.md](documentation/migration.md).

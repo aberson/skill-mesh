@@ -120,9 +120,9 @@ tests/                  calibration, distributions, package-integrity, release, 
 
 ## Current state
 
-**Phase 7 — Host-Native Discovery & Consumer Cutover, in progress.** Steps 42–48 of Steps 42–50
-are DONE — every code step on the cutover path has landed, and the two that remain (49, 50) are
-operator-only. Steps 42–46: the host-loading authority map (locked by 17 package-integrity tests); the live
+**Phase 7 — Host-Native Discovery & Consumer Cutover, complete.** Steps 42–50 are DONE; Step 47b
+remains the separately scheduled, off-critical-path containment-gate hardening follow-up. Steps 42–46:
+the host-loading authority map (locked by 17 package-integrity tests); the live
 Copilot CLI v1.0.77 discovery-root proof, which **disproved** the assumed `.copilot/skills`
 target; the resulting GPT retarget to `.github/skills` with YAML-frontmatter `SKILL.md`; and the
 both-profile discovery proof (Step 45, #67) — with both profiles installed, Copilot dedups skills
@@ -158,34 +158,31 @@ hit exit 3 into `-Resume`/`-Rollback`, which both *refuse* `failed_incomplete` (
 terminal) — two dead ends and a blocked home; and the untracked-deletion fallback destroyed the
 managed legacy GPT tree while claiming backups that provably do not cover it.
 
-**The critical path is now operator-only: Steps 49 and 50 are `Type: operator`** host acceptance
-against real Claude Code and GitHub Copilot CLI — never agent-attempted. Step 50 mutates the live
-coding-root consumer and opens with a parked-work handshake. **Step 47b** remains pending and off
-that path (containment-gate hardening: differential corpus + content-identity tripwire; AST rewrite
-deferred with a named trigger). **Step 49's mechanical half has been rehearsed end to end** against
-throwaway homes (`343843b`): the migrator came out clean — rollback byte-identical, re-apply
-convergent, ledger free of preserved-tree entries — while the rehearsal found and fixed seven
-handoff defects, including a step-order trap in Step 49's own Done-when that left a home MIXED and
-unrecoverable, and `pwsh` not existing on this machine though every command block named it. Copilot
-CLI 1.0.77 also resolved the migrated home at full scale (53 skills, 0 duplicates, `.github/skills`
-winning the collision), extending Step 45's single-skill proof. 587 tests across seven suites.
-(Step 45 also surfaced #69: the Claude-profile `SKILL.md`
-frontmatter emits `description`/`argument` unquoted, so a colon-bearing value fails Copilot's YAML
-parse — a bounded builder defect, does not block the cutover. #87 fixed `/repo-sync`'s hardcoded
-default branch in minted issue-body links; its data-repair half is done for #56–#82, while #1–#37
-still point at a plan doc that is not on any pushed branch of `aberson/coding-root` — a publishing
-gap in that repo, not a branch-name defect.)
+**Steps 49 and 50 are complete.** Step 49 recorded clean temporary-home host acceptance and rollback.
+Step 50 satisfied the verified-parking gate, installed 50 Claude and 47 GPT generated entries in the
+live consumer, confirmed both native hosts resolved the representative `plan-review` profile from their
+own discovery root, and preserved the legacy `-Model` router path through the generated compatibility
+shim. The external backup is retained; the coding-root-owned cutover branch retires 47 managed legacy GPT
+entries, preserves the consumer-only `goblin-sweep` tree by hash, and carries the GPT `judge-ui`
+calibration note forward byte-for-byte. **Step 47b** remains pending and off the completed cutover path.
+The seven pytest suites collect 587 tests; the latest full run passed **584** and skipped **3**.
+
+(Step 45 also surfaced #69: the Claude-profile `SKILL.md` frontmatter emits `description`/`argument`
+unquoted, so a colon-bearing value fails Copilot's YAML parse — a bounded builder defect, does not
+block the cutover. #87 fixed `/repo-sync`'s hardcoded default branch in minted issue-body links; its
+data-repair half is done for #56–#82, while #1–#37 still point at a plan doc that is not on any pushed
+branch of `aberson/coding-root` — a publishing gap in that repo, not a branch-name defect.)
 
 Phases 1–6 delivered the canonical `skills/` source tree, the provider-neutral router, and the
 distribution, installer, and release tooling. Plan:
 `documentation/host-native-discovery-cutover-plan.md` (it supersedes the unexecuted Step 41
 acceptance intent of `documentation/provider-neutral-skill-mesh-plan.md`). Phase 8 —
-`documentation/provider-expansion-plan.md` (Steps 51–61, Gemini + local lanes) — is PLANNED and
-gated on Phase 7's cutover. It has been through `/plan-expedite` (commit 5f3d9af): plan-review autofix
+`documentation/provider-expansion-plan.md` (Steps 51–61, Gemini + local lanes) — is BUILD-READY;
+the Phase 7 cutover prerequisite is satisfied. It has been through `/plan-expedite` (commit 5f3d9af): plan-review autofix
 resolved both authoring blockers (Step 55 re-scoped around `tools/gen_manifest.py`'s `LOCAL_CAPABLE`;
 Step 54 given a fork-on-failure provider-set obligation), plan-wrap returned READY (0 blockers, 0 gaps),
 and repo-sync minted umbrella #70 plus step issues #71–#82 — every step now carries `**Type:**` and a
-populated `**Issue:**`. The plan is build-ready; the only thing outstanding is the Phase 7 Step 50 gate.
+populated `**Issue:**`. The plan is ready for its next unblocked step.
 
 ## Environment requirements
 
