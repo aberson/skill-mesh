@@ -1,0 +1,401 @@
+# Phase 7.5 — Host Parity Repair
+
+**Status:** PLANNED
+**Build model:** Opus (all steps; run `/build-phase` from an Opus window — dev arms inherit the session tier)
+**Step range:** 62–71 (Phase 8 owns 51–61 with issues #71–#82 already minted; suffixed headings like `50a` are
+silently skipped by `/build-phase`'s `### Step N:` walker, per the Step 47b dispatch note)
+**Prerequisite:** Phase 7 Steps 42–50 are DONE (2026-08-09). Before `/build-phase`, the operator runs two
+commands from the project root — `git push origin host-native-acceptance-step49:main` (server-side
+fast-forward-only) then `git checkout main` — so every step's ship gate baselines on a published,
+current `origin/main`. See Step 62 for why this cannot be step work.
+
+---
+
+## 1. What This Feature Does
+
+Phase 7 delivered host-native discovery: one behavior contract per skill, built into two host profiles, installed
+into the two real discovery roots. The cutover ran and passed. But an audit of the *installed* trees found that
+the GPT profile is a text-only subset of the Claude profile — 97 files against 6,829 — because
+`tools/build-distributions.ps1` emits exactly `SKILL.md` + `core.md` per skill and nothing else.
+(Counts re-measured 2026-08-09 against the two live roots. Note they sit in **different homes**: the Claude
+profile at `<user-home>/.claude/skills/` and the GPT profile at `<coding-root>/.github/skills/` — the GPT root
+is a *project* discovery root, so the live install passed the coding root as `-Home`. This does **not** affect
+Step 70's rehearsal fidelity: `tools/skill-mesh-discovery.ps1:53-61` resolves both roots relative to whatever
+`-Home` is given, and `../_shared/x` resolution is intra-profile and therefore anchor-independent. It matters
+for two other things — any live re-install must target the coding-root GPT tree, not `<user-home>/.github/`,
+and Step 45's both-profile precedence proof assumed the two profiles share one home, which the live install
+does not.)
+
+The consequence is not cosmetic. Nine canonical cores dereference `../../_shared/…` (41 occurrences) and ten
+dereference `../../references/…` (17 occurrences). Neither directory is emitted into either profile, so the
+judging doctrine (`judge-core.md`), the scoring rubric (`score-skill.md`), the grader engines, and the workspace
+reference corpus ship as **dangling links** — to GPT users entirely, and to Claude users too (the `../../`
+depth is off by one from a flat discovery directory; the bytes survive on the Claude side only because the
+migrator *preserved* a pre-existing `_shared/` tree it does not own, which a clean consumer home would not have).
+
+No test resolves a single installed relative link, which is why this shipped green. `dist/claude/review-deep/core.md:19`
+already carries a dangling `../../_shared/judge-core.md` today and no suite objects.
+
+Confirmed by direct resolution against the live Claude root on 2026-08-09: from
+`<claude-root>/skills/review-deep/core.md`, `../../_shared/` resolves to `<claude-root>/_shared/`, which
+**does not exist**, while `<claude-root>/skills/_shared/judge-core.md` **does** — the off-by-one is exactly
+one level, and `../_shared/x` is the correct depth. `<claude-root>/references/` does not exist at all, so
+all 18 `references`/`rules` citations dangle on the Claude side as well, not only the GPT side.
+
+This phase makes an installed skill self-contained: ship the shared layer into both profiles, vendor the seven
+workspace reference targets the cores cite, rewrite every reference to a depth that resolves from a discovery
+root, and — first — build the gate that would have caught all of it.
+
+## 2. Existing Context
+
+- **Build.** `tools/build-distributions.ps1` reads `config/skill-manifest.json` and runs one manifest-ordered
+  loop (`:255-374`, per-skill `:268-349`). It writes `SKILL.md` (`:334`) and `core.md` (`:344`) through
+  `Write-GeneratedFile` (`:228-238`). `Read-SourceText` (`:142-147`) normalizes CRLF→LF and strips BOM;
+  output is UTF-8 no-BOM (`$UTF8_NO_BOM`, `:95`).
+- **Link rewriting today is two literal replaces.** `Repoint-CoreReference` (`:201-208`) maps `../core.md` →
+  `core.md`, gated on `$hasCore` (`:313`). `Repoint-VerdictHelperReference` (`:210-215`) maps
+  `../../_shared/build_step_verdict.py` → the bare filename, applied only to `build-step`/`build-phase`
+  (`:340-342`). A post-loop block (`:351-371`) copies that one helper into each consumer skill directory.
+  That block is the only precedent for shipping a shared asset, and it is where a general `_shared/` emit slots in.
+- **Source pinning.** `Resolve-SafeSource` (`:126-140`) pins every manifest-declared source under `$SKILLS_ROOT`
+  and throws otherwise; the verdict helper is the single hard-coded exception (`:355`, `AllowedRoots @($SHARED_ROOT)`).
+  **The builder therefore cannot ship `_shared/*.md` at all today** without widening allowed roots.
+- **Provenance is the install contract, not the ledger.** Every generated byte must carry the
+  `SKILL-MESH-GENERATED-FILE` marker (`tools/skill-mesh-provenance.ps1:38-54`). The installer's foreign-collision
+  scan (`tools/install-skill-mesh.ps1:599-614`), write-time TOCTOU guard (`:681-688`), and uninstall
+  (`:417-421`) all key on it. `.md` carries it as an HTML comment; `.py` via `Add-PythonProvenance`
+  (`build-distributions.ps1:217-226`), which **throws** on any file lacking `"""` in the first 256 bytes.
+  There is no emitter for `.js` — and `_shared/score_skill.workflow.js` is a required payload.
+- **Install enumeration is already generic.** `install-skill-mesh.ps1:589-597` walks `-Recurse -File` and derives
+  relative paths; a new top-level `_shared/` flows through structurally unchanged. The blocker is the marker, not
+  the enumeration.
+- **The migrator is not generic.** `tools/migrate-legacy-install.ps1:676-684` treats the first path segment of
+  every dist file as a skill name and raises `FOREIGN_FILE` when it is not in the manifest map.
+- **Test surface.** Seven suites under `tests/` collect **587**. The repo root collects **912** — `_shared/`
+  contributes 127, `skill-iterate/scripts/` 127, `skill-eval-setup/scripts/` 71. `python -m pytest tests/`
+  **does not collect the `_shared/` tests that cover the very files this phase touches.**
+
+## 3. Scope
+
+**In:**
+- Fast-forward `host-native-acceptance-step49` → `main`.
+- A link-resolution gate that validates relative *backtick* citations (today's validator skips them) and scans
+  `_shared/` (today nothing does), landed with a frozen, shrink-only allowlist of known-dangling refs.
+- Ship `_shared/` per profile root; rewrite `(../)+_shared/x` → `../_shared/x`; add a JS provenance emitter.
+- Teach the migrator and inspector that a skill-mesh-shipped `_shared/` is *managed*, not a preserved core-holder.
+- Vendor the seven workspace reference targets into `_shared/`, scrubbed and de-drifted; repoint the 18 citations
+  to link form.
+- Make `gen_skill_tree.py` and `gen_manifest.py` reproduce the committed tree instead of hand-listing it.
+- Quote Claude-profile frontmatter values (issue #69).
+- Close the three residual doc-reconciliation spots and adjudicate the deleted README anti-overclaim gate.
+- A release-candidate rehearsal against a throwaway home.
+- The live consumer-home cutover, host acceptance in both real hosts, and the Phase 8 handoff (Step 71).
+
+**Out:**
+- **Step 47b** (containment-gate hardening) — remains PENDING and deliberately off this path.
+- **Utility hookups for the seven portfolio utilities.** `<coding-root>/documentation/utility-hookup-plan.md`
+  already owns these as Steps 5–23 with issues #396–#418 minted, and it is already cutover-aware (every
+  core-editing step targets `skills/<name>/core.md`, and it explicitly forbids editing the generated tree).
+  Duplicating it here would re-mint 19 issues and create the N+1-edit problem. It resumes with `--resume 5`
+  after a `/plan-review` pass — see §8.
+- **`DEV_UTILITIES_ROOT` gating of the existing dev-observatory / switchboard citations.** Those are a different
+  category from the seven private utilities, and they are already partly guarded
+  (`skills/user-project/core.md:41-47` is a fail-loud `Test-Path` walk-up; `skills/plan-expedite/core.md:118,131`
+  is the same walk-up and explicitly fails open; every switchboard site is inert-by-default with a defer contract).
+- **`citation-needed` gating** — those four skills are hand-authored in the coding root, not in this repo. Coding-root plan.
+- The 13 home-anchored `.claude/references/model-tiering.md` provider refs and the 5 `../../../docs/` refs.
+  Logged in the **Step 63** allowlist (classes (c) and (d)) as known residual; closing them is a follow-up.
+  The allowlist is created in Step 63, not Step 62 — the earlier "Step 62 allowlist" wording was wrong.
+
+## 4. Impact Analysis
+
+| File | Change Type | Reason | Verified |
+|---|---|---|---|
+| `tools/build-distributions.ps1` | modify | Emit `_shared/`; add longest-token-first link rewrite; widen allowed roots | Read `:126-140`, `:201-215`, `:255-374`; 3 insert points confirmed at `:312-315`, `:338-346`, `:351-371` |
+| `tools/skill-mesh-provenance.ps1` | extend | Sole owner of marker shape; needs a `.js` comment syntax | Read `:38-54`; grep confirms no `.js` emitter exists anywhere in `tools/` |
+| `tools/migrate-legacy-install.ps1` | modify | 3 separate stops on a `_shared` dist dir | `:676-684` FOREIGN_FILE; `:709-719` `$null.adapters` under StrictMode; `:509-518` core-holder→preserve at `:626-632` |
+| `tools/inspect-host-install.ps1` | modify | Documented mirror of the migrator cascade — must not diverge | Read `:348-399`; `:365-373` is the twin of migrate `:509-518` |
+| `tools/install-skill-mesh.ps1` | modify | Uninstall must remove `_shared`; doc header enumerates only `<skill>/{SKILL.md,core.md}` | `:408-425` `Remove-OwnedFiles`; `:11-12` header; enumeration at `:589-597` needs no change |
+| `tools/gen_skill_tree.py` | modify | `_map_neutral` maps only 2 of the `references/*` targets; `transform()` never rewrites a relative backtick citation (code spans are protected at `:382`) | Read `:99`, `:213-219`, `:374-393`; sole reader of `support_assets` **in `tools/`** — but NOT repo-wide: `test_manifest_contract.py:156,258-271,534` and `test_skill_tree.py:238,263,312` also read it, and every one is a downstream consumer of any `support_assets` change |
+| `tools/gen_manifest.py` | refactor | Roster is hand-listed Python constants, not enumerated | Read `:34-150` (`PORTABLE`, `NATIVE`, `LOCAL_CAPABLE`, `SUB_AGENT`, `VISION`, `DESCRIPTIONS`); never enumerates `skills/` |
+| `_shared/` (repo root) | extend | Receives 7 vendored reference docs + a JS provenance header | 26 files present; all 5 referenced assets confirmed |
+| `skills/*/core.md` (9 files) | modify | 41 `../../_shared/` occurrences on 27 lines | Enumerated: build-phase `:7,546`; build-step `:7,187,620,624`; judge-ui `:12`; review-proof `:12`; review-deep `:12,23,762`; review-gauntlet `:12,25,222`; user-uat `:12`; skill-iterate `:153,155,388,396,507,509,522,590,705`; skill-evolve `:20,30,163` |
+| `skills/*/core.md` (10 files) | modify | 17 `../../references/` + 1 `../../rules/` occurrences | plan-init `:168,224,226,424`; plan-review `:201,245,511,592`; build-phase `:175`; plan-feature `:171`; repo-update `:160`; user-wrap `:27`; tier-escalate `:30`; tier-offload `:28`; user-gateway `:18,24`; user-afterparty `:202`. The 18th is the single `../../rules/` ref, also user-afterparty `:176` — do NOT double-count it in the `references` class |
+| `skills/judge-motion/providers/claude.md` | modify | Only adapter with `_shared` refs, at depth **3** (`core: null`, no core.md) | `:10`, `:529`; manifest `core: null` at `config/skill-manifest.json:309-312` |
+| `tests/distributions/test_distributions.py` | modify | Exact count formula and provenance-prefix assertion both break | `:186-187` `len(portable)*2+len(native)*1+2`; `:203` asserts `"Canonical source: skills/"` on **every** dist `*.md`; `:207-213`; `:408-415`; `:422-431` determinism |
+| `tests/package-integrity/test_skill_tree.py` | modify | Relative backtick refs return `None` — the whole defect class is unvalidated | `:354-356` `_ref_defect` early-return; `:256-271` divergence lock; `:188/:216` leak sweep scans `skills/` only |
+| `tests/package-integrity/test_manifest_contract.py` | modify | `global_support_assets` fixture must move with the manifest | `:286` equality vs `expected_inventory.json:1204`; leak gate `:377/:421` |
+| `tests/package-integrity/expected_inventory.json` | modify | Locked inventory fixture | `:1204` global-asset block |
+| `tests/distributions/test_legacy_migration.py` | modify | Asserts `_shared` is preserved and never managed — the policy this phase inverts | `:529-534`, `:631-645` (precise spans `:528-539`, `:631-634`, `:637-650`) |
+| `documentation/architecture.md` (+ `README.md`, `documentation/host-discovery.md`) | modify | CLAUDE.md calls `architecture.md` "the contract", and it describes the emitted tree and the `support_assets` model that this phase changes. Omitted from this table until now; Phase 8's Step 61 ("docs match shipped behavior") would inherit the drift | Read `:170` ("it emits a generated tree under `dist/<profile>/`"), `:241`, `:281` (`support_assets` enumerated per skill) |
+| `CLAUDE.md` | modify | Declares `python -m pytest tests/` the full suite — the direct contradiction of D6 that makes D6 inert for dev agents | Landed in Step 62 |
+| `documentation/host-native-discovery-cutover-plan.md` | modify | Residual stale roll-up preamble | `:677` date, `:679` "what remains is operator-only" |
+| `documentation/coding-root-cutover-handoff.md` | modify | §9.1 future tense | `:450` ("For pending Steps 49 and 50…"), `:467` ("for the pending runs"); must retain `operator evidence` (`:1097`) / `parked-work handshake` (`:1099-1100`) — the gated span is `:1095-1100`, not `:1095-1098` |
+| `documentation/provider-neutral-skill-mesh-plan.md` | modify | Step 41 supersession lacks completion | `:326-331`; the gate is **two** tests spanning `test_cutover_handoff.py:1322-1354` requiring **six** tokens (`**Status:** SUPERSEDED`, the superseding plan filename, `#50`, `operator action`, `2026-08-03`, `not/never a criterion`) **plus a five-phrase forbidden list** — not "5 tokens at `:1320-1352`" |
+
+## 5. New Components
+
+- **`tests/package-integrity/test_link_resolution.py`** — resolves every relative reference in `skills/**/*.md`,
+  `_shared/**/*.md`, and each built profile, in **backtick, bare-token, and markdown-link** forms. Carries
+  `KNOWN_DANGLING`, a frozen allowlist, plus a test asserting the allowlist never grows. Red-on-garbage anchor
+  plants a broken ref at runtime.
+- **`_shared/` inside each built profile** — `dist/claude/_shared/`, `dist/gpt/_shared/`. Eight assets:
+  `judge-core.md`, `score-skill.md`, `score_skill_composite.py`, `score_skill.workflow.js`,
+  `build_step_verdict.py`, plus the transitive closure `grader_prompt.py`, `calibrate_judge.py`,
+  `score_skill_absolute.py`. Closure citations (the earlier `judge-core.md:87,113` + `score-skill.md:111`
+  list understated it): `judge-core.md:87` → `grader_prompt.py` **and** `score_skill_absolute.py`;
+  `judge-core.md:113` → `calibrate_judge.py`; `score-skill.md` → `score_skill_absolute.py` at
+  `:16,111,158,235,344,358,364,386`, `grader_prompt.py` at `:187`, and `judge-core.md` at `:3,5`.
+  Resolve the closure by re-walking it at build time, not from this list.
+- **`Repoint-SharedReference`** in the builder — longest-token-first, ordered after the verdict repoint.
+- **`Add-JsProvenance`** in `skill-mesh-provenance.ps1` — `.js` marker. It must wrap `New-ProvenanceHeader`'s
+  output **verbatim** inside `/* */`. A bare `/* … */` marker of our own wording does **not** work:
+  `Test-SkillMeshProvenance` (`:43-55`, docstring `:14-18`) is *anchored* to an ordered three-line shape
+  (`<!-- GENERATED FILE - DO NOT EDIT.` → `Marker: SKILL-MESH-GENERATED-FILE` → `-->`). A non-conforming
+  marker makes the file foreign to install (`install-skill-mesh.ps1:599-614`), invisible to `owned_files`
+  (`Get-ExistingOwned:746-759`), and unremovable by uninstall (`:413-421`) — an orphan that Step 70's
+  no-orphan gate would nonetheless report as clean.
+- **Seven vendored reference docs** under `_shared/`: `step-authoring.md`, `task-state-schema.md`,
+  `skill-role-taxonomy.md`, `skill-pipeline.md`, `intake-engine.md`, `worktree-hygiene.md`, `subagent-economy.md`.
+
+## 6. Design Decisions
+
+**D1 — Ship `_shared/` at the profile root, not co-located per skill.** One copy per profile (~130 KB) versus
+~10 duplicated copies. It also fixes the Claude-side off-by-one, and it matches the shape the migrator already
+recognizes (`Get-DirEligibility` classifies a `SKILL.md`-less `_shared` as `core-holder`). Rejected: inlining
+shared prose into each core, which would triple core sizes and destroy greppability.
+
+**D2 — Rewrite longest-token-first.** `../../../_shared/` **literally contains** `../../_shared/` as a substring.
+A two-dot-first replace turns `judge-motion/providers/claude.md:10`'s three-dot ref into a two-dot ref — still
+broken, silently, with no test objecting. Order is: verdict-helper repoint → `../../../_shared/` → `../../_shared/`.
+The adapter rewrite must **not** be gated on `$hasCore`, because `judge-motion` is `core: null` yet references `_shared`.
+
+**D3 — `_shared` becomes a *managed* tree, and both twins change together.** Today `_shared` is `core-holder` ⇒
+preserve ⇒ `owned=false`. Once skill-mesh ships it, the same relative path lands in **both** the preserve set
+(`migrate-legacy-install.ps1:776-784`) and the install set (`:795-803`) with no collision guard (the only dedup
+is `managedRels` vs `installRels` at `:733`), and the rollback advisory (`:1251-1268`) would read skill-mesh's
+own new bytes as consumer drift under the D2 preserve-drift policy. Precision correction: that advisory does
+**not** escalate — `:1239-1240` states neither exit code changes and `:1261-1267` swallows its own failures — so
+the defect is a **false drift advisory naming the operator's own untouched path**, not a changed exit status.
+That is still a must-fix (it invites restoring a stale backup over newer bytes), but do not build the step
+around an escalation that cannot happen. So `:509-518` and its mirror `inspect-host-install.ps1:365-373` must reclassify together,
+`New-LedgerJson`'s contract comment (`:881-883`, "no `_shared` core-holder ever appears here") must be rewritten,
+and uninstall must be allowed to delete those files — which is correct **only if every one carries the marker**,
+hence the `.js` emitter is in scope, not optional.
+
+**D4 — Vendor references into `_shared/`, and treat the three existing copies as drifted, not done.**
+`intake-engine.md`, `skill-pipeline.md`, and `skill-role-taxonomy.md` were already vendored (commits `8de32f6`,
+`e55b6a8`) but have **diverged from source** (8,302 B vs 12,617 B for `skill-pipeline.md`; 17,261 vs 17,737;
+5,180 vs 5,278) and are **orphans** — no file under `skills/` references them. Blindly repointing
+`../../references/skill-pipeline.md` at the existing `_shared` copy silently swaps in stale doctrine and every
+gate stays green. Each of the three gets an explicit reconcile-or-fork decision recorded in the step.
+
+**D5 — Repoint as markdown links, never backticks.** `test_skill_tree.py:354-356` returns `None` for any relative
+non-link token, so a backtick repoint is validated by nothing and a typo ships green. Link form activates `:424`.
+
+**D6 — The DONE gate is `python -m pytest` from the repo root (912 tests), not `python -m pytest tests/` (587).**
+`_shared/test_build_step_verdict.py` carries 127 tests that `tests/` does not collect, and this phase modifies
+`_shared/`. This is precisely the cross-suite blind spot the build-phase halt contract cites from Phase 7 — two
+consecutive green subset gates merged a red `main`. Every step below names the root invocation explicitly.
+
+**D6 caveat (measured 2026-08-09, resolved by decision):** the root gate was **not green** at planning time —
+the three roots `tests/` does not collect contributed **3 failures**. Step 62 now **fixes** all three (operator
+decision, 2026-08-09) rather than freezing them, so from Step 63 onward the root gate is genuinely green and
+there is no Known-Failing set. Steps still phrase their gate as `>= baseline against the recorded counts`
+rather than a bare "green", because that is the comparison the halt contract actually needs; the point of the
+fix is that the baseline is a clean one. Do not reintroduce a frozen-failure list — it would poison every
+downstream comparison, and CLAUDE.md would be publishing a red command as the project's declared full suite.
+
+**D7 — Land the gate before the fix, with a shrink-only allowlist.** Writing the test alongside the fix produces
+a test written to pass — the codifying-test-diff anti-pattern. Instead Step 63 lands the detector with today's
+59 known-dangling refs frozen in `KNOWN_DANGLING`, and each later step deletes entries. The burn-down is the evidence.
+
+## 7. Build Steps
+
+<!-- autofix-applied: 2026-08-09 -->
+### Step 62: Fix the root gate, capture a true baseline, and rescue the orphaned calibration note
+- **Problem:** Fast-forward `host-native-acceptance-step49` into `main` (as a prerequisite), fix the three root-only test failures so the D6 gate is actually green, record the real full-suite baseline from the repo root, make CLAUDE.md agree with D6, and commit the one surviving copy of `judge-ui/calibration-notes.md` before anything can overwrite it — so every later step has a trustworthy `count >= baseline` comparison, every dev agent reads the same gate command, and no manifest-declared asset exists only in a consumer tree
+- **Type:** code
+- **Issue:** #93
+- **Flags:** --reviewers auto
+- **The branch publish is a PREREQUISITE, not step work.** Verified 2026-08-09: `main` is at `22b2974`, the branch is 4 commits ahead (`ba4a646`, `b61c3c0`, `40d7b7c`, `8e8589c`), so this is a true fast-forward. Do it as two operator commands **before** `/build-phase`, not inside a build step — `/build-step` runs its dev agent in a worktree (`--isolation` offers only `worktree`/`docker`), a ref move produces zero file diff so build-step's classifier (`build-step/core.md:688`) and its cleanup (`:699-701`) cannot see or revert it, and build-step stashes untracked files (`:155-159`) before creating the worktree, so the dev agent cannot commit the plan doc either. **Use `git push origin host-native-acceptance-step49:main`** — server-side fast-forward-only, and it refuses a checked-out target. Do **not** use `git branch -f main <sha>`: measured on git 2.52.0, that exits 0 on a *non*-fast-forward move and silently discards commits, and it never publishes. Then `git -C <project-root> checkout main`, so Steps 63–70's worktree merges and checkpoint commits land on `main` rather than on the acceptance branch. Every later step's ship gate baselines on `origin/$DEFAULT` (`build-step/core.md:686`), so an unpublished `main` leaves all of them 4 commits stale
+- **Produces:** fixes for the three root-only failures; `skills/judge-ui/calibration-notes.md` committed from the surviving 2,491-byte copy; `documentation/phase-75-baseline.md` recording collected/passed/skipped for `python -m pytest` (repo root) and for `tests/`; a CLAUDE.md **Key commands** correction naming the repo-root invocation as the DONE gate
+- **DECIDED 2026-08-09 — FIX the three, do not freeze them.** The repo-root gate is red today: `python -m pytest` over the three root-only roots reports **3 failed, 322 passed** — `SkillsRootResolutionTest` in `skill-iterate/scripts/test_adversarial_calibration.py` and in `skill-eval-setup/scripts/test_generate_bad_examples.py` (both `AssertionError: 'skill-mesh' != 'skills'`, i.e. the skills-root resolver does not recognise this repo's layout), and `CalibrateFleetAutoDiscoverDefaultTest` (`0 not greater than or equal to 1`, an auto-discovery finding nothing). Fix all three so the D6 gate is genuinely green; there is no Known-Failing set and no step may cite one. If a fix turns out to require redesign rather than repair, stop and escalate rather than silently converting it back into a frozen failure — a frozen entry here would poison every downstream `>= baseline` comparison in the phase
+- **DECIDED 2026-08-09 — vendor `judge-ui/calibration-notes.md`, and do it HERE, first.** Measured: the file exists in exactly one location on the machine, the installed GPT tree (2,491 B), and `git log --all -- '**/calibration-notes.md'` in this repo returns **nothing** — it has never been committed. `config/skill-manifest.json:378-379` already declares its dest as `skills/judge-ui/calibration-notes.md`, so the canonical tree is simply missing a file the manifest says it owns. It must be rescued in this step, before Step 64's `-Force` take-ownership install (see Step 64) can overwrite the only surviving copy. Copy the bytes to `skills/judge-ui/calibration-notes.md`, commit them, and leave `test_manifest_contract.py:279` asserting — it then passes against a real file instead of being deleted to accommodate an absent one
+- **Done when:** `origin/main` equals the acceptance-branch tip after `git fetch origin` (the prerequisite publish actually landed — a local-only ref move does not count); `python -m pytest` from the repo root is **green with zero failures** — this step is the one place in the phase where that phrase is legitimate, because this step is what makes it true; the counts are written to `phase-75-baseline.md` and every later step compares `>= baseline` against them; `skills/judge-ui/calibration-notes.md` is tracked by `git ls-files` (untracked files can never enter a release artifact, which is why the GPT profile ships without it today) and `test_manifest_contract.py:279` passes against the real file; **CLAUDE.md no longer calls `python -m pytest tests/` the full suite** (it does today, which contradicts D6 and is the one instruction a fresh dev agent actually reads, so D6 is inert until this lands) and the same correction reaches its sibling statements at `CLAUDE.md:20,31-35,168` and `architecture.md:388-391` under ONE owner; the plan document is committed **and pushed** on the branch the minted issues link to (asserted here, performed as a precondition — this repo has a live instance of the failure, issues #1–#37 pointing at a plan doc on no pushed branch); `.plan-expedite-state.provider-expansion-20260809` is disposed of deliberately (it is Phase 8 expedite state, not Phase 7.5's — do not sweep it into a commit)
+- **Depends on:** none
+
+<!-- autofix-applied: 2026-08-09 -->
+### Step 63: Land the link-resolution gate with a frozen shrink-only allowlist
+- **Problem:** No suite resolves a relative reference in any core, `_shared` doc, or built profile — which is why 59 dangling refs shipped green. Build the detector first, freeze today's failures, and assert the list can only shrink
+- **Type:** code
+- **Issue:** #94
+- **Flags:** --reviewers code
+- **Produces:** `tests/package-integrity/test_link_resolution.py` with `KNOWN_DANGLING`, a monotonic-shrink assertion, and a runtime-planted red-on-garbage anchor. **The allowlist is FOUR classes, not one count — the earlier "59" was wrong and internally contradictory.** Freeze every ref the detector finds dangling at authoring time and tag each with its class: (a) **anchored `_shared`, 43** — 41 depth-2 occurrences over 27 lines in 9 `core.md` files PLUS the 2 depth-3 refs in `skills/judge-motion/providers/claude.md:10,529`, which dangle identically and were omitted from the old 41; (b) **anchored `references`/`rules`, 18** — 17 + 1; (c) **bare non-anchored `_shared/` prose tokens, 25** (not 24: skill-iterate 11, skill-eval-setup 4, review-deep 3, judge-motion/providers 2, review-gauntlet 2, judge-ui 1, review-proof 1, user-uat 1); (d) **home-anchored residual, 17** — 13 `.claude/references/model-tiering.md` + 4 `../../../docs/` (not 5). Record the exact per-class totals the detector actually produces; classes (a) and (b) burn down to zero in Steps 64 and 66, classes (c) and (d) are declared permanent residual with a written reason
+- **Allowlist entry shape (define it once; the three assertions above all key on it):**
+
+  | field | type | note |
+  |---|---|---|
+  | `source` | str | repo-relative path of the citing file |
+  | `raw` | str | the reference token exactly as written |
+  | `target` | str | what `raw` resolves to, normalized and repo-relative |
+  | `form` | enum | `link` \| `backtick` \| `bare` |
+  | `class` | enum | `shared_anchored` \| `references_anchored` \| `rules_anchored` \| `shared_bare` \| `home_anchored` |
+  | `line` | int | informational only — **excluded from the entry key** |
+
+  The key is `(source, raw, form)`. Keep `line` **out** of it: an entry keyed on a line number turns every unrelated edit above a citation into a spurious "new dangling ref", and the burn-down would then be measuring churn rather than repair. Assertion 3 re-resolves `target` from `source`, so it needs no line number
+- **Done when:** the detector's own first run writes the frozen baseline to a committed data file — **do not hand-count a literal**, which is how the "59" defect happened; and the gate carries all **three** assertions below, because a bare "monotonic shrink" over a literal each step edits is a tautology with three known gaming vectors (narrow the detector; rewrite an entry to a normalized spelling instead of deleting it; delete one entry while an identical sibling ref still dangles):
+  1. `set(detected) <= set(KNOWN_DANGLING)` — any NEW dangling ref hard-fails.
+  2. `set(KNOWN_DANGLING) <= set(FROZEN_BASELINE)`, where `FROZEN_BASELINE` is **`tests/package-integrity/link_baseline.json`** — a separate committed file **no step may edit** (say so in a header comment inside it). This is the only immutable comparand; without it "shrink-only" compares a literal against itself.
+  3. every `KNOWN_DANGLING` entry **still dangles** — kills rewrite-instead-of-delete.
+  Plus a **detector-scope floor**: files-scanned and refs-extracted must each stay `>=` a committed minimum, so narrowing the detector reds instead of silently satisfying a burn-down (the precedent is real — `test_skill_tree.py:353-356` already returns `None` for relative non-link tokens, which is exactly how this defect class shipped). Also: the red-on-garbage anchor is a pure-function call on synthetic inputs, in the style of `test_skill_tree.py:406-421`; the anchor assembles any `.claude` literal as `"." + "claude"` so `tests/router/test_no_claude_dependency.py:41` stays green; `python -m pytest` from the repo root is `>= baseline` per Step 62
+- **Depends on:** 62
+
+<!-- autofix-applied: 2026-08-09 -->
+### Step 64: Ship `_shared/` into both profiles with a longest-token-first rewrite
+- **Problem:** The builder emits only `SKILL.md` + `core.md`, so 9 cores and 1 adapter ship dangling `_shared` references. Emit the 8-asset transitive closure into `dist/<profile>/_shared/` and repoint every reference to `../_shared/x`
+- **Type:** code
+- **Issue:** #95
+- **Flags:** --reviewers deep
+- **Produces:** `Repoint-SharedReference` and the `_shared` emit in `tools/build-distributions.ps1`; `Add-JsProvenance` in `tools/skill-mesh-provenance.ps1` (wrapping `New-ProvenanceHeader` verbatim — see §5); a second `$SHARED_ROOT`-scoped `Resolve-SafePath` copying the existing `:355` pattern (note: `Resolve-SafeSource` does **not** need widening — the precise fix is a second scoped resolve, not a loosened guard); updated `tests/distributions/test_distributions.py` count formula (`:186-187`), provenance-prefix assertion (`:203`), and the minimal-manifest case at **`:961`**, which asserts the gpt profile contains ZERO `*.md` and breaks on an unconditional `_shared/*.md` emit
+- **DECIDED 2026-08-09 — documented `-Force` take-ownership.** Without it the first install after this step REFUSES on the real consumer home: `<user-home>/.claude/skills/_shared/` already holds **43 marker-less files** (its `judge-core.md` is 21,109 B with no marker) and **7 of this step's 8 assets collide by name**; `install-skill-mesh.ps1:599-604` classes any marker-less existing target FOREIGN and `:607-613` throws "REFUSING to install", writing nothing. A fresh throwaway home (Step 70) structurally cannot surface this. Take-ownership is safe **only with all four guardrails**, and this step must implement and test them, because `-Force` is precisely the flag that turns the installer's refusal into a silent overwrite:
+  1. **Back up before overwriting** — record path, pre-hash, and bytes for every colliding file, into the Step 71 cutover record. Take-ownership without a restore path is data loss with extra steps.
+  2. **Scope it.** `-Force` must apply to the `_shared/` payload collisions only. If the flag is global, compensate by requiring a clean `tools/inspect-host-install.ps1` run first that reports **zero** foreign files outside `_shared/` — never force a home you have not just inspected.
+  3. **Leave the other 36 alone.** The non-payload marker-less files (`README.md`, five `test_*.py`, `__pycache__`, …) must be byte-unchanged afterwards; this is Step 65's per-FILE rule and take-ownership must not become a directory-wide claim.
+  4. **Prove ownership landed** — after install, all 8 payload files carry a `Test-SkillMeshProvenance`-valid marker and appear in `owned_files`, so uninstall can actually remove them. Taking ownership without the marker just converts a refusal into an orphan
+- **Done when:** `dist/claude/_shared/` and `dist/gpt/_shared/` each hold all 8 assets, and **`Test-SkillMeshProvenance` returns true for every emitted `_shared/*` file regardless of extension** (not "carries a marker" by eye — the `.js` asset is exactly where a hand-rolled marker silently fails); zero `../../_shared/` or `../../../_shared/` survives in any emitted file; every emitted `../_shared/x` resolves on disk; `judge-motion`'s adapter (a `core: null` skill, so the rewrite must **not** be gated on `$hasCore`) is rewritten correctly; the two-build determinism check at `:422-431` still passes; `KNOWN_DANGLING` class (a) shrinks to zero — all **43** anchored `_shared` entries, the 41 depth-2 plus judge-motion's 2 depth-3; the open question below is answered in writing; `python -m pytest` from the repo root is `>= baseline`
+- **Open question this step must CLOSE (it currently has no landing place):** does `build_step_verdict.py` stay co-located per skill, or collapse to the shared copy? §5 already ships it in `_shared/` and D2 keeps `Repoint-VerdictHelperReference`, so today it is decided by omission — record KEEP or COLLAPSE explicitly, because it governs whether `test_distributions.py:408-415` gets edited
+- **Depends on:** 63
+
+<!-- autofix-applied: 2026-08-09 -->
+### Step 65: Reclassify `_shared` as managed across the migrator and inspector
+- **Problem:** A `_shared` directory in a dist tree hits three separate stops in the migrator, and once it exists in a consumer home the same path lands in both the preserve set and the install set with no collision guard — so a version bump would emit a false drift advisory against skill-mesh's own bytes (see D3: it misreports, it does not change an exit code)
+- **Type:** code
+- **Issue:** #96
+- **Flags:** --reviewers deep
+- **Produces:** first-segment allowlist at `migrate-legacy-install.ps1:676-684`; `_shared`-aware `MISSING_PROFILE` loop at `:709-719`; managed reclassification at `:509-518` and its mirror `inspect-host-install.ps1:365-373`; rewritten `New-LedgerJson` contract comment (`:881-883`); uninstall coverage at `install-skill-mesh.ps1:408-425`; updated `tests/distributions/test_legacy_migration.py:529-534,631-645`
+- **Classify per FILE, not per directory.** A `_shared` path present in the dist is managed; one absent from the dist stays preserved. Directory-level reclassification drops every consumer-authored `_shared` file out of *all* audit records at once — `Get-RootScan` (`:626-632`) routes non-managed files to preserve and retire takes only marker-bearing files (`:737`), so a marker-free file absent from the dist lands in **no** action: no preserve action (`:776-784`), no `BackupManifest.preserved_files` hash (`:943-947`), no precondition row (`:1194-1197`), no post-install row (`:1211-1213`), no drift advisory (`:1251-1256`). The live `_shared/` holds 15 entries beyond the 8 shipped (`README.md`, five `test_*.py`, `__pycache__`), so a blanket reclassification silently un-audits all of them
+- **The migrator has no marker guard — the installer does.** `install-skill-mesh.ps1:599-614` refuses any target lacking the marker, with a TOCTOU recheck at `:681-688`. `migrate-legacy-install.ps1`'s install action has no equivalent, so making `_shared` managed hands the migrator permission to overwrite consumer-owned bytes the installer would refuse. Add the marker check to the migrator's install path in this step, or the reclassification is strictly less safe than what it replaces
+- **Done when:** a dry-run migration against a synthesized home that already contains a hand-authored `_shared/` completes without `FOREIGN_FILE` and without a `$null` dereference under `Set-StrictMode -Version Latest` (note the `$null` deref at `:712` is *latent* — `:683`'s `continue` makes it unreachable until the first-segment stop is lifted, so it only fires once this step lands); **an APPLY run, not only a dry-run** — `migrate-legacy-install.ps1:14-16` states a dry-run "mutates NOTHING", so a dry-run cannot exercise the write paths this step changes; no relative path appears in both the preserve and install action sets; no marker-bearing `_shared` file survives uninstall, **and** every non-marker `_shared` file is byte-unchanged and still appears in `BackupManifest.preserved_files` with its hash and drift advisory; convergence is asserted at the *plan* level by comparing `-Format json` action sets for run 2 vs run 3 (today `test_legacy_migration.py:604-612` compares only a tree digest, which cannot see an action-set difference); `python -m pytest` from the repo root is `>= baseline`
+- **Depends on:** 64
+
+<!-- autofix-applied: 2026-08-09 -->
+### Step 66: Vendor the seven workspace references, scrubbed and de-drifted
+- **Problem:** Ten cores cite `../../references/…` and one cites `../../rules/…`; skill-mesh has no such directories. Vendor the seven targets into `_shared/`, reconcile the three stale copies already there, scrub the one leak, and extend the leak sweep to cover `_shared/` — which nothing scans today
+- **Type:** code
+- **Issue:** #97
+- **Flags:** --reviewers deep
+- **Vendor-source map (resolved by citation form — do NOT guess):** `step-authoring.md` ← `<coding-root>/.claude/references/` (4,717 B, cited 11×: build-phase `:175`, plan-review `:201,245,511,592`, plan-init `:168,224,226,424`, plan-feature `:171`, repo-update `:160`); `task-state-schema.md` ← `references/` (12,590 B, user-wrap `:27`); `skill-pipeline.md` ← `references/` (12,617 B, user-gateway `:18`); `intake-engine.md` ← `references/` (17,737 B, user-gateway `:24`); `skill-role-taxonomy.md` ← `references/` (5,278 B, tier-escalate `:30`, tier-offload `:28`); `worktree-hygiene.md` ← `references/` (**5,901 B**, user-afterparty `:202`) — a 672 B stub of the same name also exists under `rules/`; vendoring the stub would silently drop the 7-landmine content, so take the `references/` copy; `subagent-economy.md` ← **`rules/`** (3,554 B, user-afterparty `:176`) — no `references/` copy exists
+- **Produces:** seven files under `_shared/`; a recorded reconcile-or-fork decision for each of `intake-engine.md`, `skill-pipeline.md`, `skill-role-taxonomy.md`; the 18 citations rewritten to markdown-link form; `_LEAK_PATTERNS` sweep extended to `_shared/**`; updated `expected_inventory.json:1204` if `global_support_assets` moves
+- **The scrub is NOT one line. Per-file verdicts, measured 2026-08-09** — running all five `_LEAK_PATTERNS` (`test_skill_tree.py:188-194`) over the seven sources hits only `task-state-schema.md:32`, yet these are missed by **all five patterns** and are real disclosure into a public repo: a raw harness session UUID at `task-state-schema.md:31` (the line immediately *above* the one the plan scrubs); `83% of billed tokens` at `subagent-economy.md:3` plus its `:31` sourcing line (account cost telemetry, cited from two private investigation docs); cross-repo issue pointers into `aberson/coding-root`, which is **private** — `issue #295` (`task-state-schema.md:190`) and `post-#227` (`skill-pipeline.md:96`); harness config paths (`task-state-schema.md:185,211`); and a private cron name `dev-sprint-wrap-monthly` (`skill-pipeline.md:148`). Verdicts: `step-authoring.md`, `skill-role-taxonomy.md`, `intake-engine.md`, `worktree-hygiene.md` = **SAFE**; scrub `task-state-schema.md:31,185,190,211`, `subagent-economy.md:3,31`, `skill-pipeline.md:96,145,148`. Add a hex-UUID regex to the sweep — patterns keyed on drive letters and home paths cannot see any of the above
+- **Vendor source root must be a contract, not a path.** The seven sources live outside this repo (`skill-mesh/.claude` does not exist) and committing their absolute path is blocked by `test_manifest_contract.py:380-411`. Use the env-var contract `gen_manifest.py:12-19` already established for exactly this problem; do not hard-code
+- **The seven are not transitively closed:** they carry 19 `](target)` links, 14 of them external to 8 further targets (`../rules/code-quality.md` ×4, `measurement-validity` ×2, `knowledge-placement`, `working-directory`, `descriptor-contract`, `shakedown-engine` ×3, `windows-shell`, `../../docs/current-md-race-fix-plan.md`). D7 forbids `KNOWN_DANGLING` from growing, so each of the 14 needs an explicit disposition — vendor, convert to prose, or an approved allowlist *replacement* (state in Step 63 whether replacement is permitted at all)
+- **Done when:** the `~/.claude/projects/…jsonl` line at source `task-state-schema.md:32` is absent from the vendored copy — it trips 3 of 5 `_LEAK_PATTERNS` but has no drive letter, so the repo-wide gate misses it and only the extended sweep catches it; **every one of the seven carries a written per-file SAFE-or-scrubbed sign-off** covering identifiers, cross-repo issue refs, account metrics, harness-config disclosure, and references to tooling skill-mesh does not ship; each of the 14 external links has a recorded disposition; the reconcile-or-fork decisions land in a **named in-repo doc**, not just a commit message; every vendored file's own outbound relative links either resolve or are converted to prose; no `skills/_shared/` string is introduced (the two real string locks are `test_skill_tree.py:270-271` and `:240` via test `:244-253`, and **both scan `skills/**/*.md` only** — `:267` is a directory-existence guard, a different check, so "locked anywhere" was never true; if you need repo-wide coverage, widen a lock deliberately rather than relying on `:267`); `KNOWN_DANGLING` shrinks to zero for the references and rules classes; `python -m pytest` from the repo root is green at or above baseline
+- **Depends on:** 64
+
+<!-- autofix-applied: 2026-08-09 -->
+### Step 67: Make the generators reproduce the committed tree
+- **Problem:** RETARGETED — the original framing was measured false. The hand-listed roster is **not** the drift source. Running `gen_manifest.py`'s `build()` against the coding root with per-skill `support_assets` stripped reproduces `config/skill-manifest.json` **byte-identically**, and the derived sets match the constants exactly (the 47 skills carrying `providers/gpt.md` == `sorted(PORTABLE)`; the 3 without == `sorted(NATIVE)` == the manifest's `core: null` set). So "enumerate `skills/` instead of the `:34-150` constants" changes no committed byte while deleting four sets that are **non-derivable by design** — `LOCAL_CAPABLE` (a semantic "bounded judge/grader single-call slice" membership), `SUB_AGENT`, `VISION`, and `DESCRIPTIONS` (all 50 `claude.md` `description:` values are launcher boilerplate that mismatches the manifest, and `gpt.md` carries no frontmatter at all, so descriptions cannot be derived from disk; deleting them also reds `test_distributions.py:346`). The **real** non-reproducing input is `scan_skill_assets` (`:156-182`), which walks an *external* legacy root that the Step 50 cutover already overwrote: regeneration drifts 47 of 50 skills / 360 lines, all inside `support_assets` — it ADDS 49 sources including 47 `.claude/skills/<name>/core.md` (skill-mesh's own installed output feeding back into its own manifest) and REMOVES `.claude/skills-gpt/judge-ui/calibration-notes.md`, hard-redding `test_manifest_contract.py:279`
+- **Type:** code
+- **Issue:** #98
+- **Flags:** --reviewers deep
+- **DECIDED 2026-08-09 — vendored, and already rescued in Step 62.** `judge-ui/calibration-notes.md` is manifest-declared (`:378-379`) but was absent from `git ls-files` with its only copy in the installed GPT tree. Step 62 commits it to `skills/judge-ui/calibration-notes.md`, so by the time this step runs the manifest entry resolves to a real tracked file and `test_manifest_contract.py:279` is left asserting rather than deleted. This step therefore does **not** drop the entry — it just stops depending on the retired legacy root to produce it
+- **Produces:** a **hermetic** `gen_manifest.py` — bake the committed `support_assets` in as a checked-in constant (the same rationale `:86-97` already gives for `DESCRIPTIONS`) or enumerate the committed `skills/<name>/` tree, so generation no longer depends on an external root the cutover mutated; at most a 3-line `assert derived == PORTABLE/NATIVE` guard for the two genuinely derivable sets (a guard, not a rewrite); the four non-derivable sets left as constants with a comment saying why; a relative-citation rewriter plus `references/*` entries in `gen_skill_tree.py`'s `_map_neutral` (`:213-219`)
+- **Done when:** a regenerated manifest is byte-identical to the committed one **without** `SKILL_MESH_LEGACY_SOURCE` being set — the legacy-reproduce clause is **deleted** from this step, because the source it reads no longer exists in a reproducible state (`test_skill_tree.py:456-482` errors on missing `legacy_rel` bytes rather than passing, and `test_manifest_contract.py:521-537` fails identically); any enumeration that does land gates on `p.is_dir()` so `skills/inventory.json` is skipped, excludes `_shared/`, and asserts 50 / 47 portable / 3 native; `python -m pytest` from the repo root is `>= baseline`
+- **Depends on:** 64, 66
+
+<!-- autofix-applied: 2026-08-09 -->
+### Step 68: Fix the colon-bearing Claude frontmatter value (issue #69)
+- **Problem:** CORRECTED — the original premise named a component that does not exist. There is **no Claude frontmatter builder**. `tools/build-distributions.ps1:322-323` says so outright ("Claude output is untouched -- its canonical claude.md already ships frontmatter"); the frontmatter passes through verbatim via `Read-SourceText` (`:312`). The only synthesizer is `New-GptFrontmatter` (`:186-199`, called at `:331`), which already quotes through `ConvertTo-YamlDoubleQuoted` (`:178-184`) and emits only `name` + `description` — no builder path emits `argument:` at all. Measured scope: 50 of 50 Claude adapters carry frontmatter, **49 parse cleanly under strict PyYAML and exactly one fails** — `skills/context-slim/providers/claude.md`, the only file in the repo with an `argument` key. The harmed consumer is **not** Claude Code, which loads the file fine; it is Copilot's secondary scan of `.claude/skills`
+- **Type:** code
+- **Issue:** #99
+- **Flags:** --reviewers code
+- **Do NOT quote every scalar.** Key tally across the 50 blocks: `name` 50, `description` 50, `user-invocable` 49, `user-invokable` 1, `argument` 1. Blanket quoting turns `user-invocable: true` into the string `"true"` and — worse — `user-invokable: false` (`skills/claude-oauth-auth/providers/claude.md:4`) into `"false"`, which is **truthy** in every strict parser, silently flipping a deliberate suppression flag. Today's gates would ship that green: `test_distributions.py:328-337` asserts key *presence* only, and the in-repo `_parse_leading_frontmatter` (`:260-276`, explicitly "No third-party YAML dependency") happily parses the unquoted value. Quote only the string-valued keys (`description`, `argument`), or quote-when-needed
+- **Produces:** the fix — one source edit to `context-slim`'s `argument` value is sufficient for today's tree, so the choice is that plus a permanent gate, versus a normalizer at the shared emit choke point (which also covers the untested GPT pass-through branch at `:305`). Prefer the choke-point normalizer only if it can be shown to preserve already-quoted, multi-line, and quote-containing values; a strict-parser gate either way. Also **the `user-invokable` typo at `claude-oauth-auth:4` is a live defect this step should surface**, since a key allowlist catches it for free
+- **Done when:** a planted colon-bearing `description` **and** `argument` round-trip through a **strict** YAML parse in both profiles (declare PyYAML in CLAUDE.md's Environment requirements, or write a red-on-garbage scanner anchored like `:316-325` — nothing in `tests/` or `tools/` imports `yaml` today, so "passes a YAML parse" is currently unverifiable); the gate asserts `user-invocable is True` (identity, not truthiness) plus a key allowlist that reds on `user-invokable`; `context-slim`'s real value parses; already-quoted values are not double-quoted; `python -m pytest` from the repo root is `>= baseline`
+- **Also in scope — this step falsifies a documented operator instruction whose gate stays green.** `documentation/coding-root-cutover-handoff.md:636-651` tells the operator that context-slim's YAML error "is expected and is not a failure", and sets the discriminator "Any other skill named in a YAML error is a real failure". `tests/package-integrity/test_cutover_handoff.py:1241-1254` hard-locks that prose and will **not** notice the fix. Rewrite both: after this step, ANY skill named in a Copilot YAML error — context-slim included — is a real failure
+- **Depends on:** 62
+
+<!-- autofix-applied: 2026-08-09 -->
+### Step 69: Close the residual doc reconciliation and adjudicate the narrowed README gate
+- **Problem:** Commit `8e8589c` reconciled most Phase 7 status text but left three spots. It **deleted nothing** — the earlier "deleted gate" framing was wrong: it renamed and rewrote `test_readme_points_at_the_handoff_without_claiming_acceptance` into `..._with_the_completed_cutover_status` in place (`tests/package-integrity/test_cutover_handoff.py:965-977`), retiring a four-phrase anti-overclaim loop (`host acceptance passed`, `acceptance is complete`, `cutover is complete`, `steps 48-50 are done`) plus a `steps 49` assertion, and adding four completion assertions. What needs adjudicating is that **retirement**
+- **Type:** code
+- **Issue:** #100
+- **Flags:** --reviewers code
+- **Pre-recorded verdict: KEEP RETIRED.** Do not leave this as "restore or justify" — that phrasing invites a reviewer to demand restoration, and restoring would red a *truthful* README: the retired `steps 49` assertion is false against today's text, and the four banned phrases forbid prose that is now simply true. The step records the reason; it does not re-litigate it
+- **Produces:** corrected `host-native-discovery-cutover-plan.md:677,679`, `coding-root-cutover-handoff.md:450,467`, `provider-neutral-skill-mesh-plan.md:326-347`; the KEEP-RETIRED rationale written down
+- **Done when:** no doc claims Phase 7 **cutover-path (Steps 42–50)** work is outstanding — scope the clause that way, because Step 47b legitimately remains PENDING and the cutover plan carries `| 47b … | **PENDING** |` at `:689`, so an unscoped "no doc claims work outstanding" contradicts the very next clause; Step 47b is still described as PENDING everywhere it appears; the handoff retains `operator evidence` and `parked-work handshake` (gated span `:1092-1100`, four tokens) and the Step 41 block retains its **six** gated tokens plus the five-phrase forbidden list across the two tests at `:1322-1354`; **the surviving README assertion bans `what remains is operator-only`, yet `host-native-discovery-cutover-plan.md:679` carries that exact string today and the gate scans only `README.md`** — so either that string goes or the gate's scope widens, decided explicitly rather than left to luck; `python -m pytest` from the repo root is `>= baseline`
+- **Depends on:** 62, 68 — 68 rewrites the handoff's "one expected YAML error" section (`:636-651`) and its gate (`:1241-1254`), which is doc reconciliation this step would otherwise collide with
+
+<!-- autofix-applied: 2026-08-09 -->
+### Step 70: Release-candidate rehearsal against a throwaway home
+- **Problem:** Every prior step is verified in-repo. Nothing has yet proved that a *clean consumer home* — one with no preserved legacy `_shared/` to fall back on — receives a self-contained skill tree. This is the producer→consumer smoke gate for the whole phase
+- **Type:** code
+- **Issue:** #101
+- **Flags:** --reviewers code
+- **Produces:** a rehearsal record at `documentation/phase-75-release-rehearsal.md` with per-profile file counts, dangling-ref counts, and checksums
+- **Done when:** `tools/release.ps1` completes and writes `CHECKSUMS.txt`; both profiles install into a fresh throwaway home; **and also into a home PRE-SEEDED with a marker-less `_shared/judge-core.md`** — the shape the real consumer home is in today (43 marker-less files) — where the decided `-Force` take-ownership policy produces a tested outcome rather than the exit-1 refusal discovered in production, with all four Step 64 guardrails asserted: colliding files backed up with pre-hashes, nothing outside `_shared/` forced, the non-payload marker-less files byte-unchanged, and all 8 payload files marker-valid and present in `owned_files`; `tools/inspect-host-install.ps1` reports zero foreign files and zero unowned generated files in both roots; **a scripted resolver walks every relative reference in both installed trees and reports zero unresolvable links**; the no-orphan clause is asserted **against the dist file set** — every path under `dist/<profile>/` appears in `owned_files` after install and is absent from disk after uninstall (the current wording, "removes every owned file", is satisfiable while a non-marker orphan sits on disk, because a marker-less file never enters `owned_files` at all); **`_shared/` is provably not skill-shaped** — no `SKILL.md` exists at any level under `dist/<profile>/_shared/` or under the installed `_shared/`, so no host can mistake the new top-level directory for a skill (it is otherwise exactly the assumption class Step 43 DISPROVED for `.copilot/skills`). The *observed* host behaviour — launching Copilot CLI and Claude Code and confirming what each actually lists — is deliberately **not** asserted here: this is a `Type: code` step, and requiring a human to launch two interactive hosts inside it would make it a code/operator hybrid that forces a mid-build halt. That check belongs to Step 71, which is `Type: operator` precisely so it can carry it; `python -m pytest` from the repo root is `>= baseline`
+- **Note on sequencing:** this step is first contact between an *installed* tree and the link resolver (Step 64 resolves only inside `dist/`, Step 65's gate never resolves links). Consider moving the installed-home resolver into Step 65, reusing the existing `full_dist` fixture (`test_legacy_migration.py:178-184,444` already builds a real dist into a synthesized home), so a depth or emit defect surfaces one step after it is introduced rather than five
+- **Depends on:** 64, 65, 66, 67, 68
+
+<!-- autofix-applied: 2026-08-09 -->
+### Step 71: Cut the live consumer home over and hand off to Phase 8
+- **Problem:** Every step up to here verifies in-repo or against a throwaway home. The two trees that actually exist — `<user-home>/.claude/skills` and `<coding-root>/.github/skills` — still carry the 43 + 18 dangling references this phase exists to eliminate, so without this step Phase 7.5 ships a repo fix that never reaches the machine. Re-install both profiles into the live home under the decided take-ownership policy, confirm both native hosts still resolve, and record the Phase 8 run order
+- **Type:** operator
+- **Issue:** #102
+- **Flags:** n/a (`Type: operator` — `/build-phase` does not spawn `/build-step` for operator steps, so reviewer flags are inert)
+- **Two different `-Home` values.** These profiles are not co-located: install Claude with the user home and GPT with the **coding root**, because `.github/skills` is a *project* discovery root (`tools/skill-mesh-discovery.ps1:53-61` resolves both roots relative to whatever `-Home` is passed). Installing GPT at the user home would create a second, unread tree rather than updating the live one
+- **Take a real backup first.** `-Force` take-ownership overwrites 7 colliding files in a directory that until Step 62 held the only copy of a manifest-declared asset. Capture the external backup before the first forced write, not after
+- **Produces:** `documentation/phase-75-live-cutover-record.md` — per-root file counts before and after, the take-ownership backup manifest (path + pre-hash for every overwritten file), dangling-reference counts before and after, both hosts' resolution evidence, and the recorded Phase 8 run order
+- **Done when:** both profiles are re-installed into their correct live roots; `tools/inspect-host-install.ps1` reports zero foreign files and zero unowned generated files in **both** live roots; the Step 70 scripted resolver reports **zero unresolvable links in the live trees** (not just the throwaway — this is the claim the whole phase is making); Claude Code and Copilot CLI each resolve the representative `plan-review` profile from their own discovery root and **neither lists nor errors on `_shared` as a skill**; the legacy `-Model` router path still works through the generated compatibility shim (the Step 50 guarantee must not regress); every overwritten file is recoverable from the recorded backup; and the Phase 8 handoff is written down — **Phase 7.5 runs to completion first, then Phase 8**, with Phase 8's Step 55 re-read against the now-hermetic `gen_manifest.py` before it resumes (the semantic constants it depends on survive Step 67's retarget, so the collision is defused to a same-file merge risk rather than a semantic one)
+- **Depends on:** 70
+
+## 8. Risks and Open Questions
+
+| Item | Risk | Mitigation |
+|---|---|---|
+| Rewrite order | `../../../_shared/` contains `../../_shared/`; a two-dot-first replace silently half-fixes `judge-motion` | D2 mandates longest-token-first; Step 64's Done-when asserts zero survivors of **both** forms |
+| Diverged vendored copies | Repointing at the existing `_shared/skill-pipeline.md` swaps 12,617 B of doctrine for a stale 8,302 B copy, and every gate stays green | D4 requires a recorded reconcile-or-fork decision per file before repointing |
+| Leak with no gate coverage | `task-state-schema.md:32` carries a session-dir slug with no drive letter — the repo-wide gate's regex misses it and the pattern gate scans `skills/` only | Step 66 extends the sweep to `_shared/**` **in the same step** as the vendoring |
+| Subset test gate | `python -m pytest tests/` misses the 127 `_shared/` tests covering files this phase edits | D6; every step names the repo-root invocation |
+| Bare `_shared/x` prose tokens | 24 bare (non-`../`-anchored) `_shared/` tokens live inside cores; a `../`-anchored rewrite will not touch them | Step 63's gate resolves bare tokens too, so they surface in `KNOWN_DANGLING` rather than hiding |
+| Legacy package divergence | The 46 legacy top-level `<skill>/SKILL.md` packages use one-level `../_shared/`; after this phase the two surfaces disagree | Accepted for the deprecation window; logged in `KNOWN_DANGLING` as a distinct class |
+| Phantom-skill precedent | Committing files at real discovery paths republished phantom skills in Step 46 (#83–#86) | `dist/` stays gitignored; Step 70 verifies against a throwaway home, not this repo's own host |
+| Concurrent sessions | Another session committed to this repo mid-planning (`8e8589c`) | Steps re-read before editing; Step 62 captures the baseline *after* that commit |
+| **Phase 8 collision (issues already minted)** | Phase 8 (`provider-expansion-plan.md`, Steps 51–61, issues #71–#82 **minted**) hard-collides on four files: `tools/gen_manifest.py` (its Step 55 vs our 67), `config/skill-manifest.json`, `tests/package-integrity/expected_inventory.json`, `tests/package-integrity/test_manifest_contract.py`. Load-bearing case: Phase 8 Step 55 declares `gen_manifest.py:51 LOCAL_CAPABLE` the ONE source of truth and hand-edits it, and Phase 8 Step 51 mints a test importing it — while our Step 67 deletes the `:34-150` constants. `LOCAL_CAPABLE` is a *semantic* membership set, not derivable from a directory listing, so neither order is free: 67-then-55 leaves 55 with no constant, 55-then-67 leaves 67 unable to regenerate byte-identically | Step 67 is re-scoped to enumerate only the **derivable** roster facts and to **preserve** the semantic sets verbatim (see Step 67). Run order still needs an explicit operator call — surfaced as an open item |
+| **Live consumer home is never repaired** | Every step through 70 verifies in-repo or against a throwaway home. The two trees that actually exist — `<user-home>/.claude/skills` (6,829 files) and `<coding-root>/.github/skills` (97) — would otherwise never be re-installed, leaving the operator's own machine carrying the 43 + 18 dangling refs this phase exists to fix | **Closed by Step 71**, which re-installs both profiles into their correct (and different) live roots and asserts zero unresolvable links in the *live* trees, not only the throwaway |
+| **Step 62 moves a branch from inside a worktree** | `/build-step` runs its dev agent in an isolated worktree (`--isolation` offers only `worktree`/`docker`, `build-step/core.md:23,46`). A ref move yields zero file diff, so build-step's classifier (`:688`) never sees it and its cleanup (`:699-701`) cannot revert it — a NEEDS-WORK step would leave `main` permanently moved | The publish moved OUT of the step into the phase prerequisite, as `git push origin <branch>:main` (server-side FF-only). `git branch -f` was considered and **rejected**: measured exit 0 on a non-FF move with commit loss, and it never publishes |
+| **The repo-root DONE gate is RED today** | D6 makes `python -m pytest` from the repo root the gate, but it currently reports **3 failures** (2 × `SkillsRootResolutionTest` asserting `'skill-mesh' != 'skills'` in `skill-iterate/scripts/test_adversarial_calibration.py` and `skill-eval-setup/scripts/test_generate_bad_examples.py`; 1 × `CalibrateFleetAutoDiscoverDefaultTest`, `0 not greater than or equal to 1`). Every step's "green at or above baseline" is therefore unsatisfiable as written, and Step 62 would halt build-phase immediately under halt class #2 | **Resolved (operator, 2026-08-09): Step 62 FIXES all three.** No Known-Failing set is created, so the baseline every later step compares against is a clean one. Later Done-whens still read `>= baseline` against the recorded counts rather than a bare "green", since that is the comparison the halt contract needs |
+| **`.js` provenance marker shape** | §5's bare `/* … */` marker does not satisfy `Test-SkillMeshProvenance`, which is **anchored** to a 3-line ordered HTML-comment shape (`skill-mesh-provenance.ps1:43-55`, docstring `:14-18`). A non-conforming marker makes the shipped `.js` foreign to install (`:599-614`), unowned (`Get-ExistingOwned:746-759`), and undeletable by uninstall (`:413-421`) — so Step 70's no-orphan gate passes *with the orphan on disk* | Step 64: `Add-JsProvenance` wraps `New-ProvenanceHeader`'s output **verbatim** inside `/* */`, and the Done-when asserts `Test-SkillMeshProvenance` is true for every emitted `_shared/*` file regardless of extension |
+| **Open** | Should `build_step_verdict.py` remain co-located per skill once `_shared/` ships, or collapse to the shared copy? | Decide in Step 64 — now given an explicit landing place in that step's Done-when, having previously been decided by omission (§5 already ships it and D2 keeps the repoint). Co-location is locked by `test_distributions.py:408-415`; collapsing means editing that gate |
+| **DECIDED — red root gate** | The D6 gate reported 3 failures at planning time, making every step's Done-when unsatisfiable and halting Step 62 on its own gate | **Fix all three** (operator, 2026-08-09). No Known-Failing set exists or may be introduced; Step 62 owns the fixes and the clean baseline |
+| **DECIDED — `_shared` collision in the live home** | The real consumer home holds 43 marker-less `_shared/` files and 7 collide by name with Step 64's payload, so the first post-Step-64 install throws "REFUSING to install" and writes nothing | **Documented `-Force` take-ownership** (operator, 2026-08-09), gated on Step 64's four guardrails: backup-with-hashes, scope limited to `_shared/`, the other 36 files byte-unchanged, and marker+`owned_files` proven after install. Step 70 rehearses it against a pre-seeded home |
+| **DECIDED — `judge-ui/calibration-notes.md`** | Manifest-declared (`:378-379`), absent from `git ls-files`, sole copy living in the installed GPT tree — and that tree is what `-Force` take-ownership is about to write to | **Vendor it, rescued in Step 62** before any forced install runs. The manifest entry and `test_manifest_contract.py:279` both stay |
+| **DECIDED — Phase 8 run order + the live home** | Phase 8's minted issues collide on four files, and no step re-installed into the two trees that actually exist | **Step 71 added** (`Type: operator`): live cutover, host acceptance in both hosts, and the written handoff — Phase 7.5 completes first, then Phase 8 Step 55 is re-read against the hermetic `gen_manifest.py`. Step 67's retarget preserves the semantic constants, so the collision drops to a same-file merge risk |
+| Missing `**Files:**` lines | No step carries a `**Files:**` field; `build-phase/core.md:213` reads it to flag parallelizable step pairs, and Steps 64/66/67 all touch `build-distributions.ps1`, `_shared/`, and `test_distributions.py` | Add a `Files:` line per step — load-bearing for the three overlapping steps above |
+| **Open** | `utility-hookup-plan.md` needs a `/plan-review` pass before `--resume 5`: its `:line` anchors all point into the deleted `.claude/skills-gpt/` tree, its Done-whens say "suite green" without naming suites (D6), and `session-wrap/core.md` is edited by six steps, requiring sequential single-branch execution | Out of scope here; sequenced into the coding-root plan |
+
+## 9. Testing Strategy
+
+**The gate that does not exist yet is the point of Step 63.** Every other step is verified by it plus the
+existing suites.
+
+- **Existing tests that will legitimately break, and must be *amended* rather than loosened:**
+  `test_distributions.py:186-187` (exact count formula — recompute it; do not relax to `>=`, which would
+  silently permit future accidental emission), `:203` (provenance prefix — `_shared`-sourced docs carry
+  `Canonical source: _shared/…`), `test_legacy_migration.py:529-534,631-645` (asserts the preserve semantics
+  D3 inverts), `test_manifest_contract.py:286` with `expected_inventory.json:1204`.
+- **New coverage:** relative-reference resolution across all three forms in `skills/`, `_shared/`, and both
+  built profiles; a shrink-only allowlist; a `.js` provenance round-trip; a migrator dry-run against a home
+  with a pre-existing `_shared/`; a colon-bearing frontmatter YAML round-trip.
+- **Authoring traps for the new test file:** `tests/router/test_no_claude_dependency.py:41` scans for
+  `\.claude[\\/]` outside comments and docstrings, so any `.claude` literal must be assembled at runtime as
+  `"." + "claude"` (the pattern used at `test_skill_tree.py:208,264,293`). The repo-wide leak gate exempts
+  exactly two files, so the new test must carry no real `<drive>:/Users/` literal and must plant its plausible
+  leaks at runtime.
+- **End-to-end:** Step 70 is the smoke gate — a real build, a real install into a clean home, and a scripted
+  link resolution over the result. It runs before any operator UAT, which is deferred wholesale to the
+  sequenced coding-root plan.
+- **Autonomous-behavior trigger: does not fire.** Every artifact here is a one-shot invocation — a build, an
+  install, a test run — that completes and returns. Nothing added runs unattended over wall-clock time, so no
+  soak or observation step is required.
