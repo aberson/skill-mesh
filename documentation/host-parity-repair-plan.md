@@ -251,6 +251,18 @@ a test written to pass — the codifying-test-diff anti-pattern. Instead Step 63
   3. every `KNOWN_DANGLING` entry **still dangles** — kills rewrite-instead-of-delete.
   Plus a **detector-scope floor**: files-scanned and refs-extracted must each stay `>=` a committed minimum, so narrowing the detector reds instead of silently satisfying a burn-down (the precedent is real — `test_skill_tree.py:353-356` already returns `None` for relative non-link tokens, which is exactly how this defect class shipped). Also: the red-on-garbage anchor is a pure-function call on synthetic inputs, in the style of `test_skill_tree.py:406-421`; the anchor assembles any `.claude` literal as `"." + "claude"` so `tests/router/test_no_claude_dependency.py:41` stays green; `python -m pytest` from the repo root is `>= baseline` per Step 62
 - **Depends on:** 62
+- **Status:** DONE (2026-08-10)
+- **Measured, superseding this step's estimates:** the detector freezes **149 entries / 270 occurrences**,
+  keyed `(source, raw, form)`. Per class: `shared_anchored` 56 (21 canonical + 35 profile),
+  `shared_bare` 42, `references_anchored` 33, `rules_anchored` 4, `home_anchored` 10, plus a
+  **sixth class not in this step's enum, `profile_layout` (5)**. The step's (a)/(b)/(c)/(d) figures
+  were *occurrence* counts; the allowlist shrinks by *keys*. **Load-bearing for Step 64:** class (a)
+  is 56 keys, not 43, and a build-time-only repoint burns down the 35 profile keys but leaves the 21
+  canonical ones, because `skills/*/core.md` still literally contains `../../_shared/`
+- **Decisions recorded (D-63-A / D-63-B):** allowlist *replacement* is NOT permitted — an entry may
+  leave the list, none may enter; the 46 legacy top-level packages are OUT of scope, their 42 anchored
+  `../_shared/` citations having been measured to resolve today, pinned by a test so the decision
+  reopens if that stops holding
 
 <!-- autofix-applied: 2026-08-09 -->
 ### Step 64: Ship `_shared/` into both profiles with a longest-token-first rewrite
