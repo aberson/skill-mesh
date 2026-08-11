@@ -260,16 +260,41 @@ these controls without reading why they exist.
 Run in: **fresh window @ `skill-mesh`** · Model: **Opus** (the plan pins Opus for all steps; dev arms
 inherit the session tier)
 
-Step 64 is **DONE and merged** (`8b3c1d3`). Continue the phase from Step 65:
+Step 64 is **DONE and merged**. Step 65 is **mid-flight and must NOT be merged as-is** — read §2A in
+full before touching it; the branch `build-step-1786408322` (`b0651be`) is pushed and `main` is clean
+at `427c99b`.
+
+**Run the queue in this order. Do not reorder — Steps 67 and 70 declare `Depends on: 65`.**
+
+1. **Step 65, iteration 3 (re-scoped).** Resume against the existing branch and worktree rather than
+   starting clean, so iterations 1–2 are not re-done:
 
 ```
 /build-phase --plan documentation/host-parity-repair-plan.md --resume 65
 ```
 
-Before building Step 65, read the evidence comment on **#96**: correctness finding MINOR-4
-reproduces, and this step's `Produces` already names the file that carries it
-(`inspect-host-install.ps1:365-373`). It will not surface as a gate failure, so it has to be fixed
-deliberately.
+   The fix is a refactor of the shared invariant, not a third patch of the predicate. Read §2A's
+   "confirmed GOOD" list first — it is a constraint set, not background. Then continue:
+
+2. **Steps 66–70** run after 65 merges.
+
+```
+/build-phase --plan documentation/host-parity-repair-plan.md --resume 66
+```
+
+**Stop before Step 71** (#102) — `Type: operator`, a live consumer-home cutover, operator work.
+
+**Also stop inside Step 66 for an operator decision.** Step 66 vendors seven documents from outside
+this repo into `_shared/` **and this repo is public**. Its own measured scrub list includes a raw
+harness session UUID, cross-repo issue pointers into the **private** `aberson/coding-root`, account
+cost telemetry, harness config paths, and a private cron name — and the plan states all five
+`_LEAK_PATTERNS` miss several of them. That is a disclosure decision with an irreversible
+consequence, so surface the per-file scrub sign-off for a human rather than self-approving it.
+Everything else in 66 (vendoring, link disposition, extending the sweep to `_shared/**`) is ordinary
+agent work.
+
+Model: **Opus** for the session; the plan pins Opus for all steps and dev arms inherit the session
+tier. Reviewer arms run at their own table-assigned tiers — do not re-pin them.
 
 **Stop before Step 71** (#102) — it is `Type: operator`, a live consumer-home cutover, and is an
 operator handoff rather than agent work.
