@@ -711,12 +711,14 @@ def test_enumeration_reds_when_the_tree_disagrees_with_the_counts(tmp_path):
     """Red-on-garbage anchor. What it can decide, stated exactly:
 
     Every planted tree here must be REJECTED, so deleting the whole guard block reds
-    this test. Beyond that, each of the four cases is caught by a different subset of
-    the three count guards, so no ONE guard can carry the block alone: keep only the
-    total guard and 48/2 slips (it sums to 50); keep only the portable guard and 47/4
-    slips; keep only the native guard and 48/3 slips. Before the 48/2 case existed the
-    other three all broke the total too (51/51/49), so a total-only block passed this
-    anchor -- that is the hole 48/2 closes.
+    this test. Beyond that, no ONE guard can carry the block alone -- for each single
+    guard, at least one planted case slips past it: keep only the total guard and 48/2
+    slips (it sums to 50); keep only the portable guard and 47/4 slips; keep only the
+    native guard and BOTH 48/3 and 46/3 slip. Before the 48/2 case existed the other
+    three all broke the total too (51/51/49), so a total-only block passed this
+    anchor -- that is the hole 48/2 closes. The four cases do NOT each have a distinct
+    catching subset, and this docstring does not claim they do: 48/3 and 46/3 are both
+    caught by exactly {total, portable}.
 
     What it CANNOT decide, and does not claim: deleting exactly one guard is invisible
     to any count-based tree, because total == portable + native makes any two of the
