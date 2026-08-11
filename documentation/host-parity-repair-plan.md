@@ -309,6 +309,40 @@ a test written to pass — the codifying-test-diff anti-pattern. Instead Step 63
 - **The seven are not transitively closed:** they carry 19 `](target)` links, 14 of them external to 8 further targets (`../rules/code-quality.md` ×4, `measurement-validity` ×2, `knowledge-placement`, `working-directory`, `descriptor-contract`, `shakedown-engine` ×3, `windows-shell`, `../../docs/current-md-race-fix-plan.md`). D7 forbids `KNOWN_DANGLING` from growing, so each of the 14 needs an explicit disposition — vendor, convert to prose, or an approved allowlist *replacement* (state in Step 63 whether replacement is permitted at all)
 - **Done when:** the `~/.claude/projects/…jsonl` line at source `task-state-schema.md:32` is absent from the vendored copy — it trips 3 of 5 `_LEAK_PATTERNS` but has no drive letter, so the repo-wide gate misses it and only the extended sweep catches it; **every one of the seven carries a written per-file SAFE-or-scrubbed sign-off** covering identifiers, cross-repo issue refs, account metrics, harness-config disclosure, and references to tooling skill-mesh does not ship; each of the 14 external links has a recorded disposition; the reconcile-or-fork decisions land in a **named in-repo doc**, not just a commit message; every vendored file's own outbound relative links either resolve or are converted to prose; no `skills/_shared/` string is introduced (the two real string locks are `test_skill_tree.py:270-271` and `:240` via test `:244-253`, and **both scan `skills/**/*.md` only** — `:267` is a directory-existence guard, a different check, so "locked anywhere" was never true; if you need repo-wide coverage, widen a lock deliberately rather than relying on `:267`); `KNOWN_DANGLING` shrinks to zero for the references and rules classes; `python -m pytest` from the repo root is green at or above baseline
 - **Depends on:** 64
+- **Status:** BLOCKED (2026-08-11) — stop-and-audit, 3/3 iterations. Work is committed on branch
+  `build-step-1786426994` (`f8ee848`, 3 commits), deliberately **NOT merged and NOT pushed**; worktree
+  preserved at `worktree_build-step-1786426994`. **Do not push this branch as-is.** Unlike Step 65's parked
+  branch, this one carries the unremediated disclosure itself (`step-66-vendored-reference-decisions.md:228`
+  and `test_skill_tree.py:550`), and this is a public repository — publishing the branch would ship the exact
+  content the block exists to prevent. Push only after the re-scope below lands. The repo-root gate is green on that branch (**981 passed / 3 skipped /
+  0 failed** against the 973 baseline), so this is not a test failure — it is a defect the suite is not
+  positioned to catch. Three consecutive review rounds found ONE invariant violated: **a document that
+  documents a scrub must not restate the scrubbed value.** Round 1 — the decision record re-quoted
+  `issue #295`/`post-#227`/the account-cost figures it documented removing. Round 2 —
+  `_shared/subagent-economy.md:22` retained the character-count magnitude while the record certified the
+  file `SCRUBBED (2 edits)`. Round 3 — the fix's own prose at
+  `step-66-vendored-reference-decisions.md:228` quotes a private turn-count two lines after the record
+  claims the figures are "restated nowhere in this record on purpose". Iteration 3 reintroduced the defect
+  it was closing, which is why no fourth patch was dispatched. Three lenses (security, correctness,
+  plan-conformance) converged independently on the same two lines; Block trend 2 → 1 → 1; oscillation check
+  negative in rounds 2 and 3, so the rounds converged rather than thrashed
+- **Re-scope for the next attempt (do NOT add another pattern):** the gate cannot scan the record for
+  values whose only definition lives in a private file outside this repo, so a fourth regex over an open
+  corpus will buy a fourth escape. The structural fix is to stop the record carrying literal values at all —
+  an itemized scrub record citing **class + source location + rationale only**, with a gate asserting the
+  record quotes no literal from any scrub it describes. That is one rule over one file, not a matcher over a
+  corpus. Sibling site to fix in the same pass: `tests/package-integrity/test_skill_tree.py:550`, whose
+  comment lists two real private magnitudes as shape examples
+- **Confirmed sound on that branch and worth preserving through any re-do:** the 18 citations across 10
+  cores land with zero stragglers; the D5 deviation reasoning holds under direct code verification
+  (`<repo>/_shared/x` was a pre-existing `Get-SharedCanonicalLabel` convention, not invented here);
+  `KNOWN_DANGLING` 112 → 75 is a genuine burn-down against all three of Step 63's frozen gaming vectors with
+  `link_baseline.json` untouched; the three-tier gate claims only what it can decide; tier 1's file set is
+  derived, not hand-listed; and nothing was narrowed across all three commits (+18 assertions, 0 removals)
+- **Open, not this step's defect:** `dev-sprint-wrap-monthly` (a string this plan itself classifies as a
+  private cron name) sits at `skills/user-afterparty/core.md:20,63` and `user-afterparty/SKILL.md:17,60` —
+  pre-existing on `origin/main`, untouched by this branch, and invisible to the extended sweep. Adjudicated
+  outside this step's charter; needs its own issue
 
 <!-- autofix-applied: 2026-08-09 -->
 ### Step 67: Make the generators reproduce the committed tree
