@@ -19,7 +19,7 @@ When an orchestrator/review skill spawns a sub-agent (Agent tool, Workflow `agen
 - **Return only the load-bearing verdict** — a PASS/BLOCKED/verdict line, counts, and at most the single most important finding. Target a handful of lines, not paragraphs.
 - **Write any longer detail to a file** (e.g. `<worktree>/.build-step/<role>-report.md`, a findings `.json`, an investigation doc) and return only its path. The orchestrator reads that file **only when the verdict requires it** (e.g. on BLOCKED/NEEDS-WORK, to feed findings back to the developer) — not eagerly.
 
-The harness already states "the agent's final message IS the tool result — relay what matters"; this rule is the skills honoring it. A 240k-char return that the orchestrator skims once and then carries resident for 400+ turns is the exact anti-pattern.
+The harness already states "the agent's final message IS the tool result — relay what matters"; this rule is the skills honoring it. A whole-report return that the orchestrator skims once and then carries resident for the rest of a long session is the exact anti-pattern.
 
 Structured-output sub-agents (Workflow `schema:`) are exempt from the prose-trim but should still keep array payloads bounded — return findings as `{severity, title, file:line, fix}` rows, not full re-quoted file bodies.
 

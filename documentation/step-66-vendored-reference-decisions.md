@@ -96,6 +96,25 @@ The scrubs are applied by exact-string replacement with an asserted occurrence c
 future source edit that moves a scrub target fails loudly rather than silently shipping the
 unscrubbed bytes.
 
+**Who certifies a class, and who merely enforces a shape** (added in iteration 3, after the
+gate was found over-claiming twice). This per-file sign-off is the **only class-level
+authority** in Step 66. The committed gates in `tests/package-integrity/test_skill_tree.py`
+make two strictly narrower claims, and neither is a certification:
+
+* **Categorical bans** over the seven vendored documents forbid whole categories outright —
+  issue-shaped pointers, shares and percentages, scaled or open-ended magnitudes. What such
+  a rule claims *is* the category it names, so the claim is decidable and cannot over-reach.
+* **Tripwires** over the open roots recognise shapes that have actually escaped into this
+  tree. They say nothing at all about the shapes that have not.
+
+Class-level absence is a judgment no shape rule reproduces. The verdicts below keep a public
+project name, drop a machine-local branch name, and deliberately keep a state-directory path
+— three different outcomes for tokens no regex can tell apart — and a pointer spelled "Step
+12 of the same phase" carries no decidable token whatsoever. So a green test run is evidence
+that the enumerated categories and the known shapes are absent; **the five per-file verdicts
+below are the only evidence that the classes are.** A reader who needs the stronger claim
+must read the sign-off, not the gate.
+
 ### `step-authoring.md` — **SAFE, no content scrub**
 I: none. X: none. M: none. H: none. T: none. Only the two `code-quality.md` links were
 de-linked (§4). Verified clean under all six leak patterns, including the new hex-UUID one.
@@ -184,7 +203,7 @@ dropped, because a `_shared/` payload file must not open with frontmatter —
 `tests/distributions/test_distributions.py`'s header stripper asserts that premise
 explicitly. Nothing downstream of the vendoring reads that block.
 
-### `subagent-economy.md` — **SCRUBBED (2 edits)**
+### `subagent-economy.md` — **SCRUBBED (3 edits)**
 * **M** — the rule's opening sentence carried a measured share-of-spend figure for one
   operator's account, together with a three-part breakdown (two further shares and a
   character-count magnitude for a typical sub-agent return). That is **usage telemetry for
@@ -194,6 +213,23 @@ explicitly. Nothing downstream of the vendoring reads that block.
   numbers). The rule's prescriptions are unchanged; only the account-level numbers are.
 * **X/M** — the `## Source` section named two private investigation documents *and* restated
   the metric. Replaced with a dated, unnamed reference to the two workspace investigations.
+* **M, the third edit — found in iteration 3, and the reason the count above reads 3 rather
+  than 2.** The same measured magnitude was restated a *second*, independent time in the
+  body of Rule 1 (vendored copy line 22, one sentence below the rule's two bullets), where
+  it survived the first two edits untouched. The bullet above claimed that magnitude
+  "Replaced with the qualitative claim"; that was true of the opening sentence and false of
+  this one, so **this row certified a class handled while a member of the certified-removed
+  set sat in the file verbatim.** Two things let it through, and both are worth naming: the
+  scrub was executed against a line list inherited from what an earlier review happened to
+  find, rather than re-derived from the class; and the occurrence carried no percentage and
+  no billing vocabulary, so no committed pattern of the day had a shape for it either.
+  **The inaccurate certification was the defect, not the fragment** — stripped of the
+  billing linkage the opening scrub removed, a bare magnitude is in kind with the
+  "400+ turns" the same sentence used to carry. Both halves are now fixed: the sentence
+  makes its point in the file's own Rule-1 vocabulary with no magnitude in it, and this row
+  states what was actually done. A member of this class can no longer survive here
+  unnoticed — §7's tier 1 bans scaled and open-ended magnitudes *outright* across all seven
+  vendored documents, which is what a bounded payload buys and an open root cannot.
 * **I: none. H: none. T: none.**
 
 ---
@@ -370,9 +406,11 @@ from the `KNOWN_DANGLING` literal, which is the whole shape D7 asked for.
 
 ## 7. Leak-sweep extension
 
-`_LEAK_PATTERNS` had five patterns and swept `skills/**/*.md` only. Four gaps, all closed —
-the last two only after iteration 1's review found that the extended gate still could not
-see the class its own sign-off record was an instance of:
+`_LEAK_PATTERNS` had five patterns and swept `skills/**/*.md` only. Four gaps, closed as far
+as a mechanical gate can close them — the last two only after iteration 1's review found
+that the extended gate still could not see the class its own sign-off record was an instance
+of. A **fifth** defect, in what those closures were said to *prove*, is recorded in §7.1;
+read this list with that correction in hand.
 
 * **Nothing scanned `_shared/`** — the tree this step writes into, and a payload that ships
   into *both* host profiles. The sweep now walks `skills/` and `_shared/`, enumerated once in
@@ -392,9 +430,11 @@ see the class its own sign-off record was an instance of:
   workspace repo's issue namespace, and **M**, account-level cost/usage telemetry. The proof
   that the gap was inert rather than theoretical is iteration 1's own commit, which extended
   the sweep *and* landed fresh instances of both classes in `documentation/` — entirely
-  unscanned, because `documentation/` was not a swept root. Both are now shaped, in
-  `_DISCLOSURE_PATTERNS`, and `documentation/` joins `skills/` and `_shared/` in
-  `_LEAK_SWEEP_ROOTS`:
+  unscanned, because `documentation/` was not a swept root. Both were given shape-based
+  coverage in `_DISCLOSURE_PATTERNS`, and `documentation/` joins `skills/` and `_shared/` in
+  `_LEAK_SWEEP_ROOTS`. **Read the three sub-bullets as descriptions of what each pattern
+  matches, not as coverage of the class it is named for** — presenting them as the latter
+  was itself the next defect, corrected in §7.1:
   * **X, all roots** — an issue/PR pointer within a ~220-character window of a token naming
     the private workspace repo, in either order. It is deliberately **not** a bare `#\d+`:
     this repository carries hundreds of legitimate references to its *own* issues, so the
@@ -422,6 +462,80 @@ One exemption, by literal and never by shape: RFC 4122 Appendix A's documentatio
 directions — a session-shaped id reds, the documentation UUID does not — and asserts the
 exemption list is still exactly one entry, because a growing exemption list is how a real id
 eventually rides in.
+
+### 7.1 The claim the gate makes — decided in iteration 3, after two rounds of over-claiming
+
+**The decision, stated once so it stops being re-litigated one patch at a time:** X and M are
+*semantic* classes ("a pointer into a private namespace", "a number drawn from a private
+measurement set"); a regex decides a *syntactic* one; and the gap between the two is
+unbounded. So **no pattern list in this repository certifies either class**, and none of them
+is written as if it does.
+
+The evidence that this needed deciding rather than patching: two consecutive review rounds
+raised the same finding-shape, each time against a fresh instance outside the patterns' reach,
+and each time the answer was one more shape fitted to the escape that had just been observed.
+Three escapes are reproducible against the iteration-2 regexes — a *paraphrase* (the repo's
+name used as a common noun between "private" and "repository", which is the phrasing that
+actually shipped historically), a *distance* (roughly 230 characters of separation clears a
+220-character window), and a *vocabulary substitution* (the third M-class occurrence in §3's
+`subagent-economy.md` row, which carries neither a percentage nor billing vocabulary). Those
+are the three ways a syntactic approximation of a semantic class always fails; a fourth round
+of fitting would have produced a fourth. **An over-claiming gate is worse than no gate,
+because the team stops looking** — which is the failure this whole phase exists to remove, and
+the same rationale §9 gives for refusing to narrow a gate around an inconvenient finding.
+
+The gate now makes three clearly separated claims, and the code says which is which:
+
+| Tier | Surface | Claim | Enforced by |
+|---|---|---|---|
+| 1 | the seven vendored `_shared/*.md` documents (derived from the vendor banner, never hand-listed) | whole **categories** are absent: issue-shaped pointers, shares and percentages, scaled or open-ended magnitudes | `test_vendored_payload_carries_no_banned_category` (+ the retained `…_no_issue_pointer`) |
+| 2 | the open roots `skills/`, `_shared/`, `documentation/` | no **known escaped shape** is present. Not a class claim. | `_DISCLOSURE_PATTERNS`, relabelled as tripwires |
+| 3 | every vendored file | the **classes** are absent | the per-file human sign-off, §3 |
+
+Why the split falls there: a categorical ban is only affordable where a false positive is
+cheap. Across seven files it is answered by rewording one sentence and recording the
+adaptation here. Across `documentation/` it would red on hundreds of legitimate issue numbers
+and percentages, and a gate that does that is one somebody switches off inside a week — so the
+bans are payload-scoped by design, and pointing them at an open root would undo them.
+
+Three things were **considered and rejected**, recorded so they are not re-proposed:
+
+1. **A third round of pattern-fitting as the fix.** Rejected on the argument above. The one
+   widening that did land — `_PRIVATE_REPO_TOKEN` now admits up to two interposed word tokens,
+   which covers the real historical phrasing — is labelled in the source as tripwire
+   *maintenance* against an observed shape, explicitly not as closing the class. It is a pure
+   widening: every string the previous form matched still matches, and it adds no new finding
+   anywhere in the swept tree.
+2. **Raising `_CROSS_REPO_WINDOW` past the ~230-character defeat.** Rejected: any finite window
+   is defeated at window+1, so raising it moves the defeat point while widening the
+   false-positive surface across three open roots, and buys no claim either way. The bound is
+   now documented in the source as accepted-and-permeable, which is the honest form. On the
+   surface where a miss is expensive — the vendored payload — tier 1 applies no proximity
+   condition at all, so the window is not load-bearing there.
+3. **Diffing each vendored file against its upstream source** (or shipping a scrub manifest).
+   Rejected as the answer to *this* defect: it is structurally blind to it, because the
+   surviving sentence was byte-identical to its source, so "vendored == source minus approved
+   edits" passes with the fragment in place. It also cannot run in ordinary CI — the source
+   root is an environment-variable contract (`tools/gen_manifest.py`), not a committed path —
+   and a plaintext scrub manifest would republish the very strings §9 removed. An env-gated
+   *digest* drift check remains worth considering for D4's stale-copy problem; it answers "did
+   the copy drift", never "is the class absent".
+
+A fourth was rejected inside tier 1 itself: a categorical ban on bare `owner/repo` tokens.
+Measured over the current payload it matches 36 times and all 36 are false — `P/D`,
+`open/close`, `plan-review/plan-wrap` and their kin are ordinary prose in these documents — and
+a ban whose first run is entirely false positives is a ban that gets deleted. The canonical
+`owner/repo#N` spelling is already a tier-2 pattern; an unadorned foreign repo slug is left to
+tier 3, and is named in the source so the omission is a recorded decision rather than an
+unexamined hole.
+
+**What did NOT change:** no pattern, root, window or assertion was narrowed or removed, in
+either direction. Iteration 3 adds a tier-1 test, widens one token, and rewrites what the
+comments and this record *claim*; `test_vendored_payload_carries_no_issue_pointer` is retained
+unchanged and shares the same compiled object with the new table's first row — and that
+sharing is **asserted with `is`, not merely commented**, so re-declaring the shape as a second
+copy reds instead of drifting, per this workspace's one-source-of-truth rule for shape
+constants.
 
 ---
 

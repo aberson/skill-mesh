@@ -220,18 +220,61 @@ _LEAK_PATTERNS = [
 ]
 
 # --------------------------------------------------------------------------- #
-# STEP 66 (iteration 2): the two DISCLOSURE classes the six patterns above cannot see.
+# STEP 66 (iteration 3): what this gate CLAIMS, per surface -- and who owns the rest.
 # --------------------------------------------------------------------------- #
 # Every pattern in `_LEAK_PATTERNS` keys on an IDENTIFIER -- a drive letter, a home
 # path, the username, a session UUID. The scrub Step 66 actually performed spent most
 # of its budget on two classes that carry none of those:
 #
 #   X  a pointer into the PRIVATE workspace repository's issue namespace
-#   M  account-level cost / usage telemetry
+#   M  account-level cost / usage telemetry -- a number drawn from a private
+#      measurement set
 #
 # The proof that the gap was inert rather than theoretical is Step 66's own iteration 1:
 # it extended this sweep to `_shared/` AND landed fresh instances of both classes in
 # `documentation/`, which was not a swept root at all. It is one now.
+#
+# But X and M are SEMANTIC classes, and a regex decides a SYNTACTIC one. The gap between
+# the two is unbounded -- paraphrase, distance and vocabulary substitution each defeat
+# any fixed shape. Iterations 1 and 2 each answered a review finding by fitting one more
+# shape to the instance that had just escaped, and each time a further instance escaped;
+# the second was a live member of M sitting in a file whose sign-off certified that very
+# class handled. So the defect was never the pattern list, it was the CLAIM: an
+# over-claiming gate is worse than no gate, because the team stops looking. Iteration 3
+# fixes the claim instead of adding a third fitted shape.
+#
+# This gate therefore makes THREE DIFFERENT CLAIMS, and never mistakes one for another:
+#
+#   TIER 1  CATEGORICAL BANS over the bounded vendored payload -- the seven
+#           `_shared/*.md` documents carrying the Step 66 vendor banner. Whole
+#           CATEGORIES are forbidden outright (issue-shaped pointers, shares and
+#           percentages, scaled or open-ended magnitudes) rather than each private
+#           phrasing being recognised, so what the rule claims IS the category it names,
+#           and that claim is decidable. Deliberately strict: a false positive is
+#           resolved by REWORDING the vendored copy and recording the adaptation, which
+#           is cheap across seven files and unaffordable anywhere else. That is exactly
+#           why the bans are payload-scoped and must never be pointed at an open root --
+#           this repository carries hundreds of legitimate issue numbers and
+#           percentages, and a gate that reds on all of them is one somebody switches
+#           off within a week. See `_VENDORED_PAYLOAD_BANS`.
+#
+#   TIER 2  TRIPWIRES over the open roots (`skills/`, `_shared/`, `documentation/`).
+#           `_DISCLOSURE_PATTERNS` recognises shapes that have ACTUALLY ESCAPED into
+#           this tree. It does not certify either class on any root, and a green run is
+#           not evidence that X or M is absent from an open root -- only that no KNOWN
+#           shape is present. A tripwire is maintained by widening it when a real new
+#           phrasing is observed; believing that a widening certifies the class is the
+#           anti-pattern this block exists to name.
+#
+#   TIER 3  THE PER-FILE HUMAN SIGN-OFF is the ONLY class-level authority
+#           (`documentation/step-66-vendored-reference-decisions.md`, section 3).
+#           Class-level absence is a judgment no shape rule reproduces: within one file
+#           the sign-off keeps a public project name, drops a machine-local branch name,
+#           and deliberately keeps a state-directory path -- three different verdicts on
+#           tokens no regex can tell apart. A pointer spelled "Step 12 of the same
+#           phase" carries no digit-magnitude and no decidable token at all. Tiers 1
+#           and 2 ENFORCE; tier 3 DECIDES. Nothing below may be cited as establishing
+#           that a class is absent.
 #
 # X is deliberately NOT "a bare #N". This repository carries hundreds of legitimate
 # references to its OWN issues, and a gate that reds on every one of them gets turned
@@ -246,13 +289,31 @@ _LEAK_PATTERNS = [
 # enforced separately over the derived vendored set, by
 # `test_vendored_payload_carries_no_issue_pointer`. That is the rule that would have
 # caught this step's two real instances at their SOURCE, where they appeared bare.
+#
+# TIER 2 -- tripwire, not a certifier. WIDENED in iteration 3 (a pure widening: every
+# string the iteration-2 form matched still matches) to admit the repository's name used
+# as a common noun between "private" and "repository" -- `private <name> repository`,
+# which is the phrasing that actually shipped historically and which the iteration-2
+# form, hard-coded to the single literal `workspace`, could not see. Up to two
+# interposed word tokens are allowed. This is tripwire MAINTENANCE against an observed
+# phrasing and it closes nothing at the class level: a third phrasing defeats it again,
+# which is the whole point of the tier label.
 _PRIVATE_REPO_TOKEN = (
     r"(?:aberson/coding-root"
-    r"|private[\s*_`]{1,4}(?:workspace[\s*_`]{1,4})?repositor(?:y|ies))")
+    r"|private[\s*_`]{1,4}(?:[\w.-]{1,24}[\s*_`]{1,4}){0,2}repositor(?:y|ies))")
 _ISSUE_POINTER = (
     r"(?:\b(?:issue|issues|pr|prs|pull\s+request|post|gh)[\s\-]*#\s*\d+"
     r"|(?<![\w#])#\d+)")
 # Characters, not lines: two adjacent wrapped markdown lines are ~160.
+#
+# This bound is ACCEPTED AS PERMEABLE, not defended. Any finite window is defeated at
+# window+1 -- roughly 230 characters of filler clears this one, and an ordinary
+# two-sentence paragraph is that long -- so raising the number would only move the
+# defeat point outward while widening the false-positive surface across three open
+# roots, and would buy a coverage claim the construction cannot support either way.
+# That permeability is precisely why this pattern is labelled a TIER 2 tripwire, and
+# why the surface where a miss is expensive -- the vendored payload -- is graded
+# instead by a TIER 1 categorical ban with no proximity condition at all.
 _CROSS_REPO_WINDOW = 220
 _CROSS_REPO_POINTER_RE = re.compile(
     r"(?is)(?:"
@@ -261,9 +322,12 @@ _CROSS_REPO_POINTER_RE = re.compile(
     + _ISSUE_POINTER + r".{0," + str(_CROSS_REPO_WINDOW) + r"}?" + _PRIVATE_REPO_TOKEN
     + r")")
 _FOREIGN_REPO_ISSUE_RE = re.compile(r"\b[\w.-]+/[\w.-]+#\d+")
-# M: a number attributed to a BILL, plus the two bare phrasings that attribute one with
-# no number present. A percentage ALONE is not the shape -- `session-wrap`'s context
-# utilisation table is legitimately full of them, and so is every SVG in `_shared/`.
+# TIER 2 -- tripwire, not a certifier. M: a number attributed to a BILL, plus the two
+# bare phrasings that attribute one with no number present. A percentage ALONE is not the
+# shape here -- `session-wrap`'s context utilisation table is legitimately full of them,
+# and so is every SVG in `_shared/`. That unavoidable looseness on an open root is
+# exactly the hole an M-class magnitude escaped through twice; on the vendored payload,
+# where a percentage has no legitimate use, TIER 1 bans the category outright instead.
 _COST_TELEMETRY_RE = re.compile(
     r"(?i)(?:"
     r"\b~?\d{1,3}\s*%[^\n]{0,48}?\b(?:bill|billed|billing|spend|spent|invoice|cost)\b"
@@ -272,6 +336,11 @@ _COST_TELEMETRY_RE = re.compile(
     r"(?:the\s+|one\s+|an?\s+)?(?:operator'?s?\s+)?(?:bill|spend|invoice)\b"
     r")")
 
+# TIER 2 registry. Every row is a tripwire for a shape that has been OBSERVED escaping
+# into this tree, listed in the order it was added. The list is not, and cannot be made,
+# a certification that class X or class M is absent from an open root -- see the tier
+# block above, and `_VENDORED_PAYLOAD_BANS` for the one surface that is graded
+# categorically.
 _DISCLOSURE_PATTERNS = [
     ("cross-repo issue pointer (owner/repo#N)", _FOREIGN_REPO_ISSUE_RE),
     ("issue pointer bound to the private workspace repo", _CROSS_REPO_POINTER_RE),
@@ -410,6 +479,17 @@ def test_disclosure_detector_reds_on_the_two_classes_the_identifier_patterns_mis
         "pointers into `aberson/coding-root`, which is private -- issue #4242 and more")
     assert bound in _find_leaks("post-#4242 lives in the operator's private\nrepository")
     assert bound in _find_leaks("#4242 was filed against aberson/coding-root last week")
+    # ...including the REAL HISTORICAL PHRASING, which is the calibration this anchor
+    # lacked until iteration 3: the repo's name used as a common noun between "private"
+    # and "repository". The two spellings above are EASIER garbage than the one that
+    # actually shipped, so passing on them alone overstated what the tripwire
+    # demonstrates -- a red-on-garbage anchor is only as strong as its garbage.
+    assert bound in _find_leaks("post-#4242 lives in the private coding-root repository")
+    assert bound in _find_leaks(
+        "filed as issue #4242 against the operator's private second-brain repository")
+    # ...and the widening is bounded: three or more interposed words is not the shape.
+    assert bound not in _find_leaks(
+        "#4242 is private to the internal build tooling repository")
     # ...and a bound pointer that is far away is NOT claimed: the window is a real
     # constraint, not decoration.
     assert bound not in _find_leaks(
@@ -449,6 +529,54 @@ MIN_VENDORED_PAYLOAD_DOCS = 7
 _VENDORED_ISSUE_POINTER_RE = re.compile(
     r"(?i)\b(?:issue|issues|pr|prs|pull\s+request|post|gh)[\s\-]*#\s*\d+")
 
+# --------------------------------------------------------------------------- #
+# TIER 1 -- the categorical bans over the bounded vendored payload.
+# --------------------------------------------------------------------------- #
+# Each row forbids a whole CATEGORY inside a vendored document, with no proximity
+# condition and no attempt to recognise a private phrasing. That is the property the
+# tripwires do not have: what a row claims IS the category it names, so the claim is
+# decidable and cannot over-reach. The issue-pointer row reuses the
+# `_VENDORED_ISSUE_POINTER_RE` OBJECT rather than a second copy of the shape, so the
+# dedicated test above and the table below can never drift apart.
+#
+# Why these three categories:
+#   * issue-shaped pointer -- inside a document copied wholesale out of the private
+#     workspace repo there is no such thing as a local issue number, so every one is
+#     foreign by construction and no binding is required. Two real instances of the
+#     step's own scrub appeared exactly this way, bare.
+#   * share or percentage -- M's most common spelling. Zero legitimate occurrences in
+#     the payload today, so the ban costs nothing now; a future one is reworded into a
+#     qualitative claim, which is precisely the substitution the M scrub already made.
+#   * scaled or open-ended magnitude (`240k`, `18M`, `400+`) -- a measured quantity
+#     lifted out of a private measurement set, and the row that mechanically catches the
+#     M-class member that survived both tripwire rounds. Plain integers and years are
+#     deliberately NOT banned: `500`, `2026` and `8601` occur legitimately in the payload
+#     and carry no scale, so banning them would be the false-positive flood that gets a
+#     gate deleted.
+#
+# One category was CONSIDERED AND REJECTED: a bare `owner/repo` token. Measured over the
+# current payload it produces 36 matches and all 36 are false (`P/D`, `open/close`,
+# `plan-review/plan-wrap`, `issue/cron`, ...), because slash-joined word pairs are
+# ordinary prose in these documents. A ban whose first run is 100% false positives is a
+# ban somebody deletes, so it is not made. The canonical `owner/repo#N` cross-repo
+# spelling is already a tier-2 pattern; an UNADORNED foreign repo slug is left to the
+# tier-3 sign-off, and is named here so that the omission is a recorded decision rather
+# than an unexamined hole.
+#
+# The magnitude row spells its number as `\d[\d,]*(?:\.\d+)?` rather than `\d[\d,.]*` on
+# purpose: the looser form absorbs a trailing sentence period, so an ordinary numbered
+# list item whose text begins with a lone capital (`2. M -- the class`, a shape these
+# very documents use) would red as `2. M`. That is not a magnitude, and a ban is only
+# worth having if the category it names is the category it matches.
+_VENDORED_SHARE_RE = re.compile(r"(?i)%|\bpercent(?:age|ile)?s?\b")
+_VENDORED_MAGNITUDE_RE = re.compile(r"(?<![\w.])~?\d[\d,]*(?:\.\d+)?\s*(?:[kKmM]\b|\+)")
+
+_VENDORED_PAYLOAD_BANS = [
+    ("issue-shaped pointer", _VENDORED_ISSUE_POINTER_RE),
+    ("share or percentage", _VENDORED_SHARE_RE),
+    ("scaled or open-ended magnitude", _VENDORED_MAGNITUDE_RE),
+]
+
 
 def test_vendored_payload_carries_no_issue_pointer():
     """No issue-shaped pointer may survive in a document vendored from the private repo.
@@ -480,6 +608,73 @@ def test_vendored_payload_carries_no_issue_pointer():
     assert not offenders, (
         "a vendored document carries a pointer into the private workspace repo's "
         "issue namespace:\n" + "\n".join(offenders))
+
+
+def test_vendored_payload_carries_no_banned_category():
+    """TIER 1: whole CATEGORIES are forbidden inside the seven vendored documents.
+
+    The generalisation of `test_vendored_payload_carries_no_issue_pointer`, which is
+    retained above unchanged with its own anchors: that test grades one row of this
+    table against the same derived document set, this one grades every row, and both
+    read the same `_VENDORED_ISSUE_POINTER_RE` object so they cannot drift.
+
+    This is the tier that makes an HONEST mechanical claim. It does not try to
+    recognise a private phrasing -- an unbounded problem that defeated two rounds of
+    tripwire-fitting -- it forbids the category outright over a surface small enough
+    that a false positive is answered by rewording seven files. Class-level absence is
+    still owned by the per-file human sign-off (tier 3), not by this test.
+
+    Every planted anchor value is SYNTHETIC, for the same reason the sweep anchors are.
+    """
+    # The shared-object claim in the docstring is ASSERTED, not asserted-in-prose: `is`,
+    # not `==`, so re-declaring the issue-pointer shape as a second copy reds here
+    # instead of drifting silently away from the test above.
+    assert any(rx is _VENDORED_ISSUE_POINTER_RE for _, rx in _VENDORED_PAYLOAD_BANS), (
+        "the issue-pointer ban is no longer the same compiled object as the one "
+        "test_vendored_payload_carries_no_issue_pointer grades; a duplicated shape "
+        "constant is a drift waiting to happen")
+
+    # ANCHORS -- each row reds on its own category...
+    assert _VENDORED_SHARE_RE.search("about 42% of the window")
+    assert _VENDORED_SHARE_RE.search("a large percentage of a long window's cost")
+    assert _VENDORED_MAGNITUDE_RE.search("a 999k-char return the orchestrator skims")
+    assert _VENDORED_MAGNITUDE_RE.search("carried resident for 999+ turns")
+    assert _VENDORED_MAGNITUDE_RE.search("roughly 42M tokens in one window")
+    assert _VENDORED_MAGNITUDE_RE.search("about 1,024k characters")
+    assert _VENDORED_MAGNITUDE_RE.search("some 3.5M tokens")
+    # ...and stays silent on the neighbouring shapes that ARE legitimately in the
+    # payload today, so the bans are strict without being indiscriminate: a plain
+    # count, a date, a standard number, and the qualitative form the M scrub adopted.
+    assert not _VENDORED_MAGNITUDE_RE.search("truncate the pointer at 500 characters")
+    assert not _VENDORED_MAGNITUDE_RE.search("dated 2026-06-22 in the ledger")
+    assert not _VENDORED_MAGNITUDE_RE.search("an ISO 8601 timestamp, UTC")
+    # ...and a numbered list item whose text opens with a lone capital is a list
+    # marker, not a magnitude -- the shape the number spelling above exists to exclude.
+    assert not _VENDORED_MAGNITUDE_RE.search("2. M -- account-level usage telemetry")
+    assert not _VENDORED_SHARE_RE.search(
+        "the large majority of a long window's token cost is incurred at high context")
+
+    docs = _vendored_payload_docs()
+    assert len(docs) >= MIN_VENDORED_PAYLOAD_DOCS, (
+        f"only {len(docs)} vendored document(s) carry the banner, floor is "
+        f"{MIN_VENDORED_PAYLOAD_DOCS}. Either a document was retired (lower the floor "
+        "deliberately, in the same commit) or the banner drifted and this gate just "
+        "stopped grading the payload it exists for.")
+    offenders = []
+    for doc in docs:
+        text = doc.read_text(encoding="utf-8")
+        for label, rx in _VENDORED_PAYLOAD_BANS:
+            for m in rx.finditer(text):
+                line = text[:m.start()].count("\n") + 1
+                offenders.append(f"{doc.relative_to(REPO_ROOT).as_posix()}:{line}: "
+                                 f"{label}: {m.group(0)!r}")
+    assert not offenders, (
+        "a vendored document carries a BANNED CATEGORY:\n" + "\n".join(offenders) +
+        "\n\nThese bans are CATEGORICAL, not heuristic. The fix is to REWORD the "
+        "vendored copy into a qualitative claim and record the adaptation in the Step "
+        "66 decision record's per-file sign-off. Do NOT narrow a ban to admit the "
+        "offending token: that converts a real finding into a false green, which is "
+        "the exact failure this tier exists to prevent.")
 
 
 def test_leak_sweep_filesystem_fallback_skips_build_output(tmp_path, monkeypatch):
