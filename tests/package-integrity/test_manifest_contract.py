@@ -708,15 +708,32 @@ def test_enumeration_skips_inventory_json_and_the_shared_namespace(tmp_path):
 
 
 def test_enumeration_reds_when_the_tree_disagrees_with_the_counts(tmp_path):
-    """Red-on-garbage anchor. Without it the three count assertions could be deleted
-    and every test above would still pass, because the real tree happens to agree."""
+    """Red-on-garbage anchor. What it can decide, stated exactly:
+
+    Every planted tree here must be REJECTED, so deleting the whole guard block reds
+    this test. Beyond that, each of the four cases is caught by a different subset of
+    the three count guards, so no ONE guard can carry the block alone: keep only the
+    total guard and 48/2 slips (it sums to 50); keep only the portable guard and 47/4
+    slips; keep only the native guard and 48/3 slips. Before the 48/2 case existed the
+    other three all broke the total too (51/51/49), so a total-only block passed this
+    anchor -- that is the hole 48/2 closes.
+
+    What it CANNOT decide, and does not claim: deleting exactly one guard is invisible
+    to any count-based tree, because total == portable + native makes any two of the
+    three guards imply the third. That is a property of the arithmetic, not a gap a
+    fifth planted tree could close.
+
+    The guards raise ValueError, not AssertionError, precisely so `python -O` cannot
+    strip them; catching ValueError here keeps that property under test.
+    """
     gm = _load_gen_manifest()
-    for kwargs in ({"portable": 48}, {"native": 4}, {"portable": 46}):
-        root = tmp_path / f"skills-{sorted(kwargs.items())[0][0]}-{list(kwargs.values())[0]}"
+    for kwargs in ({"portable": 48}, {"native": 4}, {"portable": 46},
+                   {"portable": 48, "native": 2}):
+        root = tmp_path / ("skills-" + "-".join(f"{k}{v}" for k, v in sorted(kwargs.items())))
         _plant_skill_tree(root, **kwargs)
         try:
             gm.derived_skill_sets(root)
-        except AssertionError:
+        except ValueError:
             continue
         raise AssertionError(f"enumeration accepted a tree with {kwargs}")
 

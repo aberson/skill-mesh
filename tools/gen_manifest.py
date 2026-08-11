@@ -56,8 +56,8 @@ SKILLS_DIR = REPO_ROOT / "skills"
 # provider-native). They are kept spelled out because the manifest's skill ORDER and
 # the fixture's `portable` / `provider_native` arrays are this list verbatim, and
 # because a reader should be able to see the roster without walking a directory.
-# `derived_skill_sets()` re-derives both from disk on every run and `build()` asserts
-# equality, so the spelled-out copy cannot drift away from the tree.
+# `derived_skill_sets()` re-derives both from disk on every run and `build()` raises on
+# inequality, so the spelled-out copy cannot drift away from the tree.
 
 PORTABLE = [
     "build-phase", "build-queue", "build-step", "goblin-do", "goblin-suggest",
@@ -363,15 +363,23 @@ def derived_skill_sets(skills_dir: Path = SKILLS_DIR):
         if not p.is_dir() or p.name == "_shared":
             continue
         (portable if (p / "providers" / "gpt.md").is_file() else native).append(p.name)
-    assert len(portable) + len(native) == EXPECTED_TOTAL, (
-        f"expected {EXPECTED_TOTAL} skill directories under {skills_dir}, found "
-        f"{len(portable) + len(native)}: {sorted(portable + native)}")
-    assert len(portable) == EXPECTED_PORTABLE, (
-        f"expected {EXPECTED_PORTABLE} portable skills (providers/gpt.md present), "
-        f"found {len(portable)}")
-    assert len(native) == EXPECTED_NATIVE, (
-        f"expected {EXPECTED_NATIVE} provider-native skills (no providers/gpt.md), "
-        f"found {len(native)}: {native}")
+    # `raise`, not `assert`, is deliberate here and in build(): the plan asks for a
+    # GUARD, and `python -O` / PYTHONOPTIMIZE strips every assert, which would let a
+    # drifted tree regenerate the manifest silently -- the exact failure this guard
+    # exists to prevent. A raise is the same three-line guard that survives -O. Do not
+    # "restore" the assert form.
+    if len(portable) + len(native) != EXPECTED_TOTAL:
+        raise ValueError(
+            f"expected {EXPECTED_TOTAL} skill directories under {skills_dir}, found "
+            f"{len(portable) + len(native)}: {sorted(portable + native)}")
+    if len(portable) != EXPECTED_PORTABLE:
+        raise ValueError(
+            f"expected {EXPECTED_PORTABLE} portable skills (providers/gpt.md present), "
+            f"found {len(portable)}")
+    if len(native) != EXPECTED_NATIVE:
+        raise ValueError(
+            f"expected {EXPECTED_NATIVE} provider-native skills (no providers/gpt.md), "
+            f"found {len(native)}: {native}")
     return portable, native
 
 
@@ -385,10 +393,13 @@ def build():
     # GUARD, not a rewrite: the two rosters the committed tree can also answer for
     # must equal the spelled-out constants. Deliberately three lines -- it catches a
     # roster edited in one place only, without deleting the readable list or the four
-    # non-derivable sets beside it.
+    # non-derivable sets beside it. `raise`, not `assert`, for the -O reason spelled
+    # out in derived_skill_sets().
     derived_portable, derived_native = derived_skill_sets()
-    assert derived_portable == sorted(PORTABLE), f"skills/ tree != PORTABLE: {derived_portable}"
-    assert derived_native == sorted(NATIVE), f"skills/ tree != NATIVE: {derived_native}"
+    if derived_portable != sorted(PORTABLE):
+        raise ValueError(f"skills/ tree != PORTABLE: {derived_portable}")
+    if derived_native != sorted(NATIVE):
+        raise ValueError(f"skills/ tree != NATIVE: {derived_native}")
     skills = []
     for name in sorted(PORTABLE + NATIVE):
         native = name in NATIVE
