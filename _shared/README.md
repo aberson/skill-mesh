@@ -21,3 +21,17 @@ skill itself — it has no `SKILL.md`.
 | `score-skill.md` | Composite skill-scoring procedure (structural + differential) | `/skill-iterate` Phase 2 Step D |
 | `score_skill_composite.py` | Thin Python wrapper around the composite procedure for tests + non-LLM callers | `test_score_skill.py` + smoke runs |
 | `test_score_skill.py` | Integration test for the composite scoring procedure | `pytest` |
+| `skill-role-taxonomy.md` | Direction-neutral role taxonomy (the seven tags) + fan-out classification protocol | `tier-escalate`, `tier-offload` |
+| `step-authoring.md` | Build-step sizing (one vertical slice), optional example grammar, deferred `Done when:` sentinels | `plan-init`, `plan-feature`, `plan-review`, `build-phase`, `repo-update` |
+| `task-state-schema.md` | Task-state field definitions, write discipline, path resolution contract, lifecycle | `user-wrap` |
+| `worktree-hygiene.md` | The worktree landmines: removal order, staleness, orphan cleanup | `user-afterparty` |
+| `subagent-economy.md` | Terse-verdict returns + delegate-the-read discipline for orchestrators | `user-afterparty` |
+
+**Vendored documents (Step 66).** The last five rows above, plus `skill-pipeline.md` and
+`intake-engine.md`, are copies of workspace reference documents brought into this payload
+so the cores citing them resolve inside a host discovery root. Each carries a vendoring
+note stating its two adaptations (external citations rendered as plain names; operator
+identifiers, private issue/cron references and harness-configuration paths removed).
+Cores cite them as `<repo>/_shared/<leaf>`, which `tools/build-distributions.ps1` repoints
+to `../_shared/<leaf>` at emit time; the reasoning is in this repository's Step 66
+decision record under `documentation/`.

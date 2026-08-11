@@ -77,6 +77,18 @@ EXPECTED_SHARED_PAYLOAD = frozenset({
     "score_skill_absolute.py",
     "score_skill_composite.py",
     "score_skill.workflow.js",
+    # The seven workspace references vendored in Step 66. They enter the closure the
+    # same way every other asset does -- as `_shared/<leaf>` tokens harvested from the
+    # canonical cores that cite them (spelled `<repo>/_shared/<leaf>` there; see
+    # `Repoint-SharedReference`) -- so the independent walk below finds them without
+    # being told about them.
+    "intake-engine.md",
+    "skill-pipeline.md",
+    "skill-role-taxonomy.md",
+    "step-authoring.md",
+    "subagent-economy.md",
+    "task-state-schema.md",
+    "worktree-hygiene.md",
 })
 
 # A `_shared/<leaf>` asset reference in any spelling the canonical sources use: bare,
@@ -148,6 +160,10 @@ def _repoint_shared_asset(body):
     """
     out = body.replace("../../../_shared/", "../_shared/")
     out = out.replace("../../_shared/", "../_shared/")
+    # The Step 66 spelling. Mirrored here for fidelity even though no payload source
+    # carries it today -- the provenance header's `<repo>/_shared/<leaf>` label is
+    # stamped AFTER the repoint, on purpose, so it is never rewritten.
+    out = out.replace("<repo>/_shared/", "../_shared/")
     return _BARE_SHARED_RE.sub("../_shared/", out)
 
 
@@ -562,6 +578,13 @@ def test_shared_references_are_repointed_and_resolve(dist_root):
             for token in ("../../_shared/", "../../../_shared/"):
                 if token in text:
                     deep.append(f"{profile}/{rel}: {token}")
+            # The Step 66 spelling. It is a canonical BUILD-INPUT token and must never
+            # survive into an emitted file -- unrepointed it is not even a path a
+            # consumer can follow. The one legitimate occurrence is the provenance
+            # header's `Canonical source:` value, which names where the file came from
+            # rather than citing anything, and which is stamped after the repoint.
+            for m in re.finditer(r"(?<!Canonical source: )<repo>/_shared/", text):
+                deep.append(f"{profile}/{rel}: <repo>/_shared/ at offset {m.start()}")
             for leaf in re.findall(r"\.\./_shared/([A-Za-z0-9][A-Za-z0-9._-]*)", text):
                 if not (f.parent / ".." / "_shared" / leaf).resolve().is_file():
                     unresolved.append(f"{profile}/{rel} -> ../_shared/{leaf}")
@@ -576,6 +599,80 @@ def test_shared_references_are_repointed_and_resolve(dist_root):
     assert not deep, f"deep `_shared` references survived the repoint: {deep[:10]}"
     assert not unresolved, f"emitted `../_shared/x` that does not exist: {unresolved[:10]}"
     assert not bare, f"un-repointed bare `_shared/x` inside the payload: {bare[:10]}"
+
+
+# The Step 66 build-input citation spelling. See `Repoint-SharedReference` for why the
+# canonical cores cannot spell these citations relatively.
+_REPO_ROOTED_SHARED_RE = re.compile(r"<repo>/_shared/([A-Za-z0-9][A-Za-z0-9._-]*)")
+
+# Floor on the DERIVED pair set below. A derivation that finds nothing passes vacuously,
+# and this repository has already been burned by a gate whose target list quietly emptied.
+# 12 is what the tree carries today (18 occurrences over 12 keys); the floor moves only
+# when a citation is deliberately retired.
+MIN_VENDORED_REFERENCE_CITATIONS = 12
+
+
+def _canonical_vendored_citations():
+    """(skill, leaf) for every `<repo>/_shared/<leaf>` citation in the canonical cores.
+
+    DERIVED from the tree, never hand-listed: a hand-maintained roster of what a gate is
+    supposed to cover is a false green the first time someone adds a citation and not a
+    row. Paired with the floor above so an empty derivation cannot pass either.
+    """
+    pairs = set()
+    for core in sorted((REPO_ROOT / "skills").glob("*/core.md")):
+        for leaf in _REPO_ROOTED_SHARED_RE.findall(core.read_text(encoding="utf-8")):
+            pairs.add((core.parent.name, leaf))
+    return sorted(pairs)
+
+
+def test_vendored_reference_citations_reach_the_payload(dist_root):
+    """Every Step 66 citation ships as a `../_shared/<leaf>` that RESOLVES, per profile.
+
+    The canonical cores spell these citations `<repo>/_shared/<leaf>` -- a template
+    placeholder, deliberately outside the reference scope of both the link gate and
+    `test_skill_tree`'s reachability scan, because under the link gate's resolution
+    model NO relative spelling of a `_shared` citation from `skills/<n>/core.md` can
+    resolve, and the Step 63 allowlist is shrink-only so a new dangling key hard-fails.
+    That places the ENTIRE correctness burden on the emit-time repoint: nothing else
+    can see a typo, a dropped rewrite, or an asset that never made it into the closure.
+
+    So this asserts the whole chain per (skill, document) pair rather than sampling it:
+    the emitted core cites `../_shared/<leaf>`, the leaf exists in that profile's
+    payload, and no `<repo>/` spelling survived. `test_shared_references_are_repointed_
+    and_resolve` covers the negative half tree-wide; this is the positive half, and it
+    is the one that fails if a citation is silently dropped instead of repointed.
+    """
+    pairs = _canonical_vendored_citations()
+    assert len(pairs) >= MIN_VENDORED_REFERENCE_CITATIONS, (
+        f"only {len(pairs)} `<repo>/_shared/` citation(s) found in skills/*/core.md, "
+        f"floor is {MIN_VENDORED_REFERENCE_CITATIONS}. Either citations were retired "
+        "(lower the floor deliberately, in the same commit) or the derivation stopped "
+        "seeing them, which would make every assertion below vacuous.")
+    # The derivation reads `skills/*/core.md` only, which is where all of Step 66's
+    # citations live. An adapter carrying one would emit into SKILL.md, not core.md, so
+    # the pair below would check the wrong file -- fail instead of quietly missing it.
+    stray = [p.relative_to(REPO_ROOT).as_posix()
+             for p in sorted((REPO_ROOT / "skills").glob("*/providers/*.md"))
+             if _REPO_ROOTED_SHARED_RE.search(p.read_text(encoding="utf-8"))]
+    assert not stray, (
+        "an ADAPTER now carries a `<repo>/_shared/` citation, which this test's "
+        f"core.md-only derivation cannot grade: {stray}. Extend the derivation to "
+        "SKILL.md before landing it.")
+    missing = []
+    for profile in ("claude", "gpt"):
+        for skill, leaf in pairs:
+            core = dist_root / profile / skill / "core.md"
+            if not core.is_file():
+                missing.append(f"{profile}/{skill}/core.md is absent")
+                continue
+            text = core.read_text(encoding="utf-8")
+            if f"../_shared/{leaf}" not in text:
+                missing.append(f"{profile}/{skill}/core.md does not cite ../_shared/{leaf}")
+            if not (dist_root / profile / SHARED_DEST / leaf).is_file():
+                missing.append(f"{profile}/_shared/{leaf} was not emitted")
+    assert not missing, "vendored-reference citations did not reach the payload:\n" + \
+        "\n".join(missing)
 
 
 def _synthetic_build_repo(tmp_path, shared_files, core_body, adapter_body=None):
@@ -662,6 +759,36 @@ def test_bare_shared_token_inside_a_shared_asset_is_repointed(tmp_path):
     assert "_shared/_shared/" not in emitted
     # The provenance header's own canonical-source value must survive the repoint.
     assert "Canonical source: <repo>/_shared/doc.md" in emitted
+
+
+def test_repo_rooted_shared_citation_is_seeded_and_repointed(tmp_path):
+    """ANCHOR for the Step 66 spelling, on a synthetic tree: `<repo>/_shared/x`.
+
+    Two independent claims, both of which a one-line regression would break silently on
+    the live tree (the citation is out of BOTH gates' reference scope by construction):
+
+      * the closure SEES it. `$SHARED_REF_RE` has no lookbehind, so the `_shared/<leaf>`
+        substring inside `<repo>/_shared/<leaf>` is harvested as a seed -- which is also
+        why a mistyped leaf throws in `Get-SharedClosure` instead of shipping.
+      * the emit REPOINTS it to `../_shared/<leaf>`, the one spelling that resolves one
+        level below a discovery root. Dropping the third `.Replace` in
+        `Repoint-SharedReference` leaves `<repo>/_shared/x` in the shipped core: a
+        reference no consumer can follow, and one no scope-based gate reports.
+    """
+    repo = _synthetic_build_repo(
+        tmp_path,
+        {"vendored.md": "# vendored\n\nWorkspace doctrine.\n"},
+        "# demo core\n\nSize each step per `<repo>/_shared/vendored.md` section 1.\n")
+    out = tmp_path / "out"
+    r = _synthetic_build(repo, out)
+    assert r.returncode == 0, f"{r.stdout}\n{r.stderr}"
+    assert (out / "claude" / SHARED_DEST / "vendored.md").is_file(), \
+        "the `<repo>/_shared/<leaf>` citation did not seed the closure"
+    emitted = (out / "claude" / "demo" / "core.md").read_text(encoding="utf-8")
+    assert "`../_shared/vendored.md`" in emitted, emitted
+    assert "<repo>/_shared/" not in emitted, \
+        "the `<repo>/_shared/` build-input spelling survived into the emitted core"
+    assert (out / "claude" / "demo" / ".." / "_shared" / "vendored.md").resolve().is_file()
 
 
 def test_shared_closure_seeds_from_the_adapter_as_well_as_the_core(tmp_path):

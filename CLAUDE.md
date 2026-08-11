@@ -97,7 +97,9 @@ skills/<name>/          Canonical source: core.md + providers/{claude,gpt}.md (5
 <skill>/SKILL.md        Legacy top-level packages (46) — compatibility surface during the
                         deprecation window; NOT canonical, not updated by the migration
 _shared/                Shared cores (judge-core, intake-engine), grader/verdict engines,
-                        and the README's light/dark SVG diagrams
+                        the seven vendored workspace references (Step 66 — cores cite them
+                        as `<repo>/_shared/<leaf>`, repointed to `../_shared/<leaf>` at
+                        emit time), and the README's light/dark SVG diagrams
 config/                 skill-manifest.json (inventory + eligibility), model-mapping.json,
                         model-tier-map.json
 documentation/          architecture.md (the contract), host-discovery.md, migration.md,

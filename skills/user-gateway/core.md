@@ -15,13 +15,13 @@ question — and wants them made concrete without anything getting lost or inven
 skill composes three existing contracts and owns NO routing table and NO ledger grammar
 of its own:
 
-- **Routing** — `../../references/skill-pipeline.md`
+- **Routing** — `<repo>/_shared/skill-pipeline.md`
   (the routing web) is the ONE owner of the rails, their entry conditions, the tiebreak
   rule, the re-route edges, and the re-route contract. The gateway CONSULTS it per
   fragment and cites it in output; per the web's own intro, no skill hardcodes its own
   routing table — reproducing the web's rail/entry-condition table in this file or in
   gateway output (verbatim or paraphrased) is a DEFECT.
-- **Ledger** — `../../references/intake-engine.md`
+- **Ledger** — `<repo>/_shared/intake-engine.md`
   owns the ledger path formula + topic-slug rule (§1 — which itself reuses the
   shakedown-engine §1 slug rule by cross-reference), the row grammar + `F<N>` ids +
   status vocabulary + one-line disposition rule (§2), the zero-open check + canonical

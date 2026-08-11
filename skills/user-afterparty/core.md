@@ -173,7 +173,7 @@ Run these unattended; there are NO gates here.
   never auto-run.
 
 Collect all of the above into ONE consolidated hygiene report (shape below). Per
-`../../rules/subagent-economy.md`: keep each captured
+`<repo>/_shared/subagent-economy.md`: keep each captured
 result to its load-bearing verdict + counts + a pointer to the skill's full output — do
 not inline the full dumps.
 
@@ -199,7 +199,7 @@ but do NOT invoke it into its apply phase.
 ### Step 3 — orphan-owner duties (workspace stray / orphan-worktree cleanup)
 
 Workspace-wide, report-first. Registry-checked detection of orphaned `worktree_*` dirs
-(rule owned by `../../references/worktree-hygiene.md`
+(rule owned by `<repo>/_shared/worktree-hygiene.md`
 §4) plus task-state stray triage; list for confirmation, never auto-`rm`. Note: the
 command blocks in this step are POSIX/bash (Git Bash / the Bash tool) — `ls -d`,
 `2>/dev/null`, `du -sh`, `cat <wt>/.git`, and `git check-ignore` are bash idioms, run them

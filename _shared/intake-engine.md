@@ -1,22 +1,32 @@
 # Intake engine — the shared intake-ledger contract
 
+> **Vendored into skill-mesh.** This is a copy of the workspace reference document of the
+> same name, vendored into the shared payload (`_shared`) so that the skill cores citing it
+> resolve inside a host discovery root rather than against a workspace directory no
+> consumer home has.
+> Two adaptations apply throughout: citations to workspace documents that are **not** part
+> of this payload are rendered as plain names rather than links (their targets do not ship
+> here), and operator-specific identifiers, private issue/cron references and
+> harness-configuration paths have been removed. The per-file sign-off and the full list of
+> link dispositions are recorded in this repository's Step 66 decision record.
+
 Single source of truth for the **intake ledger**: the status table that `/user-gateway` seeds
 when an operator vent is converted into routed work, that rail skills write re-route notes back
 to (per the routing web's re-route contract), and that a `/goal` condition mechanically checks
 each turn. Three consumer classes must agree on the ledger — the gateway (writes rows), the
 rail skills (write back dispositions), and the `/goal` zero-open check — so the grammar, status
-vocabulary, and check command live here **once** (per the workspace's `code-quality.md` § "One source of truth for
-data-shape constants"). When any grammar below changes, grep
+vocabulary, and check command live here **once** (per `code-quality.md § "One source of truth
+for data-shape constants"`). When any grammar below changes, grep
 the gateway skill + the routing web + this file before landing.
 
-**Sibling, not generalization.** This file is modeled on the workspace's `shakedown-engine.md`
+**Sibling, not generalization.** This file is modeled on `shakedown-engine.md`
 and deliberately kept a **sibling with its own pinned grammar**: the two schemas are independent
 and evolve independently (the shakedown grammar has three live consumers and its own executed
 fixtures; sharing a table schema would couple them for no gain). The only reused element is the
 slug rule (§1), taken by cross-reference.
 
-Cited by: [`skill-pipeline.md § "Re-route contract"`](skill-pipeline.md) (write-back, step 3);
-`user-gateway/SKILL.md`.
+Cited by: [`skill-pipeline.md § "Re-route contract"`](./skill-pipeline.md) (write-back, step 3);
+the `user-gateway` skill contract.
 
 ---
 
@@ -30,15 +40,15 @@ Cited by: [`skill-pipeline.md § "Re-route contract"`](skill-pipeline.md) (write
 
 `<git-root>` is ALWAYS resolved via `git rev-parse --show-toplevel` — **never** cwd-relative.
 A ledger written from inside a worktree with a relative path is silently lost on worktree
-cleanup (the workspace's task-state-schema gotcha) — and
+cleanup (the task-state-schema gotcha, [`task-state-schema.md`](./task-state-schema.md)) — and
 rail skills writing back a re-route (§5) may be running anywhere.
 
 ### Topic slug (reused by cross-reference)
 
 `<topic-slug>` is computed from the gateway's topic argument by the **deterministic
-feature-slug rule** the workspace's `shakedown-engine.md` §1 owns (kebab-case: lowercase;
-spaces/underscores → single hyphens; strip characters outside `[a-z0-9-]`; collapse repeated
-hyphens; trim leading/trailing hyphens). Same rule for the same reason:
+feature-slug rule in `shakedown-engine.md § 1`** — that rule is stated
+once there and reused here by cross-reference, **never restated** (one owner per contract,
+`knowledge-placement.md`). Same rule for the same reason:
 every writer — the gateway seeding rows, a rail skill writing back, the `/goal` evaluator —
 must resolve the **same** file for the same topic, or a write-back silently lands in a second
 ledger the check never sees.
@@ -68,7 +78,7 @@ The ledger body is a single markdown table. One data row per operator fragment:
   pipe-free (render any literal `|` as `/`; a pipe that slips through makes the row count as
   open — the fail-safe direction, §3).
 - **`route`** — the rail this fragment was routed onto, chosen from the routing web
-  ([`skill-pipeline.md § "The 8 rails"`](skill-pipeline.md)); `-` until the row is routed.
+  ([`skill-pipeline.md § "The 8 rails"`](./skill-pipeline.md)); `-` until the row is routed.
   Deliberately **not pinned** by the grammar below: the routing web is the one owner of the
   rail vocabulary, and pinning rail names here would create a second owner that drifts when a
   rail is added. The check never needs it — closure is a **status** question, not a route
@@ -140,7 +150,8 @@ visible, never hide it.
 **The check fails loud, and ABORT ≠ zero-open.** The block's first lines are guards: a missing
 ledger file, or a file with no ledger header, ABORTS with exit 1 instead of printing a count.
 Without the guard, grep on a missing file arithmetics to `UNROUTED=0` and a `/goal` evaluator
-reads *goal met* off a ledger that was never created (the workspace's `measurement-validity.md` § "Fail loud on fallback config"). An evaluator must treat any non-zero
+reads *goal met* off a ledger that was never created (`measurement-validity.md § "Fail loud
+on fallback config"`). An evaluator must treat any non-zero
 exit as **goal NOT met**; only a printed `0` from a real ledger satisfies the condition. A
 header-only ledger genuinely scores `0` — zero fragments captured is a closed intake — and the
 guards are what distinguish *never created* (ABORT) from *created but empty* (`0`).
@@ -222,7 +233,7 @@ file's.
 
 When a rail skill discovers mid-run that its work is on the wrong rail, the **re-route
 contract** — the emit-line format, the seed for the correct rail, the stop rule — is owned by
-[`skill-pipeline.md § "Re-route contract"`](skill-pipeline.md); this file owns only what the
+[`skill-pipeline.md § "Re-route contract"`](./skill-pipeline.md); this file owns only what the
 write-back does to a row: **the row's status stays `routed`** (never a new status word, never
 a flip back to `open`), **and the disposition gains a note recording the re-route** alongside
 the original seed pointer. The ledger records where the fragment was sent and where it ended
@@ -232,8 +243,8 @@ up; the re-routed work itself lives on the new rail.
 
 ## 6. Calibration fixtures (run, not read)
 
-Three frozen ledgers anchor the zero-open check per the workspace's `measurement-validity.md` § "Calibrate with anchors before
-comparing candidates": a known-good
+Three frozen ledgers anchor the zero-open check per `measurement-validity.md § "Calibrate
+with anchors before comparing candidates"`: a known-good
 (all closed) that must score `0`, a known-garbage (one open) that must score `1`, and a
 corruption fixture (one id-corrupted row + one status-corrupted row) that must score `2` —
 the §3 fail-safe demonstrated, not assumed. Extract any fixture to a file and run the §3

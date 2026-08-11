@@ -22,6 +22,8 @@ Runnable via pytest (`python -m pytest tests/package-integrity`) or standalone.
 import json
 import os
 import re
+import shutil
+import subprocess
 import sys
 from pathlib import Path
 
@@ -185,13 +187,110 @@ def test_generator_and_inventory_have_no_private_paths():
 # harness session-dir slug, or private second-brain (.claude/projects) path. The
 # `abero(?![a-z])` token catches the bare username WITHOUT flagging the legitimate
 # public org name `aberson/...`.
+#
+# STEP 66 widened this in two directions, because the five original patterns are all
+# keyed on a drive letter, a home path or the username -- and the highest-value private
+# token in the documents this repository now vendors carries none of them. The source
+# line `~/.claude/projects/<slug>/<uuid>.jsonl` trips three of the five, but the RAW
+# SESSION UUID on the line above it trips none: it is just 32 hex digits.
+#
+# 1. A hex-UUID pattern, so a raw harness session id is a leak on its own.
+# 2. The sweep now covers `_shared/**` as well as `skills/**` -- see
+#    `_LEAK_SWEEP_ROOTS`. Nothing scanned `_shared/` before this step, and `_shared/`
+#    is exactly where the vendored workspace references land.
+
+# RFC 4122 Appendix A's documentation UUID: the canonical "this is an example" value,
+# used as an illustrative `run_id` in a JSON sample in skills/build-step/core.md. It
+# identifies no session and no person. Exempted by LITERAL, never by shape -- any other
+# UUID-shaped token is treated as a raw harness session id and reds. Keep this list at
+# the one value that is already in the tree; a growing exemption list is how a real id
+# eventually rides in.
+_EXAMPLE_UUIDS = ("550e8400-e29b-41d4-a716-446655440000",)
+_UUID_RE = re.compile(
+    r"\b(?!(?:" + "|".join(re.escape(u) for u in _EXAMPLE_UUIDS) + r")\b)"
+    r"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\b")
+
 _LEAK_PATTERNS = [
     ("session-dir slug (c--Users-abero...)", re.compile(r"c--Users-abero")),
     ("home path (<drive>:/Users/abero)", re.compile(r"[A-Za-z]:[\\/]Users[\\/]abero")),
     ("/Users/<user>/ path", re.compile(r"[\\/]Users[\\/]abero")),
     ("private harness projects path", re.compile(r"\.claude[\\/]projects[\\/]")),
     ("bare operator username 'abero'", re.compile(r"abero(?![a-z])")),
+    ("raw harness session UUID", _UUID_RE),
 ]
+
+# Every tree the leak sweep walks. `skills/` is the migrated canonical source; `_shared/`
+# is the shared payload both profiles ship, and it was unscanned until Step 66 -- a
+# second publishing surface with no guard on it. Enumerated here, once, so the two
+# assertions below and the enumeration guard all read the same list.
+_LEAK_SWEEP_ROOTS = ("skills", "_shared")
+
+
+_GIT = shutil.which("git")
+# Build artifacts, never published, and actively HOSTILE to this sweep: CPython embeds
+# the absolute source path of the module it compiled into every `.pyc`, so a single
+# `_shared/__pycache__/` -- which this repository's own repo-root pytest run creates,
+# because `_shared/` is one of its test roots -- would report the developer's home
+# directory as an operator-private leak in the public tree. That is a false RED with no
+# legal remedy: the file is gitignored and cannot reach a release artifact.
+_LEAK_SWEEP_SKIP_DIRS = ("__pycache__",)
+
+
+def _tracked_leak_sweep_files():
+    """git-tracked files under `_LEAK_SWEEP_ROOTS`, or None when git cannot answer.
+
+    Returns None -- meaning "fall back to the filesystem walk" -- for anything that is
+    not a positive, non-empty answer about THIS tree's index: no git, a failed
+    subprocess, or a `rev-parse --show-toplevel` that is not `REPO_ROOT` (which is the
+    case inside `tools/release.ps1`'s staging directory, where git still answers for the
+    OUTER repository).
+    """
+    if _GIT is None:
+        return None
+    try:
+        top = subprocess.run([_GIT, "-C", str(REPO_ROOT), "rev-parse", "--show-toplevel"],
+                             capture_output=True, timeout=60, check=True).stdout
+        if Path(top.decode("utf-8").strip()).resolve() != REPO_ROOT.resolve():
+            return None
+        out = subprocess.run([_GIT, "-C", str(REPO_ROOT), "ls-files", "-z", "--",
+                              *_LEAK_SWEEP_ROOTS],
+                             capture_output=True, timeout=60, check=True).stdout
+    except (OSError, ValueError, UnicodeDecodeError, subprocess.SubprocessError):
+        return None
+    files = [REPO_ROOT / rel for rel in
+             (chunk.decode("utf-8") for chunk in out.split(b"\0") if chunk)]
+    files = [p for p in files if p.is_file()]
+    return sorted(files, key=lambda p: p.as_posix()) or None
+
+
+def _leak_sweep_files():
+    """Every file the leak sweep grades, from every root in `_LEAK_SWEEP_ROOTS`.
+
+    EVERY file, not `*.md`: `_shared/` ships `.py`, `.js` and `.svg` into both profiles,
+    and a private path in a docstring or an SVG title is published exactly as widely as
+    one in prose. The `.md`-only filter the sweep started with was a markdown-shaped
+    assumption, not a disclosure-shaped one.
+
+    Enumerated from `git ls-files` when git can answer for this tree, which is the
+    repository's convention for anything that must reflect TRACKED state and is exactly
+    the right scope here: `tools/release.ps1` stages from `git ls-files`, so the tracked
+    set IS the publishable set, and it reads the INDEX, so a staged-but-uncommitted file
+    is graded before it can be committed. Untracked scratch and gitignored build output
+    (`__pycache__`) are excluded because they cannot reach a consumer -- see
+    `_LEAK_SWEEP_SKIP_DIRS` for why including them is worse than a narrowing.
+
+    The fallback is the WIDER filesystem walk, minus those same build directories: an
+    untracked file then shows up as a leak rather than vanishing.
+    """
+    tracked = _tracked_leak_sweep_files()
+    if tracked is not None:
+        return tracked
+    out = []
+    for root in _LEAK_SWEEP_ROOTS:
+        for p in sorted((REPO_ROOT / root).rglob("*")):
+            if p.is_file() and not any(d in p.parts for d in _LEAK_SWEEP_SKIP_DIRS):
+                out.append(p)
+    return out
 
 
 def _find_leaks(text):
@@ -211,14 +310,58 @@ def test_leak_detector_reds_on_planted_leak():
     assert _find_leaks("a bare c--Users-abero-dev slug in prose")
     assert _find_leaks(proj + "c--Users-abero-dev/memory/")
     assert not _find_leaks("gh -R aberson/coding-root issue list  # public org, ok")
+    # STEP 66 ANCHOR -- the pattern the other five cannot see. A raw harness session
+    # UUID carries no drive letter, no home path and no username, so it survived every
+    # original pattern. Both halves are asserted: a session-shaped id reds...
+    # (the planted value is synthetic on purpose -- pasting a REAL session id into a
+    # committed anchor would be the very disclosure this pattern exists to stop)
+    assert _find_leaks("run id deadbeef-0000-4000-8000-00000000cafe from the transcript") \
+        == ["raw harness session UUID"]
+    assert _find_leaks("~/" + proj + "some-slug/0f1e2d3c-4b5a-6978-8765-43210fedcba9.jsonl")
+    # ...and the ONE literal documentation UUID does not, so the exemption is proven to
+    # be by value and not by a weakened shape.
+    assert not _find_leaks(f'"run_id":"{_EXAMPLE_UUIDS[0]}"')
+    assert len(_EXAMPLE_UUIDS) == 1, (
+        "the UUID exemption list grew. Each entry is a hole in a disclosure gate; add "
+        "one only with the reason recorded beside it.")
+
+
+def test_leak_sweep_covers_the_shared_payload():
+    """ENUMERATION GUARD: the sweep must actually reach `_shared/`, and non-markdown.
+
+    The sweep was `skills/**/*.md` until Step 66, so the entire shared payload -- which
+    ships into BOTH host profiles -- was unscanned. A later edit narrowing the walk back
+    would leave every assertion below green over a smaller tree, which is the shape this
+    repository has already been burned by. So the roots and the breadth are asserted,
+    not assumed.
+    """
+    swept = {p.relative_to(REPO_ROOT).as_posix() for p in _leak_sweep_files()}
+    assert any(f.startswith("_shared/") for f in swept), \
+        "the leak sweep no longer reaches _shared/"
+    assert any(f.startswith("skills/") for f in swept), \
+        "the leak sweep no longer reaches skills/"
+    assert "_shared/judge-core.md" in swept
+    assert any(f.startswith("_shared/") and f.endswith(".py") for f in swept), \
+        "the leak sweep is markdown-only again; `_shared/` ships .py/.js/.svg too"
+    # ...and the enumeration must not drag in gitignored build output. A `.pyc` embeds
+    # the absolute path of the source it was compiled from, so one `__pycache__` entry
+    # turns this gate into a false RED reporting the developer's own home directory.
+    assert not [f for f in swept if "__pycache__" in f], \
+        "the leak sweep is walking gitignored build output; see _LEAK_SWEEP_SKIP_DIRS"
+    # Every vendored Step 66 document is in the swept set -- the whole reason the sweep
+    # was widened. Named individually so a partial enumeration cannot pass on one file.
+    for leaf in ("step-authoring.md", "task-state-schema.md", "skill-pipeline.md",
+                 "intake-engine.md", "skill-role-taxonomy.md", "worktree-hygiene.md",
+                 "subagent-economy.md"):
+        assert f"_shared/{leaf}" in swept, f"_shared/{leaf} is not being swept"
 
 
 def test_no_private_leak_in_migrated_tree():
     offenders = []
-    for md in SKILLS_DIR.rglob("*.md"):
-        hits = _find_leaks(md.read_text(encoding="utf-8"))
+    for f in _leak_sweep_files():
+        hits = _find_leaks(f.read_text(encoding="utf-8", errors="replace"))
         if hits:
-            offenders.append(f"{md.relative_to(REPO_ROOT)}: {hits}")
+            offenders.append(f"{f.relative_to(REPO_ROOT)}: {hits}")
     inv_hits = _find_leaks(INVENTORY_PATH.read_text(encoding="utf-8"))
     if inv_hits:
         offenders.append(f"skills/inventory.json: {inv_hits}")

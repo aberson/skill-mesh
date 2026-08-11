@@ -168,7 +168,7 @@ Skip any category that genuinely doesn't apply.
   phase — do NOT default to Step 1 if prior phases already used Steps 1-N.
   Step-number collisions across sibling plans break `/repo-sync` (see
   `feedback_repo_sync_step_collision.md`).
-- What are the natural steps to build this feature? (Size each as one vertical slice — see `../../references/step-authoring.md` §1; don't over-split a coherent slice.)
+- What are the natural steps to build this feature? (Size each as one vertical slice — see `<repo>/_shared/step-authoring.md` §1; don't over-split a coherent slice.)
 - What order minimizes risk and maximizes testability at each step?
 - Can any steps be built in parallel?
 - What does "done" look like for each step? (specific test, behavior, output)

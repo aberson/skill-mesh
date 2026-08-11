@@ -157,7 +157,7 @@ phase's `$PLAN_PATH`:
   Blocker/Gap/Minor format as plan-wrap, prefixed `[drift]` (like `[wiki]` in 5b). `[drift]`
   findings are Gap/Minor only, never Blocker.
 - If the step's `**Done when:**` embeds a runnable shell command AND is non-sentinel (not one of
-  the `../../references/step-authoring.md` §3 placeholders), re-run it and report pass/fail as a
+  the `<repo>/_shared/step-authoring.md` §3 placeholders), re-run it and report pass/fail as a
   `[drift]` line (a FAIL is a `[drift] Gap`). A prose-only or sentinel Done-when is skipped (no re-run).
 - If the phase removed or renamed modules/identifiers, grep the CURRENT-STATE docs — not just the
   plan — for the removed/renamed names and the prior test count

@@ -1,5 +1,15 @@
 # Skill role taxonomy — tags + fan-out classification protocol
 
+> **Vendored into skill-mesh.** This is a copy of the workspace reference document of the
+> same name, vendored into the shared payload (`_shared`) so that the skill cores citing it
+> resolve inside a host discovery root rather than against a workspace directory no
+> consumer home has.
+> Two adaptations apply throughout: citations to workspace documents that are **not** part
+> of this payload are rendered as plain names rather than links (their targets do not ship
+> here), and operator-specific identifiers, private issue/cron references and
+> harness-configuration paths have been removed. The per-file sign-off and the full list of
+> link dispositions are recorded in this repository's Step 66 decision record.
+
 Direction-NEUTRAL source of truth for classifying the LLM-bearing roles inside a skill's
 `SKILL.md`. It defines the tag set (§1) and the parallel classification protocol (§2–§3) that
 produces a per-skill role table. It deliberately says nothing about where any role should
@@ -87,6 +97,6 @@ column(s) when it applies its rules to this table.
 
 Consuming skills add all of the above on top of the neutral classification. Do not re-inline
 them here — that re-creates the drift this single source exists to prevent (per
-[`code-quality.md § "One source of truth for data-shape constants"`](../rules/code-quality.md)).
+`code-quality.md § "One source of truth for data-shape constants"`).
 When changing the tag set or the §3 output shape, grep all consumers (`tier-offload`,
 `tier-escalate`) before landing.
