@@ -19,16 +19,29 @@
     verbatim so preserve/retire/install cannot diverge from what the read-only
     preflight reported:
         in config/skill-manifest.json      -> managed
-        `_shared` with no SKILL.md         -> core-holder
+        `_shared` with no SKILL.md         -> shared-payload (per-FILE, see below)
         has a SKILL.md                     -> consumer-only
         anything else                      -> foreign
     `managed` trees are migrated (their generated paths are installed over, with
     the pre-image backed up; their STALE marker-bearing files are retired).
-    `consumer-only` trees and the `core-holder` are PRESERVED byte-for-byte --
-    never overwritten, never retired, never a block -- and are recorded in the
-    backup manifest by relative path and SHA-256 ONLY, never payload-copied, so
-    private consumer content is not duplicated into a backup it can never need.
+    `consumer-only` trees are PRESERVED byte-for-byte -- never overwritten, never
+    retired, never a block -- and are recorded in the backup manifest by relative
+    path and SHA-256 ONLY, never payload-copied, so private consumer content is
+    not duplicated into a backup it can never need.
     `foreign` BLOCKS before the first mutation.
+
+    `shared-payload` IS CLASSIFIED PER FILE, NEVER PER DIRECTORY. The builder now
+    emits a shared support payload at each profile root (dist/<p>/_shared/<asset>),
+    so a `_shared` directory in a consumer home holds two populations that must not
+    be conflated. A file is skill-mesh's -- managed, installed over, retired when
+    superseded, and removable by the ownership-safe uninstall -- when EITHER the
+    supplied distribution ships that exact relative path OR the file on disk already
+    carries the provenance marker. Every other file in that directory is the
+    consumer's and is PRESERVED exactly like a consumer-only skill.
+    A directory-wide claim would be silent data loss in the audit records rather
+    than on disk: a consumer-authored `_shared` file would fall out of the preserve
+    action set, out of BackupManifest.preserved_files, out of the precondition and
+    post-install checks, and out of the rollback drift advisory -- all at once.
 
     OWNERSHIP AUTHORITY IS FILE-CONTENT PROVENANCE, exactly as in the installer:
     Test-SkillMeshProvenance from tools/skill-mesh-provenance.ps1 (dot-sourced,
@@ -36,6 +49,18 @@
     non-marker files this command ever writes over are the exact target paths of
     the generated distribution -- the legacy adoption this command exists to
     perform -- and every one of those has its pre-image in the backup first.
+
+    THE INSTALL PATH CARRIES A MARKER GUARD (Assert-InstallTargetAdoptable). The
+    installer REFUSES any target that exists without the marker; this command adopts
+    such a target on purpose, but only the ones its own plan already accounted for.
+    The guard re-reads the target immediately before the copy and refuses when the
+    bytes there are marker-less AND are not the pre-image the plan recorded and
+    backed up. That is the difference between an audited adoption and a silent
+    clobber: an install action planned against an ABSENT target carries pre_hash
+    $null and therefore NO backup payload, so a consumer file that appears at that
+    path after planning would be destroyed with nothing to restore from. -Apply
+    catches the wide window via Test-Preconditions; -Resume does not run
+    preconditions at all, so without this guard the resume path had no check.
 
     ATOMICITY IS NOT IMPLEMENTED HERE. The state machine, append-only journal,
     ordered rollback, and resume live in tools/skill-mesh-transaction.ps1, shared
@@ -143,6 +168,18 @@ $RETIRED_ROOT_REL = Get-SkillMeshRetiredCopilotRoot
 
 $LEDGER_NAME = '.skill-mesh-install.json'
 $LEDGER_VERSION = 1
+
+# The shared support payload the builder emits at each PROFILE ROOT, as a sibling of
+# the per-skill directories (tools/build-distributions.ps1 $SHARED_DEST). One
+# spelling, used by the dist walk, the home scan, and the eligibility cascade, so a
+# rename cannot half-land.
+$SHARED_DIR_NAME = '_shared'
+
+# FIRST-SEGMENT ALLOWLIST for a built profile. Everything directly under
+# dist/<provider>/ is a manifest skill directory EXCEPT the entries listed here.
+# It is a CLOSED list, deliberately -- not a "not in the manifest -> allow"
+# relaxation: an unmanifested skill directory must still block with FOREIGN_FILE.
+$PROFILE_ROOT_DIRS = @($SHARED_DIR_NAME)
 
 $PLAN_FILE = 'plan.json'
 $BACKUP_MANIFEST_FILE = 'backup-manifest.json'
@@ -511,10 +548,58 @@ function Get-DirEligibility([string]$name, [bool]$hasSkillMd) {
     # Get-RootAnalysis. Absence from the manifest is the SOLE criterion for
     # consumer-only, so a consumer's own skill can never be classified managed and
     # overwritten.
+    #
+    # `shared-payload` replaces the old `core-holder` verdict (D3). It is NOT a
+    # directory-level ownership claim: it says only "this directory holds a mix, so
+    # route its files through the PER-FILE rule in Get-RootScan". The twin change in
+    # inspect-host-install.ps1's Get-RootAnalysis lands with it -- the two cascades
+    # are one contract and a drift between them is exactly what makes a preflight
+    # report disagree with what the migrator then does.
     if ($script:ManifestMap.ContainsKey($name)) { return 'managed' }
-    if ($name -eq '_shared' -and (-not $hasSkillMd)) { return 'core-holder' }
+    if ($name -eq $SHARED_DIR_NAME -and (-not $hasSkillMd)) { return 'shared-payload' }
     if ($hasSkillMd) { return 'consumer-only' }
     return 'foreign'
+}
+
+function Get-SharedInstallRels($providerRoots, [string]$distAbs) {
+    # The home-relative paths the SHIPPED shared payload will occupy, as one
+    # case-insensitive set for the whole plan.
+    #
+    # Derived from the DISTRIBUTION's own layout (dist/<p>/_shared/<asset>), never a
+    # hand-listed asset roster: a roster here would drift from the builder's
+    # re-walked transitive closure and would silently start classifying the wrong
+    # consumer files as skill-mesh's.
+    #
+    # This is the PER-FILE half of D3, computed BEFORE the home scan because the home
+    # scan is what needs the answer. A distribution that ships no `_shared` payload
+    # yields an empty set, which is exactly the pre-Step-64 behaviour: every
+    # `_shared` file in the home stays preserved.
+    $set = New-Object 'System.Collections.Generic.HashSet[string]' ([System.StringComparer]::OrdinalIgnoreCase)
+    foreach ($p in @($providerRoots.Keys)) {
+        $sharedDir = Join-Path (Join-Path $distAbs $p) $SHARED_DIR_NAME
+        if (-not (Test-Path -LiteralPath $sharedDir -PathType Container)) { continue }
+        $sharedAbs = [System.IO.Path]::GetFullPath($sharedDir)
+        foreach ($f in @(Get-ChildItem -LiteralPath $sharedAbs -Recurse -File)) {
+            $leafRel = ($f.FullName.Substring($sharedAbs.Length).TrimStart('\', '/') -replace '\\', '/')
+            [void]$set.Add("$($providerRoots[$p])/$SHARED_DIR_NAME/$leafRel")
+        }
+    }
+    return $set
+}
+
+function Test-SharedFileIsOurs([string]$rel, $sharedInstallRels) {
+    # PER-FILE ownership inside a `_shared` directory. Two independent yeses, each
+    # about THIS file and never about its directory:
+    #   * the supplied distribution ships this exact relative path -- it is an
+    #     install target, so it is ours to write and (via the ledger) to uninstall;
+    #   * the file on disk carries the provenance marker -- they are our own bytes,
+    #     either a payload file a newer distribution no longer emits or a
+    #     pre-retarget copy under the retired root, so it is ours to RETIRE.
+    # Anything else is consumer-authored and stays PRESERVED: hashed into the backup
+    # manifest, precondition-checked, post-install-verified, and named by the
+    # rollback drift advisory if it ever changes.
+    if ($null -ne $sharedInstallRels -and $sharedInstallRels.Contains($rel)) { return $true }
+    return (Test-FileHasMarker (Resolve-HomeTargetForRead $rel))
 }
 
 # -- Release identity ---------------------------------------------------------
@@ -562,10 +647,17 @@ function Get-SourceRelease([string]$distAbs) {
 
 # -- Home scan ----------------------------------------------------------------
 
-function Get-RootScan([string]$rootRel) {
+function Get-RootScan([string]$rootRel, $sharedInstallRels) {
     # Classify one discovery-root-shaped tree. Returns
     # @{ blocked; preserve; managed_files } where every entry is a home-relative
     # POSIX path. Purely read-only.
+    #
+    # $sharedInstallRels is the plan-wide set from Get-SharedInstallRels; it is only
+    # consulted for files inside a `shared-payload` directory. The RETIRED root is
+    # scanned with the same set: none of its paths can match (the set is keyed to the
+    # live provider roots), so a `_shared` there is classified on the marker alone --
+    # which is the right answer, since a marker-bearing file at the retired target is
+    # a superseded copy of ours.
     $result = @{ blocked = @(); preserve = @(); managed_files = @() }
     # Gated resolve FIRST: $null means the root escapes the home, which is a block,
     # not an absence. Only a resolved path is ever handed to Test-Path.
@@ -599,7 +691,7 @@ function Get-RootScan([string]$rootRel) {
         $eligibility = Get-DirEligibility $child.Name $hasSkillMd
         if ($eligibility -eq 'foreign') {
             $result.blocked += New-Block 'FOREIGN_FILE' $childRel `
-                ('an unknown directory: not a manifest skill, no SKILL.md, and not the _shared core-holder. ' +
+                ('an unknown directory: not a manifest skill, no SKILL.md, and not the _shared payload root. ' +
                  'It is never adopted, overwritten, or deleted -- remove or relocate it, then re-run.')
             continue
         }
@@ -623,11 +715,22 @@ function Get-RootScan([string]$rootRel) {
                 continue
             }
             $rel = ConvertTo-HomeRel $f.FullName
-            if ($eligibility -eq 'managed') {
+            # PER-FILE, not per-directory (D3). `managed` is a whole-tree verdict --
+            # the directory name IS a manifest record -- but `shared-payload` is a
+            # mixed tree, so each of its files is asked individually.
+            $isOurs = $(if ($eligibility -eq 'managed') {
+                $true
+            } elseif ($eligibility -eq 'shared-payload') {
+                Test-SharedFileIsOurs $rel $sharedInstallRels
+            } else {
+                $false
+            })
+            if ($isOurs) {
                 $result.managed_files += $rel
             } else {
-                # consumer-only / core-holder: byte-untouched, recorded by path and
-                # hash only, NEVER payload-copied.
+                # consumer-only, and every consumer-authored file inside a
+                # shared-payload directory: byte-untouched, recorded by path and hash
+                # only, NEVER payload-copied.
                 $result.preserve += $rel
             }
         }
@@ -654,14 +757,18 @@ function New-MigrationPlan([string]$distAbs, [string]$backupAbs, [string]$migrat
         $providerRoots[$p] = $DISCOVERY_SUBDIR[$p]
     }
 
+    # -- What the shared payload will occupy, resolved BEFORE the home scan --
+    # The home scan classifies `_shared` per FILE and needs this answer to do it.
+    $sharedInstallRels = Get-SharedInstallRels $providerRoots $distAbs
+
     # -- Scan the consumer home --
     foreach ($p in @($providerRoots.Keys)) {
-        $scan = Get-RootScan $providerRoots[$p]
+        $scan = Get-RootScan $providerRoots[$p] $sharedInstallRels
         $blocked += @($scan.blocked)
         $preserveRels += @($scan.preserve)
         foreach ($r in @($scan.managed_files)) { [void]$managedRels.Add($r) }
     }
-    $retiredScan = Get-RootScan $RETIRED_ROOT_REL
+    $retiredScan = Get-RootScan $RETIRED_ROOT_REL $sharedInstallRels
     $blocked += @($retiredScan.blocked)
     $preserveRels += @($retiredScan.preserve)
     $retiredManaged = @($retiredScan.managed_files)
@@ -676,26 +783,23 @@ function New-MigrationPlan([string]$distAbs, [string]$backupAbs, [string]$migrat
         foreach ($f in @(Get-ChildItem -LiteralPath $profileAbs -Recurse -File | Sort-Object -Property FullName)) {
             $relFromProfile = ($f.FullName.Substring($profileAbs.Length).TrimStart('\', '/') -replace '\\', '/')
             $skill = @($relFromProfile.Split('/'))[0]
-            if ($skill -eq '_shared') {
-                # The distribution's shared payload is NOT a skill directory: it is a
-                # profile-root sibling of them, so the manifest has no record for it and
-                # the FOREIGN_FILE stop below would fire on skill-mesh's own generated
-                # bytes. Skipped here DELIBERATELY and CONSERVATIVELY: this migrator does
-                # not install it in this step, which leaves an existing consumer _shared/
-                # exactly where it is today -- preserved, not managed, not overwritten.
-                # Reclassifying it as MANAGED (install + retire + uninstall coverage, and
-                # the marker guard this install path still lacks) is Step 65's whole job
-                # and must land as one piece; doing half of it here would hand the
-                # migrator permission to overwrite consumer bytes with no marker check.
-                continue
-            }
-            if (-not $script:ManifestMap.ContainsKey($skill)) {
+            # FIRST-SEGMENT ALLOWLIST. A built profile root holds per-skill
+            # directories AND the shared support payload the builder emits beside them
+            # (dist/<p>/_shared/<asset>). The payload is not a manifest record, so
+            # without the allowlist the FOREIGN_FILE stop below fires on skill-mesh's
+            # OWN generated bytes and the whole migration blocks. The list is closed:
+            # an unmanifested SKILL directory still blocks, which is the check this
+            # branch exists for.
+            $isProfileRootAsset = (Test-SkillMeshTxMember $PROFILE_ROOT_DIRS $skill)
+            if (-not $isProfileRootAsset -and -not $script:ManifestMap.ContainsKey($skill)) {
                 $blocked += New-Block 'FOREIGN_FILE' "$p/$relFromProfile" `
                     ("the supplied distribution contains skill directory '$skill', which is not a record in " +
                      "$MANIFEST_REL; refusing to install an unmanifested tree")
                 continue
             }
-            $distSkills["$p/$skill"] = $true
+            # Only real skills participate in the both-profile completeness check;
+            # the payload has no adapter declaration to be complete against.
+            if (-not $isProfileRootAsset) { $distSkills["$p/$skill"] = $true }
             $targetRel = "$($providerRoots[$p])/$relFromProfile"
             $targetAbs = Resolve-HomeTargetForRead $targetRel
             if ($null -eq $targetAbs) {
@@ -721,6 +825,13 @@ function New-MigrationPlan([string]$distAbs, [string]$backupAbs, [string]$migrat
     # special case.
     $seenSkills = @($installs | ForEach-Object { $_.skill } | Sort-Object -Unique)
     foreach ($skill in $seenSkills) {
+        # A profile-root asset (`_shared`) is not a manifest record, so it has no
+        # adapter declaration and no both-profile obligation. Under
+        # Set-StrictMode -Version Latest, $script:ManifestMap['_shared'] is $null and
+        # reading .adapters off it THROWS PropertyNotFoundException -- a latent crash
+        # that only became REACHABLE when the first-segment allowlist above stopped
+        # `continue`-ing past the payload, which is why it never fired before.
+        if (-not $script:ManifestMap.ContainsKey($skill)) { continue }
         foreach ($p in @($providerRoots.Keys)) {
             if (-not (Test-SkillMeshTxMember @($script:ManifestMap[$skill].adapters) $p)) { continue }
             if (-not $distSkills.ContainsKey("$p/$skill")) {
@@ -729,6 +840,47 @@ function New-MigrationPlan([string]$distAbs, [string]$backupAbs, [string]$migrat
                      "has no $p profile for it; both profiles must migrate as one transaction")
             }
         }
+    }
+
+    # -- Collision guard: no relative path may be BOTH preserved and installed. --
+    # D3's per-FILE rule makes the two sets disjoint by construction; this is the
+    # control that proves it every run instead of trusting the construction.
+    #
+    # The failure it exists to catch is not a crash. A path in both sets gets a
+    # preserve action recording the CONSUMER's bytes and an install action writing
+    # skill-mesh's over them, so the rollback drift advisory (Write-PreserveDriftAdvisory)
+    # would then name the operator's own untouched path as having "changed outside this
+    # transaction" -- a false advisory that invites restoring a stale backup over newer
+    # bytes. It misreports; it does not change an exit code (D3), which is exactly why
+    # nothing downstream would have caught it.
+    $preserveSet = New-Object 'System.Collections.Generic.HashSet[string]' ([System.StringComparer]::OrdinalIgnoreCase)
+    foreach ($rel in @($preserveRels)) { [void]$preserveSet.Add($rel) }
+    foreach ($i in @($installs)) {
+        if ($preserveSet.Contains($i.rel_path)) {
+            $blocked += New-Block 'PRESERVE_INSTALL_COLLISION' $i.rel_path `
+                ('this path is classified BOTH preserved and installed: one action would record the ' +
+                 'consumer bytes as untouched while another overwrote them, and the rollback drift ' +
+                 'advisory would then read skill-mesh own bytes as consumer drift. Refusing to ' +
+                 'migrate a plan whose own action set disagrees about who owns a file.')
+        }
+    }
+
+    # -- Disclosure: which of the consumer's OWN `_shared` bytes this run adopts. --
+    # install-skill-mesh.ps1 REFUSES a marker-less collision outright and makes the
+    # operator opt in with -ForceShared -BackupDir. This command adopts such a path by
+    # design -- adoption is what a migration IS -- but it must not do so silently, so
+    # every marker-less shared-payload target it is about to take over is NAMED in the
+    # dry run, before -Apply, together with the payload that puts it back. Advisory
+    # only: it changes no status, no exit code, and no blocked finding.
+    foreach ($i in @($installs | Where-Object {
+                $null -ne $_.pre_hash -and (Test-SkillMeshTxMember $PROFILE_ROOT_DIRS $_.skill) })) {
+        if (Test-FileHasMarker (Resolve-HomeTargetForRead $i.rel_path)) { continue }
+        $label = Get-SafeRelPathLabel $i.rel_path
+        Write-Diag ("ADVISORY -- adopting '$label': it exists WITHOUT the skill-mesh provenance " +
+                    "marker, so those are your own bytes at a path this distribution now ships. " +
+                    "The pre-image is backed up to $PAYLOAD_DIR/$label and -Rollback restores it " +
+                    "byte-for-byte. Files in that directory the distribution does NOT ship are " +
+                    "preserved untouched.")
     }
 
     # -- Retire set: our OWN superseded generated files. --
@@ -891,9 +1043,23 @@ function Get-PriorCreatedDirs([string]$ledgerAbs) {
 }
 
 function New-LedgerJson($installs, $providerRoots, $createdDirs, $priorCreatedDirs) {
-    # The rewritten ownership ledger. It indexes ONLY migration-installed managed
-    # files: no preserved consumer-only skill and no _shared core-holder ever
-    # appears here, so a later ownership-safe uninstall cannot delete them.
+    # The rewritten ownership ledger. It indexes ONLY the files this migration
+    # INSTALLED, which is exactly the set the ownership-safe uninstall may delete.
+    #
+    # REWRITTEN FOR D3. The old contract read "no _shared core-holder ever appears
+    # here" and that is no longer true, deliberately: the distribution now ships a
+    # shared payload at the profile root, so `<root>/_shared/<asset>` IS an install
+    # target and MUST be indexed -- an unindexed payload file is an orphan that
+    # uninstall cannot remove. What still never appears here is any PRESERVED path:
+    # no consumer-only skill, and no file inside a `_shared` directory that this
+    # distribution does not ship. The distinction is per FILE, made once in
+    # Get-RootScan, and the ledger simply reflects the install set it produced.
+    #
+    # The uninstall side is unchanged and needs no special case: Remove-OwnedFiles in
+    # install-skill-mesh.ps1 deletes a ledger-listed path only when the file's own
+    # bytes carry the provenance marker, so even a poisoned ledger naming a
+    # consumer's `_shared/README.md` could not cause it to be deleted.
+    #
     # Shape and serialization are byte-compatible with install-skill-mesh.ps1's
     # writer, so its uninstall path reads this ledger unchanged.
     $installsObj = [PSCustomObject]@{}
@@ -1024,6 +1190,45 @@ function Assert-SafeActionTarget($action, [string]$operation) {
     return (Resolve-HomeTarget -RelPosix $action.rel_path -Operation $operation)
 }
 
+function Assert-InstallTargetAdoptable($action, [string]$safeTarget) {
+    <#
+      THE MARKER GUARD on the install path -- the counterpart of
+      install-skill-mesh.ps1's foreign-collision refusal (:820-829) and its TOCTOU
+      recheck inside the copy loop, neither of which this tool had.
+
+      The two commands make DIFFERENT decisions on purpose and this function is where
+      that difference is written down. The installer refuses any existing target that
+      lacks the provenance marker. This command ADOPTS such a target -- adopting a
+      hand-authored legacy tree is the entire reason it exists, and unlike the
+      installer it captures the pre-image into an external backup first and can put it
+      back with -Rollback.
+
+      What it will NOT do is adopt bytes its own plan never saw. An install action
+      planned against an ABSENT target carries pre_hash $null and therefore has NO
+      backup action and NO payload, so a consumer file that appears at that path
+      between planning and the write would be destroyed with nothing to restore from.
+      Same for a target whose bytes changed after the pre-image was captured: the
+      payload no longer holds what is actually there.
+
+      So: marker-bearing target -> ours, proceed. Marker-less target whose bytes are
+      exactly the recorded pre_hash -> the planned, backed-up, precondition-checked
+      adoption, proceed. Anything else -> throw, which drives the ordered rollback.
+
+      Reached on -Apply and -Resume alike because it lives in the shared mutate path;
+      -Resume is the case that matters, since Invoke-Resume performs no
+      Test-Preconditions pass.
+    #>
+    $current = Get-SkillMeshFileSha256 $safeTarget
+    if ($null -eq $current) { return }
+    if ([string]$current -eq [string]$action.pre_hash) { return }
+    if (Test-FileHasMarker $safeTarget) { return }
+    throw ("migrate-legacy-install: SECURITY -- refusing to install over " +
+           "'$(Get-SafeRelPathLabel $action.rel_path)': a file without the skill-mesh provenance " +
+           "marker is at that path and its bytes are NOT the pre-image this migration recorded, " +
+           "so no backup payload can restore it. Overwriting would destroy content this " +
+           "transaction never saw.")
+}
+
 function Invoke-ActionMutate($action) {
     switch ($action.action) {
         'preserve' {
@@ -1077,6 +1282,12 @@ function Invoke-ActionMutate($action) {
             $safeTargetPreCreate = Assert-SafeActionTarget $action 'install over it'
             New-DirectoryFor $safeTargetPreCreate
             $safeTarget = Assert-SafeActionTarget $action 'install over it'
+            # THE MARKER GUARD, re-read immediately before the copy. See the
+            # .DESCRIPTION note: -Apply's Test-Preconditions closes the wide window
+            # but -Resume runs no precondition pass at all, so this is the only check
+            # standing between a resumed transaction and a consumer file that
+            # appeared at an install target while the transaction was interrupted.
+            Assert-InstallTargetAdoptable $action $safeTarget
             Copy-Item -LiteralPath $action.source -Destination $safeTarget -Force
             return
         }

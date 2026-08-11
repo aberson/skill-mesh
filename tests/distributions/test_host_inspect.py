@@ -52,7 +52,7 @@ FILE_ATTRIBUTE_REPARSE_POINT = 0x400
 
 # The closed vocabularies the report may draw from.
 PROVIDER_SLUGS = set(json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))["providers"])
-ELIGIBILITY = {"managed", "consumer-only", "core-holder", "foreign"}
+ELIGIBILITY = {"managed", "consumer-only", "core-holder", "shared-payload", "foreign"}
 EVIDENCE_CLASSES = {"host-convention", "unknown"}
 LINK_TYPES = {"directory", "junction", "symlink", "reparse", "absent"}
 LEDGER_STATES = {"absent", "valid", "corrupt"}
@@ -430,9 +430,47 @@ def test_core_holder_distinct_from_foreign(tmp_path):
     assert s is not None
     assert s["eligibility"] == "core-holder"
     assert s["has_skill_md"] is False
+    assert s["owned"] is False
     cl = d["profiles"]["claude"]
     assert cl["owned_count"] == 0 and cl["unowned_count"] == 0
     assert "MANAGED_PATH_UNOWNED" not in _codes(d)
+
+
+def test_shipped_shared_payload_is_reported_owned_not_core_holder(tmp_path):
+    """MINOR-4: the inspector read ownership off SKILL.md, and a `_shared` directory
+    structurally has none -- so once the builder started shipping marker-bearing
+    assets there, the inspector reported skill-mesh's own payload as an unowned
+    consumer core-holder (`eligibility=core-holder, owned=false`).
+
+    Nothing else catches it: `_shared` is never classed foreign and never increments
+    unowned_count, so Step 70's "zero foreign, zero unowned generated" clause passes
+    with the misreport in place."""
+    home = _materialize("25-shared-payload", tmp_path / "home")
+    d = _inspect_json(home)
+    s = _skill(d["profiles"]["claude"], "_shared")
+    assert s is not None
+    assert s["eligibility"] == "shared-payload", s
+    assert s["has_skill_md"] is False
+    assert s["owned"] is True, "a directory of marker-bearing assets reported unowned"
+    cl = d["profiles"]["claude"]
+    assert cl["owned_count"] == 1, cl["owned_count"]
+    # The consumer's own file in the same directory must not be counted as an
+    # unowned generated file -- it is neither generated nor loadable as a skill.
+    assert cl["unowned_count"] == 0, cl["unowned_count"]
+    assert "MANAGED_PATH_UNOWNED" not in _codes(d)
+
+
+def test_a_consumer_only_shared_dir_is_still_core_holder(tmp_path):
+    """Red-on-garbage pair for the case above: the ONLY difference between the two
+    shapes is one marker-bearing file, so a per-DIRECTORY reclassification -- every
+    `_shared` becomes owned -- fails this one, and no reclassification at all fails
+    its twin."""
+    payload = _inspect_json(_materialize("25-shared-payload", tmp_path / "p"))
+    holder = _inspect_json(_materialize("10-core-holder", tmp_path / "c"))
+    a = _skill(payload["profiles"]["claude"], "_shared")
+    b = _skill(holder["profiles"]["claude"], "_shared")
+    assert (a["eligibility"], a["owned"]) == ("shared-payload", True)
+    assert (b["eligibility"], b["owned"]) == ("core-holder", False)
 
 
 def test_foreign_is_distinct_from_consumer_only_and_core_holder(tmp_path):
@@ -456,11 +494,12 @@ def test_foreign_is_distinct_from_consumer_only_and_core_holder(tmp_path):
     assert "CONSUMER_ONLY_PRESENT" not in _codes(d)
 
 
-def test_all_four_eligibility_classes_are_reachable(tmp_path):
+def test_every_eligibility_class_is_reachable(tmp_path):
     """Every class in the declared vocabulary is produced by some shape. A class no
     fixture can produce is a contract the suite does not actually test."""
     seen = set()
-    for kind in ("02-generated", "08-consumer-only", "10-core-holder", "11-foreign"):
+    for kind in ("02-generated", "08-consumer-only", "10-core-holder",
+                 "25-shared-payload", "11-foreign"):
         d = _inspect_json(_materialize(kind, tmp_path / kind))
         for prof in _all_profiles(d):
             seen.update(s["eligibility"] for s in prof["skills"])

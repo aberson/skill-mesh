@@ -184,6 +184,24 @@ def full_dist(tmp_path_factory):
 
 
 @pytest.fixture(scope="module")
+def shared_dist(full_dist, mini_dist, tmp_path_factory):
+    """`mini_dist` plus the REAL shared payload the builder emits at each profile root.
+
+    Kept SEPARATE from `mini_dist` on purpose. A distribution that ships no `_shared/`
+    is the pre-Step-64 shape and is still a legal input, so the cases built on
+    `mini_dist` keep proving the other half of the per-FILE rule: when the shipped set
+    is empty, every `_shared` file in the home stays preserved exactly as before.
+    """
+    out = tmp_path_factory.mktemp("sd") / "d"
+    shutil.copytree(mini_dist, out)
+    for provider in ("claude", "gpt"):
+        src = full_dist / provider / "_shared"
+        assert src.is_dir(), f"the built {provider} profile has no _shared payload"
+        shutil.copytree(src, out / provider / "_shared")
+    return out
+
+
+@pytest.fixture(scope="module")
 def mini_dist(full_dist, tmp_path_factory):
     """A REAL distribution trimmed to the fixture's skills.
 
@@ -526,13 +544,18 @@ def test_backup_payload_set_equals_the_mutating_action_set(mini_dist, tmp_path):
 
 
 def test_preserved_trees_survive_byte_for_byte(mini_dist, tmp_path):
-    """Consumer-only skills and the `_shared` core-holder are classified against
-    the manifest and left alone -- never overwritten, retired, or blocked."""
+    """Consumer-only skills are classified against the manifest and left alone --
+    never overwritten, retired, or blocked.
+
+    `mini_dist` ships no `_shared/` payload, so BOTH files in the home's `_shared`
+    directory are outside the shipped set and both stay preserved. That is the
+    empty-set end of the per-FILE rule; the shipped end is covered against
+    `shared_dist` below."""
     home = fx.migration_home(tmp_path / "h")
     before = {rel: h for rel, h in _tree_digest(home).items()
               if any(rel.startswith(f"{CLAUDE_ROOT}/{n}/") for n in fx.MIGRATION_CONSUMER_ONLY)
               or rel.startswith(f"{CLAUDE_ROOT}/_shared/")}
-    assert len(before) == len(fx.MIGRATION_CONSUMER_ONLY) + 1, before
+    assert len(before) == len(fx.MIGRATION_CONSUMER_ONLY) + 2, before
     assert _apply(home, tmp_path / "b", mini_dist).returncode == 0
     after = _tree_digest(home)
     for rel, digest in before.items():
@@ -612,6 +635,276 @@ def test_rerun_is_idempotent(mini_dist, tmp_path):
 
 
 # --------------------------------------------------------------------------- #
+# The shipped `_shared` payload (Step 65 / decision D3)
+#
+# The whole point is that `_shared` is classified PER FILE. Every case below is
+# built from ONE home shape that holds both populations at once -- a name the
+# builder ships and a name it does not -- so a directory-level reclassification in
+# either direction fails at least one of them.
+# --------------------------------------------------------------------------- #
+
+SHARED_SHIPPED_REL = f"{CLAUDE_ROOT}/_shared/{fx.SHARED_COLLIDING}"
+SHARED_CONSUMER_REL = f"{CLAUDE_ROOT}/_shared/{fx.SHARED_CONSUMER_ONLY}"
+
+
+def _rels(plan, kind):
+    return {a["rel_path"] for a in plan["actions"] if a["action"] == kind}
+
+
+def _payload_pairs(dist, home):
+    """(source, installed target) for every shared-payload file in both profiles."""
+    for provider, root in (("claude", CLAUDE_ROOT), ("gpt", GPT_ROOT)):
+        for src in sorted((Path(dist) / provider / "_shared").rglob("*")):
+            if src.is_file():
+                leaf = src.relative_to(Path(dist) / provider / "_shared").as_posix()
+                yield src, Path(home) / root / "_shared" / leaf
+
+
+def test_shared_fixture_names_match_the_built_payload(full_dist):
+    """The per-FILE fixtures mean nothing unless the builder really does ship one of
+    the two planted names and really does not ship the other. Asserted against the
+    REAL build, so a builder change that started shipping `operator-notes.md` (or
+    stopped shipping `judge-core.md`) reds here instead of silently defusing every
+    per-FILE assertion below into a tautology."""
+    for provider in ("claude", "gpt"):
+        shipped = {p.name for p in (full_dist / provider / "_shared").iterdir() if p.is_file()}
+        assert shipped, f"the {provider} profile shipped no _shared payload at all"
+        assert fx.SHARED_COLLIDING in shipped, \
+            f"{provider}: the collision fixture names an asset the builder does not ship"
+        assert fx.SHARED_CONSUMER_ONLY not in shipped, \
+            f"{provider}: the consumer-only fixture names an asset the builder DOES ship"
+
+
+def test_a_shipped_shared_payload_does_not_block_and_classifies_per_file(shared_dist, tmp_path):
+    """A dry run against a home that already holds a hand-authored `_shared/`
+    completes, emits no FOREIGN_FILE, and does not trip the latent `$null`
+    dereference in the both-profile completeness loop.
+
+    That dereference (`$ManifestMap['_shared'].adapters` under
+    `Set-StrictMode -Version Latest`) was unreachable while the dist walk skipped
+    `_shared` outright; lifting the first-segment stop is what makes it reachable."""
+    home = fx.migration_home(tmp_path / "h")
+    r = _migrate(home, tmp_path / "b", shared_dist)
+    assert r.returncode == 0, f"exit {r.returncode}:\n{r.stdout}\n{r.stderr}"
+    plan = json.loads(r.stdout)
+    assert plan["blocked"] == [], plan["blocked"]
+    for token in ("PropertyNotFoundException", "cannot be found on this object",
+                  "StrictMode"):
+        assert token not in r.stderr, f"StrictMode failure on stderr:\n{r.stderr}"
+
+    installs, preserved = _rels(plan, "install"), _rels(plan, "preserve")
+    # shipped -> managed, in BOTH profiles
+    assert SHARED_SHIPPED_REL in installs, sorted(r for r in installs if "_shared" in r)
+    assert f"{GPT_ROOT}/_shared/{fx.SHARED_COLLIDING}" in installs
+    # not shipped -> preserved, and never an install target
+    assert SHARED_CONSUMER_REL in preserved, sorted(r for r in preserved if "_shared" in r)
+    assert SHARED_CONSUMER_REL not in installs
+
+
+def test_no_relative_path_is_both_preserved_and_installed(shared_dist, tmp_path):
+    """A path in BOTH sets is a misreport with no exit-code signal (D3): the preserve
+    action records the consumer's bytes as untouched while the install action
+    overwrites them, and the rollback drift advisory then names skill-mesh's own new
+    bytes as consumer drift. Nothing downstream can see it, so it has to be asserted
+    directly."""
+    home = fx.migration_home(tmp_path / "h")
+    plan = _plan(home, tmp_path / "b", shared_dist)
+    preserved, installs = _rels(plan, "preserve"), _rels(plan, "install")
+    assert preserved, "no preserve actions -- the intersection would be vacuous"
+    assert installs, "no install actions -- the intersection would be vacuous"
+    both = {r.lower() for r in preserved} & {r.lower() for r in installs}
+    assert both == set(), f"classified BOTH preserved and installed: {sorted(both)}"
+
+
+def test_apply_installs_the_shared_payload_and_preserves_consumer_shared_files(
+        shared_dist, tmp_path):
+    """An APPLY run, not a dry run: migrate-legacy-install.ps1's own contract says a
+    dry run mutates NOTHING, so it structurally cannot exercise the write path this
+    step changes."""
+    home = fx.migration_home(tmp_path / "h")
+    backup = tmp_path / "b"
+    consumer = Path(home) / SHARED_CONSUMER_REL
+    consumer_before = _sha256(consumer)
+    assert consumer_before is not None, "the fixture planted no consumer _shared file"
+
+    r = _apply(home, backup, shared_dist)
+    assert r.returncode == 0, f"{r.stdout}\n{r.stderr}"
+    manifest = _manifest_of(_only_tx(backup))
+
+    # every shipped asset landed byte-exact in both profiles, carrying the marker
+    pairs = list(_payload_pairs(shared_dist, home))
+    assert pairs, "no payload files to check"
+    marker = fx.marker_token()
+    for src, dst in pairs:
+        assert dst.is_file(), f"{dst} was not installed"
+        assert _sha256(dst) == _sha256(src), dst
+        head = dst.read_text(encoding="utf-8", errors="replace")[:8192]
+        assert marker in head, f"{dst} carries no provenance marker"
+
+    # the consumer's own file in the SAME directory is byte-unchanged...
+    assert _sha256(consumer) == consumer_before, "a consumer _shared file was overwritten"
+    # ...and is still fully audited: path + hash in the backup manifest, no payload copy
+    preserved = {f["rel_path"]: f["sha256"] for f in manifest["preserved_files"]}
+    assert SHARED_CONSUMER_REL in preserved, sorted(preserved)
+    assert preserved[SHARED_CONSUMER_REL] == consumer_before
+    payload_root = Path(_only_tx(backup)) / "payload"
+    assert not (payload_root / SHARED_CONSUMER_REL).exists(), \
+        "a byte-untouched consumer file was payload-copied into the backup"
+    # the ADOPTED collision does carry a pre-image, so -Rollback can put it back
+    originals = {f["rel_path"] for f in manifest["original_files"]}
+    assert SHARED_SHIPPED_REL in originals, sorted(o for o in originals if "_shared" in o)
+    assert (payload_root / SHARED_SHIPPED_REL).is_file()
+
+
+def test_the_shared_payload_is_indexed_but_consumer_shared_files_are_not(
+        shared_dist, tmp_path):
+    """The ledger split. An unindexed payload file is an orphan the ownership-safe
+    uninstall can never remove; an indexed consumer file is one the uninstall would
+    try to delete."""
+    home = fx.migration_home(tmp_path / "h")
+    assert _apply(home, tmp_path / "b", shared_dist).returncode == 0
+    ledger = json.loads((Path(home) / LEDGER_NAME).read_text(encoding="utf-8"))
+    owned = set()
+    for entry in ledger["installs"].values():
+        owned.update(entry["owned_files"])
+    assert SHARED_SHIPPED_REL in owned, sorted(o for o in owned if "_shared" in o)
+    assert SHARED_CONSUMER_REL not in owned
+    for name in fx.MIGRATION_CONSUMER_ONLY:
+        assert not any(f"/{name}/" in rel for rel in owned), name
+
+
+def test_uninstall_removes_the_migrated_shared_payload_and_spares_consumer_files(
+        shared_dist, tmp_path):
+    """End-to-end through the PRODUCTION uninstall entry point
+    (install-skill-mesh.ps1 -Uninstall), which is the only thing that can prove the
+    migrator's ledger is actually consumable: a payload file missing from
+    `owned_files`, or written without a marker, survives as an orphan."""
+    home = fx.migration_home(tmp_path / "h")
+    assert _apply(home, tmp_path / "b", shared_dist).returncode == 0
+    consumer = Path(home) / SHARED_CONSUMER_REL
+    consumer_hash = _sha256(consumer)
+    pairs = list(_payload_pairs(shared_dist, home))
+    assert all(dst.is_file() for _, dst in pairs), "payload was not installed"
+
+    for provider in ("claude", "gpt"):
+        r = _run(INSTALL_SCRIPT, ["-Home", str(home), "-Provider", provider, "-Uninstall"])
+        assert r.returncode == 0, f"uninstall {provider} failed:\n{r.stdout}\n{r.stderr}"
+
+    for _, dst in pairs:
+        assert not dst.exists(), f"a marker-bearing _shared file survived uninstall: {dst}"
+    assert _sha256(consumer) == consumer_hash, "uninstall deleted or altered a consumer file"
+
+
+def test_a_consumer_shared_file_still_gets_a_rollback_drift_advisory(
+        shared_dist, tmp_path):
+    """A preserved `_shared` file keeps every audit property the reclassification
+    could have silently taken from it -- including the rollback drift advisory, which
+    only fires for `preserve` actions. A file swept into the managed set would simply
+    stop being mentioned, on a code path whose exit code never changes."""
+    home = fx.migration_home(tmp_path / "h")
+    backup = tmp_path / "b"
+    assert _apply(home, backup, shared_dist).returncode == 0
+    tx = _only_tx(backup)
+    consumer = Path(home) / SHARED_CONSUMER_REL
+    consumer.write_text("# edited by the operator after the migration\n", encoding="utf-8")
+
+    r = _migrate(home, backup, mode="-Rollback", migration_id=tx.name)
+    assert r.returncode == 0, f"the advisory changed the exit code:\n{r.stderr}"
+    assert "ADVISORY" in r.stderr, r.stderr
+    assert fx.SHARED_CONSUMER_ONLY in r.stderr, \
+        f"the drift advisory never named the preserved _shared file:\n{r.stderr}"
+
+
+def test_the_adopted_shared_collision_is_disclosed_before_apply(shared_dist, tmp_path):
+    """The installer REFUSES a marker-less `_shared` collision and makes the operator
+    opt in with -ForceShared -BackupDir. This tool adopts it -- that is what a
+    migration is -- but the dry run must SAY so, so the decision is visible before
+    -Apply rather than discovered afterwards."""
+    home = fx.migration_home(tmp_path / "h")
+    r = _migrate(home, tmp_path / "b", shared_dist)
+    assert r.returncode == 0, r.stderr
+    lines = [ln for ln in r.stderr.splitlines() if "ADVISORY -- adopting" in ln]
+    # EXACTLY the one path being adopted. The home holds a `_shared` only under the
+    # claude root and only one of its two files is shipped, so a per-directory claim
+    # (two lines) or a marker-blind one (a line for every payload file) fails here.
+    assert len(lines) == 1, r.stderr
+    assert fx.SHARED_COLLIDING in lines[0], lines[0]
+    assert fx.SHARED_CONSUMER_ONLY not in lines[0], lines[0]
+
+
+def test_resume_refuses_a_consumer_file_that_appeared_at_an_install_target(
+        shared_dist, tmp_path):
+    """THE marker guard the installer had and this tool did not.
+
+    -Apply re-checks every precondition hash before its first mutation, but -Resume
+    runs no precondition pass at all -- so between an interrupted transaction and its
+    resume, a consumer file appearing at an install target had nothing standing
+    between it and the copy. The action was planned against an ABSENT target, so it
+    carries `pre_hash: null` and therefore NO backup payload: the clobber would have
+    been unrecoverable, not merely rude."""
+    home = fx.migration_home(tmp_path / "h", core_holder=False)
+    backup = tmp_path / "b"
+    plan = _plan(home, backup, shared_dist)
+    action = next(a for a in plan["actions"]
+                  if a["action"] == "install" and a["rel_path"] == SHARED_SHIPPED_REL)
+    assert action["pre_hash"] is None, \
+        "the window under test is an ABSENT target; this fixture already has the file"
+
+    crashed = _apply(home, backup, shared_dist,
+                     env={"SKILL_MESH_TX_CRASH_AT": f"{action['seq']}:after-begin"})
+    assert crashed.returncode == 9, f"crash seam did not fire ({crashed.returncode})"
+    tx = _only_tx(backup)
+    assert _manifest_of(tx)["status"] == "applying"
+
+    victim = Path(home) / SHARED_SHIPPED_REL
+    victim.parent.mkdir(parents=True, exist_ok=True)
+    victim.write_text("# operator content that appeared mid-transaction\n", encoding="utf-8")
+    before = _sha256(victim)
+
+    r = _migrate(home, backup, shared_dist, mode="-Resume", migration_id=tx.name)
+    assert r.returncode != 0, "the resume clobbered a marker-less consumer file"
+    assert "SECURITY" in r.stderr, r.stderr
+    assert _sha256(victim) == before, "the consumer file was overwritten anyway"
+
+
+def test_the_marker_guard_still_lets_the_planned_adoption_through(shared_dist, tmp_path):
+    """Red-on-garbage pair for the guard above: the ONLY difference is whether the
+    bytes at the target are the pre-image the plan recorded. A guard that refused
+    every marker-less target would break the legacy adoption this tool exists to
+    perform, and would fail here."""
+    home = fx.migration_home(tmp_path / "h")
+    victim = Path(home) / SHARED_SHIPPED_REL
+    assert _sha256(victim) is not None, "the fixture planted no marker-less collision"
+    r = _apply(home, tmp_path / "b", shared_dist)
+    assert r.returncode == 0, f"a planned adoption was refused:\n{r.stdout}\n{r.stderr}"
+    assert fx.marker_token() in victim.read_text(encoding="utf-8", errors="replace")
+
+
+def test_action_sets_converge_between_run_two_and_run_three(shared_dist, tmp_path):
+    """Convergence asserted at the PLAN level, not as a tree digest.
+
+    Two consecutive runs can leave byte-identical trees while planning different
+    work -- a path oscillating between the preserve and install sets changes no byte
+    and is invisible to a digest comparison. Run 1 legitimately differs (it retires
+    the pre-retarget tree and creates directories); runs 2 and 3 must be identical."""
+    home = fx.migration_home(tmp_path / "h")
+    backup = tmp_path / "b"
+    plan1 = _plan(home, backup, shared_dist)
+    assert _apply(home, backup, shared_dist).returncode == 0
+    plan2 = _plan(home, backup, shared_dist)
+    assert _apply(home, backup, shared_dist).returncode == 0
+    plan3 = _plan(home, backup, shared_dist)
+    assert _apply(home, backup, shared_dist).returncode == 0
+
+    assert plan2["actions"] == plan3["actions"], (
+        "the action set did not converge; "
+        f"run2-only={[a for a in plan2['actions'] if a not in plan3['actions']]}, "
+        f"run3-only={[a for a in plan3['actions'] if a not in plan2['actions']]}")
+    assert plan1["actions"] != plan3["actions"], \
+        "run 1 planned identical work to run 3 -- the convergence assertion is vacuous"
+
+
+# --------------------------------------------------------------------------- #
 # The rewritten ownership ledger
 # --------------------------------------------------------------------------- #
 
@@ -628,10 +921,18 @@ def test_ledger_indexes_only_migration_installed_files(mini_dist, tmp_path):
     installs = {a["rel_path"] for a in _plan_of(_only_tx(backup))["actions"]
                 if a["action"] == "install"}
     assert owned == installs, f"extra={owned - installs}, missing={installs - owned}"
-    # No preserved consumer-only skill and no core-holder may be indexed.
-    for name in list(fx.MIGRATION_CONSUMER_ONLY) + ["_shared"]:
+    # No preserved consumer-only skill may be indexed. `_shared` is NOT in this list
+    # any more: D3 makes a SHIPPED shared-payload path a legitimate ledger entry, and
+    # asserting the whole directory out would re-freeze the very defect Step 65 fixes
+    # (an unindexed payload file is an orphan uninstall cannot remove). The per-FILE
+    # split is asserted directly in
+    # test_the_shared_payload_is_indexed_but_consumer_shared_files_are_not.
+    for name in fx.MIGRATION_CONSUMER_ONLY:
         assert not any(f"/{name}/" in rel for rel in owned), \
             f"the ledger claims ownership of preserved tree {name}"
+    # `mini_dist` ships no payload, so nothing under `_shared` may be indexed here.
+    assert not any("/_shared/" in rel for rel in owned), \
+        "a payload-free distribution indexed a _shared path"
 
 
 def test_uninstall_after_migration_never_deletes_preserved_trees(mini_dist, tmp_path):
@@ -640,6 +941,8 @@ def test_uninstall_after_migration_never_deletes_preserved_trees(mini_dist, tmp_
     here, so this is the end-to-end proof that the exclusion is real."""
     home = fx.migration_home(tmp_path / "h")
     assert _apply(home, tmp_path / "b", mini_dist).returncode == 0
+    # `mini_dist` ships no `_shared` payload, so every file under `_shared` is
+    # preserved here too -- see the shared_dist twin for the split case.
     preserved = {rel: h for rel, h in _tree_digest(home).items()
                  if any(f"/{n}/" in "/" + rel for n in
                         list(fx.MIGRATION_CONSUMER_ONLY) + ["_shared"])}

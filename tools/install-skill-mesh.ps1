@@ -31,7 +31,10 @@
         marker is FOREIGN -- refused by default; -Force is the explicit opt-in.
       - Uninstall delete / stale-removal: a file is deleted only if it bears the marker
         AND the ledger lists it. The marker is the SAFETY gate ("ours to touch?"); the
-        ledger is only the SCOPING hint ("which marker file is this provider's").
+        ledger is only the SCOPING hint ("which marker file is this provider's"). This
+        covers the shared payload with no carve-out: `<subdir>/_shared/<asset>` is an
+        ordinary owned file, while a consumer's own file in that same directory
+        satisfies neither condition and survives.
     Because the marker lives in the file's own bytes, a poisoned/mutable ledger can
     never cause an operator (non-marker) file to be clobbered or deleted, and a
     re-created operator file at a formerly-owned ("ghost") path is never clobbered.
@@ -565,6 +568,17 @@ function Remove-OwnedFiles([string]$homeAbs, $entry) {
     # Delete a ledger-listed owned file ONLY if it (a) resolves inside the home
     # (untrusted-ledger containment) AND (b) bears the skill-mesh marker. A ledger
     # entry pointing at a foreign/operator (non-marker) file is NEVER deleted.
+    #
+    # THE SHARED PAYLOAD NEEDS NO SPECIAL CASE, and that is a property worth stating
+    # rather than leaving to luck. `<subdir>/_shared/<asset>` is an ordinary install
+    # target: it is written with a marker, it lands in `owned_files` like any other
+    # generated file, and it is removed here on the same two conditions. The
+    # consumer's own files in that same directory are removed by NEITHER condition --
+    # they never enter `owned_files` (the installer only ever records paths it wrote),
+    # and even a poisoned ledger naming one could not get past the marker check on the
+    # file's own bytes. The same two conditions carry the ledger
+    # migrate-legacy-install.ps1 writes, which is why that tool needed no uninstall of
+    # its own: see its New-LedgerJson contract note.
     if ($null -eq $entry) { return }
     foreach ($rel in @(Get-Field $entry 'owned_files' @())) {
         $abs = Get-ContainedAbs $rel $homeAbs

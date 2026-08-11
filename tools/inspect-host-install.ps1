@@ -35,8 +35,30 @@
       consumer-only -- a SKILL.md-shaped tree whose name is NOT in the manifest
                        (classified per root; a .claude/skills twin never makes a
                        .github/skills or .claude/skills-gpt entry "managed").
-      core-holder   -- a `_shared` directory inside a discovery root, no SKILL.md.
+      shared-payload -- a `_shared` directory (no SKILL.md) holding at least one
+                       marker-bearing file: the shared support payload the builder
+                       emits at the profile root. `owned` is decided PER FILE from
+                       the markers inside it, not from a SKILL.md it structurally
+                       cannot have.
+      core-holder   -- a `_shared` directory inside a discovery root, no SKILL.md,
+                       and no marker-bearing file: purely consumer-held.
       foreign       -- anything else (no manifest record, no SKILL.md, not _shared).
+
+    WHY `_shared` NEEDS ITS OWN OWNERSHIP RULE. Every other class decides `owned`
+    from its SKILL.md head, and a `_shared` directory has no SKILL.md -- so before
+    this rule it reported `owned=false` unconditionally, which after the payload
+    shipped meant reporting a directory full of skill-mesh's own marker-bearing files
+    as unowned consumer content. It never surfaced as a failure anywhere, because
+    nothing is classed foreign and unowned_count stays 0; it had to be fixed
+    deliberately. This mirrors migrate-legacy-install.ps1's Get-DirEligibility +
+    Test-SharedFileIsOurs -- the two cascades are ONE contract, and a preflight that
+    disagrees with what the migrator then does is worse than no preflight.
+
+    unowned_count is deliberately NOT extended to `_shared`. It counts SKILL.md-shaped
+    trees at managed-shaped paths that skill-mesh does not own -- the "a host will
+    load this and we did not put it there" signal. A consumer's own `_shared/README.md`
+    is neither generated nor loadable as a skill, so counting it would turn a clean
+    home into a dirty report.
 
     PATH DISPLAY. Default output is consumer-home-RELATIVE (consumer_home = '.').
     -AbsolutePaths switches DISPLAY to absolute; it changes nothing that is read.
@@ -122,6 +144,10 @@ $GPT_ROOT_REL = Get-SkillMeshDiscoveryRoot 'gpt'
 $LEGACY_SKILLS_GPT_REL = Get-SkillMeshLegacySkillsGptRoot
 $RETIRED_COPILOT_REL = Get-SkillMeshRetiredCopilotRoot
 $LEDGER_NAME = '.skill-mesh-install.json'
+# The shared support payload directory the builder emits at each profile root, as a
+# sibling of the per-skill dirs. Same spelling as migrate-legacy-install.ps1's
+# $SHARED_DIR_NAME and tools/build-distributions.ps1's $SHARED_DEST.
+$SHARED_DIR_NAME = '_shared'
 $LEGACY_ROUTER_REL = '.claude/lib/skill-router.ps1'
 $CANONICAL_ROUTER_REL = 'runtime/skill-router.ps1'
 $LEDGER_VERSION_EXPECTED = 1
@@ -354,6 +380,21 @@ function Get-RootAnalysis([string]$rootRel) {
         $head = if ($hasSkillMd) { Get-HeadTextSafe $skillMd } else { '' }
         $owned = $hasSkillMd -and (Test-HeadOwned $head)
 
+        # PER-FILE ownership for the shared payload. A `_shared` directory has no
+        # SKILL.md, so the line above can only ever answer "not owned" for it -- which
+        # is a misreport once the builder ships marker-bearing assets there. Scoped to
+        # the `_shared` name and to a SKILL.md-less directory so no other class changes
+        # its ownership rule, and read through the SAME anchored parser.
+        $isSharedDir = ($name -eq $SHARED_DIR_NAME) -and (-not $hasSkillMd)
+        $sharedOwnedFiles = 0
+        if ($isSharedDir) {
+            foreach ($f in @(Get-ChildItem -LiteralPath $dir.FullName -Recurse -File -Force `
+                        -ErrorAction SilentlyContinue)) {
+                if (Test-HeadOwned (Get-HeadTextSafe $f.FullName)) { $sharedOwnedFiles++ }
+            }
+            $owned = ($sharedOwnedFiles -gt 0)
+        }
+
         $inManifest = $script:ManifestMap.ContainsKey($name)
         $manifestStatus = $null
         $singleProfile = $false
@@ -364,8 +405,13 @@ function Get-RootAnalysis([string]$rootRel) {
 
         if ($inManifest) {
             $eligibility = 'managed'
-        } elseif ($name -eq '_shared' -and (-not $hasSkillMd)) {
-            $eligibility = 'core-holder'
+        } elseif ($isSharedDir) {
+            # Split PER FILE, not per directory: a `_shared` holding skill-mesh's
+            # shipped assets is a managed payload root; one holding only the
+            # consumer's own files is still the legacy core-holder and stays
+            # preserved. The old unconditional 'core-holder' verdict reported the
+            # first case as the second.
+            $eligibility = $(if ($sharedOwnedFiles -gt 0) { 'shared-payload' } else { 'core-holder' })
         } elseif ($hasSkillMd) {
             $eligibility = 'consumer-only'
         } else {

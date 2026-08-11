@@ -248,6 +248,20 @@ def _core_holder(home):
           "# judge-core (shared core)\n\nHolds shared cores; this is not a skill (no SKILL.md).\n")
 
 
+def _shared_payload(home):
+    """A `_shared` directory holding the SHIPPED payload beside consumer content.
+
+    The distinguishing input against 10-core-holder is one marker-bearing file. That
+    directory has no SKILL.md and structurally never will, so an inspector that reads
+    ownership off SKILL.md alone reports it identically to the core-holder shape --
+    which is exactly the misreport this shape pins (`owned=false` over a directory of
+    skill-mesh's own generated assets).
+    """
+    write(home, CLAUDE_ROOT + "/_shared/" + SHARED_COLLIDING, generated_core_md("claude"))
+    write(home, CLAUDE_ROOT + "/_shared/" + SHARED_CONSUMER_ONLY,
+          "# operator notes\n\nConsumer-authored; no distribution ships this name.\n")
+
+
 def _foreign(home):
     """The ONLY input that yields eligibility 'foreign': a directory under a
     discovery root that is absent from the manifest, holds no SKILL.md, and is not
@@ -385,6 +399,28 @@ MIGRATION_NATIVE = "context-slim"
 # Unmanifested consumer skills that must survive a migration byte-for-byte.
 MIGRATION_CONSUMER_ONLY = ("build-observer", "goblin-sweep")
 
+# The two populations a consumer `_shared/` holds once the builder ships a payload
+# there, and the reason Step 65 classifies that directory per FILE.
+#
+# SHARED_COLLIDING is a real asset name from the built payload
+# (tools/build-distributions.ps1 emits it into dist/<profile>/_shared/), planted
+# marker-LESS. It is the shape the live consumer home is actually in, and it is the
+# path the migration adopts: backed up, installed over, indexed, uninstallable.
+#
+# SHARED_CONSUMER_ONLY is deliberately NOT an asset the builder emits. It is the
+# control for the per-FILE rule: a directory-level reclassification would sweep it
+# into the managed set and drop it out of the preserve actions, the backup manifest,
+# the precondition and post-install checks, and the drift advisory all at once --
+# silently, since nothing on disk would change. The live `_shared/` holds 15 such
+# entries (README.md, five test_*.py, __pycache__, ...).
+#
+# test_legacy_migration.py asserts both facts against the REAL built distribution
+# (test_shared_fixture_names_match_the_built_payload), so a builder change that
+# started or stopped shipping either name reds here instead of quietly defusing the
+# per-FILE tests.
+SHARED_COLLIDING = "judge-core.md"
+SHARED_CONSUMER_ONLY = "operator-notes.md"
+
 
 def legacy_skill_md(name):
     """The live legacy shape: a real hand-authored launcher at a managed path.
@@ -431,8 +467,14 @@ def migration_home(home, foreign=False, retired_copilot=True, consumer_only=True
         for name in MIGRATION_CONSUMER_ONLY:
             write(home, CLAUDE_ROOT + "/" + name + "/SKILL.md", consumer_skill_md(name))
     if core_holder:
-        write(home, CLAUDE_ROOT + "/_shared/judge-core.md",
+        # BOTH populations, always together. A `_shared` fixture carrying only the
+        # colliding name could not tell a correct per-FILE classification apart from
+        # a directory-wide one, and a fixture carrying only the non-colliding name
+        # would never exercise the adoption path at all.
+        write(home, CLAUDE_ROOT + "/_shared/" + SHARED_COLLIDING,
               "# judge-core (shared core)\n\nConsumer-held shared core; not a skill.\n")
+        write(home, CLAUDE_ROOT + "/_shared/" + SHARED_CONSUMER_ONLY,
+              "# operator notes\n\nConsumer-authored; no distribution ships this name.\n")
     if retired_copilot:
         # A pre-Step-44 GPT install at the RETIRED project-relative target. It
         # carries the provenance marker, so it is skill-mesh's OWN superseded file
@@ -501,6 +543,7 @@ _BUILDERS = {
     "22-migration-legacy": _migration_legacy,
     "23-migration-foreign": _migration_foreign,
     "24-migration-stale-generated": _migration_stale_generated,
+    "25-shared-payload": _shared_payload,
 }
 
 # Shapes this module builds directly. The junction shapes (05-junction and
