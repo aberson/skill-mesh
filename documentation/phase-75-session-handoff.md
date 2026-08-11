@@ -16,7 +16,8 @@ correction is recorded here with its evidence.
 | 62 — fix the root gate, capture a true baseline, rescue the calibration note | #93 | **DONE** | `72356fb` on `main` |
 | 63 — link-resolution gate with a frozen shrink-only allowlist | #94 | **DONE** | `2efc957` on `main` |
 | 64 — ship `_shared/` into both profiles | #95 | **DONE** | `8b3c1d3` on `main` (dev commit `bd048bf`) |
-| 65–70 | #96–#101 | not started | — |
+| 65 — reclassify `_shared` as managed | #96 | **IN PROGRESS — iteration 3 required, NOT merged** | `b0651be` on branch `build-step-1786408322` (pushed) |
+| 66–70 | #97–#101 | not started | — |
 | 71 — live consumer-home cutover | #102 | not started (`Type: operator`) | — |
 
 `main` is pushed and equals `origin/main` at `8b3c1d3`. Issues #93, #94 and #95 are closed.
@@ -127,6 +128,74 @@ Full review findings: `~\.claude\backups\skill-mesh-step64-reviews\` (`dev-repor
 Per-finding verification reports: `~\.claude\backups\skill-mesh-step64-verification\`.
 
 ---
+
+## 2A. Step 65 — NOT merged; iteration 3 is re-scoped (2026-08-10)
+
+Committed and pushed at **`b0651be`** on branch `build-step-1786408322`. `main` is untouched.
+Two iterations ran; the headline defect survived both, so iteration 3 is **re-scoped by the
+same-defect rule**: one refactor of the shared invariant, not a third patch of the predicate.
+
+### What is confirmed GOOD at `b0651be` — do not regress these, they constrain the fix
+
+Four independent verifiers ran against the committed SHA, each in its own isolated copy:
+
+- **No false negatives.** All 211 emitted files (195 `.md`, 14 `.py`, 2 `.js`) read owned, including
+  CRLF, BOM and BOM+CRLF variants, and through the production 8192-byte `Read-FileHead` path.
+  Install gives 107/107 and 104/104 owned; uninstall leaves zero orphans.
+  **Any fix that strands a real payload file is strictly worse than the defect it replaces.**
+- **No consumer drift.** 27 call sites of the five provenance helpers enumerated, 26 exercised:
+  `NEW_FALSE_COUNT=0`, `FLIPPED_COUNT=0` versus `6d0a80a`. 113 headers sit at offset > 0, so the
+  position anchor is non-vacuous.
+- **Rollback is genuinely byte-verified.** `test_rollback_restores_the_adopted_shared_collision_byte_for_byte`
+  captures the pre-image off disk before `-Apply` and ties the manifest hash back to it — not a
+  manifest-vs-itself tautology. Two independent sabotages of the restore branch both drove it red.
+- **The retire-side `ADVISORY -- retiring` disclosure works** (`migrate-legacy-install.ps1:920-938`),
+  firing pre-mutation for every affected path. That half of Block 1 is genuinely fixed.
+- Gate at `b0651be`: `python -m pytest tests/distributions tests/package-integrity` →
+  **519 passed, 2 skipped**, exit 0 (iteration 1 measured 510/2).
+
+### What is still BROKEN — reproduced, not argued
+
+`Test-SkillMeshHeaderPreamble` (`tools/skill-mesh-provenance.ps1:94-118`) accepts an empty preamble,
+YAML frontmatter, **or any ≤256-char prefix ending in a fence line**. So a consumer-authored document
+that quotes the header format (a) after YAML frontmatter, (b) at file top, or (c) inside a
+` ```python ` fence all return `owned=true`. Only the developer's own fixture shape — prose followed
+by a bare ` ``` ` fence — is rejected.
+
+Driven through the production entry point in a throwaway home against a dist shipping none of those
+paths: `migrate-legacy-install.ps1 -Format json` planned all three as `action=retire,
+eligibility=managed`, and `-Apply` (rc=0) **deleted all three** from the live `.claude/skills/_shared/`.
+**The step's own regression test is green** — it passes its own fixture while the siblings are
+destroyed. The source comment at `skill-mesh-provenance.ps1:126-127` claiming no "document that talks
+ABOUT the header" satisfies the anchors is false as written.
+
+The three reproduction fixtures (`c1-frontmatter-note.md`, `c2-python-example.md`, `c3-top-quote.md`)
+are preserved at `~\.claude\backups\skill-mesh-step65\reverify\`.
+
+### The structural diagnosis (advisory — pressure-test it, do not accept it)
+
+Full Block at `.build-step/diagnosis.md`, also backed up under
+`~\.claude\backups\skill-mesh-step65\build-step\`. Its claim, at HIGH confidence on mechanism:
+
+> The retire path asks a provenance question — *did skill-mesh **write** this file?* — of a
+> content-only recognizer that can only answer *do these bytes **look** like ours?* It is the sole
+> destructive operation authorized by that single, consumer-forgeable signal, while **uninstall
+> already requires two independent yeses** (ledger AND marker, `migrate-legacy-install.ps1:1092-1095`).
+
+It judges a sound content-only recognizer **structurally impossible**: the verified no-false-negative
+requirement forces accepting every emitter-output head, so a byte-identical quotation must receive the
+same verdict — `owned=true` can never imply "we wrote it."
+
+Remedies it ranks, strongest first: make **install-ledger membership** the second yes (already in the
+repo); or dist-manifest membership; or a hash recorded at emit time; or **narrow the consequence** so a
+content judgment alone can flag but never delete. Confidence on the remedy ranking is only MEDIUM —
+raise it by confirming every marker-emitting release also wrote the ledger.
+
+### Non-blocking sibling found during verification
+
+`tests/distributions/test_distributions.py:783` covers the hashbang `.js` case but asserts only a
+substring marker check plus `node --check`, never `Test-SkillMeshProvenance` — so the parser's
+hashbang preamble branch is the one emitter placement with no parser-level test coverage.
 
 ## 3. Step 63's instrument — read this before touching Steps 65–70
 
