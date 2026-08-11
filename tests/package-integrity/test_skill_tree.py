@@ -219,11 +219,73 @@ _LEAK_PATTERNS = [
     ("raw harness session UUID", _UUID_RE),
 ]
 
+# --------------------------------------------------------------------------- #
+# STEP 66 (iteration 2): the two DISCLOSURE classes the six patterns above cannot see.
+# --------------------------------------------------------------------------- #
+# Every pattern in `_LEAK_PATTERNS` keys on an IDENTIFIER -- a drive letter, a home
+# path, the username, a session UUID. The scrub Step 66 actually performed spent most
+# of its budget on two classes that carry none of those:
+#
+#   X  a pointer into the PRIVATE workspace repository's issue namespace
+#   M  account-level cost / usage telemetry
+#
+# The proof that the gap was inert rather than theoretical is Step 66's own iteration 1:
+# it extended this sweep to `_shared/` AND landed fresh instances of both classes in
+# `documentation/`, which was not a swept root at all. It is one now.
+#
+# X is deliberately NOT "a bare #N". This repository carries hundreds of legitimate
+# references to its OWN issues, and a gate that reds on every one of them gets turned
+# off within a week. The disclosure is the number BOUND to another, private repository.
+# Two bindings are recognised here:
+#   * `owner/repo#123`, GitHub's canonical cross-repo spelling, which is self-binding;
+#   * an issue pointer within a short WINDOW of a token naming the private workspace
+#     repo, in either order -- a window and not a line, because markdown wraps and the
+#     real instance this closes had the pointer and the repo name on adjacent lines.
+# A third binding -- "it is inside a document vendored FROM that repo, so every issue
+# number in it is foreign by construction" -- needs no proximity condition at all and is
+# enforced separately over the derived vendored set, by
+# `test_vendored_payload_carries_no_issue_pointer`. That is the rule that would have
+# caught this step's two real instances at their SOURCE, where they appeared bare.
+_PRIVATE_REPO_TOKEN = (
+    r"(?:aberson/coding-root"
+    r"|private[\s*_`]{1,4}(?:workspace[\s*_`]{1,4})?repositor(?:y|ies))")
+_ISSUE_POINTER = (
+    r"(?:\b(?:issue|issues|pr|prs|pull\s+request|post|gh)[\s\-]*#\s*\d+"
+    r"|(?<![\w#])#\d+)")
+# Characters, not lines: two adjacent wrapped markdown lines are ~160.
+_CROSS_REPO_WINDOW = 220
+_CROSS_REPO_POINTER_RE = re.compile(
+    r"(?is)(?:"
+    + _PRIVATE_REPO_TOKEN + r".{0," + str(_CROSS_REPO_WINDOW) + r"}?" + _ISSUE_POINTER
+    + r"|"
+    + _ISSUE_POINTER + r".{0," + str(_CROSS_REPO_WINDOW) + r"}?" + _PRIVATE_REPO_TOKEN
+    + r")")
+_FOREIGN_REPO_ISSUE_RE = re.compile(r"\b[\w.-]+/[\w.-]+#\d+")
+# M: a number attributed to a BILL, plus the two bare phrasings that attribute one with
+# no number present. A percentage ALONE is not the shape -- `session-wrap`'s context
+# utilisation table is legitimately full of them, and so is every SVG in `_shared/`.
+_COST_TELEMETRY_RE = re.compile(
+    r"(?i)(?:"
+    r"\b~?\d{1,3}\s*%[^\n]{0,48}?\b(?:bill|billed|billing|spend|spent|invoice|cost)\b"
+    r"|\b(?:billed|billable)\s+tokens?\b"
+    r"|\b(?:share|percent|percentage|fraction|slice)\s+of\s+"
+    r"(?:the\s+|one\s+|an?\s+)?(?:operator'?s?\s+)?(?:bill|spend|invoice)\b"
+    r")")
+
+_DISCLOSURE_PATTERNS = [
+    ("cross-repo issue pointer (owner/repo#N)", _FOREIGN_REPO_ISSUE_RE),
+    ("issue pointer bound to the private workspace repo", _CROSS_REPO_POINTER_RE),
+    ("account cost/usage telemetry", _COST_TELEMETRY_RE),
+]
+
 # Every tree the leak sweep walks. `skills/` is the migrated canonical source; `_shared/`
 # is the shared payload both profiles ship, and it was unscanned until Step 66 -- a
-# second publishing surface with no guard on it. Enumerated here, once, so the two
+# second publishing surface with no guard on it. `documentation/` joined them in Step 66
+# iteration 2: it is published exactly as widely as the other two (this is a public
+# repository), it is where the scrub RECORD and the plan that specifies the scrub live,
+# and it had never been graded by this sweep at all. Enumerated here, once, so the
 # assertions below and the enumeration guard all read the same list.
-_LEAK_SWEEP_ROOTS = ("skills", "_shared")
+_LEAK_SWEEP_ROOTS = ("skills", "_shared", "documentation")
 
 
 _GIT = shutil.which("git")
@@ -294,7 +356,7 @@ def _leak_sweep_files():
 
 
 def _find_leaks(text):
-    return [name for name, rx in _LEAK_PATTERNS if rx.search(text)]
+    return [name for name, rx in _LEAK_PATTERNS + _DISCLOSURE_PATTERNS if rx.search(text)]
 
 
 def test_leak_detector_reds_on_planted_leak():
@@ -326,6 +388,126 @@ def test_leak_detector_reds_on_planted_leak():
         "one only with the reason recorded beside it.")
 
 
+def test_disclosure_detector_reds_on_the_two_classes_the_identifier_patterns_miss():
+    """ANCHOR for the X and M classes. Every planted value is SYNTHETIC.
+
+    A real private issue number or a real share-of-spend figure pasted into a committed
+    anchor would be the disclosure the pattern exists to stop -- the same discipline the
+    session-UUID anchor above already follows.
+
+    Both directions are asserted for each class, because the whole point of these two
+    patterns is that they must fire on a shape while staying silent on the very common
+    legitimate neighbour of that shape. For X, that neighbour is this repository's own
+    issue numbers, of which `documentation/` alone carries well over a hundred.
+    """
+    # X -- the canonical cross-repo spelling binds itself: no window needed.
+    assert _find_leaks("see aberson/some-other-repo#4242 for the rationale") == \
+        ["cross-repo issue pointer (owner/repo#N)"]
+    # X -- an issue pointer bound to the private repo by proximity, in BOTH orders,
+    # and across a line break (the real instance wrapped).
+    bound = "issue pointer bound to the private workspace repo"
+    assert bound in _find_leaks(
+        "pointers into `aberson/coding-root`, which is private -- issue #4242 and more")
+    assert bound in _find_leaks("post-#4242 lives in the operator's private\nrepository")
+    assert bound in _find_leaks("#4242 was filed against aberson/coding-root last week")
+    # ...and a bound pointer that is far away is NOT claimed: the window is a real
+    # constraint, not decoration.
+    assert bound not in _find_leaks(
+        "aberson/coding-root" + ("x" * 400) + "issue #4242")
+    # X -- this repository's OWN issue numbers, unbound, are not a disclosure.
+    assert not _find_leaks("closed by #97; see issue #98 for the follow-up")
+    assert not _find_leaks("Step 12 of the same phase, per the plan")
+    # M -- a number attributed to a bill, and the bare form with no number at all.
+    assert _find_leaks("11% of billed spend lands above the ceiling") == \
+        ["account cost/usage telemetry"]
+    assert _find_leaks("a stated share of the invoice") == ["account cost/usage telemetry"]
+    # M -- a percentage that is not about money stays green. Both of these are real
+    # shapes in this tree: a context-utilisation threshold and an SVG dimension.
+    assert not _find_leaks("| `CLEARNEXT_FORCE_UTIL` | 75% | >150k tokens | take it |")
+    assert not _find_leaks('<rect width="100%" height="60%" fill="none" />')
+    assert not _find_leaks("token cost is incurred at high context")
+
+
+def _vendored_payload_docs():
+    """`_shared/*.md` carrying the Step 66 vendor banner. DERIVED, never hand-listed.
+
+    A hand-maintained roster of what a gate covers is a false green the first time
+    someone vendors an eighth document and does not add a row.
+    """
+    banner = "**Vendored into skill-mesh.**"
+    return sorted(p for p in (REPO_ROOT / "_shared").glob("*.md")
+                  if banner in p.read_text(encoding="utf-8"))
+
+
+# Floor on the DERIVED set above: seven documents were vendored by Step 66. It moves
+# only when a document is deliberately retired from the payload, in the same commit.
+MIN_VENDORED_PAYLOAD_DOCS = 7
+
+# Inside a vendored document there is no such thing as a local issue number: the whole
+# file is a copy of a document that lives in the private workspace repo. So no proximity
+# binding is required here, and none is applied.
+_VENDORED_ISSUE_POINTER_RE = re.compile(
+    r"(?i)\b(?:issue|issues|pr|prs|pull\s+request|post|gh)[\s\-]*#\s*\d+")
+
+
+def test_vendored_payload_carries_no_issue_pointer():
+    """No issue-shaped pointer may survive in a document vendored from the private repo.
+
+    This is the rule that grades the class AS IT APPEARED at the source: bare, with
+    nothing on the line to bind it to a repository, so the proximity rule in
+    `_DISCLOSURE_PATTERNS` could not have seen either of the two real instances.
+    """
+    # ANCHOR first -- both real shapes, with synthetic numbers.
+    assert _VENDORED_ISSUE_POINTER_RE.search("## Review routing (post-#4242)")
+    assert _VENDORED_ISSUE_POINTER_RE.search("hook wiring lands with issue #4242")
+    # ...and silent on a numbered CLASS reference, which is not an issue pointer.
+    # `skill-pipeline.md` legitimately names a halt-contract class this way.
+    assert not _VENDORED_ISSUE_POINTER_RE.search("where /build-phase halts (class #4)")
+
+    docs = _vendored_payload_docs()
+    assert len(docs) >= MIN_VENDORED_PAYLOAD_DOCS, (
+        f"only {len(docs)} vendored document(s) carry the banner, floor is "
+        f"{MIN_VENDORED_PAYLOAD_DOCS}. Either a document was retired (lower the floor "
+        "deliberately, in the same commit) or the banner drifted and this gate just "
+        "stopped grading the payload it exists for.")
+    offenders = []
+    for doc in docs:
+        text = doc.read_text(encoding="utf-8")
+        for m in _VENDORED_ISSUE_POINTER_RE.finditer(text):
+            line = text[:m.start()].count("\n") + 1
+            offenders.append(f"{doc.relative_to(REPO_ROOT).as_posix()}:{line}: "
+                             f"{m.group(0)!r}")
+    assert not offenders, (
+        "a vendored document carries a pointer into the private workspace repo's "
+        "issue namespace:\n" + "\n".join(offenders))
+
+
+def test_leak_sweep_filesystem_fallback_skips_build_output(tmp_path, monkeypatch):
+    """`_LEAK_SWEEP_SKIP_DIRS` is only REACHABLE in the fallback branch -- test it there.
+
+    Wherever git answers -- the normal case, and git is a declared dependency of this
+    repository -- `_leak_sweep_files()` returns the `git ls-files` set, in which
+    `__pycache__` is absent because it is UNTRACKED, not because the filter worked. So
+    `test_leak_sweep_covers_the_shared_payload`'s no-`__pycache__` assertion is true
+    today for a reason unrelated to the code it guards: a typo in the skip list, or
+    `d == p.name` written in place of `d in p.parts`, would ship green behind it. This
+    drives the fallback directly, which is the only branch that filter has.
+    """
+    module = sys.modules[__name__]
+    (tmp_path / "skills" / "demo" / "__pycache__").mkdir(parents=True)
+    (tmp_path / "skills" / "demo" / "core.md").write_text("# demo\n", encoding="utf-8")
+    (tmp_path / "skills" / "demo" / "__pycache__" / "core.cpython-313.pyc").write_bytes(
+        b"\x00\x0f\r\n")
+    (tmp_path / "_shared" / "nested" / "__pycache__").mkdir(parents=True)
+    (tmp_path / "_shared" / "payload.md").write_text("# payload\n", encoding="utf-8")
+    (tmp_path / "_shared" / "nested" / "__pycache__" / "x.pyc").write_bytes(b"\x00")
+    monkeypatch.setattr(module, "REPO_ROOT", tmp_path)
+    monkeypatch.setattr(module, "_LEAK_SWEEP_ROOTS", ("skills", "_shared"))
+    monkeypatch.setattr(module, "_tracked_leak_sweep_files", lambda: None)
+    swept = {p.relative_to(tmp_path).as_posix() for p in _leak_sweep_files()}
+    assert swept == {"skills/demo/core.md", "_shared/payload.md"}, swept
+
+
 def test_leak_sweep_covers_the_shared_payload():
     """ENUMERATION GUARD: the sweep must actually reach `_shared/`, and non-markdown.
 
@@ -340,6 +522,15 @@ def test_leak_sweep_covers_the_shared_payload():
         "the leak sweep no longer reaches _shared/"
     assert any(f.startswith("skills/") for f in swept), \
         "the leak sweep no longer reaches skills/"
+    # ...and `documentation/`, added in iteration 2. Dropping this root is how the two
+    # disclosure classes above become unenforceable again without a single pattern
+    # changing: every real instance either of them has ever caught lived here.
+    assert any(f.startswith("documentation/") for f in swept), \
+        "the leak sweep no longer reaches documentation/"
+    assert "documentation/host-parity-repair-plan.md" in swept, \
+        "the plan that SPECIFIES the scrub is outside the gate that grades it"
+    assert "documentation/step-66-vendored-reference-decisions.md" in swept, \
+        "the scrub RECORD is outside the gate that grades it"
     assert "_shared/judge-core.md" in swept
     assert any(f.startswith("_shared/") and f.endswith(".py") for f in swept), \
         "the leak sweep is markdown-only again; `_shared/` ships .py/.js/.svg too"

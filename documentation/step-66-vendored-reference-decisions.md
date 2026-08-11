@@ -42,7 +42,8 @@ and it changes two of the three decisions:
 
 Measured divergence: 5 hunks, all of them *vendoring adaptations already applied by the
 earlier commits* (`8de32f6`, `e55b6a8`) — four external links converted to prose, and one
-cross-repo phase pointer (`lands as Step 12 of the same phase`) dropped. **Zero doctrinal
+cross-repo phase pointer (a parenthetical naming a numbered step of a phase in the private
+workspace repo, on the `user-gateway` contract link) dropped. **Zero doctrinal
 divergence.** The document body is otherwise byte-identical to the current source.
 
 Decision: reconcile to the current source and re-apply the same adaptations mechanically
@@ -85,7 +86,8 @@ plan's per-file verdicts, which were measured on 2026-08-09 against files that h
 changed. Five categories were checked on every file:
 
 * **I** — operator identifiers (username, home path, session-dir slug, raw session UUIDs)
-* **X** — cross-repo issue / step / phase references (`aberson/coding-root` is **private**)
+* **X** — cross-repo issue / step / phase references (the operator's workspace repo, which
+  these documents are vendored *from*, is **private**)
 * **M** — account metrics (billing- or usage-share numbers)
 * **H** — harness-configuration disclosure (hook libraries, settings files, skill-tree paths)
 * **T** — references to tooling skill-mesh does not ship
@@ -101,12 +103,15 @@ de-linked (§4). Verified clean under all six leak patterns, including the new h
 ### `task-state-schema.md` — **SCRUBBED (5 edits)**
 * **I** — the raw harness session UUID and the private session-transcript path were the two
   highest-value tokens in the whole payload. The source paragraph named a real session UUID
-  and then the `~/.claude/projects/<slug>/<uuid>.jsonl` transcript that proved it. Both are
+  and then the per-session `.jsonl` transcript path under the harness projects directory
+  that proved it. Both are
   gone; the paragraph now states the same contract (scratchpad UUID == transcript basename
   == hook `session_id`, no mapping table) with no identifier in it. **This is the
   Done-when's named line, and it is absent from the vendored copy.**
-* **X** — `hook wiring lands with Step 5 / issue #295` removed. That issue is in a private
-  repository; the sentence now says the wiring is spec until it lands.
+* **X** — a sentence tying the hook wiring to a numbered step and an issue number in the
+  private workspace repo was removed. Neither the step number nor the issue number is
+  reachable by a reader of this repository; the sentence now says the wiring is spec until
+  it lands.
 * **H** — `.claude/hooks/lib/task-state-derive.ps1` → "the workspace's task-state derive hook
   library"; `.claude/skills/session-wrap/SKILL.md` → "the `session-wrap` skill contract";
   `.claude/settings.json` → "the harness settings file".
@@ -117,11 +122,12 @@ de-linked (§4). Verified clean under all six leak patterns, including the new h
 * **M** — none. **T** — none.
 
 ### `skill-pipeline.md` — **SCRUBBED (8 edits)**
-* **X** — `(Step 12; lands this phase)` removed; the `## Review routing (post-#227)` heading
-  reduced to `## Review routing`. Both pointed into the private coding-root repository.
-* **I** — the private cron name `dev-sprint-wrap-monthly` replaced with "the workspace's
-  monthly hygiene cron". A named scheduled job on the operator's machine is infrastructure
-  disclosure with no reader value.
+* **X** — a parenthetical naming a numbered step of the current phase was removed, and the
+  `## Review routing` heading lost a trailing parenthetical that pinned it to an issue
+  number. Both pointed into the private workspace repository.
+* **I** — the private cron name (a specific scheduled-job identifier on the operator's
+  machine) replaced with "the workspace's monthly hygiene cron". A named scheduled job is
+  infrastructure disclosure with no reader value.
 * **H** — three `.claude/references/…` and one `.claude/rules/…` link **labels** rewritten to
   the plain document name. These mattered twice over: they are harness paths, and each was
   also an occurrence counted by the link gate's home-anchored ceiling, which this step must
@@ -137,7 +143,8 @@ de-linked (§4). Verified clean under all six leak patterns, including the new h
 * **M** — none.
 
 ### `intake-engine.md` — **SCRUBBED (4 edits)**
-* **X/H** — `.claude/skills/user-gateway/SKILL.md (lands as Step 12 of the same phase)` →
+* **X/H** — a harness skill-tree path for the `user-gateway` contract, carrying a
+  parenthetical that pinned it to a numbered step of the same private-repo phase →
   "the `user-gateway` skill contract".
 * Three sibling links re-anchored to `./` form (§4).
 * **H, retained deliberately** — `<git-root>/.claude/task-state/intake-*.md`, the ledger path
@@ -148,21 +155,43 @@ de-linked (§4). Verified clean under all six leak patterns, including the new h
 I: none. X: none. M: none. H: none. T: none. The only edit is the vendored self-citation
 (§2.2) plus the `code-quality.md` de-link. Clean under all six leak patterns.
 
-### `worktree-hygiene.md` — **SAFE, one structural edit**
-I: none. X: none. M: none. H: none. T: none. Its project mentions (`toybox`, `Alpha4Gate`) are
+### `worktree-hygiene.md` — **SCRUBBED (1 edit), plus one structural edit**
+X: none. M: none. H: none. T: none. Its project mentions (`toybox`, `Alpha4Gate`) are
 already present in this public tree in many committed files, so they are not new disclosure.
-The one structural edit is not a scrub: its workspace YAML frontmatter (`description:`) was
+
+**I — the one item, called out by line rather than covered by a blanket verdict.** §3's
+last bullet ("Every check above is about COMMITS") anchors its lesson on a **dated
+private-workspace incident from the day before this vendoring**: it named a specific stale
+worktree branch (a `build-step-*` name with its creation epoch), the source file that was
+being rewritten, and exact uncommitted line counts. Iteration 1 rated this file a blanket
+SAFE without addressing it, which was the wrong shape of sign-off even if the verdict had
+been right — a reader cannot tell a considered "acceptable" from an unnoticed item.
+
+Assessed on its own: the branch name is a machine-local artifact identifier with an epoch
+in it, which is *infrastructure detail about the operator's working copy* and has no reader
+value — the lesson holds identically without it. The rest (a module rewrite, a rough line
+count, the two-defect outcome) is the evidence the bullet rests on and is
+stylistically identical to the already-public anchor incidents in this tree.
+Unlike those anchors, however, this one is **T-1 day fresh**, so it describes work still in
+flight rather than a settled, published outcome. **Decision: abstract the branch name, the
+file name and the exact counts; keep the incident, the date framing ("a recent case") and
+the lesson.** Erring toward abstraction costs the reader nothing here, because none of the
+removed tokens is load-bearing for the rule.
+
+The remaining structural edit is not a scrub: its workspace YAML frontmatter (`description:`) was
 dropped, because a `_shared/` payload file must not open with frontmatter —
 `Add-Provenance` would take its frontmatter-first path and
 `tests/distributions/test_distributions.py`'s header stripper asserts that premise
 explicitly. Nothing downstream of the vendoring reads that block.
 
 ### `subagent-economy.md` — **SCRUBBED (2 edits)**
-* **M** — `83% of billed tokens are spent above 150k context`, plus the `~43%` / `~18%` /
-  `~240k chars` breakdown, is **account cost telemetry**: a share of one operator's bill.
+* **M** — the rule's opening sentence carried a measured share-of-spend figure for one
+  operator's account, together with a three-part breakdown (two further shares and a
+  character-count magnitude for a typical sub-agent return). That is **usage telemetry for
+  a specific account**, and the figures are restated nowhere in this record on purpose.
   Replaced with the qualitative claim the rule actually rests on ("the large majority of a
   long window's token cost is incurred at high context", the two leaks named without
-  percentages). The rule's prescriptions are unchanged; only the account-level numbers are.
+  numbers). The rule's prescriptions are unchanged; only the account-level numbers are.
 * **X/M** — the `## Source` section named two private investigation documents *and* restated
   the metric. Replaced with a dated, unnamed reference to the two workspace investigations.
 * **I: none. H: none. T: none.**
@@ -273,12 +302,20 @@ What replaces the validation D5 wanted — and it is stronger, not weaker:
   `dist/<p>/<skill>/core.md` **is** in the link gate's scope and **must** resolve; if the
   repoint were dropped or the asset never shipped, the profile scan reports a new dangling
   reference and assertion 1 fails.
-* **Three tests assert the chain directly.**
+* **Four tests assert the chain directly, and one of them is the negative case.**
   `test_vendored_reference_citations_reach_the_payload` walks all 12 (skill, document) pairs
   in both profiles; `test_shared_references_are_repointed_and_resolve` asserts tree-wide that
-  no `<repo>/_shared/` survives outside a provenance header; and
+  no `<repo>/_shared/` survives outside a provenance header;
   `test_repo_rooted_shared_citation_is_seeded_and_repointed` is a red-on-garbage anchor on a
-  synthetic tree, proving both the seeding edge and the rewrite.
+  synthetic tree, proving both the seeding edge and the rewrite; and
+  `test_mistyped_repo_rooted_shared_citation_throws_the_build` plants a citation whose leaf
+  does not exist and asserts the build **fails**, naming the missing leaf. That last one was
+  added in iteration 2 and it is the load-bearing one: the first three all exercise the
+  positive path, so without it the single mechanism this section names as D5's replacement —
+  the `Get-SharedClosure` throw — had no proof it fires. Unlike the other three shared-
+  reference spellings, `<repo>/_shared/x` is exempt from BOTH link gates by the
+  template-placeholder rule, so for this spelling the throw is not a second line of defense,
+  it is the only one.
 
 **Recorded finding for the orchestrator:** D5's literal instruction — markdown-link form —
 is *not* satisfied in the canonical tree, and cannot be by any step operating under the
@@ -333,7 +370,9 @@ from the `KNOWN_DANGLING` literal, which is the whole shape D7 asked for.
 
 ## 7. Leak-sweep extension
 
-`_LEAK_PATTERNS` had five patterns and swept `skills/**/*.md` only. Two gaps, both closed:
+`_LEAK_PATTERNS` had five patterns and swept `skills/**/*.md` only. Four gaps, all closed —
+the last two only after iteration 1's review found that the extended gate still could not
+see the class its own sign-off record was an instance of:
 
 * **Nothing scanned `_shared/`** — the tree this step writes into, and a payload that ships
   into *both* host profiles. The sweep now walks `skills/` and `_shared/`, enumerated once in
@@ -346,6 +385,36 @@ from the `KNOWN_DANGLING` literal, which is the whole shape D7 asked for.
   red-on-garbage anchor plants a synthetic session id and asserts the sweep flags it (the
   planted value is synthetic on purpose; pasting a real session id into a committed anchor
   would be the disclosure the pattern exists to stop).
+* **Nothing scanned `documentation/`, and no pattern had a shape for the two classes the
+  scrub itself is about.** All six patterns key on an *identifier* — a drive letter, a home
+  path, the username, a session UUID. Neither of the two disclosure classes this step spent
+  most of its scrub budget on had any coverage at all: **X**, a pointer into the private
+  workspace repo's issue namespace, and **M**, account-level cost/usage telemetry. The proof
+  that the gap was inert rather than theoretical is iteration 1's own commit, which extended
+  the sweep *and* landed fresh instances of both classes in `documentation/` — entirely
+  unscanned, because `documentation/` was not a swept root. Both are now shaped, in
+  `_DISCLOSURE_PATTERNS`, and `documentation/` joins `skills/` and `_shared/` in
+  `_LEAK_SWEEP_ROOTS`:
+  * **X, all roots** — an issue/PR pointer within a ~220-character window of a token naming
+    the private workspace repo, in either order. It is deliberately **not** a bare `#\d+`:
+    this repository carries hundreds of legitimate references to its *own* issues, so the
+    disclosure is not the number, it is the number *bound to another, private repo*. The
+    canonical `owner/repo#N` cross-repo spelling is matched on its own, needing no window.
+  * **X, vendored payload only** — inside a vendored `_shared/` document, ANY issue-shaped
+    pointer (`issue #N`, `post-#N`, `GH-N`, …) is a defect, with no proximity condition,
+    because every one of those documents is copied wholesale out of the private workspace
+    repo, so any issue number in one is foreign by construction. This is the rule that would
+    have caught the two real instances *at their source*, where they appeared bare and no
+    proximity rule could see them. The vendored set is **derived** from the `Vendored into
+    skill-mesh` banner each carries, never hand-listed, and floored at seven so an emptied
+    derivation cannot pass vacuously.
+  * **M, all roots** — a percentage bound to billing/spend vocabulary inside a short window,
+    plus two bare phrasings that attribute a quantity to an account's bill with no number
+    present at all (a token count described as billed; a stated fractional slice of what an
+    operator was charged). Neither literal is restated here, for the same reason the items
+    in §3 are not. A number alone is not the shape
+    (`session-wrap`'s context-utilisation table is full of legitimate percentages); a
+    *number attributed to a bill* is.
 
 One exemption, by literal and never by shape: RFC 4122 Appendix A's documentation UUID
 `550e8400-…-446655440000`, already used as an illustrative `run_id` in a JSON sample in
@@ -370,9 +439,69 @@ eventually rides in.
 * **It did not update the 46 legacy top-level `<skill>/SKILL.md` packages.** D-63-B puts them
   out of scope: they are a frozen compatibility surface for the deprecation window, not
   canonical, and not updated by the migration.
+* **It did not scrub anything in `documentation/` beyond the two files named in §9.** The
+  widened sweep grades the whole directory; those two are all it found.
 * **It introduced no `skills/` + `_shared/` path token**, in any file — not merely in the
   two locks that scan `skills/**/*.md`. This record deliberately spells that forbidden path
   in prose only, never as a token, so the claim is literally true and not merely
   gate-satisfying. (The literal does already exist in the tree, in
   `documentation/architecture.md` and in `test_skill_tree.py`'s own lock; both predate this
   step and neither is a citation.)
+
+---
+
+## 9. Widening the sweep to `documentation/` — the two pre-existing instances
+
+Bringing `documentation/` into `_LEAK_SWEEP_ROOTS` (§7) turns the gate on a directory that
+has never been graded. It found exactly two instances, both in
+`documentation/host-parity-repair-plan.md`, both **already committed and pushed to the
+public origin**, and both belonging to this step's own specification:
+
+| # | Location | Class | What it was |
+|---|---|---|---|
+| 1 | `host-parity-repair-plan.md`, the Step 66 *"The scrub is NOT one line"* bullet | X + M | the per-file scrub spec, which named each item to be removed **by quoting its literal value** — the two private-repo issue pointers, the private scheduled-job name, and the share-of-spend figure |
+| 2 | `host-parity-repair-plan.md`, the Step 66 `Done when:` bullet | I | the harness projects-directory transcript path, spelled literally (with placeholders for the identifying segments, so it disclosed a shape and not a value) |
+
+There were three possible responses, and only two of them were legitimate. **Narrowing the
+gate — the patterns, the roots, or the window — so that these simply are not seen was
+rejected outright**: it converts a real finding into a false green, and it is precisely the
+failure mode this phase exists to prevent (a gate that grades a smaller tree while reading
+as if it graded the whole one; see the `KNOWN_DANGLING` re-rooting attack Step 63 froze).
+
+**Decision: scrub both, do not allowlist either.** Reasons, in order of weight:
+
+1. **Instance 1 is a live disclosure, not a historical one.** It sits on the default branch
+   of a public repository, and it republishes the exact strings the step spends its whole
+   scrub budget removing from `_shared/`. Leaving it allowlisted would mean the vendored
+   copies are clean and the specification that describes cleaning them is not — a distinction
+   with no value to anyone reading either.
+2. **Scrubbing costs the plan nothing.** The vendoring work is done; the literal values in
+   the spec are no longer instructions anyone will act on, only a liability. Each item is
+   now named by class and source line, which is what a reviewer verifying the scrub actually
+   needs — the same abstraction pattern §3 applies to the session-UUID item.
+3. **An allowlist entry is a permanent hole with a maintenance cost.** The exemption list
+   for the UUID pattern is capped at one entry and asserted (§7) for exactly this reason.
+   Adding a file-scoped exemption for a document that is *in this repository and editable*
+   would spend that budget on the cheapest possible fix.
+
+**Was the plan's prose locked by a committed test?** Checked before editing, and **no**.
+Two gates read `documentation/`, and neither locks this text: `test_release_gates.py`'s
+`_doc_paths()` feeds `find_broken_local_links()`, which grades markdown link *targets* (no
+link was added or removed here), and `test_cutover_handoff.py`'s token/flag sweep explicitly
+skips any document whose name ends in `-plan.md`, on the stated grounds that a plan
+legitimately names artifacts it has not built yet. `test_cutover_handoff.py` locks the text
+of `coding-root-cutover-handoff.md`, `migration.md` and
+`provider-neutral-skill-mesh-plan.md` — none of which this step touches. No test update was
+required, and none was made.
+
+Instance 2's rewrite is deliberately *not* a narrowing of the identifier pattern that caught
+it. That pattern is correct: a harness projects-directory path is a strong disclosure signal
+wherever it appears, and the fact that this occurrence carried placeholders rather than a
+real slug is a property of this occurrence, not of the shape. The prose now describes the
+path instead of spelling it, which keeps the `Done when:` verifiable — the vendored copy is
+still checked against source line 32 — without carrying the token.
+
+**One consequence worth stating plainly:** the plan document and this record are now
+*inside* the sweep, so any future edit to either that restates a private value goes RED in
+`test_no_private_leak_in_migrated_tree`. That is the intended end state. The gate now covers
+the writer of the record, not only the payload the record describes.

@@ -791,6 +791,47 @@ def test_repo_rooted_shared_citation_is_seeded_and_repointed(tmp_path):
     assert (out / "claude" / "demo" / ".." / "_shared" / "vendored.md").resolve().is_file()
 
 
+def test_mistyped_repo_rooted_shared_citation_throws_the_build(tmp_path):
+    """RED-ON-GARBAGE for the Step 66 spelling: a typo must fail the build, loudly.
+
+    The positive half is covered three ways (the two tests above plus the live-tree pair
+    walk). None of them can fail if the protection itself is gone, and for THIS spelling
+    the protection is singular: `<repo>/_shared/<leaf>` is exempted from both link gates
+    by the `<>*` template-placeholder rule, so unlike `../_shared/x`, `../../_shared/x`
+    and bare `_shared/x` there is no second line of defense behind the build-time throw
+    in `Get-SharedClosure`. The decision record leans on that throw as the whole
+    replacement for D5's abandoned link-form validation, so the throw needs its own
+    anchor: without this test, deleting the `Test-Path` guard leaves every other
+    assertion in this file green while a mistyped citation ships as a reference no
+    consumer can follow.
+    """
+    repo = _synthetic_build_repo(
+        tmp_path,
+        {"vendored.md": "# vendored\n\nWorkspace doctrine.\n"},
+        # One character off: `vendoredd.md` does not exist in `_shared/`.
+        "# demo core\n\nSize each step per `<repo>/_shared/vendoredd.md` section 1.\n")
+    out = tmp_path / "out"
+    r = _synthetic_build(repo, out)
+    assert r.returncode != 0, (
+        "the builder accepted a `<repo>/_shared/<leaf>` citation whose leaf does not "
+        f"exist -- a typo in this spelling now ships green:\n{r.stdout}\n{r.stderr}")
+    combined = f"{r.stdout}\n{r.stderr}"
+    assert "shared asset source missing" in combined, (
+        "the build failed, but not with the seeding throw -- this anchor is no longer "
+        f"proving what it claims:\n{combined}")
+    assert "vendoredd.md" in combined, \
+        f"the failure does not name the missing leaf, so it is not actionable:\n{combined}"
+    # ...and the payload the citation named is not there. MEASURED ordering, recorded
+    # rather than wished for: the builder emits each skill's files BEFORE it resolves
+    # the shared closure, so a refused build does leave a partial `dist/` behind. That
+    # is safe only because the run exits non-zero and every consumer of `dist/`
+    # (`tools/release.ps1`, the installer) branches on that -- so the assertion here is
+    # the one that is actually true, not the one that sounds tidier.
+    assert not (out / "claude" / SHARED_DEST / "vendoredd.md").is_file()
+    assert not (out / "claude" / SHARED_DEST / "vendored.md").is_file(), \
+        "the closure shipped assets despite refusing one of its seeds"
+
+
 def test_shared_closure_seeds_from_the_adapter_as_well_as_the_core(tmp_path):
     """WALK EDGE: the seed harvest reads the ADAPTER body, not only the core body.
 
