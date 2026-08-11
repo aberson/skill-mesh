@@ -1,6 +1,19 @@
 # Step 66 — vendored workspace references: decisions and sign-offs
 
-Phase 7.5, Step 66 (issue #97). This is the **named in-repo record** the step's Done-when
+> **Scrub record.** This document's whole subject is private values that were **removed**
+> from seven vendored documents, which makes it at least as likely to carry one as the files
+> it describes — it did, in three consecutive review rounds. So it is graded by the same
+> tier-1 categorical bans as the payload itself
+> (`tests/package-integrity/test_skill_tree.py`, `_tier1_graded_docs`), and this line is the
+> self-declaration that puts it in that derived set. Every removed value below is named by
+> **class and source location only** and is restated nowhere: not in prose, not inside
+> quotation marks, and not in a sentence explaining that it was removed. That last one is
+> not a hypothetical — it is how this gate came to exist. §7.2 records the two legitimate
+> constructs this costs the record, and why neither was answered by loosening a ban.
+
+Phase 7.5, Step 66; the plan's Step 66 block owns the tracking-issue number, and this record
+carries no issue-shaped pointer at all — not even to this repository's own issues, for the
+reason §7.2 gives. This is the **named in-repo record** the step's Done-when
 requires: the reconcile-or-fork decision for each of the three copies that already existed
 in `_shared/`, the per-file scrub sign-off for all seven vendored documents, the
 disposition of each of the 14 external links they carry, and the citation-form decision
@@ -101,9 +114,10 @@ gate was found over-claiming twice). This per-file sign-off is the **only class-
 authority** in Step 66. The committed gates in `tests/package-integrity/test_skill_tree.py`
 make two strictly narrower claims, and neither is a certification:
 
-* **Categorical bans** over the seven vendored documents forbid whole categories outright —
-  issue-shaped pointers, shares and percentages, scaled or open-ended magnitudes. What such
-  a rule claims *is* the category it names, so the claim is decidable and cannot over-reach.
+* **Categorical bans** over the seven vendored documents *and this record* forbid whole
+  categories outright. `_VENDORED_PAYLOAD_BANS` is the one owner of which categories those
+  are; this record does not keep a second copy of that list. What such a rule claims *is*
+  the category it names, so the claim is decidable and cannot over-reach.
 * **Tripwires** over the open roots recognise shapes that have actually escaped into this
   tree. They say nothing at all about the shapes that have not.
 
@@ -221,15 +235,18 @@ explicitly. Nothing downstream of the vendoring reads that block.
   this one, so **this row certified a class handled while a member of the certified-removed
   set sat in the file verbatim.** Two things let it through, and both are worth naming: the
   scrub was executed against a line list inherited from what an earlier review happened to
-  find, rather than re-derived from the class; and the occurrence carried no percentage and
-  no billing vocabulary, so no committed pattern of the day had a shape for it either.
+  find, rather than re-derived from the class; and the occurrence carried no share figure
+  and no billing vocabulary, so no committed pattern of the day had a shape for it either.
   **The inaccurate certification was the defect, not the fragment** — stripped of the
   billing linkage the opening scrub removed, a bare magnitude is in kind with the
-  "400+ turns" the same sentence used to carry. Both halves are now fixed: the sentence
-  makes its point in the file's own Rule-1 vocabulary with no magnitude in it, and this row
-  states what was actually done. A member of this class can no longer survive here
-  unnoticed — §7's tier 1 bans scaled and open-ended magnitudes *outright* across all seven
-  vendored documents, which is what a bounded payload buys and an open root cannot.
+  open-ended turn-count magnitude that stood beside it in the same sentence, which the same
+  edit removed; neither is restated here, and an earlier draft of this very row restating
+  one of them is the third round the block narrative describes. Both halves are now fixed:
+  the sentence makes its point in the file's own Rule-1 vocabulary with no magnitude in it,
+  and this row states what was actually done. A member of this class can no longer survive
+  here unnoticed — §7's tier 1 bans scaled and open-ended magnitudes *outright*, across all
+  seven vendored documents **and across this record**, which is what a bounded surface buys
+  and an open root cannot.
 * **I: none. H: none. T: none.**
 
 ---
@@ -448,12 +465,12 @@ read this list with that correction in hand.
     proximity rule could see them. The vendored set is **derived** from the `Vendored into
     skill-mesh` banner each carries, never hand-listed, and floored at seven so an emptied
     derivation cannot pass vacuously.
-  * **M, all roots** — a percentage bound to billing/spend vocabulary inside a short window,
-    plus two bare phrasings that attribute a quantity to an account's bill with no number
-    present at all (a token count described as billed; a stated fractional slice of what an
-    operator was charged). Neither literal is restated here, for the same reason the items
-    in §3 are not. A number alone is not the shape
-    (`session-wrap`'s context-utilisation table is full of legitimate percentages); a
+  * **M, all roots** — a share figure bound to billing/spend vocabulary inside a short
+    window, plus two bare phrasings that attribute a quantity to an account's bill with no
+    number present at all (a token count described as billed; a stated fractional slice of
+    what an operator was charged). Neither literal is restated here, for the same reason the
+    items in §3 are not. A number alone is not the shape
+    (`session-wrap`'s context-utilisation table is full of legitimate share figures); a
     *number attributed to a bill* is.
 
 One exemption, by literal and never by shape: RFC 4122 Appendix A's documentation UUID
@@ -478,7 +495,7 @@ Three escapes are reproducible against the iteration-2 regexes — a *paraphrase
 name used as a common noun between "private" and "repository", which is the phrasing that
 actually shipped historically), a *distance* (roughly 230 characters of separation clears a
 220-character window), and a *vocabulary substitution* (the third M-class occurrence in §3's
-`subagent-economy.md` row, which carries neither a percentage nor billing vocabulary). Those
+`subagent-economy.md` row, which carries neither a share figure nor billing vocabulary). Those
 are the three ways a syntactic approximation of a semantic class always fails; a fourth round
 of fitting would have produced a fourth. **An over-claiming gate is worse than no gate,
 because the team stops looking** — which is the failure this whole phase exists to remove, and
@@ -488,15 +505,16 @@ The gate now makes three clearly separated claims, and the code says which is wh
 
 | Tier | Surface | Claim | Enforced by |
 |---|---|---|---|
-| 1 | the seven vendored `_shared/*.md` documents (derived from the vendor banner, never hand-listed) | whole **categories** are absent: issue-shaped pointers, shares and percentages, scaled or open-ended magnitudes | `test_vendored_payload_carries_no_banned_category` (+ the retained `…_no_issue_pointer`) |
+| 1 | the seven vendored `_shared/*.md` documents (derived from the vendor banner) **and every scrub record** (derived from its own marker) — never hand-listed | whole **categories** are absent; `_VENDORED_PAYLOAD_BANS` is the one owner of which categories, and this table keeps no second copy of them | `test_vendored_payload_carries_no_banned_category` (+ the retained `…_no_issue_pointer`) |
 | 2 | the open roots `skills/`, `_shared/`, `documentation/` | no **known escaped shape** is present. Not a class claim. | `_DISCLOSURE_PATTERNS`, relabelled as tripwires |
 | 3 | every vendored file | the **classes** are absent | the per-file human sign-off, §3 |
 
 Why the split falls there: a categorical ban is only affordable where a false positive is
-cheap. Across seven files it is answered by rewording one sentence and recording the
-adaptation here. Across `documentation/` it would red on hundreds of legitimate issue numbers
-and percentages, and a gate that does that is one somebody switches off inside a week — so the
-bans are payload-scoped by design, and pointing them at an open root would undo them.
+cheap. Across a handful of files it is answered by rewording one sentence and recording the
+adaptation here. Across `documentation/` as a whole it would red on hundreds of legitimate
+issue numbers and share figures, and a gate that does that is one somebody switches off inside
+a week — so the bans are scoped to bounded surfaces by design, and pointing them at an open
+root would undo them.
 
 Three things were **considered and rejected**, recorded so they are not re-proposed:
 
@@ -535,7 +553,79 @@ comments and this record *claim*; `test_vendored_payload_carries_no_issue_pointe
 unchanged and shares the same compiled object with the new table's first row — and that
 sharing is **asserted with `is`, not merely commented**, so re-declaring the shape as a second
 copy reds instead of drifting, per this workspace's one-source-of-truth rule for shape
-constants.
+constants. (Iteration 3 asserted that identity for the *first* row only — which left the two
+rows that actually closed the escape deletable with the whole suite still green, since the
+anchors exercise the compiled objects directly and never assert the table still carries them.
+Iteration 4 extends the check to every row and floors the table's length; see §7.2.)
+
+### 7.2 Widening tier 1 to this record — the iteration-4 scope change
+
+Tier 1 was right and its **scope** was too small. Iteration 3 shipped it over the seven
+vendored documents only, and then this record — the document whose entire subject is the
+values those seven no longer carry — restated one, in the sentence explaining that such values
+are restated nowhere. That was the third round in a row in which a fix for one named instance
+introduced the next, and it is the whole argument for the change: a scrub record is *payload*,
+not commentary on payload, and it is at least as likely to carry a removed value as the files
+it describes, because those values are its subject matter.
+
+So iteration 4 changed **scope, not mechanism**. The same `_VENDORED_PAYLOAD_BANS` rows, the
+same compiled objects, one additional bounded surface (`_tier1_graded_docs`). No pattern was
+added, nothing was fitted to the observed instance, and no ban was pointed at an open root —
+which is what made a fourth round different in kind from rounds 1–3 rather than one more patch.
+
+**The set is derived, not this file's name.** The hazard belongs to the genre, so any document
+opening with a `**Scrub record.**` banner line is graded, present or future — a banner, not a
+mention, for the reason item 3 below gives. The derivation carries the same honest limit as
+the vendor banner it copies: an author who omits the banner is not graded, and tier 3 owns
+that gap.
+
+**The plan is deliberately excluded.** `host-parity-repair-plan.md` narrates this scrub in one
+section but is not a record *of* it, and it legitimately carries this repository's own issue
+numbers and plain open-ended counts throughout — measured against the plan as it stands, the
+three rows red on 12 tokens there and all 12 are false (6 issue numbers this repository or
+Phase 8 owns, 5 plain counts, 1 category noun). That is the false-positive flood that gets a
+gate switched off, so
+the plan's scrub narrative stays under the tier-3 sign-off. Recorded here so the omission is a
+decision rather than an unexamined hole, exactly as the rejected `owner/repo` row is — and,
+unlike that row, **pinned**: `TIER1_UNGRADED_DOCS` names the plan and the reason, and the test
+reds if the plan is ever pulled into the graded set, if this record ever drops out of it, or if
+the excluded path stops existing and the exclusion goes vacuous. A scope decision that lives
+only in a comment is the same defect one layer up, so this one does not.
+
+**Two legitimate constructs tripped the bans, and neither was answered by loosening a row** —
+the alternative was checked against the compiled patterns rather than assumed:
+
+* **This repository's own issue pointer**, in the record's opening line. Kept nowhere: the
+  plan's Step 66 block is the one owner of that number, and this record now reaches it through
+  the plan. The ban costs one hop and buys a decidable rule, because on *this* document "is
+  this issue number ours, or lifted from the private source?" is precisely the judgment that
+  failed in round 1 — so the document does not get to make it inline. Every other tracked file
+  is unaffected; the ban is scoped to tier-1 surfaces.
+* **The category noun the share row matches** — used here to *name* a category, never to
+  state a value; the row cannot tell those apart, and on this document that is the correct
+  answer rather than a limitation. The record writes "share figure" instead, and cites
+  `_VENDORED_PAYLOAD_BANS` as the owner of the category list
+  rather than re-spelling it. This one is a strict improvement independent of the gate: the
+  list had been copied into prose in three places, and a duplicated shape constant is drift
+  waiting to happen. Narrowing the row to admit the bare noun was rejected — it would have
+  re-opened the one row that mechanically catches a bare share figure in the document most
+  likely to quote one.
+
+**Three smaller things landed in the same pass, and none of them narrows anything:**
+
+1. **The ban table's wiring is now asserted row by row.** Only the first row's compiled
+   object was checked with `is`, so the share and magnitude rows could be deleted with the
+   whole suite green — verified by deleting them, not assumed. Every row is checked now, and
+   the table's length is floored so a fourth row must arrive with its two anchors.
+2. **The sibling comment that illustrated the magnitude shape with two real private values**
+   is now three invented ones. A comment in a public repository is published bytes like any
+   other, and illustrating a banned shape with the real removed value inside the file that
+   bans it is the same mistake one layer down.
+3. **The marker is anchored to a banner line, not matched as a bare substring.** As a
+   substring it selected the plan on its first run — the plan describes this mechanism and
+   quotes the marker — and a self-declaration that any *citation* of it can trigger is not a
+   self-declaration. The vendor banner can be matched loosely because no other document
+   quotes it; this marker is quoted by design, and both directions are anchored in the test.
 
 ---
 

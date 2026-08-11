@@ -245,18 +245,19 @@ _LEAK_PATTERNS = [
 #
 # This gate therefore makes THREE DIFFERENT CLAIMS, and never mistakes one for another:
 #
-#   TIER 1  CATEGORICAL BANS over the bounded vendored payload -- the seven
-#           `_shared/*.md` documents carrying the Step 66 vendor banner. Whole
-#           CATEGORIES are forbidden outright (issue-shaped pointers, shares and
-#           percentages, scaled or open-ended magnitudes) rather than each private
-#           phrasing being recognised, so what the rule claims IS the category it names,
-#           and that claim is decidable. Deliberately strict: a false positive is
-#           resolved by REWORDING the vendored copy and recording the adaptation, which
-#           is cheap across seven files and unaffordable anywhere else. That is exactly
-#           why the bans are payload-scoped and must never be pointed at an open root --
+#   TIER 1  CATEGORICAL BANS over TWO BOUNDED SURFACES -- the seven `_shared/*.md`
+#           documents carrying the Step 66 vendor banner, and every document declaring
+#           itself a scrub RECORD of them. Whole CATEGORIES are forbidden outright
+#           (issue-shaped pointers, shares and percentages, scaled or open-ended
+#           magnitudes) rather than each private phrasing being recognised, so what the
+#           rule claims IS the category it names, and that claim is decidable.
+#           Deliberately strict: a false positive is resolved by REWORDING the offending
+#           document and recording the adaptation, which is cheap across a handful of
+#           files and unaffordable anywhere else. That is exactly why the bans are
+#           scoped to those two surfaces and must never be pointed at an open root --
 #           this repository carries hundreds of legitimate issue numbers and
 #           percentages, and a gate that reds on all of them is one somebody switches
-#           off within a week. See `_VENDORED_PAYLOAD_BANS`.
+#           off within a week. See `_VENDORED_PAYLOAD_BANS` and `_tier1_graded_docs`.
 #
 #   TIER 2  TRIPWIRES over the open roots (`skills/`, `_shared/`, `documentation/`).
 #           `_DISCLOSURE_PATTERNS` recognises shapes that have ACTUALLY ESCAPED into
@@ -547,9 +548,13 @@ _VENDORED_ISSUE_POINTER_RE = re.compile(
 #   * share or percentage -- M's most common spelling. Zero legitimate occurrences in
 #     the payload today, so the ban costs nothing now; a future one is reworded into a
 #     qualitative claim, which is precisely the substitution the M scrub already made.
-#   * scaled or open-ended magnitude (`240k`, `18M`, `400+`) -- a measured quantity
-#     lifted out of a private measurement set, and the row that mechanically catches the
-#     M-class member that survived both tripwire rounds. Plain integers and years are
+#   * scaled or open-ended magnitude -- a measured quantity lifted out of a private
+#     measurement set, and the row that mechanically catches the M-class member that
+#     survived both tripwire rounds. The shape is `999k`, `18M`, `999+`: three INVENTED
+#     values, and invented on purpose. This comment ships in a public repository like
+#     every other byte here, so illustrating the shape with the real magnitudes the step
+#     removed would republish them in the file that bans them -- which is precisely the
+#     mistake this whole tier exists to stop. Plain integers and years are
 #     deliberately NOT banned: `500`, `2026` and `8601` occur legitimately in the payload
 #     and carry no scale, so banning them would be the false-positive flood that gets a
 #     gate deleted.
@@ -576,6 +581,95 @@ _VENDORED_PAYLOAD_BANS = [
     ("share or percentage", _VENDORED_SHARE_RE),
     ("scaled or open-ended magnitude", _VENDORED_MAGNITUDE_RE),
 ]
+
+# --------------------------------------------------------------------------- #
+# TIER 1, SECOND SURFACE -- the scrub RECORD is payload too.
+# --------------------------------------------------------------------------- #
+# The bans above were scoped to the seven vendored documents on the reasoning that a
+# categorical ban is affordable only where a false positive is answered by rewording a
+# handful of files. That reasoning was right and its SCOPE was too small. A document
+# whose entire subject is the private values REMOVED from those seven is at least as
+# likely to carry one as they are, and Step 66 demonstrated it three times: the record
+# re-quoted the issue pointers it had just removed; then it kept a magnitude the same
+# row certified gone; then the fix for that reintroduced a third value two lines under
+# the record's own promise that such values are restated nowhere in it. Three rounds of
+# patching the named line each produced a fresh one, because the surface was never
+# graded -- only the files it describes were.
+#
+# So this is a SCOPE change to the existing gate and not a new mechanism: the same
+# `_VENDORED_PAYLOAD_BANS` rows, the same compiled objects, one more bounded surface.
+# No pattern is added, nothing is fitted to an observed instance, and nothing is pointed
+# at an open root.
+#
+# WHY A MARKER RATHER THAN THIS ONE FILE'S NAME: the hazard belongs to the GENRE, not to
+# this instance, so the ban covers any document that declares itself a scrub record --
+# and the set is DERIVED from that self-declaration exactly as the vendored set is
+# derived from the vendor banner, because a hand-listed roster of what a gate covers is
+# a false green the first time a second record is written. The derivation has the same
+# honest limit as the vendor banner: an author who omits the marker is not graded, and
+# tier 3 owns that gap.
+#
+# The PLAN deliberately does NOT carry the marker. It narrates this scrub in one section
+# but it is not a record OF the scrub, and it legitimately carries this repository's own
+# issue numbers and plain `N+` counts throughout -- measured, the three rows red on 12
+# tokens there and ALL 12 ARE FALSE (6 issue numbers this repository or Phase 8 owns, 5
+# plain counts, 1 category noun), which is exactly the false-positive flood that gets a
+# gate switched off. Its scrub narrative stays under the tier-3 sign-off. That is a
+# recorded decision rather than an unexamined hole, like the `owner/repo` row above.
+#
+# TWO legitimate record constructs tripped these bans when the scope widened, and NEITHER
+# was answered by loosening a row (the record's section 7.2 carries the full decision):
+#   * this repository's own issue pointer, in the record's opening line. The record now
+#     reaches that number through the plan's Step 66 block, which owns it. On THIS
+#     document, "is this issue number ours or lifted from the private source?" is the
+#     exact judgment that failed in round 1, so the document does not make it inline.
+#   * the noun "percentage", used to NAME a category rather than to state a value. The
+#     record says "share figure" and cites `_VENDORED_PAYLOAD_BANS` as the owner of the
+#     category list -- which also retires three prose copies of that list, so the reword
+#     pays for itself in drift the repository would otherwise have to police by eye.
+#
+# The marker must OPEN A BANNER LINE, not merely appear somewhere in the bytes. A bare
+# substring test selected the plan on its first run, because the plan describes this very
+# mechanism and quotes the marker inline -- a document that MENTIONS the marker has not
+# declared itself, and a self-declaration that any citation of it can trigger is not one.
+# The vendor banner is matched loosely because it is prose no other document quotes; this
+# marker is quoted by design, so it is anchored instead.
+_SCRUB_RECORD_MARKER = "**Scrub record.**"
+_SCRUB_RECORD_MARKER_RE = re.compile(r"(?m)^>[ \t]*\*\*Scrub record\.\*\*")
+
+
+def _scrub_record_docs():
+    """`documentation/*.md` declaring themselves scrub records. DERIVED, never hand-listed."""
+    return sorted(p for p in (REPO_ROOT / "documentation").glob("*.md")
+                  if _SCRUB_RECORD_MARKER_RE.search(p.read_text(encoding="utf-8")))
+
+
+# Floor on the derived set above, the same discipline as MIN_VENDORED_PAYLOAD_DOCS: it
+# moves only when a record is deliberately retired, in the same commit.
+MIN_SCRUB_RECORD_DOCS = 1
+
+# The two floors above can only see the graded surface SHRINK. This is their counterpart
+# for the other direction, and the same discipline: the document tier 1 deliberately does
+# NOT grade, carrying the measured reason it is out. A floor pins how few documents may be
+# graded; this pins WHICH document must stay ungraded -- so widening the bans onto the plan
+# becomes a deliberate edit here rather than a silent side effect of a marker landing in
+# one more file, and the reason survives without a future reader re-deriving it. The
+# reason itself is recorded once, in the tier-1 second-surface block above; this entry
+# states the measurement so the failure message can hand it over at the point of failure.
+TIER1_UNGRADED_DOCS = {
+    "documentation/host-parity-repair-plan.md":
+        "it narrates this scrub in one section but is not a record OF it, and it "
+        "legitimately carries this repository's own issue numbers and plain counts "
+        "throughout: measured, the three rows red on 12 tokens there and ALL 12 ARE "
+        "FALSE (6 issue numbers this repository or Phase 8 owns, 5 plain counts, 1 "
+        "category noun). Grading it is the false-positive flood that gets a gate "
+        "switched off; its scrub narrative stays under the tier-3 sign-off.",
+}
+
+
+def _tier1_graded_docs():
+    """Every document the tier-1 categorical bans grade: the payload, plus every record."""
+    return _vendored_payload_docs() + _scrub_record_docs()
 
 
 def test_vendored_payload_carries_no_issue_pointer():
@@ -611,28 +705,47 @@ def test_vendored_payload_carries_no_issue_pointer():
 
 
 def test_vendored_payload_carries_no_banned_category():
-    """TIER 1: whole CATEGORIES are forbidden inside the seven vendored documents.
+    """TIER 1: whole CATEGORIES are forbidden across both bounded tier-1 surfaces.
+
+    Those surfaces are the seven vendored documents and every scrub RECORD describing
+    them -- see `_tier1_graded_docs`. The record is graded by the same rows, from the
+    same table, because a document whose subject is the removed values is as likely to
+    carry one as the files it describes.
 
     The generalisation of `test_vendored_payload_carries_no_issue_pointer`, which is
     retained above unchanged with its own anchors: that test grades one row of this
-    table against the same derived document set, this one grades every row, and both
-    read the same `_VENDORED_ISSUE_POINTER_RE` object so they cannot drift.
+    table against the vendored set, this one grades every row against both surfaces,
+    and both read the same `_VENDORED_ISSUE_POINTER_RE` object so they cannot drift.
 
     This is the tier that makes an HONEST mechanical claim. It does not try to
     recognise a private phrasing -- an unbounded problem that defeated two rounds of
     tripwire-fitting -- it forbids the category outright over a surface small enough
-    that a false positive is answered by rewording seven files. Class-level absence is
-    still owned by the per-file human sign-off (tier 3), not by this test.
+    that a false positive is answered by rewording a handful of files. Class-level
+    absence is still owned by the per-file human sign-off (tier 3), not by this test.
 
     Every planted anchor value is SYNTHETIC, for the same reason the sweep anchors are.
     """
-    # The shared-object claim in the docstring is ASSERTED, not asserted-in-prose: `is`,
-    # not `==`, so re-declaring the issue-pointer shape as a second copy reds here
-    # instead of drifting silently away from the test above.
-    assert any(rx is _VENDORED_ISSUE_POINTER_RE for _, rx in _VENDORED_PAYLOAD_BANS), (
-        "the issue-pointer ban is no longer the same compiled object as the one "
-        "test_vendored_payload_carries_no_issue_pointer grades; a duplicated shape "
-        "constant is a drift waiting to happen")
+    # WIRING. The shared-object claim in the docstring is ASSERTED, not asserted-in-prose:
+    # `is`, not `==`, so re-declaring a shape as a second copy reds here instead of
+    # drifting silently away from the constant the rest of the file reads.
+    #
+    # EVERY row is checked, not just the issue-pointer one. Until this loop existed the
+    # share and magnitude rows -- the two that closed the escape this step was blocked on
+    # -- could be deleted from the table with the whole suite still green, because the
+    # anchors below exercise the compiled objects DIRECTLY and never assert that the table
+    # still carries them. Anchors prove a pattern works; only identity proves it is wired.
+    for label, obj in (("issue-shaped pointer", _VENDORED_ISSUE_POINTER_RE),
+                       ("share or percentage", _VENDORED_SHARE_RE),
+                       ("scaled or open-ended magnitude", _VENDORED_MAGNITUDE_RE)):
+        assert any(rx is obj for _, rx in _VENDORED_PAYLOAD_BANS), (
+            f"the {label!r} ban is no longer the same compiled object this file "
+            "declares -- the row was dropped from _VENDORED_PAYLOAD_BANS, or replaced "
+            "by a second copy of the shape. Either way the gate below stopped grading "
+            "that category and no anchor in this test can see it.")
+    assert len(_VENDORED_PAYLOAD_BANS) == 3, (
+        "_VENDORED_PAYLOAD_BANS gained or lost a row. A ban is only worth having with a "
+        "red-on-garbage anchor and a silent-on-the-neighbour anchor beside it: add both "
+        "above and move this count in the same commit.")
 
     # ANCHORS -- each row reds on its own category...
     assert _VENDORED_SHARE_RE.search("about 42% of the window")
@@ -654,12 +767,62 @@ def test_vendored_payload_carries_no_banned_category():
     assert not _VENDORED_SHARE_RE.search(
         "the large majority of a long window's token cost is incurred at high context")
 
-    docs = _vendored_payload_docs()
-    assert len(docs) >= MIN_VENDORED_PAYLOAD_DOCS, (
-        f"only {len(docs)} vendored document(s) carry the banner, floor is "
+    # ...and the SECOND SURFACE's self-declaration is anchored in both directions too: a
+    # banner line declares a document a scrub record, an inline mention of the marker does
+    # not. This is not hypothetical either -- as a bare substring test it selected the plan
+    # on its first run, because the plan describes this mechanism and quotes the marker.
+    assert _SCRUB_RECORD_MARKER_RE.search(
+        "# Title\n\n> **Scrub record.** the values below are named by class only\n")
+    assert not _SCRUB_RECORD_MARKER_RE.search(
+        "derived from a self-declared `**Scrub record.**` marker, never hand-listed")
+
+    # BOTH surfaces are floored SEPARATELY. A single floor over the union would let one
+    # surface empty out while the other's count carried the assertion -- which is the
+    # shape of false green this repository has already been burned by.
+    payload = _vendored_payload_docs()
+    assert len(payload) >= MIN_VENDORED_PAYLOAD_DOCS, (
+        f"only {len(payload)} vendored document(s) carry the banner, floor is "
         f"{MIN_VENDORED_PAYLOAD_DOCS}. Either a document was retired (lower the floor "
         "deliberately, in the same commit) or the banner drifted and this gate just "
         "stopped grading the payload it exists for.")
+    records = _scrub_record_docs()
+    assert len(records) >= MIN_SCRUB_RECORD_DOCS, (
+        f"only {len(records)} document(s) carry {_SCRUB_RECORD_MARKER!r}, floor is "
+        f"{MIN_SCRUB_RECORD_DOCS}. The scrub record is tier-1 payload: a marker typo "
+        "silently stops grading the one document whose whole subject is the values "
+        "this tier forbids.")
+    docs = _tier1_graded_docs()
+    graded = {p.relative_to(REPO_ROOT).as_posix() for p in docs}
+    assert "documentation/step-66-vendored-reference-decisions.md" in graded, (
+        "the Step 66 scrub record is not being graded by the tier-1 bans; it carried a "
+        "banned value in three consecutive review rounds and is the reason this surface "
+        "exists")
+    assert all(f"_shared/{leaf}" in graded for leaf in
+               ("subagent-economy.md", "task-state-schema.md", "skill-pipeline.md")), graded
+
+    # ...and the EXCLUSION is pinned in the same breath, because "which documents does
+    # this gate grade?" is only half-answered by naming the ones that are in. The plan is
+    # out by a MEASURED decision, and until this assertion existed nothing held that
+    # decision: the surface could widen onto the plan -- or the record could drop out of
+    # it -- with the whole suite green, which is the exact shape of defect this step spent
+    # three rounds on. A scope decision that lives only in a comment is not pinned.
+    for rel, why in sorted(TIER1_UNGRADED_DOCS.items()):
+        # Existence first. "not in graded" is satisfied vacuously by a file that was
+        # renamed or deleted, so without this the entry would quietly stop asserting
+        # anything -- a hand-listed roster decaying into a false green.
+        assert (REPO_ROOT / rel).is_file(), (
+            f"{rel} is listed in TIER1_UNGRADED_DOCS as deliberately ungraded, but no "
+            "longer exists at that path, so the exclusion below now asserts nothing. "
+            "Repoint the entry at the file's new path, or drop it, in the commit that "
+            "moved it.")
+        assert rel not in graded, (
+            f"{rel} is now GRADED by the tier-1 categorical bans. It is deliberately "
+            f"excluded: {why}\n\nIf a scrub-record marker landed in it by mistake, "
+            "remove the marker -- a document that merely MENTIONS the marker must quote "
+            "it inline rather than open a banner line with it. If widening tier 1 onto "
+            "this document is genuinely intended, delete its entry here in the same "
+            "commit, and expect to reword every one of those tokens: do NOT answer this "
+            "failure by narrowing a ban.")
     offenders = []
     for doc in docs:
         text = doc.read_text(encoding="utf-8")
@@ -669,12 +832,16 @@ def test_vendored_payload_carries_no_banned_category():
                 offenders.append(f"{doc.relative_to(REPO_ROOT).as_posix()}:{line}: "
                                  f"{label}: {m.group(0)!r}")
     assert not offenders, (
-        "a vendored document carries a BANNED CATEGORY:\n" + "\n".join(offenders) +
+        "a tier-1 document carries a BANNED CATEGORY:\n" + "\n".join(offenders) +
         "\n\nThese bans are CATEGORICAL, not heuristic. The fix is to REWORD the "
-        "vendored copy into a qualitative claim and record the adaptation in the Step "
-        "66 decision record's per-file sign-off. Do NOT narrow a ban to admit the "
-        "offending token: that converts a real finding into a false green, which is "
-        "the exact failure this tier exists to prevent.")
+        "offending document into a qualitative claim and record the adaptation in the "
+        "Step 66 decision record -- in the per-file sign-off for a vendored file, in "
+        "section 7.2 for the record itself. A record documenting a scrub must describe "
+        "the removed value by CLASS AND LOCATION and never restate it, including inside "
+        "quotation marks and including in a sentence explaining that it was removed: "
+        "that last one is not hypothetical, it is how this gate came to exist. Do NOT "
+        "narrow a ban to admit the offending token: that converts a real finding into a "
+        "false green, which is the exact failure this tier exists to prevent.")
 
 
 def test_leak_sweep_filesystem_fallback_skips_build_output(tmp_path, monkeypatch):
