@@ -15,12 +15,15 @@ correction is recorded here with its evidence.
 |---|---|---|---|
 | 62 — fix the root gate, capture a true baseline, rescue the calibration note | #93 | **DONE** | `72356fb` on `main` |
 | 63 — link-resolution gate with a frozen shrink-only allowlist | #94 | **DONE** | `2efc957` on `main` |
-| 64 — ship `_shared/` into both profiles | #95 | **IN REVIEW — not merged** | `bd048bf` on branch `build-step-1786367337` |
+| 64 — ship `_shared/` into both profiles | #95 | **DONE** | `8b3c1d3` on `main` (dev commit `bd048bf`) |
 | 65–70 | #96–#101 | not started | — |
 | 71 — live consumer-home cutover | #102 | not started (`Type: operator`) | — |
 
-`main` is pushed and equals `origin/main` at `2efc957`. Branch `build-step-1786367337` is pushed.
-Issues #93 and #94 are closed; #95 is open.
+`main` is pushed and equals `origin/main` at `8b3c1d3`. Issues #93, #94 and #95 are closed.
+Step 64's residuals are open as **#104–#108**, with evidence commented onto the two step issues that
+own them: #96 (the inspector misreport — Step 65's `Produces` names that file verbatim) and #101
+(no test proves the `_shared/` payload reaches a consumer home — cheapest to close in Step 70,
+which already stands up a throwaway home).
 
 **The full suite is `python -m pytest` from the repository root — NOT `python -m pytest tests/`.**
 That is design decision D6, and Step 62 made it true (the root-only roots were red before). The
@@ -28,16 +31,21 @@ That is design decision D6, and Step 62 made it true (the root-only roots were r
 `skill-eval-setup/scripts/`, so it cannot see a regression there.
 
 Suite trajectory: **912 collected / 906 passed / 3 failed** before Step 62 → **909 passed, 3 skipped**
-after Step 62 → **953 passed, 3 skipped** after Step 63. A full root run takes 32–44 minutes; run-to-run
-variance on one machine is minutes, so budget for the high end.
+after Step 62 → **953 passed, 3 skipped** after Step 63 → **973 passed, 3 skipped** (976 collected)
+after Step 64. Full root runs on this machine have been observed between **31m48s and 52m12s** — the
+52m12s figure is the post-Step-64 merged-tree run, so the earlier "32–44 minutes" estimate was low.
+Budget generously and never read the timing as signal; the spread is wider than any regression it
+could detect.
 
 ---
 
-## 2. Step 64 — exactly where it stands
+## 2. Step 64 — DONE (merged 2026-08-10)
 
-Committed at **`bd048bf`** (branch `build-step-1786367337`, worktree still present but disposable —
-the branch holds everything). Gate on that SHA:
-`python -m pytest tests/distributions tests/package-integrity` → **492 passed, 2 skipped**, exit 0.
+Developer commit **`bd048bf`**, merged to `main` as **`8b3c1d3`**. Targeted gate on `bd048bf`
+(reproduced 2026-08-10): `python -m pytest tests/distributions tests/package-integrity` →
+**492 passed, 2 skipped**, exit 0. Full root gate on the merged tree: **973 passed, 3 skipped**,
+exit 0, with all three root-only roots (`_shared`, `skill-iterate`, `skill-eval-setup`) confirmed
+present in the run.
 
 Nine files changed, 1481 insertions: `tools/build-distributions.ps1`, `tools/install-skill-mesh.ps1`,
 `tools/skill-mesh-provenance.ps1`, `tools/migrate-legacy-install.ps1`, `_shared/score-skill.md`,
@@ -77,27 +85,46 @@ does *not* exist, and would move the manifest's `global_support_assets` dest.
   `_shared/` reference copy). Collapsing would create a cross-directory runtime dependency and
   force removing it from `SHIPPED_LEAVES`, so `test_distributions.py:408-415` is unedited.
 
-### 2.3 What remains: verify which review findings survive
+### 2.3 Review findings F1–F8 — re-verified against `bd048bf` (2026-08-10)
 
-Three reviewers reviewed a **stale snapshot** (see §4), so their findings must be re-checked against
-`bd048bf` before merge. Spot-checks already suggest several are resolved — confirm, do not assume:
+Three reviewers reviewed a **stale snapshot** (see §4), so every finding was re-checked against the
+committed SHA before merge, each in its own isolated `git archive bd048bf` copy. **Method: every
+verdict was earned by planting the reviewer's own defect and confirming a control goes red.** "The
+suite passed" was not accepted as evidence, because F1 was originally exactly that failure mode.
+Result: **zero merge-blocking findings.**
 
-| # | Finding | Spot-check on `bd048bf` |
+| # | Finding | Verdict on `bd048bf` |
 |---|---|---|
-| F1 | No content-fidelity control — a builder shipping correctly-named, correctly-stamped **stubs** passed everything (truncating `judge-core.md` 20,800→1,681 B stayed green) | likely RESOLVED — `_canonical_shared_body` + anti-truncation test |
-| F2 | Live un-repointed ref shipping in `dist/<p>/_shared/score_skill_composite.py:186`; the check scanned `.md` only | likely RESOLVED — `$BARE_SHARED_REF_RE` + `Repoint-SharedAssetReference` |
-| F3 | Two closure-walk edges untested (dropping either stayed green) | partly — 3 closure tests now exist incl. an adapter-seed edge |
-| F4 | `-ForceShared` scope defeated by a directory junction (clobbered a file with no `_shared` segment, adopted 8 paths into `owned_files`) | likely RESOLVED — `$safeTarget` real-path check |
-| F5 | Take-ownership backup manifest overwritten by the second profile (claude rows' hashes destroyed) | likely RESOLVED — `<BackupDir>/<provider>-<run id>/` |
-| F6 | `-BackupDir`-outside-home check is a string `StartsWith` a junction walks through | unverified |
-| F7 | `Add-JsProvenance` displaced a hashbang; no JS parse gate | likely RESOLVED — hashbang kept on line 1, `node --check` gate skips visibly |
-| F8 | Prose conversion dropped the module name `test_score_skill_absolute.py` | RESOLVED |
+| F1 | No content-fidelity control — a builder shipping correctly-named, correctly-stamped **stubs** passed everything | **RESOLVED.** `test_shared_payload_bytes_are_the_canonical_asset` (`test_distributions.py:498`) does exact post-header equality against `_canonical_shared_body`. Proven *not* a size or prefix check: a **byte-length-preserving** 400-char midpoint reversal in `judge-core.md` (20335 vs 20335) reds it, as do a mid-file paragraph delete and single-word swaps in `.py` and `.js`, across **both** profiles |
+| F2 | Live un-repointed ref shipping in `dist/<p>/_shared/score_skill_composite.py:186`; the check scanned `.md` only | **RESOLVED.** `build-distributions.ps1:565` repoints *before* the extension switch. Sweep of all **211** emitted files, every extension, both profiles: 0 survivors. Reverting that one line reproduces the exact two survivors and reds `test_shared_references_are_repointed_and_resolve` (`:578`). Residual (#108): the regex is case-sensitive and forward-slash-only, but zero such spellings exist in the tree today |
+| F3 | Two closure-walk edges untested (dropping either stayed green) | **RESOLVED.** All **9** constructs in `Get-SharedClosure` enumerated and mutated one at a time. All **6** payload-bearing edges red when removed, including MAJOR-2's exact `$next = @()` probe. The 3 that stay green (md-only gate, self-skip, `Sort-Object`) emit a **byte-identical** 211-file tree, so they are provably inert rather than uncovered |
+| F4 | `-ForceShared` scope defeated by a directory junction (adopted 8 paths into `owned_files`) | **RESOLVED.** The real-path check resolves at `install-skill-mesh.ps1:791`, **before** the scope decision at `:809-811`. The junction repro now exits 1 with the victim byte-unchanged and **0** paths adopted; a junction whose last segment is itself `_shared` is also refused; benign junctions still install, so it does not over-refuse. Residual (#107): scope is not re-derived at write time (TOCTOU, bounded to in-home paths) |
+| F5 | Take-ownership backup manifest overwritten by the second profile | **RESOLVED.** Per-run `<BackupDir>/<provider>-<run id>/`. Restore proven **end-to-end**: the first provider's file was restored after the second install and diffed byte-identical. Run ids carry 32 crypto-random bits — 3000 rapid mints spanned only 2 second-stamps but produced 3000 unique ids, so they cannot collide on a coarse timestamp. Residual (#107): same-provider-twice is pinned by no test |
+| F6 | `-BackupDir`-outside-home check is a string `StartsWith` a junction walks through | **RESOLVED — this was the one nobody had checked, and it was already fixed.** `:764-768` canonicalizes **both** sides via `Get-CanonicalRealPath` before comparing, and ships a test (`test_distributions.py:1440`) that does not exist on `main`. Mirror case checked across five throwaway homes: prefix-adjacent sibling, trailing separator, case variant, and home-reached-via-junction all still install, so no legitimate input is wrongly rejected |
+| F7 | `Add-JsProvenance` displaced a hashbang; no JS parse gate | **PARTIAL.** The hashbang half is fixed and guarded (hashbang line 1, marker line 2, idempotent on rebuild; reverting the `StartsWith('#!')` branch reds `test_emitted_javascript_still_parses`). But the parse gate is **vacuous for the only real shipped `.js`**: node *is* present so the skip never fires, yet `node --check` exits 0 on any ESM-syntax `.js`, so garbage appended to `score_skill.workflow.js` stays green. Filed as **#104** |
+| F8 | Prose conversion dropped the module name `test_score_skill_absolute.py` | **PARTIAL — narrow finding refuted.** The module name is present at `_shared/score-skill.md:365` and all three conversions keep their paths verbatim. The broader issue is confirmed and **loud**: prose in `_shared/*.md` is load-bearing, and D-63-A leaves **no green path** to absorb an author-added citation (splicing `KNOWN_DANGLING` reds `test_frozen_baseline_is_tamper_evident` on `BASELINE_SHA256`). Undocumented for authors — filed as **#105**, worth closing before Step 66 vendors seven more such docs |
 
-Full findings: `.build-step/review-{correctness,security,tests}.md` in the worktree (gitignored, so
-copy them out before removing it), plus `.build-step/dev-report.md`.
+**The reviews contained more than these eight.** The unlisted findings were swept too: security
+F2/F3, correctness MINOR-3 and tests Nit 2 are resolved with controls seen to go red; MINOR-4
+reproduces (the inspector reports the installed payload as `owned=false` with 8 marker-bearing files
+present) but that file is untouched by this diff and Step 65 names it verbatim in its `Produces` —
+evidence is on **#96**. The rest are INFO/cosmetic, captured in **#107** and **#108**.
 
-**Highest-value open question for the verifier:** what is the cheapest builder edit that still ships
-a *wrong* `_shared/` payload while leaving the suite green? F1 was exactly that shape.
+**The highest-value open question — the cheapest builder edit that ships a *wrong* `_shared/`
+payload while staying green — now has an answer, and it is not in the builder.** Build-side controls
+held against every attack that completed: a claude-only payload reds
+`test_build_file_counts_match_manifest` (`assert 96 == 104`), and the F1 stub replay reds the
+canonical-asset test. **The gap is at the install boundary.** The only payload file any test proves
+reaches a home is `judge-core.md`, and only as a side effect of the `-ForceShared` pre-seed fixture
+(`_PRESEEDED_PAYLOAD`); a plain install asserts only `SKILL.md`/`core.md` and `len(owned_files) > 0`.
+An installer mutation dropping the non-`.md` payload leaves an operator home with **12 unresolved
+`../_shared/x` references** — including `judge-core.md → ../_shared/grader_prompt.py`, the exact
+breakage class Phase 7.5 exists to repair — and it installs green. Filed as **#106** and flagged on
+#101, since Step 70 already stands up a throwaway home and is the cheapest place to close it.
+
+Full review findings: `~\.claude\backups\skill-mesh-step64-reviews\` (`dev-report.md` plus
+`review-{correctness,security,tests}.md`, copied out of the worktree before removal).
+Per-finding verification reports: `~\.claude\backups\skill-mesh-step64-verification\`.
 
 ---
 
@@ -146,6 +173,16 @@ these controls without reading why they exist.
 6. **`--max-iter` is a knob, not a gate.** It was extended 3→4→5 on Step 63 because findings were new
    and distinct each round (not reversals) and blocking counts fell monotonically. When round N+1
    blocks what round N demanded, that is oscillation: stop patching and write the decision.
+7. **A gitignored artefact survives every merged-check.** Both worktrees removed on 2026-08-10 were
+   clean, pushed, and ancestors of `main` — and both still held review material that existed nowhere
+   else, none of it visible to `git status --porcelain`. Run `git status --porcelain --ignored` before
+   removing a worktree; ancestry answers a different question than "is anything here unique".
+8. **Re-verifying a stale review is cheap, and it changes answers.** Of the eight findings §2.3 had
+   guessed at, the one marked *unverified* (F6) turned out to be already fixed — with a test that does
+   not exist on `main` — while two marked *likely RESOLVED* were only partly so. What made the
+   difference was refusing to treat a passing suite as evidence: every verdict was earned by planting
+   the reviewer's own defect and watching a named control go red. F1 exists precisely because a
+   green suite once meant nothing.
 
 ---
 
@@ -154,40 +191,36 @@ these controls without reading why they exist.
 Run in: **fresh window @ `skill-mesh`** · Model: **Opus** (the plan pins Opus for all steps; dev arms
 inherit the session tier)
 
-Step 64 is committed but **not merged**. Finish it by verifying §2.3 against `bd048bf`, then merge to
-`main`, run the full root gate, mark `Status: DONE` in the plan, and close #95.
-
-```
-git fetch origin && git checkout build-step-1786367337
-```
-
-```
-python -m pytest tests/distributions tests/package-integrity
-```
-
-To continue the phase after Step 64 merges:
+Step 64 is **DONE and merged** (`8b3c1d3`). Continue the phase from Step 65:
 
 ```
 /build-phase --plan documentation/host-parity-repair-plan.md --resume 65
 ```
 
+Before building Step 65, read the evidence comment on **#96**: correctness finding MINOR-4
+reproduces, and this step's `Produces` already names the file that carries it
+(`inspect-host-install.ps1:365-373`). It will not surface as a gate failure, so it has to be fixed
+deliberately.
+
 **Stop before Step 71** (#102) — it is `Type: operator`, a live consumer-home cutover, and is an
 operator handoff rather than agent work.
 
-### Worktrees
+### Worktrees — both removed 2026-08-10
 
-Two build-step worktrees exist.
+`git worktree list` now shows only the main checkout. Their artefacts were copied out first,
+because **a merged-and-pushed check does not cover gitignored files.** Every *tracked* byte was
+safe on both pushed branches and both tips were ancestors of `main`, yet each worktree still held
+review material that existed nowhere else and that `git status --porcelain` does not show:
 
-**Keep `build-step-1786367337` until Step 64 merges.** Every *tracked* byte is safe on the pushed
-branch, but the four review artefacts — `.build-step/dev-report.md` and
-`.build-step/review-{correctness,security,tests}.md` — are **gitignored and exist nowhere else**.
-They carry the reproduction steps for findings F1–F8 in §2.3. Removing the worktree destroys them
-and the next window would have to re-derive the reviews from scratch. Copy them somewhere outside
-the repository first if you do want to remove it (they contain machine-local paths, so they must not
-be committed).
+| Was in | Now at |
+|---|---|
+| `worktree_build-step-1786367337/.build-step/` — the F1–F8 reproduction steps (4 files) | `~\.claude\backups\skill-mesh-step64-reviews\` |
+| `worktree_build-step-1785890195/.build-step/` + `.review-deep/` + telemetry — the abandoned Step 47 record: 6 review-deep iterations, 4 diffs up to 243 KB, 53 files / 1.5 MB | `~\.claude\backups\skill-mesh-step47-worktree-artifacts\` |
 
-`build-step-1785890195` predates this session (the abandoned Step 47 branch) and is not Phase 7.5
-work — it can be removed independently.
+Per-finding reports from the Step 64 re-verification: `~\.claude\backups\skill-mesh-step64-verification\`.
+
+The branches `build-step-1786367337` and `build-step-1785890195` still exist locally and on the
+remote. Both are merged into `main` and can be deleted whenever convenient.
 
 ---
 
