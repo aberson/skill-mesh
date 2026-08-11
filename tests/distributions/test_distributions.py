@@ -675,13 +675,20 @@ def test_vendored_reference_citations_reach_the_payload(dist_root):
         "\n".join(missing)
 
 
-def _synthetic_build_repo(tmp_path, shared_files, core_body, adapter_body=None):
+def _synthetic_build_repo(tmp_path, shared_files, core_body, adapter_body=None,
+                          gpt_adapter_body=None, description=None):
     """A minimal, fully SYNTHETIC repo the real builder can run inside.
 
     The builder resolves `_shared/` and `skills/` from its own `$PSScriptRoot`, so the
     only way to exercise its refusal paths is to give it a different repo. Nothing is
     planted in this checkout -- a stray file at a real source path is its own defect
     class here (#83-#86).
+
+    `gpt_adapter_body` also declares a `gpt` provider, so a caller can build BOTH
+    profiles from planted sources -- the only way to reach build-distributions.ps1's
+    frontmatter PASS-THROUGH branch (a gpt adapter that already leads with `---`, so
+    New-GptFrontmatter is skipped), which no real canonical source exercises today.
+    `description` populates the manifest record New-GptFrontmatter synthesizes from.
     """
     repo = tmp_path / "srepo"
     for sub in ("tools", "runtime", "config", "_shared", "skills/demo/providers"):
@@ -700,16 +707,23 @@ def _synthetic_build_repo(tmp_path, shared_files, core_body, adapter_body=None):
         adapter_body or "# demo adapter\n\nLoads ../core.md in full.\n", encoding="utf-8")
     for name, body in shared_files.items():
         (repo / "_shared" / name).write_text(body, encoding="utf-8")
-    _write_manifest(repo / "config" / "skill-manifest.json", [{
+    entry = {
         "name": "demo", "status": "portable", "core": "skills/demo/core.md",
         "providers": {"claude": "skills/demo/providers/claude.md"},
-    }])
+    }
+    if gpt_adapter_body is not None:
+        (repo / "skills" / "demo" / "providers" / "gpt.md").write_text(
+            gpt_adapter_body, encoding="utf-8")
+        entry["providers"]["gpt"] = "skills/demo/providers/gpt.md"
+    if description is not None:
+        entry["description"] = description
+    _write_manifest(repo / "config" / "skill-manifest.json", [entry])
     return repo
 
 
-def _synthetic_build(repo, out_dir):
+def _synthetic_build(repo, out_dir, provider="claude"):
     return _run(repo / "tools" / "build-distributions.ps1",
-                ["-OutputDir", str(out_dir), "-Provider", "claude"])
+                ["-OutputDir", str(out_dir), "-Provider", provider])
 
 
 def test_shared_closure_follows_a_sibling_mention(tmp_path):
@@ -1120,6 +1134,167 @@ def test_gpt_frontmatter_roundtrips_quotes_and_backslashes(tmp_path):
     head = text[:text.find("\n---\n", 4)]
     assert '\\"' in head and "\\\\" in head, \
         "emitted frontmatter did not escape the quote/backslash -- test would be vacuous"
+
+
+# --------------------------------------------------------------------------- #
+# STRICT YAML frontmatter on the EMITTED profiles (Step 68, #69).
+#
+# `_parse_leading_frontmatter` above is deliberately tolerant -- it is the in-repo
+# `key: value` reader, and it happily parsed the unquoted colon-bearing `argument:`
+# value that Copilot CLI REJECTED. The gates below run the emitted bytes through a
+# real strict parser (PyYAML, a declared Environment requirement), using the same
+# contract module the canonical-source gate uses, so producer and consumer are graded
+# by ONE set of rules rather than two that drift.
+# --------------------------------------------------------------------------- #
+
+_FRONTMATTER_CONTRACT_PATH = (
+    REPO_ROOT / "tests" / "package-integrity" / "frontmatter_contract.py")
+
+
+def _frontmatter_contract():
+    """Import the ONE owner of the frontmatter contract (tests/package-integrity/
+    frontmatter_contract.py) by path -- the two suite directories are not a package.
+    Mirrors _load_gen_manifest's loader. Deliberately NOT a local copy of the rules."""
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location(
+        "frontmatter_contract_under_test", _FRONTMATTER_CONTRACT_PATH)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def _yaml_double_quoted(value):
+    """The author-side spelling of a YAML double-quoted scalar, mirroring
+    ConvertTo-YamlDoubleQuoted in build-distributions.ps1. Used to WRITE a planted
+    adapter, never to grade one -- the grading is PyYAML's."""
+    return '"' + value.replace("\\", "\\\\").replace('"', '\\"') + '"'
+
+
+# The planted values. Colon-bearing on BOTH string keys (the #69 shape), plus a
+# literal double-quote to prove escaping survives the trip, and a real boolean whose
+# identity is asserted after the round-trip.
+_PLANTED_FRONTMATTER = {
+    "name": "demo",
+    "description": 'Audits a thing: carefully, including a "quoted" clause.',
+    "user-invocable": True,
+    "argument": "Optional flags: --project <name-or-path> (default: innermost)",
+}
+
+_PLANTED_ADAPTER_BODY = (
+    "---\n"
+    f"name: {_PLANTED_FRONTMATTER['name']}\n"
+    f"description: {_yaml_double_quoted(_PLANTED_FRONTMATTER['description'])}\n"
+    "user-invocable: true\n"
+    f"argument: {_yaml_double_quoted(_PLANTED_FRONTMATTER['argument'])}\n"
+    "---\n"
+    "\n# demo adapter\n\nLoads ../core.md in full.\n"
+)
+
+
+def test_every_emitted_skill_md_frontmatter_survives_a_strict_yaml_parse(dist_root):
+    """What a host actually parses. Claude launchers pass the canonical adapter's own
+    block through verbatim; GPT launchers carry the synthesized `name`+`description`
+    block. Both must parse strictly, carry only allowlisted keys, and keep
+    `user-invocable` a real boolean."""
+    fc = _frontmatter_contract()
+    portable, native = _skill_partition()
+    expected = {"claude": len(portable) + len(native), "gpt": len(portable)}
+    allowed = {"claude": fc.CLAUDE_KEYS, "gpt": fc.GPT_KEYS}
+    failures = []
+    for profile in ("claude", "gpt"):
+        launchers = sorted((dist_root / profile).glob("*/SKILL.md"))
+        assert len(launchers) == expected[profile], (
+            f"{profile}: {len(launchers)} launchers emitted, manifest declares "
+            f"{expected[profile]} -- this gate would grade the wrong file set")
+        for path in launchers:
+            text = path.read_text(encoding="utf-8")
+            for defect in fc.frontmatter_defects(text, allowed_keys=allowed[profile]):
+                failures.append(f"{profile}/{path.parent.name}/SKILL.md: {defect}")
+    assert not failures, (
+        "emitted SKILL.md frontmatter violates the strict-YAML contract:\n  "
+        + "\n  ".join(failures))
+
+
+def test_emitted_frontmatter_gate_reds_on_an_unquoted_colon_bearing_value(dist_root):
+    """ANCHOR on REAL emitted bytes: strip the quotes the fix added to context-slim's
+    colon-bearing `argument` and the gate must go red. Without this, the check above
+    could be passing because it never actually reaches the frontmatter through the
+    provenance header that follows it."""
+    fc = _frontmatter_contract()
+    text = (dist_root / "claude" / "context-slim" / "SKILL.md").read_text(
+        encoding="utf-8")
+    assert fc.frontmatter_defects(text) == [], fc.frontmatter_defects(text)
+    block, _ = fc.split_frontmatter(text)
+    line = next(ln for ln in block.splitlines() if ln.startswith("argument:"))
+    assert ': "' in line, (
+        "context-slim's emitted `argument` is no longer quoted at the source -- the "
+        "probe below would not be planting the #69 defect")
+    unquoted = line.replace('argument: "', "argument: ").rstrip('"')
+    broken = text.replace(line, unquoted, 1)
+    assert broken != text, "the probe did not change the emitted block"
+    defects = fc.frontmatter_defects(broken)
+    assert any("not valid YAML" in d for d in defects), defects
+
+
+def test_planted_colon_bearing_pair_round_trips_in_both_profiles(tmp_path):
+    """Done-when, both halves: a planted colon-bearing `description` AND `argument`
+    reach both emitted profiles byte-intact through a STRICT parse.
+
+    The GPT half also covers build-distributions.ps1's frontmatter pass-through branch
+    (an adapter that already leads with `---` skips New-GptFrontmatter), which no
+    canonical source reaches today and which nothing tested before this step."""
+    fc = _frontmatter_contract()
+    body = _PLANTED_ADAPTER_BODY
+    repo = _synthetic_build_repo(
+        tmp_path, {}, "# demo core\n\nNo shared payload.\n",
+        adapter_body=body, gpt_adapter_body=body,
+        description="a synthesized description that must NOT appear")
+    out = tmp_path / "out"
+    r = _synthetic_build(repo, out, provider="both")
+    assert r.returncode == 0, f"{r.stdout}\n{r.stderr}"
+    for profile in ("claude", "gpt"):
+        text = (out / profile / "demo" / "SKILL.md").read_text(encoding="utf-8")
+        assert fc.frontmatter_defects(text) == [], \
+            f"{profile}: {fc.frontmatter_defects(text)}"
+        fm = fc.parse_frontmatter(text)
+        assert fm == _PLANTED_FRONTMATTER, (
+            f"{profile}: planted frontmatter did not round-trip: {fm!r} != "
+            f"{_PLANTED_FRONTMATTER!r}")
+        # Identity, not truthiness: the string 'true' would satisfy `assert fm[...]`.
+        assert fm["user-invocable"] is True, \
+            f"{profile}: user-invocable is {fm['user-invocable']!r}, not the bool True"
+        # Exactly ONE block: the pass-through branch must not stack a synthesized
+        # block on top of the adapter's own, and the provenance header sits right
+        # after the closing fence.
+        _, rest = fc.split_frontmatter(text)
+        assert rest.startswith("<!-- GENERATED FILE - DO NOT EDIT."), \
+            f"{profile}: provenance header is not immediately after the frontmatter"
+        assert fc.split_frontmatter(rest) is None, \
+            f"{profile}: a second frontmatter block was stacked on the first"
+        assert "a synthesized description that must NOT appear" not in text, \
+            f"{profile}: the builder synthesized a block over the adapter's own"
+
+
+def test_gpt_synthesized_frontmatter_survives_a_strict_yaml_parse(tmp_path):
+    """The other GPT path: New-GptFrontmatter synthesizing from a manifest description
+    that is FULL of colons. `_parse_leading_frontmatter` cannot prove this -- it would
+    accept a block a strict parser rejects. PyYAML can."""
+    fc = _frontmatter_contract()
+    raw_desc = ('Three modes: --small (default: quick wins), --big, and --uat: '
+                'pick exactly one.')
+    entry = _real_skill_entry("build-phase")
+    entry["description"] = raw_desc
+    manifest = _write_manifest(tmp_path / "mf_strict.json", [entry])
+    dist = tmp_path / "dist"
+    _build_from_manifest(dist, manifest, provider="gpt")
+
+    text = (dist / "gpt" / "build-phase" / "SKILL.md").read_text(encoding="utf-8")
+    assert fc.frontmatter_defects(text, allowed_keys=fc.GPT_KEYS) == [], \
+        fc.frontmatter_defects(text, allowed_keys=fc.GPT_KEYS)
+    assert fc.parse_frontmatter(text)["description"] == raw_desc, (
+        "colon-bearing description did not round-trip through the strict parse: "
+        f"{fc.parse_frontmatter(text)['description']!r} != {raw_desc!r}")
 
 
 def test_launcher_core_reference_is_repointed_and_resolves(dist_root):

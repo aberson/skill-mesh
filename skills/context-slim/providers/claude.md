@@ -2,7 +2,7 @@
 name: context-slim
 description: Audit all auto-loaded Claude Code context files (CLAUDE.md chain, .claude/rules/*.md, MEMORY.md) for a project and produce a prioritized progressive-disclosure improvement report — what to stub, extract, or prune to reduce per-turn token cost. Run bare for a report only; add --apply to implement high-confidence changes (rules stubbing, stale memory pruning) autonomously.
 user-invocable: true
-argument: Optional flags: --project <name-or-path> (default: innermost project with a CLAUDE.md); --apply (implement high-confidence changes after the report)
+argument: "Optional flags: --project <name-or-path> (default: innermost project with a CLAUDE.md); --apply (implement high-confidence changes after the report)"
 ---
 
 # context-slim

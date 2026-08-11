@@ -1,7 +1,7 @@
 ---
 name: claude-oauth-auth
 description: How to authenticate with Claude using a subscription OAuth token instead of an API key. Use when setting up Claude Code sessions, building tools that invoke the claude CLI, or when a user has a Claude subscription but no API key.
-user-invokable: false
+user-invocable: false
 ---
 
 # Claude OAuth Authentication (no API key needed)

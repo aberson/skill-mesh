@@ -1238,18 +1238,70 @@ def test_handoff_stages_and_commits_in_separate_blocks():
     assert not defects, "staging contract violated:\n" + "\n".join(defects)
 
 
-def test_handoff_pins_the_expected_copilot_yaml_error_to_one_named_skill():
-    """Copilot prints a YAML parse failure for exactly one skill of 50 (issue #69:
-    an unquoted colon-bearing `argument:` value in the Claude adapter's
-    frontmatter). An operator told only "expect some YAML noise" cannot tell that
-    from a real discovery failure, so the discriminator has to be a NAME."""
-    low = re.sub(r"\s+", " ", _read(HANDOFF)).lower()
-    assert "context-slim" in low, \
-        "the handoff never names the one skill whose YAML error is expected"
-    assert "#69" in low, "the handoff does not tie the expected error to its issue"
-    assert "any other skill" in low, \
-        ("the handoff gives no discriminator between the one expected YAML error and a "
-         "real one")
+# Phrases that RE-INSTATE the retired one-exempt-skill discriminator. Each one, on its
+# own, tells an operator to look past a YAML error; together they are the exact prose
+# Step 68 removed. Matched against whitespace-normalized lowercase text.
+_RETIRED_YAML_EXEMPTIONS = (
+    "is expected and is not a failure",
+    "any other skill named in a yaml error",
+    "one known name, expected",
+    "the one expected yaml error",
+)
+
+
+def copilot_yaml_error_defects(text):
+    """Ways the handoff's Copilot-output section could mislead an operator about a YAML
+    parse failure. Empty list == correct."""
+    low = re.sub(r"\s+", " ", text).lower()
+    defects = []
+    if "any skill named in a yaml error is a real failure" not in low:
+        defects.append("the handoff does not state that ANY skill named in a YAML "
+                       "error is a real failure")
+    if "context-slim" not in low:
+        defects.append("the handoff never names context-slim, so an operator working "
+                       "from the retired exemption is never corrected")
+    if "#69" not in low:
+        defects.append("the handoff does not tie the retired exemption to its issue")
+    for phrase in _RETIRED_YAML_EXEMPTIONS:
+        # Banned outright, including as a quotation. The correction paragraph explains
+        # what it retires in its OWN words for exactly this reason: an operator skimming
+        # for "is expected and is not a failure" must not find it anywhere on the page,
+        # whatever sentence it is embedded in.
+        if phrase in low:
+            defects.append(
+                f"the handoff still carries the retired exemption phrase: {phrase!r}")
+    return defects
+
+
+def test_copilot_yaml_error_gate_reds_on_the_retired_exemption():
+    """ANCHOR: the live document must pass, and the prose this step retired must red.
+
+    Before Step 68 (#69) this section told the operator that context-slim's YAML parse
+    failure "is expected and is not a failure", with the discriminator "any other skill
+    named in a YAML error is a real failure". The defect is now fixed at its canonical
+    source and gated by a strict YAML parse, so that instruction is not merely stale --
+    it would talk an operator out of the one signal that the tree in the home is not
+    the tree this repository released."""
+    text = _read(HANDOFF)
+    assert copilot_yaml_error_defects(text) == [], copilot_yaml_error_defects(text)
+
+    retired = ("`copilot skill list` in a migrated home ends with a \"failed to load\" "
+               "block naming **`context-slim`**. That one is expected and is not a "
+               "failure. **Any other skill named in a YAML error is a real failure** -- "
+               "one known name, expected; any second name, stop. Issue #69.")
+    defects = copilot_yaml_error_defects(retired)
+    assert any("ANY skill named in a YAML" in d for d in defects), defects
+    assert any("retired exemption phrase" in d for d in defects), defects
+
+    dropped = text.replace("Any skill named in a YAML error is a real failure", "", 1)
+    assert dropped != text, "the probe did not change the document"
+    assert copilot_yaml_error_defects(dropped), \
+        "the gate accepts a handoff that never states the real-failure rule"
+
+
+def test_handoff_treats_every_copilot_yaml_error_as_a_real_failure():
+    defects = copilot_yaml_error_defects(_read(HANDOFF))
+    assert not defects, "Copilot-output section violated:\n" + "\n".join(defects)
 
 
 def test_handoff_warns_that_a_repeat_apply_is_not_a_no_op():

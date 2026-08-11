@@ -192,9 +192,13 @@ Current collected / passed / skipped counts for both the repo-root DONE gate and
 section deliberately restates none of them, because a count copied into a status paragraph
 is a count that drifts.
 
-(Step 45 also surfaced #69: the Claude-profile `SKILL.md` frontmatter emits `description`/`argument`
-unquoted, so a colon-bearing value fails Copilot's YAML parse — a bounded builder defect, does not
-block the cutover. #87 fixed `/repo-sync`'s hardcoded default branch in minted issue-body links; its
+(Step 45 also surfaced #69, **fixed in Phase 7.5 Step 68**: a colon-bearing `argument` value failed
+Copilot's YAML parse. It was never a builder defect — there is no Claude frontmatter builder; the
+canonical adapter's block is copied through verbatim, so the fix was to quote the value at its
+source (`skills/context-slim/providers/claude.md`), and a strict-PyYAML gate now grades both the
+canonical adapters and both emitted profiles. The same gate's key allowlist retired a live typo,
+`user-invokable` in `skills/claude-oauth-auth/providers/claude.md`, which had silently disabled
+that skill's deliberate `user-invocable: false` suppression. #87 fixed `/repo-sync`'s hardcoded default branch in minted issue-body links; its
 data-repair half is done for #56–#82, while #1–#37 still point at a plan doc that is not on any pushed
 branch of `aberson/coding-root` — a publishing gap in that repo, not a branch-name defect.)
 
@@ -215,6 +219,13 @@ populated `**Issue:**`. The plan is ready for its next unblocked step.
   and release test suites shell out to it. There is no POSIX path.
 - **Python 3 with pytest** on `PATH` (or an activated project venv). No `pyproject.toml`, no
   dependency lockfile, and no pinned interpreter is committed — supply your own.
+- **PyYAML** (`pip install pyyaml`) — the only third-party Python dependency. The frontmatter
+  gate (`tests/package-integrity/frontmatter_contract.py`) imports it **hard**, so a missing
+  PyYAML is a loud collection error rather than a skip. That is deliberate: the consumer that
+  gate models is a real strict YAML parser (Copilot CLI's scan of the discovery roots), a
+  hand-rolled scanner would only be this repository's *model* of YAML, and
+  `pytest.importorskip` would turn the gate into a silent skip on exactly the machine that
+  needs it.
 - **git** — release staging is `git ls-files`-driven and fails outside a working tree.
 - **`gh` CLI** for issue/PR work.
 - **GitHub Copilot CLI, signed in via `gh auth login`**, for any GPT-side host acceptance.
