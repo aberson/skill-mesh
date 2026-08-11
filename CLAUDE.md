@@ -79,8 +79,10 @@ SHA-256 every file under the generated `dist/`:
 powershell -File tools/release.ps1
 ```
 
-Regenerate the manifest (only when the legacy source or the authoritative constants change; the
-source root comes from the `SKILL_MESH_LEGACY_SOURCE` environment variable, never a committed path):
+Regenerate the manifest. **Hermetic since Step 67** — it reads nothing outside this repository, takes
+no argument and no environment variable, and reproduces `config/skill-manifest.json` plus
+`tests/package-integrity/expected_inventory.json` exactly. Re-run only when one of the authoritative
+constants in `tools/gen_manifest.py` changes:
 
 ```
 python tools/gen_manifest.py

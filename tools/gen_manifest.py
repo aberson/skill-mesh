@@ -1,35 +1,63 @@
 """Generate config/skill-manifest.json and tests/package-integrity/expected_inventory.json.
 
-Authoritative structural data (names, status, local_capable, capabilities) is
-encoded here as checked-in constants derived from evidence in the READ-ONLY legacy
-source (.claude/references/model-mapping.md and each skill's SKILL contract).
+HERMETIC (Step 67). Generation reads nothing outside this repository. Every input is
+either a checked-in constant below or the committed skills/<name>/ tree, so
 
-Skill-local support-asset lists are scanned from the legacy source at generation
-time and baked statically into the committed manifest + fixture, so the published
-package tests never need the private source to run. Re-run only when the legacy
-source or the authoritative constants change.
+    python tools/gen_manifest.py
+
+reproduces both committed artifacts with NO environment set and no argument passed.
+
+WHY hermetic. This generator used to SCAN an external legacy root for each skill's
+support assets (<coding-root>/.claude/{skills,skills-gpt}/<name>). The Step 50
+consumer cutover overwrote that root with this package's OWN installed output, so a
+regeneration fed skill-mesh's build product back into skill-mesh's manifest: 47 of
+50 skills drifted, gaining 47 bogus `.claude/skills/<name>/core.md` sources and
+losing `.claude/skills-gpt/judge-ui/calibration-notes.md`. An input that a
+consumer-side install can mutate is not a generator input.
+
+LINE ENDINGS. This repository has no .gitattributes and core.autocrlf=true, so ONE
+git blob is CRLF in a Windows checkout and LF in a POSIX one. `write_artifacts`
+therefore writes the PLATFORM line ending, matching whatever the checkout produced,
+and the raw bytes of a regenerated artifact are a property of the CLONE rather than
+of its content. Any comparison against a committed copy must normalize (strip a
+UTF-8 BOM, then CRLF/CR -> LF) on BOTH sides -- the same rule the release tooling
+already applies to `dist/`. The regeneration gate in
+tests/package-integrity/test_manifest_contract.py does exactly that, so it cannot
+pass in a worktree and fail in the main checkout.
+
+Authoritative structural data (names, status, local_capable, capabilities,
+descriptions, support assets) is encoded here as checked-in constants. Four of those
+sets are NON-DERIVABLE BY DESIGN and each states why at its own definition:
+LOCAL_CAPABLE, SUB_AGENT, VISION, DESCRIPTIONS. PORTABLE and NATIVE are the two sets
+that ARE derivable from the committed tree; they stay spelled out for readability and
+are CHECKED against the tree by `derived_skill_sets()` on every run.
 
 Usage:
-    $env:SKILL_MESH_LEGACY_SOURCE = "<coding-root>"   # e.g. the operator checkout
     python tools/gen_manifest.py
-  or:
-    python tools/gen_manifest.py --legacy-source <coding-root>
 
-No absolute private path is embedded: the legacy source root must be supplied via
---legacy-source or the SKILL_MESH_LEGACY_SOURCE environment variable.
+Re-run only when one of the constants below changes. There is no legacy-source
+argument and no environment variable: an external source root is precisely what this
+generator no longer reads.
 """
 
 from __future__ import annotations
 
 import argparse
 import json
-import os
-import sys
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+SKILLS_DIR = REPO_ROOT / "skills"
 
 # ---- Authoritative structural constants (evidence-grounded) ----------------
+#
+# PORTABLE / NATIVE are the ONLY two sets here that the committed tree can also
+# produce (a skill dir carrying providers/gpt.md is portable; one without it is
+# provider-native). They are kept spelled out because the manifest's skill ORDER and
+# the fixture's `portable` / `provider_native` arrays are this list verbatim, and
+# because a reader should be able to see the roster without walking a directory.
+# `derived_skill_sets()` re-derives both from disk on every run and `build()` asserts
+# equality, so the spelled-out copy cannot drift away from the tree.
 
 PORTABLE = [
     "build-phase", "build-queue", "build-step", "goblin-do", "goblin-suggest",
@@ -48,6 +76,15 @@ PORTABLE = [
 NATIVE = ["claude-oauth-auth", "context-slim", "judge-motion"]
 
 # local-capable=Y rows of .claude/references/model-mapping.md (authoritative table).
+#
+# NON-DERIVABLE BY DESIGN. Membership is a SEMANTIC judgment -- "this skill's work
+# reduces to a bounded judge/grader single-call slice a local text-only model can
+# serve" -- and nothing on disk states it. No file in skills/<name>/ carries the
+# flag, and it is not implied by the tree's shape: it is merely DISJOINT from the
+# sub-agent and vision sets, which is a consequence of the judgment, not a definition
+# of it. Enumerating skills/ can therefore only reproduce this set by reading it from
+# here. Phase 8 Step 55 (provider-expansion-plan.md) treats this set as its single
+# source of truth; changing its membership or its shape belongs to that step.
 LOCAL_CAPABLE = {
     "lesson-harvest", "memory-distill", "observatory-doctor", "plan-feature",
     "plan-init", "plan-merge", "plan-review", "plan-trim", "plan-wrap",
@@ -61,6 +98,13 @@ LOCAL_CAPABLE = {
 # sub-agents / provider action children (Agent/Task primitive or Workflow
 # agent() call) -- NOT merely a named-skill dispatch. Evidence: each skill's
 # legacy SKILL-core.md / SKILL.md (see documentation/architecture.md sec 4).
+#
+# NON-DERIVABLE BY DESIGN. The distinction this set encodes -- an ISOLATED
+# fresh-context agent versus an ordinary named-skill dispatch (`/other-skill`) -- is
+# a reading of what each core MEANS, and the two are spelled with the same
+# vocabulary in prose. A grep over skills/<name>/core.md cannot separate them, which
+# is exactly why capability_semantics["sub-agent"] has to say so in words. The
+# per-entry evidence quote stays beside each name so the judgment is auditable.
 SUB_AGENT = {
     "build-step",        # "Spawn a sub-agent"; "Step 6 -- Spawn reviewer agents"
     "context-slim",      # "Spawn three parallel subagents using the Agent tool"
@@ -81,6 +125,11 @@ SUB_AGENT = {
 }
 
 # Skills with a documented native-vision dependency.
+#
+# NON-DERIVABLE BY DESIGN. "Requires a native image/vision capability" is a claim
+# about the HOST capability a skill needs, not about any artifact in skills/<name>/.
+# Several skills mention screenshots without needing to SEE one; these two cannot
+# render a verdict without it. Nothing on disk marks that difference.
 VISION = {"judge-ui", "judge-motion"}
 
 # Per-skill one-line `description`, the SINGLE source of truth for the SKILL.md
@@ -89,7 +138,19 @@ VISION = {"judge-ui", "judge-motion"}
 # `name` + `description`; Step 44). Encoded here as a checked-in, evidence-grounded
 # constant exactly like PORTABLE / NATIVE / LOCAL_CAPABLE above -- the evidence is
 # each skill's own SKILL contract (its legacy `.claude/skills/<name>/SKILL.md`
-# description and canonical core.md purpose). Baking it in (rather than re-reading
+# description and canonical core.md purpose).
+#
+# NON-DERIVABLE BY DESIGN, and measurably so: all 50 committed
+# skills/<name>/providers/claude.md files carry a `description:` that is LAUNCHER
+# boilerplate ("Claude provider entry point for <name>; loads the canonical shared
+# core."), which is not what the manifest publishes; and skills/<name>/providers/
+# gpt.md carries no YAML frontmatter at all. Reading these values off disk would
+# replace every published description with wrapper boilerplate. Deleting this
+# constant additionally reds
+# tests/distributions/test_distributions.py::test_manifest_description_matches_gen_manifest_source_of_truth,
+# which pins the manifest against it.
+#
+# Baking it in (rather than re-reading
 # the READ-ONLY legacy source) keeps the generator runnable WITHOUT that source and
 # makes the committed manifest byte-reproducible: `config/skill-manifest.json`'s
 # `description` field equals `DESCRIPTIONS[name]` for every record, so a regen never
@@ -148,47 +209,186 @@ DESCRIPTIONS = {
     "user-wrap": "The return-moment front door for sitting back down: orient, get a keep-going-or-wrap verdict, and act on it.",
 }
 
-# Directory names never migrated (build output / cache / scratch).
-ASSET_EXCLUDE_DIRS = {"node_modules", ".pytest_cache", "__pycache__", "tmp",
-                      ".judge-motion"}
+# Per-skill support assets, BAKED IN as a checked-in constant -- the same rationale
+# DESCRIPTIONS above already gives, applied to the input that actually broke.
+#
+# These are the committed manifest's `support_assets` values verbatim, captured from
+# the legacy source at Step 33. They are NOT re-derivable from the committed
+# skills/<name>/ tree: 61 of the 62 dests do not exist there yet (the per-skill asset
+# migration is a later step), so enumerating skills/<name>/ would silently ERASE 61
+# declarations instead of reproducing them. That is why this is a constant and not a
+# scan -- and scanning the ONE root that did hold them is what Step 67 removed,
+# because the Step 50 cutover overwrote it.
+#
+# Encoded as (legacy_tree, relative_path) pairs so the two emitted fields have ONE
+# source and cannot drift apart on the relative path they share:
+#     source = .claude/<legacy_tree>/<name>/<rel>     (provenance into the retired
+#              legacy layout, which the manifest's `legacy_migration_root` documents)
+#     dest   = skills/<name>/<rel>                    (canonical package path)
+# A trailing "/" on <rel> marks a directory asset, exactly as the committed manifest
+# spells it. `legacy_tree` is "skills" for every entry but one: judge-ui's
+# calibration-notes.md lived ONLY in the legacy GPT tree, and Step 62 vendored it to
+# skills/judge-ui/calibration-notes.md, so that entry now resolves to a real tracked
+# file (tests/package-integrity/test_manifest_contract.py asserts it is still here).
+#
+# Order within a skill is the committed order and is load-bearing for byte-identity.
+# All 50 skills carry a key -- an empty list where a skill has no assets -- so adding
+# a skill without deciding its assets is a loud KeyError, never a silent empty record.
+SUPPORT_ASSETS = {
+    "build-phase": [("skills", "evals/")],
+    "build-queue": [("skills", "evals/")],
+    "build-step": [
+        ("skills", "evals/"),
+        ("skills", "scripts/"),
+    ],
+    "claude-oauth-auth": [("skills", "evals/")],
+    "context-slim": [("skills", "evals/")],
+    "goblin-do": [
+        ("skills", "evals/"),
+        ("skills", "goblin_do.workflow.js"),
+    ],
+    "goblin-suggest": [
+        ("skills", "evals/"),
+        ("skills", "goblin_suggest.workflow.js"),
+    ],
+    "judge-motion": [
+        ("skills", "fixtures/"),
+        ("skills", "package-lock.json"),
+        ("skills", "package.json"),
+        ("skills", "scripts/"),
+        ("skills", "tests/"),
+    ],
+    "judge-ui": [
+        ("skills", "evals/"),
+        ("skills-gpt", "calibration-notes.md"),
+    ],
+    "lesson-harvest": [("skills", "evals/")],
+    "memory-distill": [("skills", "evals/")],
+    "observatory-doctor": [],
+    "plan-expedite": [
+        ("skills", "evals/"),
+        ("skills", "test-fixtures/"),
+    ],
+    "plan-feature": [("skills", "evals/")],
+    "plan-init": [("skills", "evals/")],
+    "plan-merge": [("skills", "evals/")],
+    "plan-redline": [
+        ("skills", "evals/"),
+        ("skills", "reference-proposal.html"),
+    ],
+    "plan-review": [("skills", "evals/")],
+    "plan-trim": [("skills", "evals/")],
+    "plan-wrap": [("skills", "evals/")],
+    "repo-init": [("skills", "evals/")],
+    "repo-sync": [("skills", "evals/")],
+    "repo-update": [("skills", "evals/")],
+    "research-prospect": [("skills", "evals/")],
+    "review-deep": [
+        ("skills", "evals/"),
+        ("skills", "scripts/"),
+    ],
+    "review-gauntlet": [("skills", "evals/")],
+    "review-proof": [("skills", "evals/")],
+    "review-uat": [("skills", "evals/")],
+    "session-wrap": [("skills", "evals/")],
+    "skill-eval-setup": [
+        ("skills", "evals/"),
+        ("skills", "scripts/"),
+    ],
+    "skill-evolve": [("skills", "evals/")],
+    "skill-iterate": [
+        ("skills", "evals/"),
+        ("skills", "scripts/"),
+    ],
+    "task-handoff": [],
+    "test-prune": [("skills", "evals/")],
+    "tier-escalate": [
+        ("skills", "evals/"),
+        ("skills", "sample-escalate-map.md"),
+    ],
+    "tier-offload": [
+        ("skills", "sample-inventory.md"),
+        ("skills", "sample-offload-config.json"),
+        ("skills", "test_sample_config_loads.py"),
+        ("skills", "test_taxonomy_osot.py"),
+    ],
+    "user-afterparty": [],
+    "user-brainstorm": [("skills", "evals/")],
+    "user-debug": [("skills", "evals/")],
+    "user-draft": [("skills", "evals.seed/")],
+    "user-gateway": [("skills", "evals/")],
+    "user-lavishify": [],
+    "user-learn": [("skills", "evals/")],
+    "user-orient": [("skills", "evals/")],
+    "user-pm": [("skills", "evals/")],
+    "user-project": [],
+    "user-shakedown": [("skills", "evals/")],
+    "user-uat": [("skills", "evals/")],
+    "user-walkthrough": [("skills", "evals/")],
+    "user-wrap": [("skills", "evals/")],
+}
+
+# Spelled-out expectations for the tree enumeration below. The same three numbers are
+# asserted independently by tests/package-integrity/test_manifest_contract.py.
+EXPECTED_TOTAL, EXPECTED_PORTABLE, EXPECTED_NATIVE = 50, 47, 3
 
 
-def scan_skill_assets(legacy_root: Path, name: str):
-    """Return (source, dest) support-asset pairs for one skill.
+def skill_support_assets(name: str):
+    """Return the (source, dest) support-asset records for one skill.
 
-    source is coding-root-relative; dest is the canonical package path.
+    Built from the single (legacy_tree, rel) pair in SUPPORT_ASSETS, so `source` and
+    `dest` cannot disagree about the relative path they share.
     """
-    assets = []
-    for tree in ("skills", "skills-gpt"):
-        base = legacy_root / ".claude" / tree / name
-        if not base.is_dir():
+    return [{"source": f".claude/{tree}/{name}/{rel}",
+             "dest": f"skills/{name}/{rel}"}
+            for tree, rel in SUPPORT_ASSETS[name]]
+
+
+def derived_skill_sets(skills_dir: Path = SKILLS_DIR):
+    """Enumerate the COMMITTED skills/ tree -> (portable_names, native_names), sorted.
+
+    A skill directory carrying providers/gpt.md is portable; one without it is
+    provider-native. These are the only two roster sets the tree can answer for --
+    LOCAL_CAPABLE, SUB_AGENT, VISION and DESCRIPTIONS are non-derivable by design and
+    each says so at its definition.
+
+    The walk is gated on `p.is_dir()`, so skills/inventory.json (a generated artifact,
+    not a skill) is skipped rather than counted as a 51st entry. `_shared` is excluded
+    because it is the cross-skill payload namespace, not a skill: it does not exist
+    under skills/ today, and the exclusion is here so the step that eventually creates
+    it cannot silently turn it into a provider-native record.
+    """
+    portable, native = [], []
+    for p in sorted(skills_dir.iterdir()):
+        if not p.is_dir() or p.name == "_shared":
             continue
-        for entry in sorted(base.iterdir(), key=lambda p: p.name):
-            if entry.is_file():
-                if entry.name.startswith("SKILL") and entry.suffix == ".md":
-                    continue
-                rel = entry.name
-                assets.append({
-                    "source": f".claude/{tree}/{name}/{rel}",
-                    "dest": f"skills/{name}/{rel}",
-                })
-            elif entry.is_dir():
-                if entry.name in ASSET_EXCLUDE_DIRS or entry.name.startswith("."):
-                    continue
-                assets.append({
-                    "source": f".claude/{tree}/{name}/{entry.name}/",
-                    "dest": f"skills/{name}/{entry.name}/",
-                })
-    return assets
+        (portable if (p / "providers" / "gpt.md").is_file() else native).append(p.name)
+    assert len(portable) + len(native) == EXPECTED_TOTAL, (
+        f"expected {EXPECTED_TOTAL} skill directories under {skills_dir}, found "
+        f"{len(portable) + len(native)}: {sorted(portable + native)}")
+    assert len(portable) == EXPECTED_PORTABLE, (
+        f"expected {EXPECTED_PORTABLE} portable skills (providers/gpt.md present), "
+        f"found {len(portable)}")
+    assert len(native) == EXPECTED_NATIVE, (
+        f"expected {EXPECTED_NATIVE} provider-native skills (no providers/gpt.md), "
+        f"found {len(native)}: {native}")
+    return portable, native
 
 
-def build(legacy_root: Path):
+def build():
     # Fail loud if a skill lacks a frontmatter description: the builder needs one
     # for every published skill, and a silently-missing entry would ship an
     # incomplete SKILL.md frontmatter to a Copilot host.
     missing_desc = sorted(set(PORTABLE + NATIVE) - set(DESCRIPTIONS))
     if missing_desc:
         raise KeyError(f"DESCRIPTIONS missing entries for: {missing_desc}")
+    # GUARD, not a rewrite: the two rosters the committed tree can also answer for
+    # must equal the spelled-out constants. Deliberately three lines -- it catches a
+    # roster edited in one place only, without deleting the readable list or the four
+    # non-derivable sets beside it.
+    derived_portable, derived_native = derived_skill_sets()
+    assert derived_portable == sorted(PORTABLE), f"skills/ tree != PORTABLE: {derived_portable}"
+    assert derived_native == sorted(NATIVE), f"skills/ tree != NATIVE: {derived_native}"
     skills = []
     for name in sorted(PORTABLE + NATIVE):
         native = name in NATIVE
@@ -228,7 +428,7 @@ def build(legacy_root: Path):
             "capabilities": caps,
             "local_capable": name in LOCAL_CAPABLE,
             "migration": migration,
-            "support_assets": scan_skill_assets(legacy_root, name),
+            "support_assets": skill_support_assets(name),
         })
 
     counts = {
@@ -360,24 +560,52 @@ def build(legacy_root: Path):
     return manifest, fixture
 
 
-def main():
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--legacy-source",
-                    default=os.environ.get("SKILL_MESH_LEGACY_SOURCE"))
-    args = ap.parse_args()
-    if not args.legacy_source:
-        sys.exit("error: set SKILL_MESH_LEGACY_SOURCE or pass --legacy-source "
-                 "(the READ-ONLY coding-root checkout)")
-    legacy_root = Path(args.legacy_source)
-    manifest, fixture = build(legacy_root)
+def serialize(doc) -> str:
+    """The ONE serializer for both artifacts: UTF-8, no BOM, 2-space indent, trailing
+    newline. Returns TEXT with "\\n" separators; the writer below decides the bytes."""
+    return json.dumps(doc, indent=2) + "\n"
 
-    (REPO_ROOT / "config" / "skill-manifest.json").write_text(
-        json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
-    (REPO_ROOT / "tests" / "package-integrity" / "expected_inventory.json").write_text(
-        json.dumps(fixture, indent=2) + "\n", encoding="utf-8")
+
+# The two generated artifacts, relative to the tree they are written into.
+ARTIFACTS = ("config/skill-manifest.json",
+             "tests/package-integrity/expected_inventory.json")
+
+
+def write_artifacts(out_root: Path):
+    """Build and write both artifacts under `out_root`. Returns the manifest.
+
+    `out_root` is a parameter so the regeneration gate can drive the REAL production
+    write path into a temporary tree instead of over the committed files.
+
+    LINE ENDINGS -- deliberate, and the reason every comparison against these files
+    normalizes. `write_text` emits the PLATFORM line ending, which is the same
+    convention git's checkout applies here: this repository has no .gitattributes and
+    core.autocrlf=true, so the committed copies are CRLF in a Windows checkout and LF
+    in a POSIX one. Matching the platform is what keeps `git status` clean after a
+    regeneration on either. It also means the raw bytes of a regenerated artifact are
+    a property of the CHECKOUT, never of the content -- so a gate that compares them
+    raw passes in one clone and fails in another. Normalize (strip a UTF-8 BOM, then
+    CRLF/CR -> LF) on BOTH sides, exactly as the release tooling already does for
+    `dist/`.
+    """
+    manifest, fixture = build()
+    for rel, doc in zip(ARTIFACTS, (manifest, fixture)):
+        path = out_root / rel
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(serialize(doc), encoding="utf-8")
+    return manifest
+
+
+def main():
+    # No arguments, no environment: generation is hermetic. The parser is kept with an
+    # empty argument set on purpose, so a stale invocation still carrying the retired
+    # --legacy-source flag fails loudly ("unrecognized arguments") instead of being
+    # silently accepted and ignored.
+    argparse.ArgumentParser(description="Regenerate the skill manifest + fixture "
+                                        "from this repository alone.").parse_args()
+    manifest = write_artifacts(REPO_ROOT)
     print(f"counts: {manifest['counts']}")
-    print("wrote config/skill-manifest.json and "
-          "tests/package-integrity/expected_inventory.json")
+    print("wrote " + " and ".join(ARTIFACTS))
 
 
 if __name__ == "__main__":

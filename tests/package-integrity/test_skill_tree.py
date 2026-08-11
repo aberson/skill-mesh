@@ -9,25 +9,30 @@ Two independent layers:
   agrees with the manifest and the committed expected_inventory.json fixture; and
   no operator-private absolute path leaked into the migrated tree.
 
-- CLAUSE-PRESERVATION (optional, SKIPS cleanly without SKILL_MESH_LEGACY_SOURCE,
-  like test_migration_source_files_exist): re-derives each migrated file from its
-  READ-ONLY legacy source via the production transform and asserts (a) it
-  reproduces the committed bytes exactly (determinism / zero drift) and (b) the
-  normalized clause-bearing prose is identical (no required clause dropped or
-  reworded -- only path tokens changed).
+- TRANSFORM BEHAVIOR (mandatory, needs NO private/legacy source): the production
+  migration transform is driven directly over synthetic inputs, covering the two
+  reference syntaxes Step 67 added -- a RELATIVE `../`-anchored citation written as
+  backtick or bare prose, and the seven Step-66 vendored `references/*` + `rules/*`
+  targets that now resolve into `_shared/`.
+
+RETIRED IN STEP 67: the clause-preservation layer that re-derived every migrated file
+from the READ-ONLY legacy source and compared it to the committed bytes. It was
+optional (it skipped without SKILL_MESH_LEGACY_SOURCE), and the Step 50 consumer
+cutover OVERWROTE that source with this package's own installed output -- so setting
+the variable no longer verifies anything: the run errors on missing `legacy_rel`
+bytes. A gate whose only two outcomes are "skipped" and "wrong" is not a gate. The
+mandatory layers above, plus the hermetic regeneration gate in
+test_manifest_contract.py, are what replaced it.
 
 Runnable via pytest (`python -m pytest tests/package-integrity`) or standalone.
 """
 
 import json
-import os
 import re
 import shutil
 import subprocess
 import sys
 from pathlib import Path
-
-import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 MANIFEST_PATH = REPO_ROOT / "config" / "skill-manifest.json"
@@ -36,7 +41,7 @@ INVENTORY_PATH = REPO_ROOT / "skills" / "inventory.json"
 SKILLS_DIR = REPO_ROOT / "skills"
 
 # Import the production generator (single source of truth for the migration
-# transform and plan) -- reused, never re-implemented, by the source-bearing test.
+# transform and plan) -- reused, never re-implemented, by the transform tests below.
 sys.path.insert(0, str(REPO_ROOT / "tools"))
 import gen_skill_tree  # noqa: E402
 
@@ -1141,41 +1146,122 @@ def test_normalize_detects_prose_reword_but_hides_path_rewrite():
 
 
 # --------------------------------------------------------------------------- #
-# Clause preservation (optional; skips without the READ-ONLY legacy source)
+# Migration transform (STEP 67) -- driven directly, no legacy source required
 # --------------------------------------------------------------------------- #
+# These replace the retired clause-preservation gate (see the module docstring). They
+# drive `gen_skill_tree.transform` -- the SAME production function the generator's
+# `run()` calls on every migrated file -- over synthetic inputs, so the two rewrite
+# behaviors Step 67 added are exercised on every run instead of only when a source
+# root that no longer exists happens to be present.
+#
+# Nothing here reads the committed tree: the generator cannot be re-run against the
+# overwritten legacy root, so these additions change no committed byte and must not
+# pretend to.
 
-def _legacy_root():
-    root = os.environ.get("SKILL_MESH_LEGACY_SOURCE")
-    return Path(root) if root else None
 
-
-def test_migrated_tree_reproduces_from_legacy_and_preserves_clauses():
-    root = _legacy_root()
-    if root is None or not (root / ".claude").is_dir():
-        pytest.skip("legacy source not present (set SKILL_MESH_LEGACY_SOURCE to verify)")
+def _transform_args():
+    """(portable, native, support) exactly as `run()` assembles them."""
     manifest = gen_skill_tree.load_manifest()
     portable, native = gen_skill_tree.skill_sets(manifest)
-    support = gen_skill_tree.support_dests(manifest)
-    plan = gen_skill_tree.build_plan(manifest)
+    return portable, native, gen_skill_tree.support_dests(manifest)
 
-    drift = []          # committed bytes != deterministic transform output
-    clause_loss = []    # normalized prose differs (a clause dropped or reworded)
-    for rec in plan:
-        legacy_text = (root / rec["legacy_rel"]).read_bytes().decode("utf-8")
-        expected = gen_skill_tree.transform(
-            legacy_text, rec["legacy_dir_parts"], rec["dest_dir"],
-            portable, native, support)
-        committed = (REPO_ROOT / rec["dest_rel"]).read_bytes().decode("utf-8")
-        if committed != expected:
-            drift.append(rec["dest_rel"])
-        if gen_skill_tree.normalize_clause_lines(legacy_text) != \
-                gen_skill_tree.normalize_clause_lines(committed):
-            clause_loss.append(f"{rec['dest_rel']}  <-  {rec['legacy_rel']}")
 
-    assert not drift, ("committed tree drifted from a fresh generator run "
-                       "(re-run tools/gen_skill_tree.py):\n" + "\n".join(drift))
-    assert not clause_loss, ("clause preservation failed (prose differs beyond "
-                             "path tokens):\n" + "\n".join(clause_loss))
+def test_vendored_shared_refs_map_only_documents_the_payload_ships():
+    """The `references/*` + `rules/*` map is pinned to the DERIVED Step 66 payload.
+
+    Derived from the vendor banner, never hand-listed against a second roster: an
+    eighth vendored document that nobody adds to the map -- or a map entry naming a
+    file the payload does not carry -- both red here. The second assertion is the one
+    that matters for consumers: every target must be a real file, because a mapping
+    to a missing `_shared/` leaf would convert an honest external citation into a
+    dangling repo link.
+    """
+    payload = {f"_shared/{p.name}" for p in _vendored_payload_docs()}
+    assert set(gen_skill_tree.VENDORED_SHARED_REFS.values()) == payload, (
+        "VENDORED_SHARED_REFS and the Step 66 vendored payload disagree: "
+        f"map={sorted(gen_skill_tree.VENDORED_SHARED_REFS.values())} payload={sorted(payload)}")
+    for legacy, target in sorted(gen_skill_tree.VENDORED_SHARED_REFS.items()):
+        assert (REPO_ROOT / target).is_file(), f"{legacy} -> {target} does not exist"
+
+
+def test_transform_rewrites_a_relative_backtick_citation():
+    """STEP 67 gap 1. A relative citation is neither a markdown link nor a
+    `.claude/`-absolute path, so before this step NO pass claimed it and it survived
+    the migration still naming the legacy `references/` layout."""
+    portable, native, support = _transform_args()
+    out = gen_skill_tree.transform(
+        "Follow `../../references/task-state-schema.md` before writing state.\n",
+        ["skills-gpt", "session-wrap"], "skills/session-wrap",
+        portable, native, support)
+    assert out == "Follow `../../_shared/task-state-schema.md` before writing state.\n"
+
+
+def test_transform_rewrites_a_bare_relative_citation_in_prose():
+    portable, native, support = _transform_args()
+    out = gen_skill_tree.transform(
+        "Routing lives at ../../references/skill-pipeline.md today.\n",
+        ["skills-gpt", "user-gateway"], "skills/user-gateway",
+        portable, native, support)
+    assert out == "Routing lives at ../../_shared/skill-pipeline.md today.\n"
+
+
+def test_transform_maps_the_one_vendored_rules_target():
+    """Six of the seven came from `references/`; `subagent-economy.md` came from
+    `rules/` and has no `references/` copy, so a leaf-name map would have missed it."""
+    portable, native, support = _transform_args()
+    out = gen_skill_tree.transform(
+        "Budget per `../../rules/subagent-economy.md`.\n",
+        ["skills", "build-step"], "skills/build-step/providers",
+        portable, native, support)
+    assert out == "Budget per `../../../_shared/subagent-economy.md`.\n"
+
+
+def test_transform_leaves_an_unshipped_reference_as_prose():
+    """CONSERVATIVE half. `model-tiering.md` and `shakedown-engine.md` are real
+    workspace documents this package does NOT ship, so their citations stay external
+    and unchanged. Fabricating a `_shared/` path for them would trade a truthful
+    external citation for a dangling repo link."""
+    portable, native, support = _transform_args()
+    for leaf in ("references/model-tiering.md", "references/shakedown-engine.md",
+                 "rules/code-quality.md"):
+        src = f"See `../../{leaf}` for the policy.\n"
+        assert gen_skill_tree.transform(
+            src, ["skills-gpt", "tier-escalate"], "skills/tier-escalate",
+            portable, native, support) == src, leaf
+
+
+def test_transform_does_not_rewrite_relative_paths_inside_a_fence():
+    """Fenced code is a literal sample; the relative pass runs with fences stashed."""
+    portable, native, support = _transform_args()
+    src = ("intro\n\n```\ncp ../../references/task-state-schema.md .\n```\n\n"
+           "outro `../../references/task-state-schema.md`\n")
+    out = gen_skill_tree.transform(src, ["skills-gpt", "session-wrap"],
+                                   "skills/session-wrap", portable, native, support)
+    assert "cp ../../references/task-state-schema.md ." in out, "fence was rewritten"
+    assert out.endswith("outro `../../_shared/task-state-schema.md`\n")
+
+
+def test_transform_leaves_an_already_rewritten_link_target_alone():
+    """ORDERING. The relative pass runs LAST, with the links it must not touch
+    stashed: their targets are already NEUTRAL by then, and re-resolving a neutral
+    path against the LEGACY directory is how a correct rewrite gets corrupted. The
+    assertion is on the composed output, which is what the tree would ship."""
+    portable, native, support = _transform_args()
+    out = gen_skill_tree.transform(
+        "See [core](../../skills-gpt/plan-review/SKILL-core.md).\n",
+        ["skills", "plan-review"], "skills/plan-review/providers",
+        portable, native, support)
+    assert out == "See [core](../core.md).\n"
+
+
+def test_transform_ignores_non_path_relative_prose():
+    """A `../`-anchored token must END on a word character, so a bare `cd ../..` and
+    a trailing sentence period are left alone rather than half-consumed."""
+    portable, native, support = _transform_args()
+    src = "Run cd ../.. first, then re-read ../../references/nope.md.\n"
+    out = gen_skill_tree.transform(src, ["skills-gpt", "build-step"],
+                                   "skills/build-step", portable, native, support)
+    assert out == src
 
 
 def _all_tests():

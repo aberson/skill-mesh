@@ -37,6 +37,12 @@ already established for the same problem: it is supplied at authoring time throu
 `SKILL_MESH_LEGACY_SOURCE` environment variable. The vendoring itself was a one-time
 authoring act; what must never land in a commit is the absolute path, and none did.
 
+> **Since Step 67:** `tools/gen_manifest.py` no longer reads that variable at all — its
+> generation is hermetic, because the Step 50 cutover overwrote the root it used to scan.
+> The decision recorded above is unchanged and still correct for the authoring act it
+> describes: a source root that lives outside this repository is named by contract, never
+> by a committed path. Only the cited precedent moved on.
+
 `worktree-hygiene.md` was taken from `references/` (6,711 B as measured 2026-08-10, not the
 5,901 B the plan recorded — the source was edited after the plan was written). A 672 B stub
 of the same name also exists under `rules/`; vendoring the stub would have silently dropped

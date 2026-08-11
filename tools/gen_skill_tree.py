@@ -16,10 +16,31 @@ paths neutralized), and writes:
 plus a machine-readable skills/inventory.json enumerating what exists per skill
 and an explicit exclusion record for each provider-native skill.
 
-Determinism: re-running reproduces the committed tree byte-for-byte (zero drift).
-The transform touches only path tokens (markdown link targets, the `Core:` header
-line, `.claude/...` citations, and private absolute paths); every substantive prose
-clause is preserved.
+Determinism: the transform is a pure function of its input, so the same source and
+the same manifest always produce the same bytes. It touches only path tokens
+(markdown link targets, the `Core:` header line, `.claude/...` citations, RELATIVE
+`../`-anchored citations, and private absolute paths); every substantive prose clause
+is preserved. It no longer FOLLOWS that a fresh run reproduces the committed tree --
+see NOTE ON RE-RUNNING below; that claim held while the legacy source was intact and
+the tree was generator-owned, and both of those stopped being true.
+
+STEP 67 closed two gaps in that transform, both of which had left legacy path tokens
+standing in the migrated tree:
+  - a RELATIVE citation written as backtick or bare prose (not a markdown link, no
+    `.claude/` prefix) was matched by no pass at all. `_REL_CITATION_RE` is that
+    third syntax; it runs last, with fences and the already-rewritten links stashed.
+  - `_map_neutral` mapped only two of the `references/*` targets. The seven workspace
+    references Step 66 vendored into `_shared/` now map there too, via
+    `VENDORED_SHARED_REFS` -- and only those seven, so a `references/*` document this
+    package does not ship stays an honest external citation.
+
+NOTE ON RE-RUNNING. This generator reads the legacy source, which the Step 50
+consumer cutover overwrote; it can no longer be re-run against a reproducible root,
+and the committed tree has since been hand-edited by Steps 62-66. The two additions
+above therefore change no committed byte -- they are exercised by direct unit tests
+of `transform()` in tests/package-integrity/test_skill_tree.py, which is also where
+the retired legacy-reproduce gate used to live. (Its hermetic sibling,
+tools/gen_manifest.py, needs no external root at all as of Step 67.)
 
 Neutral-target mapping (`_map_neutral`) is HARDCODED, not read from the manifest's
 `global_support_assets`. Two deliberate points where it is authoritative over the
@@ -65,6 +86,33 @@ EXCLUSION_REASONS = {
     "claude-oauth-auth": "Claude-native - Claude OAuth flow; excluded from GPT porting.",
     "context-slim": "Claude-native - Claude Code context management; excluded from GPT porting.",
     "judge-motion": "Claude-native - depends on Claude-native motion/vision capture; excluded from GPT porting.",
+}
+
+# Step 66 vendored seven workspace reference documents into the repo-root `_shared/`
+# payload, so their legacy citations NOW have a neutral equivalent. Until then this
+# generator mapped only TWO `references/*` targets (the two model-* files) and demoted
+# every other one to plain prose -- which is why ten migrated cores ended up citing a
+# `references/` directory this repository does not have.
+#
+# Keyed by the legacy `.claude/`-relative path rather than by leaf name, because the
+# seven did not all come from one tree: six were vendored out of `references/` and
+# `subagent-economy.md` out of `rules/` (it has no `references/` copy). The per-file
+# sign-off lives in documentation/step-66-vendored-reference-decisions.md.
+#
+# ONLY these seven map. A `references/*` or `rules/*` target this package does NOT
+# ship -- model-tiering.md, shakedown-engine.md, code-quality.md, ... -- stays
+# external and is still demoted to prose. Fabricating a `_shared/` path for a document
+# that is not in the payload would convert a truthful external citation into a
+# dangling repo link, which is the failure mode the conservative support-asset
+# fallback below already guards against.
+VENDORED_SHARED_REFS = {
+    "references/intake-engine.md": "_shared/intake-engine.md",
+    "references/skill-pipeline.md": "_shared/skill-pipeline.md",
+    "references/skill-role-taxonomy.md": "_shared/skill-role-taxonomy.md",
+    "references/step-authoring.md": "_shared/step-authoring.md",
+    "references/task-state-schema.md": "_shared/task-state-schema.md",
+    "references/worktree-hygiene.md": "_shared/worktree-hygiene.md",
+    "rules/subagent-economy.md": "_shared/subagent-economy.md",
 }
 
 # Markdown link: [label](target)  (label captured so a path-shaped label is fixed too)
@@ -181,6 +229,12 @@ def _map_neutral(parts, portable, native, support):
     """
     if not parts:
         return None
+    # The seven Step-66 vendored workspace references resolve to the shared payload.
+    # Checked first and by FULL path, so `references/` and `rules/` each map only the
+    # leaves this package actually ships (see VENDORED_SHARED_REFS).
+    vendored = VENDORED_SHARED_REFS.get("/".join(parts))
+    if vendored:
+        return vendored
     tree = parts[0]
     if tree in ("skills", "skills-gpt"):
         if len(parts) >= 2 and parts[1] == "_shared":
@@ -371,6 +425,55 @@ def _restore_code(text, spans):
     return re.sub(r"\x00(\d+)\x00", lambda m: spans[int(m.group(1))], text)
 
 
+# --------------------------------------------------------------------------- #
+# THIRD reference syntax: a RELATIVE citation that is not a link (Step 67)
+# --------------------------------------------------------------------------- #
+# Markdown links and `.claude/...`-absolute citations were both rewritten; a
+# RELATIVE path written as a backtick citation or bare prose (`../../references/
+# task-state-schema.md`, `../../skills-gpt/<name>/SKILL-core.md`) was not, so it
+# survived the migration pointing at the legacy layout. `_ABS_CLAUDE_RE` cannot see it
+# -- it has no `.claude/` prefix to anchor on -- and `_LINK_RE` cannot either, because
+# it is not a link.
+#
+# Anchored on one or more leading `../` segments: that is what makes a token a PATH
+# rather than prose, and it is the shape every relative citation in the legacy sources
+# uses. A bare `./x` is deliberately NOT matched (too close to ordinary prose), and the
+# token must END on a word character, so `cd ../..` and a trailing sentence period are
+# both left alone. The lookbehind rejects a token glued to a longer path but ADMITS a
+# leading backtick, since a backtick citation is the main case this exists for.
+#
+# Conservative in the same way `_map_neutral`'s support-asset fallback is: a token with
+# no declared neutral equivalent is returned UNCHANGED, never rewritten into a
+# fabricated repo path.
+_REL_CITATION_RE = re.compile(
+    r"(?<![\w/\\.~-])((?:\.\./)+[A-Za-z0-9_.\-/]*[A-Za-z0-9_-])")
+
+
+def _rewrite_rel_citation(m, legacy_dir_parts, dest_dir, portable, native, support):
+    token = m.group(1)
+    neutral = _neutral_for(token, legacy_dir_parts, portable, native, support)
+    if neutral is None:
+        return token
+    return posixpath.relpath(neutral, dest_dir)
+
+
+def _protect_fences_and_links(text):
+    """Stash fenced code blocks AND whole markdown links before the relative-citation
+    pass. Fences first, so a link inside a fence is carried away with it rather than
+    stashed twice; links second, because by this point their targets are already
+    NEUTRAL paths and re-resolving them against the legacy directory would corrupt
+    correct output."""
+    spans = []
+
+    def _stash(m):
+        spans.append(m.group(0))
+        return f"\x00{len(spans) - 1}\x00"
+
+    text = _FENCE_RE.sub(_stash, text)
+    text = _LINK_RE.sub(_stash, text)
+    return text, spans
+
+
 def transform(text, legacy_dir_parts, dest_dir, portable, native, support):
     """Deterministic, clause-preserving migration transform for one file.
 
@@ -389,6 +492,15 @@ def transform(text, legacy_dir_parts, dest_dir, portable, native, support):
         text)
     text = _ABS_CLAUDE_RE.sub(
         lambda m: _rewrite_abs_claude(m, portable, native, support), text)
+    # THIRD syntax LAST, with fences and the already-rewritten links stashed: every
+    # relative token still standing at this point is a prose/backtick citation that no
+    # earlier pass claimed.
+    text, protected = _protect_fences_and_links(text)
+    text = _REL_CITATION_RE.sub(
+        lambda m: _rewrite_rel_citation(m, legacy_dir_parts, dest_dir, portable,
+                                        native, support),
+        text)
+    text = _restore_code(text, protected)
     text = _scrub_private(text)
     return text
 
