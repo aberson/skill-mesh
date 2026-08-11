@@ -313,7 +313,24 @@ a test written to pass — the codifying-test-diff anti-pattern. Instead Step 63
 - **The seven are not transitively closed:** they carry 19 `](target)` links, 14 of them external to 8 further targets (`../rules/code-quality.md` ×4, `measurement-validity` ×2, `knowledge-placement`, `working-directory`, `descriptor-contract`, `shakedown-engine` ×3, `windows-shell`, `../../docs/current-md-race-fix-plan.md`). D7 forbids `KNOWN_DANGLING` from growing, so each of the 14 needs an explicit disposition — vendor, convert to prose, or an approved allowlist *replacement* (state in Step 63 whether replacement is permitted at all)
 - **Done when:** the private session-transcript path line at source `task-state-schema.md:32` (a per-session `.jsonl` under the harness projects directory) is absent from the vendored copy — it trips 3 of 5 `_LEAK_PATTERNS` but has no drive letter, so the repo-wide gate misses it and only the extended sweep catches it; **every one of the seven carries a written per-file SAFE-or-scrubbed sign-off** covering identifiers, cross-repo issue refs, account metrics, harness-config disclosure, and references to tooling skill-mesh does not ship; each of the 14 external links has a recorded disposition; the reconcile-or-fork decisions land in a **named in-repo doc**, not just a commit message; every vendored file's own outbound relative links either resolve or are converted to prose; no `skills/_shared/` string is introduced (the two real string locks are `test_skill_tree.py:270-271` and `:240` via test `:244-253`, and **both scan `skills/**/*.md` only** — `:267` is a directory-existence guard, a different check, so "locked anywhere" was never true; if you need repo-wide coverage, widen a lock deliberately rather than relying on `:267`); `KNOWN_DANGLING` shrinks to zero for the references and rules classes; `python -m pytest` from the repo root is green at or above baseline
 - **Depends on:** 64
-- **Status:** BLOCKED (2026-08-11) — stop-and-audit, 3/3 iterations. Work is committed on branch
+- **Status:** DONE (2026-08-11) — merged to `main` as `292d7bd` (fast-forward) after a re-scoped 4th
+  iteration. Post-merge full-suite gate in the main checkout: **981 passed / 3 skipped / 0 failed**.
+  The re-scope is the load-bearing lesson: three rounds of adding link/leak patterns each bought exactly
+  one more escape, because the defect was never a missing pattern — it was a **scoping** gap. Tier 1's
+  categorical bans already existed but treated the scrub record as not-payload, when a document whose
+  entire job is describing removed private values is the likeliest place to carry them. Bringing the
+  record under the bans that already existed closed the class instead of the instance. Confirming round:
+  security PASS, plan-conformance PASS, test-quality 2 Nits (both closed pre-merge, with the graded set
+  pinned in both directions and falsified against five mutations), correctness/bugs/style PASS.
+  Both reviewers independently reproduced the 12-token measurement behind excluding the plan document
+  from tier-1 grading and confirmed tier 2 still covers it as a compensating control.
+  **Discovered at the post-merge gate and fixed in the same pass (#112):** the smoke report's
+  `Core SHA-256` fingerprinted raw checkout bytes, so an identical git blob hashed differently in a CRLF
+  clone versus an LF worktree — the committed report was an inconsistent *mix* of both contexts and the
+  gate flipped on line endings alone. Now normalized (BOM strip + CRLF→LF), the same rule the release
+  tooling already applied. Follow-ups filed: #109 (pre-existing private-string residue outside this
+  step's charter), #110 (git-history remediation decision), #112 (the fingerprint defect).
+- **Historical — the stop-and-audit block that preceded the re-scope (2026-08-11):** work was committed on branch
   `build-step-1786426994` (`f8ee848`, 3 commits), deliberately **NOT merged and NOT pushed**; worktree
   preserved at `worktree_build-step-1786426994`. **Do not push this branch as-is.** Unlike Step 65's parked
   branch, this one carries the unremediated disclosure itself (`step-66-vendored-reference-decisions.md:228`

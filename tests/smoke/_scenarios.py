@@ -202,7 +202,33 @@ def canonical_core(skill):
         )
     if not claude_core.is_file():
         raise AssertionError(f"{skill}: resolved canonical core does not exist: {claude_core}")
-    return claude_core, hashlib.sha256(claude_core.read_bytes()).hexdigest()
+    return claude_core, _normalized_sha256(claude_core)
+
+
+def _normalized_sha256(path):
+    """sha256 over CONTENT, not over one checkout's line-ending representation.
+
+    The raw on-disk bytes of a source file are not stable across checkouts:
+    this repository ships no `.gitattributes` and Git for Windows defaults
+    `core.autocrlf=true`, so the same blob lands as CRLF in a normal clone and
+    as LF wherever a tool rewrote the file in place. Fingerprinting the raw
+    bytes therefore produces a hash that is only valid in the line-ending
+    context that generated it -- the committed report goes red purely because
+    it was regenerated in a differently-normalized tree, with no content change
+    at all. Measured: `skills/build-phase/core.md` is 74529 bytes / 0 CRLF in a
+    fresh worktree and 75543 bytes / 1014 CRLF in the main checkout, for an
+    identical git blob.
+
+    Normalization is CRLF->LF plus BOM strip -- deliberately the same rule
+    `tools/release.ps1` already applies to the generated `dist/` for exactly
+    this reason (see CLAUDE.md: checksums cover the generated tree "rather than
+    the source checkout, whose line endings vary by clone"). The release path
+    learned this; this fingerprint had not.
+    """
+    data = path.read_bytes()
+    if data.startswith(b"\xef\xbb\xbf"):
+        data = data[3:]
+    return hashlib.sha256(data.replace(b"\r\n", b"\n")).hexdigest()
 
 
 def canonical_core_hash(skill):
