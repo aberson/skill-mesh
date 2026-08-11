@@ -264,34 +264,43 @@ Step 64 is **DONE and merged**. Step 65 is **mid-flight and must NOT be merged a
 full before touching it; the branch `build-step-1786408322` (`b0651be`) is pushed and `main` is clean
 at `427c99b`.
 
-**Run the queue in this order. Do not reorder — Steps 67 and 70 declare `Depends on: 65`.**
+**Step 65 does NOT gate 66–69.** Measured from the plan's own `Depends on:` lines: 66 → 64;
+67 → 64, 66; 68 → 62; 69 → 62, 68. **Only Step 70 depends on 65** (`64, 65, 66, 67, 68`). Steps
+62–64 are DONE, so 66, 67, 68 and 69 are all runnable right now with Step 65 still open.
 
-1. **Step 65, iteration 3 (re-scoped).** Resume against the existing branch and worktree rather than
-   starting clean, so iterations 1–2 are not re-done:
-
-```
-/build-phase --plan documentation/host-parity-repair-plan.md --resume 65
-```
-
-   The fix is a refactor of the shared invariant, not a third patch of the predicate. Read §2A's
-   "confirmed GOOD" list first — it is a constraint set, not background. Then continue:
-
-2. **Steps 66–70** run after 65 merges.
+1. **Steps 66–69 — unattended-safe, run these first.** Plan order is preserved, and it matters
+   (67 needs 66; 69 needs 68):
 
 ```
-/build-phase --plan documentation/host-parity-repair-plan.md --resume 66
+/build-phase --plan documentation/host-parity-repair-plan.md --steps 66,67,68,69
+```
+
+2. **Step 65, iteration 3 (re-scoped) — do NOT run this unattended.** `/build-step` creates its
+   worktree with `git worktree add ... HEAD`, i.e. from `main`, so a plain `--resume 65` would start
+   from scratch and silently discard the ~1,165 lines on `build-step-1786408322` — of which four of
+   five findings are already fixed and independently confirmed. Preserve that branch. The fix is one
+   refactor of the shared invariant (§2A), not a third patch of the predicate, and §2A's
+   "confirmed GOOD" list is a constraint set rather than background.
+
+3. **Step 70** last — it is the only step that needs 65.
+
+```
+/build-phase --plan documentation/host-parity-repair-plan.md --steps 70
 ```
 
 **Stop before Step 71** (#102) — `Type: operator`, a live consumer-home cutover, operator work.
 
-**Also stop inside Step 66 for an operator decision.** Step 66 vendors seven documents from outside
+**Review Step 66's scrub before anything is pushed.** Step 66 vendors seven documents from outside
 this repo into `_shared/` **and this repo is public**. Its own measured scrub list includes a raw
 harness session UUID, cross-repo issue pointers into the **private** `aberson/coding-root`, account
 cost telemetry, harness config paths, and a private cron name — and the plan states all five
-`_LEAK_PATTERNS` miss several of them. That is a disclosure decision with an irreversible
-consequence, so surface the per-file scrub sign-off for a human rather than self-approving it.
-Everything else in 66 (vendoring, link disposition, extending the sweep to `_shared/**`) is ordinary
-agent work.
+`_LEAK_PATTERNS` miss several of them.
+
+What makes this survivable unattended: **`/build-phase` commits per step but never pushes**
+(`build-phase` Limitations — pushing is `/repo-update`'s job). So an overnight run leaves Step 66's
+vendored content as local commits only; nothing reaches GitHub until a human pushes. Treat the
+per-file scrub sign-off as a **release gate before the first push**, not as a mid-run halt. Note
+that issue comments *do* reach GitHub during the run — those carry no vendored content.
 
 Model: **Opus** for the session; the plan pins Opus for all steps and dev arms inherit the session
 tier. Reviewer arms run at their own table-assigned tiers — do not re-pin them.
