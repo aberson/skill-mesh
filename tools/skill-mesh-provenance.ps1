@@ -15,7 +15,9 @@
     The detection is ANCHORED to the exact header block the builder emits
     (`<!-- GENERATED FILE - DO NOT EDIT. ... Marker: <token> ... -->`), NOT a
     substring-anywhere scan -- so an operator file that merely MENTIONS or quotes the
-    token is never misclassified as skill-mesh-owned.
+    token is never misclassified as skill-mesh-owned. Three anchors carry that claim
+    (line start, marker-line adjacency, emitter-legal position); Get-SkillMeshHeaderStart
+    holds all three and Test-SkillMeshProvenance is its boolean face.
 
     Both the emit side and the check side live here, so the marker token, the marker
     line, and the header structure cannot drift between the two scripts (code-quality:
@@ -84,15 +86,85 @@ function Add-JsProvenance([string]$body, [string]$header) {
     return $block + $body
 }
 
+# Upper bound on the continuation lines between the Marker line and the block's
+# `-->`. The builder emits three; the cap only has to stop an unterminated opener
+# from swallowing an arbitrarily long document while it hunts for a terminator.
+$script:SKILL_MESH_HEADER_MAX_LINES = 16
+
+function Test-SkillMeshHeaderPreamble([string]$pre) {
+    # Is $pre an EMITTER-LEGAL run of bytes in front of the header block?
+    #
+    # Mirrors, one branch per emitter, the four placements the build actually
+    # produces -- Add-Provenance (bare or after YAML frontmatter), Add-JsProvenance,
+    # Add-PythonProvenance. That mirroring is the point: it is what lets the check
+    # say "this header is where an emitter would have PUT one" rather than only
+    # "these bytes look like a header", and a verbatim quotation of the header inside
+    # a document body is the case only the position anchor can reject.
+    #
+    # A branch added to build-distributions.ps1 without a branch added here would
+    # strand real payload files, so tests/distributions/test_distributions.py runs
+    # this predicate (via Test-SkillMeshProvenance) over EVERY emitted file of a real
+    # build -- a new placement reds there rather than shipping unowned bytes.
+    if ($null -eq $pre -or $pre.Length -eq 0) { return $true }
+    # Add-Provenance, frontmatter branch. Same lazy `---\n ... \n---\n` shape the
+    # emitter itself uses to decide where the header goes.
+    if ([regex]::IsMatch($pre, '^---\r?\n[\s\S]*?\r?\n---\r?\n$')) { return $true }
+    # Add-JsProvenance: `/*` at the top, after a line-1 hashbang when there is one.
+    if ([regex]::IsMatch($pre, '^(?:#![^\r\n]*\r?\n)?/\*\r?\n$')) { return $true }
+    # Add-PythonProvenance: inserted after the FIRST '"""', which that emitter
+    # requires to start within the first 256 characters.
+    if ([regex]::IsMatch($pre, '^(?:(?!""")[\s\S]){0,256}"""\r?\n$')) { return $true }
+    return $false
+}
+
+function Get-SkillMeshHeaderStart([string]$text) {
+    # Character offset of the ONE well-formed generated header block in $text, or -1.
+    # Test-SkillMeshProvenance is its boolean face; the inspector's `Profile:` scan
+    # uses the offset so it reads a VALIDATED header rather than the first string
+    # that merely looks like an opener.
+    #
+    # THREE anchors, every one of them satisfied by construction by the emitters and
+    # none of them by a document that talks ABOUT the header:
+    #
+    #   1. LINE START -- the opener begins a line. All 211 files of a real build do.
+    #   2. ADJACENCY  -- the `Marker:` line is the line IMMEDIATELY after the opener,
+    #      and the `-->` closes the SAME uninterrupted block: no blank line between
+    #      them, at most $SKILL_MESH_HEADER_MAX_LINES continuation lines. This is the
+    #      anchor the previous `(?:.|\n)*?` shape lacked, which let the three tokens
+    #      be scattered across an entire document and still read as one header.
+    #   3. POSITION   -- everything in FRONT of the block is an emitter-legal preamble
+    #      (Test-SkillMeshHeaderPreamble). Contiguity alone cannot tell a real header
+    #      from a verbatim copy of one quoted inside a file's body, and under
+    #      migrate-legacy-install.ps1's per-file `_shared` rule that difference decides
+    #      whether an operator's own notes get RETIRED off disk.
+    #
+    # Tolerant on purpose about everything that legitimately varies: CRLF or LF, the
+    # indent width of the continuation lines, and how many of them there are -- none
+    # of which distinguishes our bytes from anyone else's.
+    if ([string]::IsNullOrEmpty($text)) { return -1 }
+    # A decoded UTF-8 BOM is not part of the header question, and leaving it in front
+    # would make offset 0 itself an illegal preamble.
+    $t = $text.TrimStart([char]0xFEFF)
+    $delta = $text.Length - $t.Length
+    $open = [regex]::Escape((Get-SkillMeshHeaderOpen))
+    $marker = [regex]::Escape((Get-SkillMeshMarkerLine))
+    # A continuation line: non-blank, consumed lazily so the FIRST '-->' terminates.
+    $cont = '(?:(?![ \t]*\r?\n)[^\r\n]*\r?\n){0,' + $script:SKILL_MESH_HEADER_MAX_LINES + '}?'
+    $pattern = '(?m)^' + $open + '[^\r\n]*\r?\n' +
+               '[ \t]*' + $marker +
+               '(?:[^\r\n]*-->' +
+               '|[^\r\n]*\r?\n' + $cont + '(?![ \t]*\r?\n)[^\r\n]*?-->)'
+    $m = [regex]::Match($t, $pattern)
+    while ($m.Success) {
+        if (Test-SkillMeshHeaderPreamble ($t.Substring(0, $m.Index))) { return ($m.Index + $delta) }
+        $m = $m.NextMatch()
+    }
+    return -1
+}
+
 function Test-SkillMeshProvenance([string]$text) {
-    # True only when $text contains a WELL-FORMED generated header: the exact opener,
-    # then the Marker line with the token, then a comment terminator, in order. Far
-    # stricter than a Contains()-anywhere scan -- a file that merely quotes the token
-    # (an operator doc, a hand-authored SKILL.md) does NOT match.
-    if ([string]::IsNullOrEmpty($text)) { return $false }
-    $pattern = [regex]::Escape((Get-SkillMeshHeaderOpen)) +
-               '(?:.|\n)*?' +
-               [regex]::Escape((Get-SkillMeshMarkerLine)) +
-               '(?:.|\n)*?-->'
-    return [regex]::IsMatch($text, $pattern)
+    # True only when $text carries a WELL-FORMED generated header block at a position
+    # an emitter could have put it. See Get-SkillMeshHeaderStart for the three anchors
+    # -- a file that merely quotes or documents the token does NOT match.
+    return ((Get-SkillMeshHeaderStart $text) -ge 0)
 }

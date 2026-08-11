@@ -741,7 +741,14 @@ def test_hostile_plants_are_actually_present(tmp_path):
     assert any("\n" in k for k in keys), "newline ledger key plant missing"
     assert any(len(k) >= 400 for k in keys), "over-long ledger key plant missing"
     skill_md = (home / fx.CLAUDE_ROOT / "build-phase" / "SKILL.md").read_text(encoding="utf-8")
-    assert skill_md.startswith("Profile: " + fx.SECRET), "decoy Profile plant missing"
+    decoy = "Profile: " + fx.SECRET
+    assert decoy in skill_md, "decoy Profile plant missing"
+    # The plant only proves anything while it sits ABOVE the real header (so a scan that
+    # started at offset 0 would read it) in a file that is still OWNED (so the header tag
+    # is consulted at all). Both, or the decoy tests nothing.
+    assert skill_md.index(decoy) < skill_md.index("<!-- GENERATED FILE"), \
+        "the decoy no longer precedes the real provenance header"
+    assert skill_md.startswith("---\n"), "the decoy displaced the frontmatter"
     dirs = {p.name for p in (home / fx.CLAUDE_ROOT).iterdir() if p.is_dir()}
     assert "comma,injected-name" in dirs, "comma-bearing directory plant missing"
     assert any(len(n) == fx.OVERLONG_NAME_LEN for n in dirs), "over-long directory plant missing"

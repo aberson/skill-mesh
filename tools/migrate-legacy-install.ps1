@@ -587,6 +587,20 @@ function Get-SharedInstallRels($providerRoots, [string]$distAbs) {
     return $set
 }
 
+function Test-RelUnderSharedPayload([string]$rel) {
+    # Does this home-relative path sit inside a `_shared` payload directory? Answered
+    # from the PATH alone -- the classification cascade has already run by the time the
+    # disclosure loops need this, and re-deriving eligibility here would give the
+    # advisory a second opinion that could disagree with the plan it is describing.
+    # Ordinal membership (Test-SkillMeshTxMember), like every other closed-vocabulary
+    # comparison in this tool.
+    if ([string]::IsNullOrWhiteSpace($rel)) { return $false }
+    foreach ($seg in @($rel.Split('/'))) {
+        if (Test-SkillMeshTxMember $PROFILE_ROOT_DIRS $seg) { return $true }
+    }
+    return $false
+}
+
 function Test-SharedFileIsOurs([string]$rel, $sharedInstallRels) {
     # PER-FILE ownership inside a `_shared` directory. Two independent yeses, each
     # about THIS file and never about its directory:
@@ -903,6 +917,26 @@ function New-MigrationPlan([string]$distAbs, [string]$backupAbs, [string]$migrat
     }
     $retires = @($retires | Sort-Object -Unique)
 
+    # -- Disclosure, retire side. The twin of the adoption disclosure above. --
+    # A retire DELETES the file from its live location, so it is the more consequential
+    # of the two -- and inside a `_shared` directory it is the one decided purely by the
+    # file's own CONTENT, since that directory holds both populations at once and the
+    # dist ships neither answer for a path it does not emit. Every such path is NAMED in
+    # the dry run, before -Apply, together with the payload that puts it back: if the
+    # anchored provenance parser ever calls an operator file ours, the operator sees the
+    # path in the plan rather than discovering the deletion afterwards. Advisory only --
+    # no status, no exit code, no blocked finding (the install-side loop's contract).
+    foreach ($rel in @($retires | Where-Object { Test-RelUnderSharedPayload $_ })) {
+        $label = Get-SafeRelPathLabel $rel
+        Write-Diag ("ADVISORY -- retiring '$label': it carries the skill-mesh provenance " +
+                    "marker but no profile of this distribution ships that path, so it is " +
+                    "read as a superseded skill-mesh asset and REMOVED from the live " +
+                    "location. Its directory also holds consumer-authored files, which stay " +
+                    "untouched. The pre-image is backed up to $PAYLOAD_DIR/$label and " +
+                    "-Rollback restores it byte-for-byte. If those are YOUR bytes, stop here " +
+                    "and move the file out of that directory before running -Apply.")
+    }
+
     # -- Ledger rewrite --
     $ledgerRel = $LEDGER_NAME
     $ledgerAbs = Resolve-HomeTargetForRead $ledgerRel
@@ -1193,8 +1227,11 @@ function Assert-SafeActionTarget($action, [string]$operation) {
 function Assert-InstallTargetAdoptable($action, [string]$safeTarget) {
     <#
       THE MARKER GUARD on the install path -- the counterpart of
-      install-skill-mesh.ps1's foreign-collision refusal (:820-829) and its TOCTOU
-      recheck inside the copy loop, neither of which this tool had.
+      install-skill-mesh.ps1's foreign-collision refusal (the `$foreign` pre-scan in
+      Invoke-Install, gated on Test-FileHasMarker) and its TOCTOU recheck inside the
+      copy loop, neither of which this tool had. Cited by NAME, not by line range:
+      every other cross-file reference in these three tools does, so a shift in the
+      installer cannot silently point this comment at unrelated code.
 
       The two commands make DIFFERENT decisions on purpose and this function is where
       that difference is written down. The installer refuses any existing target that

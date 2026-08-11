@@ -480,6 +480,86 @@ def test_shared_payload_carries_valid_provenance_for_every_extension(dist_root, 
     assert body.lstrip().startswith("export const meta"), body[:80]
 
 
+def test_every_generated_file_reads_owned_through_the_anchored_parser(dist_root, tmp_path):
+    """`Test-SkillMeshProvenance` is TRUE for EVERY emitted file of a real build.
+
+    The anti-stranding control for the header parser's anchors. That parser rejects a
+    header that is not contiguous, not at a line start, or not at a position one of the
+    build's emitters could have put it -- and the failure mode of getting any of those
+    wrong is the opposite of the one they exist to prevent: a genuinely generated file
+    that reads UNOWNED is refused by install, missing from `owned_files`, undeletable by
+    uninstall, and left behind by migrate as an orphan. Nothing else in the suite would
+    say so, because every other provenance assertion here is a substring check that an
+    unanchored and an anchored parser both satisfy.
+
+    Whole corpus, both profiles, every extension -- not a sample: a NEW emitter (or an
+    existing one moving its header) is exactly the change that would strand files, and
+    it would land as a handful of paths among two hundred."""
+    for profile in ("claude", "gpt"):
+        root = dist_root / profile
+        verdicts = _provenance_verdicts(root, tmp_path / profile)
+        expected = {p.relative_to(root).as_posix() for p in root.rglob("*") if p.is_file()}
+        assert set(verdicts) == expected, "the probe did not visit every emitted file"
+        unowned = sorted(rel for rel, ok in verdicts.items() if not ok)
+        assert not unowned, (
+            f"{profile}: {len(unowned)} emitted file(s) do NOT read as skill-mesh-owned "
+            f"through the shipped parser -- install would refuse them and uninstall "
+            f"could never remove them: {unowned}")
+
+
+def test_the_anchored_parser_rejects_a_document_that_quotes_the_header(dist_root, tmp_path):
+    """A file whose SUBJECT is the marker format is not a skill-mesh file.
+
+    The header block is lifted VERBATIM out of a real emitted file, so the quoting cases
+    differ from the owned case in exactly one respect: where the block sits. Content
+    alone cannot separate them -- which is why the parser also anchors position, and why
+    this test would be satisfied by nothing weaker.
+
+    The stakes are not cosmetic. `_shared/` is classified per FILE by
+    migrate-legacy-install.ps1, and a consumer file that reads owned there is planned as
+    a `retire` -- deleted from the live home."""
+    src = next(p for p in (dist_root / "claude" / SHARED_DEST).iterdir()
+               if p.is_file() and p.suffix == ".md")
+    text = src.read_text(encoding="utf-8")
+    start = text.index(_PROV_OPEN)
+    header = text[start:text.index("-->", start) + 3]
+    assert header.count("\n") >= 2, "the lifted header is not the multi-line block"
+
+    probe = tmp_path / "cases"
+    probe.mkdir(parents=True, exist_ok=True)
+    (probe / "generated.md").write_text(header + "\n\n# body\n", encoding="utf-8")
+    (probe / "quoted.md").write_text(
+        "# marker format (operator notes)\n\nskill-mesh emits this header:\n\n"
+        "```\n" + header + "\n```\n\nMine carry no such block.\n", encoding="utf-8")
+    (probe / "scattered.md").write_text(
+        "# notes\n\nThe block opens with `" + _PROV_OPEN + "`.\n\n"
+        "Somewhere below it comes a line reading `Marker: " + _marker_literal() + "`,\n"
+        "and the whole thing is closed by `-->`.\n", encoding="utf-8")
+    # The SAME three tokens in the same order, starting at offset 0 so the position
+    # anchor is satisfied and only ADJACENCY can reject it. Without this case the
+    # scattered-token defect the parser was rewritten for is untested: `scattered.md`
+    # above is refused by position before contiguity is ever consulted.
+    (probe / "scattered_at_top.md").write_text(
+        _PROV_OPEN + "\n"
+        "This is the operator's own note about that opener.\n"
+        "\n"
+        "Marker: " + _marker_literal() + " is the line it carries.\n"
+        "\n"
+        "The block is terminated by -->, and that is the whole convention.\n",
+        encoding="utf-8")
+
+    verdicts = _provenance_verdicts(probe, tmp_path / "run")
+    assert verdicts["generated.md"] is True, \
+        "a header at an emitter-legal position stopped reading as owned"
+    assert verdicts["quoted.md"] is False, \
+        "a doc quoting the header verbatim in its body reads as skill-mesh-owned"
+    assert verdicts["scattered.md"] is False, \
+        "the three header tokens scattered through prose read as one header"
+    assert verdicts["scattered_at_top.md"] is False, \
+        "the three header tokens scattered across a document, but starting at offset 0, " \
+        "read as one contiguous header"
+
+
 def test_shared_payload_ships_no_pytest_module(dist_root):
     """No emitted profile contains a pytest module.
 

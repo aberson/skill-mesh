@@ -217,11 +217,13 @@ function Get-ProfileHeaderTag([string]$headText) {
     # value the manifest DECLARES as a provider is returned: build-distributions.ps1
     # is the sole emitter of this line and writes nothing else, so any other token is
     # hand-edited or hostile -- and the token charset [A-Za-z0-9_-] spells most
-    # credential shapes verbatim. The scan starts AT the generated header, so a decoy
-    # `Profile:` planted ABOVE it cannot win (Test-SkillMeshProvenance matches the
-    # header block anywhere in the head, not only at offset 0).
+    # credential shapes verbatim. The scan starts at the VALIDATED header block
+    # (Get-SkillMeshHeaderStart, the same anchored parser that decides ownership), so
+    # a decoy `Profile:` planted above it cannot win -- and neither can one planted
+    # under a merely opener-SHAPED string, which a raw IndexOf of the opener would
+    # have accepted as the place to start reading.
     if ([string]::IsNullOrEmpty($headText)) { return $null }
-    $start = $headText.IndexOf((Get-SkillMeshHeaderOpen), [System.StringComparison]::Ordinal)
+    $start = Get-SkillMeshHeaderStart $headText
     if ($start -lt 0) { return $null }
     $m = [regex]::Match($headText.Substring($start), 'Profile:\s*([A-Za-z0-9_-]+)')
     if (-not $m.Success) { return $null }
@@ -385,6 +387,14 @@ function Get-RootAnalysis([string]$rootRel) {
         # is a misreport once the builder ships marker-bearing assets there. Scoped to
         # the `_shared` name and to a SKILL.md-less directory so no other class changes
         # its ownership rule, and read through the SAME anchored parser.
+        #
+        # `owned` is a trust signal downstream automation may gate on, so this loop is
+        # only ever as honest as that parser: a content-quoting operator file counted
+        # here would report a directory of purely consumer-authored content as
+        # skill-mesh's. That is the same misclassification migrate-legacy-install.ps1's
+        # retire path would act on DESTRUCTIVELY, which is why the fix lives in
+        # Get-SkillMeshHeaderStart (position + adjacency anchored) rather than in either
+        # of the two consumers separately.
         $isSharedDir = ($name -eq $SHARED_DIR_NAME) -and (-not $hasSkillMd)
         $sharedOwnedFiles = 0
         if ($isSharedDir) {

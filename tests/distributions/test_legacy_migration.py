@@ -673,6 +673,13 @@ def test_shared_fixture_names_match_the_built_payload(full_dist):
             f"{provider}: the collision fixture names an asset the builder does not ship"
         assert fx.SHARED_CONSUMER_ONLY not in shipped, \
             f"{provider}: the consumer-only fixture names an asset the builder DOES ship"
+        # The marker-only populations mean nothing unless the dist really does NOT ship
+        # their paths -- a shipped path is classified by the FIRST yes and would never
+        # reach the marker rule the retire cases exist to exercise.
+        assert fx.SHARED_STALE_ASSET not in shipped, \
+            f"{provider}: the stale-asset fixture names an asset the builder DOES ship"
+        assert fx.SHARED_QUOTING_DOC not in shipped, \
+            f"{provider}: the quoting-doc fixture names an asset the builder DOES ship"
 
 
 def test_a_shipped_shared_payload_does_not_block_and_classifies_per_file(shared_dist, tmp_path):
@@ -878,6 +885,173 @@ def test_the_marker_guard_still_lets_the_planned_adoption_through(shared_dist, t
     r = _apply(home, tmp_path / "b", shared_dist)
     assert r.returncode == 0, f"a planned adoption was refused:\n{r.stdout}\n{r.stderr}"
     assert fx.marker_token() in victim.read_text(encoding="utf-8", errors="replace")
+
+
+SHARED_STALE_REL = f"{CLAUDE_ROOT}/_shared/{fx.SHARED_STALE_ASSET}"
+SHARED_QUOTING_REL = f"{CLAUDE_ROOT}/_shared/{fx.SHARED_QUOTING_DOC}"
+SHARED_RETIRED_REL = f"{COPILOT_ROOT}/_shared/{fx.SHARED_COLLIDING}"
+SHARED_RETIRED_CONSUMER_REL = f"{COPILOT_ROOT}/_shared/{fx.SHARED_CONSUMER_ONLY}"
+
+
+def test_rollback_restores_the_adopted_shared_collision_byte_for_byte(shared_dist, tmp_path):
+    """THE promise the whole adoption feature rests on, asserted end-to-end.
+
+    `Assert-InstallTargetAdoptable` justifies overwriting a marker-less consumer file at
+    a shipped `_shared` path entirely on "the pre-image is backed up and -Rollback puts
+    it back byte-for-byte". Every pre-existing rollback case runs against `mini_dist`,
+    which ships no `_shared` payload at all -- so `_shared` is always `preserve` there
+    and the adopt-then-rollback path was exercised by nothing. Existence of a payload
+    file is not the claim; equal BYTES are, so this compares them (and the manifest's
+    recorded hash) against the pre-migration original."""
+    home = fx.migration_home(tmp_path / "h")
+    backup = tmp_path / "b"
+    adopted = Path(home) / SHARED_SHIPPED_REL
+    before_bytes = adopted.read_bytes()
+    before_hash = _sha256(adopted)
+    assert fx.marker_token() not in before_bytes.decode("utf-8", "replace"), \
+        "the fixture is marker-BEARING; this case is about adopting consumer bytes"
+
+    assert _apply(home, backup, shared_dist).returncode == 0
+    tx = _only_tx(backup)
+    assert _sha256(adopted) != before_hash, "the adoption never overwrote the file"
+
+    entry = next(f for f in _manifest_of(tx)["original_files"]
+                 if f["rel_path"] == SHARED_SHIPPED_REL)
+    payload = Path(tx) / "payload" / SHARED_SHIPPED_REL
+    assert _sha256(payload) == entry["sha256"], "the payload does not match its manifest hash"
+    assert entry["sha256"] == before_hash, "the recorded pre-image is not the original bytes"
+
+    r = _migrate(home, backup, mode="-Rollback", migration_id=tx.name)
+    assert r.returncode == 0, f"rollback failed:\n{r.stdout}\n{r.stderr}"
+    assert _manifest_of(tx)["status"] == "rolled_back"
+    assert adopted.read_bytes() == before_bytes, \
+        "-Rollback did not restore the adopted _shared file byte-for-byte"
+
+
+def test_a_consumer_doc_that_quotes_the_header_is_preserved_not_retired(
+        shared_dist, tmp_path):
+    """A `_shared` file whose SUBJECT is the marker format is the consumer's, not ours.
+
+    `_shared` ownership is content-driven per file, and the marker-only half of that
+    rule is the one with a DESTRUCTIVE consequence: a file read as ours that the dist
+    does not ship is planned as a `retire` and deleted from the live home. An operator
+    doc quoting a whole header verbatim is byte-for-byte indistinguishable from a
+    generated file except in WHERE the block sits, so this is the case that decides
+    whether the header parser's position anchor is load-bearing or decorative.
+
+    Asserted through -Apply, not only the plan: the dry run mutates nothing by
+    contract, so it cannot show that the file survives."""
+    home = fx.migration_home(tmp_path / "h", shared_quoting_doc=True)
+    backup = tmp_path / "b"
+    doc = Path(home) / SHARED_QUOTING_REL
+    before = doc.read_bytes()
+    assert fx.marker_token() in before.decode("utf-8"), \
+        "the fixture doc does not quote the marker at all -- it proves nothing"
+
+    plan = _plan(home, backup, shared_dist)
+    assert SHARED_QUOTING_REL in _rels(plan, "preserve"), sorted(_rels(plan, "preserve"))
+    assert SHARED_QUOTING_REL not in _rels(plan, "retire"), \
+        "an operator doc that quotes the header format was planned for DELETION"
+    assert SHARED_QUOTING_REL not in _rels(plan, "install")
+
+    r = _apply(home, backup, shared_dist)
+    assert r.returncode == 0, f"{r.stdout}\n{r.stderr}"
+    assert doc.is_file(), "the operator's own _shared doc was deleted from the home"
+    assert doc.read_bytes() == before, "the operator's own _shared doc was rewritten"
+    # ...and it is audited as CONSUMER content, not as a superseded asset of ours.
+    manifest = _manifest_of(_only_tx(backup))
+    assert SHARED_QUOTING_REL in {f["rel_path"] for f in manifest["preserved_files"]}
+    assert SHARED_QUOTING_REL not in {f["rel_path"] for f in manifest["original_files"]}
+
+
+def test_a_marker_bearing_shared_asset_the_dist_no_longer_ships_is_retired(
+        shared_dist, tmp_path):
+    """Marker-only retirement, scenario 1: a payload asset a newer build stopped
+    emitting. The two-yeses rule is justified by this case and by the retired-root case
+    below; neither was exercised by any fixture, so the marker half of the rule could
+    have been deleted outright with the suite still green."""
+    home = fx.migration_home(tmp_path / "h", shared_stale_generated=True)
+    plan = _plan(home, tmp_path / "b", shared_dist)
+    assert SHARED_STALE_REL in _rels(plan, "retire"), sorted(_rels(plan, "retire"))
+    assert SHARED_STALE_REL not in _rels(plan, "preserve")
+
+    r = _apply(home, tmp_path / "b2", shared_dist)
+    assert r.returncode == 0, f"{r.stdout}\n{r.stderr}"
+    assert not (Path(home) / SHARED_STALE_REL).exists(), \
+        "a superseded skill-mesh asset survived the retire action"
+
+
+def test_the_same_shared_asset_without_a_marker_is_preserved(shared_dist, tmp_path):
+    """Red-on-garbage pair for the case above. Identical home, identical path, identical
+    dist -- the ONLY difference is whether the file carries the provenance header. A
+    retire rule that keyed on anything else (the directory, the extension, absence from
+    the shipped set) would delete this file too."""
+    home = fx.migration_home(tmp_path / "h", shared_stale_generated=True)
+    victim = Path(home) / SHARED_STALE_REL
+    victim.write_text("# not ours\n\nSame path, no provenance header.\n", encoding="utf-8")
+    before = victim.read_bytes()
+
+    plan = _plan(home, tmp_path / "b", shared_dist)
+    assert SHARED_STALE_REL in _rels(plan, "preserve"), sorted(_rels(plan, "preserve"))
+    assert SHARED_STALE_REL not in _rels(plan, "retire")
+    assert _apply(home, tmp_path / "b2", shared_dist).returncode == 0
+    assert victim.read_bytes() == before, "a marker-less _shared file was touched"
+
+
+def test_a_marker_bearing_shared_asset_under_the_retired_root_is_retired(
+        shared_dist, tmp_path):
+    """Marker-only retirement, scenario 2: a `_shared` payload copy left under the
+    retired `.copilot/skills` root by a pre-retarget install.
+
+    A DIFFERENT path to the same rule: the retired root is scanned with the same
+    `$sharedInstallRels` set, and none of that set's paths can ever match one under it
+    -- so the shipped-path yes is structurally unavailable and the marker is the only
+    thing that can classify the file. The consumer file planted beside it is what keeps
+    this from passing under a directory-wide claim."""
+    home = fx.migration_home(tmp_path / "h", shared_retired_copilot=True)
+    plan = _plan(home, tmp_path / "b", shared_dist)
+    retires = _rels(plan, "retire")
+    assert SHARED_RETIRED_REL in retires, sorted(retires)
+    assert SHARED_RETIRED_CONSUMER_REL not in retires, \
+        "a consumer file under the retired root was swept in by a directory-wide claim"
+    assert SHARED_RETIRED_CONSUMER_REL in _rels(plan, "preserve")
+
+    r = _apply(home, tmp_path / "b2", shared_dist)
+    assert r.returncode == 0, f"{r.stdout}\n{r.stderr}"
+    assert not (Path(home) / SHARED_RETIRED_REL).exists(), \
+        "a pre-retarget skill-mesh asset survived under the retired root"
+    assert (Path(home) / SHARED_RETIRED_CONSUMER_REL).is_file(), \
+        "a consumer file under the retired root was deleted"
+
+
+def test_every_shared_retire_is_disclosed_before_apply(shared_dist, tmp_path):
+    """A retire DELETES from the live home, and inside `_shared` it is decided purely by
+    the file's own content -- so the dry run must NAME every such path before -Apply.
+
+    The install-side adoption advisory already did this for the collision case; this is
+    the retire side, which is the more consequential of the two and had no disclosure at
+    all. Advisory only: it must not change the exit code."""
+    home = fx.migration_home(tmp_path / "h", shared_stale_generated=True)
+    r = _migrate(home, tmp_path / "b", shared_dist)
+    assert r.returncode == 0, f"the advisory changed the exit code:\n{r.stderr}"
+    lines = [ln for ln in r.stderr.splitlines() if "ADVISORY -- retiring" in ln]
+    assert len(lines) == 1, r.stderr
+    assert fx.SHARED_STALE_ASSET in lines[0], lines[0]
+    # It names what is being DELETED -- never a preserved neighbour in the same dir.
+    assert fx.SHARED_CONSUMER_ONLY not in lines[0], lines[0]
+    # And it points at the payload that reverses it.
+    assert "-Rollback" in lines[0], lines[0]
+
+
+def test_no_retire_advisory_fires_when_nothing_shared_is_retired(shared_dist, tmp_path):
+    """Red-on-garbage pair for the disclosure above: an advisory that printed
+    unconditionally would be noise the operator learns to skip, and would pass the test
+    above without ever consulting the retire set."""
+    home = fx.migration_home(tmp_path / "h")
+    r = _migrate(home, tmp_path / "b", shared_dist)
+    assert r.returncode == 0, r.stderr
+    assert [ln for ln in r.stderr.splitlines() if "ADVISORY -- retiring" in ln] == [], \
+        r.stderr
 
 
 def test_action_sets_converge_between_run_two_and_run_three(shared_dist, tmp_path):
