@@ -35,11 +35,23 @@ What this gate asserts:
   or a linter/typechecker this repository deliberately does not have
   (documentation/architecture.md section 8.4).
 
+- No status-bearing markdown document carries a banned stale-status phrase in
+  prose (Step 69 of documentation/host-parity-repair-plan.md). Scope is README.md
+  + CLAUDE.md + documentation/**/*.md with NO file excluded, and backticked
+  CITATIONS of a banned phrase are exempt so the documents that specify the ban
+  can satisfy it.
+
 What this gate deliberately does NOT do:
 - It never EXECUTES a handoff step -- no subprocess, no PowerShell, no network.
   test_this_gate_executes_nothing enforces that against this module's own source.
 - It never asserts that host acceptance passed. That is operator evidence from
   Steps 43, 45, 49, and 50; a green suite is a precondition, never a substitute.
+- The stale-status sweep decides ONE thing: whether a literal phrase appears in
+  prose. It does NOT decide the semantic class "a document presents completed
+  cutover-path work as outstanding" -- paraphrase defeats any literal list, and
+  human review owns that class. See the comment block above
+  _STALE_CUTOVER_STATUS_PHRASES, and the decision record at
+  documentation/step-69-doc-reconciliation-decisions.md.
 
 Scoping notes (both deliberate):
 - Markdown LINKS are already covered by
@@ -75,6 +87,7 @@ MIGRATION = DOC_DIR / "migration.md"
 NEUTRAL_PLAN = DOC_DIR / "provider-neutral-skill-mesh-plan.md"
 CUTOVER_PLAN = DOC_DIR / "host-native-discovery-cutover-plan.md"
 README = REPO_ROOT / "README.md"
+CLAUDE_MD = REPO_ROOT / "CLAUDE.md"
 
 sys.path.insert(0, str(REPO_ROOT / "tools"))
 import release_checks  # noqa: E402
@@ -380,17 +393,33 @@ _PS1_IN_SPAN = re.compile(
 _FLAG = re.compile(r"(?<![\w:/\\.-])-([A-Za-z][A-Za-z0-9]*)")
 
 
-def code_spans(text):
-    """Every fenced-block line and every inline `code` span."""
-    spans = []
+def fence_walk(text):
+    """Every line of `text` as (line, kind): "fence" for a ``` delimiter line,
+    "code" for a line inside a fence, "prose" for everything else.
+
+    ONE fence state machine for this module (.claude/rules/code-quality.md
+    § "One source of truth"). Two consumers read it in opposite directions:
+    code_spans() COLLECTS the code, strip_code_spans() REMOVES it. The second
+    consumer originally carried its own single-line regex and no fence tracking
+    at all, and that duplicate had already drifted -- a fenced block whose
+    interior stated a banned phrase read as prose. Reuse, not a second copy.
+    """
     in_fence = False
     for line in text.splitlines():
         if _FENCE.match(line):
             in_fence = not in_fence
+            yield line, "fence"
             continue
-        if in_fence:
+        yield line, ("code" if in_fence else "prose")
+
+
+def code_spans(text):
+    """Every fenced-block line and every inline `code` span."""
+    spans = []
+    for line, kind in fence_walk(text):
+        if kind == "code":
             spans.append(line)
-        else:
+        elif kind == "prose":
             spans.extend(_INLINE_CODE.findall(line))
     return spans
 
@@ -973,8 +1002,327 @@ def test_readme_points_at_the_handoff_with_the_completed_cutover_status():
         "README does not identify the closed acceptance/cutover issues"
     assert "step 48 is done" in low, \
         "README no longer records the completed handoff status"
-    assert "what remains is operator-only" not in low, \
-        "README still presents completed host acceptance as pending"
+    # Deliberately STRICTER than the widened sweep below, and kept rather than
+    # folded into it. This is a raw-text check with NO code-span exemption, so
+    # README.md is the one document immune to strip_code_spans()' whole blind-spot
+    # mechanism -- not merely to its currently-known members, since it parses no
+    # markup at all: the front door may not carry the phrase at all, not even
+    # backticked. Cite it from documentation/ instead -- there the exemption
+    # holds. Recorded at step-69-doc-reconciliation-decisions.md section 2.3.
+    assert "what remains is operator-only" not in low, (
+        "README still presents completed host acceptance as pending -- note "
+        "README.md is held to the raw-text rule, so even a backticked CITATION "
+        "of the phrase reds here while it stays green under the wider sweep")
+
+
+# --------------------------------------------------------------------------- #
+# Stale cutover-path status, across the WHOLE published markdown surface
+# --------------------------------------------------------------------------- #
+#
+# Step 69 of documentation/host-parity-repair-plan.md. The README assertion just
+# above bans one literal phrase in ONE file, and that file was never where the
+# phrase actually lived: it sat in
+# documentation/host-native-discovery-cutover-plan.md, which the README gate does
+# not read. A ban whose scope excludes the site of the only real instance is a
+# ban in name only, so the scope is widened here -- deliberately, and recorded in
+# documentation/step-69-doc-reconciliation-decisions.md rather than left to luck.
+#
+# WHAT THIS GATE CAN DECIDE -- and it is narrow, on purpose:
+#   Every phrase in `_STALE_CUTOVER_STATUS_PHRASES` is absent from the PROSE of
+#   every README.md + CLAUDE.md + documentation/**/*.md file -- the surface
+#   status_scanned_docs() returns, stated here in full because an under-stated
+#   scope comment is the same class of defect as an over-stated one. That is a
+#   syntactic question about literal strings and it is fully decidable.
+#
+# WHAT IT CANNOT DECIDE, and must never be read as certifying:
+#   Whether any document presents completed Phase 7 cutover-path work (Steps
+#   42-50) as outstanding. That is a SEMANTIC class, and a literal-phrase matcher
+#   decides a syntactic one; the gap between them is unbounded, and paraphrase
+#   defeats any fixed list. This is the same over-claiming failure Step 66 hit
+#   three times (see step-66-vendored-reference-decisions.md section 7.1): a gate
+#   that claims a class it cannot decide is worse than no gate, because the team
+#   stops looking. The class-level authority is human review, exactly as tier 3
+#   is there. This list is a TRIPWIRE for one phrase that has ACTUALLY shipped
+#   stale in this repository, and it is maintained by adding the next phrase that
+#   actually does.
+#
+# It also cannot see prose that `fence_walk` reads as a code region, because that
+# walk decides from delimiter position and pairing ALONE -- it is intent-blind.
+# The KNOWN members of that open class are enumerated with their costs in
+# `strip_code_spans`; the list is not claimed complete, and a later-found member
+# is a new example of the same mechanism rather than a broken promise. That
+# docstring also says why README.md is deliberately held to a stricter raw-text
+# rule that has none of them.
+#
+# SCOPE IS DERIVED, NEVER HAND-LISTED. `status_scanned_docs` globs the whole
+# published markdown surface with NO file excluded -- not even a plan. The
+# earlier `scanned_docs` skips `*-plan.md` because a plan legitimately names
+# artifacts it has not built yet; that reasoning is about PATH TOKENS and does
+# not transfer to status prose, where a plan is one of the likeliest places for a
+# stale claim to sit. Reusing that exclusion here would have re-created the exact
+# hole this gate exists to close.
+
+_STALE_CUTOVER_STATUS_PHRASES = (
+    # Shipped stale at host-native-discovery-cutover-plan.md:679 while Steps 49
+    # and 50 were already accepted (2026-08-09, #62/#63 closed).
+    "what remains is operator-only",
+)
+
+def strip_code_spans(text):
+    """`text` with every code span blanked, leaving only prose.
+
+    A backticked phrase is a CITATION of a token, not a claim about status. Two
+    documents legitimately quote the banned phrase in order to specify the ban
+    itself -- this plan's Step 69 block and the decision record -- and a gate that
+    reds on the document that DEFINES it is a gate nobody can satisfy. Excluding
+    code spans is a rule about markup meaning, not a hole cut for named files: it
+    is derived from the text, so a future citation is covered by construction.
+
+    Built on fence_walk() and _INLINE_CODE -- the same primitives code_spans()
+    uses -- so "what counts as code" has one definition in this module. Two
+    consequences of that reuse, both intended:
+      * A ``double-backtick`` citation is exempt. The inner pair matches, so the
+        standard CommonMark idiom for a span that may embed a backtick no longer
+        reds as prose.
+      * The whole INTERIOR of a ``` fence is exempt, not just its delimiter
+        lines. A fenced transcript or a verbatim before/after example may quote a
+        banned phrase without reding.
+
+    The cost, stated rather than hidden -- BLIND SPOTS, in the order they matter:
+      1. A stale status claim that OVERLAPS a single-line backtick span is
+         invisible, and the exposure is wider than "a whole sentence someone
+         chose to backtick". The span is blanked and the surrounding prose
+         closes up, so backticking any FRAGMENT of a banned phrase -- one word,
+         one hyphen -- breaks the match for the rest of the sentence. Nothing
+         distinguishes that from a one-token citation, and this gate does not
+         try.
+      2. A stale status claim written inside a ``` fence is invisible, for the
+         same reason and over a larger span. Widened deliberately when this
+         function was moved onto fence_walk(); the previous single-line regex
+         red on fenced prose, which was a false positive on legitimate quoting,
+         not extra coverage it could be relied on for.
+      3. A stale status claim bracketed by TWO line-initial ``` spans that each
+         open AND close on their own line and were never a fence pair. _FENCE
+         matches on line-start alone, so each one toggles the walk and the real
+         prose between them reads as fenced interior. No scanned document
+         contains such a line today. Note what this does to the compensating
+         check in test_status_scan_reaches_the_documents_that_carry_phase_status:
+         the delimiter count stays EVEN, so a phantom pair passes it. That check
+         decides an ODD count -- an unclosed fence -- and nothing more.
+    These are the KNOWN members of an open class, not a complete list: the walk is
+    intent-blind, so any markup that makes prose read as a code region exempts it.
+    A later-found member is a new example of the same mechanism, not a falsified
+    claim -- add it here and give it an anchor row. They are accepted, and they are
+    the price of excluding no file by name.
+    README.md alone is additionally held to a raw-text rule with no exemption at
+    all (see test_readme_points_at_the_handoff_with_the_completed_cutover_status)
+    -- the front door is the one place none of them applies.
+
+    NOT exempt, on purpose: a 4-space-INDENTED code block, and a ~~~ tilde fence,
+    which _FENCE does not recognize as a delimiter at all. Telling an indented
+    block apart from a lazy paragraph continuation needs block-level markdown
+    parsing that fence_walk() deliberately does not do, and adding a second,
+    different block model here would recreate the duplication this function was
+    just folded out of. Both failure directions are a loud false positive, never
+    a silent miss.
+    """
+    out = []
+    for line, kind in fence_walk(text):
+        out.append(_INLINE_CODE.sub(" ", line) if kind == "prose" else " ")
+    return "\n".join(out)
+
+
+def stale_cutover_status_defects(text, label=""):
+    """Banned status phrases present in `text`'s prose. Empty list == clean.
+
+    Whitespace is normalized AFTER stripping, so a phrase broken across a
+    markdown line wrap is still caught -- a line-scoped matcher would miss the
+    single most likely spelling in a wrapped document.
+    """
+    prose = re.sub(r"\s+", " ", strip_code_spans(text)).lower()
+    return [f"{label}stale status phrase in prose: {phrase!r}"
+            for phrase in _STALE_CUTOVER_STATUS_PHRASES if phrase in prose]
+
+
+def status_scanned_docs():
+    """The whole status-bearing markdown surface: the two root status documents
+    plus documentation/**/*.md, with NO file excluded and no glob narrowing.
+
+    CLAUDE.md is included on purpose and is not merely more coverage. The repair
+    plan's Step 62 makes the point directly -- it is "the one instruction a fresh
+    dev agent actually reads" -- so a stale Phase status there propagates into
+    work rather than merely sitting on a page. The sibling doc gates in this
+    repository stop at README + documentation/ because they validate PUBLISHED
+    link and path tokens; this one grades status claims, which is a different
+    question with a different surface.
+    """
+    docs = [README, CLAUDE_MD] + sorted(DOC_DIR.rglob("*.md"))
+    return [d for d in docs if d.is_file()]
+
+
+# Scope floor. Measured 2026-08-11: README.md + CLAUDE.md + 18 documents under
+# documentation/ = 20, BEFORE this step added its decision record. Pinned at the
+# PRE-EXISTING surface rather than the post-step count so the number is robust to
+# whether a just-written file is in the git index yet -- tools/release.ps1 runs
+# this suite from inside a `git ls-files` stage, where an unindexed file is simply
+# absent. A floor, not an equality: adding documents never reds it, and narrowing
+# the enumeration (an exclusion list, a tightened glob) always does. Step 63 set
+# this precedent after a sibling gate silently returned None for a whole defect
+# class and the burn-down measured nothing.
+_STATUS_SCAN_FLOOR = 20
+
+
+def test_status_scan_reaches_the_documents_that_carry_phase_status():
+    """Anti-narrowing. A burn-down that is satisfied by scanning less is not a
+    burn-down, so the surface has a floor and named must-reach members."""
+    docs = status_scanned_docs()
+    assert len(docs) >= _STATUS_SCAN_FLOOR, (
+        f"status scan reaches only {len(docs)} documents, below the committed "
+        f"floor of {_STATUS_SCAN_FLOOR} -- the enumeration was narrowed")
+    names = {d.name for d in docs}
+    # A membership FLOOR, not the scanned set: these are the documents that carry
+    # Phase 7 status, including the plans the sibling token gate excludes.
+    for required in ("README.md",
+                     "CLAUDE.md",
+                     "host-native-discovery-cutover-plan.md",
+                     "host-parity-repair-plan.md",
+                     "coding-root-cutover-handoff.md",
+                     "provider-neutral-skill-mesh-plan.md",
+                     "migration.md"):
+        assert required in names, \
+            f"status scan no longer reaches {required} -- scope was narrowed"
+
+    # Narrowing is not only a shorter file list. strip_code_spans() blanks the
+    # interior of every ``` fence, so ONE unclosed fence blinds the gate for the
+    # entire remainder of that document -- silently, the dangerous direction.
+    # Bound it here so an unbalanced fence is a loud failure rather than a quiet
+    # loss of coverage.
+    #
+    # WHAT THIS ASSERTION DECIDES, stated exactly because its first spelling did
+    # not: a scanned document has an EVEN number of lines fence_walk() calls
+    # delimiters. That is the unclosed fence above, and that is all of it. It
+    # does NOT decide that the exempt surface has not grown -- a well-formed
+    # fence wrapped around a status paragraph keeps the count even and is
+    # legal, and so does a phantom pair of line-initial same-line ``` spans
+    # (blind spot 3 in strip_code_spans). An even count is silent on whether the
+    # pairing is the one the author meant.
+    #
+    # The measured size of the exempt surface is owned by
+    # documentation/step-69-doc-reconciliation-decisions.md section 2.4 and is
+    # deliberately not restated here: it was restated here once, and the copy
+    # was the one that went stale.
+    for doc in docs:
+        delims = sum(1 for _, kind in fence_walk(_read(doc)) if kind == "fence")
+        assert delims % 2 == 0, (
+            f"{doc.relative_to(REPO_ROOT).as_posix()} has {delims} ``` fence "
+            "delimiters -- an unclosed fence makes strip_code_spans blank every "
+            "line after it, so the stale-status gate goes blind there")
+
+
+def test_stale_status_gate_reds_on_prose_and_stays_silent_on_a_citation():
+    # ANCHOR: watched to go red on a planted defect before being believed. Pure
+    # function, synthetic inputs -- the style of test_skill_tree.py's anchors.
+    planted = "Every code step on the cutover path has landed. What remains is operator-only."
+    assert stale_cutover_status_defects(planted), \
+        "the gate did not flag the exact sentence that shipped stale"
+
+    # ...and across a markdown line wrap, which is how it would really appear.
+    wrapped = "Every code step has landed. What remains is\noperator-only.\n"
+    assert stale_cutover_status_defects(wrapped), \
+        "the gate is line-scoped -- a wrapped claim would slip through"
+
+    # A CITATION of the token is not a claim: both documents that specify the ban
+    # quote it this way, and they must stay green.
+    cited = "the surviving README assertion bans `what remains is operator-only`."
+    assert stale_cutover_status_defects(cited) == [], \
+        "the gate reds on the document that DEFINES the ban"
+
+    # The strip must not swallow prose outside the span, or the gate would go
+    # quiet in exactly the case it exists for.
+    assert stale_cutover_status_defects(
+        "see `:679` -- what remains is operator-only, per the roll-up"), \
+        "code-span stripping ate the surrounding prose"
+
+    # A ``double-backtick`` citation is the CommonMark idiom for a span that may
+    # embed a backtick. It is a citation like any other and must stay green --
+    # the single-line regex this function replaced red on it.
+    double = "the ban names ``what remains is operator-only`` verbatim."
+    assert stale_cutover_status_defects(double) == [], \
+        "a double-backtick citation reds -- the strip is not fence_walk-based"
+
+    # A ``` fence quoting the phrase verbatim is code, not a claim. Exempt for
+    # the same reason, over a larger span; blind spot 2 in strip_code_spans.
+    fenced = "Before:\n\n```\nWhat remains is operator-only.\n```\n\nAfter: done.\n"
+    assert stale_cutover_status_defects(fenced) == [], \
+        "a fenced verbatim quote reds -- fence interiors are not being stripped"
+
+    # ...but the fence must CLOSE. Prose after the closing delimiter is prose
+    # again, or one stray fence would blind the rest of a document.
+    assert stale_cutover_status_defects(fenced + "What remains is operator-only."), \
+        "prose after a closed fence is still being treated as code"
+
+    # Blind spot 1 is FRAGMENT-wide, not sentence-wide, and the docstring says so
+    # -- so pin the claim rather than only asserting it in prose. One backticked
+    # word inside an otherwise-bare stale sentence is enough: the span is blanked
+    # and the prose closes up around it.
+    fragment = "Every code step has landed. What remains is `operator`-only."
+    assert stale_cutover_status_defects(fragment) == [], \
+        "blind spot 1 is narrower than strip_code_spans' docstring claims -- " \
+        "the docstring and record section 2.4 must be re-measured"
+
+    # Blind spot 3, pinned here so the disclosure is executable rather than
+    # prose. Two line-initial ``` spans that each open AND close on their own
+    # line are not a fence pair to a reader, but _FENCE matches on line-start
+    # alone, so each toggles the walk and the prose between them is blanked.
+    # Asserted GREEN because that is what the shipped function does; if a future
+    # change makes it red, the disclosure in strip_code_spans and record section
+    # 2.4 is what has to move, not this line.
+    phantom = ("```one-token```\n\nEvery code step has landed. What remains is\n"
+               "operator-only.\n\n```another-token```\n")
+    assert stale_cutover_status_defects(phantom) == [], \
+        "blind spot 3 changed -- strip_code_spans' docstring and the decision " \
+        "record section 2.4 both describe this case and must be re-measured"
+    # ...and this is why the scope-floor bound above cannot be read as "the
+    # exempt surface cannot grow unseen": the phantom pair's delimiter count is
+    # EVEN, so that assertion stays green on exactly this input.
+    assert sum(1 for _, kind in fence_walk(phantom) if kind == "fence") % 2 == 0, \
+        "the phantom pair no longer counts even -- the scope-floor claim in " \
+        "test_status_scan_reaches_the_documents_that_carry_phase_status changed"
+
+    # Blind spot 4, pinned for the same reason. Distinct from 3 and STRICTLY MORE
+    # REACHABLE: it needs no self-closing span, only two ordinary ``` openers that
+    # were each left unclosed -- the everyday markdown edit mistake. They pair into
+    # a phantom fence exactly as 3 does, and the delimiter count is likewise EVEN,
+    # so the scope-floor bound does not fire on it either. Found in the round-4
+    # confirming check, one round after 3 was disclosed; that is what demoted the
+    # blind-spot list from a closed set to an open class (record section 2.4).
+    unclosed_pair = ("```\n\nEvery code step has landed. What remains is\n"
+                     "operator-only.\n\n```\n")
+    assert stale_cutover_status_defects(unclosed_pair) == [], \
+        "blind spot 4 changed -- strip_code_spans' docstring and the decision " \
+        "record section 2.4 both describe this case and must be re-measured"
+    assert sum(1 for _, kind in fence_walk(unclosed_pair) if kind == "fence") % 2 == 0, \
+        "the unclosed-opener pair no longer counts even -- the scope-floor claim " \
+        "in test_status_scan_reaches_the_documents_that_carry_phase_status changed"
+
+    # And it must stay silent on an unrelated document.
+    assert stale_cutover_status_defects("Steps 49 and 50 were accepted 2026-08-09.") == []
+
+
+def test_no_published_doc_presents_the_completed_cutover_as_pending():
+    """Step 69's widened ban: no document returned by status_scanned_docs()
+    (README.md + CLAUDE.md + documentation/**/*.md, nothing excluded) may carry a
+    banned status phrase in PROSE. Backticked citations are exempt, and this
+    decides only the literal phrases in _STALE_CUTOVER_STATUS_PHRASES -- not the
+    semantic class. Scope decision and rationale:
+    documentation/step-69-doc-reconciliation-decisions.md section 2."""
+    defects = []
+    for doc in status_scanned_docs():
+        rel = doc.relative_to(REPO_ROOT).as_posix()
+        defects.extend(stale_cutover_status_defects(_read(doc), f"{rel}: "))
+    assert not defects, (
+        "a published document still presents completed cutover-path work as "
+        "pending:\n" + "\n".join(defects))
 
 
 def test_handoff_names_both_discovery_roots_and_the_legacy_router():
@@ -1238,18 +1586,70 @@ def test_handoff_stages_and_commits_in_separate_blocks():
     assert not defects, "staging contract violated:\n" + "\n".join(defects)
 
 
-def test_handoff_pins_the_expected_copilot_yaml_error_to_one_named_skill():
-    """Copilot prints a YAML parse failure for exactly one skill of 50 (issue #69:
-    an unquoted colon-bearing `argument:` value in the Claude adapter's
-    frontmatter). An operator told only "expect some YAML noise" cannot tell that
-    from a real discovery failure, so the discriminator has to be a NAME."""
-    low = re.sub(r"\s+", " ", _read(HANDOFF)).lower()
-    assert "context-slim" in low, \
-        "the handoff never names the one skill whose YAML error is expected"
-    assert "#69" in low, "the handoff does not tie the expected error to its issue"
-    assert "any other skill" in low, \
-        ("the handoff gives no discriminator between the one expected YAML error and a "
-         "real one")
+# Phrases that RE-INSTATE the retired one-exempt-skill discriminator. Each one, on its
+# own, tells an operator to look past a YAML error; together they are the exact prose
+# Step 68 removed. Matched against whitespace-normalized lowercase text.
+_RETIRED_YAML_EXEMPTIONS = (
+    "is expected and is not a failure",
+    "any other skill named in a yaml error",
+    "one known name, expected",
+    "the one expected yaml error",
+)
+
+
+def copilot_yaml_error_defects(text):
+    """Ways the handoff's Copilot-output section could mislead an operator about a YAML
+    parse failure. Empty list == correct."""
+    low = re.sub(r"\s+", " ", text).lower()
+    defects = []
+    if "any skill named in a yaml error is a real failure" not in low:
+        defects.append("the handoff does not state that ANY skill named in a YAML "
+                       "error is a real failure")
+    if "context-slim" not in low:
+        defects.append("the handoff never names context-slim, so an operator working "
+                       "from the retired exemption is never corrected")
+    if "#69" not in low:
+        defects.append("the handoff does not tie the retired exemption to its issue")
+    for phrase in _RETIRED_YAML_EXEMPTIONS:
+        # Banned outright, including as a quotation. The correction paragraph explains
+        # what it retires in its OWN words for exactly this reason: an operator skimming
+        # for "is expected and is not a failure" must not find it anywhere on the page,
+        # whatever sentence it is embedded in.
+        if phrase in low:
+            defects.append(
+                f"the handoff still carries the retired exemption phrase: {phrase!r}")
+    return defects
+
+
+def test_copilot_yaml_error_gate_reds_on_the_retired_exemption():
+    """ANCHOR: the live document must pass, and the prose this step retired must red.
+
+    Before Step 68 (#69) this section told the operator that context-slim's YAML parse
+    failure "is expected and is not a failure", with the discriminator "any other skill
+    named in a YAML error is a real failure". The defect is now fixed at its canonical
+    source and gated by a strict YAML parse, so that instruction is not merely stale --
+    it would talk an operator out of the one signal that the tree in the home is not
+    the tree this repository released."""
+    text = _read(HANDOFF)
+    assert copilot_yaml_error_defects(text) == [], copilot_yaml_error_defects(text)
+
+    retired = ("`copilot skill list` in a migrated home ends with a \"failed to load\" "
+               "block naming **`context-slim`**. That one is expected and is not a "
+               "failure. **Any other skill named in a YAML error is a real failure** -- "
+               "one known name, expected; any second name, stop. Issue #69.")
+    defects = copilot_yaml_error_defects(retired)
+    assert any("ANY skill named in a YAML" in d for d in defects), defects
+    assert any("retired exemption phrase" in d for d in defects), defects
+
+    dropped = text.replace("Any skill named in a YAML error is a real failure", "", 1)
+    assert dropped != text, "the probe did not change the document"
+    assert copilot_yaml_error_defects(dropped), \
+        "the gate accepts a handoff that never states the real-failure rule"
+
+
+def test_handoff_treats_every_copilot_yaml_error_as_a_real_failure():
+    defects = copilot_yaml_error_defects(_read(HANDOFF))
+    assert not defects, "Copilot-output section violated:\n" + "\n".join(defects)
 
 
 def test_handoff_warns_that_a_repeat_apply_is_not_a_no_op():

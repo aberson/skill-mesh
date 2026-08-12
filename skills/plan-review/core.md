@@ -198,7 +198,7 @@ plan to another model or agent.
 
 ### 17. Feature plan — existing-code validation
 
-*Sections 17–21 apply ONLY to feature plans (e.g. `documentation/*-plan.md`), not greenfield. Sections 1–16 still apply in feature mode — fire each §1–16 check whose trigger condition the feature plan satisfies (persistence, external deps, scheduled work, producer/consumer chains, undefined acronyms, missing build steps, etc.). Do NOT silently skip §1–16 because §17–21 are running. **Two carve-outs apply in BOTH modes:** §19's CLAUDE.md/AGENTS.md-conventions bullet and §21's step-sizing bullet (see `../../references/step-authoring.md` §1) — run them in greenfield too; only the rest of §17–21 is greenfield-skipped.*
+*Sections 17–21 apply ONLY to feature plans (e.g. `documentation/*-plan.md`), not greenfield. Sections 1–16 still apply in feature mode — fire each §1–16 check whose trigger condition the feature plan satisfies (persistence, external deps, scheduled work, producer/consumer chains, undefined acronyms, missing build steps, etc.). Do NOT silently skip §1–16 because §17–21 are running. **Two carve-outs apply in BOTH modes:** §19's CLAUDE.md/AGENTS.md-conventions bullet and §21's step-sizing bullet (see `<repo>/_shared/step-authoring.md` §1) — run them in greenfield too; only the rest of §17–21 is greenfield-skipped.*
 
 **Proof discipline applies to all feature plan checks (sections 17–21):** Every claim
 about the codebase must cite file:line or command output. Do not state "module X exists"
@@ -242,7 +242,7 @@ doesn't match reality" without quoting both the plan text and the actual code.
   existing project?
 - Does it re-state stack/tooling decisions the project has already made without adding
   new rationale?
-- Are build steps sized for a feature (not a full project rebuild)? **(Carve-out — applies in BOTH modes:** each step is one vertical slice, per `../../references/step-authoring.md` §1.)
+- Are build steps sized for a feature (not a full project rebuild)? **(Carve-out — applies in BOTH modes:** each step is one vertical slice, per `<repo>/_shared/step-authoring.md` §1.)
 
 ### 22. Step shape — operator/code split (Blocker if violated)
 
@@ -508,7 +508,7 @@ followed by "None."
 | Default Type: code | Adds `**Type:** code` to any step lacking a Type: field. | (existing Type check) |
 | Stakes-aware reviewer escalation | Token-level substitution on the `**Flags:**` line of a step whose blast surface matches the high-stakes trigger classes per `review-deep` SKILL.md's header: `--reviewers code` → `--reviewers deep`, all co-located flags preserved verbatim. Emits nothing (and touches nothing) on a plan with zero high-stakes steps; steps already declaring `--reviewers deep` are a no-op. The high-tier escalation note stays a surfaced annotation — never written into the plan. | §27 |
 
-**Present-but-vague Done-when (surfaced Significant Gap — NOT autofixed).** Extends the missing-Done-when check above: a `Done when:` that is present but non-falsifiable / vague (e.g. `"it works"`, `"done"`) or not mapped to the step's `Problem:` is a **Significant Gap** surfaced for operator judgment — never auto-rewritten (the wording is theirs). EXEMPT the deferred sentinels in `../../references/step-authoring.md` §3 (they mean "not yet filled in", not "vague") — those stay silent in both modes.
+**Present-but-vague Done-when (surfaced Significant Gap — NOT autofixed).** Extends the missing-Done-when check above: a `Done when:` that is present but non-falsifiable / vague (e.g. `"it works"`, `"done"`) or not mapped to the step's `Problem:` is a **Significant Gap** surfaced for operator judgment — never auto-rewritten (the wording is theirs). EXEMPT the deferred sentinels in `<repo>/_shared/step-authoring.md` §3 (they mean "not yet filled in", not "vague") — those stay silent in both modes.
 
 Each fix applied adds an HTML comment `<!-- autofix-applied: YYYY-MM-DD -->` immediately above the modified step heading in plan.md. `/plan-expedite` uses these markers for resume detection; the marker records prior autofix activity but does not exempt the step from later checks.
 
@@ -589,7 +589,7 @@ When invoked, read the plan file (ask the user for the path if not obvious), the
 which mode applies:
 
 - **Greenfield plan** — the file is `plan.md` or describes a full project from scratch.
-  Apply sections 1–16 AND sections 22–27. Skip sections 17–21, EXCEPT §19's conventions bullet and §21's step-sizing bullet (both apply in greenfield — see `../../references/step-authoring.md` §1).
+  Apply sections 1–16 AND sections 22–27. Skip sections 17–21, EXCEPT §19's conventions bullet and §21's step-sizing bullet (both apply in greenfield — see `<repo>/_shared/step-authoring.md` §1).
 - **Feature plan** — the file is in `documentation/*-plan.md` or describes a scoped change
   to an existing project. Apply sections 1–16 (skipping those irrelevant to the feature's
   scope) AND sections 17–27. For sections 17–21, actively read the codebase to validate

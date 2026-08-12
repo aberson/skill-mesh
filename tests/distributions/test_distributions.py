@@ -77,6 +77,18 @@ EXPECTED_SHARED_PAYLOAD = frozenset({
     "score_skill_absolute.py",
     "score_skill_composite.py",
     "score_skill.workflow.js",
+    # The seven workspace references vendored in Step 66. They enter the closure the
+    # same way every other asset does -- as `_shared/<leaf>` tokens harvested from the
+    # canonical cores that cite them (spelled `<repo>/_shared/<leaf>` there; see
+    # `Repoint-SharedReference`) -- so the independent walk below finds them without
+    # being told about them.
+    "intake-engine.md",
+    "skill-pipeline.md",
+    "skill-role-taxonomy.md",
+    "step-authoring.md",
+    "subagent-economy.md",
+    "task-state-schema.md",
+    "worktree-hygiene.md",
 })
 
 # A `_shared/<leaf>` asset reference in any spelling the canonical sources use: bare,
@@ -148,6 +160,10 @@ def _repoint_shared_asset(body):
     """
     out = body.replace("../../../_shared/", "../_shared/")
     out = out.replace("../../_shared/", "../_shared/")
+    # The Step 66 spelling. Mirrored here for fidelity even though no payload source
+    # carries it today -- the provenance header's `<repo>/_shared/<leaf>` label is
+    # stamped AFTER the repoint, on purpose, so it is never rewritten.
+    out = out.replace("<repo>/_shared/", "../_shared/")
     return _BARE_SHARED_RE.sub("../_shared/", out)
 
 
@@ -642,6 +658,13 @@ def test_shared_references_are_repointed_and_resolve(dist_root):
             for token in ("../../_shared/", "../../../_shared/"):
                 if token in text:
                     deep.append(f"{profile}/{rel}: {token}")
+            # The Step 66 spelling. It is a canonical BUILD-INPUT token and must never
+            # survive into an emitted file -- unrepointed it is not even a path a
+            # consumer can follow. The one legitimate occurrence is the provenance
+            # header's `Canonical source:` value, which names where the file came from
+            # rather than citing anything, and which is stamped after the repoint.
+            for m in re.finditer(r"(?<!Canonical source: )<repo>/_shared/", text):
+                deep.append(f"{profile}/{rel}: <repo>/_shared/ at offset {m.start()}")
             for leaf in re.findall(r"\.\./_shared/([A-Za-z0-9][A-Za-z0-9._-]*)", text):
                 if not (f.parent / ".." / "_shared" / leaf).resolve().is_file():
                     unresolved.append(f"{profile}/{rel} -> ../_shared/{leaf}")
@@ -658,13 +681,94 @@ def test_shared_references_are_repointed_and_resolve(dist_root):
     assert not bare, f"un-repointed bare `_shared/x` inside the payload: {bare[:10]}"
 
 
-def _synthetic_build_repo(tmp_path, shared_files, core_body, adapter_body=None):
+# The Step 66 build-input citation spelling. See `Repoint-SharedReference` for why the
+# canonical cores cannot spell these citations relatively.
+_REPO_ROOTED_SHARED_RE = re.compile(r"<repo>/_shared/([A-Za-z0-9][A-Za-z0-9._-]*)")
+
+# Floor on the DERIVED pair set below. A derivation that finds nothing passes vacuously,
+# and this repository has already been burned by a gate whose target list quietly emptied.
+# 12 is what the tree carries today (18 occurrences over 12 keys); the floor moves only
+# when a citation is deliberately retired.
+MIN_VENDORED_REFERENCE_CITATIONS = 12
+
+
+def _canonical_vendored_citations():
+    """(skill, leaf) for every `<repo>/_shared/<leaf>` citation in the canonical cores.
+
+    DERIVED from the tree, never hand-listed: a hand-maintained roster of what a gate is
+    supposed to cover is a false green the first time someone adds a citation and not a
+    row. Paired with the floor above so an empty derivation cannot pass either.
+    """
+    pairs = set()
+    for core in sorted((REPO_ROOT / "skills").glob("*/core.md")):
+        for leaf in _REPO_ROOTED_SHARED_RE.findall(core.read_text(encoding="utf-8")):
+            pairs.add((core.parent.name, leaf))
+    return sorted(pairs)
+
+
+def test_vendored_reference_citations_reach_the_payload(dist_root):
+    """Every Step 66 citation ships as a `../_shared/<leaf>` that RESOLVES, per profile.
+
+    The canonical cores spell these citations `<repo>/_shared/<leaf>` -- a template
+    placeholder, deliberately outside the reference scope of both the link gate and
+    `test_skill_tree`'s reachability scan, because under the link gate's resolution
+    model NO relative spelling of a `_shared` citation from `skills/<n>/core.md` can
+    resolve, and the Step 63 allowlist is shrink-only so a new dangling key hard-fails.
+    That places the ENTIRE correctness burden on the emit-time repoint: nothing else
+    can see a typo, a dropped rewrite, or an asset that never made it into the closure.
+
+    So this asserts the whole chain per (skill, document) pair rather than sampling it:
+    the emitted core cites `../_shared/<leaf>`, the leaf exists in that profile's
+    payload, and no `<repo>/` spelling survived. `test_shared_references_are_repointed_
+    and_resolve` covers the negative half tree-wide; this is the positive half, and it
+    is the one that fails if a citation is silently dropped instead of repointed.
+    """
+    pairs = _canonical_vendored_citations()
+    assert len(pairs) >= MIN_VENDORED_REFERENCE_CITATIONS, (
+        f"only {len(pairs)} `<repo>/_shared/` citation(s) found in skills/*/core.md, "
+        f"floor is {MIN_VENDORED_REFERENCE_CITATIONS}. Either citations were retired "
+        "(lower the floor deliberately, in the same commit) or the derivation stopped "
+        "seeing them, which would make every assertion below vacuous.")
+    # The derivation reads `skills/*/core.md` only, which is where all of Step 66's
+    # citations live. An adapter carrying one would emit into SKILL.md, not core.md, so
+    # the pair below would check the wrong file -- fail instead of quietly missing it.
+    stray = [p.relative_to(REPO_ROOT).as_posix()
+             for p in sorted((REPO_ROOT / "skills").glob("*/providers/*.md"))
+             if _REPO_ROOTED_SHARED_RE.search(p.read_text(encoding="utf-8"))]
+    assert not stray, (
+        "an ADAPTER now carries a `<repo>/_shared/` citation, which this test's "
+        f"core.md-only derivation cannot grade: {stray}. Extend the derivation to "
+        "SKILL.md before landing it.")
+    missing = []
+    for profile in ("claude", "gpt"):
+        for skill, leaf in pairs:
+            core = dist_root / profile / skill / "core.md"
+            if not core.is_file():
+                missing.append(f"{profile}/{skill}/core.md is absent")
+                continue
+            text = core.read_text(encoding="utf-8")
+            if f"../_shared/{leaf}" not in text:
+                missing.append(f"{profile}/{skill}/core.md does not cite ../_shared/{leaf}")
+            if not (dist_root / profile / SHARED_DEST / leaf).is_file():
+                missing.append(f"{profile}/_shared/{leaf} was not emitted")
+    assert not missing, "vendored-reference citations did not reach the payload:\n" + \
+        "\n".join(missing)
+
+
+def _synthetic_build_repo(tmp_path, shared_files, core_body, adapter_body=None,
+                          gpt_adapter_body=None, description=None):
     """A minimal, fully SYNTHETIC repo the real builder can run inside.
 
     The builder resolves `_shared/` and `skills/` from its own `$PSScriptRoot`, so the
     only way to exercise its refusal paths is to give it a different repo. Nothing is
     planted in this checkout -- a stray file at a real source path is its own defect
     class here (#83-#86).
+
+    `gpt_adapter_body` also declares a `gpt` provider, so a caller can build BOTH
+    profiles from planted sources -- the only way to reach build-distributions.ps1's
+    frontmatter PASS-THROUGH branch (a gpt adapter that already leads with `---`, so
+    New-GptFrontmatter is skipped), which no real canonical source exercises today.
+    `description` populates the manifest record New-GptFrontmatter synthesizes from.
     """
     repo = tmp_path / "srepo"
     for sub in ("tools", "runtime", "config", "_shared", "skills/demo/providers"):
@@ -683,16 +787,23 @@ def _synthetic_build_repo(tmp_path, shared_files, core_body, adapter_body=None):
         adapter_body or "# demo adapter\n\nLoads ../core.md in full.\n", encoding="utf-8")
     for name, body in shared_files.items():
         (repo / "_shared" / name).write_text(body, encoding="utf-8")
-    _write_manifest(repo / "config" / "skill-manifest.json", [{
+    entry = {
         "name": "demo", "status": "portable", "core": "skills/demo/core.md",
         "providers": {"claude": "skills/demo/providers/claude.md"},
-    }])
+    }
+    if gpt_adapter_body is not None:
+        (repo / "skills" / "demo" / "providers" / "gpt.md").write_text(
+            gpt_adapter_body, encoding="utf-8")
+        entry["providers"]["gpt"] = "skills/demo/providers/gpt.md"
+    if description is not None:
+        entry["description"] = description
+    _write_manifest(repo / "config" / "skill-manifest.json", [entry])
     return repo
 
 
-def _synthetic_build(repo, out_dir):
+def _synthetic_build(repo, out_dir, provider="claude"):
     return _run(repo / "tools" / "build-distributions.ps1",
-                ["-OutputDir", str(out_dir), "-Provider", "claude"])
+                ["-OutputDir", str(out_dir), "-Provider", provider])
 
 
 def test_shared_closure_follows_a_sibling_mention(tmp_path):
@@ -742,6 +853,77 @@ def test_bare_shared_token_inside_a_shared_asset_is_repointed(tmp_path):
     assert "_shared/_shared/" not in emitted
     # The provenance header's own canonical-source value must survive the repoint.
     assert "Canonical source: <repo>/_shared/doc.md" in emitted
+
+
+def test_repo_rooted_shared_citation_is_seeded_and_repointed(tmp_path):
+    """ANCHOR for the Step 66 spelling, on a synthetic tree: `<repo>/_shared/x`.
+
+    Two independent claims, both of which a one-line regression would break silently on
+    the live tree (the citation is out of BOTH gates' reference scope by construction):
+
+      * the closure SEES it. `$SHARED_REF_RE` has no lookbehind, so the `_shared/<leaf>`
+        substring inside `<repo>/_shared/<leaf>` is harvested as a seed -- which is also
+        why a mistyped leaf throws in `Get-SharedClosure` instead of shipping.
+      * the emit REPOINTS it to `../_shared/<leaf>`, the one spelling that resolves one
+        level below a discovery root. Dropping the third `.Replace` in
+        `Repoint-SharedReference` leaves `<repo>/_shared/x` in the shipped core: a
+        reference no consumer can follow, and one no scope-based gate reports.
+    """
+    repo = _synthetic_build_repo(
+        tmp_path,
+        {"vendored.md": "# vendored\n\nWorkspace doctrine.\n"},
+        "# demo core\n\nSize each step per `<repo>/_shared/vendored.md` section 1.\n")
+    out = tmp_path / "out"
+    r = _synthetic_build(repo, out)
+    assert r.returncode == 0, f"{r.stdout}\n{r.stderr}"
+    assert (out / "claude" / SHARED_DEST / "vendored.md").is_file(), \
+        "the `<repo>/_shared/<leaf>` citation did not seed the closure"
+    emitted = (out / "claude" / "demo" / "core.md").read_text(encoding="utf-8")
+    assert "`../_shared/vendored.md`" in emitted, emitted
+    assert "<repo>/_shared/" not in emitted, \
+        "the `<repo>/_shared/` build-input spelling survived into the emitted core"
+    assert (out / "claude" / "demo" / ".." / "_shared" / "vendored.md").resolve().is_file()
+
+
+def test_mistyped_repo_rooted_shared_citation_throws_the_build(tmp_path):
+    """RED-ON-GARBAGE for the Step 66 spelling: a typo must fail the build, loudly.
+
+    The positive half is covered three ways (the two tests above plus the live-tree pair
+    walk). None of them can fail if the protection itself is gone, and for THIS spelling
+    the protection is singular: `<repo>/_shared/<leaf>` is exempted from both link gates
+    by the `<>*` template-placeholder rule, so unlike `../_shared/x`, `../../_shared/x`
+    and bare `_shared/x` there is no second line of defense behind the build-time throw
+    in `Get-SharedClosure`. The decision record leans on that throw as the whole
+    replacement for D5's abandoned link-form validation, so the throw needs its own
+    anchor: without this test, deleting the `Test-Path` guard leaves every other
+    assertion in this file green while a mistyped citation ships as a reference no
+    consumer can follow.
+    """
+    repo = _synthetic_build_repo(
+        tmp_path,
+        {"vendored.md": "# vendored\n\nWorkspace doctrine.\n"},
+        # One character off: `vendoredd.md` does not exist in `_shared/`.
+        "# demo core\n\nSize each step per `<repo>/_shared/vendoredd.md` section 1.\n")
+    out = tmp_path / "out"
+    r = _synthetic_build(repo, out)
+    assert r.returncode != 0, (
+        "the builder accepted a `<repo>/_shared/<leaf>` citation whose leaf does not "
+        f"exist -- a typo in this spelling now ships green:\n{r.stdout}\n{r.stderr}")
+    combined = f"{r.stdout}\n{r.stderr}"
+    assert "shared asset source missing" in combined, (
+        "the build failed, but not with the seeding throw -- this anchor is no longer "
+        f"proving what it claims:\n{combined}")
+    assert "vendoredd.md" in combined, \
+        f"the failure does not name the missing leaf, so it is not actionable:\n{combined}"
+    # ...and the payload the citation named is not there. MEASURED ordering, recorded
+    # rather than wished for: the builder emits each skill's files BEFORE it resolves
+    # the shared closure, so a refused build does leave a partial `dist/` behind. That
+    # is safe only because the run exits non-zero and every consumer of `dist/`
+    # (`tools/release.ps1`, the installer) branches on that -- so the assertion here is
+    # the one that is actually true, not the one that sounds tidier.
+    assert not (out / "claude" / SHARED_DEST / "vendoredd.md").is_file()
+    assert not (out / "claude" / SHARED_DEST / "vendored.md").is_file(), \
+        "the closure shipped assets despite refusing one of its seeds"
 
 
 def test_shared_closure_seeds_from_the_adapter_as_well_as_the_core(tmp_path):
@@ -1032,6 +1214,167 @@ def test_gpt_frontmatter_roundtrips_quotes_and_backslashes(tmp_path):
     head = text[:text.find("\n---\n", 4)]
     assert '\\"' in head and "\\\\" in head, \
         "emitted frontmatter did not escape the quote/backslash -- test would be vacuous"
+
+
+# --------------------------------------------------------------------------- #
+# STRICT YAML frontmatter on the EMITTED profiles (Step 68, #69).
+#
+# `_parse_leading_frontmatter` above is deliberately tolerant -- it is the in-repo
+# `key: value` reader, and it happily parsed the unquoted colon-bearing `argument:`
+# value that Copilot CLI REJECTED. The gates below run the emitted bytes through a
+# real strict parser (PyYAML, a declared Environment requirement), using the same
+# contract module the canonical-source gate uses, so producer and consumer are graded
+# by ONE set of rules rather than two that drift.
+# --------------------------------------------------------------------------- #
+
+_FRONTMATTER_CONTRACT_PATH = (
+    REPO_ROOT / "tests" / "package-integrity" / "frontmatter_contract.py")
+
+
+def _frontmatter_contract():
+    """Import the ONE owner of the frontmatter contract (tests/package-integrity/
+    frontmatter_contract.py) by path -- the two suite directories are not a package.
+    Mirrors _load_gen_manifest's loader. Deliberately NOT a local copy of the rules."""
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location(
+        "frontmatter_contract_under_test", _FRONTMATTER_CONTRACT_PATH)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def _yaml_double_quoted(value):
+    """The author-side spelling of a YAML double-quoted scalar, mirroring
+    ConvertTo-YamlDoubleQuoted in build-distributions.ps1. Used to WRITE a planted
+    adapter, never to grade one -- the grading is PyYAML's."""
+    return '"' + value.replace("\\", "\\\\").replace('"', '\\"') + '"'
+
+
+# The planted values. Colon-bearing on BOTH string keys (the #69 shape), plus a
+# literal double-quote to prove escaping survives the trip, and a real boolean whose
+# identity is asserted after the round-trip.
+_PLANTED_FRONTMATTER = {
+    "name": "demo",
+    "description": 'Audits a thing: carefully, including a "quoted" clause.',
+    "user-invocable": True,
+    "argument": "Optional flags: --project <name-or-path> (default: innermost)",
+}
+
+_PLANTED_ADAPTER_BODY = (
+    "---\n"
+    f"name: {_PLANTED_FRONTMATTER['name']}\n"
+    f"description: {_yaml_double_quoted(_PLANTED_FRONTMATTER['description'])}\n"
+    "user-invocable: true\n"
+    f"argument: {_yaml_double_quoted(_PLANTED_FRONTMATTER['argument'])}\n"
+    "---\n"
+    "\n# demo adapter\n\nLoads ../core.md in full.\n"
+)
+
+
+def test_every_emitted_skill_md_frontmatter_survives_a_strict_yaml_parse(dist_root):
+    """What a host actually parses. Claude launchers pass the canonical adapter's own
+    block through verbatim; GPT launchers carry the synthesized `name`+`description`
+    block. Both must parse strictly, carry only allowlisted keys, and keep
+    `user-invocable` a real boolean."""
+    fc = _frontmatter_contract()
+    portable, native = _skill_partition()
+    expected = {"claude": len(portable) + len(native), "gpt": len(portable)}
+    allowed = {"claude": fc.CLAUDE_KEYS, "gpt": fc.GPT_KEYS}
+    failures = []
+    for profile in ("claude", "gpt"):
+        launchers = sorted((dist_root / profile).glob("*/SKILL.md"))
+        assert len(launchers) == expected[profile], (
+            f"{profile}: {len(launchers)} launchers emitted, manifest declares "
+            f"{expected[profile]} -- this gate would grade the wrong file set")
+        for path in launchers:
+            text = path.read_text(encoding="utf-8")
+            for defect in fc.frontmatter_defects(text, allowed_keys=allowed[profile]):
+                failures.append(f"{profile}/{path.parent.name}/SKILL.md: {defect}")
+    assert not failures, (
+        "emitted SKILL.md frontmatter violates the strict-YAML contract:\n  "
+        + "\n  ".join(failures))
+
+
+def test_emitted_frontmatter_gate_reds_on_an_unquoted_colon_bearing_value(dist_root):
+    """ANCHOR on REAL emitted bytes: strip the quotes the fix added to context-slim's
+    colon-bearing `argument` and the gate must go red. Without this, the check above
+    could be passing because it never actually reaches the frontmatter through the
+    provenance header that follows it."""
+    fc = _frontmatter_contract()
+    text = (dist_root / "claude" / "context-slim" / "SKILL.md").read_text(
+        encoding="utf-8")
+    assert fc.frontmatter_defects(text) == [], fc.frontmatter_defects(text)
+    block, _ = fc.split_frontmatter(text)
+    line = next(ln for ln in block.splitlines() if ln.startswith("argument:"))
+    assert ': "' in line, (
+        "context-slim's emitted `argument` is no longer quoted at the source -- the "
+        "probe below would not be planting the #69 defect")
+    unquoted = line.replace('argument: "', "argument: ").rstrip('"')
+    broken = text.replace(line, unquoted, 1)
+    assert broken != text, "the probe did not change the emitted block"
+    defects = fc.frontmatter_defects(broken)
+    assert any("not valid YAML" in d for d in defects), defects
+
+
+def test_planted_colon_bearing_pair_round_trips_in_both_profiles(tmp_path):
+    """Done-when, both halves: a planted colon-bearing `description` AND `argument`
+    reach both emitted profiles byte-intact through a STRICT parse.
+
+    The GPT half also covers build-distributions.ps1's frontmatter pass-through branch
+    (an adapter that already leads with `---` skips New-GptFrontmatter), which no
+    canonical source reaches today and which nothing tested before this step."""
+    fc = _frontmatter_contract()
+    body = _PLANTED_ADAPTER_BODY
+    repo = _synthetic_build_repo(
+        tmp_path, {}, "# demo core\n\nNo shared payload.\n",
+        adapter_body=body, gpt_adapter_body=body,
+        description="a synthesized description that must NOT appear")
+    out = tmp_path / "out"
+    r = _synthetic_build(repo, out, provider="both")
+    assert r.returncode == 0, f"{r.stdout}\n{r.stderr}"
+    for profile in ("claude", "gpt"):
+        text = (out / profile / "demo" / "SKILL.md").read_text(encoding="utf-8")
+        assert fc.frontmatter_defects(text) == [], \
+            f"{profile}: {fc.frontmatter_defects(text)}"
+        fm = fc.parse_frontmatter(text)
+        assert fm == _PLANTED_FRONTMATTER, (
+            f"{profile}: planted frontmatter did not round-trip: {fm!r} != "
+            f"{_PLANTED_FRONTMATTER!r}")
+        # Identity, not truthiness: the string 'true' would satisfy `assert fm[...]`.
+        assert fm["user-invocable"] is True, \
+            f"{profile}: user-invocable is {fm['user-invocable']!r}, not the bool True"
+        # Exactly ONE block: the pass-through branch must not stack a synthesized
+        # block on top of the adapter's own, and the provenance header sits right
+        # after the closing fence.
+        _, rest = fc.split_frontmatter(text)
+        assert rest.startswith("<!-- GENERATED FILE - DO NOT EDIT."), \
+            f"{profile}: provenance header is not immediately after the frontmatter"
+        assert fc.split_frontmatter(rest) is None, \
+            f"{profile}: a second frontmatter block was stacked on the first"
+        assert "a synthesized description that must NOT appear" not in text, \
+            f"{profile}: the builder synthesized a block over the adapter's own"
+
+
+def test_gpt_synthesized_frontmatter_survives_a_strict_yaml_parse(tmp_path):
+    """The other GPT path: New-GptFrontmatter synthesizing from a manifest description
+    that is FULL of colons. `_parse_leading_frontmatter` cannot prove this -- it would
+    accept a block a strict parser rejects. PyYAML can."""
+    fc = _frontmatter_contract()
+    raw_desc = ('Three modes: --small (default: quick wins), --big, and --uat: '
+                'pick exactly one.')
+    entry = _real_skill_entry("build-phase")
+    entry["description"] = raw_desc
+    manifest = _write_manifest(tmp_path / "mf_strict.json", [entry])
+    dist = tmp_path / "dist"
+    _build_from_manifest(dist, manifest, provider="gpt")
+
+    text = (dist / "gpt" / "build-phase" / "SKILL.md").read_text(encoding="utf-8")
+    assert fc.frontmatter_defects(text, allowed_keys=fc.GPT_KEYS) == [], \
+        fc.frontmatter_defects(text, allowed_keys=fc.GPT_KEYS)
+    assert fc.parse_frontmatter(text)["description"] == raw_desc, (
+        "colon-bearing description did not round-trip through the strict parse: "
+        f"{fc.parse_frontmatter(text)['description']!r} != {raw_desc!r}")
 
 
 def test_launcher_core_reference_is_repointed_and_resolves(dist_root):

@@ -79,8 +79,10 @@ SHA-256 every file under the generated `dist/`:
 powershell -File tools/release.ps1
 ```
 
-Regenerate the manifest (only when the legacy source or the authoritative constants change; the
-source root comes from the `SKILL_MESH_LEGACY_SOURCE` environment variable, never a committed path):
+Regenerate the manifest. **Hermetic since Step 67** — it reads nothing outside this repository, takes
+no argument and no environment variable, and reproduces `config/skill-manifest.json` plus
+`tests/package-integrity/expected_inventory.json` exactly. Re-run only when one of the authoritative
+constants in `tools/gen_manifest.py` changes:
 
 ```
 python tools/gen_manifest.py
@@ -97,7 +99,9 @@ skills/<name>/          Canonical source: core.md + providers/{claude,gpt}.md (5
 <skill>/SKILL.md        Legacy top-level packages (46) — compatibility surface during the
                         deprecation window; NOT canonical, not updated by the migration
 _shared/                Shared cores (judge-core, intake-engine), grader/verdict engines,
-                        and the README's light/dark SVG diagrams
+                        the seven vendored workspace references (Step 66 — cores cite them
+                        as `<repo>/_shared/<leaf>`, repointed to `../_shared/<leaf>` at
+                        emit time), and the README's light/dark SVG diagrams
 config/                 skill-manifest.json (inventory + eligibility), model-mapping.json,
                         model-tier-map.json
 documentation/          architecture.md (the contract), host-discovery.md, migration.md,
@@ -188,9 +192,13 @@ Current collected / passed / skipped counts for both the repo-root DONE gate and
 section deliberately restates none of them, because a count copied into a status paragraph
 is a count that drifts.
 
-(Step 45 also surfaced #69: the Claude-profile `SKILL.md` frontmatter emits `description`/`argument`
-unquoted, so a colon-bearing value fails Copilot's YAML parse — a bounded builder defect, does not
-block the cutover. #87 fixed `/repo-sync`'s hardcoded default branch in minted issue-body links; its
+(Step 45 also surfaced #69, **fixed in Phase 7.5 Step 68**: a colon-bearing `argument` value failed
+Copilot's YAML parse. It was never a builder defect — there is no Claude frontmatter builder; the
+canonical adapter's block is copied through verbatim, so the fix was to quote the value at its
+source (`skills/context-slim/providers/claude.md`), and a strict-PyYAML gate now grades both the
+canonical adapters and both emitted profiles. The same gate's key allowlist retired a live typo,
+`user-invokable` in `skills/claude-oauth-auth/providers/claude.md`, which had silently disabled
+that skill's deliberate `user-invocable: false` suppression. #87 fixed `/repo-sync`'s hardcoded default branch in minted issue-body links; its
 data-repair half is done for #56–#82, while #1–#37 still point at a plan doc that is not on any pushed
 branch of `aberson/coding-root` — a publishing gap in that repo, not a branch-name defect.)
 
@@ -211,6 +219,17 @@ populated `**Issue:**`. The plan is ready for its next unblocked step.
   and release test suites shell out to it. There is no POSIX path.
 - **Python 3 with pytest** on `PATH` (or an activated project venv). No `pyproject.toml`, no
   dependency lockfile, and no pinned interpreter is committed — supply your own.
+- **PyYAML** (`pip install pyyaml`) — the only third-party Python dependency, and test-only.
+  The frontmatter gate (`tests/package-integrity/frontmatter_contract.py`) needs a *real*
+  strict parser, because the consumer it models is one (Copilot CLI's scan of the discovery
+  roots); a hand-rolled scanner would only be this repository's *model* of YAML. Without
+  PyYAML that gate **fails loudly and by name**: 20 red tests across the two files that grade
+  frontmatter, each message naming the dependency and pointing back at this section, plus the
+  5 `tests/release` cases that assert `release.ps1` exits 0 — it re-runs the integrity check
+  inside the staged tree, so a release genuinely cannot be certified without the parser. The
+  gate does not skip (a skipped gate is a false green on the one machine nobody checked) and
+  it does not abort collection (that would erase every other test's verdict): measured at
+  1024 collected, 25 failed, **998 passed, 1 skipped** — the same single skip as a healthy run.
 - **git** — release staging is `git ls-files`-driven and fails outside a working tree.
 - **`gh` CLI** for issue/PR work.
 - **GitHub Copilot CLI, signed in via `gh auth login`**, for any GPT-side host acceptance.

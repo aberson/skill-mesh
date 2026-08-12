@@ -31,7 +31,10 @@
     every such reference is repointed to ../_shared/x. The rewrite is
     longest-token-first because '../../../_shared/' contains '../../_shared/', and it
     is NOT conditional on the skill having a core (judge-motion is core: null and
-    still cites the payload).
+    still cites the payload). A THIRD spelling, '<repo>/_shared/x', is repointed the
+    same way: it is how the ten cores cite the seven vendored workspace references
+    (Step 66), because a relative spelling of those citations would be a NEW dangling
+    reference in the shrink-only link-gate allowlist. See Repoint-SharedReference.
 
     The payload SET is the transitive closure re-walked from this profile's own
     emitted sources on every run, not a committed list, and every emitted asset is
@@ -277,7 +280,28 @@ function Repoint-SharedReference([string]$body) {
     # references (skills/judge-motion/providers/claude.md), and judge-motion is a
     # core: null skill -- so callers must NOT gate this on a core being present.
     $out = $body.Replace('../../../_shared/', '../_shared/')
-    return $out.Replace('../../_shared/', '../_shared/')
+    $out = $out.Replace('../../_shared/', '../_shared/')
+    # THIRD spelling, added in Step 66: '<repo>/_shared/<leaf>'.
+    #
+    # The seven vendored workspace references (step-authoring, task-state-schema,
+    # skill-pipeline, intake-engine, skill-role-taxonomy, worktree-hygiene,
+    # subagent-economy) are cited from ten canonical cores. Those citations CANNOT be
+    # written as '../../_shared/<leaf>': under the link gate's resolution model a
+    # skills/<n>/core.md reference is resolved against skills/, so every relative
+    # spelling of a _shared citation ESCAPES that root and is a dangling reference --
+    # and the Step 63 allowlist is SHRINK-ONLY (D7 / D-63-A), so a NEW dangling key
+    # hard-fails rather than being frozen. '<repo>/_shared/<leaf>' is the spelling this
+    # tool already uses for exactly this problem (see Get-SharedCanonicalLabel, whose
+    # header value is repo-rooted for the same reason): the angle-bracket segment is a
+    # documented template placeholder, so it is out of the reference scope of BOTH
+    # gates, while '$SHARED_REF_RE' still harvests the leaf, so a mistyped filename
+    # throws in Get-SharedClosure instead of shipping.
+    #
+    # The emitted profile is where the reference has to resolve, and here it does:
+    # '../_shared/<leaf>' from dist/<p>/<skill>/ IS in the link gate's scope and IS
+    # required to resolve, so the repoint is positively validated rather than merely
+    # unobjected-to.
+    return $out.Replace('<repo>/_shared/', '../_shared/')
 }
 
 # A BARE '_shared/x' token: the namespace named without a relative anchor. The

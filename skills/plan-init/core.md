@@ -165,7 +165,7 @@ initial description.
     match step shape` (anchors: `feedback_plan_reviewer_flags.md`,
     `feedback_runtime_reviewers_skip_on_auth_gated_substrate.md`).
   - `--ui`: add if the step needs Playwright screenshots/evidence
-- What are the natural step boundaries? (Size each step as one vertical slice — see `../../references/step-authoring.md` §1; don't over-split a coherent slice.)
+- What are the natural step boundaries? (Size each step as one vertical slice — see `<repo>/_shared/step-authoring.md` §1; don't over-split a coherent slice.)
 - **Are there any manual checks, observation periods, or operator-driven
   verifications that must happen AFTER the automated build steps complete?**
   (E.g., visual UI spot-checks against a real client; a soak test the operator
@@ -221,9 +221,9 @@ and section 6 (API Route Contract) may be omitted when genuinely not applicable.
     - **Depends on:** <step numbers, or "none">
     ```
     If no flags are needed, omit the Flags line (build-step defaults apply).
-    Size each step as one vertical slice (`../../references/step-authoring.md` §1). Phrase
+    Size each step as one vertical slice (`<repo>/_shared/step-authoring.md` §1). Phrase
     `Done when:` however makes it falsifiable — EARS (`WHEN … SHALL …`) and Given/When/Then
-    are OPTIONAL examples (`../../references/step-authoring.md` §2), never required grammar.
+    are OPTIONAL examples (`<repo>/_shared/step-authoring.md` §2), never required grammar.
     Use `Type: operator` for manual smoke tests / observation work that won't
     produce a code diff. Use `Type: wait` for long-wall-clock observation steps
     (soak tests, benchmarks). Use `Type: conditional` for steps that only run
@@ -421,7 +421,7 @@ Before writing the file, verify:
   automatable code completion with operator confirmation are split into
   `N-prep` (code) + `N` (operator). Symmetric to the operator+code-Produces
   rule above.
-- Each step is one vertical slice (fits one agent context, one observable behavior via its production caller, no "and" to describe) per `../../references/step-authoring.md` §1 — neither too big nor over-split.
+- Each step is one vertical slice (fits one agent context, one observable behavior via its production caller, no "and" to describe) per `<repo>/_shared/step-authoring.md` §1 — neither too big nor over-split.
 - If the plan has any `Type: operator` or `Type: wait` steps mixed with
   `Type: code` steps, the Build Steps section labels them under a Manual
   subsection separate from the Automated subsection, with named

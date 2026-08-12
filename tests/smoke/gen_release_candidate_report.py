@@ -128,7 +128,12 @@ def generate():
         "equal; a skill whose two adapters disagreed -- including a decoy "
         "`../core.md` substring surviving elsewhere in the file while the real "
         "declared reference pointed elsewhere -- would fail that check before "
-        "this report could be regenerated.",
+        "this report could be regenerated. The fingerprint is taken over "
+        "CONTENT, not over one checkout's byte representation: CRLF is "
+        "normalized to LF and a BOM is stripped before hashing, the same rule "
+        "the release tooling applies to the generated tree. Without that, the "
+        "hash records the line-ending configuration of whichever clone last "
+        "regenerated this file, and the gate goes red on an identical git blob.",
         "",
         "| " + " | ".join(COLUMNS) + " |",
         "|" + "|".join(["---"] * len(COLUMNS)) + "|",

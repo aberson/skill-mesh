@@ -447,8 +447,9 @@ proves the other. Discovery proof is §12.
 
 ## 9.1 Host-trace acceptance amendment (2026-08-09)
 
-For pending Steps 49 and 50, do not append the legacy `ACCEPTANCE PROBE` text
-to an installed `SKILL.md`. Claude Code 2.1.212 correctly rejects that dynamic
+In Step 49 and Step 50 — both accepted on 2026-08-09 — and in every re-run of
+this sequence since, do not append the legacy `ACCEPTANCE PROBE` text to an
+installed `SKILL.md`. Claude Code 2.1.212 correctly rejects that dynamic
 instruction as prompt injection, so a model's response is not an acceptable
 path-discovery signal.
 
@@ -464,9 +465,10 @@ after the host observations. These paths are native host output, not model
 claims.
 
 This amendment supersedes the probe append/revert instructions in this section
-for the pending runs. The remaining material below documents the historical
-rollback failure mode; it still applies to any pre-existing home where probe
-text was appended before this amendment.
+for the Step 49 and Step 50 runs it was written for and for every run since.
+The remaining material below documents the historical rollback failure mode; it
+still applies to any pre-existing home where probe text was appended before this
+amendment.
 
 ## 10. Revert the acceptance probe before any rollback
 
@@ -633,22 +635,35 @@ target `SKILL.md` to `<work-dir>/probe-preimage` → append the probe → invoke
 it is §10's restore source, and without it the only way back to the installed bytes is the
 matching file under `<dist-dir>`.
 
-### Reading Copilot's output: the one expected YAML error
+### Reading Copilot's output: a YAML error is never expected
 
-`copilot skill list` in a migrated home ends with a "failed to load" block naming
-**`context-slim`**:
+`copilot skill list` in a migrated home must end with **no** "failed to load" block at all.
+
+**Any skill named in a YAML error is a real failure — `context-slim` included.** There is no
+exempt name and no discriminator to apply: one name, ten names, or a name you have never seen,
+the verdict is the same. Record the name and the exact message and treat it as a failed
+acceptance check (§11), because it means bytes reached this home that the release gates never
+graded.
+
+This paragraph used to say the opposite. Before Step 68 of
+[`host-parity-repair-plan.md`](host-parity-repair-plan.md) (issue #69) it told you to expect
+exactly one failure, naming `context-slim`:
 
 ```
 mapping values are not allowed in this context at line 4 column 25
 ```
 
-**That one is expected and is not a failure.** `context-slim` is the single skill of 50 whose
-Claude-profile frontmatter emits an unquoted colon-bearing `argument:` value, so its YAML parse
-fails; it is a Claude-only skill Copilot never needs, and it is filed as a bounded builder
-defect (issue #69). **Any other skill named in a YAML error is a real failure** — that is the
-discriminator, and it is the only one you need: one known name, expected; any second name,
-stop. The GPT profile is unaffected — all portable skills' GPT `SKILL.md` frontmatter is
-double-quoted by the builder.
+Its canonical Claude adapter carried an unquoted colon-bearing `argument:` value, which is not
+valid YAML. That value is now quoted at its canonical source — the only place it could be
+fixed, since the build copies Claude frontmatter through verbatim and synthesizes nothing — and
+both surfaces are now gated by a strict YAML parse: the canonical adapters by
+`tests/package-integrity/test_frontmatter_yaml.py`, the emitted profiles by
+`tests/distributions/test_distributions.py`. If you are working from an older copy of this
+document, or from memory, discard the exemption: it is exactly the shape of instruction that
+talks an operator out of the one signal that something is wrong.
+
+The GPT profile has always been unaffected — every portable skill's GPT `SKILL.md` frontmatter
+is double-quoted by the builder — and is now covered by the same strict parse.
 
 Nothing in §13 or §14 runs until acceptance has recorded PASS **and §10 has reported
 `match=True` for every probed file**. A failed check triggers §11 and marks the step BLOCKED —

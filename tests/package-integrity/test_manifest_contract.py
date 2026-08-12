@@ -7,19 +7,21 @@ documentation/architecture.md.
 Design:
 - The public package tests depend on NO private/legacy source. All expected truth
   is committed in tests/package-integrity/expected_inventory.json.
-- An optional migration-source verification test re-checks the manifest's legacy
-  paths against the real READ-ONLY source, and SKIPS clearly when that source is
-  not present (resolved only from SKILL_MESH_LEGACY_SOURCE; never a private
-  absolute default).
+- Since Step 67 the GENERATOR depends on no external source either, and the last
+  section of this file is the gate that holds it there: a regeneration must
+  reproduce both committed artifacts with no environment set.
 
 Runnable via pytest (`python -m pytest tests/package-integrity`) or standalone
 (`python tests/package-integrity/test_manifest_contract.py`).
 """
 
+import importlib.util
+import inspect
 import json
 import os
 import re
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -28,6 +30,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 MANIFEST_PATH = REPO_ROOT / "config" / "skill-manifest.json"
 FIXTURE_PATH = Path(__file__).resolve().parent / "expected_inventory.json"
 ARCH_PATH = REPO_ROOT / "documentation" / "architecture.md"
+GEN_MANIFEST_PATH = REPO_ROOT / "tools" / "gen_manifest.py"
 
 CAPABILITY_VOCAB = {"filesystem", "sub-agent", "vision"}
 KEBAB = re.compile(r"^[a-z][a-z0-9]*(-[a-z0-9]+)*$")
@@ -511,30 +514,230 @@ def test_default_branch_gate_reds_on_a_planted_link(tmp_path):
 
 
 # --------------------------------------------------------------------------- #
-# Optional migration-source verification (skips if source absent)
+# Hermetic regeneration (STEP 67)
 # --------------------------------------------------------------------------- #
+# What stood here was an OPTIONAL verification that every `migration` and
+# `support_assets` path still existed under the READ-ONLY legacy root, skipped unless
+# SKILL_MESH_LEGACY_SOURCE was set. It is RETIRED, not loosened: the Step 50 consumer
+# cutover overwrote that root with this package's own installed output, so the check
+# has no reproducible source left to read. Set the variable today and it reports 47 of
+# 50 skills as missing -- a defect that lives in the retired root, not in the manifest.
+# A check whose only outcomes are "skipped" and "wrong" is not a gate.
+#
+# Its replacement asserts the property the manifest actually needs and requires
+# nothing external: the generator REPRODUCES both committed artifacts, from this
+# repository alone. That is also what makes the manifest auditable again -- before
+# Step 67 a regeneration silently rewrote 47 of 50 `support_assets` blocks, feeding
+# skill-mesh's own installed output back into skill-mesh's own manifest.
+#
+# LINE ENDINGS -- `_norm` is load-bearing, not decoration. This repository has no
+# .gitattributes and core.autocrlf=true, so ONE git blob is CRLF in a Windows checkout
+# and LF in a POSIX one. A raw byte comparison would therefore pass in one clone and
+# fail in another, which is exactly how a Step 66 gate went green in a worktree and
+# red in main (#112). Both sides are normalized here -- UTF-8 BOM stripped, then
+# CRLF/CR -> LF -- the same rule tools/release.ps1 already applies to `dist/`.
 
-def _legacy_root():
-    root = os.environ.get("SKILL_MESH_LEGACY_SOURCE")
-    return Path(root) if root else None
+
+def _norm(data: bytes) -> bytes:
+    """Strip a UTF-8 BOM, then fold CRLF/CR to LF. Applied to BOTH sides, always."""
+    if data.startswith(b"\xef\xbb\xbf"):
+        data = data[3:]
+    return data.replace(b"\r\n", b"\n").replace(b"\r", b"\n")
 
 
-def test_migration_source_files_exist():
-    root = _legacy_root()
-    if root is None or not (root / ".claude").is_dir():
-        pytest.skip("legacy source not present (set SKILL_MESH_LEGACY_SOURCE to verify)")
-    m = load_manifest()
-    missing = []
-    for s in m["skills"]:
-        for key in ("legacy_core", "legacy_claude_launcher",
-                    "legacy_claude_adapter", "legacy_gpt"):
-            val = s["migration"][key]
-            if val and not (root / val).exists():
-                missing.append(f"{s['name']}:{key} -> {val}")
-        for a in s["support_assets"]:
-            if not (root / a["source"].rstrip("/")).exists():
-                missing.append(f"{s['name']}:asset -> {a['source']}")
-    assert not missing, "legacy sources missing:\n" + "\n".join(missing)
+def _load_gen_manifest():
+    """Import tools/gen_manifest.py under a private module name, so its
+    `if __name__ == '__main__'` guard never fires."""
+    spec = importlib.util.spec_from_file_location(
+        "gen_manifest_hermetic", GEN_MANIFEST_PATH)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def test_generator_reads_no_external_source():
+    """The hermetic property itself, asserted structurally rather than by reading a
+    comment: `build()` takes no source argument, the CLI declares no arguments to
+    hand it one, and the module never touches the environment."""
+    gm = _load_gen_manifest()
+    assert list(inspect.signature(gm.build).parameters) == [], (
+        "gen_manifest.build() regained a parameter -- the only thing it ever took was "
+        "an external legacy root, which the Step 50 cutover overwrote")
+    src = GEN_MANIFEST_PATH.read_text(encoding="utf-8")
+    assert "add_argument" not in src, (
+        "gen_manifest.py's CLI declares an argument again; generation takes no input "
+        "beyond this repository")
+    assert "import os" not in src and "os.environ" not in src, (
+        "gen_manifest.py reads the environment again; the legacy-source variable is "
+        "exactly the input this generator no longer has")
+
+
+def test_build_reproduces_the_committed_manifest():
+    gm = _load_gen_manifest()
+    manifest, _ = gm.build()
+    assert _norm(gm.serialize(manifest).encode("utf-8")) == _norm(MANIFEST_PATH.read_bytes()), (
+        "config/skill-manifest.json is not what tools/gen_manifest.py produces "
+        "(line endings normalized on both sides)")
+
+
+def test_build_reproduces_the_committed_fixture():
+    gm = _load_gen_manifest()
+    _, fixture = gm.build()
+    assert _norm(gm.serialize(fixture).encode("utf-8")) == _norm(FIXTURE_PATH.read_bytes()), (
+        "expected_inventory.json is not what tools/gen_manifest.py produces "
+        "(line endings normalized on both sides)")
+
+
+def test_write_artifacts_reproduces_both_files(tmp_path):
+    """Through the real writer, not just the in-memory doc: `write_artifacts` is what
+    `main()` calls, and it is the only place the serialized text becomes bytes."""
+    gm = _load_gen_manifest()
+    gm.write_artifacts(tmp_path)
+    for rel, committed in zip(gm.ARTIFACTS, (MANIFEST_PATH, FIXTURE_PATH)):
+        written = tmp_path / rel
+        assert written.is_file(), rel
+        assert _norm(written.read_bytes()) == _norm(committed.read_bytes()), rel
+
+
+def test_cli_regenerates_both_artifacts_with_no_legacy_source_set():
+    """END-TO-END through the production entry point.
+
+    `python tools/gen_manifest.py`, with SKILL_MESH_LEGACY_SOURCE scrubbed from the
+    environment and no argument passed, must leave both committed artifacts
+    unchanged. The committed bytes are captured first and restored in `finally`, so a
+    failure reports the drift instead of leaving it in the working tree.
+    """
+    targets = (MANIFEST_PATH, FIXTURE_PATH)
+    before = {p: p.read_bytes() for p in targets}
+    env = {k: v for k, v in os.environ.items() if k != "SKILL_MESH_LEGACY_SOURCE"}
+    try:
+        r = subprocess.run([sys.executable, str(GEN_MANIFEST_PATH)],
+                           cwd=str(REPO_ROOT), env=env,
+                           capture_output=True, text=True)
+        after = {p: p.read_bytes() for p in targets}
+    finally:
+        for p, data in before.items():
+            p.write_bytes(data)
+    assert r.returncode == 0, f"generator failed: {r.stderr}"
+    drifted = [p.relative_to(REPO_ROOT).as_posix()
+               for p in targets if _norm(after[p]) != _norm(before[p])]
+    assert not drifted, (
+        "a hermetic regeneration changed committed artifact(s): " + ", ".join(drifted))
+
+
+def test_support_assets_constant_matches_the_committed_manifest():
+    """The baked constant IS the committed data, per skill and in order.
+
+    `test_build_reproduces_the_committed_manifest` would also catch a change here, but
+    only as one opaque whole-document mismatch; this names the skill.
+    """
+    gm = _load_gen_manifest()
+    committed = {s["name"]: s["support_assets"] for s in load_manifest()["skills"]}
+    assert set(gm.SUPPORT_ASSETS) == set(committed), (
+        "SUPPORT_ASSETS and the manifest disagree on the skill roster: "
+        f"{sorted(set(gm.SUPPORT_ASSETS) ^ set(committed))}")
+    for name in sorted(committed):
+        assert gm.skill_support_assets(name) == committed[name], name
+
+
+def test_judge_ui_calibration_note_is_generated_and_tracked():
+    """The one support asset that came from the legacy GPT tree.
+
+    It is the entry a naive `skills/` enumeration would erase and the entry the old
+    external scan lost once the cutover overwrote its source, so it is asserted on the
+    GENERATED side, not only on the committed one. Step 62 vendored the file itself,
+    so the declaration now resolves to a real tracked path.
+    """
+    gm = _load_gen_manifest()
+    manifest, _ = gm.build()
+    judge_ui = next(s for s in manifest["skills"] if s["name"] == "judge-ui")
+    dests = {a["dest"] for a in judge_ui["support_assets"]}
+    assert "skills/judge-ui/calibration-notes.md" in dests, (
+        "the generator dropped judge-ui's calibration note")
+    assert (REPO_ROOT / "skills" / "judge-ui" / "calibration-notes.md").is_file(), (
+        "the declared calibration note is not on disk")
+
+
+def test_derived_skill_sets_match_the_spelled_out_rosters():
+    """The 3-line guard inside `build()`, exercised on its own so a roster edited in
+    one place only is named here rather than surfacing as a generator crash."""
+    gm = _load_gen_manifest()
+    portable, native = gm.derived_skill_sets()
+    assert portable == sorted(gm.PORTABLE)
+    assert native == sorted(gm.NATIVE)
+    assert (len(portable), len(native)) == (47, 3)
+
+
+def _plant_skill_tree(root, portable=47, native=3, extras=()):
+    """A synthetic skills/ tree: `portable` dirs with providers/gpt.md, `native`
+    without, plus whatever non-skill entries the caller wants to prove are skipped."""
+    root.mkdir(parents=True, exist_ok=True)
+    for i in range(portable):
+        d = root / f"skill-{i:02d}" / "providers"
+        d.mkdir(parents=True)
+        (d / "gpt.md").write_text("x", encoding="utf-8")
+        (d / "claude.md").write_text("x", encoding="utf-8")
+    for i in range(native):
+        d = root / f"native-{i}" / "providers"
+        d.mkdir(parents=True)
+        (d / "claude.md").write_text("x", encoding="utf-8")
+    for name in extras:
+        if name.endswith("/"):
+            (root / name.rstrip("/")).mkdir()
+        else:
+            (root / name).write_text("{}", encoding="utf-8")
+
+
+def test_enumeration_skips_inventory_json_and_the_shared_namespace(tmp_path):
+    """The two gates the enumeration must apply, proven on a synthetic tree.
+
+    `p.is_dir()` keeps the generated skills/inventory.json from counting as a 51st
+    skill, and `_shared` is excluded because it is the cross-skill payload namespace,
+    not a skill. `_shared` does not exist under skills/ today, so only a planted tree
+    can exercise that branch at all -- without this the exclusion would be untested
+    code that silently stops working the day the directory lands.
+    """
+    gm = _load_gen_manifest()
+    root = tmp_path / "skills"
+    _plant_skill_tree(root, extras=("inventory.json", "_shared/"))
+    (root / "_shared" / "judge-core.md").write_text("x", encoding="utf-8")
+    portable, native = gm.derived_skill_sets(root)
+    assert (len(portable), len(native)) == (47, 3)
+    assert "inventory.json" not in portable + native
+    assert "_shared" not in portable + native
+
+
+def test_enumeration_reds_when_the_tree_disagrees_with_the_counts(tmp_path):
+    """Red-on-garbage anchor. What it can decide, stated exactly:
+
+    Every planted tree here must be REJECTED, so deleting the whole guard block reds
+    this test. Beyond that, no ONE guard can carry the block alone -- for each single
+    guard, at least one planted case slips past it: keep only the total guard and 48/2
+    slips (it sums to 50); keep only the portable guard and 47/4 slips; keep only the
+    native guard and BOTH 48/3 and 46/3 slip. Before the 48/2 case existed the other
+    three all broke the total too (51/51/49), so a total-only block passed this
+    anchor -- that is the hole 48/2 closes. The four cases do NOT each have a distinct
+    catching subset, and this docstring does not claim they do: 48/3 and 46/3 are both
+    caught by exactly {total, portable}.
+
+    What it CANNOT decide, and does not claim: deleting exactly one guard is invisible
+    to any count-based tree, because total == portable + native makes any two of the
+    three guards imply the third. That is a property of the arithmetic, not a gap a
+    fifth planted tree could close.
+
+    The guards raise ValueError, not AssertionError, precisely so `python -O` cannot
+    strip them; catching ValueError here keeps that property under test.
+    """
+    gm = _load_gen_manifest()
+    for kwargs in ({"portable": 48}, {"native": 4}, {"portable": 46},
+                   {"portable": 48, "native": 2}):
+        root = tmp_path / ("skills-" + "-".join(f"{k}{v}" for k, v in sorted(kwargs.items())))
+        _plant_skill_tree(root, **kwargs)
+        try:
+            gm.derived_skill_sets(root)
+        except ValueError:
+            continue
+        raise AssertionError(f"enumeration accepted a tree with {kwargs}")
 
 
 def _all_tests():

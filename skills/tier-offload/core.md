@@ -25,7 +25,7 @@ The offload's one governing rule (Switchboard Decision 9 / the 3-tier judge spli
 
 ### Taxonomy + classification protocol — shared reference
 
-Classification follows `../../references/skill-role-taxonomy.md`: its **§1 taxonomy** (the seven tags — ORCH / AUTHOR / PLAN / JUDGES / GATE / MECH / SOLO — plus the tag boundaries), its **§2 fan-out classification protocol**, and its **§3 output shape**. That reference is direction-neutral; this skill layers the down-direction (offload) rules on top: the four corrections below, the hard gate-precondition invariant, and the LOCAL / PRIMARY / SCRIPT verdict columns added in Phase 2.
+Classification follows `<repo>/_shared/skill-role-taxonomy.md`: its **§1 taxonomy** (the seven tags — ORCH / AUTHOR / PLAN / JUDGES / GATE / MECH / SOLO — plus the tag boundaries), its **§2 fan-out classification protocol**, and its **§3 output shape**. That reference is direction-neutral; this skill layers the down-direction (offload) rules on top: the four corrections below, the hard gate-precondition invariant, and the LOCAL / PRIMARY / SCRIPT verdict columns added in Phase 2.
 
 ### The four corrections (apply them — a naive "every fan-out → local" read is wrong)
 

@@ -24,7 +24,7 @@ existing contracts and owns ZERO triage logic of its own:
   WRAP & CLOSE / SAFE TO CLOSE), and the two-line loss report.
 - **State fields** — `current.md` format, field semantics, path resolution, and
   staleness are owned by
-  `../../references/task-state-schema.md`
+  `<repo>/_shared/task-state-schema.md`
   (cite it, never restate it).
 
 **Defect clause.** Any triage constant appearing in this file or in

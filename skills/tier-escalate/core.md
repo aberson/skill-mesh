@@ -27,7 +27,7 @@ The policy owner is the workspace model-tiering rule (`.claude/references/model-
 
 ### Taxonomy + classification protocol — shared reference
 
-Classification follows `../../references/skill-role-taxonomy.md`: its **§1 taxonomy** (the seven tags — ORCH / AUTHOR / PLAN / JUDGES / GATE / MECH / SOLO — plus the tag boundaries), its **§2 fan-out classification protocol**, and its **§3 output shape**. That reference is direction-neutral; this skill layers the up-direction (escalation) rules on top: the four up-corrections below and the FABLE-SEED / STAY / CONDITIONAL verdict columns added in Phase 2.
+Classification follows `<repo>/_shared/skill-role-taxonomy.md`: its **§1 taxonomy** (the seven tags — ORCH / AUTHOR / PLAN / JUDGES / GATE / MECH / SOLO — plus the tag boundaries), its **§2 fan-out classification protocol**, and its **§3 output shape**. That reference is direction-neutral; this skill layers the up-direction (escalation) rules on top: the four up-corrections below and the FABLE-SEED / STAY / CONDITIONAL verdict columns added in Phase 2.
 
 ### The four up-corrections (apply them — a naive "hard skill → stronger model" read is wrong)
 
