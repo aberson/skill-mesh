@@ -205,7 +205,20 @@ conclusion Step 66 reached after three rounds of fitting one more pattern to the
 had just escaped. The phrase list is a **tripwire** for one spelling that has actually shipped
 stale here, maintained by adding the next spelling that actually does.
 
-**Also cannot see — three blind spots, in the order they matter:**
+**Also cannot see — one mechanism, whose members are an OPEN class.**
+
+The mechanism is closed and decidable, and it is the thing to reason about: `strip_code_spans` blanks
+every region `fence_walk` treats as code, and `fence_walk` decides that from delimiter position and
+pairing **alone** — it is intent-blind. So any markup that makes prose look like a code region to
+that walk exempts the prose inside it, whatever the author meant.
+
+The list below is **the members we know of. It is not claimed complete, and a later-found member
+falsifies nothing here** — it is a new example of the same mechanism, and belongs in this list and in
+an anchor row. Earlier drafts of this section asserted completeness over this list twice, and were
+falsified twice, one member at a time; the quantifier was the defect, not the enumeration. Recorded
+as a decision: `dev/decisions/2026-08-11-prefer-guardrails-over-standing-human-sign-off-for.md`.
+
+**Known members, in the order they matter:**
 
 1. A stale claim **overlapping an inline backtick span** — and the exposure is wider than "a whole
    sentence someone chose to backtick", which is how the first draft of this list put it. The span
@@ -226,8 +239,15 @@ stale here, maintained by adding the next spelling that actually does.
    corpus — measured: no scanned document carries a line-initial same-line triple-backtick span —
    but it is a property of the shipped function, not a hypothetical, and it is pinned by an anchor
    in `test_stale_status_gate_reds_on_prose_and_stays_silent_on_a_citation`.
+4. A stale claim **bracketed by two ordinary triple-backtick opener lines that were each left
+   unclosed** — the everyday markdown edit mistake rather than member 3's self-closing construct.
+   Two independently unclosed openers pair into a phantom fence exactly as member 3 does, blanking
+   the prose between them, and the delimiter count stays **even**, so the fence-parity bound below
+   does not fire either. Found in the review round after member 3 was disclosed — which is what
+   demoted this list from a closed set to an open one. Strictly more reachable than member 3,
+   because it needs no unusual construct, only a mistake.
 
-All three are accepted, and all three are the price of excluding no file by name. The mitigating
+These are accepted, and they are the price of excluding no file by name. The mitigating
 claim is stated as what it is — **an assumption about how people write, not a property of the
 gate**: we are relying on nobody choosing to wrap a status sentence, or a fragment of one, in
 backticks or a fence. That assumption is exactly the kind this phase has watched fail three times,
@@ -237,7 +257,8 @@ bullet, rather than left implied.
 #### What bounds the damage — stated as what it decides, not as what it reassures
 
 `README.md` is held to a **raw-text rule with no exemption at all** (§2.3), so the front door has
-none of the three.
+none of them — and, because it parses no markup, it is immune to the whole open class rather than to
+the members listed above.
 
 The scope-floor test additionally asserts, per scanned document, that the number of lines
 `fence_walk` classifies as delimiters is **even**. That decides exactly one thing: an **odd** count,
@@ -517,7 +538,8 @@ a Nit-fixing round is how an over-claiming gate gets built. Recorded as a candid
   a citation" — dressed as a rule about markup, and it reds the legitimate table cell in §2.5's last
   rows and the whole-line citations this record itself uses. It is the same shape as the fence
   matcher declined in §2.4, one layer up: a fourth pattern fitted to the escape in front of it. The
-  exemption's cost is now stated precisely (three blind spots, each pinned by an anchor) instead of
+  exemption's cost is now stated precisely — one intent-blind mechanism, with its known members
+  listed and anchored and the list not claimed complete — instead of
   being traded for a narrower rule nobody can state the boundary of. If the exemption is ever
   revisited, the thing to change is the *surface* — which documents are held to `README.md`'s
   raw-text rule — not the definition of a code span.

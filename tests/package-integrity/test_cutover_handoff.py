@@ -1045,12 +1045,13 @@ def test_readme_points_at_the_handoff_with_the_completed_cutover_status():
 #   stale in this repository, and it is maintained by adding the next phrase that
 #   actually does.
 #
-# It also cannot see a stale claim that OVERLAPS an inline backtick span (one
-# backticked word inside the phrase is enough), nor one inside a ``` fence, nor
-# one bracketed by two line-initial same-line ``` spans that were never a fence
-# pair -- three blind spots, enumerated with their costs in `strip_code_spans`,
-# which also says why README.md is deliberately held to a stricter raw-text rule
-# that has none of them.
+# It also cannot see prose that `fence_walk` reads as a code region, because that
+# walk decides from delimiter position and pairing ALONE -- it is intent-blind.
+# The KNOWN members of that open class are enumerated with their costs in
+# `strip_code_spans`; the list is not claimed complete, and a later-found member
+# is a new example of the same mechanism rather than a broken promise. That
+# docstring also says why README.md is deliberately held to a stricter raw-text
+# rule that has none of them.
 #
 # SCOPE IS DERIVED, NEVER HAND-LISTED. `status_scanned_docs` globs the whole
 # published markdown surface with NO file excluded -- not even a plan. The
@@ -1107,7 +1108,11 @@ def strip_code_spans(text):
          check in test_status_scan_reaches_the_documents_that_carry_phase_status:
          the delimiter count stays EVEN, so a phantom pair passes it. That check
          decides an ODD count -- an unclosed fence -- and nothing more.
-    All three are accepted, and they are the price of excluding no file by name.
+    These are the KNOWN members of an open class, not a complete list: the walk is
+    intent-blind, so any markup that makes prose read as a code region exempts it.
+    A later-found member is a new example of the same mechanism, not a falsified
+    claim -- add it here and give it an anchor row. They are accepted, and they are
+    the price of excluding no file by name.
     README.md alone is additionally held to a raw-text rule with no exemption at
     all (see test_readme_points_at_the_handoff_with_the_completed_cutover_status)
     -- the front door is the one place none of them applies.
