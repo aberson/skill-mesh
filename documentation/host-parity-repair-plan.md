@@ -412,8 +412,8 @@ a test written to pass — the codifying-test-diff anti-pattern. Instead Step 63
 - **Depends on:** 62, 68 — 68 rewrites the handoff's "one expected YAML error" section (`:636-651`) and its gate (`:1241-1254`), which is doc reconciliation this step would otherwise collide with
 
 - **Status:** BLOCKED (2026-08-11) — work is committed and pushed nowhere; it sits on branch
-  `build-step-1786501444` at `1ac7ec2`, with the worktree deliberately PRESERVED at
-  `C:\Users\abero\dev\worktree_build-step-1786501444`. `main` is untouched at `d03fb2c`. **This is
+  `build-step-1786501444` at `1ac7ec2`, with its worktree deliberately PRESERVED as the
+  `worktree_build-step-1786501444` sibling of the project root. `main` is untouched at `d03fb2c`. **This is
   not a test failure** — the in-worktree full suite is **1026 passed / 1 skipped / 0 failed** and the
   two-suite gate covering both consumers of the refactored helper is 294 passed / 1 skipped. Three
   developer iterations ran against the five-arm gauntlet; the Block trend was **0 → 0 → 1**, rising
