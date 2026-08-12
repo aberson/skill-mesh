@@ -295,23 +295,30 @@ a test written to pass — the codifying-test-diff anti-pattern. Instead Step 63
 - **Done when:** a dry-run migration against a synthesized home that already contains a hand-authored `_shared/` completes without `FOREIGN_FILE` and without a `$null` dereference under `Set-StrictMode -Version Latest` (note the `$null` deref at `:712` is *latent* — `:683`'s `continue` makes it unreachable until the first-segment stop is lifted, so it only fires once this step lands); **an APPLY run, not only a dry-run** — `migrate-legacy-install.ps1:14-16` states a dry-run "mutates NOTHING", so a dry-run cannot exercise the write paths this step changes; no relative path appears in both the preserve and install action sets; no marker-bearing `_shared` file survives uninstall, **and** every non-marker `_shared` file is byte-unchanged and still appears in `BackupManifest.preserved_files` with its hash and drift advisory; convergence is asserted at the *plan* level by comparing `-Format json` action sets for run 2 vs run 3 (today `test_legacy_migration.py:604-612` compares only a tree digest, which cannot see an action-set difference); `python -m pytest` from the repo root is `>= baseline`
 - **Depends on:** 64
 - **Status:** IN PROGRESS — iteration 3 required (2026-08-10). Work is committed and pushed on branch `build-step-1786408322` (`b0651be`) and deliberately **NOT merged**. Iteration 1 (`6d0a80a`) drew 2 Block + 3 Nit from a six-lens deep review; iteration 2 (`b0651be`) is gate-green (519 passed / 2 skipped) and fixed 4 of 5 findings — independently confirmed — but an adversarial verifier **reproduced live file deletion again**. `Test-SkillMeshHeaderPreamble` (`tools/skill-mesh-provenance.ps1:94-118`) accepts an empty preamble, YAML frontmatter, or any ≤256-char prefix ending in a fence line, so consumer docs quoting the header after frontmatter, at file top, or inside a ` ```python ` fence still classify owned; `-Apply` (rc=0) deleted all three from a throwaway home's `_shared/`. The step's own regression test is green because it rejects only its own fixture shape. **The diagnosis is structural** (`.build-step/diagnosis.md`, advisory/unverified): the retire path asks "did skill-mesh *write* this file?" of a recognizer that can only answer "do these bytes *look* like ours?", and it is the only destructive operation authorized by that single consumer-forgeable signal — while uninstall already requires **two independent yeses** (ledger AND marker, `migrate-legacy-install.ps1:1092-1095`). A sound content-only recognizer is judged structurally impossible: the verified no-false-negative requirement forces accepting every emitter-output head, so a byte-identical quotation must receive the same verdict. Iteration 3 is **re-scoped** per the same-defect rule — one refactor of the shared invariant (add the ledger/dist-membership second yes, or narrow the consequence so content alone can flag but never delete), not a third patch of the predicate. **Constraint that outranks the fix:** all 211 emitted files currently read owned across LF/CRLF/BOM variants and 27 call sites show zero flips — any change that strands a real payload file is strictly worse than the defect it replaces
-- **DECIDED — the second yes is DIST-MEMBERSHIP (operator, 2026-08-12).** Iteration 3 implements the
-  two-yeses option in the one form that satisfies the constraint above *by construction*: retire
-  requires BOTH the content marker AND the file's dist-relative path being present in the current
-  `dist/<profile>/` file set. Rationale, in the order that decided it: (i) every one of the 211
-  emitted files is in the dist by definition, so no payload file can be stranded — the no-stranding
-  constraint is met structurally, not merely asserted by a test; (ii) a consumer-authored `_shared/*`
-  file becomes undeletable no matter how closely its bytes imitate an emitted header, which is
-  precisely the forgeable-signal hole the adversarial verifier walked through three times (frontmatter
-  prefix, file-top, and inside a fenced block); (iii) it mirrors uninstall's existing
-  two-independent-yeses contract at `:1092-1095`, so this is an established pattern in the same file
-  rather than a new invention. **Ledger membership was considered and rejected** as the second yes: a
-  legacy home predating the ledger carries no entries, so retire would degrade to a no-op exactly
-  where it is most needed. **Flag-but-never-delete was considered and rejected**: it moves unbounded
-  manual work onto the operator at every migration and lets orphaned payload files accumulate in
-  consumer homes. This is **not** a licence to re-patch `Test-SkillMeshHeaderPreamble` — the predicate
-  is left as it is, and the same-defect rule still forbids a third patch of it. What changes is that
-  its answer alone no longer authorizes a destructive action.
+- **DECISION REOPENED — do NOT implement a second yes until this resolves (2026-08-12).** A
+  dist-membership second yes was decided and then **retracted the same day, before any code**, when
+  the retire path was read rather than summarized. Recording the retraction and its evidence, because
+  the eliminating fact is durable and any future attempt will otherwise re-propose the same design:
+  - **Dist-membership cannot work for the loop that matters.** The retire set is built in TWO loops
+    (`:904-918`). Loop 2 iterates `$managedRels` and opens with `if ($installRels.Contains($rel)) { continue }`
+    — it considers *only* files the current distribution does **not** emit, since its purpose is
+    retiring superseded generated files. Requiring dist membership would make it dead code: retire
+    would never fire for stale files and orphans would accumulate, which Step 70's no-orphan clause
+    exists to catch. The file's own disclosure comment (`:920-926`) already states the reason — inside
+    a `_shared` directory the decision is "decided purely by the file's own CONTENT … the dist ships
+    neither answer for a path it does not emit."
+  - **The objection raised against a ledger second yes was mis-weighted.** "It degrades to a no-op in
+    a ledger-less legacy home" is true, but for loop 2 a no-op means *leaving a stale file on disk*
+    (benign), whereas the defect it replaces is *deleting a consumer's file* (not benign). The
+    asymmetry favours the ledger; it was scored backwards.
+  - **Two facts that should shape the answer, both from the code rather than this plan's summary:**
+    loop 1 (`$retiredManaged`, the retired `.copilot/skills` root) carries a *positional* signal that
+    loop 2 lacks, so one blanket rule for both is likely wrong; and `_shared/` is the only directory
+    the scan puts both populations into, so a rule scoped there may buy most of the safety at a
+    fraction of the disruption.
+  - Superseded by the evidence-backed decision from the scoped investigation that follows. The
+    same-defect rule still forbids a third patch of `Test-SkillMeshHeaderPreamble`; the predicate
+    stays, and only its authority to authorize deletion is in question.
 
 <!-- autofix-applied: 2026-08-09 -->
 ### Step 66: Vendor the seven workspace references, scrubbed and de-drifted
