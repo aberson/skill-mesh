@@ -42,10 +42,13 @@ The resolution: the import is attempted once here and its failure is RECORDED
 re-raised. Importing this module therefore always succeeds, so collection always
 succeeds. Every entry point that actually needs a parser calls `require_yaml()`
 first, which raises at CALL time -- inside a test body, where pytest reports it as a
-FAILURE. Missing PyYAML is then ~15 red tests naming the dependency, and every other
-test in the repository still reports its real verdict. The two checks in this
+FAILURE. Missing PyYAML is then a bounded set of red tests naming the dependency
+(CLAUDE.md's `## Environment requirements` owns the measured counts), and every other
+test in the repository still reports its real verdict. The three checks in this
 module's test file that need no parser (the `user-invokable` spelling scan, the
-quoted-value vacuity guard) keep passing, because their verdict is still true.
+quoted-value vacuity guard, and the GPT-adapter premise check, which short-circuits on
+`split_frontmatter` before it can reach a parse) keep passing, because their verdict
+is still true.
 
 WHAT IS DELIBERATELY OUT OF SCOPE
 ---------------------------------

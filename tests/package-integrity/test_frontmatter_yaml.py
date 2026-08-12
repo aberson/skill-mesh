@@ -363,7 +363,20 @@ def test_anchor_a_missing_parser_reds_this_gate_and_leaves_collection_standing()
     """
     # 1. IMPORTING it must not raise. This call returning at all is the proof that a
     # missing dependency cannot abort collection and erase every other test's verdict.
-    module = _contract_with_yaml_blocked()
+    # An ordinary exception is re-raised so its traceback survives; a BaseException
+    # that is NOT an Exception (pytest's own skip signal is exactly that) would be
+    # dispatched by pytest as a SKIP of this test rather than a failure, so it is
+    # converted into an explicit failure here instead of being allowed to propagate.
+    try:
+        module = _contract_with_yaml_blocked()
+    except Exception:
+        raise
+    except BaseException as exc:
+        pytest.fail(
+            f"importing the contract module with PyYAML blocked raised {exc!r}, a "
+            "BaseException that is not an Exception -- pytest reports that as a SKIP "
+            "of this anchor, not a failure, which is the exact outcome this anchor "
+            "exists to make impossible")
 
     # 2. The failure is RECORDED, and its message is actionable.
     assert module.YAML_IMPORT_ERROR is not None
@@ -377,13 +390,37 @@ def test_anchor_a_missing_parser_reds_this_gate_and_leaves_collection_standing()
 
     # 4. Everything that needs a parser reds at CALL time -- and reds as an ordinary
     # Exception. pytest's skip signal is a BaseException that is NOT an Exception, so
-    # this assertion is what distinguishes "fails loudly" from "skips quietly".
+    # the isinstance check below is what distinguishes "fails loudly" from "skips
+    # quietly".
+    #
+    # `pytest.raises(RuntimeError)` CANNOT make that distinction and must not be used
+    # here: it only suppresses exceptions matching the declared type, so a skip-shaped
+    # BaseException would sail past it, out of this test body, and be converted by
+    # pytest's own outcome dispatcher into a SKIP of the whole anchor -- with the
+    # isinstance assertion never reached. `except BaseException` catches
+    # unconditionally, which puts the pass/fail decision in the assertions below
+    # rather than in pytest's implicit Skipped-to-skip handling.
     for entry_point in (module.frontmatter_defects, module.parse_frontmatter):
-        with pytest.raises(RuntimeError) as excinfo:
+        try:
             entry_point(_GOOD)
-        assert isinstance(excinfo.value, Exception), \
-            "a missing parser must FAIL, never skip"
-        assert "PyYAML" in str(excinfo.value)
+        except BaseException as exc:
+            assert isinstance(exc, Exception), (
+                f"{entry_point.__name__} raised {exc!r} -- a BaseException that is "
+                "not an Exception. pytest reports that as a SKIP, not a FAILURE, so "
+                "a missing parser would paint this gate green on the one machine "
+                "nobody checked. It must FAIL, never skip.")
+            assert isinstance(exc, RuntimeError), (
+                f"{entry_point.__name__} raised {exc!r}, not the RuntimeError "
+                "require_yaml() promises")
+            assert "PyYAML" in str(exc)
+            assert exc.__cause__ is module._YAML_IMPORT_EXC, (
+                "the raise lost its `from _YAML_IMPORT_EXC` chain -- the original "
+                "ImportError is what tells an operator WHICH import failed")
+        else:
+            pytest.fail(
+                f"{entry_point.__name__} returned a verdict with no parser installed "
+                "-- a 'no defects' answer without a parser is an over-claim, not a "
+                "pass")
 
     # And the real module is untouched by the probe.
     assert fc.YAML_IMPORT_ERROR is None
