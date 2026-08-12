@@ -316,9 +316,60 @@ a test written to pass — the codifying-test-diff anti-pattern. Instead Step 63
     loop 2 lacks, so one blanket rule for both is likely wrong; and `_shared/` is the only directory
     the scan puts both populations into, so a rule scoped there may buy most of the safety at a
     fraction of the disruption.
-  - Superseded by the evidence-backed decision from the scoped investigation that follows. The
-    same-defect rule still forbids a third patch of `Test-SkillMeshHeaderPreamble`; the predicate
-    stays, and only its authority to authorize deletion is in question.
+  - Superseded by the evidence-backed decision below. The same-defect rule still forbids a third
+    patch of `Test-SkillMeshHeaderPreamble`; the predicate stays, and only its authority to
+    authorize deletion is in question.
+- **INVESTIGATION COMPLETE (2026-08-12) — three candidate designs falsified by measurement, one
+  survives. Recommendation: loop 2 must stop deleting.** Two adversarial rounds. Recording the
+  eliminations, because each was proposed from a plausible reading of this plan and each will be
+  re-proposed otherwise.
+  - **The problem is NOT scoped to `_shared/`, which was the second wrong guess.** `Get-DirEligibility`
+    (`:546-562`) classifies per *directory name* (manifest membership); `Get-RootScan` (`:735-741`)
+    then marks **every file at any depth** under a managed dir `$isOurs = $true` **unconditionally**,
+    with no content or dist check. Per-file classification exists only for the shared-payload branch.
+    So a consumer file at `<root>/<manifest-skill>/<anything>` reaches loop 2 with the marker as its
+    sole gate. `_shared/` is in fact the *better*-protected surface: `Test-SharedFileIsOurs`
+    (`:604-617`) already requires dist-membership OR marker at scan time.
+  - **FALSIFIED — manifest "orphaned profile entry" rule.** Measured against
+    `config/skill-manifest.json` and `build-distributions.ps1:470-472`: every skill has a claude
+    adapter, so the rule is a **total no-op under `.claude/skills`** — zero cleanup on the root where
+    the deletion reproduced. Its only firing domain is the three `core: null` provider-native names
+    under the GPT root, which the builder excludes from that profile entirely, so skill-mesh has
+    never placed them there: **every entry the rule can fire on is consumer-placed by construction.**
+  - **FALSIFIED — bulk-moving the marker-less population into `preserve` actions** (proposed as an
+    audit-gap closure). `Test-Preconditions` is kind-uniform, so drift on any action fires
+    `PRECONDITION_DRIFT` with nothing written, and a `Test-PostInstall` mismatch can escalate to
+    `failed_incomplete` exit 3 — the state Step 48 found `-Resume` and `-Rollback` both refuse. The
+    live population is ~6,669 files including `.pyc`, `.log` and `.db` under manifest-named dirs, so
+    one background test run regenerating a `.pyc` between plan and apply would abort the migration.
+    Plan-time hashing at `:976` is unguarded, so a throw there is terminating.
+  - **FALSIFIED — ledger membership as loop 2's second yes.** Three independent kills. (i) **Not in
+    scope**: the migrator's only prior-ledger read is `Get-PriorCreatedDirs` at `:944`, *after*
+    `$retires` is frozen at `:918`, and it projects `created_dirs` only — `owned_files` is never read
+    anywhere in this tool. (ii) **Not a second axis**: measured live, marker-bearing and ledger-owned
+    coincide *exactly* over the reachable population (99/99 and 96/96, zero divergence either
+    direction). Both answer "did skill-mesh ever WRITE this path", neither asks "are the CURRENT
+    bytes ours" — so a consumer who customises an installed skill (body rewritten, generated header
+    kept) passes **both**, leaving the reproduced class open. `install-skill-mesh.ps1:26-42` already
+    states the ledger is index/hint only and strictly weaker than content, so gating on it inverts
+    the tool's own precedent. (iii) **Vacuous on the primary target**: the legacy user-profile home
+    carries 58 skill directories and **no ledger**, so it degenerates to the do-nothing option there
+    anyway — while still turning the same three tests red.
+  - **SURVIVING RECOMMENDATION — narrow the CONSEQUENCE, not the predicate.** Loop 1 unchanged: its
+    second yes is real and content-independent (residence under the retired `.copilot/skills` root, a
+    path no profile installs into and no host reads). **Loop 2 never deletes**; each candidate becomes
+    a named advisory the operator acts on. This closes the destructive path structurally rather than
+    by out-predicting a forgeable signal, and it is the only option not falsified by measurement.
+  - **Costs, stated rather than discovered later.** Three currently-green tests
+    (`test_stale_generated_file_is_retired_not_blocked`,
+    `test_a_marker_bearing_shared_asset_the_dist_no_longer_ships_is_retired`, and the third named in
+    the round-2 record) must be rewritten to assert an advisory instead of a retire — a **deliberate
+    recorded behaviour change**, not a codifying test edit. After the rewrite no test exercises a
+    loop-2 retire at all, so a future loop-2 regression is invisible; superseded generated files
+    accumulate in the live tree until an operator acts. Both are accepted trade-offs against a tool
+    that provably deletes consumer files, and both need naming in the step's Done-when.
+  - **Not yet implemented — awaiting operator sign-off**, because rewriting locked test behaviour is
+    a behaviour decision rather than a defect fix.
 
 <!-- autofix-applied: 2026-08-09 -->
 ### Step 66: Vendor the seven workspace references, scrubbed and de-drifted
