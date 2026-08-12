@@ -159,10 +159,14 @@ Reuse fixed both without a new regex. Exempt as a result:
 - the **entire interior** of a fenced block, not merely its delimiter lines — a verbatim
   before/after quotation or a pasted transcript may state the phrase without reding.
 
-Not exempt, deliberately: a 4-space **indented** code block. Telling one apart from a lazy
-paragraph continuation needs block-level markdown parsing `fence_walk` does not do, and bolting a
-second, different block model onto this function would rebuild the duplication just removed. Its
-failure direction is a loud false positive, never a silent miss.
+Not exempt, deliberately: a 4-space **indented** code block, and — noted in review round 2 so a
+reader is not surprised by it — a `~~~` **tilde fence**, which `_FENCE` does not recognize as a
+delimiter at all, so a tilde-fenced verbatim quote of the phrase reds. Telling an indented block
+apart from a lazy paragraph continuation needs block-level markdown parsing `fence_walk` does not
+do, and bolting a second, different block model onto this function would rebuild the duplication
+just removed. Both failure directions are a loud false positive, never a silent miss, which is why
+"any future document that quotes the phrase correctly is covered by construction" above means
+*with backticks* — the exemption is derived from the markup this module actually reads.
 
 Consequences, all deliberate:
 
@@ -201,29 +205,85 @@ conclusion Step 66 reached after three rounds of fitting one more pattern to the
 had just escaped. The phrase list is a **tripwire** for one spelling that has actually shipped
 stale here, maintained by adding the next spelling that actually does.
 
-**Also cannot see — two blind spots, in the order they matter:**
+**Also cannot see — three blind spots, in the order they matter:**
 
-1. A stale claim written inside an **inline backtick span**. Nothing distinguishes a one-token
-   citation from a whole sentence someone chose to backtick, and the gate does not try.
+1. A stale claim **overlapping an inline backtick span** — and the exposure is wider than "a whole
+   sentence someone chose to backtick", which is how the first draft of this list put it. The span
+   is blanked and the surrounding prose closes up, so backticking any *fragment* of a banned
+   phrase — one word, one hyphen — breaks the match for the rest of the sentence. Nothing
+   distinguishes that from a one-token citation, and the gate does not try.
 2. A stale claim written inside a **fenced block**, for the same reason and over a larger span.
    This one was **widened on purpose** in review round 2, when `strip_code_spans` was moved onto
    the module's shared `fence_walk`. The previous single-line regex red on fenced prose, but that
    was a false positive on legitimate verbatim quoting, not coverage anyone could rely on — an
    author who wanted to evade the gate never needed a fence, blind spot 1 was already open and
    cheaper. The trade buys correct behaviour on citations at no honest loss.
+3. A stale claim **bracketed by two line-initial triple-backtick spans that were never a fence
+   pair**. `_FENCE` matches on line start alone, so a line that opens *and closes* a triple-backtick
+   span in one breath still toggles the walk; two such lines, written independently by authors who
+   meant neither as a fence, silently bracket everything between them as fenced interior. Found in
+   review round 2, one round after the fence-parity bound below was added. Not reachable in this
+   corpus — measured: no scanned document carries a line-initial same-line triple-backtick span —
+   but it is a property of the shipped function, not a hypothetical, and it is pinned by an anchor
+   in `test_stale_status_gate_reds_on_prose_and_stays_silent_on_a_citation`.
 
-Both are accepted, and both are the price of excluding no file by name. The mitigating claim is
-stated as what it is — **an assumption about how people write, not a property of the gate**: we are
-relying on nobody choosing to wrap a full status sentence in backticks or a fence. That assumption
-is exactly the kind this phase has watched fail three times, which is why it is written here in the
-open, in the module docstring, and in the plan's DECIDED bullet, rather than left implied.
+All three are accepted, and all three are the price of excluding no file by name. The mitigating
+claim is stated as what it is — **an assumption about how people write, not a property of the
+gate**: we are relying on nobody choosing to wrap a status sentence, or a fragment of one, in
+backticks or a fence. That assumption is exactly the kind this phase has watched fail three times,
+which is why it is written here in the open, in the module docstring, and in the plan's DECIDED
+bullet, rather than left implied.
 
-Two things bound the damage. `README.md` is held to a **raw-text rule with no exemption at all**
-(§2.3), so the front door has neither blind spot. And an **unclosed fence** — which would blank
-every line after it and silently blind the gate for the rest of that document — is a hard failure
-of the scope-floor test, so the exempt surface cannot grow without someone seeing it. Measured
-2026-08-11: all 21 scanned documents balance their fences, and the exempt surface is 218 of 6324
-lines.
+#### What bounds the damage — stated as what it decides, not as what it reassures
+
+`README.md` is held to a **raw-text rule with no exemption at all** (§2.3), so the front door has
+none of the three.
+
+The scope-floor test additionally asserts, per scanned document, that the number of lines
+`fence_walk` classifies as delimiters is **even**. That decides exactly one thing: an **odd** count,
+which is the unclosed fence that would blank every line after it and blind the gate for the rest of
+that document. It does **not** decide that the exempt surface has not grown. A well-formed fence
+wrapped around a status paragraph keeps the count even and is perfectly legal — that is blind spot 2
+working as designed — and a phantom pair (blind spot 3) keeps it even too. An even count is silent
+on whether the pairing is the one its author intended.
+
+**The previous wording here — "the exempt surface cannot grow without someone seeing it" — was
+false, and it is worth recording why rather than quietly deleting it.** It claimed the second thing
+while checking only the first. The bound had been fitted to the escape known when it was written
+(an unclosed fence), and the next escape — a phantom pair, which keeps the count even — walked past
+it in the very next review round. That is the **fourth** instance in this phase of one defect shape:
+a claim asserting more than it can decide.
+
+**A tighter fence matcher was considered and declined**, and the reasoning is the correction.
+CommonMark says a backtick fence's opening line may not contain a backtick after the delimiter run,
+so `_FENCE` could be narrowed to `` ^\s*`{3,}[^`]*$ `` and blind spot 3 would close. Declined for
+two reasons, the first decisive:
+
+- **It would not make the corrected claim true.** A well-formed closed fence still grows the exempt
+  surface silently and evenly. The sentence was over-claiming about blind spot 2, which no matcher
+  improvement touches at all, so tightening buys none of what the sentence promised.
+- **It would be a fourth pattern fitted to the third escape.** `fence_walk` would still ignore tilde
+  fences, the closing-run-length rule, blockquote and list-item containers, and indented blocks.
+  Implementing one more CommonMark rule does not make it a parser; it makes it a partial parser that
+  the next reader trusts as a whole one — and `fence_walk` is shared with `code_spans`, so the
+  change would land on five path/flag gates to close a hole in one. Step 66 reached this conclusion
+  after three rounds of the same motion (§7.1): a third fitted shape predicts a fourth escape,
+  because these are semantic classes and a matcher decides a syntactic one.
+
+Stating the boundary is the fix here. Moving it is the defect repeating.
+
+**Measured 2026-08-11 on this step's final tree — this section owns the figure.** Across the 21
+scanned documents: **7535 lines, of which 372 are exempt** (fence delimiters plus fenced
+interiors), about 4.9%. All 21 balance their fences.
+
+Two things about that figure, both learned the hard way. It is a **snapshot that ages the instant
+any scanned document is edited — including by the commit that records it**, since this record is
+itself one of the 21; so recompute rather than trust it, by summing the `fence` and `code` kinds
+`fence_walk` yields over `status_scanned_docs()`. And it lives **here only**: the test comment
+points at this section and restates none of it, because the restated copy is the one that went
+stale. An earlier draft said "218 of 6324" in both places — wrong when written, wrong in two files
+at once — and the round-2 citation sweep (§5) could not catch it, because that sweep resolves
+`file:line` citations and an aggregate count is not one.
 
 ### 2.5 Anchors — watched to fail before being believed
 
@@ -244,9 +304,14 @@ Not asserted; observed. Each was planted, the suite run, and the failure read:
 | Prose stating the phrase **after** the fence closes | RED — a fence exempts its interior, not the rest of the file |
 | A 4-space **indented** block stating the phrase | RED — indented blocks are not exempt (§2.3), the loud direction |
 | A table cell wrapping the whole claim in one backtick span | GREEN — blind spot 1, unchanged and disclosed |
+| Two independent line-initial triple-backtick spans bracketing a stale sentence | GREEN — blind spot 3, **and** the delimiter count stays even, so the scope-floor bound does not fire either (§2.4) |
+| One backticked *word* inside an otherwise-bare stale sentence | GREEN — blind spot 1 is fragment-wide, not sentence-wide (§2.4) |
 
-Every row above was re-run against the rewritten `strip_code_spans` before this record was
-updated; the six pre-existing rows all still hold, and the whole live corpus stays clean
+**Fifteen rows.** Every one was run against the shipped functions — the four document-level rows by
+planting the defect, running the suite, reading the failure and restoring the file; the eleven
+pure-function rows by calling the shipped `stale_cutover_status_defects` on fresh synthetic input
+and reading the return. The six rows that predate the `fence_walk` rewrite all still hold, the two
+added in round 3 were observed the same way as the rest, and the whole live corpus stays clean
 (21 documents scanned, 0 defects).
 
 One further data point, unplanned and worth more than the planted ones: **this record's own first
@@ -378,13 +443,22 @@ applies to gate targets, where a hand-maintained list is a false green. For ever
 map for its target, and anything whose line moved is reported. Bare `` `:N` `` citations, which
 carry their filename in surrounding prose rather than in the token, were enumerated separately by
 grepping each changed basename and reading the row. **Result: 18 individual line references across
-8 citation sites, all in `host-parity-repair-plan.md`.** Sixteen were introduced by this diff; one
-(`:1322-1354`) was already wrong before it and got worse.
+8 citation sites, all in `host-parity-repair-plan.md`.**
+
+**Counting rule**, stated because the roll-up is otherwise not reproducible by hand: one *reference*
+is one `:N` or one `:N-M` token as cited, counted **once per anchor group** — `:410` and `:417` cite
+the same three anchors from two bullets, as do `:397` and `:412`, and each group is counted at a
+single site. By that rule the eleven rows below carry 3 + 2 + 1 + 1 + 2 + 1 + 0 + 1 + 2 + 0 + 5 =
+**18**, across the eight distinct sites `:133`, `:134`, `:397`, `:405`, `:410`, `:411`, `:412`,
+`:417`. The reference at `:1322-1354` was already wrong before this diff existed and got worse; the
+rest were stale-dated by this diff's own 188-line insertion, or — for the two pre-Step-68 anchors —
+by Step 68. Which is which is in the Disposition column, deliberately not totalled again here: a
+second hand-maintained count is a second thing to drift.
 
 | Site | Cited | Actual after this step | Disposition |
 |---|---|---|---|
 | `:133` | `:1097`, `:1099-1100`, `:1095-1100` | `:1366`, `:1368-1369`, `:1364-1369` | Fixed, and anchored to `test_handoff_defers_host_acceptance_to_the_operator_steps` |
-| `:133` | handoff `:450`, `:467` | repair at `:450-452`, `:468-471` | Labelled pre-change; repair location added |
+| `:133` | handoff `:450`, `:467` | repair at `:450-452`, `:467-468` | Labelled pre-change; repair location added. Narrowed in round 3 from `:468-471`, which was accurate but swept in three lines of adjacent historical-rollback prose that the correction never touched |
 | `:134` | `test_cutover_handoff.py:1322-1354` | `:1643-1675` | Fixed, and anchored to both test names. Was already wrong at the previous commit (really `:1374-1414`) — pre-existing, not this diff's |
 | `:134` | neutral plan `:326-331` | marker now `:326-333` | Labelled pre-change; current span added |
 | `:397` | handoff `:636-651`, test `:1241-1254` | `:638-653`, `:1513-1573` | **Left as written**, labelled PRE-Step-68 — see the policy below |
@@ -393,7 +467,7 @@ grepping each changed basename and reading the row. **Result: 18 individual line
 | `:411` | cutover plan `:689` (the `47b … PENDING` row) | `:693` | Fixed, with the four-line cause named |
 | `:411` | `:1092-1100`, `:1322-1354` | `:1361-1369`, `:1643-1675` | Fixed |
 | `:412` | handoff `:636-651`, test `:1241-1254` | `:638-653`, `:1513-1573` | Fixed, and anchored to the section heading and `copilot_yaml_error_defects` |
-| `:417` | `:677,679`, `:450,467`, `:326-347` | `:677,679-683`, `:450-452,468-471`, `:326-352` | Fixed — this bullet is the as-shipped claim, so it must resolve today |
+| `:417` | `:677,679`, `:450,467`, `:326-347` | `:677,679-683`, `:450-452,467-468`, `:326-352` | Fixed — this bullet is the as-shipped claim, so it must resolve today |
 
 Verified unmoved and left alone: `host-native-discovery-cutover-plan.md:677` (replaced in place)
 and `:679` (still the first line of the corrected preamble, which now runs to `:683`);
@@ -437,3 +511,13 @@ a Nit-fixing round is how an over-claiming gate gets built. Recorded as a candid
   [`provider-expansion-plan.md`](provider-expansion-plan.md) were corrected (§4.1).
 - **It did not narrow or delete any assertion.** The `README.md`-scoped ban was kept alongside the
   wider sweep, and the sweep added assertions without removing one.
+- **It did not tighten the code-span exemption, and that is a decision, not an omission.** Review
+  round 2 recommended rejecting the exemption when a span is the whole line's content with no
+  adjacent prose. Declined: that is a heuristic for *intent* — "this looks like a claim rather than
+  a citation" — dressed as a rule about markup, and it reds the legitimate table cell in §2.5's last
+  rows and the whole-line citations this record itself uses. It is the same shape as the fence
+  matcher declined in §2.4, one layer up: a fourth pattern fitted to the escape in front of it. The
+  exemption's cost is now stated precisely (three blind spots, each pinned by an anchor) instead of
+  being traded for a narrower rule nobody can state the boundary of. If the exemption is ever
+  revisited, the thing to change is the *surface* — which documents are held to `README.md`'s
+  raw-text rule — not the definition of a code span.

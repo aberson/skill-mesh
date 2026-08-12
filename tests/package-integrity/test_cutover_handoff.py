@@ -1045,10 +1045,12 @@ def test_readme_points_at_the_handoff_with_the_completed_cutover_status():
 #   stale in this repository, and it is maintained by adding the next phrase that
 #   actually does.
 #
-# It also cannot see a stale claim written INSIDE backticks, nor one inside a
-# ``` fence -- see `strip_code_spans` for why those exclusions exist, what they
-# cost, and why README.md is deliberately held to a stricter raw-text rule that
-# has neither blind spot.
+# It also cannot see a stale claim that OVERLAPS an inline backtick span (one
+# backticked word inside the phrase is enough), nor one inside a ``` fence, nor
+# one bracketed by two line-initial same-line ``` spans that were never a fence
+# pair -- three blind spots, enumerated with their costs in `strip_code_spans`,
+# which also says why README.md is deliberately held to a stricter raw-text rule
+# that has none of them.
 #
 # SCOPE IS DERIVED, NEVER HAND-LISTED. `status_scanned_docs` globs the whole
 # published markdown surface with NO file excluded -- not even a plan. The
@@ -1085,24 +1087,38 @@ def strip_code_spans(text):
         banned phrase without reding.
 
     The cost, stated rather than hidden -- BLIND SPOTS, in the order they matter:
-      1. A stale status claim written inside a single-line backtick span is
-         invisible. Nothing distinguishes a one-token citation from a whole
-         sentence someone chose to backtick, and this gate does not try.
+      1. A stale status claim that OVERLAPS a single-line backtick span is
+         invisible, and the exposure is wider than "a whole sentence someone
+         chose to backtick". The span is blanked and the surrounding prose
+         closes up, so backticking any FRAGMENT of a banned phrase -- one word,
+         one hyphen -- breaks the match for the rest of the sentence. Nothing
+         distinguishes that from a one-token citation, and this gate does not
+         try.
       2. A stale status claim written inside a ``` fence is invisible, for the
          same reason and over a larger span. Widened deliberately when this
          function was moved onto fence_walk(); the previous single-line regex
          red on fenced prose, which was a false positive on legitimate quoting,
          not extra coverage it could be relied on for.
-    Both are accepted, and they are the price of excluding no file by name.
+      3. A stale status claim bracketed by TWO line-initial ``` spans that each
+         open AND close on their own line and were never a fence pair. _FENCE
+         matches on line-start alone, so each one toggles the walk and the real
+         prose between them reads as fenced interior. No scanned document
+         contains such a line today. Note what this does to the compensating
+         check in test_status_scan_reaches_the_documents_that_carry_phase_status:
+         the delimiter count stays EVEN, so a phantom pair passes it. That check
+         decides an ODD count -- an unclosed fence -- and nothing more.
+    All three are accepted, and they are the price of excluding no file by name.
     README.md alone is additionally held to a raw-text rule with no exemption at
     all (see test_readme_points_at_the_handoff_with_the_completed_cutover_status)
-    -- the front door is the one place neither blind spot applies.
+    -- the front door is the one place none of them applies.
 
-    NOT exempt, on purpose: a 4-space-INDENTED code block. Telling one apart from
-    a lazy paragraph continuation needs block-level markdown parsing that
-    fence_walk() deliberately does not do, and adding a second, different block
-    model here would recreate the duplication this function was just folded out
-    of. The failure direction is a loud false positive, never a silent miss.
+    NOT exempt, on purpose: a 4-space-INDENTED code block, and a ~~~ tilde fence,
+    which _FENCE does not recognize as a delimiter at all. Telling an indented
+    block apart from a lazy paragraph continuation needs block-level markdown
+    parsing that fence_walk() deliberately does not do, and adding a second,
+    different block model here would recreate the duplication this function was
+    just folded out of. Both failure directions are a loud false positive, never
+    a silent miss.
     """
     out = []
     for line, kind in fence_walk(text):
@@ -1173,9 +1189,22 @@ def test_status_scan_reaches_the_documents_that_carry_phase_status():
     # Narrowing is not only a shorter file list. strip_code_spans() blanks the
     # interior of every ``` fence, so ONE unclosed fence blinds the gate for the
     # entire remainder of that document -- silently, the dangerous direction.
-    # Measured 2026-08-11: all 21 scanned documents balance, and the blanked
-    # surface is 218 of 6324 lines. Bound it here so an unbalanced fence is a
-    # loud failure rather than a quiet loss of coverage.
+    # Bound it here so an unbalanced fence is a loud failure rather than a quiet
+    # loss of coverage.
+    #
+    # WHAT THIS ASSERTION DECIDES, stated exactly because its first spelling did
+    # not: a scanned document has an EVEN number of lines fence_walk() calls
+    # delimiters. That is the unclosed fence above, and that is all of it. It
+    # does NOT decide that the exempt surface has not grown -- a well-formed
+    # fence wrapped around a status paragraph keeps the count even and is
+    # legal, and so does a phantom pair of line-initial same-line ``` spans
+    # (blind spot 3 in strip_code_spans). An even count is silent on whether the
+    # pairing is the one the author meant.
+    #
+    # The measured size of the exempt surface is owned by
+    # documentation/step-69-doc-reconciliation-decisions.md section 2.4 and is
+    # deliberately not restated here: it was restated here once, and the copy
+    # was the one that went stale.
     for doc in docs:
         delims = sum(1 for _, kind in fence_walk(_read(doc)) if kind == "fence")
         assert delims % 2 == 0, (
@@ -1225,6 +1254,34 @@ def test_stale_status_gate_reds_on_prose_and_stays_silent_on_a_citation():
     # again, or one stray fence would blind the rest of a document.
     assert stale_cutover_status_defects(fenced + "What remains is operator-only."), \
         "prose after a closed fence is still being treated as code"
+
+    # Blind spot 1 is FRAGMENT-wide, not sentence-wide, and the docstring says so
+    # -- so pin the claim rather than only asserting it in prose. One backticked
+    # word inside an otherwise-bare stale sentence is enough: the span is blanked
+    # and the prose closes up around it.
+    fragment = "Every code step has landed. What remains is `operator`-only."
+    assert stale_cutover_status_defects(fragment) == [], \
+        "blind spot 1 is narrower than strip_code_spans' docstring claims -- " \
+        "the docstring and record section 2.4 must be re-measured"
+
+    # Blind spot 3, pinned here so the disclosure is executable rather than
+    # prose. Two line-initial ``` spans that each open AND close on their own
+    # line are not a fence pair to a reader, but _FENCE matches on line-start
+    # alone, so each toggles the walk and the prose between them is blanked.
+    # Asserted GREEN because that is what the shipped function does; if a future
+    # change makes it red, the disclosure in strip_code_spans and record section
+    # 2.4 is what has to move, not this line.
+    phantom = ("```one-token```\n\nEvery code step has landed. What remains is\n"
+               "operator-only.\n\n```another-token```\n")
+    assert stale_cutover_status_defects(phantom) == [], \
+        "blind spot 3 changed -- strip_code_spans' docstring and the decision " \
+        "record section 2.4 both describe this case and must be re-measured"
+    # ...and this is why the scope-floor bound above cannot be read as "the
+    # exempt surface cannot grow unseen": the phantom pair's delimiter count is
+    # EVEN, so that assertion stays green on exactly this input.
+    assert sum(1 for _, kind in fence_walk(phantom) if kind == "fence") % 2 == 0, \
+        "the phantom pair no longer counts even -- the scope-floor claim in " \
+        "test_status_scan_reaches_the_documents_that_carry_phase_status changed"
 
     # And it must stay silent on an unrelated document.
     assert stale_cutover_status_defects("Steps 49 and 50 were accepted 2026-08-09.") == []
