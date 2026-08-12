@@ -100,12 +100,13 @@ roll-up preamble the README gate does not read.
 So the ban's scope excluded the site of the only real instance. That is a ban in name only, and
 the step exists to settle it rather than leave it to luck.
 
-> **Authoring rule for this record: a code span must not be wrapped across a line break.** The
-> gate strips single-line backtick spans only, so a citation split by a markdown wrap reads as
-> prose and reds — which is exactly what happened on this record's first draft, at the sentence
-> immediately above. That is the Step 66 lesson repeating: a document whose subject is a banned
-> phrase is the likeliest place to carry one. The gate caught it, not review (§2.5). Keep every
-> citation of a banned phrase on one line.
+> **Authoring rule for this record: an inline code span must not be wrapped across a line break.**
+> Inline stripping is line-scoped, so a citation split by a markdown wrap reads as prose and reds —
+> which is exactly what happened on this record's first draft, at the sentence immediately above.
+> That is the Step 66 lesson repeating: a document whose subject is a banned phrase is the
+> likeliest place to carry one. The gate caught it, not review (§2.5). Keep every inline citation
+> of a banned phrase on one line; a quotation too long for that belongs in a fenced block, whose
+> interior is exempt in full (§2.3).
 
 Measured across the tree at authoring time, the phrase appeared in **three** places, not one:
 
@@ -137,10 +138,31 @@ accident would have produced either an unsatisfiable gate or a hand-cut hole.
 ### 2.3 The adopted decision
 
 The gate now scans **`README.md` + `CLAUDE.md` + `documentation/**/*.md`, with no file excluded —
-not even a plan** — and exempts single-line backtick code spans. A backticked phrase is a *citation of a
+not even a plan** — and exempts code spans. A backticked phrase is a *citation of a
 token*; prose is a *claim about status*. That distinction is derived from the markup, so any
 future document that quotes the phrase correctly is covered by construction and nobody has to
 remember to add it to a list.
+
+**"Code span" is defined once, by the module's existing primitives.** `strip_code_spans` is built
+on `fence_walk` and `_INLINE_CODE` — the same two things `code_spans` has always used for the path
+and flag sweeps — so this module has ONE answer to "what counts as code" (the workspace
+code-quality rule's "one source of truth for data-shape constants"; de-linked here, per the Step 66
+disposition for that reference). Its first draft carried a private `_CODE_SPAN_RE` instead, and
+that duplicate had **already
+drifted** in the one round it existed: it had no fence tracking, so a fenced block whose interior
+quoted the banned phrase red as prose, and its `` `[^`\n]*` `` spelling paired the two leading
+backticks of a double-backtick citation as an empty span and then red on the citation itself.
+Reuse fixed both without a new regex. Exempt as a result:
+
+- an inline span, single- **or** double-backtick — the second is the standard CommonMark idiom
+  for a span that may embed a backtick, and it is a citation like any other;
+- the **entire interior** of a fenced block, not merely its delimiter lines — a verbatim
+  before/after quotation or a pasted transcript may state the phrase without reding.
+
+Not exempt, deliberately: a 4-space **indented** code block. Telling one apart from a lazy
+paragraph continuation needs block-level markdown parsing `fence_walk` does not do, and bolting a
+second, different block model onto this function would rebuild the duplication just removed. Its
+failure direction is a loud false positive, never a silent miss.
 
 Consequences, all deliberate:
 
@@ -153,7 +175,13 @@ Consequences, all deliberate:
   does not transfer to status prose, where a plan is one of the likeliest places for a stale
   claim to sit. Reusing it would have re-created the hole being closed.
 - The old `README.md`-scoped assertion was **kept**, not replaced. It is now redundant with the
-  wider sweep; deleting it would be a narrowing, and this phase does not narrow.
+  wider sweep; deleting it would be a narrowing, and this phase does not narrow. It is also
+  **strictly stricter**: it is a raw-text check with no code-span exemption, so it reds on a
+  backticked citation the wider sweep passes. That asymmetry is now a **stated policy rather than
+  an accident** — `README.md` is the front door, and it is the one document where neither blind
+  spot in §2.4 applies. The assertion's own failure message says so, so a future editor who adds a
+  citation there is told why the two gates disagree instead of discovering it. Cite the phrase from
+  `documentation/` instead, where the exemption holds.
 
 ### 2.4 What the gate claims — and what it does not
 
@@ -173,9 +201,29 @@ conclusion Step 66 reached after three rounds of fitting one more pattern to the
 had just escaped. The phrase list is a **tripwire** for one spelling that has actually shipped
 stale here, maintained by adding the next spelling that actually does.
 
-**Also cannot see:** a stale claim written inside backticks. Accepted blind spot, stated rather
-than hidden — prose does not get written in code spans, and it is the price of excluding no file
-by name.
+**Also cannot see — two blind spots, in the order they matter:**
+
+1. A stale claim written inside an **inline backtick span**. Nothing distinguishes a one-token
+   citation from a whole sentence someone chose to backtick, and the gate does not try.
+2. A stale claim written inside a **fenced block**, for the same reason and over a larger span.
+   This one was **widened on purpose** in review round 2, when `strip_code_spans` was moved onto
+   the module's shared `fence_walk`. The previous single-line regex red on fenced prose, but that
+   was a false positive on legitimate verbatim quoting, not coverage anyone could rely on — an
+   author who wanted to evade the gate never needed a fence, blind spot 1 was already open and
+   cheaper. The trade buys correct behaviour on citations at no honest loss.
+
+Both are accepted, and both are the price of excluding no file by name. The mitigating claim is
+stated as what it is — **an assumption about how people write, not a property of the gate**: we are
+relying on nobody choosing to wrap a full status sentence in backticks or a fence. That assumption
+is exactly the kind this phase has watched fail three times, which is why it is written here in the
+open, in the module docstring, and in the plan's DECIDED bullet, rather than left implied.
+
+Two things bound the damage. `README.md` is held to a **raw-text rule with no exemption at all**
+(§2.3), so the front door has neither blind spot. And an **unclosed fence** — which would blank
+every line after it and silently blind the gate for the rest of that document — is a hard failure
+of the scope-floor test, so the exempt surface cannot grow without someone seeing it. Measured
+2026-08-11: all 21 scanned documents balance their fences, and the exempt surface is 218 of 6324
+lines.
 
 ### 2.5 Anchors — watched to fail before being believed
 
@@ -186,8 +234,20 @@ Not asserted; observed. Each was planted, the suite run, and the failure read:
 | The exact stale sentence appended to `architecture.md` — a document the old `README.md`-scoped gate could never read | RED, naming the file and the phrase |
 | The original sentence restored at its original site in `host-native-discovery-cutover-plan.md` (a `*-plan.md`) | RED — proof the widened scope would have caught the real instance |
 | `status_scanned_docs()` narrowed by reintroducing the `*-plan.md` exclusion | RED on the scope floor |
+| An **unclosed fence** appended to `migration.md` | RED on the scope floor — `assert (1 % 2) == 0`, naming the file |
 | A backticked citation of the phrase | GREEN, as intended |
 | Prose surrounding a code span on the same line | RED — stripping does not swallow neighbouring prose |
+| The phrase across a markdown line wrap, unbackticked | RED — the matcher is not line-scoped |
+| An inline citation split across a line wrap | RED — the documented cost of line-scoped inline stripping (§2.1's authoring rule) |
+| A **double-backtick** citation | GREEN — red before the `fence_walk` rewrite; this row is why it happened |
+| A **fenced** verbatim quote of the phrase | GREEN — blind spot 2, §2.4 |
+| Prose stating the phrase **after** the fence closes | RED — a fence exempts its interior, not the rest of the file |
+| A 4-space **indented** block stating the phrase | RED — indented blocks are not exempt (§2.3), the loud direction |
+| A table cell wrapping the whole claim in one backtick span | GREEN — blind spot 1, unchanged and disclosed |
+
+Every row above was re-run against the rewritten `strip_code_spans` before this record was
+updated; the six pre-existing rows all still hold, and the whole live corpus stays clean
+(21 documents scanned, 0 defects).
 
 One further data point, unplanned and worth more than the planted ones: **this record's own first
 draft reds the gate.** §2.1 cited the banned phrase inside a code span that a markdown line wrap
@@ -290,12 +350,81 @@ trusting four stale anchors. Same-cause sweep, no semantic change.
 
 One more of the same class was found and corrected while sweeping: Step 67's Problem bullet cited
 `test_distributions.py:346` for the DESCRIPTIONS assertion, which is now
-`test_manifest_description_matches_gen_manifest_source_of_truth` at `:1083-1102`; `:346` is an
-unrelated `assert INSTALL_SCRIPT.is_file()`.
+`test_manifest_description_matches_gen_manifest_source_of_truth` at `:1083-1102`. `:346` itself is
+a **blank line**; the nearest statement, `assert INSTALL_SCRIPT.is_file()` inside the unrelated
+`test_scripts_exist`, is at `:345`. An earlier draft of this record said `:346` *was* that assert —
+off by one, in the sentence whose entire subject is citation precision. Corrected after reading the
+line.
 
 ---
 
-## 5. What this step deliberately did NOT do
+## 5. The step's own diff stale-dated 18 citations — found in review, then swept mechanically
+
+The charter of this step is correcting drifted citations. Its first round **created a fresh batch
+of them**, in the same document it was correcting, by the same mechanism it had just audited five
+other files for: inserting 188 lines into
+[`../tests/package-integrity/test_cutover_handoff.py`](../tests/package-integrity/test_cutover_handoff.py)
+shifted every citation into that file below the insertion point, and rewriting five status
+paragraphs shifted citations into those documents too.
+
+Review caught **two** of the sites. That is the finding worth recording: the round-1 sweep audited
+citations *into files the step read* and never audited citations *into the files the step wrote*.
+An author checking their own work looks outward by default.
+
+So round 2 stopped hand-checking and **enumerated** — the same discipline this repository already
+applies to gate targets, where a hand-maintained list is a false green. For every file in
+`git diff <base> HEAD --name-only`, the `-U0` hunk headers give an old→new line map; every
+`<basename>:<line>` citation in every tracked `.md`/`.py`/`.ps1` file is then resolved through the
+map for its target, and anything whose line moved is reported. Bare `` `:N` `` citations, which
+carry their filename in surrounding prose rather than in the token, were enumerated separately by
+grepping each changed basename and reading the row. **Result: 18 individual line references across
+8 citation sites, all in `host-parity-repair-plan.md`.** Sixteen were introduced by this diff; one
+(`:1322-1354`) was already wrong before it and got worse.
+
+| Site | Cited | Actual after this step | Disposition |
+|---|---|---|---|
+| `:133` | `:1097`, `:1099-1100`, `:1095-1100` | `:1366`, `:1368-1369`, `:1364-1369` | Fixed, and anchored to `test_handoff_defers_host_acceptance_to_the_operator_steps` |
+| `:133` | handoff `:450`, `:467` | repair at `:450-452`, `:468-471` | Labelled pre-change; repair location added |
+| `:134` | `test_cutover_handoff.py:1322-1354` | `:1643-1675` | Fixed, and anchored to both test names. Was already wrong at the previous commit (really `:1374-1414`) — pre-existing, not this diff's |
+| `:134` | neutral plan `:326-331` | marker now `:326-333` | Labelled pre-change; current span added |
+| `:397` | handoff `:636-651`, test `:1241-1254` | `:638-653`, `:1513-1573` | **Left as written**, labelled PRE-Step-68 — see the policy below |
+| `:405` | `:965-977` | `:994-1014` | Fixed |
+| `:410` | `:677,679`, `:450,467`, `:326-347` | see `:417` | Labelled pre-change |
+| `:411` | cutover plan `:689` (the `47b … PENDING` row) | `:693` | Fixed, with the four-line cause named |
+| `:411` | `:1092-1100`, `:1322-1354` | `:1361-1369`, `:1643-1675` | Fixed |
+| `:412` | handoff `:636-651`, test `:1241-1254` | `:638-653`, `:1513-1573` | Fixed, and anchored to the section heading and `copilot_yaml_error_defects` |
+| `:417` | `:677,679`, `:450,467`, `:326-347` | `:677,679-683`, `:450-452,468-471`, `:326-352` | Fixed — this bullet is the as-shipped claim, so it must resolve today |
+
+Verified unmoved and left alone: `host-native-discovery-cutover-plan.md:677` (replaced in place)
+and `:679` (still the first line of the corrected preamble, which now runs to `:683`);
+`host-parity-repair-plan.md:132`; this record's own citations of both; and the `:679` comment
+inside `_STALE_CUTOVER_STATUS_PHRASES`.
+
+**The policy, decided here rather than improvised per row.** A line number is a pointer, and the
+question is what it points at.
+
+- A citation that makes a claim about the tree **today** — a `Done when`, a
+  `Produces (as shipped)`, a "must retain X" constraint — is re-measured and corrected. Those are
+  the rows a future builder acts on, and this repository has already paid for one of them: a stale
+  `test_manifest_contract.py:105` would have sent Step 55 at the wrong assertion (§4.1).
+- A citation inside a **completed step's** `Problem` or scope bullet describes the state that step
+  was written against. Renumbering it onto the repaired text converts a true past observation into
+  a false present claim — `:397` says its gate "will **not** notice the fix", which was true of the
+  pre-Step-68 gate and is false of the one at those lines today. Those are labelled pre-change and
+  left, with a pointer to where the replacement is cited at today's lines.
+- **Where a stable anchor exists, cite it and let the number be the convenience.** Every corrected
+  citation above now names the function, constant, or heading it points at. That is the only part
+  of this that does not need redoing after the next insertion, and it is why the fix is not just
+  new numbers.
+
+Not adopted: a mechanical gate that resolves `file:line` citations in documents. It is the obvious
+next instrument and it was considered and declined here — it needs a policy for pre-change anchors
+that a matcher cannot decide (the whole point of the second bullet above), and inventing one under
+a Nit-fixing round is how an over-claiming gate gets built. Recorded as a candidate, not shipped.
+
+---
+
+## 6. What this step deliberately did NOT do
 
 - **It did not re-litigate the retirement.** §1 records the reason; it does not reopen the
   question. That is the whole point of writing it down.

@@ -393,17 +393,33 @@ _PS1_IN_SPAN = re.compile(
 _FLAG = re.compile(r"(?<![\w:/\\.-])-([A-Za-z][A-Za-z0-9]*)")
 
 
-def code_spans(text):
-    """Every fenced-block line and every inline `code` span."""
-    spans = []
+def fence_walk(text):
+    """Every line of `text` as (line, kind): "fence" for a ``` delimiter line,
+    "code" for a line inside a fence, "prose" for everything else.
+
+    ONE fence state machine for this module (.claude/rules/code-quality.md
+    § "One source of truth"). Two consumers read it in opposite directions:
+    code_spans() COLLECTS the code, strip_code_spans() REMOVES it. The second
+    consumer originally carried its own single-line regex and no fence tracking
+    at all, and that duplicate had already drifted -- a fenced block whose
+    interior stated a banned phrase read as prose. Reuse, not a second copy.
+    """
     in_fence = False
     for line in text.splitlines():
         if _FENCE.match(line):
             in_fence = not in_fence
+            yield line, "fence"
             continue
-        if in_fence:
+        yield line, ("code" if in_fence else "prose")
+
+
+def code_spans(text):
+    """Every fenced-block line and every inline `code` span."""
+    spans = []
+    for line, kind in fence_walk(text):
+        if kind == "code":
             spans.append(line)
-        else:
+        elif kind == "prose":
             spans.extend(_INLINE_CODE.findall(line))
     return spans
 
@@ -986,8 +1002,16 @@ def test_readme_points_at_the_handoff_with_the_completed_cutover_status():
         "README does not identify the closed acceptance/cutover issues"
     assert "step 48 is done" in low, \
         "README no longer records the completed handoff status"
-    assert "what remains is operator-only" not in low, \
-        "README still presents completed host acceptance as pending"
+    # Deliberately STRICTER than the widened sweep below, and kept rather than
+    # folded into it. This is a raw-text check with NO code-span exemption, so
+    # README.md is the one document where neither of strip_code_spans()' blind
+    # spots applies: the front door may not carry the phrase at all, not even
+    # backticked. Cite it from documentation/ instead -- there the exemption
+    # holds. Recorded at step-69-doc-reconciliation-decisions.md section 2.3.
+    assert "what remains is operator-only" not in low, (
+        "README still presents completed host acceptance as pending -- note "
+        "README.md is held to the raw-text rule, so even a backticked CITATION "
+        "of the phrase reds here while it stays green under the wider sweep")
 
 
 # --------------------------------------------------------------------------- #
@@ -1004,8 +1028,10 @@ def test_readme_points_at_the_handoff_with_the_completed_cutover_status():
 #
 # WHAT THIS GATE CAN DECIDE -- and it is narrow, on purpose:
 #   Every phrase in `_STALE_CUTOVER_STATUS_PHRASES` is absent from the PROSE of
-#   every README.md + documentation/**/*.md file. That is a syntactic question
-#   about literal strings and it is fully decidable.
+#   every README.md + CLAUDE.md + documentation/**/*.md file -- the surface
+#   status_scanned_docs() returns, stated here in full because an under-stated
+#   scope comment is the same class of defect as an over-stated one. That is a
+#   syntactic question about literal strings and it is fully decidable.
 #
 # WHAT IT CANNOT DECIDE, and must never be read as certifying:
 #   Whether any document presents completed Phase 7 cutover-path work (Steps
@@ -1019,8 +1045,10 @@ def test_readme_points_at_the_handoff_with_the_completed_cutover_status():
 #   stale in this repository, and it is maintained by adding the next phrase that
 #   actually does.
 #
-# It also cannot see a stale claim written INSIDE backticks -- see
-# `strip_code_spans` for why that exclusion exists and what it costs.
+# It also cannot see a stale claim written INSIDE backticks, nor one inside a
+# ``` fence -- see `strip_code_spans` for why those exclusions exist, what they
+# cost, and why README.md is deliberately held to a stricter raw-text rule that
+# has neither blind spot.
 #
 # SCOPE IS DERIVED, NEVER HAND-LISTED. `status_scanned_docs` globs the whole
 # published markdown surface with NO file excluded -- not even a plan. The
@@ -1036,11 +1064,8 @@ _STALE_CUTOVER_STATUS_PHRASES = (
     "what remains is operator-only",
 )
 
-_CODE_SPAN_RE = re.compile(r"`[^`\n]*`")
-
-
 def strip_code_spans(text):
-    """Blank every single-line backtick span, leaving only prose.
+    """`text` with every code span blanked, leaving only prose.
 
     A backticked phrase is a CITATION of a token, not a claim about status. Two
     documents legitimately quote the banned phrase in order to specify the ban
@@ -1049,15 +1074,40 @@ def strip_code_spans(text):
     code spans is a rule about markup meaning, not a hole cut for named files: it
     is derived from the text, so a future citation is covered by construction.
 
-    The cost, stated rather than hidden: a stale status claim written inside
-    backticks is invisible to this gate. That is an accepted, deliberate blind
-    spot -- prose does not get written in code spans -- and it is the price of not
-    excluding whole files by name.
+    Built on fence_walk() and _INLINE_CODE -- the same primitives code_spans()
+    uses -- so "what counts as code" has one definition in this module. Two
+    consequences of that reuse, both intended:
+      * A ``double-backtick`` citation is exempt. The inner pair matches, so the
+        standard CommonMark idiom for a span that may embed a backtick no longer
+        reds as prose.
+      * The whole INTERIOR of a ``` fence is exempt, not just its delimiter
+        lines. A fenced transcript or a verbatim before/after example may quote a
+        banned phrase without reding.
 
-    Triple-backtick fences degrade harmlessly: the pattern is single-line, so it
-    consumes the leading pair of a ``` fence and leaves the fenced body as prose.
+    The cost, stated rather than hidden -- BLIND SPOTS, in the order they matter:
+      1. A stale status claim written inside a single-line backtick span is
+         invisible. Nothing distinguishes a one-token citation from a whole
+         sentence someone chose to backtick, and this gate does not try.
+      2. A stale status claim written inside a ``` fence is invisible, for the
+         same reason and over a larger span. Widened deliberately when this
+         function was moved onto fence_walk(); the previous single-line regex
+         red on fenced prose, which was a false positive on legitimate quoting,
+         not extra coverage it could be relied on for.
+    Both are accepted, and they are the price of excluding no file by name.
+    README.md alone is additionally held to a raw-text rule with no exemption at
+    all (see test_readme_points_at_the_handoff_with_the_completed_cutover_status)
+    -- the front door is the one place neither blind spot applies.
+
+    NOT exempt, on purpose: a 4-space-INDENTED code block. Telling one apart from
+    a lazy paragraph continuation needs block-level markdown parsing that
+    fence_walk() deliberately does not do, and adding a second, different block
+    model here would recreate the duplication this function was just folded out
+    of. The failure direction is a loud false positive, never a silent miss.
     """
-    return _CODE_SPAN_RE.sub(" ", text)
+    out = []
+    for line, kind in fence_walk(text):
+        out.append(_INLINE_CODE.sub(" ", line) if kind == "prose" else " ")
+    return "\n".join(out)
 
 
 def stale_cutover_status_defects(text, label=""):
@@ -1120,6 +1170,19 @@ def test_status_scan_reaches_the_documents_that_carry_phase_status():
         assert required in names, \
             f"status scan no longer reaches {required} -- scope was narrowed"
 
+    # Narrowing is not only a shorter file list. strip_code_spans() blanks the
+    # interior of every ``` fence, so ONE unclosed fence blinds the gate for the
+    # entire remainder of that document -- silently, the dangerous direction.
+    # Measured 2026-08-11: all 21 scanned documents balance, and the blanked
+    # surface is 218 of 6324 lines. Bound it here so an unbalanced fence is a
+    # loud failure rather than a quiet loss of coverage.
+    for doc in docs:
+        delims = sum(1 for _, kind in fence_walk(_read(doc)) if kind == "fence")
+        assert delims % 2 == 0, (
+            f"{doc.relative_to(REPO_ROOT).as_posix()} has {delims} ``` fence "
+            "delimiters -- an unclosed fence makes strip_code_spans blank every "
+            "line after it, so the stale-status gate goes blind there")
+
 
 def test_stale_status_gate_reds_on_prose_and_stays_silent_on_a_citation():
     # ANCHOR: watched to go red on a planted defect before being believed. Pure
@@ -1144,6 +1207,24 @@ def test_stale_status_gate_reds_on_prose_and_stays_silent_on_a_citation():
     assert stale_cutover_status_defects(
         "see `:679` -- what remains is operator-only, per the roll-up"), \
         "code-span stripping ate the surrounding prose"
+
+    # A ``double-backtick`` citation is the CommonMark idiom for a span that may
+    # embed a backtick. It is a citation like any other and must stay green --
+    # the single-line regex this function replaced red on it.
+    double = "the ban names ``what remains is operator-only`` verbatim."
+    assert stale_cutover_status_defects(double) == [], \
+        "a double-backtick citation reds -- the strip is not fence_walk-based"
+
+    # A ``` fence quoting the phrase verbatim is code, not a claim. Exempt for
+    # the same reason, over a larger span; blind spot 2 in strip_code_spans.
+    fenced = "Before:\n\n```\nWhat remains is operator-only.\n```\n\nAfter: done.\n"
+    assert stale_cutover_status_defects(fenced) == [], \
+        "a fenced verbatim quote reds -- fence interiors are not being stripped"
+
+    # ...but the fence must CLOSE. Prose after the closing delimiter is prose
+    # again, or one stray fence would blind the rest of a document.
+    assert stale_cutover_status_defects(fenced + "What remains is operator-only."), \
+        "prose after a closed fence is still being treated as code"
 
     # And it must stay silent on an unrelated document.
     assert stale_cutover_status_defects("Steps 49 and 50 were accepted 2026-08-09.") == []
