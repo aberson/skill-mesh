@@ -6,9 +6,14 @@
 > consumer home has.
 > Two adaptations apply throughout: citations to workspace documents that are **not** part
 > of this payload are rendered as plain names rather than links (their targets do not ship
-> here), and operator-specific identifiers, private issue/cron references and
-> harness-configuration paths have been removed. The per-file sign-off and the full list of
-> link dispositions are recorded in this repository's Step 66 decision record.
+> here), and the private *values* of three classes (operator-specific identifiers, issue
+> and cron references, and harness-configuration paths) were removed or replaced with a
+> de-identified description. That is what this notice claims and the whole of it: some
+> references to those artifacts survive deliberately in de-identified form where the
+> surrounding contract needs them, no class is certified exhaustively absent, and a
+> residual is a defect to report rather than a contradiction of this notice. The per-file
+> sign-off, recorded with the full list of link dispositions in this repository's Step 66
+> decision record, is the only class-level authority.
 
 This file is the routing web: the 8 rails an operator fragment can land on (entry
 condition + skill chain), the re-route edges between them, and the re-route contract.

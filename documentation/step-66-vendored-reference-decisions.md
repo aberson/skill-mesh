@@ -180,6 +180,18 @@ de-linked (§4). Verified clean under all six leak patterns, including the new h
   is *named private infrastructure* (a cron job, a settings file, a private repo's issue
   numbers) versus *a skill's public name*.
 * **M** — none.
+* **H — UNCOVERED. Found 2026-08-12, after this sign-off, and NOT part of it.** The
+  `investigate` rail's dispatch cell names a harness workflow *registration* name, forbids the
+  host's built-in fallback, and cites a rule document that does not ship here. By the
+  distinction this row itself draws one bullet above, that is named private infrastructure
+  rather than a skill's public name, so it warranted either a scrub or a deliberate retention
+  with a stated reason; it received neither, and no other class row covers it. Left in place:
+  the fix is a behavioural change to the rail (a consumer has no such registration and the
+  documented fallback is prohibited), not a wording edit, so it belongs to its own issue rather
+  than to a correction pass. The same identifier is already published in a canonical core
+  outside this vendoring's charter, so this is a coverage gap in the sign-off, not a new
+  disclosure. The vendor header carried by all seven payload files was corrected the same day
+  to stop asserting that this class is exhaustively removed.
 
 ### `intake-engine.md` — **SCRUBBED (4 edits)**
 * **X/H** — a harness skill-tree path for the `user-gateway` contract, carrying a

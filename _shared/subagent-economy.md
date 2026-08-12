@@ -6,9 +6,14 @@
 > consumer home has.
 > Two adaptations apply throughout: citations to workspace documents that are **not** part
 > of this payload are rendered as plain names rather than links (their targets do not ship
-> here), and operator-specific identifiers, private issue/cron references and
-> harness-configuration paths have been removed. The per-file sign-off and the full list of
-> link dispositions are recorded in this repository's Step 66 decision record.
+> here), and the private *values* of three classes (operator-specific identifiers, issue
+> and cron references, and harness-configuration paths) were removed or replaced with a
+> de-identified description. That is what this notice claims and the whole of it: some
+> references to those artifacts survive deliberately in de-identified form where the
+> surrounding contract needs them, no class is certified exhaustively absent, and a
+> residual is a defect to report rather than a contradiction of this notice. The per-file
+> sign-off, recorded with the full list of link dispositions in this repository's Step 66
+> decision record, is the only class-level authority.
 
 The dominant token cost in this workspace is **resident orchestrator context**, not subagent fan-out. A heavy `/build-phase` window rides one session for hundreds to thousands of turns and pins near its context ceiling; **the large majority of a long window's token cost is incurred at high context**. Two leaks dominate such a window: `tool_result` is the largest single share of it, split about evenly between **`Agent` returns (sub-agents returning whole reports instead of a verdict)** and **`Read` (orchestrators reading files inline a sub-agent should read)**. Both are resident *forever* once they land. Two disciplines fix it, at zero independence/correctness cost.
 
