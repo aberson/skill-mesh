@@ -219,13 +219,17 @@ populated `**Issue:**`. The plan is ready for its next unblocked step.
   and release test suites shell out to it. There is no POSIX path.
 - **Python 3 with pytest** on `PATH` (or an activated project venv). No `pyproject.toml`, no
   dependency lockfile, and no pinned interpreter is committed — supply your own.
-- **PyYAML** (`pip install pyyaml`) — the only third-party Python dependency. The frontmatter
-  gate (`tests/package-integrity/frontmatter_contract.py`) imports it **hard**, so a missing
-  PyYAML is a loud collection error rather than a skip. That is deliberate: the consumer that
-  gate models is a real strict YAML parser (Copilot CLI's scan of the discovery roots), a
-  hand-rolled scanner would only be this repository's *model* of YAML, and
-  `pytest.importorskip` would turn the gate into a silent skip on exactly the machine that
-  needs it.
+- **PyYAML** (`pip install pyyaml`) — the only third-party Python dependency, and test-only.
+  The frontmatter gate (`tests/package-integrity/frontmatter_contract.py`) needs a *real*
+  strict parser, because the consumer it models is one (Copilot CLI's scan of the discovery
+  roots); a hand-rolled scanner would only be this repository's *model* of YAML. Without
+  PyYAML that gate **fails loudly and by name**: 20 red tests across the two files that grade
+  frontmatter, each message naming the dependency and pointing back at this section, plus the
+  5 `tests/release` cases that assert `release.ps1` exits 0 — it re-runs the integrity check
+  inside the staged tree, so a release genuinely cannot be certified without the parser. The
+  gate does not skip (a skipped gate is a false green on the one machine nobody checked) and
+  it does not abort collection (that would erase every other test's verdict): measured at
+  1024 collected, 25 failed, **998 passed, 1 skipped** — the same single skip as a healthy run.
 - **git** — release staging is `git ls-files`-driven and fails outside a working tree.
 - **`gh` CLI** for issue/PR work.
 - **GitHub Copilot CLI, signed in via `gh auth login`**, for any GPT-side host acceptance.

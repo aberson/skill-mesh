@@ -14,8 +14,8 @@ two that drift:
     (.claude/rules/code-quality.md, "One source of truth for data-shape
     constants").
 
-WHY A REAL YAML PARSER, HARD-IMPORTED
--------------------------------------
+WHY A REAL YAML PARSER, AND WHY A MISSING ONE FAILS AT CALL TIME
+----------------------------------------------------------------
 The consumer this contract models is a strict YAML parser -- GitHub Copilot CLI's
 scan of the Claude discovery root, which rejected `context-slim` outright
 ("mapping values are not allowed in this context") because an unquoted
@@ -24,11 +24,28 @@ be this repository's *model* of YAML, and any gap between that model and the rea
 parser is a gate that says PASS on bytes the host rejects -- an over-claiming gate,
 which is worse than no gate at all.
 
-So PyYAML is imported HARD, and declared in CLAUDE.md's Environment requirements
-beside Python/pytest. `pytest.importorskip("yaml")` is deliberately NOT used: it
-would turn this gate into a silent skip on any machine without PyYAML, and a suite
-whose baseline carries one skip cannot see a second one appear. A missing
-dependency must ERROR loudly at collection.
+So PyYAML is a real dependency, declared in CLAUDE.md's Environment requirements
+beside Python/pytest. Its absence has to be LOUD *and* SCOPED, and those pull in
+opposite directions if you reach for either obvious answer:
+
+  * pytest's import-or-skip helper is a SILENT skip. This suite's baseline carries
+    exactly one skip, so a second one appears in no summary line anyone reads, and
+    the machine that skips the gate is precisely the machine nobody checked.
+  * A hard top-level `import yaml` is loud but UNSCOPED. Nothing in this repository
+    passes `--continue-on-collection-errors`, so one un-importable module aborts the
+    whole session: `Interrupted: 1 error during collection`, exit 1, and ~1004
+    unrelated tests report neither pass nor fail. A dead suite carries strictly less
+    information than a red one.
+
+The resolution: the import is attempted once here and its failure is RECORDED
+(`yaml is None`, `YAML_IMPORT_ERROR` holds the operator-facing message) instead of
+re-raised. Importing this module therefore always succeeds, so collection always
+succeeds. Every entry point that actually needs a parser calls `require_yaml()`
+first, which raises at CALL time -- inside a test body, where pytest reports it as a
+FAILURE. Missing PyYAML is then ~15 red tests naming the dependency, and every other
+test in the repository still reports its real verdict. The two checks in this
+module's test file that need no parser (the `user-invokable` spelling scan, the
+quoted-value vacuity guard) keep passing, because their verdict is still true.
 
 WHAT IS DELIBERATELY OUT OF SCOPE
 ---------------------------------
@@ -66,15 +83,43 @@ from __future__ import annotations
 import re
 from collections import Counter
 
+# The import is ATTEMPTED here and its failure RECORDED, never re-raised -- so
+# importing this module always succeeds and collection can never abort on it.
+# `YAML_IMPORT_ERROR` is None when PyYAML is present, and otherwise holds the
+# operator-facing message that require_yaml() raises at call time.
 try:
     import yaml
-except ImportError as exc:  # pragma: no cover -- environment defect, not a skip
-    raise ImportError(
-        "PyYAML is required by this repository's frontmatter gate and is declared "
-        "in CLAUDE.md's Environment requirements (`pip install pyyaml`). This is "
-        "an intentionally HARD import: skipping the gate would hide the exact "
-        "defect class it exists to catch (issue #69)."
-    ) from exc
+except ImportError as _exc:  # pragma: no cover -- exercised by an absent-PyYAML run
+    yaml = None
+    _YAML_IMPORT_EXC = _exc
+    YAML_IMPORT_ERROR = (
+        "PyYAML is not importable, so this repository's strict-YAML frontmatter gate "
+        "cannot render a verdict. Install it (`pip install pyyaml`): it is declared "
+        "in CLAUDE.md's `## Environment requirements` section beside Python/pytest, "
+        "and this repository ships no pyproject.toml and no lockfile, so the "
+        "interpreter's packages are yours to supply. "
+        f"The underlying import error was: {_exc}. "
+        "This is a FAILURE and never a skip -- a skipped gate would paint the exact "
+        "defect class it exists to catch (issue #69) green on the one machine that "
+        "was never checked. It is raised at CALL time rather than at import time so "
+        "that a missing dependency reds only the checks that need a parser, instead "
+        "of aborting collection and erasing every other test's verdict."
+    )
+else:
+    _YAML_IMPORT_EXC = None
+    YAML_IMPORT_ERROR = None
+
+
+def require_yaml():
+    """Raise (loudly, at CALL time) when PyYAML is missing; else return the module.
+
+    Called by every entry point below that needs a real parser. Deliberately NOT
+    called at import time -- see this module's docstring: an import-time raise takes
+    collection down with it, and a dead suite says less than a red one.
+    """
+    if yaml is None:
+        raise RuntimeError(YAML_IMPORT_ERROR) from _YAML_IMPORT_EXC
+    return yaml
 
 
 # The canonical Claude adapter vocabulary. Closed on purpose: an unknown key is a
@@ -152,8 +197,11 @@ def frontmatter_defects(text, allowed_keys=CLAUDE_KEYS, required=REQUIRED_KEYS):
 
     Returns a list of human-readable defect strings; an EMPTY list means the block
     satisfies every rule in this module's docstring. Never raises on bad input --
-    a YAML error is a reported defect, so one bad file cannot mask the others.
+    a YAML error is a reported defect, so one bad file cannot mask the others. It
+    DOES raise on a missing parser, which is an environment defect and not a verdict
+    about `text`: reporting "no defects" without a parser would be an over-claim.
     """
+    require_yaml()
     defects = []
     split = split_frontmatter(text)
     if split is None:
@@ -227,8 +275,10 @@ def parse_frontmatter(text):
     """The parsed mapping, or None when there is no well-formed leading block.
 
     Callers that need the VALUES (round-trip assertions) use this; callers that
-    need the VERDICT use frontmatter_defects().
+    need the VERDICT use frontmatter_defects(). Raises when PyYAML is missing --
+    returning None would be indistinguishable from "this file has no block".
     """
+    require_yaml()
     split = split_frontmatter(text)
     if split is None:
         return None

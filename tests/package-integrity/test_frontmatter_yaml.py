@@ -22,17 +22,22 @@ Every assertion has an anchor test that plants the corresponding defect and prov
 this gate goes RED on it (.claude/rules/measurement-validity.md -- a gate never seen
 red is not a gate).
 
+The strict parser is PyYAML, a declared Environment requirement. When it is absent
+this file goes RED and says so by name -- it never skips (a skip is a false green)
+and it never breaks collection (that would erase ~1004 unrelated tests' verdicts).
+frontmatter_contract.require_yaml() is what makes that possible; its docstring owns
+the reasoning.
+
 Run: `python -m pytest tests/package-integrity/test_frontmatter_yaml.py`
 """
 
+import importlib.util
+import sys
 from pathlib import Path
 
-from frontmatter_contract import (
-    CLAUDE_KEYS,
-    frontmatter_defects,
-    parse_frontmatter,
-    split_frontmatter,
-)
+import pytest
+
+import frontmatter_contract as fc
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SKILLS_ROOT = REPO_ROOT / "skills"
@@ -64,6 +69,24 @@ def _read(path):
 
 
 # --------------------------------------------------------------------------- #
+# The dependency this gate is only as good as
+# --------------------------------------------------------------------------- #
+
+def test_the_strict_yaml_parser_this_gate_depends_on_is_installed():
+    """Named, first, and a FAILURE -- so a machine without PyYAML learns it from a
+    red line rather than from a skip nobody reads or a collection abort that takes
+    the rest of the suite's verdict with it.
+
+    Every check below that calls the parser reds with this same message via
+    frontmatter_contract.require_yaml(); this one exists so the summary names the
+    cause once, unambiguously, instead of leaving the reader to infer it from
+    fifteen downstream tracebacks.
+    """
+    assert fc.YAML_IMPORT_ERROR is None, fc.YAML_IMPORT_ERROR
+    assert fc.require_yaml() is not None
+
+
+# --------------------------------------------------------------------------- #
 # The live tree
 # --------------------------------------------------------------------------- #
 
@@ -76,7 +99,7 @@ def test_every_canonical_claude_adapter_frontmatter_satisfies_the_contract():
         f"floor is {MIN_CLAUDE_ADAPTERS} -- every check below would be vacuous")
     failures = []
     for path in adapters:
-        for defect in frontmatter_defects(_read(path), allowed_keys=CLAUDE_KEYS):
+        for defect in fc.frontmatter_defects(_read(path), allowed_keys=fc.CLAUDE_KEYS):
             failures.append(f"{_rel(path)}: {defect}")
     assert not failures, (
         "canonical Claude frontmatter violates the strict-YAML contract:\n  "
@@ -95,10 +118,10 @@ def test_canonical_gpt_adapters_carry_no_frontmatter_and_are_graded_if_they_grow
     with_block = []
     for path in adapters:
         text = _read(path)
-        if split_frontmatter(text) is None:
+        if fc.split_frontmatter(text) is None:
             continue
         with_block.append(_rel(path))
-        for defect in frontmatter_defects(text):
+        for defect in fc.frontmatter_defects(text):
             failures.append(f"{_rel(path)}: {defect}")
     assert not failures, (
         "a canonical GPT adapter grew frontmatter that violates the contract:\n  "
@@ -118,7 +141,7 @@ def test_user_invocable_is_a_real_boolean_and_the_suppression_is_pinned():
     declared_true = []
     declared_false = []
     for path in _claude_adapters():
-        fm = parse_frontmatter(_read(path))
+        fm = fc.parse_frontmatter(_read(path))
         assert fm is not None, f"{_rel(path)}: frontmatter did not parse"
         if "user-invocable" not in fm:
             continue
@@ -160,9 +183,9 @@ def test_the_colon_bearing_value_that_broke_copilot_now_parses():
     be the fix applied twice)."""
     path = SKILLS_ROOT / "context-slim" / "providers" / "claude.md"
     text = _read(path)
-    assert frontmatter_defects(text, allowed_keys=CLAUDE_KEYS) == [], \
-        frontmatter_defects(text, allowed_keys=CLAUDE_KEYS)
-    fm = parse_frontmatter(text)
+    assert fc.frontmatter_defects(text, allowed_keys=fc.CLAUDE_KEYS) == [], \
+        fc.frontmatter_defects(text, allowed_keys=fc.CLAUDE_KEYS)
+    fm = fc.parse_frontmatter(text)
     argument = fm["argument"]
     assert ": " in argument, (
         "context-slim's `argument` no longer carries a colon -- it was this "
@@ -180,7 +203,7 @@ def test_at_least_one_canonical_value_is_quoted_so_the_no_double_quoting_rule_bi
     "already-quoted values are not quoted again" assertion never exercises anything."""
     quoted = []
     for path in _claude_adapters():
-        block, _ = split_frontmatter(_read(path))
+        block, _ = fc.split_frontmatter(_read(path))
         for line in block.splitlines():
             if ": \"" in line:
                 quoted.append(_rel(path))
@@ -208,8 +231,8 @@ _GOOD = (
 def test_anchor_the_contract_accepts_a_quoted_colon_bearing_pair():
     """Positive control. Without it, every anchor below could be passing because the
     checker reports a defect on EVERYTHING."""
-    assert frontmatter_defects(_GOOD) == [], frontmatter_defects(_GOOD)
-    fm = parse_frontmatter(_GOOD)
+    assert fc.frontmatter_defects(_GOOD) == [], fc.frontmatter_defects(_GOOD)
+    fm = fc.parse_frontmatter(_GOOD)
     assert fm["description"] == "Does a thing: carefully, with a colon."
     assert fm["argument"] == \
         "Optional flags: --project <name-or-path> (default: innermost)"
@@ -220,7 +243,7 @@ def test_anchor_reds_on_an_unquoted_colon_bearing_description():
     bad = _GOOD.replace('description: "Does a thing: carefully, with a colon."',
                         "description: Does a thing: carefully, with a colon.")
     assert bad != _GOOD, "the probe did not change the block"
-    defects = frontmatter_defects(bad)
+    defects = fc.frontmatter_defects(bad)
     assert any("not valid YAML" in d for d in defects), defects
 
 
@@ -229,14 +252,14 @@ def test_anchor_reds_on_an_unquoted_colon_bearing_argument():
         'argument: "Optional flags: --project <name-or-path> (default: innermost)"',
         "argument: Optional flags: --project <name-or-path> (default: innermost)")
     assert bad != _GOOD, "the probe did not change the block"
-    defects = frontmatter_defects(bad)
+    defects = fc.frontmatter_defects(bad)
     assert any("not valid YAML" in d for d in defects), defects
 
 
 def test_anchor_reds_on_the_user_invokable_misspelling():
     bad = _GOOD.replace("user-invocable: true", "user-invokable: false")
     assert bad != _GOOD, "the probe did not change the block"
-    defects = frontmatter_defects(bad)
+    defects = fc.frontmatter_defects(bad)
     assert any("unknown key 'user-invokable'" in d for d in defects), defects
 
 
@@ -246,11 +269,11 @@ def test_anchor_reds_on_a_quoted_boolean_in_both_directions():
     for literal in ('"false"', '"true"', "'false'"):
         bad = _GOOD.replace("user-invocable: true", f"user-invocable: {literal}")
         assert bad != _GOOD, "the probe did not change the block"
-        defects = frontmatter_defects(bad)
+        defects = fc.frontmatter_defects(bad)
         assert any("not an unquoted YAML boolean" in d for d in defects), \
             f"{literal}: {defects}"
     # And the reason it matters, stated as an executable fact rather than a comment.
-    assert bool(parse_frontmatter(
+    assert bool(fc.parse_frontmatter(
         _GOOD.replace("user-invocable: true", 'user-invocable: "false"')
     )["user-invocable"]) is True
 
@@ -259,7 +282,7 @@ def test_anchor_reds_on_a_value_quoted_twice():
     bad = _GOOD.replace('description: "Does a thing: carefully, with a colon."',
                         'description: "\\"Does a thing\\""')
     assert bad != _GOOD, "the probe did not change the block"
-    defects = frontmatter_defects(bad)
+    defects = fc.frontmatter_defects(bad)
     assert any("quoted a second time" in d for d in defects), defects
 
 
@@ -268,9 +291,9 @@ def test_anchor_reds_on_a_comment_truncated_value():
     bad = _GOOD.replace('description: "Does a thing: carefully, with a colon."',
                         "description: Does a thing # carefully")
     assert bad != _GOOD, "the probe did not change the block"
-    assert parse_frontmatter(bad)["description"] == "Does a thing", \
+    assert fc.parse_frontmatter(bad)["description"] == "Does a thing", \
         "the probe did not actually truncate -- this anchor would be vacuous"
-    defects = frontmatter_defects(bad)
+    defects = fc.frontmatter_defects(bad)
     assert any("did not survive the parse" in d for d in defects), defects
 
 
@@ -278,30 +301,90 @@ def test_anchor_reds_on_a_duplicate_key():
     bad = _GOOD.replace("user-invocable: true",
                         "user-invocable: true\ndescription: second")
     assert bad != _GOOD, "the probe did not change the block"
-    defects = frontmatter_defects(bad)
+    defects = fc.frontmatter_defects(bad)
     assert any("duplicate key 'description'" in d for d in defects), defects
 
 
 def test_anchor_reds_on_a_missing_or_unterminated_block():
-    assert frontmatter_defects("# demo\n\nno frontmatter here\n") == \
+    assert fc.frontmatter_defects("# demo\n\nno frontmatter here\n") == \
         ["does not lead with a `---` frontmatter block closed by a `---` line"]
-    assert frontmatter_defects("---\nname: demo\n# never closed\n") == \
+    assert fc.frontmatter_defects("---\nname: demo\n# never closed\n") == \
         ["does not lead with a `---` frontmatter block closed by a `---` line"]
-    assert split_frontmatter("---\nname: demo\n# never closed\n") is None
+    assert fc.split_frontmatter("---\nname: demo\n# never closed\n") is None
 
 
 def test_anchor_reds_on_a_missing_required_key_and_on_a_non_mapping():
     bad = _GOOD.replace("name: demo\n", "")
-    assert any("missing required key 'name'" in d for d in frontmatter_defects(bad)), \
-        frontmatter_defects(bad)
+    assert any("missing required key 'name'" in d for d in fc.frontmatter_defects(bad)), \
+        fc.frontmatter_defects(bad)
     assert any("not a mapping" in d
-               for d in frontmatter_defects("---\n- a\n- b\n---\nbody\n")), \
-        frontmatter_defects("---\n- a\n- b\n---\nbody\n")
+               for d in fc.frontmatter_defects("---\n- a\n- b\n---\nbody\n")), \
+        fc.frontmatter_defects("---\n- a\n- b\n---\nbody\n")
 
 
 def test_anchor_the_allowlist_is_closed_not_advisory():
     """A narrower allowlist must reject a key the wider one permits -- proof the
     parameter is actually consulted, not decoration."""
-    defects = frontmatter_defects(_GOOD, allowed_keys=frozenset({"name", "description"}))
+    defects = fc.frontmatter_defects(_GOOD, allowed_keys=frozenset({"name", "description"}))
     assert any("unknown key 'argument'" in d for d in defects), defects
     assert any("unknown key 'user-invocable'" in d for d in defects), defects
+
+
+def _contract_with_yaml_blocked():
+    """A SECOND, throwaway copy of the contract module loaded with `import yaml`
+    forced to fail -- the absent-PyYAML condition, reproduced in-process.
+
+    `sys.modules["yaml"] = None` is the documented way to make CPython raise
+    ImportError for a name without uninstalling anything; the real module object is
+    saved and restored in a finally, so nothing outside this call is affected.
+    """
+    saved = sys.modules.get("yaml")
+    sys.modules["yaml"] = None
+    try:
+        spec = importlib.util.spec_from_file_location(
+            "frontmatter_contract_yaml_blocked", Path(fc.__file__))
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return module
+    finally:
+        if saved is None:
+            sys.modules.pop("yaml", None)
+        else:
+            sys.modules["yaml"] = saved
+
+
+def test_anchor_a_missing_parser_reds_this_gate_and_leaves_collection_standing():
+    """The anchor for the dependency handling itself -- without it, the absent-PyYAML
+    behaviour would rest on a one-time manual experiment rather than on a gate
+    (.claude/rules/measurement-validity.md: a gate never seen red is not a gate).
+
+    Proves all four properties the design has to hold at once, in the one condition
+    that exercises them.
+    """
+    # 1. IMPORTING it must not raise. This call returning at all is the proof that a
+    # missing dependency cannot abort collection and erase every other test's verdict.
+    module = _contract_with_yaml_blocked()
+
+    # 2. The failure is RECORDED, and its message is actionable.
+    assert module.YAML_IMPORT_ERROR is not None
+    for token in ("PyYAML", "pip install pyyaml", "CLAUDE.md",
+                  "Environment requirements"):
+        assert token in module.YAML_IMPORT_ERROR, \
+            f"the missing-dependency message no longer names {token!r}"
+
+    # 3. Parserless work still answers truthfully rather than failing for show.
+    assert module.split_frontmatter(_GOOD) is not None
+
+    # 4. Everything that needs a parser reds at CALL time -- and reds as an ordinary
+    # Exception. pytest's skip signal is a BaseException that is NOT an Exception, so
+    # this assertion is what distinguishes "fails loudly" from "skips quietly".
+    for entry_point in (module.frontmatter_defects, module.parse_frontmatter):
+        with pytest.raises(RuntimeError) as excinfo:
+            entry_point(_GOOD)
+        assert isinstance(excinfo.value, Exception), \
+            "a missing parser must FAIL, never skip"
+        assert "PyYAML" in str(excinfo.value)
+
+    # And the real module is untouched by the probe.
+    assert fc.YAML_IMPORT_ERROR is None
+    assert fc.frontmatter_defects(_GOOD) == []
