@@ -447,8 +447,9 @@ proves the other. Discovery proof is §12.
 
 ## 9.1 Host-trace acceptance amendment (2026-08-09)
 
-For pending Steps 49 and 50, do not append the legacy `ACCEPTANCE PROBE` text
-to an installed `SKILL.md`. Claude Code 2.1.212 correctly rejects that dynamic
+In Step 49 and Step 50 — both accepted on 2026-08-09 — and in every re-run of
+this sequence since, do not append the legacy `ACCEPTANCE PROBE` text to an
+installed `SKILL.md`. Claude Code 2.1.212 correctly rejects that dynamic
 instruction as prompt injection, so a model's response is not an acceptable
 path-discovery signal.
 
@@ -464,9 +465,10 @@ after the host observations. These paths are native host output, not model
 claims.
 
 This amendment supersedes the probe append/revert instructions in this section
-for the pending runs. The remaining material below documents the historical
-rollback failure mode; it still applies to any pre-existing home where probe
-text was appended before this amendment.
+for the Step 49 and Step 50 runs it was written for and for every run since.
+The remaining material below documents the historical rollback failure mode; it
+still applies to any pre-existing home where probe text was appended before this
+amendment.
 
 ## 10. Revert the acceptance probe before any rollback
 

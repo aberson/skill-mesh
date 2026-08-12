@@ -35,11 +35,23 @@ What this gate asserts:
   or a linter/typechecker this repository deliberately does not have
   (documentation/architecture.md section 8.4).
 
+- No status-bearing markdown document carries a banned stale-status phrase in
+  prose (Step 69 of documentation/host-parity-repair-plan.md). Scope is README.md
+  + CLAUDE.md + documentation/**/*.md with NO file excluded, and backticked
+  CITATIONS of a banned phrase are exempt so the documents that specify the ban
+  can satisfy it.
+
 What this gate deliberately does NOT do:
 - It never EXECUTES a handoff step -- no subprocess, no PowerShell, no network.
   test_this_gate_executes_nothing enforces that against this module's own source.
 - It never asserts that host acceptance passed. That is operator evidence from
   Steps 43, 45, 49, and 50; a green suite is a precondition, never a substitute.
+- The stale-status sweep decides ONE thing: whether a literal phrase appears in
+  prose. It does NOT decide the semantic class "a document presents completed
+  cutover-path work as outstanding" -- paraphrase defeats any literal list, and
+  human review owns that class. See the comment block above
+  _STALE_CUTOVER_STATUS_PHRASES, and the decision record at
+  documentation/step-69-doc-reconciliation-decisions.md.
 
 Scoping notes (both deliberate):
 - Markdown LINKS are already covered by
@@ -75,6 +87,7 @@ MIGRATION = DOC_DIR / "migration.md"
 NEUTRAL_PLAN = DOC_DIR / "provider-neutral-skill-mesh-plan.md"
 CUTOVER_PLAN = DOC_DIR / "host-native-discovery-cutover-plan.md"
 README = REPO_ROOT / "README.md"
+CLAUDE_MD = REPO_ROOT / "CLAUDE.md"
 
 sys.path.insert(0, str(REPO_ROOT / "tools"))
 import release_checks  # noqa: E402
@@ -975,6 +988,181 @@ def test_readme_points_at_the_handoff_with_the_completed_cutover_status():
         "README no longer records the completed handoff status"
     assert "what remains is operator-only" not in low, \
         "README still presents completed host acceptance as pending"
+
+
+# --------------------------------------------------------------------------- #
+# Stale cutover-path status, across the WHOLE published markdown surface
+# --------------------------------------------------------------------------- #
+#
+# Step 69 of documentation/host-parity-repair-plan.md. The README assertion just
+# above bans one literal phrase in ONE file, and that file was never where the
+# phrase actually lived: it sat in
+# documentation/host-native-discovery-cutover-plan.md, which the README gate does
+# not read. A ban whose scope excludes the site of the only real instance is a
+# ban in name only, so the scope is widened here -- deliberately, and recorded in
+# documentation/step-69-doc-reconciliation-decisions.md rather than left to luck.
+#
+# WHAT THIS GATE CAN DECIDE -- and it is narrow, on purpose:
+#   Every phrase in `_STALE_CUTOVER_STATUS_PHRASES` is absent from the PROSE of
+#   every README.md + documentation/**/*.md file. That is a syntactic question
+#   about literal strings and it is fully decidable.
+#
+# WHAT IT CANNOT DECIDE, and must never be read as certifying:
+#   Whether any document presents completed Phase 7 cutover-path work (Steps
+#   42-50) as outstanding. That is a SEMANTIC class, and a literal-phrase matcher
+#   decides a syntactic one; the gap between them is unbounded, and paraphrase
+#   defeats any fixed list. This is the same over-claiming failure Step 66 hit
+#   three times (see step-66-vendored-reference-decisions.md section 7.1): a gate
+#   that claims a class it cannot decide is worse than no gate, because the team
+#   stops looking. The class-level authority is human review, exactly as tier 3
+#   is there. This list is a TRIPWIRE for one phrase that has ACTUALLY shipped
+#   stale in this repository, and it is maintained by adding the next phrase that
+#   actually does.
+#
+# It also cannot see a stale claim written INSIDE backticks -- see
+# `strip_code_spans` for why that exclusion exists and what it costs.
+#
+# SCOPE IS DERIVED, NEVER HAND-LISTED. `status_scanned_docs` globs the whole
+# published markdown surface with NO file excluded -- not even a plan. The
+# earlier `scanned_docs` skips `*-plan.md` because a plan legitimately names
+# artifacts it has not built yet; that reasoning is about PATH TOKENS and does
+# not transfer to status prose, where a plan is one of the likeliest places for a
+# stale claim to sit. Reusing that exclusion here would have re-created the exact
+# hole this gate exists to close.
+
+_STALE_CUTOVER_STATUS_PHRASES = (
+    # Shipped stale at host-native-discovery-cutover-plan.md:679 while Steps 49
+    # and 50 were already accepted (2026-08-09, #62/#63 closed).
+    "what remains is operator-only",
+)
+
+_CODE_SPAN_RE = re.compile(r"`[^`\n]*`")
+
+
+def strip_code_spans(text):
+    """Blank every single-line backtick span, leaving only prose.
+
+    A backticked phrase is a CITATION of a token, not a claim about status. Two
+    documents legitimately quote the banned phrase in order to specify the ban
+    itself -- this plan's Step 69 block and the decision record -- and a gate that
+    reds on the document that DEFINES it is a gate nobody can satisfy. Excluding
+    code spans is a rule about markup meaning, not a hole cut for named files: it
+    is derived from the text, so a future citation is covered by construction.
+
+    The cost, stated rather than hidden: a stale status claim written inside
+    backticks is invisible to this gate. That is an accepted, deliberate blind
+    spot -- prose does not get written in code spans -- and it is the price of not
+    excluding whole files by name.
+
+    Triple-backtick fences degrade harmlessly: the pattern is single-line, so it
+    consumes the leading pair of a ``` fence and leaves the fenced body as prose.
+    """
+    return _CODE_SPAN_RE.sub(" ", text)
+
+
+def stale_cutover_status_defects(text, label=""):
+    """Banned status phrases present in `text`'s prose. Empty list == clean.
+
+    Whitespace is normalized AFTER stripping, so a phrase broken across a
+    markdown line wrap is still caught -- a line-scoped matcher would miss the
+    single most likely spelling in a wrapped document.
+    """
+    prose = re.sub(r"\s+", " ", strip_code_spans(text)).lower()
+    return [f"{label}stale status phrase in prose: {phrase!r}"
+            for phrase in _STALE_CUTOVER_STATUS_PHRASES if phrase in prose]
+
+
+def status_scanned_docs():
+    """The whole status-bearing markdown surface: the two root status documents
+    plus documentation/**/*.md, with NO file excluded and no glob narrowing.
+
+    CLAUDE.md is included on purpose and is not merely more coverage. The repair
+    plan's Step 62 makes the point directly -- it is "the one instruction a fresh
+    dev agent actually reads" -- so a stale Phase status there propagates into
+    work rather than merely sitting on a page. The sibling doc gates in this
+    repository stop at README + documentation/ because they validate PUBLISHED
+    link and path tokens; this one grades status claims, which is a different
+    question with a different surface.
+    """
+    docs = [README, CLAUDE_MD] + sorted(DOC_DIR.rglob("*.md"))
+    return [d for d in docs if d.is_file()]
+
+
+# Scope floor. Measured 2026-08-11: README.md + CLAUDE.md + 18 documents under
+# documentation/ = 20, BEFORE this step added its decision record. Pinned at the
+# PRE-EXISTING surface rather than the post-step count so the number is robust to
+# whether a just-written file is in the git index yet -- tools/release.ps1 runs
+# this suite from inside a `git ls-files` stage, where an unindexed file is simply
+# absent. A floor, not an equality: adding documents never reds it, and narrowing
+# the enumeration (an exclusion list, a tightened glob) always does. Step 63 set
+# this precedent after a sibling gate silently returned None for a whole defect
+# class and the burn-down measured nothing.
+_STATUS_SCAN_FLOOR = 20
+
+
+def test_status_scan_reaches_the_documents_that_carry_phase_status():
+    """Anti-narrowing. A burn-down that is satisfied by scanning less is not a
+    burn-down, so the surface has a floor and named must-reach members."""
+    docs = status_scanned_docs()
+    assert len(docs) >= _STATUS_SCAN_FLOOR, (
+        f"status scan reaches only {len(docs)} documents, below the committed "
+        f"floor of {_STATUS_SCAN_FLOOR} -- the enumeration was narrowed")
+    names = {d.name for d in docs}
+    # A membership FLOOR, not the scanned set: these are the documents that carry
+    # Phase 7 status, including the plans the sibling token gate excludes.
+    for required in ("README.md",
+                     "CLAUDE.md",
+                     "host-native-discovery-cutover-plan.md",
+                     "host-parity-repair-plan.md",
+                     "coding-root-cutover-handoff.md",
+                     "provider-neutral-skill-mesh-plan.md",
+                     "migration.md"):
+        assert required in names, \
+            f"status scan no longer reaches {required} -- scope was narrowed"
+
+
+def test_stale_status_gate_reds_on_prose_and_stays_silent_on_a_citation():
+    # ANCHOR: watched to go red on a planted defect before being believed. Pure
+    # function, synthetic inputs -- the style of test_skill_tree.py's anchors.
+    planted = "Every code step on the cutover path has landed. What remains is operator-only."
+    assert stale_cutover_status_defects(planted), \
+        "the gate did not flag the exact sentence that shipped stale"
+
+    # ...and across a markdown line wrap, which is how it would really appear.
+    wrapped = "Every code step has landed. What remains is\noperator-only.\n"
+    assert stale_cutover_status_defects(wrapped), \
+        "the gate is line-scoped -- a wrapped claim would slip through"
+
+    # A CITATION of the token is not a claim: both documents that specify the ban
+    # quote it this way, and they must stay green.
+    cited = "the surviving README assertion bans `what remains is operator-only`."
+    assert stale_cutover_status_defects(cited) == [], \
+        "the gate reds on the document that DEFINES the ban"
+
+    # The strip must not swallow prose outside the span, or the gate would go
+    # quiet in exactly the case it exists for.
+    assert stale_cutover_status_defects(
+        "see `:679` -- what remains is operator-only, per the roll-up"), \
+        "code-span stripping ate the surrounding prose"
+
+    # And it must stay silent on an unrelated document.
+    assert stale_cutover_status_defects("Steps 49 and 50 were accepted 2026-08-09.") == []
+
+
+def test_no_published_doc_presents_the_completed_cutover_as_pending():
+    """Step 69's widened ban: no document returned by status_scanned_docs()
+    (README.md + CLAUDE.md + documentation/**/*.md, nothing excluded) may carry a
+    banned status phrase in PROSE. Backticked citations are exempt, and this
+    decides only the literal phrases in _STALE_CUTOVER_STATUS_PHRASES -- not the
+    semantic class. Scope decision and rationale:
+    documentation/step-69-doc-reconciliation-decisions.md section 2."""
+    defects = []
+    for doc in status_scanned_docs():
+        rel = doc.relative_to(REPO_ROOT).as_posix()
+        defects.extend(stale_cutover_status_defects(_read(doc), f"{rel}: "))
+    assert not defects, (
+        "a published document still presents completed cutover-path work as "
+        "pending:\n" + "\n".join(defects))
 
 
 def test_handoff_names_both_discovery_roots_and_the_legacy_router():
