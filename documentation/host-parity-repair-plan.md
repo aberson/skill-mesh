@@ -411,6 +411,47 @@ a test written to pass — the codifying-test-diff anti-pattern. Instead Step 63
 - **Done when:** no doc claims Phase 7 **cutover-path (Steps 42–50)** work is outstanding — scope the clause that way, because Step 47b legitimately remains PENDING and the cutover plan carries `| 47b … | **PENDING** |` at `:689`, so an unscoped "no doc claims work outstanding" contradicts the very next clause; Step 47b is still described as PENDING everywhere it appears; the handoff retains `operator evidence` and `parked-work handshake` (gated span `:1092-1100`, four tokens) and the Step 41 block retains its **six** gated tokens plus the five-phrase forbidden list across the two tests at `:1322-1354`; **the surviving README assertion bans `what remains is operator-only`, yet `host-native-discovery-cutover-plan.md:679` carries that exact string today and the gate scans only `README.md`** — so either that string goes or the gate's scope widens, decided explicitly rather than left to luck; `python -m pytest` from the repo root is `>= baseline`
 - **Depends on:** 62, 68 — 68 rewrites the handoff's "one expected YAML error" section (`:636-651`) and its gate (`:1241-1254`), which is doc reconciliation this step would otherwise collide with
 
+- **Status:** BLOCKED (2026-08-11) — work is committed and pushed nowhere; it sits on branch
+  `build-step-1786501444` at `1ac7ec2`, with the worktree deliberately PRESERVED at
+  `C:\Users\abero\dev\worktree_build-step-1786501444`. `main` is untouched at `d03fb2c`. **This is
+  not a test failure** — the in-worktree full suite is **1026 passed / 1 skipped / 0 failed** and the
+  two-suite gate covering both consumers of the refactored helper is 294 passed / 1 skipped. Three
+  developer iterations ran against the five-arm gauntlet; the Block trend was **0 → 0 → 1**, rising
+  only at the final round and only because a reviewer was explicitly told to hunt the next instance
+  of the phase's recurring pattern. What is confirmed sound and must be preserved through any redo:
+  all five named status corrections verified true; the citation sweep independently confirmed
+  complete (8/8 sites re-verified by reading content at the cited line, plus 18 stale references
+  across 8 sites that the step's own edits had introduced, one of which was already wrong before it);
+  Step 47b's PENDING sense intact everywhere (pre-diff count of 28 reproduced exactly); Step 55's
+  scope diffed byte-identical, so the BUILD-READY Phase 8 plan was corrected without re-scoping;
+  `test_cutover_handoff.py` weakened nothing (188 insertions / 0 deletions in round 1, and every
+  later hunk classified additive or neutral); the `fence_walk()` extraction proven **behaviourally
+  byte-identical** for its other consumer across 15 hostile inputs and all 21 scanned documents;
+  and all 15 planted-defect rows in the decision record reproduced with exact error-string matches.
+- **Why it is BLOCKED, and why the fix is NOT another pattern:** the decision record enumerates the
+  gate's blind spots and asserts that enumeration is complete. It is not. A reviewer reproduced a
+  fourth even-count evasion — two ordinary, independently-unclosed fence-opener lines, the everyday
+  markdown edit mistake rather than the contrived case the tests cover — which hides a live status
+  phrase while the delimiter count stays even, and which no docstring, record, or anchor names.
+  **This is the fifth instance in this phase of one defect shape: a claim asserting more than it can
+  decide** (Step 67's anchor docstring; the fix for that docstring; Step 68's anchor whose mechanism
+  turned its own target regression into a silent skip; this record's "cannot grow without someone
+  seeing it"; and now its completeness quantifier). Rounds 2 and 3 each patched the named instance
+  and produced a new one a layer down — the exact sequence Step 66 documented before concluding that
+  the defect was never a missing pattern but a scoping gap. **Do not fit a fourth pattern.** The
+  developer already built and tested the tighter CommonMark matcher, confirmed it closes the named
+  hole, and correctly DECLINED to ship it; the advisory diagnosis then established independently that
+  the tightening provably does not touch the escape that actually blocked the step.
+- **Recommended resolution (advisory, UNVERIFIED — pressure-test rather than accept):** the root
+  cause is that the enumeration classifies an open *authorial-intent* class while the helper decides
+  one closed syntactic toggle rule, so any finite blind-spot list carrying a completeness quantifier
+  is falsifiable by construction. Replace the quantifier with a closed **mechanism** statement (any
+  two line-initial fence-opener lines pair, intent-blind), list the known members as an **open**
+  class rather than a complete one, and let the tier-3 human sign-off own the class — Step 66 §7.1's
+  conclusion, applied here. Collapse the four disclosure sites to a single owner while doing it.
+  Naming the fourth blind spot is worth an anchor row; it is not the fix. Diagnosis Block at
+  `.build-step/diagnosis.md` in the preserved worktree; per-round findings at `.build-step/review*.md`
+
 <!-- autofix-applied: 2026-08-09 -->
 ### Step 70: Release-candidate rehearsal against a throwaway home
 - **Problem:** Every prior step is verified in-repo. Nothing has yet proved that a *clean consumer home* — one with no preserved legacy `_shared/` to fall back on — receives a self-contained skill tree. This is the producer→consumer smoke gate for the whole phase
