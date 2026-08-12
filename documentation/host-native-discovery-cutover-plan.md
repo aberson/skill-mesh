@@ -674,9 +674,13 @@ not the hosts, was verified.
 
 ## 7. Build Steps
 
-### Phase roll-up (2026-08-06)
+### Phase roll-up (2026-08-06; status reconciled 2026-08-11)
 
-**Every code step on the cutover path has landed. What remains is operator-only.**
+**Every step on the cutover path has landed and been accepted — Steps 42-50, code and
+operator alike.** Steps 49 and 50 were accepted on 2026-08-09 (#62 and #63 closed), so no
+cutover-path work is outstanding in either class. The one Phase 7 step still **PENDING** is
+47b, which is deliberately off the 48->50 critical path; the table row below and the note
+after it are the owners of that status.
 
 | Step | Type | Status |
 |---|---|---|

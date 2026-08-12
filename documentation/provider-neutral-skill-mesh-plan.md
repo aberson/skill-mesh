@@ -323,23 +323,29 @@ existing deterministic/rubric comparison that checks adapter parity.
 
 ### Step 41: Perform host-native acceptance and publish
 
-> **Do not execute this step as written.** Its unexecuted acceptance intent is superseded by
-> [`host-native-discovery-cutover-plan.md`](host-native-discovery-cutover-plan.md), where the work is
-> now Steps 49 (acceptance against the release candidate) and 50 (live coding-root cutover). Step 43
-> of that plan disproved the discovery-root assumption this step was written against. This note
-> exists so a fresh reader does not treat Step 41 and Steps 49-50 as two live units. The repository
-> description referenced below has already been updated ([`repo-metadata.md`](repo-metadata.md)).
+> **Do not execute this step as written.** Its unexecuted acceptance intent was superseded by
+> [`host-native-discovery-cutover-plan.md`](host-native-discovery-cutover-plan.md), where the work
+> became Steps 49 (acceptance against the release candidate) and 50 (live coding-root cutover) —
+> **and both of those were accepted on 2026-08-09, closing issues #62 and #63.** The acceptance
+> intent recorded here is therefore discharged, not merely relocated. Step 43 of that plan disproved
+> the discovery-root assumption this step was written against. This note exists so a fresh reader
+> does not treat Step 41 and Steps 49-50 as two live units. The repository description referenced
+> below has already been updated ([`repo-metadata.md`](repo-metadata.md)).
 
 - **Problem:** The final goal depends on real host discovery behavior that fixtures cannot fully establish.
 - **Type:** operator
 - **Issue:** #50
 - **Status:** SUPERSEDED (2026-08-05) by
   [`host-native-discovery-cutover-plan.md`](host-native-discovery-cutover-plan.md) — marked by that
-  plan's Step 48. The acceptance intent below is carried by that plan's Steps 49 (acceptance against
+  plan's Step 48. The acceptance intent below was carried by that plan's Steps 49 (acceptance against
   the release candidate, from a clean temporary consumer home) and 50 (live coding-root cutover), and
-  the operator sequence they consume is
-  [`coding-root-cutover-handoff.md`](coding-root-cutover-handoff.md). Nothing in this step is live:
-  do not schedule it, do not build it, and do not treat its Done-when as an outstanding obligation.
+  the operator sequence they consumed is
+  [`coding-root-cutover-handoff.md`](coding-root-cutover-handoff.md). **Both of those steps are now
+  DONE — accepted 2026-08-09, issues #62 and #63 closed** — so the supersession is not just a
+  hand-off, it is finished work: real Claude Code and GitHub Copilot CLI hosts each resolved a
+  generated `plan-review` profile from their own discovery root, and the live consumer was cut over
+  with an external backup retained. Nothing in this step is live: do not schedule it, do not build
+  it, and do not treat its Done-when as an outstanding obligation.
   **Issue #50 needs nothing further: it was already closed on 2026-08-03**, superseded against
   umbrella #56. That closure was a `/repo-sync`/operator action and was deliberately never a
   criterion of Step 48, which is a code step and owns only this in-repo marker — so it is neither

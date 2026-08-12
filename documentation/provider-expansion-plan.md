@@ -17,19 +17,42 @@ no external document is required to execute it.
 > in place:
 >
 > 1. **Step 55 (four-way `local` data-shape constant) — RESOLVED by re-scope.** Source of truth
->    fixed as `tools/gen_manifest.py:51 LOCAL_CAPABLE`; Step 55's Files/Produces/Done-when now name
+>    fixed as `tools/gen_manifest.py:88 LOCAL_CAPABLE`; Step 55's Files/Produces/Done-when now name
 >    all four artifacts (`gen_manifest.py` source + `config/model-mapping.json`,
 >    `config/skill-manifest.json`, `tests/package-integrity/expected_inventory.json`) plus the pinned
->    `test_manifest_contract.py` assertions, and specify the clean-clone HAND-EDIT path — a clean
->    `/build-phase` worktree cannot regenerate because `gen_manifest.py:369` hard-exits without the
->    private `SKILL_MESH_LEGACY_SOURCE`, and the contract/drift tests read the committed artifacts
->    rather than regenerating. See Step 55.
+>    `test_manifest_contract.py` assertions, and specify the clean-clone HAND-EDIT path, because the
+>    contract/drift tests read the committed artifacts rather than regenerating. See Step 55.
 > 2. **Blank `**Issue:**` fields — expected pre-`/repo-sync`, not a defect.** `/repo-sync` mints them
 >    against live GitHub state (Phase 7 + its wrap/sibling issues already run through #69). Read the
 >    next free number at sync time; never hand-write.
 >
+> **CORRECTED 2026-08-11 by Phase 7.5 Step 69 — the `SKILL_MESH_LEGACY_SOURCE` premise is dead, and
+> five line citations in Step 55 had drifted.** Blocker 1 above, and Step 55 itself, originally
+> justified the hand-edit path by claiming a clean `/build-phase` worktree *cannot* regenerate
+> because `gen_manifest.py` hard-exits without the private `SKILL_MESH_LEGACY_SOURCE`. That is false
+> as of Phase 7.5 **Step 67**, which made `tools/gen_manifest.py` **hermetic**: it reads nothing
+> outside this repository, takes no such environment variable (the name appears nowhere in the file),
+> and reproduces `config/skill-manifest.json` plus `tests/package-integrity/expected_inventory.json`
+> byte-identically from the committed tree. Both statements of the dead premise are removed. The
+> **surviving** reason is untouched and still carries the decision on its own: the contract and drift
+> tests read the committed artifacts and never regenerate. **Step 55 is NOT re-scoped here** — its
+> Files, Produces, Done-when, and hand-edit path stand exactly as written; only the factual claim
+> changed. Line citations into `gen_manifest.py` were re-measured against the post-Step-67 file and
+> corrected in the same pass: `LOCAL_CAPABLE` `:51`→`:88`, the per-skill write `:229`→`:440`, the
+> count `:238`→`:449`, the sorted member list `:344`→`:555`; `:369` is now a roster `raise` guard and
+> is no longer cited at all. **Five `test_manifest_contract.py` anchors had drifted by a uniform +3**
+> (Step 67 added three imports above them) and were corrected after reading each target line:
+> `:105`→`:108` (`== 24`), `:129`→`:132` (exact-set vs fixture), `:153`→`:156` (per-skill),
+> `:175`→`:178` (the provider-set constraint, cited three times), `:210`→`:213`
+> (`test_vision_or_subagent_implies_not_local`). The `:129` on the `model-tier-map.json` impact row
+> is a `runtime/skill-router.ps1` citation, not this file, and was deliberately left alone.
+> `expected_inventory.json:7,66` were re-measured and are correct. This matters beyond tidiness:
+> Step 55 HAND-EDITS against these anchors, and `:105` now points at `assert derived["total"] == 50`
+> — a builder following it would edit the wrong assertion. Before Step 55 resumes, re-read it
+> against the hermetic generator — an obligation Phase 7.5's Step 71 handoff already carries.
+>
 > Step 54's `providers/gemini.md` provider-set gap is assigned an explicit fork-on-failure ownership
-> obligation (its carrier doc must extend `test_manifest_contract.py:175`, the builder `ValidateSet`,
+> obligation (its carrier doc must extend `test_manifest_contract.py:178`, the builder `ValidateSet`,
 > and the installer root map WHEN a fork is authored — no Phase 8 code step authors one, so the
 > closed `{claude, gpt}` manifest set stays valid throughout Phase 8). §27 stakes-aware routing
 > escalated the four Gemini/local transport steps (52/53/54/55) to `--reviewers deep`. NOTE: Step 56
@@ -245,14 +268,14 @@ itself; team-profile implementation (key is designed-not-built); paid Gemini key
   Step 51 drift test is extended to validate the new column; full suite green. The `gemini`
   column added here is a `model-mapping.json` capability flag ONLY and does NOT touch
   `config/skill-manifest.json`'s `providers` block, so the closed-provider-set assertion
-  `tests/package-integrity/test_manifest_contract.py:175`
+  `tests/package-integrity/test_manifest_contract.py:178`
   (`assert set(prov.keys()) == {"claude", "gpt"}`) stays green throughout Phase 8's code steps
   (no per-skill `providers/gemini.md` is authored here — §6.5 proxy-first).
 - **Provider-set-extension ownership (fork-on-failure obligation):** `documentation/providers/gemini.md`
   MUST document that authoring a per-skill `providers/gemini.md` fork (deferred to fork-on-failure,
   Step 60 disposition) is the point that opens the closed provider set, and that such a fork
   is NOT complete until it also extends, in the same change: (1) the manifest-contract assertion
-  `test_manifest_contract.py:175` from `{claude, gpt}` to include `gemini`; (2) the builder's
+  `test_manifest_contract.py:178` from `{claude, gpt}` to include `gemini`; (2) the builder's
   `ValidateSet('claude','gpt','both')` in `tools/build-distributions.ps1`; and (3) the installer's
   provider→root map in `tools/install-skill-mesh.ps1`. No Phase 8 code step authors a fork, so
   these three enforcement points are unchanged by Phase 8's code steps — the obligation is
@@ -274,24 +297,28 @@ itself; team-profile implementation (key is designed-not-built); paid Gemini key
 - **Flags:** --reviewers deep
 - **Source of truth for the `local`/`local_capable` shape (four-way duplication — resolve before
   building).** The `local` capability is a duplicated data-shape constant with ONE source of
-  truth: `tools/gen_manifest.py:51 LOCAL_CAPABLE` (the generator set; `:229` writes
-  `local_capable = name in LOCAL_CAPABLE`, `:238`/`:344` derive the count and sorted member list).
+  truth: `tools/gen_manifest.py:88 LOCAL_CAPABLE` (the generator set; `:440` writes
+  `local_capable = name in LOCAL_CAPABLE`, `:449`/`:555` derive the count and sorted member list).
   Its three DERIVED copies are `config/model-mapping.json` (per-skill `local` boolean column,
   currently 24 `true`), `config/skill-manifest.json` (per-skill `local_capable` + the summary
   count), and `tests/package-integrity/expected_inventory.json` (`"local_capable": <count>` at :7
   plus the exact member array at :66). Re-deriving the 24 legacy-aspirational flags against the
   strict §6.6 criteria WILL likely change the membership (and therefore the count away from 24),
-  which trips the hard assertions `test_manifest_contract.py:105` (`== 24`), `:129`
-  (exact-set vs the fixture), and `:153` (per-skill). A FOURTH pinned assertion, `:210`
+  which trips the hard assertions `test_manifest_contract.py:108` (`== 24`), `:132`
+  (exact-set vs the fixture), and `:156` (per-skill). A FOURTH pinned assertion, `:213`
   `test_vision_or_subagent_implies_not_local`, is a hard CONSTRAINT on the re-derivation rather than a
   follower of it: no skill declaring `vision` or `sub-agent` may be marked `local`. §6.6's "no tool use
   or vision" criterion MUST therefore be read as also excluding all 16 `sub-agent` skills (today's
-  24-member set has zero overlap with the 16 `sub-agent` / 2 `vision` skills — keep it that way). **Because `gen_manifest.py:369` hard-exits
-  without the private `SKILL_MESH_LEGACY_SOURCE`, a clean `/build-phase` worktree CANNOT
-  regenerate** — so this step HAND-EDITS all four artifacts consistently (the manifest-contract
-  and drift tests read the committed artifacts and never regenerate, so hand-editing is the
-  supported clean-clone path), and updates `test_manifest_contract.py`'s hardcoded `== 24` at :105
-  to the re-derived count (the `:129` exact-set assertion auto-follows because it reads the count
+  24-member set has zero overlap with the 16 `sub-agent` / 2 `vision` skills — keep it that way).
+  This step HAND-EDITS all four artifacts consistently, **because the manifest-contract and drift
+  tests read the committed artifacts and never regenerate**, so hand-editing is the supported
+  clean-clone path. (**Corrected 2026-08-11 by Phase 7.5 Step 69:** this bullet previously justified
+  the hand-edit path with "a clean `/build-phase` worktree CANNOT regenerate" because
+  `gen_manifest.py` hard-exits without the private `SKILL_MESH_LEGACY_SOURCE`. Step 67 made the
+  generator hermetic, so that premise is false and is removed; the surviving reason above is
+  unchanged and the step is not re-scoped. See the corrected note in the preamble.) It also
+  updates `test_manifest_contract.py`'s hardcoded `== 24` at :108
+  to the re-derived count (the `:132` exact-set assertion auto-follows because it reads the count
   and member set from `expected_inventory.json`).
 - **Files:** `runtime/skill-router.ps1`, `config/model-mapping.json`, `config/skill-manifest.json`,
   `tools/gen_manifest.py`, `tests/package-integrity/expected_inventory.json`,
