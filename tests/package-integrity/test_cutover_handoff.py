@@ -1004,8 +1004,9 @@ def test_readme_points_at_the_handoff_with_the_completed_cutover_status():
         "README no longer records the completed handoff status"
     # Deliberately STRICTER than the widened sweep below, and kept rather than
     # folded into it. This is a raw-text check with NO code-span exemption, so
-    # README.md is the one document where neither of strip_code_spans()' blind
-    # spots applies: the front door may not carry the phrase at all, not even
+    # README.md is the one document immune to strip_code_spans()' whole blind-spot
+    # mechanism -- not merely to its currently-known members, since it parses no
+    # markup at all: the front door may not carry the phrase at all, not even
     # backticked. Cite it from documentation/ instead -- there the exemption
     # holds. Recorded at step-69-doc-reconciliation-decisions.md section 2.3.
     assert "what remains is operator-only" not in low, (
@@ -1287,6 +1288,22 @@ def test_stale_status_gate_reds_on_prose_and_stays_silent_on_a_citation():
     assert sum(1 for _, kind in fence_walk(phantom) if kind == "fence") % 2 == 0, \
         "the phantom pair no longer counts even -- the scope-floor claim in " \
         "test_status_scan_reaches_the_documents_that_carry_phase_status changed"
+
+    # Blind spot 4, pinned for the same reason. Distinct from 3 and STRICTLY MORE
+    # REACHABLE: it needs no self-closing span, only two ordinary ``` openers that
+    # were each left unclosed -- the everyday markdown edit mistake. They pair into
+    # a phantom fence exactly as 3 does, and the delimiter count is likewise EVEN,
+    # so the scope-floor bound does not fire on it either. Found in the round-4
+    # confirming check, one round after 3 was disclosed; that is what demoted the
+    # blind-spot list from a closed set to an open class (record section 2.4).
+    unclosed_pair = ("```\n\nEvery code step has landed. What remains is\n"
+                     "operator-only.\n\n```\n")
+    assert stale_cutover_status_defects(unclosed_pair) == [], \
+        "blind spot 4 changed -- strip_code_spans' docstring and the decision " \
+        "record section 2.4 both describe this case and must be re-measured"
+    assert sum(1 for _, kind in fence_walk(unclosed_pair) if kind == "fence") % 2 == 0, \
+        "the unclosed-opener pair no longer counts even -- the scope-floor claim " \
+        "in test_status_scan_reaches_the_documents_that_carry_phase_status changed"
 
     # And it must stay silent on an unrelated document.
     assert stale_cutover_status_defects("Steps 49 and 50 were accepted 2026-08-09.") == []
