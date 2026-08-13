@@ -113,8 +113,36 @@ of a single state file; they apply verbatim to each `sessions/<id>.md`.
 - <salvage pointer — TODO discovered but not filed, seed doc worth writing, finding not yet recorded>
 
 ## Next Action
-<exact command or skill invocation — the single most important next step>
+<one exact command/skill invocation, OR the locked multiline bundle defined below>
 ```
+
+---
+
+### Next Action forms
+
+The normal form remains one exact command or skill invocation. A caller that must preserve a
+preview observation point plus an atomic command pair MAY use this one locked multiline form and
+no other ad hoc multiline shape:
+
+```text
+<!-- task-handoff-next-action-v1 -->
+Digest: sha256:<64-lowercase-hex>
+Run directory: <canonical absolute directory>
+Preview command:
+<exact preview command or NONE>
+Action command pair:
+<exact goal command>
+<exact action command>
+<!-- /task-handoff-next-action-v1 -->
+```
+
+The task-handoff contract owns JSON ingestion and field validation. The digest is lowercase
+SHA-256 over UTF-8 schema literal `task-handoff-next-action-v1`, canonical run directory,
+preview-or-empty, goal, and action joined by one NUL byte. No field may contain NUL. Readers and
+read-merge-writers preserve the entire envelope byte-for-byte. A presentation layer may parse a
+digest-valid bundle only to render preview first, pause for observation, and then render the
+goal/action pair atomically; it never rewrites the stored field. `NONE` is the literal no-preview
+sentinel.
 
 ---
 
@@ -175,10 +203,10 @@ Last written. These represent the current state, not history.
 | Loop iteration completes | `task-handoff --loop` — write `sessions/<id>.md` (overwrite WIP + Next Action, append Completed if step done), then `Write-DerivedRollup`; NO commit (gitignored) |
 | Compaction fires (PreCompact hook) | Append `## Compaction Marker` (UTC timestamp + git SHA) to the active session's `sessions/<id>.md`, then regen the rollup |
 | Task completes | `task-handoff --loop` with Status: COMPLETE |
-| Task switch (next task, same window) | `task-handoff --next-task [label]` — durable boundary write (`sessions/<id>.md` + regen rollup; commit + push MEMORY.md + code only, NOT gitignored state), then keep working in-window |
+| Task switch (next task, same window) | `task-handoff --next-task [label] [--next-action-file <absolute-json-path>]` — durable boundary write (`sessions/<id>.md` + regen rollup; commit + push MEMORY.md + code only, NOT gitignored state), then keep working in-window |
 | Session transition (`/session-wrap` routes `clear-next` / `end-window`) | Read-merge-write this file FIRST, then render `handoff-prompt.md` from it + the session decisions log (render-on-wrap — the render never precedes the write) |
-| Session resumes | Read Last written timestamp; if within 8 hours, output "Resuming [Task]: [Status]" + Next Action |
-| Fresh window after `end-window` | Operator pastes the Pick-up-here opener; the new session reads `handoff-prompt.md` (self-contained render), verifies git state first, then executes Next Action |
+| Session resumes | Read Last written timestamp; if within 8 hours, output "Resuming [Task]: [Status]" + Next Action. A locked bundle remains stored verbatim and is executed only through its preview/observation/action ordering. |
+| Fresh window after `end-window` | Operator pastes the Pick-up-here opener; the new session reads `handoff-prompt.md` (self-contained render), verifies git state first, then executes Next Action, preserving any locked preview observation point. |
 | Build-step worktree context | Use `--no-commit` flag to avoid double-commit with build-phase Step 2e |
 
 ---

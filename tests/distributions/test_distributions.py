@@ -363,6 +363,32 @@ def test_portable_skills_have_launcher_and_core_in_both_profiles(dist_root):
             assert (d / "core.md").is_file(), f"{profile}/{name}: missing core.md"
 
 
+def test_both_profiles_preserve_the_locked_handoff_contract(dist_root):
+    expected = {
+        "plan-expedite": (
+            "plan-expedite-initial-handoff-v1",
+            "task-handoff-next-action-v1",
+            "handoff_digest",
+        ),
+        "task-handoff": (
+            "--next-action-file <absolute-json-path>",
+            "<!-- task-handoff-next-action-v1 -->",
+            "full-string regex match `^/goal",
+        ),
+        "session-wrap": (
+            "Locked Next Action bundle",
+            "Preview (run in <absolute run directory>)",
+            "Start build (run in <absolute run directory>)",
+        ),
+    }
+
+    for profile in ("claude", "gpt"):
+        for skill, markers in expected.items():
+            core = (dist_root / profile / skill / "core.md").read_text(encoding="utf-8")
+            for marker in markers:
+                assert marker in core, (profile, skill, marker)
+
+
 def test_native_exclusions_only_truthful_adapter(dist_root):
     """Provider-native skills appear in claude/ (no core, since core is null) and are
     ABSENT from gpt/ -- no misleading stub for the unsupported provider."""

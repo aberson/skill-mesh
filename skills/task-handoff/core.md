@@ -58,7 +58,7 @@ identical; `build-phase` may keep passing it.
 
 ---
 
-## `--next-task [label]` — task-boundary save
+## `--next-task [label] [--next-action-file <absolute-json-path>]` — task-boundary save
 
 **Cost:** ~30 seconds. Durable boundary write when switching tasks within the same goal
 (e.g. plan-expedite → build-phase): the same session-file read-merge-write as `--loop` (into
@@ -67,6 +67,58 @@ Completed (append); WIP, Next Action, and Status are overwritten to point at the
 (`[label]`). Then update `MEMORY.md` and commit + push **that** (and any code) — NOT the
 gitignored task-state. Scope the add (`git add MEMORY.md <code paths>`); never `git add -A`
 (the workspace carries parallel-session churn).
+
+`--next-action-file` is an optional, deterministic transport for a caller-owned multiline Next
+Action. Omitting it preserves the legacy label-derived behavior above. When present, require it
+only with `--next-task`, require a canonical absolute file path, and read the file exactly once as
+UTF-8 JSON without executing or interpolating any value. The file must live outside the Git worktree.
+Reject invalid UTF-8, duplicate JSON keys,
+unknown/missing keys, a symlink/reparse-point input, or a file inside the Git worktree. The caller
+owns deletion after this skill returns; this skill never stages, rewrites, or deletes the file.
+
+The JSON object has exactly this schema:
+
+```json
+{
+  "schema": "task-handoff-next-action-v1",
+  "run_directory": "C:/canonical/absolute/project",
+  "preview": null,
+  "goal": "/goal \"finish condition\"",
+  "action": "/build-phase --plan plan.md --steps 1,2"
+}
+```
+
+`schema` is the literal shown. `run_directory` must be an existing canonical absolute directory.
+`preview` is either null or one non-empty line. `goal` and `action` are non-empty one-line strings.
+Reject CR, LF, NUL, other control characters, leading/trailing whitespace, or a field that is not
+the declared JSON type. Require a full-string regex match `^/goal "[^"\r\n]+"$` (never a substring
+or search match), `action` to begin exactly
+`/build-phase `, and a non-null preview to begin exactly `/build-phase ` and contain the standalone
+token `--dry-run` exactly once; reject that token in `action`. These checks defend the persistence boundary; the caller remains responsible
+for plan-aware selector validation.
+
+Compute lowercase SHA-256 over the UTF-8 bytes of the following fields joined by one NUL byte:
+schema, canonical run directory, preview or the empty string, goal, action. Write the decoded
+strings into this exact locked multiline `## Next Action` body; omit no labels and add no prose:
+
+```text
+<!-- task-handoff-next-action-v1 -->
+Digest: sha256:<64-lowercase-hex>
+Run directory: <canonical absolute directory>
+Preview command:
+<exact preview command or NONE>
+Action command pair:
+<exact goal command>
+<exact action command>
+<!-- /task-handoff-next-action-v1 -->
+```
+
+`NONE` is the literal preview sentinel and cannot be supplied as a command because a real preview
+must begin `/build-phase `. The command lines have no Markdown indentation, so their bytes are
+preserved. This envelope is the only multiline Next Action shape session-wrap may structurally
+split; every other Next Action remains opaque and verbatim. After writing the session file, reread
+the locked body, recompute the digest, and fail before `Write-DerivedRollup`, MEMORY update, commit,
+or push if it does not match.
 
 Then **keep working in-window**. No manual `/compact` is needed to cross a task boundary.
 If a *deliberate* focused reset is genuinely wanted (not the default), emit a

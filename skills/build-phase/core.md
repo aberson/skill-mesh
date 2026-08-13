@@ -38,8 +38,8 @@ This skill's default posture, by strong operator preference:
 
 The 5 conditions under which `/build-phase` is permitted to halt mid-run. Anything else is a defect — surface it as a finding upstream (`/plan-review`, `/plan-wrap`), not a mid-run halt. Long-form rationale + the workspace-wide source-of-truth lives in `dev/.claude/rules/code-quality.md § "Build-phase halt contract"`; this section inlines a 1-sentence summary per item so an operator reading SKILL.md cold doesn't have to navigate out. Reference investigation `02-halt-contract.md`.
 
-1. **Conditional-step predicate errored or returned non-binary.** A `Type: conditional` step's `Condition:` shell expression exited with a code build-phase cannot interpret as run-or-skip (command-not-found ≥126, syntax error, signal-terminated ≥128, or a predicate that outputs but never exits). See "Conditional step handling" below for the dispatch table.
-2. **Quality-gate hard fail.** typecheck error count > 0, test count regressed below baseline, lint produced a blocker-class finding — OR (per Step 1's race-condition defense in sections 2d/2e) `origin` advanced with commits overlapping the step's modified file set. All four are integrity-class failures: the worktree's claim that "this step ships these changes against this baseline" no longer holds. The race-condition extension is documented as a sub-case of this halt class, NOT a new (6th) halt class — preserves the 5-item allowlist.
+1. **Conditional-step predicate errored or returned non-binary.** A `Type: conditional` step's `Condition:` ABI has exactly two valid exits: `0` = run and `1` = skip. Every other exit, signal, launch failure, or syntax error halts. See "Conditional step handling" below for the dispatch table.
+2. **Quality-gate hard fail.** typecheck error count > 0, test count regressed below baseline, lint produced a blocker-class finding, `origin` advanced with overlapping files, OR a `PROJECT_SCOPE_HALT` detected a changed/staged path outside the validated project prefix. These are integrity-class failures: the worktree's claim that "this step ships these changes against this baseline and scope" no longer holds. Race and scope failures are sub-cases of this halt class, NOT new halt classes.
 3. **Stop-and-audit triggered.** Third instance of the same bug-shape in this session, per `/build-step`'s stop-and-audit rule. Whack-a-mole is wasting time; STOP iterating, audit the codebase for siblings, and fix the shared structural invariant in one refactor rather than re-patching each named line.
 4. **Wait-type step reached.** A step declared `Type: wait` is long-running observation work (a soak test, a benchmark run). The orchestrator halts intentionally so wall-clock waiting doesn't burn context window. Resume in a fresh session via `--resume <next-step>` after the wait completes.
 5. **Worktree merge conflict.** A surgical-edit conflict from earlier steps overlapping the current step's files. Requires human resolution before continuing.
@@ -97,7 +97,7 @@ If `Issue` is omitted, no GitHub updates are posted for that step.
 - **Issue:** #65
 ```
 
-The shell-expression in `Condition:` is run from the project root at conditional-step dispatch time. Exit 0 means run; non-zero means skip. Steps with `Type: conditional` lacking a `Condition:` field are pre-flight Blockers (see Step 0 pre-flight detection).
+The shell-expression in `Condition:` is run from the project root at conditional-step dispatch time. Exit `0` means run, exit `1` means skip, and every other result halts. Steps with `Type: conditional` lacking a `Condition:` field are pre-flight Blockers (see Step 0 pre-flight detection).
 
 ### Step types
 
@@ -109,7 +109,7 @@ The `Type:` field tells build-phase what shape of work the step represents.
 | `code` | Default. A normal coding step — write/modify source files, run tests. | Spawns `/build-step` with the step's flags. Standard reviewer/iteration loop. |
 | `operator` | The work is observation, configuration, smoke testing, or other manual investigation that does not produce a code diff. Common for "verify X is wired" or "smoke test Y" steps. | **Does NOT spawn /build-step.** Halts orchestration, prints the step's problem statement to the user, and waits for the user to do the work and report back. The user runs the step manually (often outside any worktree) and tells build-phase the result. build-phase then updates plan/issue/checkpoint as if /build-step had returned PASS. |
 | `wait` | Long-running observation. The step is mostly idle wall-clock time — a soak test, a benchmark run, a data-collection window. The deliverable is a run log or observation document, not a code diff. | **Halts orchestration entirely.** Prints the step problem and stops. The user runs the wait period manually and the orchestrator does not resume; instead a future build-phase invocation picks up at the next step via `--resume`. Burning context window on a 4-hour wait is wasteful — hand off cleanly. |
-| `conditional` | The step only runs if a predicate from a prior step is true. Common shape: "Step 5: fix blockers (only if Step 4 found any)." Requires a `**Condition:** <shell-expression>` field. | **Evaluates the `Condition:` predicate.** Exit code 0 → run the step as a code step; non-zero (≤125) → skip with `Status: SKIPPED (condition false)` and continue; ≥126 or predicate errored → halt as a pre-flight defect. No y/n prompt — the predicate is the decision. |
+| `conditional` | The step only runs if a predicate from a prior step is true. Common shape: "Step 5: fix blockers (only if Step 4 found any)." Requires a `**Condition:** <shell-expression>` field. | **Evaluates the `Condition:` predicate.** Exit `0` → run; exit `1` → `Status: SKIPPED (condition false)`; every other exit or launch error → halt as a predicate defect. No y/n prompt — the predicate is the decision. |
 
 **Why this exists:** prior to this field, build-phase blindly tried to run every step
 through `/build-step`, which wastes time and context on operator/wait steps and produces
@@ -153,6 +153,149 @@ orchestrator can do the right thing per step.
 build-phase walks 4 outer steps: Step 0 (parse), Step 1 (pre-flight), Step 2 (dispatch each plan step), Step 3 (final verification), Step 4 (report). See `## Flow` below for the full procedure.
 
 ## Flow
+
+### In-repository project adapter (non-negotiable)
+
+The invocation directory is the project root. A plan may describe either a whole Git repository or
+a project stored below a larger repository; do not infer that the two roots are identical. Resolve
+and retain all four values before Step 0:
+
+```bash
+PHASE_STASH_OID=""
+STASH_LOCK_OWNER="skill-mesh-build-phase-$(date +%s)-$$-${RANDOM}-${RANDOM}"
+
+acquire_stash_lock() {
+  LOCK_ATTEMPT=0
+  while ! mkdir "$STASH_LOCK_DIR" 2>/dev/null; do
+    LOCK_ATTEMPT=$((LOCK_ATTEMPT + 1))
+    EXISTING_OWNER="$(cat "$STASH_LOCK_DIR/owner" 2>/dev/null || true)"
+    if [ "$LOCK_ATTEMPT" -ge 50 ]; then
+      echo "STASH_LOCK_HALT: Git-root stash lock busy or stale; retained without stealing. Owner: ${EXISTING_OWNER:-initializing}" >&2
+      return 1
+    fi
+    sleep 0.1
+  done
+  printf 'marker=%s pid=%s host=%s started=%s\n' \
+    "$STASH_LOCK_OWNER" "$$" "$(hostname)" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+    > "$STASH_LOCK_DIR/owner"
+}
+
+release_stash_lock() {
+  LOCK_OWNER_TEXT="$(cat "$STASH_LOCK_DIR/owner" 2>/dev/null || true)"
+  case "$LOCK_OWNER_TEXT" in
+    "marker=$STASH_LOCK_OWNER "*)
+      rm -f -- "$STASH_LOCK_DIR/owner" && rmdir "$STASH_LOCK_DIR"
+      ;;
+    *) echo "STASH_LOCK_HALT: lock owner changed; retaining lock" >&2; return 1 ;;
+  esac
+}
+
+restore_phase_stash() {
+  [ -z "$PHASE_STASH_OID" ] && return 0
+  acquire_stash_lock || return 1
+  RESTORE_RC=0
+  git -C "$GIT_ROOT" cat-file -e "${PHASE_STASH_OID}^{commit}" || RESTORE_RC=1
+  if [ "$RESTORE_RC" -eq 0 ]; then
+    STASH_REF=$(git -C "$GIT_ROOT" stash list --format='%H %gd' \
+      | awk -v oid="$PHASE_STASH_OID" '$1 == oid { print $2; exit }')
+    [ -n "$STASH_REF" ] || RESTORE_RC=1
+  fi
+  if [ "$RESTORE_RC" -eq 0 ]; then
+    git -C "$GIT_ROOT" stash apply --index "$PHASE_STASH_OID" || RESTORE_RC=1
+  fi
+  if [ "$RESTORE_RC" -eq 0 ]; then
+    git -C "$GIT_ROOT" stash drop "$STASH_REF" || RESTORE_RC=1
+  fi
+  release_stash_lock || RESTORE_RC=1
+  [ "$RESTORE_RC" -eq 0 ] && PHASE_STASH_OID=""
+  return "$RESTORE_RC"
+}
+
+finalize_phase_state() {
+  restore_phase_stash
+}
+
+phase_scope_halt() {
+  SCOPE_SUMMARY="PROJECT_SCOPE_HALT: $1"
+  # If a per-step verdict channel is active, atomically call write_verdict before return:
+  # write_verdict(terminal="NEEDS WORK", halt="SHIP_GATE_HALT",
+  #               summary=SCOPE_SUMMARY, expected run id/path/key)
+  # This is halt class #2 (integrity); SHIP_GATE_HALT is the schema-valid durable sentinel.
+  finalize_phase_state || echo "PROJECT_SCOPE_HALT: exact phase stash restoration failed" >&2
+  echo "$SCOPE_SUMMARY" >&2
+  return 2
+}
+
+PROJECT_ROOT="$(pwd -P)"
+GIT_ROOT="$(git -C "$PROJECT_ROOT" rev-parse --show-toplevel)"
+GIT_ROOT="$(cd "$GIT_ROOT" && pwd -P)"
+GIT_COMMON_DIR="$(git -C "$GIT_ROOT" rev-parse --git-common-dir)"
+case "$GIT_COMMON_DIR" in /*|[A-Za-z]:/*) ;; *) GIT_COMMON_DIR="$GIT_ROOT/$GIT_COMMON_DIR" ;; esac
+STASH_LOCK_DIR="$GIT_COMMON_DIR/skill-mesh-stash.lock"
+case "$PROJECT_ROOT/" in
+  "$GIT_ROOT/"*) ;;
+  *) phase_scope_halt "project root is outside Git root"; exit $? ;;
+esac
+if [ "$PROJECT_ROOT" = "$GIT_ROOT" ]; then
+  PROJECT_PREFIX="."
+else
+  PROJECT_PREFIX="${PROJECT_ROOT#"$GIT_ROOT"/}"
+fi
+PROJECT_PATHSPEC="$PROJECT_PREFIX"
+
+list_project_changes_since() {
+  CHANGE_BASE="$1"
+  # Comparing a commit to the working tree includes later commits, index, and unstaged tracked
+  # edits. Add untracked paths explicitly. Keep the stream NUL-delimited end to end.
+  git -C "$GIT_ROOT" diff "$CHANGE_BASE" --name-only -z -- "$PROJECT_PATHSPEC"
+  git -C "$GIT_ROOT" ls-files --others --exclude-standard -z -- "$PROJECT_PATHSPEC"
+}
+
+write_project_overlap_set() {
+  REMOTE_RANGE="$1"
+  LOCAL_BASE="$2"
+  OVERLAP_OUTPUT="$3"
+  UPSTREAM_SORTED_Z="$(mktemp)" || return 1
+  LOCAL_SORTED_Z="$(mktemp)" || { rm -f -- "$UPSTREAM_SORTED_Z"; return 1; }
+  OVERLAP_RC=0
+  set -o pipefail
+  git -C "$GIT_ROOT" diff --name-only -z "$REMOTE_RANGE" -- "$PROJECT_PATHSPEC" \
+    | sort -z -u > "$UPSTREAM_SORTED_Z" || OVERLAP_RC=1
+  list_project_changes_since "$LOCAL_BASE" \
+    | sort -z -u > "$LOCAL_SORTED_Z" || OVERLAP_RC=1
+  if [ "$OVERLAP_RC" -eq 0 ]; then
+    comm -z -12 "$UPSTREAM_SORTED_Z" "$LOCAL_SORTED_Z" > "$OVERLAP_OUTPUT" \
+      || OVERLAP_RC=1
+  fi
+  rm -f -- "$UPSTREAM_SORTED_Z" "$LOCAL_SORTED_Z"
+  return "$OVERLAP_RC"
+}
+
+render_nul_paths() {
+  while IFS= read -r -d '' path; do
+    printf '  %q\n' "$path"
+  done
+}
+```
+
+- `PROJECT_ROOT` owns plan resolution, dependency commands, predicates, quality gates, and
+  `/build-step` dispatch cwd.
+- `GIT_ROOT` owns Git metadata and every Git command.
+- `PROJECT_PREFIX` is repository-relative (`.` for a normal one-project repository).
+- `PROJECT_PATHSPEC` is the sole pathspec for status, stash, changed-path collection, overlap,
+  staging, and checkpoint commits.
+
+Resolve relative `--plan` paths against `PROJECT_ROOT`, then require the absolute plan to remain
+inside `PROJECT_ROOT`. A caller at a containing repository root must first enter the intended
+project; a plan path such as `subproject/plan.md` does not silently turn the repository root into
+that subproject. This explicit cwd contract preserves existing `documentation/*-plan.md` layouts
+while making an in-repository project deterministic.
+
+Every repository-relative path collected from Git must equal `PROJECT_PREFIX` or start with
+`PROJECT_PREFIX/` (all paths are allowed only when the prefix is `.`). Reject an out-of-prefix
+child diff before any copy, merge, stage, commit, or cleanup. Iterate changed paths as NUL-delimited
+records so whitespace cannot bypass the check. `/build-step` is invoked with cwd exactly
+`PROJECT_ROOT`, and its `WORKTREE_PROJECT` adapter independently enforces the same boundary.
 
 ### Step 0 -- Parse plan
 
@@ -219,7 +362,7 @@ Mixed-type phase detected. build-phase will:
   - Run code steps via /build-step
   - Halt on operator steps and prompt you to do them manually
   - Halt entirely on wait steps (resume with --resume after the wait)
-  - Evaluate the `Condition:` predicate on conditional steps (run if exit 0, skip if non-zero)
+  - Evaluate the `Condition:` predicate on conditional steps (exit 0 runs, exit 1 skips, every other result halts)
 
 Operator-preference checks (autonomous + UI-bundle + parallel):
   - UI-MISSING:        (none detected)   [or: "UI-MISSING: Steps N, M touch frontend/ but lack --ui. Continuing without it. Operator should review whether --ui flag is appropriate for the next phase invocation."]
@@ -249,13 +392,89 @@ After printing the step list and any summary notes, transition directly to Step 
 
 ### Step 1 -- Pre-flight
 
-1. **Detect project context:** language, test/lint/typecheck commands.
-2. **Run baseline quality gates:**
+1. **Detect project context from `PROJECT_ROOT`:** language and the applicable
+   test/lint/typecheck commands. Run dependency and gate commands from this directory, never from
+   `GIT_ROOT` merely because it owns `.git`.
+2. **Classify and run the baseline quality gates.** First establish Python intent; filesystem
+   absence alone is not language detection. Set `PYTHON_PROJECT_DETECTED=true` only from existing
+   Python project evidence (for example `pyproject.toml`, a declared Python toolchain, or Python
+   source), and set `PYTHON_BOOTSTRAP_DECLARED=true` only when a selected plan step's
+   `Problem:`/`Produces:` explicitly promises a Python bootstrap (`pyproject.toml`, `.py` modules,
+   or named Python/uv gates). Do not classify an empty Node/Go/Rust or unknown project as Python
+   merely because `pyproject.toml`, `src/`, and `tests/` are absent.
+
+   A detected-or-declared Python project with all three bootstrap surfaces absent has no executable
+   baseline yet. Record the literal state `NO_BASELINE (greenfield)` and baseline test count `0`;
+   do not invent commands or treat their absence as a gate failure. Otherwise run every
+   detected/applicable gate in the project's declared order:
    ```bash
-   <typecheck_command> && <lint_command> && <test_command>
+   cd "$PROJECT_ROOT"
+   if { [ "$PYTHON_PROJECT_DETECTED" = true ] || [ "$PYTHON_BOOTSTRAP_DECLARED" = true ]; } \
+      && [ ! -e pyproject.toml ] && [ ! -d src ] && [ ! -d tests ]; then
+     BASELINE_STATE="NO_BASELINE (greenfield)"
+     BASELINE_TEST_COUNT=0
+     echo "Baseline: NO_BASELINE (greenfield); test count: 0"
+   else
+     BASELINE_STATE="ESTABLISHED"
+     <typecheck_command> && <lint_command> && <test_command>
+     BASELINE_TEST_COUNT=<measured_test_count>
+   fi
    ```
-3. **Record baseline test count.**
-4. **Verify git is clean** (or stash).
+   If Python intent is false, detect and run the actual stack's gates. A genuinely gate-free,
+   non-Python documentation task may report `NO_APPLICABLE_GATES`, but it must not use the Python
+   `NO_BASELINE (greenfield)` label or synthetic Python test count.
+
+   `NO_BASELINE` is a one-time bootstrap state, not a waiver. Immediately after the first code step
+   creates any project gate surface (for Python: `pyproject.toml`, `src/`, or `tests/`), redetect the
+   project commands and require every applicable typecheck, lint, and full-test gate in section 2f.
+   From that point onward a missing expected command, skipped gate, non-zero exit, or test count
+   below the most recent established baseline is a quality-gate hard fail. A plan may declare a
+   fixed order (for example `mypy` → `ruff` → full `pytest`); preserve it exactly.
+3. **Record the measured baseline test count** (`0` only for the explicit greenfield case above).
+4. **Check or stash only `PROJECT_PATHSPEC`:** unrelated changes elsewhere in a containing
+   repository are out of scope and remain byte-for-byte/index-for-index untouched.
+
+   ```bash
+   if ! acquire_stash_lock; then
+     phase_scope_halt "could not acquire Git-root stash lock"
+     exit $?
+   fi
+   STASH_CREATE_RC=0
+   PROJECT_STATUS="$(git -C "$GIT_ROOT" status --porcelain -- "$PROJECT_PATHSPEC")"
+   if [ -n "$PROJECT_STATUS" ]; then
+     git -C "$GIT_ROOT" stash push --include-untracked \
+       -m "build-phase pre-run state: $PROJECT_PREFIX [$STASH_LOCK_OWNER]" \
+       -- "$PROJECT_PATHSPEC" || STASH_CREATE_RC=1
+     if [ "$STASH_CREATE_RC" -eq 0 ]; then
+       PHASE_STASH_OID="$(git -C "$GIT_ROOT" rev-parse refs/stash)" || STASH_CREATE_RC=1
+     fi
+   fi
+   release_stash_lock || STASH_CREATE_RC=1
+   if [ "$STASH_CREATE_RC" -ne 0 ]; then
+     phase_scope_halt "path-scoped stash creation failed"
+     exit $?
+   fi
+   ```
+
+   `restore_phase_stash` applies the recorded OID itself with `--index` and drops only the `%gd`
+   whose full `%H` matched. Never use an unqualified stash pop or drop a ref selected before the
+   OID check.
+
+   The Git-common-dir lock covers each complete identity-sensitive transaction: status + scoped
+   push + OID capture, and restore identity lookup + `--index` apply + exact-ref drop. The owner
+   file records a unique run marker, PID, host, and UTC start. Contention waits briefly and then
+   fails closed. Missing, partial, or dead-looking owner metadata is reported as stale but retained;
+   never steal or recursively delete the lock because PID reuse and cross-host worktrees make that
+   unsafe. The owner record is printed for deliberate operator recovery.
+
+   **Terminal-finalizer invariant:** once a phase stash exists, every success, wait boundary,
+   predicate halt, BLOCKED result, overlap/scope halt, exception, or other return routes through
+   `finalize_phase_state`, which calls `restore_phase_stash`. The acquisition and creation guards
+   above exit immediately through that finalizer; they never fall through into step dispatch. A
+   failed exact apply/drop preserves the stash and
+   converts the terminal result to a quality-gate hard fail. No successful phase report is emitted
+   before restoration succeeds. A clean dedicated build worktree creates no stash. `--dry-run`
+   exits in Step 0 and never reaches this block, so it has no stash/stage/commit side effects.
 
 ### Step 2 -- Run each step
 
@@ -461,13 +680,50 @@ For steps with `Type: conditional`:
 
    This is a legitimate halt: a defect-of-input the operator needs to see, not a "should I continue?" gate. (After BPA Step 10 lands, the formal legitimate-halt allowlist will live in `.claude/rules/code-quality.md`; until then, the inline rationale here is the source of truth.)
 
-2. **Evaluate the predicate.** When a conditional step is reached during execution, exec the `Condition:` shell expression via `bash -c "<expr>"` from the project root (bash is universally invoked, even on Windows; the workspace's `CLAUDE.md` notes Git Bash is routinely available). Capture exit code only; ignore stdout/stderr unless the predicate errored. If `bash` itself is unavailable, halt as a pre-flight defect (this is a setup problem, not a predicate problem).
+2. **Evaluate the predicate with an explicit shell and cwd.** On Windows, invoke the exact Git for
+   Windows executable `C:\Program Files\Git\bin\bash.exe`; never resolve `bash`, `bash.exe`, or
+   `wsl.exe` through `PATH`, because a bare name may select WSL and change exit-code semantics. Set
+   the process working directory to `PROJECT_ROOT`. A host using PowerShell follows this shape:
+
+   ```powershell
+   $conditionShell = 'C:\Program Files\Git\bin\bash.exe'
+   if (-not (Test-Path -LiteralPath $conditionShell -PathType Leaf)) {
+       throw 'build-phase pre-flight defect: explicit Git Bash executable is unavailable'
+   }
+   $predicateTempDir = Join-Path ([IO.Path]::GetTempPath()) ("skill-mesh-predicate-" + [guid]::NewGuid().ToString('N'))
+   $null = New-Item -ItemType Directory -Path $predicateTempDir
+   $predicateStderrPath = Join-Path $predicateTempDir 'stderr.txt'
+   $predicateStderr = ''
+   try {
+       Push-Location -LiteralPath $PROJECT_ROOT
+       try {
+           & $conditionShell -c $condition 2> $predicateStderrPath
+           $predicateExit = $LASTEXITCODE
+       }
+       finally {
+           Pop-Location
+       }
+       if (Test-Path -LiteralPath $predicateStderrPath) {
+           $predicateStderr = Get-Content -LiteralPath $predicateStderrPath -Raw
+       }
+   }
+   finally {
+       Remove-Item -LiteralPath $predicateTempDir -Recurse -Force -ErrorAction SilentlyContinue
+   }
+   ```
+
+   On non-Windows, resolve the platform's Bash executable to an absolute path once, reject an empty
+   or non-executable result, create a private directory with `mktemp -d`, define an absolute
+   `predicateStderrPath` inside it, and invoke that absolute shell with cwd `PROJECT_ROOT`; do not
+   dispatch a bare shell name. Capture the exit code and stderr before an unconditional temp-dir
+   cleanup. If shell launch fails, assign a non-binary result and halt; it is never a false
+   predicate.
 
 3. **Dispatch on exit code:**
-   `# Exit 2 with non-empty stderr = syntax error → treat as ≥126 halt, not skip`
-   Capture stderr separately so the orchestrator can distinguish a predicate that evaluated false from a predicate that failed to parse.
+   The ABI is exhaustive and deliberately narrower than generic shell truthiness. Capture and
+   surface `$predicateStderr` on the halt branch; never use stderr presence to reinterpret exit `1`.
    - **Exit 0:** the predicate is true — execute the step as a code step using the standard 2a-2g flow (same flags, same dev → review → merge cycle).
-   - **Exit non-zero (but ≤ 125), except exit 2 with non-empty stderr:** the predicate evaluated false — mark the step `Status: SKIPPED (condition false)` in plan.md, no checkpoint commit (the skip itself is not a meaningful diff), no quality-gate run, continue to the next step. Post a brief skip comment to the GitHub issue if `Issue:` is set:
+   - **Exit 1:** the predicate evaluated false — mark the step `Status: SKIPPED (condition false)` in plan.md, no checkpoint commit (the skip itself is not a meaningful diff), no quality-gate run, continue to the next step. Post a brief skip comment to the GitHub issue if `Issue:` is set:
      ```
      ## build-phase: Step N skipped (condition false)
 
@@ -475,7 +731,7 @@ For steps with `Type: conditional`:
      Exit code: <code>
      Step skipped per Type: conditional handling.
      ```
-   - **Exit ≥ 126 (command not found / not executable) OR predicate errored (unexpected behavior, e.g., signal, syntax error):** halt the phase with a `pre-flight-defect` style message — the predicate itself is broken (command-not-found, syntax error, or signal-terminated), which is a defect to surface, not a step to skip. Like the missing-Condition Blocker above, this is a legitimate halt: it represents a real defect the operator needs to see, not an autonomy gate.
+   - **Every other exit/result (including 2–255, command-not-found, launch failure, syntax error, or signal):** halt the phase with the numeric result and captured stderr. The predicate is broken or violated its declared ABI; it is never a skip. Like the missing-Condition Blocker above, this is a legitimate halt: it represents a real defect the operator needs to see, not an autonomy gate.
 
 #### Code step handling — standard flow
 
@@ -483,12 +739,12 @@ For steps with `Type: conditional`:
 
 If the step has an issue number:
 
-Capture the baseline HEAD with `git rev-parse HEAD` immediately before posting and include it as `**Baseline HEAD:**` in the comment. The baseline HEAD is recorded so the recheck-git-state defense in sections 2d and 2e has a deterministic reference point — both subsequent ship gates compare `origin`'s state against this value to detect parallel-session commits that landed on master between step start and step finish.
+Capture the baseline HEAD with `git -C "$GIT_ROOT" rev-parse HEAD` immediately before posting and include it as `**Baseline HEAD:**` in the comment. The baseline HEAD is recorded so the recheck-git-state defense in sections 2d and 2e has a deterministic reference point — both subsequent ship gates compare `origin`'s project-scoped state against this value to detect parallel-session commits that landed on master between step start and step finish.
 
-Heredoc note: this template uses `<<EOF` (unquoted) so `$BASELINE_HEAD` interpolates at issue-comment time; backticks in the body are escaped (`\``) to render literally. The 2d PASS/BLOCKED templates below use `<<'EOF'` (single-quoted) because they have no shell variables to expand. The 2d HALT template (race-condition path) uses `<<EOF` (unquoted) for the same reason as 2a — it interpolates `$BASELINE_HEAD`, `$UPSTREAM`, `$OVERLAP`.
+Heredoc note: this template uses `<<EOF` (unquoted) so `$BASELINE_HEAD` interpolates at issue-comment time; backticks in the body are escaped (`\``) to render literally. The 2d PASS/BLOCKED templates below use `<<'EOF'` (single-quoted) because they have no shell variables to expand. The 2d HALT template (race-condition path) uses `<<EOF` (unquoted) for the same reason as 2a — it interpolates `$BASELINE_HEAD`, `$UPSTREAM`, and display-only `$OVERLAP_DISPLAY`.
 
 ```bash
-BASELINE_HEAD=$(git rev-parse HEAD)
+BASELINE_HEAD=$(git -C "$GIT_ROOT" rev-parse HEAD)
 gh issue comment $ISSUE --body "$(cat <<EOF
 ## build-phase: Step N started
 
@@ -524,8 +780,10 @@ verdict, overlap halt, quality-gate halt, or successful checkpoint, delete
 `VERDICT_PATH`. Failure to delete is a warning; the unique run id/key prevent
 reuse.
 
-Invoke `/build-step` with the step's problem statement, flags, issue number, and
-durable verdict channel. When the step's `Done when:` was extracted in Step 0
+Invoke `/build-step` with cwd set exactly to `PROJECT_ROOT`, plus the step's problem statement,
+flags, issue number, and durable verdict channel. This cwd is part of the containment contract:
+build-step derives the same `GIT_ROOT`/`PROJECT_PREFIX` and enters
+`WORKTREE_ROOT/PROJECT_PREFIX` in its child worktree. When the step's `Done when:` was extracted in Step 0
 sub-bullet 6 as a present, non-sentinel value, forward it as `--acceptance`.
 
 ```text
@@ -579,38 +837,44 @@ If the step has an issue number, post a comprehensive update:
 
 **This halt is NOT a new halt class.** It extends existing halt class #2 (Quality-gate hard fail) per `dev/.claude/rules/code-quality.md § "Build-phase halt contract"` — git-state divergence from `origin` is a quality-gate failure in the integrity sense: the local worktree's claim that "this step ships these changes against this baseline" no longer holds. Treat the recheck like a typecheck or test-count regression — a measured value, surfaced as a defect.
 
-Heuristic: `if git rev-parse --abbrev-ref @{u} 2>/dev/null returns a value, use HEAD..@{u}; else git fetch --quiet origin && git log --oneline HEAD..origin/<default-branch>`.
+Heuristic: query upstream and origin via `git -C "$GIT_ROOT"`; every file-diff command also receives
+`-- "$PROJECT_PATHSPEC"` so sibling-project changes cannot create a false overlap.
 
 ```bash
 # Form A: upstream tracking is set
-git log --oneline HEAD..@{u}
+git -C "$GIT_ROOT" log --oneline HEAD..@{u}
 ```
 
 ```bash
 # Form B: no upstream — fetch and compare to default branch
-git fetch --quiet origin
-DEFAULT=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's|refs/remotes/||')
+git -C "$GIT_ROOT" fetch --quiet origin
+DEFAULT=$(git -C "$GIT_ROOT" symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's|refs/remotes/||')
 DEFAULT=${DEFAULT:-origin/master}  # Fallback if origin/HEAD isn't set (fresh clone without `git remote set-head`)
-git log --oneline "HEAD..$DEFAULT"
+git -C "$GIT_ROOT" log --oneline "HEAD..$DEFAULT"
 ```
 
 If new commits exist on `origin`, compute the file-overlap:
 
 ```bash
 # Files changed in the new origin commits (compare REMOTE to LOCAL — left side is the upstream)
-UPSTREAM=$(git rev-parse --abbrev-ref @{u} 2>/dev/null || echo "$DEFAULT")
-NEW_COMMIT_FILES=$(git diff --name-only "$BASELINE_HEAD..$UPSTREAM")
-
-# Files this step has modified since baseline
-STEP_FILES=$(git diff --name-only "$BASELINE_HEAD..HEAD")
-
-# Overlap = intersection
-OVERLAP=$(comm -12 <(echo "$NEW_COMMIT_FILES" | sort -u) <(echo "$STEP_FILES" | sort -u))
+UPSTREAM=$(git -C "$GIT_ROOT" rev-parse --abbrev-ref @{u} 2>/dev/null || echo "$DEFAULT")
+OVERLAP_Z=$(mktemp) || { phase_scope_halt "could not allocate overlap set"; exit $?; }
+if ! write_project_overlap_set "$BASELINE_HEAD..$UPSTREAM" "$BASELINE_HEAD" "$OVERLAP_Z"; then
+  rm -f -- "$OVERLAP_Z"
+  phase_scope_halt "NUL-safe overlap computation failed"
+  exit $?
+fi
+if [ -s "$OVERLAP_Z" ]; then
+  OVERLAP_DISPLAY="$(render_nul_paths < "$OVERLAP_Z")"
+else
+  OVERLAP_DISPLAY=""
+fi
+rm -f -- "$OVERLAP_Z"
 ```
 
 **Dispatch on overlap:**
 
-- **OVERLAP non-empty → HALT** (extension of halt class #2). Preserve the worktree state for operator inspection. Post a halt comment to the issue naming the conflicting commits (the `git log --oneline` output above) and the overlapping files; cross-link to `dev/.claude/rules/code-quality.md § "Build-phase halt contract"`. Do NOT proceed to the PASS/BLOCKED ship comment. Do NOT proceed to 2e.
+- **`OVERLAP_DISPLAY` non-empty → HALT** (extension of halt class #2). The decision was made from the NUL-delimited file before rendering; `%q` is display-only, so a newline-bearing path cannot change the intersection. Preserve the worktree state for operator inspection. Post a halt comment to the issue naming the conflicting commits (the `git log --oneline` output above) and the overlapping files; cross-link to `dev/.claude/rules/code-quality.md § "Build-phase halt contract"`. Do NOT proceed to the PASS/BLOCKED ship comment. Do NOT proceed to 2e.
 
   ```bash
   gh issue comment $ISSUE --body "$(cat <<EOF
@@ -622,12 +886,12 @@ OVERLAP=$(comm -12 <(echo "$NEW_COMMIT_FILES" | sort -u) <(echo "$STEP_FILES" | 
 
   **Conflicting commits on origin:**
   \`\`\`
-  $(git log --oneline "HEAD..$UPSTREAM")
+  $(git -C "$GIT_ROOT" log --oneline "HEAD..$UPSTREAM")
   \`\`\`
 
   **Overlapping files (this step ∩ new origin commits):**
   \`\`\`
-  $OVERLAP
+  $OVERLAP_DISPLAY
   \`\`\`
 
   **Worktree preserved.** Resolve the divergence (merge / rebase / re-plan) and re-run with \`/build-phase --plan <path> --resume N\`.
@@ -637,7 +901,7 @@ OVERLAP=$(comm -12 <(echo "$NEW_COMMIT_FILES" | sort -u) <(echo "$STEP_FILES" | 
   )"
   ```
 
-- **New commits exist but OVERLAP empty → informational note only, continue.** Emit a one-line note in the result comment ("Note: N new commits landed on `origin` during this step but touched no files in this step's scope — no halt.") and proceed to the PASS/BLOCKED ship comment below per plan §8 risk-table line 228.
+- **New commits exist but `OVERLAP_DISPLAY` empty → informational note only, continue.** Emit a one-line note in the result comment ("Note: N new commits landed on `origin` during this step but touched no files in this step's scope — no halt.") and proceed to the PASS/BLOCKED ship comment below per plan §8 risk-table line 228.
 
 - **No new commits → silent, continue to ship comment.**
 
@@ -732,31 +996,49 @@ EOF
 
 After capturing the result (PASS or BLOCKED), update the plan document and commit:
 
-**Recheck git state before the checkpoint commit.** Re-run the same recheck-git-state defense described in section 2d (race-condition defense) immediately before `git add -A && git commit`. The window between 2d's recheck and 2e's commit is small but non-zero, and a parallel session that committed in that window must still be detected. Heuristic + commands are identical:
+**Recheck git state before the checkpoint commit.** Re-run the same project-scoped
+recheck-git-state defense described in section 2d immediately before the scoped stage/commit. The
+window between 2d's recheck and 2e's commit is small but non-zero, and a parallel session that
+committed in that window must still be detected. Heuristic + commands are identical:
 
 ```bash
 # Form A: upstream tracking is set
-git log --oneline HEAD..@{u}
+git -C "$GIT_ROOT" log --oneline HEAD..@{u}
 ```
 
 ```bash
 # Form B: no upstream — fetch and compare to default branch
-git fetch --quiet origin
-DEFAULT=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's|refs/remotes/||')
+git -C "$GIT_ROOT" fetch --quiet origin
+DEFAULT=$(git -C "$GIT_ROOT" symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's|refs/remotes/||')
 DEFAULT=${DEFAULT:-origin/master}  # Fallback if origin/HEAD isn't set (fresh clone without `git remote set-head`)
-git log --oneline "HEAD..$DEFAULT"
+git -C "$GIT_ROOT" log --oneline "HEAD..$DEFAULT"
 ```
 
-If new origin commits exist AND their changed files overlap `$BASELINE_HEAD..HEAD`, **halt before committing** as an extension of halt class #2 (Quality-gate hard fail) per `dev/.claude/rules/code-quality.md § "Build-phase halt contract"`. Preserve the worktree state for operator inspection — do NOT run `git add -A`, do NOT create the checkpoint commit. The same halt comment template from section 2d (naming the conflicting commits via `git log --oneline` and listing overlapping files) is posted to the issue. Non-overlapping new commits proceed silently (informational note already emitted by 2d). See workspace memory `feedback_recheck_git_during_build_phase` (Toybox K17).
+If new origin commits exist AND their project-scoped changed files overlap the complete local set
+since `$BASELINE_HEAD` (commits + index + unstaged + untracked), **halt before committing** as an extension of halt class #2 (Quality-gate
+hard fail) per `dev/.claude/rules/code-quality.md § "Build-phase halt contract"`. Preserve the
+worktree state for operator inspection — do not stage or create the checkpoint commit. The same
+halt comment template from section 2d is posted to the issue. Non-overlapping new commits proceed
+silently (informational note already emitted by 2d). See workspace memory
+`feedback_recheck_git_during_build_phase` (Toybox K17).
 
 ```bash
-UPSTREAM=$(git rev-parse --abbrev-ref @{u} 2>/dev/null || echo "$DEFAULT")
-NEW_COMMIT_FILES=$(git diff --name-only "$BASELINE_HEAD..$UPSTREAM")
-STEP_FILES=$(git diff --name-only "$BASELINE_HEAD..HEAD")
-OVERLAP=$(comm -12 <(echo "$NEW_COMMIT_FILES" | sort -u) <(echo "$STEP_FILES" | sort -u))
+UPSTREAM=$(git -C "$GIT_ROOT" rev-parse --abbrev-ref @{u} 2>/dev/null || echo "$DEFAULT")
+OVERLAP_Z=$(mktemp) || { phase_scope_halt "could not allocate overlap set"; exit $?; }
+if ! write_project_overlap_set "$BASELINE_HEAD..$UPSTREAM" "$BASELINE_HEAD" "$OVERLAP_Z"; then
+  rm -f -- "$OVERLAP_Z"
+  phase_scope_halt "NUL-safe overlap computation failed"
+  exit $?
+fi
+if [ -s "$OVERLAP_Z" ]; then
+  OVERLAP_DISPLAY="$(render_nul_paths < "$OVERLAP_Z")"
+else
+  OVERLAP_DISPLAY=""
+fi
+rm -f -- "$OVERLAP_Z"
 ```
 
-> Wrong-directory guard (complements the recheck above): the recheck catches a wrong-BASELINE (a parallel commit that moved the base); this guard catches a wrong-REPO. Before the `git add -A && git commit`, warn if the resolved target repo != the repo this lands in (advisory, never blocks) — per working-directory.md § Wrong-directory guard; reference impl `Test-WrongDirGuard`.
+> Wrong-directory guard (complements the recheck above): the recheck catches a wrong-BASELINE (a parallel commit that moved the base); this guard catches a wrong-REPO. Before the scoped stage and commit, warn if the resolved target repo != the repo this lands in (advisory, never blocks) — per working-directory.md § Wrong-directory guard; reference impl `Test-WrongDirGuard`.
 
 1. **Mark the step in plan.md.** Find the step's `### Step N:` heading and append a
    status line immediately after the existing metadata:
@@ -766,19 +1048,30 @@ OVERLAP=$(comm -12 <(echo "$NEW_COMMIT_FILES" | sort -u) <(echo "$STEP_FILES" | 
 
    If a `Status` line already exists for the step, replace it.
 
-2. **Create a checkpoint commit** with all current changes (merged worktree files +
-   plan doc update):
+2. **Create a project-scoped checkpoint commit** containing the merged worktree files and plan
+   update, never sibling/root canaries. First stage only `PROJECT_PATHSPEC`. Validate every staged
+   path in that pathspec against `PROJECT_PREFIX`; an attributed path outside the prefix is
+   `PROJECT_SCOPE_HALT`. A pre-existing staged sibling path remains untouched and is excluded from
+   the commit by the explicit pathspec.
 
    ```bash
-   git add -A
-   git commit -m "checkpoint: step N complete — <step_name>"
+   git -C "$GIT_ROOT" add --all -- "$PROJECT_PATHSPEC"
+   while IFS= read -r -d '' f; do
+     if [ "$PROJECT_PREFIX" != "." ]; then
+       case "$f" in
+         "$PROJECT_PREFIX"/*) ;;
+         *) phase_scope_halt "staged path outside $PROJECT_PREFIX/: $f"; exit $? ;;
+       esac
+     fi
+   done < <(git -C "$GIT_ROOT" diff --cached --name-only -z -- "$PROJECT_PATHSPEC")
+   git -C "$GIT_ROOT" commit --only -m "checkpoint: step N complete — <step_name>" -- "$PROJECT_PATHSPEC"
    ```
 
    On BLOCKED, use:
 
    ```bash
-   git add -A
-   git commit -m "checkpoint: step N blocked — <step_name>"
+   git -C "$GIT_ROOT" add --all -- "$PROJECT_PATHSPEC"
+   git -C "$GIT_ROOT" commit --only -m "checkpoint: step N blocked — <step_name>" -- "$PROJECT_PATHSPEC"
    ```
 
    These commits are intentionally small and frequent so that `--resume` can
@@ -791,6 +1084,7 @@ OVERLAP=$(comm -12 <(echo "$NEW_COMMIT_FILES" | sort -u) <(echo "$STEP_FILES" | 
 After each successful step:
 
 ```bash
+cd "$PROJECT_ROOT"
 <typecheck_command> && <lint_command> && <test_command>
 ```
 
@@ -804,6 +1098,13 @@ After each successful step:
 - If gates pass and test count >= baseline: update baseline, continue.
 - If gates fail: stop, report which gate failed, suggest fix.
 - If test count decreased: stop, report which tests were lost.
+- If the phase began at `NO_BASELINE (greenfield)`, this first post-step run establishes the real
+  baseline. Once any applicable project gate exists, all applicable gates are mandatory for this
+  and every later code step; never carry the zero baseline forward as permission to skip them.
+- If the just-completed step explicitly promised the Python bootstrap but all three surfaces remain
+  absent, halt as a quality-gate hard fail before marking it DONE. If the step did not promise a
+  bootstrap (for example a documentation-only precursor), retain the zero baseline until the
+  declared bootstrap step runs.
 
 #### 2g. Stop conditions
 
@@ -818,10 +1119,18 @@ On stop, always report which steps completed and which are still pending.
 After all steps complete:
 
 ```bash
+cd "$PROJECT_ROOT"
 <typecheck_command> && <lint_command> && <test_command>
 ```
 
 > Scope: FULL suite, same rule as §2f — the final report names which suites ran.
+
+If the phase started at `NO_BASELINE (greenfield)` and the three Python surfaces are still absent,
+branch explicitly instead of executing placeholder gate commands. If any selected/executed step
+declared the Python bootstrap, this is a quality-gate hard fail: the promised project was not
+created. Only when no executed step promised a Python surface may final verification report
+`NO_BASELINE (greenfield), test count 0` and finish without Python commands. Never report a passing
+Python gate that did not exist.
 
 ### Step 4 -- Report
 
@@ -929,7 +1238,7 @@ successful step completion — it does not replace or affect the 5 halt conditio
 
 After parsing the step list, before running pre-flight:
 
-1. Resolve `<git-root>/.claude/task-state/current.md` via `git rev-parse --show-toplevel`
+1. Resolve `$GIT_ROOT/.claude/task-state/current.md` from the already-validated `GIT_ROOT`
 2. If the file exists AND its `Task:` field contains the current plan path:
    - Read `current.md`
    - Output: `"Resuming phase from step N per task state."` (where N comes from the WIP
@@ -941,12 +1250,12 @@ After parsing the step list, before running pre-flight:
 
 **Use `task-handoff --loop --no-commit`.** Per the current.md write-race fix, task-state is now
 gitignored — a routine `--loop` commits nothing, so `--loop` and `--no-commit` are equivalent and
-neither can double-commit. 2e's `git add -A` commits the CODE + the plan's `Status: DONE` entry;
+neither can double-commit. 2e's project-scoped stage/commit records the CODE + the plan's `Status: DONE` entry;
 it does NOT pick up the gitignored `current.md` / `sessions/<id>.md` (nor should it). 2d/2e
 race-detection is unaffected — it compares the tracked-code diff, which never includes the
 gitignored task-state. `--no-commit` stays the correct call for clarity.
 
-Call `task-handoff --loop --no-commit` BEFORE the `git add -A && git commit` in 2e,
+Call `task-handoff --loop --no-commit` BEFORE the project-scoped stage/commit in 2e,
 with current.md reflecting:
 
 ```
@@ -961,7 +1270,7 @@ with current.md reflecting:
 /build-phase --plan <plan-path> --resume N+1
 ```
 
-The `--no-commit` write happens before 2e's `git add -A` so the checkpoint commit includes the
+The `--no-commit` write happens before 2e's scoped stage so the checkpoint commit includes the
 plan's `Status: DONE` entry. (The session-file write is durable-on-disk immediately and is
 gitignored, so it is not itself part of the commit.)
 

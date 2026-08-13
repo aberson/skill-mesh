@@ -115,6 +115,8 @@ this exact order — `current.md` first, render second, screen last:
    turn/step (e.g. plan-expedite's `--next-task` write) — preserve it verbatim; the
    render carries Next Action verbatim (rendering contract item 4), so an overwrite
    here would silently drop it.
+   A body delimited by `<!-- task-handoff-next-action-v1 -->` and its matching closing
+   marker is one indivisible field: preserve every label, digest, and command line exactly.
    The route's own git verb (step 5) checkpoints code changes and plan `Status: DONE`
    lines only; `current.md` remains filesystem-only. Do NOT use `--next-task` here:
    its git behavior would duplicate the route's git verb.
@@ -165,11 +167,14 @@ Everything in `clear-next`, same order — including step 1's
   than its indexed date, add a `friction catalog stale` digest flag (do not
   regenerate it).
 
-The Pick-up-here block's exact next command becomes the fresh-window opener instead
-of `/clear` (contract below) — the SessionStart hook does not fire on plain startup,
-so the opener must carry the pointer. With opt-in `--spawn` (section below), the deep
-link then auto-opens the next window pre-filled with that opener; the block on screen
-stays the baseline.
+For an end-window route without a runnable locked bundle, the Pick-up-here block's exact next
+command becomes the fresh-window opener instead of `/clear` (contract below) — the SessionStart
+hook does not fire on plain startup, so the opener must carry the pointer. A digest-valid
+`task-handoff-next-action-v1` bundle is the explicit exception: its locked branch owns the screen
+ordering (`/clear`, optional preview observation, then the atomic goal/action pair), while the
+fresh-window opener remains only the digest's closed-window alternative. With opt-in `--spawn`
+(section below), the deep link auto-opens the next window pre-filled with that opener; the block on
+screen stays the baseline.
 
 ---
 
@@ -308,6 +313,22 @@ just-written `current.md`; if the render needs a fact `current.md` lacks, write
   2-space-indented plain lines, paths and inline code in single backticks.
 - **No flukes, no retry counts** (invariant 6).
 
+### Locked Next Action bundle
+
+Before rendering or presenting a Next Action whose first line is
+`<!-- task-handoff-next-action-v1 -->`, parse only the fixed task-handoff envelope: digest, run
+directory, `Preview command:`, one preview line or `NONE`, `Action command pair:`, goal, action,
+and closing marker. No missing, extra, reordered, indented, or duplicate line is allowed. Require
+an absolute canonical run directory, recompute the task-handoff NUL-framed SHA-256 from schema,
+run directory, preview-or-empty, goal, and action, and compare it with the stored digest. Also
+require preview/goal/action command shapes from task-handoff's schema.
+
+If parsing or digest verification fails, stop with a state-integrity error before printing any
+command block; never infer a pair from nearby prose. If it succeeds, keep the entire envelope
+verbatim in `handoff-prompt.md`, but extract its exact command strings for the observation-safe
+screen steps below. `NONE` means no preview. Envelope labels are never emitted inside a pasteable
+command fence.
+
 ---
 
 ## Pick-up-here screen contract
@@ -354,7 +375,7 @@ run next is always the bottom of the output (operator contract, 2026-07-16):
   re-injects `current.md` after the clear) — unless any router segment reads
   `ask-first pending`; then the steps are replaced by the ask response (Git-verb
   router Step A), never a step past the open gate.
-- **`end-window` with a runnable Next Action pair** (the just-written `current.md`
+- **`end-window` with an unbundled legacy runnable Next Action pair** (the just-written `current.md`
   Next Action is a paste-ready command pair, e.g. plan-expedite's `/goal` +
   `/build-phase`): Step 1 `/clear` (recycle this window; the hook re-injects state);
   then, ONLY when the session's model was explicitly overridden this session (for example,
@@ -362,6 +383,15 @@ run next is always the bottom of the output (operator contract, 2026-07-16):
   `/model <pinned-default>` step; then the FINAL step: the pair verbatim in one
   block. The digest carries a one-line closed-window alternative:
   `closing instead? fresh-window opener: Read <abs-path>\handoff-prompt.md fully, verify git state per its first instruction, then execute its Next Action.`
+- **`end-window` with a locked `task-handoff-next-action-v1` bundle:** Step 1 is `/clear`.
+  Preserve the existing optional `/model <pinned-default>` step. If preview is not `NONE`, the
+  next step is labelled `Preview (run in <absolute run directory>)` and contains only the exact
+  preview command. Follow it with the plain observation sentence `Continue only after the preview
+  exits 0 with Dry-run complete. No steps executed.` The FINAL step is labelled
+  `Start build (run in <absolute run directory>)` and contains exactly the goal then action in one
+  fence. If preview is `NONE`, omit the preview step and observation sentence; the same atomic
+  goal/action step remains final. Never output the source/envelope order goal-preview-action as a
+  pasteable unit.
 - **`end-window` without a runnable pair** (wait step, operator handoff, done-for-day
   with nothing paste-ready): the single step is the fresh-window opener, verbatim
   with an absolute path — never `/clear` (the SessionStart hook does not fire on
@@ -564,14 +594,16 @@ contract, and an empty preview reads exactly `nothing`.
 ## Maintenance
 
 The `evals/` suite targets THIS triage contract (rebuilt 2026-07-12, Step 7 / #297;
-`--advise` category added 2026-07-13, Step 3 / #304): **26 assertions** across **6
-categories** in `evals/evals.json` (passing threshold **24/26**), **6 scenarios** in
+`--advise` category added 2026-07-13, Step 3 / #304): **27 assertions** across **6
+categories** in `evals/evals.json` (passing threshold **25/27**), **7 scenarios** in
 `evals/test_scenarios.json` (one per route, the signal-absent fail-loud path, the
-`--advise` SAFE-vs-WRAP close-check, and the end-window runnable-pair handoff), and a golden corpus of 9 goods + 27
+`--advise` SAFE-vs-WRAP close-check, the legacy end-window runnable pair, and the locked-bundle
+preview handoff), and a golden corpus of 10 goods + 28
 single-defect bads under `evals/golden/` (manifest.json maps each bad to the one
 assertion it trips). v3.2 (2026-07-16) reshaped the Pick-up-here block (digest first,
 fenced Step blocks last, end-window pair/no-pair branches) — assertions 7/8/10 and
-every block-bearing golden updated together. Any edit that changes an output contract here (triage line,
+every block-bearing golden updated together. v3.3 (2026-08-12) added the digest-validated locked
+preview/goal/action branch and its two single-defect negatives. Any edit that changes an output contract here (triage line,
 route output, Pick-up-here block, render invariants, advise verdict banner or loss
 report) must update the affected assertions and goldens in the same diff, keeping
 this footer's numbers equal to `evals.json`'s. Terseness and specificity assertions

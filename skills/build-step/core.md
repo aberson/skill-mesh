@@ -123,6 +123,317 @@ Requires `--start-cmd` and `--url`. Implies `--ui`.
 
 ## Steps
 
+### In-repository project adapter (non-negotiable)
+
+`/build-step` supports both a project that is the Git repository and a project that lives at a
+subdirectory of a larger repository. Resolve these values once, before any status, stash,
+worktree, developer, review, gate, copy, merge, or cleanup action:
+
+When build-phase supplied the complete verdict channel, validate and initialize it to
+`NEEDS WORK / run incomplete` **before** the adapter block below. Scope resolution itself can fail,
+so deferring sidecar initialization until after worktree creation would leave that terminal path
+unauthenticated. The parent-local key remains private as specified in Step 1.
+
+```bash
+PROJECT_STASH_OID=""
+STASH_LOCK_OWNER="skill-mesh-build-step-$(date +%s)-$$-${RANDOM}-${RANDOM}"
+UI_PREVIEW_ACTIVE=false
+UI_PREVIEW_SNAPSHOT_DIR=""
+UI_PREVIEW_MANIFEST=""
+UI_PREVIEW_PAYLOAD=""
+
+acquire_stash_lock() {
+  LOCK_ATTEMPT=0
+  while ! mkdir "$STASH_LOCK_DIR" 2>/dev/null; do
+    LOCK_ATTEMPT=$((LOCK_ATTEMPT + 1))
+    EXISTING_OWNER="$(cat "$STASH_LOCK_DIR/owner" 2>/dev/null || true)"
+    if [ "$LOCK_ATTEMPT" -ge 50 ]; then
+      echo "STASH_LOCK_HALT: Git-root stash lock busy or stale; retained without stealing. Owner: ${EXISTING_OWNER:-initializing}" >&2
+      return 1
+    fi
+    sleep 0.1
+  done
+  printf 'marker=%s pid=%s host=%s started=%s\n' \
+    "$STASH_LOCK_OWNER" "$$" "$(hostname)" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+    > "$STASH_LOCK_DIR/owner"
+}
+
+release_stash_lock() {
+  LOCK_OWNER_TEXT="$(cat "$STASH_LOCK_DIR/owner" 2>/dev/null || true)"
+  case "$LOCK_OWNER_TEXT" in
+    "marker=$STASH_LOCK_OWNER "*)
+      rm -f -- "$STASH_LOCK_DIR/owner" && rmdir "$STASH_LOCK_DIR"
+      ;;
+    *)
+      echo "STASH_LOCK_HALT: lock owner changed; retaining lock" >&2
+      return 1
+      ;;
+  esac
+}
+
+restore_project_stash() {
+  if [ "$UI_PREVIEW_ACTIVE" = true ]; then
+    echo "PROJECT_SCOPE_HALT: refusing stash restoration while UI preview is active" >&2
+    return 1
+  fi
+  [ -z "$PROJECT_STASH_OID" ] && return 0
+  acquire_stash_lock || return 1
+  RESTORE_RC=0
+  git -C "$GIT_ROOT" cat-file -e "${PROJECT_STASH_OID}^{commit}" || RESTORE_RC=1
+  if [ "$RESTORE_RC" -eq 0 ]; then
+    STASH_REF=$(git -C "$GIT_ROOT" stash list --format='%H %gd' \
+      | awk -v oid="$PROJECT_STASH_OID" '$1 == oid { print $2; exit }')
+    [ -n "$STASH_REF" ] || RESTORE_RC=1
+  fi
+  if [ "$RESTORE_RC" -eq 0 ]; then
+    git -C "$GIT_ROOT" stash apply --index "$PROJECT_STASH_OID" || RESTORE_RC=1
+  fi
+  if [ "$RESTORE_RC" -eq 0 ]; then
+    git -C "$GIT_ROOT" stash drop "$STASH_REF" || RESTORE_RC=1
+  fi
+  release_stash_lock || RESTORE_RC=1
+  [ "$RESTORE_RC" -eq 0 ] && PROJECT_STASH_OID=""
+  return "$RESTORE_RC"
+}
+
+discard_ui_snapshot() {
+  [ -z "$UI_PREVIEW_SNAPSHOT_DIR" ] && return 0
+  UI_TEMP_PARENT="${TMPDIR:-/tmp}"
+  case "$UI_PREVIEW_SNAPSHOT_DIR" in
+    "$UI_TEMP_PARENT"/skill-mesh-ui-preview.*)
+      rm -rf -- "$UI_PREVIEW_SNAPSHOT_DIR" || return 1
+      ;;
+    *)
+      echo "PROJECT_SCOPE_HALT: refusing unexpected UI snapshot cleanup path" >&2
+      return 1
+      ;;
+  esac
+  UI_PREVIEW_SNAPSHOT_DIR=""
+  UI_PREVIEW_MANIFEST=""
+  UI_PREVIEW_PAYLOAD=""
+}
+
+ui_preview_path_in_scope() {
+  [ "$PROJECT_PREFIX" = "." ] && return 0
+  case "$1" in "$PROJECT_PREFIX"/*) return 0 ;; *) return 1 ;; esac
+}
+
+snapshot_ui_preview() {
+  [ "$UI_PREVIEW_ACTIVE" = false ] || return 1
+  UI_TEMP_PARENT="${TMPDIR:-/tmp}"
+  UI_PREVIEW_SNAPSHOT_DIR="$(mktemp -d "$UI_TEMP_PARENT/skill-mesh-ui-preview.XXXXXX")" \
+    || return 1
+  case "$UI_PREVIEW_SNAPSHOT_DIR/" in
+    "$GIT_ROOT/"*|"$WORKTREE_ROOT/"*)
+      echo "PROJECT_SCOPE_HALT: UI snapshot must be outside both worktrees" >&2
+      discard_ui_snapshot
+      return 1
+      ;;
+  esac
+  UI_PREVIEW_MANIFEST="$UI_PREVIEW_SNAPSHOT_DIR/manifest.z"
+  UI_PREVIEW_PAYLOAD="$UI_PREVIEW_SNAPSHOT_DIR/payload.z"
+  : > "$UI_PREVIEW_MANIFEST" || { discard_ui_snapshot; return 1; }
+  list_project_payload_changes > "$UI_PREVIEW_PAYLOAD" \
+    || { discard_ui_snapshot; return 1; }
+
+  SNAPSHOT_INDEX=0
+  while IFS= read -r -d '' f; do
+    ui_preview_path_in_scope "$f" || { discard_ui_snapshot; return 1; }
+    dst="$GIT_ROOT/$f"
+    backup=""
+    if git -C "$GIT_ROOT" ls-files --error-unmatch -- "$f" >/dev/null 2>&1; then
+      if [ -e "$dst" ] || [ -L "$dst" ]; then
+        [ ! -d "$dst" ] || [ -L "$dst" ] || { discard_ui_snapshot; return 1; }
+        state="tracked-present"
+      else
+        state="tracked-deleted"
+      fi
+    elif [ -e "$dst" ] || [ -L "$dst" ]; then
+      [ ! -d "$dst" ] || [ -L "$dst" ] || { discard_ui_snapshot; return 1; }
+      state="untracked-present"
+    else
+      state="absent"
+    fi
+    case "$state" in
+      tracked-present|untracked-present)
+        backup="$UI_PREVIEW_SNAPSHOT_DIR/objects/$SNAPSHOT_INDEX"
+        mkdir -p "$(dirname "$backup")" || { discard_ui_snapshot; return 1; }
+        cp -a -- "$dst" "$backup" || { discard_ui_snapshot; return 1; }
+        ;;
+      tracked-deleted|absent) ;;
+      *) discard_ui_snapshot; return 1 ;;
+    esac
+    printf '%s\0%s\0%s\0' "$state" "$f" "$backup" >> "$UI_PREVIEW_MANIFEST" \
+      || { discard_ui_snapshot; return 1; }
+    SNAPSHOT_INDEX=$((SNAPSHOT_INDEX + 1))
+  done < "$UI_PREVIEW_PAYLOAD"
+  UI_PREVIEW_ACTIVE=true
+}
+
+rollback_ui_preview() {
+  [ "$UI_PREVIEW_ACTIVE" = true ] || return 0
+  [ -f "$UI_PREVIEW_MANIFEST" ] || return 1
+  ROLLBACK_RC=0
+  while IFS= read -r -d '' state; do
+    IFS= read -r -d '' f || { ROLLBACK_RC=1; break; }
+    IFS= read -r -d '' backup || { ROLLBACK_RC=1; break; }
+    ui_preview_path_in_scope "$f" || { ROLLBACK_RC=1; break; }
+    dst="$GIT_ROOT/$f"
+    [ ! -d "$dst" ] || [ -L "$dst" ] || { ROLLBACK_RC=1; break; }
+    case "$state" in
+      tracked-present|untracked-present)
+        case "$backup" in "$UI_PREVIEW_SNAPSHOT_DIR"/objects/*) ;; *) ROLLBACK_RC=1; break ;; esac
+        [ -e "$backup" ] || [ -L "$backup" ] || { ROLLBACK_RC=1; break; }
+        rm -f -- "$dst" || { ROLLBACK_RC=1; break; }
+        mkdir -p "$(dirname "$dst")" || { ROLLBACK_RC=1; break; }
+        cp -a -- "$backup" "$dst" || { ROLLBACK_RC=1; break; }
+        ;;
+      tracked-deleted|absent)
+        rm -f -- "$dst" || { ROLLBACK_RC=1; break; }
+        ;;
+      *) ROLLBACK_RC=1; break ;;
+    esac
+  done < "$UI_PREVIEW_MANIFEST"
+  [ "$ROLLBACK_RC" -eq 0 ] || return 1
+  UI_PREVIEW_ACTIVE=false
+  discard_ui_snapshot
+}
+
+finalize_project_state() {
+  rollback_ui_preview || return 1
+  restore_project_stash
+}
+
+project_scope_halt() {
+  SCOPE_SUMMARY="PROJECT_SCOPE_HALT: $1"
+  # With a parent channel, atomically call write_verdict before any return:
+  # write_verdict(terminal="NEEDS WORK", halt="SHIP_GATE_HALT",
+  #               summary=SCOPE_SUMMARY, expected parent run id/path/key)
+  # SHIP_GATE_HALT is the schema-valid durable sentinel; the summary preserves the
+  # PROJECT_SCOPE_HALT subtype. This is halt class #2 (integrity), not a sixth class.
+  finalize_project_state || {
+    # Overwrite the parent verdict as NEEDS WORK with cleanup failure before returning.
+    echo "PROJECT_SCOPE_HALT: exact stash restoration failed" >&2
+  }
+  echo "$SCOPE_SUMMARY" >&2
+  return 2
+}
+
+PROJECT_ROOT="$(pwd -P)"
+GIT_ROOT="$(git -C "$PROJECT_ROOT" rev-parse --show-toplevel)"
+GIT_ROOT="$(cd "$GIT_ROOT" && pwd -P)"
+GIT_COMMON_DIR="$(git -C "$GIT_ROOT" rev-parse --git-common-dir)"
+case "$GIT_COMMON_DIR" in /*|[A-Za-z]:/*) ;; *) GIT_COMMON_DIR="$GIT_ROOT/$GIT_COMMON_DIR" ;; esac
+STASH_LOCK_DIR="$GIT_COMMON_DIR/skill-mesh-stash.lock"
+case "$PROJECT_ROOT/" in
+  "$GIT_ROOT/"*) ;;
+  *) project_scope_halt "project root is outside Git root"; exit $? ;;
+esac
+if [ "$PROJECT_ROOT" = "$GIT_ROOT" ]; then
+  PROJECT_PREFIX="."
+else
+  PROJECT_PREFIX="${PROJECT_ROOT#"$GIT_ROOT"/}"
+fi
+PROJECT_PATHSPEC="$PROJECT_PREFIX"
+```
+
+`PROJECT_ROOT` is the invocation directory and owns project commands. `GIT_ROOT` owns Git
+metadata and Git commands. `PROJECT_PREFIX` is repository-relative (`.` for the normal
+one-project-per-repository case). Never silently replace `PROJECT_ROOT` with `GIT_ROOT`.
+
+Every path returned by a child-worktree Git diff is repository-relative. Before copying,
+applying, merging, staging, or reporting one, validate it with this fail-closed guard:
+
+```bash
+require_project_path() {
+  [ "$PROJECT_PREFIX" = "." ] && return 0
+  case "$1" in
+    "$PROJECT_PREFIX"/*) return 0 ;;
+    *) project_scope_halt "child changed path outside $PROJECT_PREFIX/: $1"; return $? ;;
+  esac
+}
+
+list_all_child_changes() {
+  git -C "$WORKTREE_ROOT" diff "$WORKTREE_BASELINE" --name-only -z
+  git -C "$WORKTREE_ROOT" ls-files --others --exclude-standard -z
+}
+
+list_project_child_changes() {
+  git -C "$WORKTREE_ROOT" diff "$WORKTREE_BASELINE" --name-only -z -- "$PROJECT_PATHSPEC"
+  git -C "$WORKTREE_ROOT" ls-files --others --exclude-standard -z -- "$PROJECT_PATHSPEC"
+}
+
+list_project_payload_changes() {
+  while IFS= read -r -d '' changed_path; do
+    require_project_path "$changed_path" || return 2
+    if [ "$PROJECT_PREFIX" = "." ]; then
+      project_relative_path="$changed_path"
+    else
+      project_relative_path="${changed_path#"$PROJECT_PREFIX"/}"
+    fi
+    case "$project_relative_path" in
+      .build-step|.build-step/*|.ui-review-evidence|.ui-review-evidence/*)
+        continue
+        ;;
+    esac
+    printf '%s\0' "$changed_path"
+  done < <(list_project_child_changes)
+}
+
+list_main_project_changes_since() {
+  CHANGE_BASE="$1"
+  git -C "$GIT_ROOT" diff "$CHANGE_BASE" --name-only -z -- "$PROJECT_PATHSPEC"
+  git -C "$GIT_ROOT" ls-files --others --exclude-standard -z -- "$PROJECT_PATHSPEC"
+}
+
+write_main_overlap_set() {
+  REMOTE_RANGE="$1"
+  LOCAL_BASE="$2"
+  OVERLAP_OUTPUT="$3"
+  UPSTREAM_SORTED_Z="$(mktemp)" || return 1
+  LOCAL_SORTED_Z="$(mktemp)" || { rm -f -- "$UPSTREAM_SORTED_Z"; return 1; }
+  OVERLAP_RC=0
+  set -o pipefail
+  git -C "$GIT_ROOT" diff --name-only -z "$REMOTE_RANGE" -- "$PROJECT_PATHSPEC" \
+    | sort -z -u > "$UPSTREAM_SORTED_Z" || OVERLAP_RC=1
+  list_main_project_changes_since "$LOCAL_BASE" \
+    | sort -z -u > "$LOCAL_SORTED_Z" || OVERLAP_RC=1
+  if [ "$OVERLAP_RC" -eq 0 ]; then
+    comm -z -12 "$UPSTREAM_SORTED_Z" "$LOCAL_SORTED_Z" > "$OVERLAP_OUTPUT" \
+      || OVERLAP_RC=1
+  fi
+  rm -f -- "$UPSTREAM_SORTED_Z" "$LOCAL_SORTED_Z"
+  return "$OVERLAP_RC"
+}
+
+render_nul_paths() {
+  while IFS= read -r -d '' path; do
+    printf '  %q\n' "$path"
+  done
+}
+
+audit_child_scope() {
+  while IFS= read -r -d '' changed_path; do
+    require_project_path "$changed_path" || return 2
+  done < <(list_all_child_changes)
+}
+```
+
+`git diff "$WORKTREE_BASELINE"` compares the saved start commit to the child working tree, so it
+includes developer commits, index changes, and unstaged tracked changes; `diff HEAD` is forbidden
+because a developer commit would disappear from the captured/merged change set. The unscoped
+`list_all_child_changes` audit is intentional: filtering to the project before the
+audit would hide an escaped sibling change. Only after that complete audit passes may operations
+use `list_project_child_changes`. `list_project_payload_changes` then removes only orchestrator-owned
+project-relative `.build-step/**` and `.ui-review-evidence/**` paths from preview and landing. The
+unfiltered audit still sees those paths, so an out-of-project artifact remains a scope failure even
+when the repository has no ignore rule. The second source (`ls-files --others`) is mandatory because a
+greenfield step can consist entirely of untracked new files. Use NUL-delimited iteration so spaces
+cannot change the validated path. A path that fails this
+guard is an integrity failure: do not copy, merge, stage, commit, or clean it. Preserve the child
+worktree for inspection. This guard is required even when the developer prompt said to stay in
+scope; prose is not a containment boundary.
+
 ### Step 0 -- Pre-flight
 
 1. **Validate flags:**
@@ -132,12 +443,21 @@ Requires `--start-cmd` and `--url`. Implies `--ui`.
    - If `--ui`: require `--start-cmd` and `--url`
    - If `--isolation docker`: verify Docker is running (`docker info`)
 
-2. **Detect project context** from the working directory:
+2. **Detect project context** from `PROJECT_ROOT` (the invocation directory, not `GIT_ROOT`):
    - Language/stack (Python, TypeScript, Go, etc.)
    - Test command (`uv run pytest`, `npm run test`, `go test ./...`)
    - Lint command (`uv run ruff check .`, `npm run lint`, `golangci-lint run`)
    - Typecheck command (`uv run mypy src`, `npm run typecheck`, `go vet ./...`)
    - Dependency install command (`uv sync`, `npm install --silent`, etc.)
+
+   Filesystem absence alone does not imply Python. Record `NO_BASELINE (greenfield)` with test
+   count `0` only when Python is detected from existing context OR the problem/acceptance target
+   explicitly declares a Python bootstrap (`pyproject.toml`, `.py` modules, or named Python/uv
+   gates), and `pyproject.toml`, `src/`, and `tests/` are all absent. An empty Node/Go/Rust or
+   unknown project receives its own detected-stack handling, never the Python zero baseline. This
+   state applies only before the developer pass. If that pass creates any Python surface, redetect
+   the commands inside `WORKTREE_PROJECT` and require all applicable gates in Step 4; the initial
+   zero is not a continuing waiver.
 
 3. **Playwright check** (if `--ui` or `--reviewers runtime|full`):
    ```bash
@@ -145,12 +465,52 @@ Requires `--start-cmd` and `--url`. Implies `--ui`.
    ```
    If unavailable, stop with install instructions.
 
-4. **Stash uncommitted changes:**
+4. **Stash only uncommitted project changes:** Ignore unrelated changes elsewhere in a containing
+   repository. If project-local changes exist, create one path-scoped stash and record its exact
+   object id for restoration; never run a repository-wide stash.
    ```bash
-   git status --porcelain
-   # If changes exist:
-   git stash push -m "build-step pre-run state" --include-untracked
+   if ! acquire_stash_lock; then
+     project_scope_halt "could not acquire Git-root stash lock"
+     exit $?
+   fi
+   STASH_CREATE_RC=0
+   PROJECT_STATUS="$(git -C "$GIT_ROOT" status --porcelain -- "$PROJECT_PATHSPEC")"
+   if [ -n "$PROJECT_STATUS" ]; then
+     git -C "$GIT_ROOT" stash push --include-untracked \
+       -m "build-step pre-run state: $PROJECT_PREFIX [$STASH_LOCK_OWNER]" \
+       -- "$PROJECT_PATHSPEC" || STASH_CREATE_RC=1
+     if [ "$STASH_CREATE_RC" -eq 0 ]; then
+       PROJECT_STASH_OID="$(git -C "$GIT_ROOT" rev-parse refs/stash)" || STASH_CREATE_RC=1
+     fi
+   fi
+   release_stash_lock || STASH_CREATE_RC=1
+   if [ "$STASH_CREATE_RC" -ne 0 ]; then
+     project_scope_halt "path-scoped stash creation failed"
+     exit $?
+   fi
    ```
+
+   The adapter's `restore_project_stash` applies `PROJECT_STASH_OID` itself with `--index`, then
+   drops only the `%gd` whose full `%H` matched that OID. Never use an unqualified `stash pop`, and
+   never drop a ref selected before checking its OID. A concurrent session may add a newer stash.
+
+   The Git-common-dir lock covers each complete identity-sensitive transaction: status +
+   path-scoped push + OID capture, and later OID lookup + `--index` apply + matching-ref drop. Its
+   owner file carries the unique run marker, PID, host, and UTC start. Contention waits briefly,
+   then fails closed. A missing, partial, or dead-looking owner is reported as stale but deliberately
+   retained; never steal or recursively delete it, because PID reuse and cross-host worktrees make
+   automatic stale removal unsafe. The halt prints the owner record for operator recovery.
+
+   **Terminal-finalizer invariant:** immediately after this block, register `finalize_project_state`.
+   After a stash is created, no success, BLOCKED, exception, scope halt, ship-gate halt,
+   max-iteration return, or cleanup return may bypass it. The acquisition and creation guards above
+   exit immediately through the same finalizer; they never continue into worktree creation. The finalizer
+   runs `rollback_ui_preview` before `restore_project_stash`; stash restoration refuses to run while
+   `UI_PREVIEW_ACTIVE=true`. It runs
+   before the human return; if exact apply/drop fails it atomically overwrites any parent verdict
+   with `NEEDS WORK` and preserves the stash for recovery. Only after exact restoration succeeds
+   may a PASS verdict be finalized. A project at `PROJECT_PREFIX=.` keeps historical whole-project
+   behavior; a subproject cannot touch a sibling canary.
 
 5. **Gitignore** (if `--ui`): add `.ui-review-evidence/` if missing.
 
@@ -169,7 +529,7 @@ Requires `--start-cmd` and `--url`. Implies `--ui`.
 
 ### Step 1 -- Create isolated environment
 
-Before spawning the developer, establish the verdict channel:
+Before spawning the developer, confirm the verdict channel established before adapter resolution:
 
 1. `--verdict-path` and `--verdict-run-id` are an all-or-none set. When
    supplied by build-phase, require both and reject empty values. The path MUST
@@ -181,8 +541,8 @@ Before spawning the developer, establish the verdict channel:
 2. Standalone `/build-step` does not create a machine verdict sidecar; its prose
    report is for the invoking operator only. All write requirements below apply
    only when the parent supplied the complete channel.
-3. For a parent-supplied channel, delete any pre-existing target, then
-   atomically initialize it with
+3. For a parent-supplied channel, the adapter preamble already deleted any pre-existing target and
+   atomically initialized it with
    `write_verdict(... terminal="NEEDS WORK", summary="run incomplete")` from
    `../../_shared/build_step_verdict.py`, using the parent key.
    A crash therefore fails closed.
@@ -194,17 +554,29 @@ Before spawning the developer, establish the verdict channel:
 #### Worktree (default)
 
 ```bash
-PROJECT="$(pwd)"
 BRANCH="build-step-$(date +%s)"
-git worktree add "../worktree_$BRANCH" -b "$BRANCH" HEAD
-WORKTREE="../worktree_$BRANCH"
-cd "$WORKTREE"
+WORKTREE_BASELINE="$(git -C "$GIT_ROOT" rev-parse HEAD)"
+WORKTREE_ROOT="$(dirname "$GIT_ROOT")/worktree_$BRANCH"
+case "$WORKTREE_ROOT/" in
+  "$GIT_ROOT/"*) project_scope_halt "child worktree must be outside parent Git root"; exit $? ;;
+esac
+git -C "$GIT_ROOT" worktree add "$WORKTREE_ROOT" -b "$BRANCH" "$WORKTREE_BASELINE"
+if [ "$PROJECT_PREFIX" = "." ]; then
+  WORKTREE_PROJECT="$WORKTREE_ROOT"
+else
+  WORKTREE_PROJECT="$WORKTREE_ROOT/$PROJECT_PREFIX"
+fi
+[ -d "$WORKTREE_PROJECT" ] || {
+  project_scope_halt "child project directory missing: $WORKTREE_PROJECT"
+  exit $?
+}
+cd "$WORKTREE_PROJECT"
 
 # Worktree dep rebuild -- required because `git worktree add` does NOT carry
 # .venv/ (Windows: often binds the wrong Python) or node_modules/ (gitignored).
 # Both commands are idempotent -- no-op on cached deps.
 
-# Python: run if pyproject.toml or setup.py exists
+# Python: run from WORKTREE_PROJECT if pyproject.toml or setup.py exists
 if [ -f pyproject.toml ] || [ -f setup.py ]; then
   uv sync
 fi
@@ -243,6 +615,8 @@ that solves the problem statement below.
 IMPORTANT RULES:
 - Only create NEW files or modify files relevant to the problem statement.
 - Do NOT modify unrelated files.
+- The allowed filesystem scope is WORKTREE_PROJECT. Do not create or modify a path outside it;
+  the orchestrator validates repository-relative changed paths and fails closed on escape.
 - Read surrounding code first to understand existing patterns and conventions.
 - All functions you import must exist -- grep for them before using.
 - Write tests for any new behavior.
@@ -251,7 +625,7 @@ IMPORTANT RULES:
   Unit tests of the new module alone are insufficient -- they cannot detect silent wiring failures.
   Skip this rule for pure utilities with no callers in this step's scope, or for schema-only changes.
 
-WORKING DIRECTORY: <worktree_path or container workspace>
+WORKING DIRECTORY: <WORKTREE_PROJECT or project-scoped container workspace>
 
 PROBLEM STATEMENT:
 <problem_statement>
@@ -276,7 +650,7 @@ RETURN (keep it terse -- see dev/.claude/rules/subagent-economy.md): your final
 message is the tool result and stays resident in the orchestrator's window for the
 rest of the phase, so do NOT paste the diff or a long narrative. Write any detailed
 write-up (full change rationale, per-file notes, raw gate output) to
-`<worktree>/.build-step/dev-report.md` and return ONLY: (1) a one-line verdict
+`<WORKTREE_PROJECT>/.build-step/dev-report.md` and return ONLY: (1) a one-line verdict
 (DONE / BLOCKED + why), (2) the `git diff --stat` line(s), (3) the one-line test
 result (e.g. `42 passed`), (4) any pre-existing-format-debt note, (5) the
 `dev-report.md` path. The orchestrator reads `dev-report.md` only if it needs detail
@@ -298,8 +672,15 @@ PREVIOUS REVIEW FINDINGS (you must address all of these):
 ### Step 3 -- Capture diff
 
 ```bash
-cd "$WORKTREE" && git diff HEAD
+cd "$WORKTREE_PROJECT"
+audit_child_scope || exit 2
+git -C "$WORKTREE_ROOT" diff "$WORKTREE_BASELINE" -- "$PROJECT_PATHSPEC"
+git -C "$WORKTREE_ROOT" ls-files --others --exclude-standard -- "$PROJECT_PATHSPEC"
 ```
+
+The audit covers tracked and untracked paths across `WORKTREE_ROOT`; the displayed diff and
+untracked-name list are then project-scoped. A change outside `PROJECT_PREFIX` is
+`PROJECT_SCOPE_HALT`, even if it looks related to the problem.
 
 For Docker: extract results from `workspace/results/`.
 
@@ -307,8 +688,18 @@ For Docker: extract results from `workspace/results/`.
 
 Always run, regardless of review style:
 
+If pre-flight recorded `NO_BASELINE (greenfield)`, first inspect `WORKTREE_PROJECT` again. Once
+`pyproject.toml`, `src/`, or `tests/` exists, resolve the new project's typecheck, lint, and full-test
+commands and run every applicable gate below in declared order. A newly applicable gate that cannot
+be resolved or is skipped is a failure, not another zero baseline. If the step created no project
+surface, branch explicitly: if this step's problem/acceptance promised the Python bootstrap, reject
+the iteration because the promised surface is missing; only a step that did not promise bootstrap
+(for example, a documentation-only precursor) may retain the explicit zero baseline and report that
+no executable project gate exists yet. Do not run placeholder commands and do not report a passing
+gate that did not exist.
+
 ```bash
-cd "$WORKTREE"  # or container
+cd "$WORKTREE_PROJECT"  # or project-scoped container workspace
 mkdir -p .build-step
 <typecheck_command> > .build-step/gate-typecheck.log 2>&1; TYPECHECK_RC=$?; tail -20 .build-step/gate-typecheck.log
 <lint_command> > .build-step/gate-lint.log 2>&1; LINT_RC=$?; tail -10 .build-step/gate-lint.log
@@ -331,18 +722,35 @@ Skip entirely when no UI evidence is needed.
 
 1. **Copy changes** from worktree to main project (app startup expects project root):
    ```bash
-   cd "$WORKTREE"
-   CHANGED=$(git diff HEAD --name-only)
-   for f in $CHANGED; do
-     mkdir -p "$(dirname "$PROJECT/$f")"
-     cp "$WORKTREE/$f" "$PROJECT/$f"
-   done
-   echo "$CHANGED" > .ui-review-evidence/copied-files.txt
+   cd "$WORKTREE_PROJECT"
+   audit_child_scope || exit 2
+    mkdir -p .ui-review-evidence
+   if ! snapshot_ui_preview; then
+     project_scope_halt "could not snapshot exact pre-preview state"
+     exit $?
+   fi
+   while IFS= read -r -d '' f; do
+      require_project_path "$f" || exit 2
+      src="$WORKTREE_ROOT/$f"
+      dst="$GIT_ROOT/$f"
+     if [ -e "$src" ] || [ -L "$src" ]; then
+        mkdir -p "$(dirname "$dst")"
+       cp -a -- "$src" "$dst" || { project_scope_halt "UI preview copy failed: $f"; exit $?; }
+      else
+       rm -f -- "$dst" || { project_scope_halt "UI preview delete failed: $f"; exit $?; }
+      fi
+   done < "$UI_PREVIEW_PAYLOAD"
    ```
+
+   The parent-owned NUL manifests freeze repository-relative, already-validated payload paths and
+   classify each destination as `tracked-present`, `tracked-deleted`, `untracked-present`, or
+   `absent` before the first mutation. Present objects are saved byte-for-byte with `cp -a` outside
+   both worktrees. The UI copy path never derives a destination by joining a child-provided path
+   directly to `PROJECT_ROOT`; it joins only validated paths to `GIT_ROOT`.
 
 2. **Migration pre-flight** (auto-detect framework entrypoint; non-gating):
    ```bash
-   cd "$PROJECT"
+   cd "$PROJECT_ROOT"
    # Framework-native commands only; no custom Python entrypoints.
    # Long-tail projects invoke their migration from --start-cmd.
    if [ -f alembic.ini ]; then
@@ -363,7 +771,7 @@ Skip entirely when no UI evidence is needed.
 
 3. **Start app:**
    ```bash
-   cd "$PROJECT"
+   cd "$PROJECT_ROOT"
    mkdir -p .ui-review-evidence/run-$ITERATION
    bash -c '<start-cmd>' > .ui-review-evidence/run-$ITERATION/backend.log 2>&1 &
    APP_PID=$!
@@ -404,8 +812,20 @@ Skip entirely when no UI evidence is needed.
        taskkill /F /PID "$PID" 2>/dev/null || true
      done
      curl --max-time 2 -sf "$u" >/dev/null && echo "WARN: $u still bound after cleanup" || true
-   done
+    done
+    ```
+
+7. **Roll back the preview before any reviewer/ship/iteration decision:**
+   ```bash
+   if ! rollback_ui_preview; then
+     project_scope_halt "exact UI preview rollback failed"
+     exit $?
+   fi
    ```
+   This runs after the app and port cleanup, even on readiness/evidence failure. It restores exact
+   saved objects for `tracked-present` and `untracked-present`, preserves original tracked deletions,
+   and removes only destinations recorded as preview-created `absent`. It is idempotent; every retry
+   and terminal finalizer repeats it safely.
 
 ### Step 5.5 -- Ship-gate re-check (canonical)
 
@@ -416,23 +836,35 @@ Related: `dev/.claude/rules/worktree-hygiene.md § 7` (merge default before vali
 
 ```bash
 # Ship-gate re-check (uses git merge-base for baseline -- no cross-block state needed)
-git fetch origin --quiet
-DEFAULT=$(git symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null | sed 's|^origin/||')
+git -C "$GIT_ROOT" fetch origin --quiet
+DEFAULT=$(git -C "$GIT_ROOT" symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null | sed 's|^origin/||')
 DEFAULT="${DEFAULT:-master}"
-NEW=$(git log --oneline "HEAD..origin/$DEFAULT" 2>/dev/null)
+NEW=$(git -C "$GIT_ROOT" log --oneline "HEAD..origin/$DEFAULT" 2>/dev/null)
 if [ -n "$NEW" ]; then
-  BASE=$(git merge-base "origin/$DEFAULT" HEAD 2>/dev/null)
-  OVERLAP=$(comm -12 <(git diff --name-only "HEAD..origin/$DEFAULT" | sort -u) <(git diff --name-only "$BASE..HEAD" | sort -u))
-  if [ -n "$OVERLAP" ]; then
+  BASE=$(git -C "$GIT_ROOT" merge-base "origin/$DEFAULT" HEAD 2>/dev/null)
+  OVERLAP_Z=$(mktemp) || { project_scope_halt "could not allocate overlap set"; exit $?; }
+  if ! write_main_overlap_set "HEAD..origin/$DEFAULT" "$BASE" "$OVERLAP_Z"; then
+    rm -f -- "$OVERLAP_Z"
+    project_scope_halt "NUL-safe ship-gate overlap computation failed"
+    exit $?
+  fi
+  if [ -s "$OVERLAP_Z" ]; then
+    OVERLAP_DISPLAY="$(render_nul_paths < "$OVERLAP_Z")"
+    rm -f -- "$OVERLAP_Z"
     echo "SHIP_GATE_HALT: origin/$DEFAULT advanced with overlapping files since merge-base $BASE. New commits:"
     echo "$NEW"
-    echo "Overlap:"; echo "$OVERLAP"
+    echo "Overlap:"; echo "$OVERLAP_DISPLAY"
     echo "Resolve the divergence (merge / rebase / re-plan) before proceeding. Do NOT auto-merge — let the operator decide."
     exit 2
   fi
+  rm -f -- "$OVERLAP_Z"
   echo "Note: origin/$DEFAULT advanced ($NEW) but no file overlap — proceeding."
 fi
 ```
+
+The intersection remains NUL-delimited through `diff -z`, `sort -z`, and `comm -z`; shell variables
+never hold the decision set. Rendering with `%q` happens only after the non-empty file has already
+selected HALT, so spaces, tabs, and newlines in a valid Git path cannot evade or invent overlap.
 
 **Exit-code contract.** A non-zero exit from this block (literal stdout prefix `SHIP_GATE_HALT:`) is a /build-step halt — surface verbatim to the operator and abort the step.
 Do NOT pass to the developer agent as a fix-this finding; no developer fix can resolve an upstream race. This is distinct from Step 4's quality-gate non-zero exits (which DO trigger developer iteration).
@@ -443,7 +875,7 @@ Do NOT pass to the developer agent as a fix-this finding; no developer fix can r
 
 **Spawn ALL reviewers for the mode in ONE tool message** — a single assistant turn carrying N parallel host isolated-agent calls, never one-at-a-time. The reviewers are independent, so serial spawning only adds wall-clock (≈60–85% slower) for zero independence gain — independence comes from context isolation, not serial order (see `dev/.claude/rules/subagent-economy.md`).
 
-**Reviewer returns are terse + file-backed** (per `dev/.claude/rules/subagent-economy.md`): instruct each reviewer to return ONLY `{verdict, finding-count, the single highest-severity finding}` and to write its full findings list to `<worktree>/.build-step/review-<lens>.{json,md}`. Step 7 reads those files to aggregate; the orchestrator window must not hold N full findings dumps resident for the rest of the run. (Workflow `schema:` reviewers already return bounded rows — keep them `{severity, title, file:line, fix}`, never re-quoted file bodies.)
+**Reviewer returns are terse + file-backed** (per `dev/.claude/rules/subagent-economy.md`): instruct each reviewer to return ONLY `{verdict, finding-count, the single highest-severity finding}` and to write its full findings list to `<WORKTREE_PROJECT>/.build-step/review-<lens>.{json,md}`. Step 7 reads those files to aggregate; the orchestrator window must not hold N full findings dumps resident for the rest of the run. (Workflow `schema:` reviewers already return bounded rows — keep them `{severity, title, file:line, fix}`, never re-quoted file bodies.)
 
 Based on `--reviewers`:
 
@@ -455,6 +887,16 @@ Each receives: problem statement, full diff, content of touched files.
 Dispatch all five with the router-selected reviewer-tier peer — reviewer *diversity* carries the
 quality here; arms must never inherit an escalated session (tier policy, CLAUDE.md
 model paragraph).
+
+Immediately before the parallel reviewer tool calls, run `cd "$WORKTREE_PROJECT"`, verify
+`"$(pwd -P)" = "$(cd "$WORKTREE_PROJECT" && pwd -P)"`, and set every host isolated-agent call's
+explicit working-directory field to `WORKTREE_PROJECT`. Prompt paths and output paths do not
+substitute for the dispatch cwd.
+
+```bash
+cd "$WORKTREE_PROJECT"
+[ "$(pwd -P)" = "$(cd "$WORKTREE_PROJECT" && pwd -P)" ] || exit 2
+```
 
 1. **Correctness Reviewer** -- logic vs intent, missing edge cases, inverted conditions,
    silent behavior breaks.
@@ -472,26 +914,44 @@ Do NOT spawn the five gauntlet reviewers — review-deep's code lenses, includin
 superset them (running both doubles cost for zero independence gain). Invoke `/review-deep`
 once (host skill-invocation adapter) with:
 
+```bash
+cd "$WORKTREE_PROJECT"
+[ "$(pwd -P)" = "$(cd "$WORKTREE_PROJECT" && pwd -P)" ] || exit 2
+mkdir -p "$WORKTREE_PROJECT/.build-step/review-deep"
+```
+
+This block runs immediately before the `/review-deep` host dispatch, whose explicit
+working-directory field is also `WORKTREE_PROJECT`.
+
 - `--prompt` = the problem statement (plus the acceptance target when `--acceptance` is
   present, as developer-orientation context only; no reviewer lens or verdict gate may
   treat it as a criterion)
 - `--diff` = the worktree diff captured at Step 3
 - `--plan-step <plan-path>:<step-id>` when the orchestrator knows the plan file + step id
   (enables the plan-conformance lens; omit otherwise — the lens SKIPs cleanly)
-- `--output-dir <worktree>/.review-deep/`
+- `--output-dir <WORKTREE_PROJECT>/.build-step/review-deep/`
 - on iteration ≥ 2, `--prior-sidecar <previous iteration's sidecar path>` (enables
   review-deep's persistent-disagreement aggregator rule)
 
 review-deep runs its code lenses with its own per-lens model tiers (no `the router-selected reviewer-tier peer` re-pin
 here), applies its deterministic aggregator, and returns a pre-aggregated verdict
 (`PASS | NEEDS-WORK | DEFERRED-TO-UAT`) plus a JSON audit-trail sidecar at
-`<worktree>/.review-deep/<timestamp>.json`. The sidecar replaces the per-lens
+`<WORKTREE_PROJECT>/.build-step/review-deep/<timestamp>.json`. The sidecar replaces the per-lens
 `review-<lens>.{json,md}` files the gauntlet arms would have written — Steps 7 and 9 read
 findings from the sidecar's `lens_verdicts[].findings[]` instead.
 
 #### `runtime` -- 3 parallel agents
 Each receives: diff plus their evidence slice. Dispatch all three with explicit
 `the router-selected reviewer-tier peer` (same arm pin as the `code` reviewers).
+
+Immediately before the parallel runtime-reviewer tool calls, run `cd "$WORKTREE_PROJECT"`, verify
+the canonical cwd as above, and set every call's explicit working-directory field to
+`WORKTREE_PROJECT`.
+
+```bash
+cd "$WORKTREE_PROJECT"
+[ "$(pwd -P)" = "$(cd "$WORKTREE_PROJECT" && pwd -P)" ] || exit 2
+```
 
 1. **UI Reviewer (blind-first)** -- screenshots (before/after exercise). Two-phase
    review in a single pass:
@@ -561,7 +1021,14 @@ Runtime reviewers must end with one of:
 A `NOT OBSERVED` counts as a medium finding.
 
 #### `full` -- 8 parallel agents
-All of the above, simultaneously.
+All of the above, simultaneously. Immediately before the single eight-call dispatch, repeat
+`cd "$WORKTREE_PROJECT"` plus the canonical-cwd assertion and set all eight calls' explicit
+working-directory field to `WORKTREE_PROJECT`.
+
+```bash
+cd "$WORKTREE_PROJECT"
+[ "$(pwd -P)" = "$(cd "$WORKTREE_PROJECT" && pwd -P)" ] || exit 2
+```
 
 ### Step 7 -- Aggregate verdict
 
@@ -591,7 +1058,7 @@ review-deep is a strong-provider-tier instrument, not a weak-model advisor.
 
 **When `--reviewers code|runtime|full`:**
 
-Read each reviewer's full findings from its `<worktree>/.build-step/review-<lens>.{json,md}` file (Step 6 had them return only a terse verdict + top finding). Normalize findings:
+Read each reviewer's full findings from its `<WORKTREE_PROJECT>/.build-step/review-<lens>.{json,md}` file (Step 6 had them return only a terse verdict + top finding). Normalize findings:
 
 | Finding type | Normalized severity |
 |---|---|
@@ -670,27 +1137,71 @@ channel never parses prose for authorization.
 
 > Wrong-directory guard: before merging/committing the worktree's changes into the project repo, warn if the resolved target repo != the repo this lands in (advisory, never blocks) — per working-directory.md § Wrong-directory guard; reference impl `Test-WrongDirGuard`.
 
-1. Merge changes to main project. Compute baseline + classify each changed file INLINE
-   (no cross-block state — capture vars in the same block where used):
+1. Land the complete child payload in the main project. If Step 5 copied a UI preview, first call
+   the exact snapshot-backed `rollback_ui_preview`; a `git restore` approximation is forbidden
+   because it loses preexisting untracked bytes and tracked deletions. Final landing must start
+   from the pre-preview state. Then use the saved
+   `WORKTREE_BASELINE`, not child `HEAD`, for every classification and patch:
    ```bash
-   cd "$PROJECT"
-   DEFAULT=$(git symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null | sed 's|^origin/||')
-   DEFAULT="${DEFAULT:-master}"
-   BASELINE=$(git merge-base "origin/$DEFAULT" HEAD)
+   cd "$PROJECT_ROOT"
+
+   if ! rollback_ui_preview; then
+     project_scope_halt "UI preview still active before landing"
+     exit $?
+   fi
+
+   # Validate committed, indexed, unstaged, and untracked child changes across the complete
+   # worktree before the first main-worktree mutation. Do not pre-filter an escaped path away.
+   audit_child_scope || exit 2
+
+   while IFS= read -r -d '' f; do
+     require_project_path "$f" || exit 2
+     src="$WORKTREE_ROOT/$f"
+     dst="$GIT_ROOT/$f"
+     mkdir -p "$(dirname "$dst")"
+
+     MAIN_CHANGED=false
+     git -C "$GIT_ROOT" diff --quiet "$WORKTREE_BASELINE" -- "$f" || MAIN_CHANGED=true
+     if git -C "$GIT_ROOT" ls-files --others --exclude-standard -- "$f" | grep -q .; then
+       MAIN_CHANGED=true
+     fi
+
+     CHILD_TRACKED=false
+     git -C "$WORKTREE_ROOT" ls-files --error-unmatch -- "$f" >/dev/null 2>&1 \
+       && CHILD_TRACKED=true
+
+     if [ "$MAIN_CHANGED" = true ] && [ "$CHILD_TRACKED" = true ]; then
+       # Full baseline-to-working-tree patch: includes child commits, index, and unstaged edits.
+       git -C "$WORKTREE_ROOT" diff --binary "$WORKTREE_BASELINE" -- "$f" \
+         | git -C "$GIT_ROOT" apply --3way || exit 2
+     elif [ "$MAIN_CHANGED" = true ]; then
+       echo "WORKTREE_MERGE_HALT: untracked child path collides with a main-project change: $f"
+       exit 2
+     elif [ -e "$src" ] || [ -L "$src" ]; then
+       # New/exclusive paths, including untracked files. Parent exists before the copy.
+       cp -p -- "$src" "$dst"
+     else
+       rm -f -- "$dst"
+     fi
+   done < <(list_project_payload_changes)
    ```
-   For each file `f` in `git -C "$WORKTREE" diff HEAD --name-only`, classify by `git log --oneline "$BASELINE..HEAD" -- "$f"` in `$PROJECT`. Precedence (mutually exclusive — pick the first match): **Parallel-safe** → **Shared across steps** → **Step-exclusive**.
-   - **Parallel-safe** (operator opted into concurrent worktrees): use `git -C "$PROJECT" merge --squash "$BRANCH"` — 3-way merge handles BOTH parallel-safety AND shared-file overlap. Skip the other categories.
-   - **Shared across steps** (≥1 commit since `$BASELINE` touched `$f` — e.g. routes, `database.py`, `runner.py`, config): do NOT full-file copy. Apply only the worktree's diff hunks via `git -C "$PROJECT" apply --3way <(git -C "$WORKTREE" diff HEAD -- "$f")` — git's own 3-way merge engine, prior steps' changes survive. Full-file copy here is the Alpha4Gate Phase 2 incident (step 4 clobbered step 2's `action_probs` + step 3's `--no-reward-log` in `database.py`/`runner.py`; 6 tests failed).
-   - **Step-exclusive** (zero commits since `$BASELINE` touched `$f`): safe to `cp "$WORKTREE/$f" "$PROJECT/$f"`.
-   - Worktree-with-UI environment: Step 5's copy loop should ALSO apply this same classification (back-propagated; full-file `cp` in Step 5 is the known loophole — Step 5 sub-step 1 must honor shared-file Edit semantics or this gate is too late). For now, re-verify by sampling: if any shared file shows clobbered prior-step content, HALT.
-   - Docker environment: classification predicate runs in `$PROJECT` against the worktree's branch regardless of whether the source is `$WORKTREE` or `workspace/results/`.
-   See `dev/.claude/rules/worktree-hygiene.md § 5` (silent no-op when merge runs in wrong worktree — always use `git -C "$PROJECT"`) and `§ 6` (shared-file overwrite risk).
-2. **Post-merge test gate (mandatory):** run the FULL test suite — every test root/suite the project declares, not the subset this step iterated against — IN the main project (`cd "$PROJECT" && <test_command>`), NOT just in the worktree. The gate evidence names WHICH suites ran, not just a pass count; if the full suite is too slow here, say so explicitly instead of reporting a subset count as the gate (see workspace memory `feedback_subset_gate_hides_cross_suite_regression`). If it fails, atomically call `write_verdict` with `terminal="NEEDS WORK"`, `halt="POST_MERGE_HALT"`, and the parent run id/path/key **before returning**. Echo the literal sentinel `POST_MERGE_HALT:` followed by the failing tests, do NOT close the issue or declare PASS, exit non-zero. The orchestrator routes the halt to the operator, not developer iteration.
+   A dirty child branch MUST NOT use `merge --squash "$BRANCH"`: branch merge sees commits only and
+   silently drops index/working/untracked changes. The algorithm above is the canonical merge for
+   sequential and parallel-safe lanes: shared tracked files receive the full
+   baseline-to-child-working-tree patch via Git's 3-way engine; exclusive/new payload files copy their full
+   bytes; deletions remove the validated destination; every copy creates its parent first. Docker
+   results receive the same baseline, untracked collection, unfiltered scope audit, artifact-filtered
+   payload list, and landing algorithm. Orchestrator-owned `.build-step/**` and
+   `.ui-review-evidence/**` never land, even without a repository ignore rule.
+   See `dev/.claude/rules/worktree-hygiene.md §5–§6`.
+2. **Post-merge test gate (mandatory):** run the FULL test suite — every test root/suite the project declares, not the subset this step iterated against — IN the main project (`cd "$PROJECT_ROOT" && <test_command>`), NOT just in the worktree. The gate evidence names WHICH suites ran, not just a pass count; if the full suite is too slow here, say so explicitly instead of reporting a subset count as the gate (see workspace memory `feedback_subset_gate_hides_cross_suite_regression`). If it fails, atomically call `write_verdict` with `terminal="NEEDS WORK"`, `halt="POST_MERGE_HALT"`, and the parent run id/path/key **before returning**. Echo the literal sentinel `POST_MERGE_HALT:` followed by the failing tests, do NOT close the issue or declare PASS, exit non-zero. The orchestrator routes the halt to the operator, not developer iteration.
 3. Run the final **ship-gate re-check**. Any `SHIP_GATE_HALT` atomically
    overwrites the durable verdict with `terminal="NEEDS WORK"` and
    `halt="SHIP_GATE_HALT"` before returning.
-4. Clean up worktree/branch (or container), clean up evidence (unless
-   `--keep-evidence`), and restore the stash. If any cleanup/restoration fails,
+4. Leave `WORKTREE_ROOT` before cleanup. Remove only that exact registered child worktree/branch
+   via `git -C "$GIT_ROOT"`; never delete a computed current directory. Clean up project evidence
+   (unless `--keep-evidence`) and call `finalize_project_state`, which rolls back any active UI
+   preview before restoring only `PROJECT_STASH_OID` as defined in Step 0. If any cleanup/restoration fails,
    atomically write `NEEDS WORK` before returning.
 5. **Finalize PASS only after every merge, post-merge, ship-gate, cleanup, and
    restoration operation succeeds.** Atomically call `write_verdict` with the
@@ -705,7 +1216,7 @@ channel never parses prose for authorization.
 
 ### Step 9 -- On NEEDS WORK
 
-Compile findings from ALL reviewers into a single block — read each lens's full findings from its `<worktree>/.build-step/review-<lens>.{json,md}` file (Step 6), not from the terse spawn-time returns. On the `deep` lane, read findings from review-deep's JSON sidecar (`<worktree>/.review-deep/<timestamp>.json`, `lens_verdicts[].findings[]`) instead — there are no per-lens gauntlet files.
+Compile findings from ALL reviewers into a single block — read each lens's full findings from its `<WORKTREE_PROJECT>/.build-step/review-<lens>.{json,md}` file (Step 6), not from the terse spawn-time returns. On the `deep` lane, read findings from review-deep's JSON sidecar (`<WORKTREE_PROJECT>/.build-step/review-deep/<timestamp>.json`, `lens_verdicts[].findings[]`) instead — there are no per-lens gauntlet files.
 
 **Stop-and-audit check (run BEFORE iterating):** If the SAME bug-shape (same invariant violated, same anti-pattern, same producer/consumer drift, same constant duplicated) has been flagged in **three** iterations in a row -- even at different file locations -- STOP iterating, do NOT spawn the developer for another whack-a-mole fix. Instead, follow the Stop-and-audit rule below: grep the entire codebase for the bug-shape, enumerate every site, and report ONE comprehensive audit finding plus a structural regression-test proposal (e.g. assert single source of truth via CI grep, assert object identity not equality). Mark the run **BLOCKED (audit required)** and skip to the BLOCKED report.
 
@@ -739,9 +1250,12 @@ Compile findings from ALL reviewers into a single block — read each lens's ful
 > `phone-a-friend: diagnosis arm skipped (<reason>)` and dispatch iteration 3 unchanged.
 
 If iterations remain AND the stop-and-audit check did not trigger:
-1. If UI evidence was captured: revert copied files in main project
+1. If UI evidence was captured, run the exact idempotent rollback before returning to the developer:
    ```bash
-   while read f; do git checkout -- "$f"; done < .ui-review-evidence/copied-files.txt
+   if ! rollback_ui_preview; then
+     project_scope_halt "exact UI preview rollback failed before retry"
+     exit $?
+   fi
    ```
 2. Go to Step 2 with all findings appended to developer prompt
 3. Developer works in the same worktree (cumulative fixes)
@@ -752,7 +1266,9 @@ If max iterations exhausted: **BLOCKED**
    file.
 2. Print remaining findings
 3. Keep worktree alive for manual inspection
-4. Restore stash if created
+4. Route through `finalize_project_state`; exact UI rollback must finish before exact-OID apply/drop.
+   Both must succeed before returning BLOCKED. If either fails, keep the durable verdict
+   `NEEDS WORK`, report the cleanup failure, and preserve the snapshot/stash recovery artifacts.
 5. **Phone-a-friend fallback (report-only):** if `<worktree>/.build-step/diagnosis.md`
    does not exist (the re-scope hook never fired — the two hook points are mutually
    exclusive), spawn the same solo fable-tier diagnosis arm once, writing its Diagnosis
@@ -804,7 +1320,7 @@ build-step complete
   Files changed: N
   Gates: typecheck OK, lint OK, test OK
   Code review: correctness OK, bugs OK, tests OK, style OK   (if applicable)
-  Deep review: aggregated <PASS|NEEDS-WORK|DEFERRED-TO-UAT>; audit sidecar .review-deep/<timestamp>.json   (if applicable)
+  Deep review: aggregated <PASS|NEEDS-WORK|DEFERRED-TO-UAT>; audit sidecar .build-step/review-deep/<timestamp>.json   (if applicable)
   Runtime: UI OK, backend OK, frontend OK                     (if applicable)
   Tests: X/Y passing
   Issue: #N closed | #N close failed (warning) | not supplied
@@ -886,8 +1402,8 @@ Full field definitions, overwrite/append rules, and lifecycle:
 
 The 5 conditions under which `/build-phase` is permitted to halt mid-run. Anything else is a defect — surface it as a finding upstream (`/plan-review`, `/plan-wrap`), not a mid-run halt. Long-form rationale + the workspace-wide source-of-truth lives in `dev/.claude/rules/code-quality.md § "Build-phase halt contract"`; this section inlines a 1-sentence summary per item so an operator reading SKILL.md cold doesn't have to navigate out. Reference investigation `02-halt-contract.md`.
 
-1. **Conditional-step predicate errored or returned non-binary.** A `Type: conditional` step's `Condition:` shell expression exited with a code build-phase cannot interpret as run-or-skip (command-not-found ≥126, syntax error, signal-terminated ≥128, or a predicate that outputs but never exits). See "Conditional step handling" below for the dispatch table.
-2. **Quality-gate hard fail.** typecheck error count > 0, test count regressed below baseline, lint produced a blocker-class finding — OR (per Step 1's race-condition defense in sections 2d/2e) `origin` advanced with commits overlapping the step's modified file set. All four are integrity-class failures: the worktree's claim that "this step ships these changes against this baseline" no longer holds. The race-condition extension is documented as a sub-case of this halt class, NOT a new (6th) halt class — preserves the 5-item allowlist.
+1. **Conditional-step predicate errored or returned non-binary.** The `Condition:` ABI accepts only `0` (run) and `1` (skip). Every other exit, signal, syntax error, or launch failure halts. See build-phase's "Conditional step handling" dispatch table.
+2. **Quality-gate hard fail.** typecheck error count > 0, test count regressed below baseline, lint produced a blocker-class finding, `origin` advanced with overlapping files, OR `PROJECT_SCOPE_HALT` detected an out-of-prefix path. These are integrity failures: the worktree's claim about baseline and scope no longer holds. Race and scope failures are sub-cases of class #2, NOT new halt classes. With a parent verdict channel, a scope failure atomically writes `terminal="NEEDS WORK"`, schema-valid `halt="SHIP_GATE_HALT"`, and a `PROJECT_SCOPE_HALT:` summary before returning.
 3. **Stop-and-audit triggered.** Third instance of the same bug-shape in this session, per `/build-step`'s stop-and-audit rule. Whack-a-mole is wasting time; STOP iterating, audit the codebase for siblings, and fix the shared structural invariant in one refactor rather than re-patching each named line.
 4. **Wait-type step reached.** A step declared `Type: wait` is long-running observation work (a soak test, a benchmark run). The orchestrator halts intentionally so wall-clock waiting doesn't burn context window. Resume in a fresh session via `--resume <next-step>` after the wait completes.
 5. **Worktree merge conflict.** A surgical-edit conflict from earlier steps overlapping the current step's files. Requires human resolution before continuing.
