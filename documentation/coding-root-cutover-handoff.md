@@ -27,7 +27,8 @@ captured `SKILL.md` path is.
   looking for a linter, and do not report "0 lint violations" when wrapping.
 - **Not interactive.** The inspector and the migrator declare *no* mandatory parameters
   precisely so they can never sit at a prompt — they validate their arguments manually and
-  exit `2`. The installer's `-Provider` and `-Home` **are** mandatory, so always pass both:
+  exit `2`. Current migrator commands use `-ProjectRoot`; `-Home` remains its compatibility
+  alias. The installer's `-Provider` and `-Home` **are** mandatory, so always pass both:
   omitting either turns an unattended run into an interactive prompt.
 - **Not a skill-mesh commit.** Everything this document changes in the consumer is owned,
   branched, committed, and merged by the consumer repository. This package is an external
@@ -259,7 +260,7 @@ powershell -File tools/inspect-host-install.ps1 -Home '<consumer-home>' -Format 
 ```
 
 **Expect:** exit `0` and a text report that begins
-`skill-mesh host-install report (schema_version 1)`, followed by `consumer_home:`, the
+`skill-mesh host-install report (schema_version 2)`, followed by `consumer_home:`, the
 `instruction files:` block, one block per discovery root, then `ledger:`, `router:`,
 `legacy_shadows:` and a `warnings (N):` list. Exit `2` means the `-Home` was invalid or
 unreadable, or the manifest could not be parsed — fix that before anything else. The JSON form
@@ -275,10 +276,15 @@ Read these five fields before continuing:
 | `router.classification` / `.version` | `legacy` means the old router is still on a resolution path. |
 | `warnings[]` | `LEGACY_CLAUDE_SKILLS_GPT_PRESENT` is expected here; a `foreign`-class finding in a discovery root is not, and will block the migrator in §7. |
 
-**The classification vocabulary is a four-class cascade, and only `managed` is retirable:**
-a name in `config/skill-manifest.json` is `managed`; a `_shared` directory with no `SKILL.md` is
-`core-holder`; any other directory that has a `SKILL.md` is `consumer-only`; anything else is
-`foreign`. In the legacy GPT core tree the entries carry `SKILL-core.md` and `SKILL-gpt.md`
+**The current schema-v2 classification vocabulary has five values (Step 46's historical schema v1
+shipped four; Step 65 completed the v2 amendment on 2026-08-13):** a name in
+`config/skill-manifest.json` is
+`managed`; a `_shared` directory with no `SKILL.md` is `shared-payload` with `owned=true` when a
+recursive per-file scan finds at least one valid generated marker, and otherwise remains
+`core-holder` with `owned=false`; any other directory that has a `SKILL.md` is `consumer-only`;
+anything else is `foreign`. A mixed `_shared` contributes one to `owned_count`, while its
+consumer-authored files do not increment `unowned_count`. In the legacy GPT core tree the entries
+carry `SKILL-core.md` and `SKILL-gpt.md`
 rather than `SKILL.md`, so a consumer-only entry there classifies **`foreign`**, not
 `consumer-only`. That is exactly why §13 retires on a positive `managed` allowlist and never on
 a "not consumer-only" denylist — a denylist would delete the consumer's own skill.
@@ -306,9 +312,16 @@ you picked a path inside the home — pick another; the migrator would refuse it
 What lands in `<backup-dir>`: the transaction plan, an append-only journal, a backup manifest
 recording release identity plus every original and installed hash, and the **pre-image payload
 of every path the migration mutates**. What never lands there: the bytes of anything the
-migration only *preserves*. A preserved tree is recorded in `preserved_files` by relative path
-and SHA-256 only — never payload-copied — so private consumer content is not duplicated into a
-backup it can never need.
+migration only *preserves*. A preserved consumer-only tree, marker-free `_shared` core holder, or
+non-shipped consumer file beside a shipped `_shared` payload is recorded in `preserved_files` by
+relative path and SHA-256 only — never payload-copied — so private consumer content is not
+duplicated into a backup it can never need.
+
+The journal contains per-action history and, after a successful rollback, one transaction-level
+`rollback_complete` record. An ordinary action attempt has a `begin`/`commit` pair, but a crash or
+failure may leave `begin` only, while a true no-op or legacy observational compatibility record may
+be `commit` only. The final transaction record carries the exact durable-begin sequence set and is
+flushed before the manifest publishes `rolled_back`.
 
 Treat `<backup-dir>` as sensitive. It holds pre-images of the consumer's own files. Never
 upload it, never add it to a repository, and delete it per §15.
@@ -329,7 +342,7 @@ Rolling back with it fails:
 **Run in:** `<skill-mesh-repo>` (this repository; it plans against `<consumer-home>`)
 
 ```powershell
-powershell -File tools/migrate-legacy-install.ps1 -Home '<consumer-home>' -DistDir '<dist-dir>' -BackupDir '<backup-dir>'
+powershell -File tools/migrate-legacy-install.ps1 -ProjectRoot '<consumer-home>' -DistDir '<dist-dir>' -BackupDir '<backup-dir>'
 ```
 
 **Expect:** exit `0` and a plan that begins `skill-mesh migration plan (schema_version 1)`,
@@ -338,11 +351,19 @@ then `migration_id: <throwaway id>`, `source_release: commit=...`, an `actions:`
 under it. **Do not record this `migration_id`** — see above; the one `-Resume` and `-Rollback`
 require comes from §8.
 
+The JSON plan and the written backup manifest also carry
+`root_encoding: canonical-realpath.v1`; both roots are canonical absolute paths. Older schema-v1
+transactions have no encoding marker. They remain automatically recoverable only when their
+recorded Home and BackupDir spellings were already canonical; an alias-spelled legacy artifact
+fails closed with `LEGACY_ALIAS_ROOT_UNSUPPORTED` because it cannot distinguish the original alias
+target from a later junction retarget.
+
 If the last line is `blocked (N):` with findings, exit is `2`, nothing was written, and each
 finding prints as `[CODE] <rel_path> -- <message>`. The codes you may see:
 `MANIFEST_UNREADABLE`, `UNSAFE_LINK`, `FOREIGN_FILE`, `UNKNOWN_PROVIDER_ROOT`,
 `MISSING_PROFILE`, `INCOMPLETE_TRANSACTION`, `PRECONDITION_DRIFT`, `INVALID_MODE`,
-`INVALID_HOME`, `BACKUP_DIR_REQUIRED`, `BACKUP_DIR_INSIDE_HOME`, `DIST_DIR_REQUIRED`,
+`INVALID_HOME`, `PERSONAL_HOME_UNSUPPORTED`, `BACKUP_DIR_REQUIRED`,
+`BACKUP_DIR_INSIDE_HOME`, `DIST_DIR_REQUIRED`,
 `INVALID_MIGRATION_ID`, `UNKNOWN_TRANSACTION`, `HOME_MISMATCH`, `RELEASE_MISMATCH`,
 `TRANSACTION_RESOLVED`. `FOREIGN_FILE` is the common one on a hand-maintained consumer: a file
 in a discovery root that is neither generated nor a recognisable skill. Resolve it in the
@@ -351,23 +372,39 @@ reach for `-Force` on the installer; that is the expert override this whole docu
 replace.
 
 Re-read the plan until the counts match your intent. `preserve` should cover every consumer-only
-tree and the `_shared` core-holder; `retire` should cover only stale marker-bearing generated
-files.
+tree, every non-shipped consumer file beside a shipped `_shared` payload, and a marker-free
+`_shared` core-holder. Under the Step 65 contract, `retire` may cover marker-bearing files only when
+their canonical residence is inside the retired `.copilot/skills` root and those bytes are not
+reachable through any active `.claude/skills`, `.github/skills`, or `.agents/skills` path. A
+generated-looking stale file in an active root is retained and reported with
+`ACTIVE_MANAGED_FILE_RETAINED`; it is never auto-deleted there.
+
+`-ProjectRoot` is also an authority boundary. Planning, Apply, and Resume refuse when it resolves
+to the effective personal home, because `~/.copilot/skills` is an active Copilot personal root, not
+the retired project-relative wrong-target. A normal project nested beneath the personal home is
+valid. `-Home` remains accepted for compatibility, but it does not bypass this check.
 
 ---
 
 ## 8. Apply the migration
 
+**Single-operator gate:** for one canonical `<consumer-home>` and `<backup-dir>`, only one
+operator process may run `-Apply`, `-Resume`, or `-Rollback` at a time. Do not start one of those
+modes in a second shell, agent, or scheduled task while another is running. The recovery contract
+does not provide concurrent-writer coordination; inspect and dry-run around the mutating command
+only after that command has exited.
+
 **Run in:** `<skill-mesh-repo>` (this repository; it mutates `<consumer-home>`)
 
 ```powershell
-powershell -File tools/migrate-legacy-install.ps1 -Home '<consumer-home>' -DistDir '<dist-dir>' -BackupDir '<backup-dir>' -Apply
+powershell -File tools/migrate-legacy-install.ps1 -ProjectRoot '<consumer-home>' -DistDir '<dist-dir>' -BackupDir '<backup-dir>' -Apply
 ```
 
 **Expect:** exit `0` and a final line of the form
 `migrate-legacy-install: migration <migration-id> APPLIED (N installed, N retired, N preserved).`
-Claude and GPT are installed as **one** transaction — a failure in either profile rolls the
-whole set back in reverse order and restores the prior ownership ledger.
+Claude and GPT are installed as **one** transaction — a caught failure in either profile rolls
+every verified begun action back in reverse order and restores the prior ownership ledger. The
+mid-`Copy-Item` process-interruption limitation is stated under Resume below.
 
 **Record the `<migration-id>` from THIS line.** It is the id `-Resume` and `-Rollback` require,
 and it is the only id under which a transaction directory exists. Two things about it that are
@@ -391,7 +428,7 @@ Other outcomes and what they mean:
 | Exit | Meaning | What to do |
 |---|---|---|
 | `0` | Applied. | Continue to §9. |
-| `1` | Operational failure, **home left clean** (rollback completed, or nothing was mutated). | Read the diagnostic, fix the cause, re-run the dry run. |
+| `1` | Operational failure; every verified file mutation was reversed (or nothing was mutated). Empty plan-time-created directories may remain because the tool has no durable identity proving it owns an empty replacement. | Read the diagnostic, fix the cause, re-run the dry run. |
 | `2` | Blocked / unsafe precondition, **always pre-mutation**. | Nothing changed. Resolve the named code and re-run. |
 | `3` | Rollback did not complete. **Two distinct meanings — see §11 before acting.** | Read §11. Do not restore a backup reflexively. |
 
@@ -402,24 +439,60 @@ dead end for one of them:
 
 | Status in the message | What it is | What to do |
 |---|---|---|
-| `prepared`, `applying`, `rolling_back` | Mid-flight and still resolvable by the tool. | Drive it forward with `-Resume -MigrationId <migration-id>`, or reverse it with `-Rollback -MigrationId <migration-id>`. |
+| `prepared`, `applying` | Mid-flight and still resolvable by the tool. `applying` means the mutation phase was durably entered; an interruption can leave that status before the first action's `begin` exists. | Drive it forward with `-Resume -MigrationId <migration-id>`, or reverse it with `-Rollback -MigrationId <migration-id>`. |
+| `rolling_back` | Rollback began but its terminal status was not published. If the durable `rollback_complete` record is already present, every inverse already succeeded; otherwise undo is incomplete. | Run `-Rollback -MigrationId <migration-id>`. With the valid completion record it publishes `rolled_back` without replaying any inverse; without the record it idempotently continues reverse-order undo from durable `begin` authority, accepting exact pre-state but refusing ambiguous or changed bytes. |
 | `failed_incomplete` | A rollback that did not complete. **Unresolved** (so it blocks a bare `-Apply`) and **terminal** at the same time: `-Resume` refuses it with `TRANSACTION_RESOLVED` (exit `2`) and `-Rollback` refuses it with `TRANSACTION_RESOLVED` too. Both remedies in the row above are dead ends. | No tool mode clears it. Recover by hand per §11's exit-`3` table, then **remove that transaction directory** to clear the block — the exact sequence is §11's "Clearing a `failed_incomplete` transaction". |
 
-`applied` and `rolled_back` are terminal *and* resolved; they never block a later `-Apply`.
+`applied` and `rolled_back` are terminal *and* resolved only when the transaction's complete
+metadata and journal validate. A status label is not trusted by itself: missing, malformed,
+truncated, relabelled, or inconsistent terminal authority is classified corrupt, and a bare
+`-Apply` refuses rather than layering a new transaction over it.
+
+For current-format transactions, `rolled_back` requires the valid final `rollback_complete` record
+and remains resolved even if the consumer legitimately edits a restored path later. A markerless
+legacy `rolled_back` transaction uses a narrower compatibility rule: every begun mutating action
+must still be at its exact recorded pre-state. `failed_incomplete` has no valid completion record.
+
+A missing journal is valid only for a validated `prepared` transaction carrying zero action
+history — the process may have stopped after plan/manifest creation but before its first journal
+record. In every later status, or when any history is claimed, a missing journal fails closed.
 
 If the process is interrupted mid-apply, resume it — do not re-run a bare `-Apply`.
 
 **Run in:** `<skill-mesh-repo>` (this repository; it mutates `<consumer-home>`)
 
 ```powershell
-powershell -File tools/migrate-legacy-install.ps1 -Home '<consumer-home>' -DistDir '<dist-dir>' -BackupDir '<backup-dir>' -Resume -MigrationId '<migration-id>'
+powershell -File tools/migrate-legacy-install.ps1 -ProjectRoot '<consumer-home>' -DistDir '<dist-dir>' -BackupDir '<backup-dir>' -Resume -MigrationId '<migration-id>'
 ```
 
 **Expect:** against a genuinely interrupted transaction, the same
 `APPLIED (N installed, ...)` line and exit `0`. Against a transaction that already reached
 `applied`, the line reads `migrate-legacy-install: migration <migration-id> is already applied
-(no-op).` — also exit `0`, and the same meaning. Resume is precondition-hash driven and
-idempotent: it converges to the same terminal state without double-applying.
+(no-op).` — also exit `0`, and the same meaning. At the tested process-interruption seams
+immediately before or after a complete mutation, Resume is precondition-hash driven and
+idempotent: it converges to the same terminal state without double-applying. Its possible-undo set
+includes only actions carrying a prior durable journal `begin`, so a later failure — including a
+cross-action postcheck failure — reverses only work actually begun by an earlier process. A
+mutating action may treat matching post-state as already performed only when that action has a
+durable `begin`; the sole exception is a true no-op whose recorded pre- and post-state are equal. A
+legacy commit-only record remains observational compatibility history: it can record matching
+bytes but can never be normalized into skip, delete, overwrite, or rollback authority. A directory
+never satisfies an absent-file precondition.
+
+The terminal responses above are earned, not label-driven. Explicit Resume first validates the
+complete plan, backup manifest, and journal. It prints the `applied` no-op only when every action's
+committed history validates; it refuses `rolled_back` with `TRANSACTION_RESOLVED` only when the
+current `rollback_complete` record (or the conservative markerless-legacy exact-pre fallback)
+validates. Missing, corrupt, truncated, or relabelled terminal authority refuses without claiming
+the transaction is resolved and without touching the home.
+
+That convergence statement is not a byte-level atomic-copy guarantee. The engine currently uses
+direct `Copy-Item` mutations, and the process-interruption seams bracket the cmdlet rather than
+interrupting it mid-copy. If the process is killed while `Copy-Item` is writing and leaves torn
+bytes, those bytes match neither the recorded pre-state nor post-state; Resume fails closed instead
+of guessing. Recover the named path from the retained pre-image and follow §11's manual-recovery
+guidance. Do not assume every possible interruption while status is `applying` can converge
+automatically.
 
 ---
 
@@ -432,11 +505,11 @@ powershell -File tools/inspect-host-install.ps1 -Home '<consumer-home>' -Format 
 powershell -File tools/inspect-host-install.ps1 -Home '<consumer-home>'
 ```
 
-**Expect:** exit `0`, and in the text report both roots now read `state=present`. The `owned=`
-count on each block equals that profile's manifest total — read them from
-`config/skill-manifest.json` rather than memorising them: `counts.total` for the Claude root
-(50 today) and `counts.portable` for the GPT root (47 today; the three provider-native skills
-have no GPT adapter). `ledger: state=` reports a present ledger naming both providers with
+**Expect:** exit `0`, and in the text report both roots now read `state=present`. In schema v2, the
+`owned=` count on each block equals that profile's manifest total **plus one** for its generated
+`_shared` `shared-payload` entry. Read the manifest totals from `config/skill-manifest.json`: today
+that is `counts.total + 1` for Claude (**51**) and `counts.portable + 1` for GPT (**48**; the three
+provider-native skills have no GPT adapter). `ledger: state=` reports a present ledger naming both providers with
 `unrecognized=0`. Every entry you expected preserved is still listed, and `unowned` counts only
 the consumer's own trees.
 
@@ -522,22 +595,46 @@ is the escape hatch for a failed acceptance, and knowing the command afterwards 
 **Run in:** `<skill-mesh-repo>` (this repository; it restores `<consumer-home>`)
 
 ```powershell
-powershell -File tools/migrate-legacy-install.ps1 -Home '<consumer-home>' -BackupDir '<backup-dir>' -Rollback -MigrationId '<migration-id>'
+powershell -File tools/migrate-legacy-install.ps1 -ProjectRoot '<consumer-home>' -BackupDir '<backup-dir>' -Rollback -MigrationId '<migration-id>'
 ```
 
 **Expect:** exit `0` and a final line
-`migrate-legacy-install: migration <migration-id> ROLLED BACK (N action(s) reversed).`
-Rollback restores original hashes, removes only migration-owned files, and removes only
-directories the migration itself created and only while they are empty. `-DistDir` is **not**
-required for `-Rollback`; `-BackupDir` and `-MigrationId` are.
+`migrate-legacy-install: migration <migration-id> ROLLED BACK (N begun action(s) processed).`
+If an earlier process stopped after durable completion but before the status publish, the final line
+instead ends `ROLLED BACK (durable completion recovered).`; no inverse is replayed.
+Rollback restores original file hashes and removes only hash-verified files the migration created.
+Its reverse-order undo set is filtered to durable `begin` records, including when cross-action
+postcheck triggers rollback; a commit-only observation never manufactures undo authority.
+After every inverse succeeds, Rollback flushes one `rollback_complete` record naming the exact begun
+sequence set and only then publishes `rolled_back`. Immediately before that append, it revalidates
+the exact plan, complete journal, and candidate begin set under the existing journal writer handle.
+History that becomes missing, truncated, damaged, or inconsistent during undo may be best-effort
+reversed from already validated in-memory authority, but it cannot be certified: no completion
+record or `rolled_back` status is published. A failed inverse, completion validation, or completion
+append attempts to publish `failed_incomplete` without a valid completion record. Every status
+write is read back;
+if that publication fails, the tool reports the status-persistence failure and the last verified
+manifest status remains authoritative — it must not tell you `failed_incomplete` persisted when it
+did not.
+It intentionally does **not** remove empty plan-time-created directories: absence at planning is
+not durable directory identity, and an operator may have created an empty replacement while the
+transaction was interrupted. `-DistDir` is **not** required for `-Rollback`; `-ProjectRoot`,
+`-BackupDir`, and `-MigrationId` are. `-Home` remains a compatibility alias.
+
+Rollback is the only mode allowed to recover a transaction whose project-root guard would now
+reject the target as the effective personal home. That exception is restorative only: for an older
+schema-v1 retire action, it may restore a hash-verified backup payload to a truly absent,
+home-contained target only when its canonical home-relative spelling still equals the recorded
+path. A newly planted junction cannot redirect that compatibility restore. Resume and forward
+migration never gain deletion authority from this exception.
 
 **`-MigrationId` selects which state you go back to, and only one id goes back to the legacy
 home.** Rollback restores the pre-images *that transaction* captured. The first `-Apply` on a
 legacy home captured the hand-authored legacy files, so its id is the one that undoes the
 cutover. Any later `-Apply` against an already-migrated home captured the **generated** files
 as its pre-images, so rolling that id back restores generated bytes over generated bytes and
-leaves the home fully cut over — it looks like a successful `ROLLED BACK (N action(s)
-reversed).` and changes nothing you wanted changed. If more than one transaction directory
+leaves the home fully cut over — it looks like a successful `ROLLED BACK (N begun action(s)
+processed).` and changes nothing you wanted changed. If more than one transaction directory
 exists under `<backup-dir>`, reverse them newest-first and finish with the first one; that
 first id still works after the later ones are reversed.
 
@@ -553,7 +650,13 @@ one is destructive.
 |---|---|---|
 | `ROLLBACK INCOMPLETE -- ... refusing to undo the install of '<rel-path>' -- the bytes there are no longer the ones this migration wrote, so undoing would destroy content this transaction did not create.` | A path the tool **installed** was edited after the install, so the undo refused rather than destroy the edit. **This is the exit `3` you are most likely to meet**, and the usual cause is an acceptance probe still appended to a `SKILL.md` (§10). It carries neither of the two quoted phrases in the rows below — match it here, not by keyword. | Restore the named path to its installed bytes — from your §10 pre-image, or by copying the file of the same relative path out of `<dist-dir>` — and verify its SHA-256 equals that path's `installed_files[].sha256` in `backup-manifest.json`. The transaction is already `failed_incomplete` and the home is mixed, so then clear it per *"Clearing a `failed_incomplete` transaction"* below and re-run the §7 dry run, which re-plans over the mixed home and returns `blocked (0)`. |
 | `ROLLBACK INCOMPLETE -- the consumer home is MIXED. The backup is retained at MigrationId ...` | A path the tool **mutated** could not be restored for some other reason (a lock, a permission, a vanished payload). The home genuinely holds a mix of generated and original files. | Recover from the retained backup payloads in `<backup-dir>/<migration-id>`. |
-| A message stating that **every path this tool mutated was restored** and that the failure set is a **preserved** path | A path the migration only *preserved* changed. It carries no backup payload **by design** — those bytes are the consumer's own and are already intact. Nothing the tool touched is outstanding. | Inspect the named path. **Do not restore a backup over it** — the backup has no copy of it, and treating this as the mixed case would overwrite the consumer's newer bytes with older ones. |
+| A message stating that **every verified file mutation this tool made was reversed** and that the failure set is a **preserved** path | A path the migration only *preserved* changed. It carries no backup payload **by design** — those bytes are the consumer's own and are already intact. Nothing the tool touched is outstanding; identity-less empty directories may remain. | Inspect the named path. **Do not restore a backup over it** — the backup has no copy of it, and treating this as the mixed case would overwrite the consumer's newer bytes with older ones. |
+
+If the diagnostic instead says a status could not be persisted, do not infer
+`failed_incomplete` from exit `3` or from the attempted transition. Read the retained manifest: the
+last read-verified status remains authoritative. Preserve the backup and resolve the persistence
+problem before selecting a recovery command; the tool must not print a terminal status it failed to
+write and verify.
 
 A preserved path that drifts during a *pre-completion* abort is neither of these: it lands
 `rolled_back` with an advisory naming the path and its expected/observed hashes, and a follow-up
@@ -564,7 +667,7 @@ bare `-Apply` re-plans and succeeds.
 
 ### Clearing a `failed_incomplete` transaction
 
-Exit `3` leaves the transaction in status `failed_incomplete`, and that status is a corner the
+When the retained manifest read-verifies status `failed_incomplete`, that status is a corner the
 tool deliberately will not drive you out of: `-Resume` refuses it (`TRANSACTION_RESOLVED`, exit
 `2`), `-Rollback` refuses it (`TRANSACTION_RESOLVED`, exit `2`), and a bare `-Apply` refuses it
 (`INCOMPLETE_TRANSACTION`, exit `2`) because it is still counted unresolved. **There is no tool
@@ -599,7 +702,7 @@ every other transaction under `<backup-dir>` is untouched.
 **Run in:** `<skill-mesh-repo>` (this repository; it plans against `<consumer-home>`)
 
 ```powershell
-powershell -File tools/migrate-legacy-install.ps1 -Home '<consumer-home>' -DistDir '<dist-dir>' -BackupDir '<backup-dir>'
+powershell -File tools/migrate-legacy-install.ps1 -ProjectRoot '<consumer-home>' -DistDir '<dist-dir>' -BackupDir '<backup-dir>'
 ```
 
 **Expect:** exit `0` and `blocked (0):` — the `INCOMPLETE_TRANSACTION` finding is gone and a fresh

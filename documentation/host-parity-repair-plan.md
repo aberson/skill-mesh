@@ -1,6 +1,8 @@
 # Phase 7.5 — Host Parity Repair
 
-**Status:** IN PROGRESS — Steps 62–64 and 66–69 DONE; Step 65 parked unmerged on branch `build-step-1786408322` (see its Status); 70 remains; 71 is the operator cutover
+**Status:** IN PROGRESS — Steps 62–69 DONE; Step 70 remains blocked by the four-part installer
+authority prerequisite, including its Step 4 `created_dirs` decision; Step 71 is the operator
+cutover and remains blocked behind Step 70
 **Build model:** Opus (all steps; run `/build-phase` from an Opus window — dev arms inherit the session tier)
 **Step range:** 62–71 (Phase 8 owns 51–61 with issues #71–#82 already minted; suffixed headings like `50a` are
 silently skipped by `/build-phase`'s `### Step N:` walker, per the Step 47b dispatch note)
@@ -294,7 +296,30 @@ a test written to pass — the codifying-test-diff anti-pattern. Instead Step 63
 - **The migrator has no marker guard — the installer does.** `install-skill-mesh.ps1:599-614` refuses any target lacking the marker, with a TOCTOU recheck at `:681-688`. `migrate-legacy-install.ps1`'s install action has no equivalent, so making `_shared` managed hands the migrator permission to overwrite consumer-owned bytes the installer would refuse. Add the marker check to the migrator's install path in this step, or the reclassification is strictly less safe than what it replaces
 - **Done when:** a dry-run migration against a synthesized home that already contains a hand-authored `_shared/` completes without `FOREIGN_FILE` and without a `$null` dereference under `Set-StrictMode -Version Latest` (note the `$null` deref at `:712` is *latent* — `:683`'s `continue` makes it unreachable until the first-segment stop is lifted, so it only fires once this step lands); **an APPLY run, not only a dry-run** — `migrate-legacy-install.ps1:14-16` states a dry-run "mutates NOTHING", so a dry-run cannot exercise the write paths this step changes; no relative path appears in both the preserve and install action sets; no marker-bearing `_shared` file survives uninstall, **and** every non-marker `_shared` file is byte-unchanged and still appears in `BackupManifest.preserved_files` with its hash and drift advisory; convergence is asserted at the *plan* level by comparing `-Format json` action sets for run 2 vs run 3 (today `test_legacy_migration.py:604-612` compares only a tree digest, which cannot see an action-set difference); `python -m pytest` from the repo root is `>= baseline`
 - **Depends on:** 64
-- **Status:** IN PROGRESS — iteration 3 required (2026-08-10). Work is committed and pushed on branch `build-step-1786408322` (`b0651be`) and deliberately **NOT merged**. Iteration 1 (`6d0a80a`) drew 2 Block + 3 Nit from a six-lens deep review; iteration 2 (`b0651be`) is gate-green (519 passed / 2 skipped) and fixed 4 of 5 findings — independently confirmed — but an adversarial verifier **reproduced live file deletion again**. `Test-SkillMeshHeaderPreamble` (`tools/skill-mesh-provenance.ps1:94-118`) accepts an empty preamble, YAML frontmatter, or any ≤256-char prefix ending in a fence line, so consumer docs quoting the header after frontmatter, at file top, or inside a ` ```python ` fence still classify owned; `-Apply` (rc=0) deleted all three from a throwaway home's `_shared/`. The step's own regression test is green because it rejects only its own fixture shape. **The diagnosis is structural** (`.build-step/diagnosis.md`, advisory/unverified): the retire path asks "did skill-mesh *write* this file?" of a recognizer that can only answer "do these bytes *look* like ours?", and it is the only destructive operation authorized by that single consumer-forgeable signal — while uninstall already requires **two independent yeses** (ledger AND marker, `migrate-legacy-install.ps1:1092-1095`). A sound content-only recognizer is judged structurally impossible: the verified no-false-negative requirement forces accepting every emitter-output head, so a byte-identical quotation must receive the same verdict. Iteration 3 is **re-scoped** per the same-defect rule — one refactor of the shared invariant (add the ledger/dist-membership second yes, or narrow the consequence so content alone can flag but never delete), not a third patch of the predicate. **Constraint that outranks the fix:** all 211 emitted files currently read owned across LF/CRLF/BOM variants and 27 call sites show zero flips — any change that strands a real payload file is strictly worse than the defect it replaces
+- **Status:** DONE (2026-08-13) — iteration 3 passed the authoritative repo-root gate:
+  **1,143 passed, 1 skipped, 1,144 collected in 3,443.99s (0:57:23), exit 0**. Focused
+  recovery-boundary regressions and adversarial protocol review also passed with no remaining
+  must-fix Block. The earlier work remains committed and pushed on branch
+  `build-step-1786408322` (`b0651be`) as audit history. Iteration 1 (`6d0a80a`) drew 2 Block + 3 Nit
+  from a six-lens deep review; iteration 2 (`b0651be`) was gate-green at that point (519 passed / 2
+  skipped) and fixed 4 of 5 findings — independently confirmed — but an adversarial verifier
+  **reproduced live file deletion again**. `Test-SkillMeshHeaderPreamble`
+  (`tools/skill-mesh-provenance.ps1:94-118`) accepts an empty preamble, YAML frontmatter, or any
+  ≤256-char prefix ending in a fence line, so consumer docs quoting the header after frontmatter, at
+  file top, or inside a ` ```python ` fence still classify owned; `-Apply` (rc=0) deleted all three
+  from a throwaway home's `_shared/`. The step's own regression test was green because it rejected
+  only its own fixture shape. **The diagnosis was structural** (`.build-step/diagnosis.md`,
+  advisory/unverified): the retire path asked "did skill-mesh *write* this file?" of a recognizer
+  that can only answer "do these bytes *look* like ours?", and it was the only destructive operation
+  authorized by that single consumer-forgeable signal — while uninstall already requires **two
+  independent yeses** (ledger AND marker, `migrate-legacy-install.ps1:1092-1095`). A sound
+  content-only recognizer was judged structurally impossible: the verified no-false-negative
+  requirement forces accepting every emitter-output head, so a byte-identical quotation must
+  receive the same verdict. Iteration 3 was **re-scoped** per the same-defect rule — narrow the
+  consequence so content alone can flag but never delete, rather than patching the predicate a third
+  time. **Constraint that outranked the fix:** all 211 emitted files read owned across LF/CRLF/BOM
+  variants and 27 call sites showed zero flips — any change that stranded a real payload file would
+  have been strictly worse than the defect it replaced
 - **DECISION REOPENED — do NOT implement a second yes until this resolves (2026-08-12).** A
   dist-membership second yes was decided and then **retracted the same day, before any code**, when
   the retire path was read rather than summarized. Recording the retraction and its evidence, because
@@ -317,8 +342,10 @@ a test written to pass — the codifying-test-diff anti-pattern. Instead Step 63
     the scan puts both populations into, so a rule scoped there may buy most of the safety at a
     fraction of the disruption.
   - Superseded by the evidence-backed decision below. The same-defect rule still forbids a third
-    patch of `Test-SkillMeshHeaderPreamble`; the predicate stays, and only its authority to
-    authorize deletion is in question.
+    heuristic expansion of `Test-SkillMeshHeaderPreamble` and forbids treating its answer as
+    deletion authority. The shared parser may still be narrowed to the emitter's exact grammar
+    (including the first-frontmatter-closer correction); that repair does not authorize loop-2
+    deletion.
 - **INVESTIGATION COMPLETE (2026-08-12) — three candidate designs falsified by measurement, one
   survives. Recommendation: loop 2 must stop deleting.** Two adversarial rounds. Recording the
   eliminations, because each was proposed from a plausible reading of this plan and each will be
@@ -368,8 +395,120 @@ a test written to pass — the codifying-test-diff anti-pattern. Instead Step 63
     loop-2 retire at all, so a future loop-2 regression is invisible; superseded generated files
     accumulate in the live tree until an operator acts. Both are accepted trade-offs against a tool
     that provably deletes consumer files, and both need naming in the step's Done-when.
-  - **Not yet implemented — awaiting operator sign-off**, because rewriting locked test behaviour is
-    a behaviour decision rather than a defect fix.
+  - **APPROVED by the operator (2026-08-12); implemented and DONE on 2026-08-13 after the Dev
+    Observatory / On Brand UAT hold cleared on 2026-08-12.** The surviving
+    consequence-narrowing design exactly as written: loop 1 may still retire files only under the
+    retired `.copilot/skills` root; loop 2 never deletes and emits the named
+    `ACTIVE_MANAGED_FILE_RETAINED` advisory instead. The three locked tests are deliberately
+    rewritten to assert that behaviour change, and a forged-header Apply regression proves the
+    active-root file survives while the advisory names it. This authorization does not authorize an
+    early live install or Step 71 cut-over.
+  - **IMPLEMENTATION REVIEW DISCOVERIES (2026-08-12; resolved in completed iteration 3).** The loop-1 positional
+    signal is narrower than its first implementation assumed. The working implementation now uses
+    each file's canonical residence, not the lexical path through which the scan found it: an
+    in-home alias from `.copilot/skills` into an active tree is routed to loop 2's advisory-only
+    population. It also refuses loop-1 authority when the canonical retired bytes are reachable
+    through any active project discovery path — `.claude/skills`, `.github/skills`, or
+    `.agents/skills` — including whole-root and nested aliases. The same domain check is repeated at
+    precondition, forward mutation, resume-skip, and current-plan undo boundaries
+    so an alias changed after planning cannot recover destructive authority from a matching hash.
+    Undo is intentionally excluded only for the verified legacy-v1 restoration case described
+    below; it restores a missing pre-image and never exercises forward deletion authority.
+  - **The install path now has a mutation-time pre-image guard.** Immediately before an Apply or
+    Resume copy, the target must still be the exact file hash the plan recorded; a marker-bearing
+    customization is not identity. A `pre_hash: null` means the path was truly absent, not merely
+    "not a regular file." The working implementation centralizes that rule in one recorded-file
+    predicate shared by Apply preconditions, forward mutation, resume classification, and rollback.
+    The retire resume predicate now accepts only three unambiguous target/payload pairs
+    (pre/absent, pre/pre, absent/pre); a replacement directory, unreadable/non-file target,
+    mismatched file, corrupt payload, or double absence is refused. This closes the earlier
+    directory-versus-absence Block in code; its focused and repository gates passed in the Step 65
+    status above.
+  - **The personal-root positional premise now fails closed.** Project-relative
+    `.copilot/skills` is retired, but `<actual-user-home>/.copilot/skills` is Copilot's active
+    personal discovery root. The working command prefers `-ProjectRoot` (`-Home` remains a
+    compatibility alias) and rejects planning, Apply, and Resume when the supplied root resolves to
+    the effective personal home, with `PERSONAL_HOME_UNSUPPORTED`. Explicit Rollback remains
+    available so a transaction created by an older unsafe invocation can restore verified bytes.
+    This closes the earlier personal-home Block in code; the final tests and repository gate passed.
+  - **Resume/rollback now recover from durable journal history, not only the current process.** A
+    resumed run seeds its reverse-order undo set only from prior durable `begin` records. A
+    commit-only record remains observational compatibility history: it may record matching bytes,
+    but it never gains `begin`, never becomes rollback-visible, and never grants destructive
+    authority. Explicit Rollback uses the same begin-only interpretation. Undo applies
+    the shared recorded-file and backup-payload identity guards on every branch. The sole deliberate
+    retired-domain exception is restoration of a verified legacy-v1 retire pre-image to a truly
+    absent, home-contained target whose canonical home-relative spelling still equals its recorded
+    path: Resume may never delete outside the narrowed retired domain, and a junction may not
+    redirect the compatibility restore, but Rollback can repair an unaliased older transaction.
+  - **Rollback completion is now its own durable journal boundary.** After every inverse in the
+    exact durable-begin set succeeds, the engine revalidates the exact plan, complete journal, and
+    candidate begin set under the existing journal writer handle, then appends and flushes one
+    transaction-level `rollback_complete` record carrying that exact sequence set and publishes
+    `rolled_back`. History that becomes missing, truncated, damaged, or inconsistent during undo
+    may be best-effort reversed from already validated in-memory authority, but cannot be certified
+    with either that completion record or a `rolled_back` status. A
+    crash in the narrow gap leaves `rolling_back`; explicit Rollback validates the completion record
+    and publishes the terminal status without replaying an inverse. A current `rolled_back` plus
+    valid completion record stays resolved even if the consumer later edits restored bytes.
+    Markerless legacy `rolled_back` transactions retain only the conservative exact-pre-state
+    compatibility fallback. Any inverse, completion-validation, or completion-append failure
+    attempts to publish `failed_incomplete` without a valid completion record. Status publication
+    is write-first and read-verified: if that
+    writer fails, the engine retains and reports the last verified persisted status instead of
+    overclaiming `failed_incomplete`. A `rolling_back` retry without the record idempotently continues
+    reverse-order undo: exact pre-state means that inverse already completed, while ambiguous or
+    changed bytes still refuse.
+  - **The migrator intentionally leaves identity-less empty directories.** Absence at planning is
+    not durable directory identity; an operator can create an empty replacement during an
+    interruption, and no byte hash can prove it belongs to this transaction. Rollback does not
+    delete empty plan-time-created directories, and forward retirement does not cosmetically delete
+    emptied retired ancestors. It restores or removes verified file bytes only. These changes are
+    part of the completed Step 65 implementation; DONE does not authorize live cutover.
+  - **Recovery authority and root encoding fail closed.** New plan/manifest pairs record
+    `root_encoding: canonical-realpath.v1` plus canonical project/backup roots. Recovery validates
+    metadata, action order/provider domains, payload maps, and journal/action grammar before
+    mutation; missing, malformed, truncated, or inconsistent authority refuses. A legacy schema-v1
+    artifact whose roots were spelled through an alias returns
+    `LEGACY_ALIAS_ROOT_UNSUPPORTED` rather than retargeting historical begin authority. `applied`
+    is published only after post-install verification, and explicit Rollback does not depend on the
+    current checkout manifest. Explicit Resume validates the same complete authority before an
+    `applied` no-op or `rolled_back`-resolved response; a terminal status label never bypasses
+    journal validation.
+  - **NEW PRE-LIVE PREREQUISITE — four installer destructive paths share the forgeable-marker
+    authority defect; ordinary overwrite is confirmed destructive without a backup.** Measured
+    2026-08-12 in a fresh throwaway home:
+    copy the real `dist/claude/plan-review/SKILL.md`, append consumer customization while retaining
+    its valid generated header, then run an ordinary Claude install with no force flag and no backup
+    option. The installer exited 0, changed the pre-image hash
+    `2fe5647b843a27747e2684878d702b74e9c5235255249ea051c9f43b4a8973b0` to the exact dist hash
+    `1d45cb26d3ee868d5bc2d1dd60659b086b08d35ad5d83c3303d239f14bf9e7a0`, removed the consumer
+    text, and wrote **zero** take-ownership backup manifests. The throwaway tree was removed after
+    measurement. A destructive-call-site audit found the same authority gap in **four** installer
+    paths: routine overwrite, stale removal after install, normal uninstall, and corrupt-ledger
+    marker-fallback uninstall. Stale removal and normal uninstall add ledger path membership but do
+    not prove the current bytes remain the installed bytes; corrupt-ledger fallback deletes on the
+    marker alone. This is a distinct sibling class in `install-skill-mesh.ps1`, not an expansion of
+    Step 65's migrator-retire acceptance: record it separately and **block Steps 70 and 71 (therefore
+    any live install or uninstall) until all four paths are fixed and regression-tested**. Smallest
+    sound direction: when a target
+    is already ledger-listed, record the installed file's hash in the ledger and permit a routine
+    overwrite only if the current bytes still equal that recorded hash; otherwise refuse or require
+    an explicit backup-before-overwrite take-ownership path. Marker plus ledger still scopes the
+    candidate, but neither substitutes for current-byte identity. Existing ledgers carry no per-file
+    hashes, so their first upgrade needs a fail-closed or explicit backed-up adoption rule; do not
+    silently bless current bytes. Apply the same current-byte identity gate to stale removal and
+    normal uninstall. The corrupt-ledger fallback has no identity record to consult, so it must fail
+    closed on deletion or first place candidates in an explicit recoverable/quarantined backup.
+    **The prerequisite has a second authority dimension: `created_dirs`.** Directory absence at
+    install time is not durable ownership identity; another process or operator may later create an
+    empty directory at the same path. Step 65's migrator therefore no longer deletes empty
+    plan-time-created directories, but the explicit installer `-Uninstall` path can still remove
+    ledger-listed `created_dirs`. Before any live install or uninstall, Step 4 of this prerequisite
+    must settle and test both (1) current-byte identity for every `owned_files` overwrite/removal and
+    (2) deletion authority plus an explicit empty-directory policy for `created_dirs`. This is
+    pre-existing deferred installer debt, not part of Step 65's DONE scope, and recording it here
+    does not widen or complete Step 65.
 
 <!-- autofix-applied: 2026-08-09 -->
 ### Step 66: Vendor the seven workspace references, scrubbed and de-drifted
@@ -497,6 +636,9 @@ a test written to pass — the codifying-test-diff anti-pattern. Instead Step 63
 
 <!-- autofix-applied: 2026-08-09 -->
 ### Step 70: Release-candidate rehearsal against a throwaway home
+- **PRECONDITION ADDED 2026-08-12:** BLOCKED until the ordinary-install customized-marker overwrite
+  recorded in Step 65's new PRE-LIVE prerequisite is fixed and regression-tested. A release rehearsal
+  that runs the known-destructive installer without first closing that defect is not valid evidence.
 - **Problem:** Every prior step is verified in-repo. Nothing has yet proved that a *clean consumer home* — one with no preserved legacy `_shared/` to fall back on — receives a self-contained skill tree. This is the producer→consumer smoke gate for the whole phase
 - **Type:** code
 - **Issue:** #101
@@ -520,6 +662,9 @@ a test written to pass — the codifying-test-diff anti-pattern. Instead Step 63
 
 <!-- autofix-applied: 2026-08-09 -->
 ### Step 71: Cut the live consumer home over and hand off to Phase 8
+- **PRECONDITION ADDED 2026-08-12:** BLOCKED until both Step 70 passes and the ordinary-install
+  customized-marker overwrite recorded under Step 65 is fixed and regression-tested. No live install
+  is authorized while an ordinary reinstall can erase customized marker-bearing bytes without backup.
 - **Problem:** Every step up to here verifies in-repo or against a throwaway home. The two trees that actually exist — `<user-home>/.claude/skills` and `<coding-root>/.github/skills` — still carry the 43 + 18 dangling references this phase exists to eliminate, so without this step Phase 7.5 ships a repo fix that never reaches the machine. Re-install both profiles into the live home under the decided take-ownership policy, confirm both native hosts still resolve, and record the Phase 8 run order
 - **Type:** operator
 - **Issue:** #102
@@ -552,6 +697,7 @@ a test written to pass — the codifying-test-diff anti-pattern. Instead Step 63
 | **DECIDED — `_shared` collision in the live home** | The real consumer home holds 43 marker-less `_shared/` files and 7 collide by name with Step 64's payload, so the first post-Step-64 install throws "REFUSING to install" and writes nothing | **Documented `-Force` take-ownership** (operator, 2026-08-09), gated on Step 64's four guardrails: backup-with-hashes, scope limited to `_shared/`, the other 36 files byte-unchanged, and marker+`owned_files` proven after install. Step 70 rehearses it against a pre-seeded home |
 | **DECIDED — `judge-ui/calibration-notes.md`** | Manifest-declared (`:378-379`), absent from `git ls-files`, sole copy living in the installed GPT tree — and that tree is what `-Force` take-ownership is about to write to | **Vendor it, rescued in Step 62** before any forced install runs. The manifest entry and `test_manifest_contract.py:282` both stay |
 | **DECIDED — Phase 8 run order + the live home** | Phase 8's minted issues collide on four files, and no step re-installed into the two trees that actually exist | **Step 71 added** (`Type: operator`): live cutover, host acceptance in both hosts, and the written handoff — Phase 7.5 completes first, then Phase 8 Step 55 is re-read against the hermetic `gen_manifest.py`. Step 67's retarget preserves the semantic constants, so the collision drops to a same-file merge risk |
+| **OPEN BLOCKER — four installer paths trust customized marker-bearing bytes** | Routine overwrite, stale removal, normal uninstall, and corrupt-ledger fallback all treat a valid retained/forged header as destructive authority; ordinary overwrite was measured replacing consumer-customized bytes at exit 0 with no backup on 2026-08-12 | Separate installer authority-model repair before Steps 70/71: persist installed hashes and require current-byte identity for overwrite/stale/uninstall, otherwise refuse or require explicit backed-up adoption; corrupt-ledger fallback must fail closed or quarantine recoverably. Step 65 remains scoped to migration retirement |
 | Missing `**Files:**` lines | No step carries a `**Files:**` field; `build-phase/core.md:213` reads it to flag parallelizable step pairs, and Steps 64/66/67 all touch `build-distributions.ps1`, `_shared/`, and `test_distributions.py` | Add a `Files:` line per step — load-bearing for the three overlapping steps above |
 | **Open** | `utility-hookup-plan.md` needs a `/plan-review` pass before `--resume 5`: its `:line` anchors all point into the deleted `.claude/skills-gpt/` tree, its Done-whens say "suite green" without naming suites (D6), and `session-wrap/core.md` is edited by six steps, requiring sequential single-branch execution | Out of scope here; sequenced into the coding-root plan |
 

@@ -49,7 +49,7 @@ deprecation window (see `migration.md`), not canonical sources.
 | Telemetry | `runtime/telemetry/` | Neutral telemetry writer/summary (Step 34). |
 | Distribution builder | `tools/build-distributions.ps1` | Generates `dist/claude/`, `dist/gpt/` (Step 36). |
 | Installer | `tools/install-skill-mesh.ps1` | Installs a host profile without making canonical files host-owned (Step 36). |
-| Host-install inspector | `tools/inspect-host-install.ps1` | Read-only `HostInstallReport` (text or JSON, `schema_version` 1): workspace instruction files, Claude/GPT discovery roots, provenance ownership, link type, ledger state, router version, and legacy shadowing (Step 46). |
+| Host-install inspector | `tools/inspect-host-install.ps1` | Read-only `HostInstallReport` (text or JSON, current `schema_version` 2): workspace instruction files, Claude/GPT discovery roots, provenance ownership, link type, ledger state, router version, and legacy shadowing. Step 46 shipped schema v1 with four `skills[].eligibility` values. Step 65's completed v2 contract adds `shared-payload`: a `SKILL.md`-less `_shared` entry is `owned=true` when a recursive per-file scan finds at least one valid generated marker; a marker-free `_shared` remains `core-holder`. The directory contributes at most one to `owned_count`, and its consumer-authored neighbours do not contribute to `unowned_count`. |
 | Release/export command | `tools/release.ps1` | Reproducible release staging + checksums (Step 38). |
 | Package-integrity tests | `tests/package-integrity/` | Manifest/link/drift/claim gates: `test_manifest_contract.py`, `test_release_gates.py`, `test_host_discovery.py`, `test_skill_tree.py` (99 tests). |
 | Router tests | `tests/router/` | Provider-selection and transport tests (Step 34/37). |

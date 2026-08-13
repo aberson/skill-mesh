@@ -47,10 +47,13 @@
     manual recovery.
 
     IDEMPOTENT RESUME. The caller supplies a `-ShouldSkip` predicate that answers
-    "does the post-state already hold on disk?". An action whose post-state holds
-    is skipped and a `commit` record is appended for it, so a crash after a
-    mutation but before its `commit` flush converges to the same terminal state
-    instead of being redone.
+    "does the post-state already hold on disk?" and may supply the actions whose
+    `begin` records already exist through `-PriorBegunActions`. A mutating post-state
+    is skipped only when that durable `begin` proves this transaction may have made
+    it. Without `begin`, a post-state different from the recorded pre-image is
+    ambiguous consumer content and is refused; a post-image identical to the
+    pre-image is a true no-op and never enters the undo set. A crash after a mutation
+    but before its `commit` flush therefore converges without manufacturing ownership.
 
     ROLLBACK IS OPT-IN. `Invoke-SkillMeshTxApply -NoRollback` runs the same
     ordered, journaled, verified apply but rethrows on failure WITHOUT undoing.
@@ -59,7 +62,7 @@
     a retry resumes without -Force), not an undo. Silently upgrading the installer
     to rollback would change shipped, test-locked behavior.
 
-    TEST SEAMS. Three environment variables let a test drive the failure paths
+    TEST SEAMS. Four environment variables let a test drive the failure paths
     that are otherwise unreachable from outside. They are inert when unset, so
     production behavior is unchanged:
       SKILL_MESH_TX_CRASH_AT=<seq>[:<point>]  hard-exits the process (code 9) at
@@ -67,6 +70,10 @@
           after-begin. This is a true crash: no finally block runs.
       SKILL_MESH_TX_FAIL_AT=<seq>             throws during that action's mutation.
       SKILL_MESH_TX_FAIL_UNDO_AT=<seq>        throws during that action's undo.
+      SKILL_MESH_TX_CRASH_AFTER_ROLLBACK_COMPLETE=1
+                                                hard-exits after the durable
+                                                completion record but before the
+                                                rolled_back status publish.
     They can only affect a process the caller already started, so they grant no
     capability the caller does not already have.
 
@@ -149,9 +156,10 @@ function Get-SkillMeshTxField {
 }
 
 function Get-SkillMeshFileSha256 {
-    # Lowercase hex SHA-256 of a file, or $null when the path is not a file. A
-    # $null hash is the canonical "this path does not exist" marker throughout the
-    # engine, so an absent target and an empty file are never confused.
+    # Lowercase hex SHA-256 of a regular file, or $null when no regular-file hash
+    # exists. Null alone does NOT prove absence: directories/non-files also return
+    # null, so callers that require a truly absent state must pair this with an
+    # explicit existence/kind check.
     param([string]$Path)
     if ([string]::IsNullOrWhiteSpace($Path)) { return $null }
     if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) { return $null }
@@ -223,6 +231,95 @@ function New-SkillMeshTxJournal {
     return $Path
 }
 
+function Add-SkillMeshTxJournalDocument {
+    # The ONE durable append primitive for action and transaction-completion records.
+    # It opens an EXISTING journal and validates the complete append boundary under
+    # the same exclusive-writer handle. Recovery authority must never be recreated
+    # after preparation, nor may a new record be glued onto a partial/corrupt tail.
+    param(
+        $Transaction,
+        $Record,
+        [scriptblock]$ValidateExisting = $null,
+        [object[]]$ValidationActions = @()
+    )
+    $line = ($Record | ConvertTo-Json -Compress -Depth 5)
+    $path = (Get-SkillMeshTxField $Transaction 'journal_path')
+    $bytes = (New-Object System.Text.UTF8Encoding($false)).GetBytes($line + "`n")
+    if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
+        throw "skill-mesh-transaction: authoritative journal is missing or is not a regular file."
+    }
+    $stream = New-Object System.IO.FileStream(
+        $path, [System.IO.FileMode]::Open, [System.IO.FileAccess]::ReadWrite,
+        [System.IO.FileShare]::Read, 4096, [System.IO.FileOptions]::WriteThrough)
+    try {
+        $existingRecords = New-Object System.Collections.Generic.List[object]
+        $length = $stream.Length
+        if ($length -gt [int]::MaxValue) {
+            throw "skill-mesh-transaction: authoritative journal exceeds the supported size."
+        }
+        if ($length -gt 0) {
+            [void]$stream.Seek(-1, [System.IO.SeekOrigin]::End)
+            if ($stream.ReadByte() -ne 10) {
+                throw "skill-mesh-transaction: authoritative journal ends with a non-newline-terminated record."
+            }
+            [void]$stream.Seek(0, [System.IO.SeekOrigin]::Begin)
+            $existingBytes = New-Object byte[] ([int]$length)
+            $offset = 0
+            while ($offset -lt $existingBytes.Length) {
+                $read = $stream.Read($existingBytes, $offset, $existingBytes.Length - $offset)
+                if ($read -le 0) {
+                    throw "skill-mesh-transaction: authoritative journal could not be read completely."
+                }
+                $offset += $read
+            }
+            $strictUtf8 = New-Object System.Text.UTF8Encoding($false, $true)
+            try {
+                $existingText = $strictUtf8.GetString($existingBytes)
+            } catch {
+                throw "skill-mesh-transaction: authoritative journal is not valid UTF-8."
+            }
+            $existingLines = $existingText.Split(
+                [char[]]@("`n"), [System.StringSplitOptions]::None)
+            for ($i = 0; $i -lt ($existingLines.Count - 1); $i++) {
+                $existingLine = $existingLines[$i].TrimEnd("`r")
+                if ([string]::IsNullOrWhiteSpace($existingLine)) {
+                    throw "skill-mesh-transaction: authoritative journal contains an unexpected blank record."
+                }
+                try {
+                    $existingRecord = $existingLine | ConvertFrom-Json
+                } catch {
+                    throw "skill-mesh-transaction: authoritative journal contains a malformed complete record."
+                }
+                $existingPhase = [string](Get-SkillMeshTxField $existingRecord 'phase')
+                if (-not (Test-SkillMeshTxMember @('begin', 'commit') $existingPhase) -or
+                    -not ((Get-SkillMeshTxField $existingRecord 'schema_version') -is [int]) -or
+                    [int](Get-SkillMeshTxField $existingRecord 'schema_version') -ne
+                        (Get-SkillMeshTxSchemaVersion) -or
+                    [string](Get-SkillMeshTxField $existingRecord 'migration_id') -cne
+                        [string](Get-SkillMeshTxField $Transaction 'migration_id')) {
+                    throw "skill-mesh-transaction: authoritative journal is not appendable action history."
+                }
+                [void]$existingRecords.Add($existingRecord)
+            }
+        }
+        # The final rollback certificate needs more than syntactic appendability:
+        # its exact plan/action/hash/transition binding is checked while THIS writer
+        # handle still prevents replacement or modification of the journal. The
+        # callback consumes the already-parsed bytes, so it cannot accidentally
+        # validate a different path epoch through a second read.
+        if ($null -ne $ValidateExisting) {
+            & $ValidateExisting @($ValidationActions) @($existingRecords.ToArray())
+        }
+        [void]$stream.Seek(0, [System.IO.SeekOrigin]::End)
+        $stream.Write($bytes, 0, $bytes.Length)
+        # A begin grants rollback authority and rollback_complete grants terminal
+        # authority only after this durable flush returns.
+        $stream.Flush($true)
+    } finally {
+        $stream.Dispose()
+    }
+}
+
 function Add-SkillMeshTxJournalRecord {
     # APPEND one record. Never rewrites or truncates: the journal is the only
     # evidence a crashed transaction leaves behind.
@@ -246,38 +343,106 @@ function Add-SkillMeshTxJournalRecord {
         post_hash      = $PostHash
         utc            = (Get-SkillMeshTxUtcNow)
     }
-    $line = ($record | ConvertTo-Json -Compress -Depth 5)
-    $path = (Get-SkillMeshTxField $Transaction 'journal_path')
-    [System.IO.File]::AppendAllText($path, ($line + "`n"),
-        (New-Object System.Text.UTF8Encoding($false)))
+    Add-SkillMeshTxJournalDocument $Transaction $record
+}
+
+function Add-SkillMeshTxRollbackCompleteRecord {
+    <#
+      Durably certify that every action carrying `begin` authority in this rollback
+      attempt was processed successfully. The manifest status is published only
+      after this record flushes, so later terminal discovery can allow legitimate
+      consumer edits made after rollback instead of freezing historical pre-images.
+    #>
+    param(
+        $Transaction,
+        [object[]]$Actions = @(),
+        [scriptblock]$ValidateExisting = $null
+    )
+    $seqs = @(@($Actions | ForEach-Object {
+        [int](Get-SkillMeshTxField $_ 'seq' -1)
+    }) | Sort-Object -Unique)
+    $record = [PSCustomObject][ordered]@{
+        schema_version = (Get-SkillMeshTxSchemaVersion)
+        migration_id   = (Get-SkillMeshTxField $Transaction 'migration_id')
+        phase          = 'rollback_complete'
+        begun_seqs     = @($seqs)
+        utc            = (Get-SkillMeshTxUtcNow)
+    }
+    Add-SkillMeshTxJournalDocument $Transaction $record `
+        -ValidateExisting $ValidateExisting -ValidationActions @($Actions)
 }
 
 function Read-SkillMeshTxJournal {
-    # Parse the journal into records. A truncated final line (the signature of a
-    # crash mid-append) is DROPPED rather than fatal -- an unparseable record is by
-    # definition one that never completed, so treating it as absent is exactly the
-    # conservative reading.
-    param([string]$Path)
+    <#
+      Parse the authoritative append-only journal.
+
+      Every durable record must be complete, valid JSON, and newline-terminated.
+      A partial EOF append is detectable but not safely appendable: ignoring it
+      would glue the next record onto corrupt bytes, while truncating an
+      authoritative audit trail would itself be a mutation. Recovery therefore
+      fails closed and leaves the journal available for manual inspection.
+    #>
+    param([string]$Path, [switch]$AllowMissing)
     $out = @()
-    if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) { return , $out }
-    foreach ($line in [System.IO.File]::ReadAllLines($Path, [System.Text.Encoding]::UTF8)) {
-        if ([string]::IsNullOrWhiteSpace($line)) { continue }
+    $exists = Test-Path -LiteralPath $Path
+    if (-not $exists) {
+        if ($AllowMissing) { return , $out }
+        throw "skill-mesh-transaction: authoritative journal is missing or is not a file."
+    }
+    if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
+        throw "skill-mesh-transaction: authoritative journal exists but is not a regular file."
+    }
+    $strictUtf8 = New-Object System.Text.UTF8Encoding($false, $true)
+    try {
+        $text = [System.IO.File]::ReadAllText($Path, $strictUtf8)
+    } catch {
+        throw "skill-mesh-transaction: authoritative journal is not valid UTF-8."
+    }
+    if ($text.Length -eq 0) { return , $out }
+    $endsWithNewline = $text.EndsWith("`n", [System.StringComparison]::Ordinal)
+    if (-not $endsWithNewline) {
+        throw "skill-mesh-transaction: authoritative journal ends with a non-newline-terminated record."
+    }
+    $lines = $text.Split([char[]]@("`n"), [System.StringSplitOptions]::None)
+    for ($i = 0; $i -lt $lines.Count; $i++) {
+        $line = $lines[$i].TrimEnd("`r")
+        $isSyntheticFinalEmpty = ($i -eq ($lines.Count - 1) -and
+            $endsWithNewline -and $line.Length -eq 0)
+        if ($isSyntheticFinalEmpty) { continue }
+        if ([string]::IsNullOrWhiteSpace($line)) {
+            throw "skill-mesh-transaction: authoritative journal contains an unexpected blank record."
+        }
         try {
             $out += ($line | ConvertFrom-Json)
         } catch {
-            continue
+            throw "skill-mesh-transaction: authoritative journal contains a malformed complete record."
         }
     }
     return , $out
 }
 
 function Get-SkillMeshTxBegunSeqs {
-    # The set of seq values that reached `begin` (committed or not). This is the
-    # undo set: anything begun may have mutated the target.
+    # The set of seq values that reached an actual `begin` (committed or not).
+    # This is the only journal evidence that grants destructive rollback authority.
+    # A legacy commit-only record proves observation, not mutation, and is excluded.
     param($Records)
     $set = New-Object 'System.Collections.Generic.HashSet[int]'
     foreach ($r in @($Records)) {
-        if ((Get-SkillMeshTxField $r 'phase') -eq 'begin') {
+        if (Test-SkillMeshTxMember @('begin') ([string](Get-SkillMeshTxField $r 'phase'))) {
+            [void]$set.Add([int](Get-SkillMeshTxField $r 'seq' -1))
+        }
+    }
+    return , $set
+}
+
+function Get-SkillMeshTxCommittedSeqs {
+    # Commit proves that a prior process observed the declared post-state. It is
+    # useful for idempotent resume, but (unlike begin) never grants rollback
+    # authority by itself.
+    param($Records)
+    $set = New-Object 'System.Collections.Generic.HashSet[int]'
+    foreach ($r in @($Records)) {
+        if (Test-SkillMeshTxMember @('commit') ([string](Get-SkillMeshTxField $r 'phase'))) {
             [void]$set.Add([int](Get-SkillMeshTxField $r 'seq' -1))
         }
     }
@@ -301,7 +466,12 @@ function New-SkillMeshTransaction {
     if (-not (Test-SkillMeshTxMember (Get-SkillMeshTxStates) $Status)) {
         throw "skill-mesh-transaction: unknown initial status '$Status'."
     }
-    New-SkillMeshTxJournal $JournalPath | Out-Null
+    if ($Status -eq 'prepared') {
+        New-SkillMeshTxJournal $JournalPath | Out-Null
+    } elseif (-not (Test-Path -LiteralPath $JournalPath -PathType Leaf)) {
+        throw ("skill-mesh-transaction: cannot recover status '$Status' without " +
+               "the existing authoritative journal.")
+    }
     return [PSCustomObject]@{
         migration_id  = $MigrationId
         journal_path  = $JournalPath
@@ -321,9 +491,12 @@ function Set-SkillMeshTxStatus {
         throw ("skill-mesh-transaction: ILLEGAL state transition '$from' -> '$Status'. " +
                "Legal from '$from': [" + ((Get-SkillMeshTxLegalNext $from) -join ', ') + '].')
     }
-    $Transaction.status = $Status
     $writer = Get-SkillMeshTxField $Transaction 'status_writer'
     if ($null -ne $writer) { & $writer $Status }
+    # Memory follows durable state. If the writer refuses, the in-memory handle
+    # remains at the last persisted status and failure handling cannot report a
+    # transition that never reached the authoritative manifest.
+    $Transaction.status = $Status
 }
 
 # -- Test seams (inert unless the environment variable is set) ----------------
@@ -371,12 +544,17 @@ function Invoke-SkillMeshTxRollback {
       Undo $Actions (which MUST already be the begun set, in ascending apply
       order) in strict REVERSE order. Returns $null when every inverse succeeded
       (status -> rolled_back), or the failing ErrorRecord (status ->
-      failed_incomplete, backup retained for manual recovery).
+      failed_incomplete, backup retained for manual recovery). ValidateCompletion
+      is the caller's exact plan/journal binding check immediately before the final
+      certificate. CompletionForbidden permits best-effort undo after damaged
+      journal framing but never grants a rollback_complete/rolled_back claim.
     #>
     param(
         $Transaction,
         [object[]]$Actions = @(),
-        [Parameter(Mandatory = $true)][scriptblock]$Undo
+        [Parameter(Mandatory = $true)][scriptblock]$Undo,
+        [scriptblock]$ValidateCompletion = $null,
+        [switch]$CompletionForbidden
     )
     Set-SkillMeshTxStatus $Transaction 'rolling_back'
     $failure = $null
@@ -391,6 +569,38 @@ function Invoke-SkillMeshTxRollback {
         } catch {
             $failure = $_
             break
+        }
+    }
+    if ($null -eq $failure -and $CompletionForbidden) {
+        try {
+            throw ("skill-mesh-transaction: rollback reversed its in-memory action set, " +
+                   "but damaged or uncertain journal authority forbids terminal certification.")
+        } catch {
+            $failure = $_
+        }
+    }
+    if ($null -eq $failure -and $null -eq $ValidateCompletion) {
+        try {
+            throw ("skill-mesh-transaction: rollback completion requires the caller's " +
+                   "validated plan/journal authority callback.")
+        } catch {
+            $failure = $_
+        }
+    }
+    if ($null -eq $failure) {
+        try {
+            Add-SkillMeshTxRollbackCompleteRecord $Transaction @($Actions) `
+                -ValidateExisting $ValidateCompletion
+            # TEST SEAM (inert unless exactly `1`): model a process stopping after
+            # durable rollback completion but before the manifest status publish.
+            if ([Environment]::GetEnvironmentVariable(
+                    'SKILL_MESH_TX_CRASH_AFTER_ROLLBACK_COMPLETE') -eq '1') {
+                [Console]::Error.WriteLine(
+                    'skill-mesh-transaction: TEST SEAM -- simulated crash after rollback completion.')
+                [Environment]::Exit(9)
+            }
+        } catch {
+            $failure = $_
         }
     }
     if ($null -eq $failure) {
@@ -416,6 +626,16 @@ function Invoke-SkillMeshTxApply {
         -ShouldSkip   optional; $true when the post-state ALREADY holds on disk
                       (resume). A skipped action still gets a `commit` record, so
                       a crash between a mutation and its commit converges.
+        -PriorBegunActions optional; actions whose durable `begin` records predate
+                      this invocation.
+        -PriorCommittedSeqs optional; seq values whose durable `commit` records
+                      predate this invocation. A prior commit suppresses redundant
+                      audit records but never grants undo authority.
+        -ValidateRollbackCompletion optional; the caller's exact plan/journal
+                      binding check before rollback_complete can be written.
+        -DeferAppliedStatus optional; leave a successful action loop in `applying`
+                      so the caller can run a wider acceptance check before it
+                      durably publishes `applied`.
 
       Throws the original error on failure; the caller reads $Transaction.status
       to distinguish rolled_back (recoverable) from failed_incomplete (mixed).
@@ -428,7 +648,11 @@ function Invoke-SkillMeshTxApply {
         [Parameter(Mandatory = $true)][scriptblock]$GetPostHash,
         [scriptblock]$Undo = $null,
         [scriptblock]$ShouldSkip = $null,
-        [switch]$NoRollback
+        [switch]$NoRollback,
+        [object[]]$PriorBegunActions = @(),
+        [int[]]$PriorCommittedSeqs = @(),
+        [scriptblock]$ValidateRollbackCompletion = $null,
+        [switch]$DeferAppliedStatus
     )
     if (-not $NoRollback -and $null -eq $Undo) {
         throw "skill-mesh-transaction: -Undo is required unless -NoRollback is passed."
@@ -441,9 +665,27 @@ function Invoke-SkillMeshTxApply {
         Set-SkillMeshTxStatus $Transaction 'applying'
     }
 
-    # Every action that may have touched a target -- the undo set. A resume-skipped
-    # action belongs here too: it IS applied, so a later failure must undo it.
+    # Every action that may have touched a target -- the undo set. Seed it from
+    # durable history so a resumed run rolls back work begun by an earlier process.
+    # The seq set prevents both historical duplicates and a current action from
+    # entering the in-memory rollback set twice.
     $begun = New-Object System.Collections.Generic.List[object]
+    $begunSeqs = New-Object 'System.Collections.Generic.HashSet[int]'
+    $historicalBegunSeqs = New-Object 'System.Collections.Generic.HashSet[int]'
+    $historicalCommittedSeqs = New-Object 'System.Collections.Generic.HashSet[int]'
+    foreach ($priorAction in @($PriorBegunActions)) {
+        $priorSeq = [int](Get-SkillMeshTxField $priorAction 'seq' -1)
+        if ($begunSeqs.Add($priorSeq)) {
+            [void]$begun.Add($priorAction)
+        }
+    }
+    foreach ($priorAction in @($PriorBegunActions)) {
+        $priorSeq = [int](Get-SkillMeshTxField $priorAction 'seq' -1)
+        [void]$historicalBegunSeqs.Add($priorSeq)
+    }
+    foreach ($priorSeq in @($PriorCommittedSeqs)) {
+        [void]$historicalCommittedSeqs.Add([int]$priorSeq)
+    }
 
     try {
         foreach ($action in @($Actions)) {
@@ -453,9 +695,40 @@ function Invoke-SkillMeshTxApply {
             $expected = Get-SkillMeshTxField $action 'post_hash'
 
             if ($null -ne $ShouldSkip -and (& $ShouldSkip $action)) {
-                $begun.Add($action)
-                Add-SkillMeshTxJournalRecord $Transaction $seq $kind $rel 'commit' `
-                    (& $GetPreHash $action) (& $GetPostHash $action)
+                $mutating = Test-SkillMeshTxMember @('retire', 'install', 'ledger') $kind
+                if ($mutating -and (-not $historicalBegunSeqs.Contains($seq))) {
+                    $recordedPre = Get-SkillMeshTxField $action 'pre_hash'
+                    $recordedPost = Get-SkillMeshTxField $action 'post_hash'
+                    if ([string]$recordedPre -ne [string]$recordedPost -and
+                        (-not $historicalCommittedSeqs.Contains($seq))) {
+                        throw ("skill-mesh-transaction: SECURITY -- refusing to adopt an " +
+                               "unrecorded post-state for seq $seq ($kind '$rel'). The " +
+                               "journal contains no begin proving this transaction " +
+                               "produced those bytes.")
+                    }
+                    # pre == post is a genuine no-op; a legacy commit-only record is
+                    # an observation of matching bytes. Neither grants undo authority.
+                    # Append only when this is the first observation so retries do
+                    # not manufacture duplicate journal transitions.
+                    if (-not $historicalCommittedSeqs.Contains($seq)) {
+                        $pre = & $GetPreHash $action
+                        Add-SkillMeshTxJournalRecord $Transaction $seq $kind $rel 'commit' `
+                            $pre (& $GetPostHash $action)
+                        [void]$historicalCommittedSeqs.Add($seq)
+                    }
+                    continue
+                }
+                $pre = & $GetPreHash $action
+                if ($historicalBegunSeqs.Contains($seq)) {
+                    if ($begunSeqs.Add($seq)) {
+                        [void]$begun.Add($action)
+                    }
+                }
+                if (-not $historicalCommittedSeqs.Contains($seq)) {
+                    Add-SkillMeshTxJournalRecord $Transaction $seq $kind $rel 'commit' `
+                        $pre (& $GetPostHash $action)
+                    [void]$historicalCommittedSeqs.Add($seq)
+                }
                 continue
             }
 
@@ -464,7 +737,10 @@ function Invoke-SkillMeshTxApply {
             Add-SkillMeshTxJournalRecord $Transaction $seq $kind $rel 'begin' $pre $null
             # Recorded as begun the instant the `begin` record is durable: from
             # here on the action may have mutated its target.
-            $begun.Add($action)
+            [void]$historicalBegunSeqs.Add($seq)
+            if ($begunSeqs.Add($seq)) {
+                [void]$begun.Add($action)
+            }
             Invoke-SkillMeshTxCrashPoint $seq 'after-begin'
 
             if (Test-SkillMeshTxSeamSeq 'SKILL_MESH_TX_FAIL_AT' $seq) {
@@ -482,6 +758,7 @@ function Invoke-SkillMeshTxApply {
                        "' but found '" + [string]$post + "'.")
             }
             Add-SkillMeshTxJournalRecord $Transaction $seq $kind $rel 'commit' $pre $post
+            [void]$historicalCommittedSeqs.Add($seq)
         }
     } catch {
         $applyError = $_
@@ -490,7 +767,45 @@ function Invoke-SkillMeshTxApply {
             # stays `applying`, which is the truthful record of a partial apply.
             throw
         }
-        $undoFailure = Invoke-SkillMeshTxRollback $Transaction @($begun.ToArray()) $Undo
+        # Reconcile the undo set from the authoritative journal, not only from
+        # in-memory bookkeeping. A begin append can throw after writing complete
+        # bytes (for example, a Flush failure), while a partial append makes the
+        # journal undecidable. Parseable history supplies the exact durable begin
+        # set; malformed/missing history permits only best-effort in-memory undo and
+        # can never receive rollback_complete or a rolled_back status.
+        $completionForbidden = $false
+        try {
+            $durableRecords = Read-SkillMeshTxJournal `
+                ([string](Get-SkillMeshTxField $Transaction 'journal_path'))
+            $durableBegun = Get-SkillMeshTxBegunSeqs $durableRecords
+            $undoActions = @(@($Actions) | Where-Object {
+                $durableBegun.Contains([int](Get-SkillMeshTxField $_ 'seq' -1))
+            })
+            foreach ($knownAction in @($begun.ToArray())) {
+                $knownSeq = [int](Get-SkillMeshTxField $knownAction 'seq' -1)
+                if (-not $durableBegun.Contains($knownSeq)) {
+                    throw ("skill-mesh-transaction: authoritative journal lost " +
+                           "known durable begin seq $knownSeq.")
+                }
+            }
+            if ($null -eq $ValidateRollbackCompletion) {
+                throw ("skill-mesh-transaction: rollback reconciliation requires " +
+                       "the caller's validated plan/journal authority callback.")
+            }
+            & $ValidateRollbackCompletion @($undoActions) @($durableRecords)
+        } catch {
+            $completionForbidden = $true
+            $undoActions = @($begun.ToArray())
+        }
+        # Prior actions can arrive in any order and may be interleaved with actions
+        # first begun by this invocation. Normalize once here because rollback's
+        # contract is reverse seq, independent of caller enumeration order.
+        $undoActions = @($undoActions | Sort-Object -Property @{
+            Expression = { [int](Get-SkillMeshTxField $_ 'seq' -1) }
+        })
+        $undoFailure = Invoke-SkillMeshTxRollback $Transaction $undoActions $Undo `
+            -ValidateCompletion $ValidateRollbackCompletion `
+            -CompletionForbidden:$completionForbidden
         if ($null -ne $undoFailure) {
             [Console]::Error.WriteLine(
                 "skill-mesh-transaction: ROLLBACK FAILED -- $($undoFailure.Exception.Message)")
@@ -498,5 +813,7 @@ function Invoke-SkillMeshTxApply {
         throw $applyError
     }
 
-    Set-SkillMeshTxStatus $Transaction 'applied'
+    if (-not $DeferAppliedStatus) {
+        Set-SkillMeshTxStatus $Transaction 'applied'
+    }
 }

@@ -31,15 +31,21 @@
     from every git-tracked .ps1 and fails if any file other than this one still
     spells a root literal in executable code, so a fourth copy cannot reappear.
 
-    THE ROOTS.
+    THE PROJECT ROOTS.
       claude -> .claude/skills   Claude Code's project skill-discovery root.
       gpt    -> .github/skills   A real GitHub Copilot CLI project discovery root,
                                  proven live in Step 43 (#58) and confirmed to win
                                  the both-profile collision in Step 45 (#67).
+      active alternate -> .agents/skills
+                                 A Copilot project discovery root that skill-mesh
+                                 does not install into but must still treat as active
+                                 when authorizing a project-relative retirement.
     Retired / legacy, recognized but never installed into:
-      .copilot/skills            The pre-Step-44 project-relative GPT target.
-                                 Copilot does NOT discover it; any generated tree
-                                 found there is superseded and gets retired.
+      .copilot/skills            The pre-Step-44 PROJECT-relative GPT target.
+                                 Copilot does not discover that project path; any
+                                 generated tree found there is superseded. In
+                                 contrast, `~/.copilot/skills` is an ACTIVE personal
+                                 discovery root and is never retirement-eligible.
       .claude/skills-gpt         The legacy GPT core tree that can still shadow
                                  resolution.
 
@@ -58,6 +64,21 @@ function Get-SkillMeshDiscoveryRoots {
         'claude' = '.claude/skills'
         'gpt'    = '.github/skills'
     }
+}
+
+function Get-SkillMeshActiveProjectDiscoveryRoots {
+    <#
+      Every project-relative root a supported host actively scans, whether or not
+      skill-mesh installs a profile there. The migrator consumes this larger set
+      when deciding whether bytes under the retired project `.copilot/skills` tree
+      are nevertheless host-visible through an in-home alias.
+
+      Claude installs/discovers `.claude/skills`. Copilot discovers that root plus
+      `.github/skills` and `.agents/skills`; skill-mesh chooses `.github/skills` as
+      its GPT install target but cannot ignore the alternate active root when
+      authorizing deletion. A FRESH array prevents caller mutation.
+    #>
+    return @('.claude/skills', '.github/skills', '.agents/skills')
 }
 
 function Get-SkillMeshDiscoveryRoot {

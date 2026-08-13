@@ -1,8 +1,12 @@
 # Step 65 — retire authorization: decision brief for independent review
 
-**Status:** RECOMMENDATION, NOT IMPLEMENTED. Awaiting review and operator sign-off.
-**Date:** 2026-08-12 · **Issue:** #96 · **Branch under discussion:** `build-step-1786408322`
-**Line references** are as of that branch (merged current with `main`); confirm before relying on one.
+**Status:** APPROVED BY THE OPERATOR (2026-08-12) AND IMPLEMENTED; STEP 65 DONE (2026-08-13). The
+Dev Observatory / On Brand UAT hold cleared on 2026-08-12. Completion still does not authorize an
+early live install or Step 71 cut-over; the installer authority prerequisite remains blocking.
+**Date:** 2026-08-12 · **Completed:** 2026-08-13 · **Issue:** #96 · **Implementation:** current
+`main` worktree, derived from parked branch `build-step-1786408322` (`b0651be`)
+**Line references** record the reviewed branch at the time each finding was written; confirm current
+function names and locations before relying on one.
 
 This document is written to be **disagreed with**. It exists because three candidate designs were
 proposed and falsified in one session, two of them by the same author who is now recommending the
@@ -39,9 +43,13 @@ In priority order. Everything else in this document is context for these five.
 plans a set of typed actions (install / preserve / retire / backup / ledger) in `New-MigrationPlan`,
 then applies them transactionally.
 
-Two host discovery roots are live: `<home>/.claude/skills` (Claude) and `<home>/.github/skills`
-(GPT). A third, `<home>/.copilot/skills`, is **retired** — no profile installs into it and no host
-reads it.
+Two project discovery roots are live installation targets: `<home>/.claude/skills` (Claude) and
+`<home>/.github/skills` (GPT). A third *project-relative* path,
+`<project-home>/.copilot/skills`, is **retired** — no profile installs into it and no host reads it.
+That statement does not generalize to an arbitrary `-Home`: `<actual-user-home>/.copilot/skills` is
+Copilot's active personal discovery root. The working implementation now prefers the explicit
+`-ProjectRoot` spelling (`-Home` remains a compatibility alias) and fails closed when that root is
+the effective personal home; §6.1 records the implementation and its still-pending acceptance.
 
 Every file skill-mesh generates carries a provenance marker in its own bytes
 (`tools/skill-mesh-provenance.ps1`). The architecture's stated authority model
@@ -100,9 +108,12 @@ files, exit code 0**, via three different acceptance branches (frontmatter prefi
 fenced block). The step's own regression test was green throughout: it rejects only its own fixture's
 shape.
 
-Two prior iterations each patched the predicate; each produced a new escape. The step is therefore
-under the **same-defect rule**, which forbids a third patch of `Test-SkillMeshHeaderPreamble`. The
-predicate stays as it is. What is in question is *whether its answer alone may authorize deletion*.
+Two prior iterations each expanded the predicate as a deletion heuristic; each produced a new
+escape. The **same-defect rule** therefore forbids a third heuristic expansion and, most
+importantly, forbids treating the parser's answer as deletion authority. The implementation does
+make one shared-parser correctness repair: YAML frontmatter ends at the emitter's first closing
+delimiter, so a later Markdown rule cannot retroactively make a quoted header emitter-valid. That
+narrows generated-candidate recognition; it does not restore destructive authority to loop 2.
 
 ### Correcting a natural assumption
 
@@ -200,17 +211,101 @@ Not falsified by any lens applied. Its costs are real and stated in §7.
 
 ## 6. The recommendation
 
-- **Loop 1: unchanged.** Its second yes is genuine and content-independent — residence under the
-  retired `.copilot/skills` root, a path no profile installs into and no host reads. A manifest-named
-  tree there is itself evidence of a pre-retarget skill-mesh install. Position carries real
-  information here.
+- **Loop 1: unchanged in consequence, narrowed in authority.** Its second yes is genuine and
+  content-independent only when the bytes canonically reside under the retired *project-relative*
+  `.copilot/skills` root, are not reachable through an active discovery alias, and `-Home` is not
+  turning that spelling into Copilot's personal root. A manifest-named tree satisfying all of those
+  conditions is evidence of a pre-retarget skill-mesh install. Position carries real information
+  only inside that proven domain.
 - **Loop 2: never deletes.** Candidates are reported as named advisories the operator acts on.
-- **`Test-SkillMeshHeaderPreamble` and `Test-FileHasMarker` are not touched**, per the same-defect
-  rule. The 211 owned verdicts across 27 call sites are preserved by construction, not by
-  re-measurement.
+- **Header recognition remains anchored and bounded.** This implementation does touch the shared
+  provenance parser: it factors the validated preamble/span so the inspector can read metadata
+  only from the owned header block, and it re-measures every generated file through that parser.
+  `Test-FileHasMarker` continues to delegate to the single parser rather than inventing a second
+  marker rule.
 
 The reasoning in one line: **loop 2 has no non-forgeable signal available to it, so it must not hold
 a destructive privilege.** Loop 1 does have one, so it keeps its privilege.
+
+### 6.1 Implementation review findings — acceptance obligations, not a DONE claim
+
+The current working implementation has incorporated the following findings from adversarial review:
+
+1. **Canonical residence, not lexical reachability from the retired name.** `Get-RootScan` records
+   the contained canonical file path. A junction under or at `.copilot/skills` that resolves into an
+   active tree cannot smuggle that active file into loop 1; it is routed to loop 2's retained,
+   advisory-only population.
+2. **No active host path may reach the retired bytes.** Even a file physically under the retired
+   root loses positional deletion authority if it is reachable through `.claude/skills`,
+   `.github/skills`, or `.agents/skills`. The working guard checks whole-root and nested aliases and
+   is repeated at plan precondition, forward retire mutation, resume-skip, and current-plan undo
+   boundaries. That repeat is load-bearing: an alias may change after the
+   plan or during an interrupted transaction. Undo's narrow restoration exception is item 6 below.
+3. **A plan hash is file identity, not path-kind identity.** One recorded-file predicate is now
+   shared by Apply preconditions, forward mutation, resume classification, and rollback. A null hash
+   means true nonexistence, never a directory, non-file, unreadable file, or hash failure. The retire
+   resume classifier accepts only pre/absent, pre/pre, or absent/pre target/payload pairs; every
+   ambiguous pair is refused before another mutation.
+4. **The project-root premise is enforced.** The command prefers `-ProjectRoot` while retaining
+   `-Home` as a compatibility alias. Planning, Apply, and Resume fail closed with
+   `PERSONAL_HOME_UNSUPPORTED` when that root resolves to the effective personal home. Rollback is
+   deliberately exempt so an older transaction can still put verified personal bytes back.
+5. **Recovery includes work begun by an earlier process without laundering observations into
+   ownership.** Resume and explicit Rollback derive the reverse-order undo set only from durable
+   `begin` history. A commit-only record is observational compatibility history: Resume may use it
+   to recognize matching post-state bytes, but it never manufactures a `begin`, never enters the
+   undo set, and never grants permission to delete or overwrite those bytes. Byte-identical
+   pre/post actions are true no-ops under the same rule.
+6. **Rollback's one retired-domain exception is restorative, not destructive.** Resume and forward
+   retire still require the narrowed retired domain. Undo permits a hash-verified legacy-v1 retire
+   payload to return only to a truly absent, home-contained target whose canonical home-relative
+   spelling still equals its recorded path. A new junction cannot redirect that compatibility
+   restore. This cannot confer new delete authority; it preserves unaliased recovery for
+   transactions created before Step 65 narrowed the rule.
+7. **Empty directories are not durable property.** Rollback no longer removes empty
+   plan-time-created directories, and forward retirement no longer cosmetically removes emptied
+   retired ancestors: an operator may have created an empty replacement during an interruption,
+   and no byte hash can distinguish it. Verified file pre-images are still restored and verified
+   created files removed.
+8. **Recovery authority is bound and fail-closed.** Plan, backup manifest, and journal schema,
+   transaction identity, action ordering, paths, providers, hashes, payloads, and record/action
+   correspondence are validated before recovery mutation. Missing, malformed, non-file, truncated,
+   or inconsistent authority artifacts refuse recovery. A bare Apply also refuses an ambiguous or
+   corrupt prior transaction instead of layering a new transaction over it. Explicit Resume applies
+   the same validation before calling `applied` a no-op or refusing `rolled_back` as resolved; a
+   terminal label alone never earns either response.
+9. **`applied` follows acceptance, not merely the action loop.** The engine leaves the durable
+   state at `applying` until cross-action post-install verification succeeds. A crash in that window
+   therefore resumes the verification path. Explicit Rollback is intentionally independent of the
+   current checkout manifest so valid retained payloads remain usable if planning metadata changes.
+10. **Canonical roots are explicit, and legacy ambiguity refuses.** New schema-v1 plan/manifest
+    pairs carry `root_encoding: canonical-realpath.v1` and repeat their canonical project and backup
+    roots. Older schema-v1 artifacts omitted that discriminator. They remain automatically
+    recoverable only when their recorded spellings were already canonical; alias-spelled legacy
+    artifacts fail closed with `LEGACY_ALIAS_ROOT_UNSUPPORTED` rather than silently redirecting
+    historical journal authority through a replacement junction.
+11. **Rollback completion is durable before its terminal label.** After every action carrying
+    durable `begin` authority has been undone and verified, the engine revalidates the exact plan,
+    complete journal, and candidate begin set under the existing journal writer handle, then
+    appends and flushes one final transaction-level `rollback_complete` record whose `begun_seqs`
+    is that exact set; only then does it publish `rolled_back`. History that becomes missing,
+    truncated, damaged, or inconsistent during undo may be best-effort reversed from already
+    validated in-memory authority, but it cannot be certified with either the completion record or
+    `rolled_back`. If a process stops between the successful record flush and status write, explicit
+    Rollback validates the record and publishes the status without replaying any inverse. A current
+    `rolled_back` transaction with that record remains resolved despite legitimate later consumer
+    edits. Markerless legacy `rolled_back` history uses the conservative exact-pre-state fallback,
+    while `failed_incomplete` never carries a valid completion record. A `rolling_back` retry
+    without the record idempotently continues reverse-order undo, accepting an inverse already at
+    exact pre-state but refusing ambiguous or changed bytes. Status publication is write-first and
+    read-verified: if publishing `failed_incomplete` fails, the engine retains and reports the last
+    verified status rather than claiming a terminal label that never persisted.
+
+These review findings are implemented and Step 65 is **DONE (2026-08-13)**. The authoritative
+repo-root `python -m pytest` gate completed with **1,143 passed, 1 skipped, 1,144 collected in
+3,443.99s (0:57:23), exit 0**; focused regressions and adversarial review also passed. The Step 4
+installer-authority prerequisite and Steps 70–71 remain blocked and outside Step 65's completed
+scope.
 
 ---
 
@@ -220,8 +315,8 @@ a destructive privilege.** Loop 1 does have one, so it keeps its privilege.
    `test_stale_generated_file_is_retired_not_blocked`,
    `test_a_marker_bearing_shared_asset_the_dist_no_longer_ships_is_retired`, and the third named in
    the round-2 record. This is a **deliberate recorded behaviour change**, not a codifying test edit
-   — the distinction this repository has been burned by before, and the reason sign-off is being
-   sought rather than assumed.
+   — the distinction this repository has been burned by before, and the reason sign-off was sought
+   rather than assumed. The operator approved that behavior change on 2026-08-12.
 2. **After the rewrite, no test exercises a loop-2 retire at all.** Every remaining retire assertion
    rides loop 1. A future regression in the loop-2 population becomes invisible. *This is the
    strongest argument against the recommendation and it has no answer in the current proposal.*
@@ -235,7 +330,8 @@ a destructive privilege.** Loop 1 does have one, so it keeps its privilege.
 
 ## 8. Scope challenge: the sibling defect
 
-**Install-overwrite is gated on the same forgeable signal.** `install-skill-mesh.ps1:808-812`:
+**The installer has four destructive siblings gated by the same forgeable signal.** The ordinary
+overwrite gate is at `install-skill-mesh.ps1:808-812`:
 
 > FOREIGN = target exists AND its content does NOT bear the marker. The ledger is NOT consulted here
 > (a poisoned ledger cannot launder a foreign file into "owned").
@@ -246,7 +342,14 @@ manifest-named skill directory is silently overwritten by an ordinary install, w
 involved at all.
 
 The comment shows the intent: prevent a poisoned *ledger* laundering a foreign file. But the *marker*
-is the forgeable signal, and it alone is trusted here.
+is the forgeable signal, and it alone is trusted here. A repo-wide destructive-call-site audit found
+three further siblings in the same installer: stale removal after a successful install, normal
+uninstall, and corrupt-ledger fallback uninstall. Stale removal and normal uninstall add ledger
+listing as a path-scoping signal, but neither verifies that the current bytes still match what
+skill-mesh installed; a consumer customization that retains the valid header therefore passes both.
+Corrupt-ledger fallback has lost even that scoping signal and deletes every marker-bearing file it
+finds under the provider root. The affected class is consequently **overwrite + stale delete +
+normal uninstall + corrupt-ledger marker fallback**, not overwrite alone.
 
 This means the defect Step 65 is fixing is **one instance of an architectural assumption**, and
 plausibly not the most reachable one. Under this repository's own rule — *when fixing one drift
@@ -255,13 +358,30 @@ instance, audit for siblings* — the reviewer should decide:
 - Does Step 65 stay scoped to retire, with the sibling filed separately?
 - Or is the correct unit of work the authority model itself?
 
-**Not verified, and material:** whether the install path backs up a marker-bearing overwrite. If it
-does not, the sibling is *data loss without a backup*, which would outrank the retire defect. This
-should be checked before the scope question is answered.
+**Verified 2026-08-12 — distinct real blocker, deferred from Step 65 but mandatory before live
+work.** In a fresh throwaway home, a real generated `dist/claude/plan-review/SKILL.md` was copied to
+the install target and given an appended consumer customization without removing its valid header.
+An ordinary Claude install — no force flag and no backup option — exited 0, changed the target hash
+from `2fe5647b843a27747e2684878d702b74e9c5235255249ea051c9f43b4a8973b0` to the exact dist hash
+`1d45cb26d3ee868d5bc2d1dd60659b086b08d35ad5d83c3303d239f14bf9e7a0`, removed the consumer
+text, and produced zero take-ownership backup manifests. The throwaway tree was removed after the
+measurement. That is data loss without a backup.
 
-By the same reasoning, uninstall is the best-protected of the three destructive paths: it requires
-marker **AND** ledger listing, so a consumer file quoting the header but absent from the ledger
-survives.
+Step 65 stays scoped to migration retirement: expanding it into the installer's authority model
+would silently change four destructive installer paths whose ledger schema, partial-install
+recovery, uninstall behavior, corrupt-ledger recovery, and upgrade behavior need their own design.
+But this finding is a **PRE-LIVE PREREQUISITE**: Steps 70
+and 71, and any live install, are blocked until the installer defect is fixed and regression-tested.
+The smallest sound direction is current-byte identity, not another marker parser: persist the hash
+of each installed file in the ledger and allow a routine overwrite only when the current bytes still
+match that recorded hash. A mismatch must refuse or enter an explicit backup-before-overwrite
+take-ownership path. Marker plus ledger can continue to scope the candidate, but neither is proof
+that its current bytes are unmodified. Because existing ledgers contain paths but no per-file hashes,
+their first upgrade must fail closed or require explicit backed-up adoption rather than silently
+blessing the bytes found at the path. The same current-byte identity rule must gate stale removal and
+normal uninstall. Corrupt-ledger fallback cannot prove identity from a missing ledger at all, so it
+must fail closed on deletion or first create an explicit recoverable/quarantined backup rather than
+using the marker as sole delete authority.
 
 ---
 

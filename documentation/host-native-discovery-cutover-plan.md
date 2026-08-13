@@ -30,7 +30,9 @@ Steps 33-40.
 - `tools/install-skill-mesh.ps1` installs Claude into `<Home>/.claude/skills` and
   GPT into `<Home>/.github/skills` (retargeted in Step 44 after Step 43 disproved
   the project-relative `.copilot/skills` assumption), records an ownership ledger,
-  refuses foreign-file collisions by default, and supports ownership-safe uninstall.
+  refuses foreign-file collisions by default, and supports ledger-scoped uninstall. Step 65's
+  review proved that marker-plus-ledger is not current-byte identity; the installed-hash repair
+  recorded below is therefore required before any live uninstall.
 - `runtime/skill-router.ps1` is provider-neutral and defaults to trustworthy
   host metadata, while the consumer workspace still has the legacy
   `.claude/lib/skill-router.ps1` v1.2 implementation and no installed GPT skill
@@ -222,7 +224,7 @@ skip visibly when the host cannot create Windows junctions.
 | `tools/inspect-host-install.ps1` | add | Give operators a read-only truth report before migration | Live inspection required separate commands for roots, link type, provenance, router version, and instruction files |
 | `tools/migrate-legacy-install.ps1` | add | Back up, adopt, replace, and roll back a legacy unowned install without blind overwrite | Existing installer has no adoption path; `-Force` intentionally takes ownership but does not provide legacy backup/rollback |
 | `tools/skill-mesh-provenance.ps1` | reuse | Keep one ownership-marker parser for installer, inspector, and migration without changing its public helper contract | Grep confirmed installer and distribution builder already dot-source this file |
-| `tools/skill-mesh-transaction.ps1` | add | House the state machine, journal, ordered rollback, and idempotent resume once so the installer's two-profile install and the migrator share one atomicity implementation | Installer currently installs both profiles without a shared transaction primitive; the migrator needs the same restore-on-failure guarantee, and two copies would drift |
+| `tools/skill-mesh-transaction.ps1` | add | House the state machine, journal, ordered rollback, and idempotent resume once so the installer's two-profile install and the migrator share one transaction/recovery implementation | Installer currently installs both profiles without a shared transaction primitive; the migrator needs the same restore-on-failure guarantee, and two copies would drift |
 | `tests/distributions/test_distributions.py` | extend | Cover inspection and legacy migration lifecycle | Existing distribution tests cover generated profiles and install safety but not real legacy adoption |
 | `tests/fixtures/` | extend | Provide deterministic legacy and mixed-ownership homes | Current smoke fixtures model router behavior, not consumer-home migration |
 | `tests/package-integrity/` | extend | Lock the three-mechanism authority map so the docs cannot drift back into conflating them | Existing package-integrity gates cover manifest/link/claim contracts but not host-loading semantics |
@@ -247,7 +249,7 @@ all call sites in `tools/build-distributions.ps1`,
 |---|---|
 | `tools/inspect-host-install.ps1` | Read-only JSON/text inventory of workspace instruction files, Claude/GPT discovery roots, provenance ownership, link types, router version, ledger state, and legacy shadowing |
 | `tools/migrate-legacy-install.ps1` | Dry-run-first migration with backup manifest, exact collision classification, explicit apply, post-install verification, and rollback |
-| `tools/skill-mesh-transaction.ps1` | Shared transaction engine: state machine, append-only journal, ordered rollback, and idempotent resume, dot-sourced by both the installer and the migrator so atomicity has one implementation |
+| `tools/skill-mesh-transaction.ps1` | Shared transaction engine: state machine, append-only journal, ordered rollback, and idempotent resume, dot-sourced by both the installer and the migrator so transaction/recovery semantics have one implementation |
 | `tests/distributions/legacy_install_fixtures.py` | Synthetic legacy, mixed-owned, foreign, and partially migrated consumer homes, SYNTHESIZED into a temp dir at test time (never committed -- a committed fixture `SKILL.md` sits at a real discovery path and is loaded as a live skill, #86) |
 | `documentation/host-discovery.md` | Authority map for workspace instructions vs skill discovery vs router dispatch |
 | `documentation/coding-root-cutover-handoff.md` | Copy-pasteable private-consumer follow-up, including the required `AGENTS.md`/`CLAUDE.md` shared-source design |
@@ -258,10 +260,10 @@ all call sites in `tools/build-distributions.ps1`,
 
 | Field | Type | Purpose |
 |---|---|---|
-| `schema_version` | integer (`1`) | Parser compatibility |
+| `schema_version` | integer (`2`) | Parser compatibility; v1 is the historical Step 46 report |
 | `consumer_home` | string | `.` by default; absolute only when explicitly requested |
 | `instruction_files` | array | Relative path, presence, and evidence class for root host instructions |
-| `profiles` | object keyed by `claude`, `gpt` | Discovery root, state, link type, owned/unowned counts, per-skill eligibility class (`managed`/`consumer-only`/`core-holder`/`foreign`, cross-referenced against `config/skill-manifest.json`), and adapter sample |
+| `profiles` | object keyed by `claude`, `gpt` | Discovery root, state, link type, owned/unowned counts, per-entry eligibility class (`managed`/`consumer-only`/`shared-payload`/`core-holder`/`foreign`, cross-referenced against `config/skill-manifest.json` and provenance), and adapter sample |
 | `ledger` | object | `absent`, `valid`, or `corrupt`; provider names only |
 | `router` | object | Relative path, semantic version when parseable, and `canonical`, `legacy`, or `absent` classification |
 | `legacy_shadows` | array of strings | Relative legacy paths that can still affect resolution |
@@ -273,16 +275,33 @@ provenance), `host-convention` (a documented discovery convention plus a file
 present at that path), and `unknown`. The inspector never upgrades
 `host-convention` to `observed`.
 
+**Schema v2 amendment (Step 65, DONE 2026-08-13).** Step 46
+shipped schema v1 with the four-value eligibility vocabulary recorded in its historical status
+below. Step 65 bumps this report to schema v2 and adds `shared-payload`: a `SKILL.md`-less
+`_shared` entry is `shared-payload` when at least one file beneath it carries valid skill-mesh
+provenance, and remains `core-holder` when none does. The entry-level `owned` boolean and
+`owned_count` use that same per-file scan, aggregated as "at least one owned payload file"; a mixed
+directory therefore contributes one owned entry, not one count per file. Consumer-authored files
+beside that payload do not increment `unowned_count`, because that counter remains limited to
+unowned `SKILL.md`-shaped entries. The JSON field layout is unchanged, but the closed enum and
+count meaning are parser-visible semantics, so v1 consumers must reject or explicitly upgrade for
+v2 rather than silently interpreting it as the four-value report. Consequently a complete current
+install reports the provider's manifest total plus one generated shared-payload entry: **51 Claude**
+(`counts.total + 1`) and **48 GPT** (`counts.portable + 1`) today, not the historical 50/47 manifest
+totals alone. Step 65 passed its authoritative repository gate on 2026-08-13:
+**1,143 passed, 1 skipped, 1,144 collected in 3,443.99s (0:57:23), exit 0**.
+
 `MigrationPlan` is the dry-run output consumed by `-Apply`:
 
 | Field | Type | Purpose |
 |---|---|---|
 | `schema_version` | integer (`1`) | Parser compatibility |
+| `root_encoding` | `canonical-realpath.v1` (new artifacts) or absent (legacy) | New plans bind canonical project/backup roots. A legacy artifact with an alias spelling is ambiguous and recovery refuses with `LEGACY_ALIAS_ROOT_UNSUPPORTED` rather than silently retargeting it. |
 | `migration_id` | string | Stable transaction identifier |
 | `source_release` | object | Commit/tag plus distribution checksums |
 | `consumer_home` | string | Canonical absolute target used only in the local plan file |
 | `backup_dir` | string | Canonical absolute operator-selected backup |
-| `actions` | ordered array | Relative path, provider, action (`backup`, `install`, `retire`, `preserve`, `ledger`), eligibility class, and precondition hash. A `preserve` action records a consumer-only skill or core-holder left byte-untouched (recorded by relative path and SHA-256 for audit, never payload-copied, overwritten, or retired); the single `ledger` action rewrites the ownership ledger, is the last-sequenced action, captures its pre-image as `original_ledger`, and indexes ONLY migration-installed managed files -- never a preserved consumer-only skill (`build-observer`, `goblin-sweep`) or the `_shared` core-holder, so ownership-safe uninstall cannot later delete them |
+| `actions` | ordered array | Relative path, provider, action (`backup`, `install`, `retire`, `preserve`, `ledger`), eligibility class, and precondition hash. A `preserve` action records any byte-untouched consumer path: a consumer-only skill, a marker-free `_shared` core-holder, or a non-shipped consumer file beside a shipped `_shared` payload (relative path + SHA-256 only; never payload-copied, overwritten, or retired). The single `ledger` action rewrites the ownership ledger, is last-sequenced, captures its pre-image as `original_ledger`, and indexes only migration-installed files, including shipped `_shared` payload files but excluding every preserved neighbour |
 | `blocked` | array | Foreign/unsafe paths and stable reason codes |
 
 `BackupManifest` is written before target mutation:
@@ -290,11 +309,12 @@ present at that path), and `unknown`. The inspector never upgrades
 | Field | Type | Purpose |
 |---|---|---|
 | `schema_version` | integer (`1`) | Parser compatibility |
+| `root_encoding` | `canonical-realpath.v1` (new artifacts) or absent (legacy) | Must match the plan; new manifests repeat the canonical `consumer_home` and `backup_dir` binding. |
 | `migration_id` | string | Joins backup, transaction log, and rollback |
 | `created_utc` | RFC 3339 UTC string | Audit timestamp |
 | `source_release` | object | Same immutable release identity as the plan |
 | `original_files` | array | The pre-image of every MUTATED target (each `retire` target and each `install` that overwrites an existing file): relative path, size, SHA-256, and backup payload path. Nothing byte-untouched appears here |
-| `preserved_files` | array | Byte-untouched consumer-only/core-holder trees: relative path and SHA-256 only, NO payload copy (audit record, never restored) |
+| `preserved_files` | array | Every byte-untouched consumer path -- consumer-only skills, marker-free `_shared` core holders, and non-shipped consumer files beside a shipped `_shared` payload -- by relative path and SHA-256 only, with NO payload copy (audit record, never restored) |
 | `original_ledger` | object or null | Byte-preserved ledger payload path and SHA-256 |
 | `installed_files` | array | Relative path and expected SHA-256 for generated output |
 | `status` | `prepared`, `applying`, `applied`, `rolling_back`, `rolled_back`, `failed_incomplete` | Transaction state machine (see `TransactionJournal` below) |
@@ -335,9 +355,12 @@ opposing ones.
 `TransactionJournal` is an append-only journal written under
 `<backup_dir>/<migration_id>/journal.jsonl` (or, for the installer's backup-less
 clean install, the per-run temporary state directory noted under **One shared
-engine** below), one record per action attempt,
-flushed to disk BEFORE the corresponding target mutation and again after it
-verifies, so a crash always leaves the last in-flight action on record:
+engine** below). It carries per-action history: ordinarily a `begin`/`commit`
+pair, but a crash or failure may leave `begin` only, while a true no-op or legacy
+observational compatibility record may be `commit` only. A `begin` is flushed to
+disk BEFORE its corresponding target mutation and a `commit` after that action
+verifies, so a crash always leaves the last in-flight action on record. These
+action records carry:
 
 | Field | Type | Purpose |
 |---|---|---|
@@ -351,22 +374,44 @@ verifies, so a crash always leaves the last in-flight action on record:
 | `post_hash` | string or null | SHA-256 of the target after the mutation |
 | `utc` | RFC 3339 UTC string | Audit timestamp |
 
+Rollback adds one different, transaction-level record after every inverse has
+succeeded: `rollback_complete` carries `schema_version`, `migration_id`, `phase`,
+`utc`, and `begun_seqs` equal to the exact sorted set of action sequences with
+durable `begin` authority. It intentionally has no action/path/hash fields. The
+engine revalidates the exact plan/journal/candidate authority under the existing
+journal writer handle immediately before appending and durably flushing that
+final record, then publishes the manifest status `rolled_back`. A failed inverse,
+failed completion validation, or failed completion append attempts to publish
+`failed_incomplete` without a valid completion record, subject to the
+write/read-back rule below.
+
 The transaction engine is the single mechanism that applies an ordered action
-set atomically. Its states (recorded in `BackupManifest.status`) and their only
+set transactionally at verified action boundaries. Its states (recorded in `BackupManifest.status`) and their only
 legal transitions are:
 
 - `prepared` -- backup payloads and manifest written; no target mutated yet.
-- `applying` -- at least one `begin` record is flushed; targets are being
-  mutated. Reached only from `prepared`.
+- `applying` -- the transaction has durably entered its mutation phase. This status is persisted
+  before the first action's `begin`, so an interruption may leave `applying` with no action begun.
+  Reached only from `prepared`.
 - `applied` -- every action committed and post-install verification passed.
   Reached only from `applying`; terminal success.
-- `rolling_back` -- a failure during `applying` triggered reverse-order undo.
-  Reached only from `applying`.
-- `rolled_back` -- undo restored every original hash and the prior ledger.
-  Reached only from `rolling_back`; terminal success-of-recovery.
-- `failed_incomplete` -- an undo step itself failed; the home is mixed and
-  manual recovery from the retained backup is required (exit `3`). Reached only
-  from `rolling_back`; terminal failure.
+- `rolling_back` -- a failure during `applying` or an explicit `-Rollback` triggered
+  reverse-order undo. Reached from `prepared`, `applying`, or `applied`. It may also
+  mean every inverse already succeeded and the durable `rollback_complete` record
+  flushed, but the process stopped before publishing `rolled_back`.
+- `rolled_back` -- undo restored every original hash and the prior ledger, and the
+  durable completion record was published before this status. Reached only from
+  `rolling_back`; terminal success-of-recovery.
+- `failed_incomplete` -- rollback could not publish successful completion. A failed
+  inverse on a tool-mutated path leaves a mixed home requiring manual recovery from
+  the retained backup; the separately documented post-install preserved-path case
+  can leave every tool mutation reversed while the consumer's unbacked-up edit stays
+  intact. Reached only from `rolling_back`; terminal failure, with no valid
+  `rollback_complete` record.
+  This label is authoritative only after the manifest status writer succeeds and
+  read-back verification confirms it. A writer failure leaves the last verified
+  status authoritative and must be reported as a persistence failure, never as a
+  successfully persisted `failed_incomplete` state.
 
 **Ordered apply.** Applying is two phases. First, a pre-flight pass in state
 `prepared` re-validates EVERY action's precondition hash against current
@@ -383,45 +428,128 @@ failure or unexpected on-disk change once `applying` has begun -- a mutation
 error or a post-hash mismatch included -- triggers ordered rollback and exits
 `1` (rollback complete) or `3` (rollback failed), never exit `2`.
 
-**Ordered rollback.** Any failure while `applying` walks the committed and
-in-flight journal records in strict REVERSE `seq` order and applies each
+**Ordered rollback.** Any failure while `applying` walks only actions carrying a validated,
+durable `begin` record in strict REVERSE `seq` order and applies each
 action's inverse: an `install` is removed or the backed-up original restored, a
 `retire` is restored from the backup, the `ledger` action restores
 `original_ledger`, and a `backup`/`preserve` needs no target undo. Because the
 `ledger` action is last-sequenced it is the first reverted, so no window leaves
-a new ledger indexing already-reverted files. Success sets `rolled_back` and
-leaves the original hashes; any failed inverse sets `failed_incomplete` and
-stops, preserving the backup for manual recovery.
+a new ledger indexing already-reverted files. After every inverse verifies, the
+engine revalidates the exact plan, complete journal history, and candidate
+durable-begin set under the same existing-journal writer handle, then flushes a
+final `rollback_complete` record whose `begun_seqs` is that exact set and only
+then publishes `rolled_back`. Missing, truncated, damaged, or inconsistent history
+discovered during undo may still be best-effort reversed from already validated
+in-memory authority, but it cannot be certified and must not append the completion
+record or publish `rolled_back`. Any failed inverse, completion validation, or
+completion append attempts to publish `failed_incomplete` without that valid record
+and stops, preserving the backup for manual recovery, provided that terminal status
+itself persists and verifies. If its status write fails, in-memory state remains at
+the last persisted status and the tool must report that status-persistence failure
+rather than emit a false terminal claim. Undo requires the currently
+installed bytes and every recovery payload to match their recorded hashes. Its
+one intentional retired-domain exception is restorative: a verified legacy-v1
+retire payload may be copied back to a truly absent, home-contained target even
+when the narrowed Step 65 retired-domain rule would no longer permit deletion
+there. Rollback does not remove empty plan-time-created directories, because an
+empty replacement has no durable byte identity proving the transaction owns it.
+A rollback triggered by cross-action post-install verification applies the same durable-begin
+filter. A commit-only observation never manufactures a begin or enters the undo set.
+If a process stops after `rollback_complete` flushes while status still reads
+`rolling_back`, explicit `-Rollback` validates the record and publishes
+`rolled_back` without replaying any inverse. If it stops earlier, while status is
+`rolling_back` but no valid completion record exists, explicit `-Rollback`
+idempotently continues the reverse-order undo: an action already at exact pre-state
+is accepted as complete, while any ambiguous or changed bytes still fail closed.
 
 **Idempotent re-apply.** An interrupted transaction is resumed explicitly with
 `-Resume -MigrationId <id>`, which reads that transaction's journal and manifest
-and drives it forward. Per action: if on-disk state already equals the expected
-post-state (`post_hash` matches the generated hash), the action is skipped as
-already-applied; a `begin` with no matching `commit` is redone from its
-precondition (every mutation is designed to re-produce the same bytes); an
-action never begun runs normally. Skip/redo is evaluated per action kind: an
-`install` skips when the target hash already matches its generated `post_hash`;
-a `retire` skips when the target is absent AND its payload is present in the
-backup (a crash after the move but before the `commit` flush is detected as
-target-absent + backup-present + no `commit`, and is completed by writing the
-`commit` record rather than redone, since the source is already gone); a
-`ledger` skips when the on-disk ledger matches the rewritten-ledger hash;
+and drives it forward. Before continuing, it seeds the possible-undo set only
+from durable `begin` records left by prior processes. A `commit` without a
+`begin` is observational compatibility history: it may establish that matching
+post-state bytes were seen, but it never grants rollback authority and is never
+normalized into one. For a mutating action, matching post-state is treated as already performed
+only when a prior `begin` proves the transaction may have produced it; the sole exception is a
+true no-op whose recorded pre- and post-state are equal. A legacy commit-only post-state remains
+observation-only and supplies no skip, delete, overwrite, or rollback authority. Otherwise Resume proceeds only
+from an unambiguous recorded pre-state. One shared predicate makes null hash mean true
+absence, never a directory, non-file, unreadable file, or hash failure.
+Subject to that authority rule, skip/redo is evaluated per action kind: an
+`install` carrying a prior begin skips when the target hash already matches its generated
+`post_hash` (and a pre-equals-post action is independently a true no-op);
+a `retire` recognizes only pre/absent, pre/pre, or absent/pre target/payload
+pairs (a crash after the copy/delete but before the `commit` flush is completed
+from the matching pair only with its durable begin; every directory, mismatch, corrupt payload, or double
+absence is refused); a
+`ledger` carrying a prior begin skips when the on-disk ledger matches the rewritten-ledger hash;
 `backup`/`preserve` are re-verified against their recorded hashes. A fully
-`applied` home resumed is a
-byte-for-byte no-op, and a crash mid-`applying` converges to the same terminal
-state on the next `-Resume`. A bare `-Apply` never silently adopts a prior
-transaction: it refuses (exit `2`, `INCOMPLETE_TRANSACTION`) when an unresolved
-transaction for the same `-Home` -- one whose status is not `applied` or
-`rolled_back` (that is, `prepared`, `applying`, `rolling_back`, or the
-known-mixed `failed_incomplete`) -- already exists in `-BackupDir`, naming the
-`-MigrationId` to `-Resume` or `-Rollback`.
+`applied` home resumed is a byte-for-byte no-op. At the tested process-interruption seams
+immediately before or after a complete mutation, an interrupted `applying` transaction converges
+to the same terminal state on the next `-Resume`.
+
+Explicit Resume validates the complete retained metadata and journal before any
+terminal response too; the manifest label is never enough. It may report an
+`applied` no-op only after the journal proves complete committed history, and it may
+refuse a `rolled_back` transaction as resolved only after the current completion
+record (or the conservative markerless-legacy fallback) validates. Damaged or
+relabelled terminal authority refuses without claiming either outcome.
+
+That tested guarantee does not make direct `Copy-Item` a byte-atomic replacement primitive. The
+process-interruption seams bracket the cmdlet; an operating-system or process interruption inside
+the copy may leave torn bytes that match neither the recorded pre-state nor post-state. Recovery
+then fails closed and requires manual restoration from the retained pre-image rather than promising
+automatic convergence. The transaction contract is also single-operator: no two processes may run
+`-Apply`, `-Resume`, or `-Rollback` concurrently for the same canonical project root and backup
+directory.
+
+A bare `-Apply` never silently adopts a prior transaction. Before trusting even a terminal status,
+it validates that candidate's complete plan, manifest, and journal authority. A valid `applied` or
+current-format `rolled_back` transaction with its exact `rollback_complete` record is resolved even
+when a consumer legitimately edited the restored paths later; those edits happened after the durable
+recovery boundary and are not reclassified as corruption. A markerless legacy `rolled_back`
+transaction remains compatible only through the conservative fallback that every begun mutating
+action is still at its exact recorded pre-state. Missing, malformed, truncated, relabelled, or inconsistent
+terminal authority is corrupt and blocks a new transaction. A valid unresolved transaction for the
+same project root -- `prepared`, `applying`, `rolling_back`, or terminal-but-unresolved
+`failed_incomplete` -- also refuses (exit `2`, `INCOMPLETE_TRANSACTION`), naming the
+`-MigrationId`. `prepared` and `applying` may be resumed or rolled back; `rolling_back` is continued
+only with explicit Rollback, as its validated journal state permits. `failed_incomplete` has no
+tool-mode remedy and requires manual recovery
+from the retained backup before the operator clears that transaction.
+
+Recovery first validates the complete local authority set: plan/manifest schema and transaction
+identity; canonical-root encoding; action vocabulary, ordering, provider roots, hashes, and payload
+maps; and every journal record's identity, action, path, phase, and state grammar. Apart from the
+validated `prepared`/zero-history missing-journal case described below, missing, non-file,
+malformed, truncated, or inconsistent authority artifacts fail closed before a status or home
+mutation. This validation also precedes the bare-Apply resolved-status check, so a terminal
+label cannot hide damaged journal authority and permit transaction layering. Journal validation
+distinguishes per-action `begin`/`commit` records from the one terminal `rollback_complete` record,
+requires its `begun_seqs` to equal the exact durable-begin set, and rejects any record after it. New artifacts record
+`root_encoding: canonical-realpath.v1`; an older schema-v1
+artifact whose Home or BackupDir was spelled through an alias is explicitly ambiguous and refuses
+with `LEGACY_ALIAS_ROOT_UNSUPPORTED`. The engine publishes `applied` only after cross-action
+post-install verification, so a crash after the action loop resumes that verification rather than
+false-no-oping. Explicit Rollback reads only the retained transaction authority and does not depend
+on the current checkout's planning manifest.
+
+The one missing-journal case that is not corruption is a validated `prepared` transaction with no
+action history: a process may stop after writing plan/manifest authority but before creating the
+first journal record. That shape is treated as zero durable begins. Once status leaves `prepared`,
+or any journal history is claimed, a missing journal fails closed.
+
+The Step 65 state/journal hardening described above is DONE (2026-08-13). Its personal-home
+refusal, directory-versus-absence states, begin-only prior-process undo seeding, observation-only
+commit compatibility, durable rollback-completion boundary, and restorative legacy-v1 rollback
+exception passed focused regressions, adversarial review, and the repository gate recorded in the
+schema-v2 amendment above.
 
 **One shared engine.** This state machine, journal, ordered rollback, and
 resume logic live once in `tools/skill-mesh-transaction.ps1`, dot-sourced by
 both `tools/migrate-legacy-install.ps1` and `tools/install-skill-mesh.ps1`
 (whose clean two-profile install is the same ordered-action-set apply with an
 empty backup set), mirroring the shared `tools/skill-mesh-provenance.ps1`
-parser. Neither tool reimplements atomicity, so the Claude+GPT "one
+parser. Neither tool reimplements transaction/recovery behavior, so the Claude+GPT "one
 transaction" guarantee cannot drift between install and migration. The
 installer's clean install has no `-BackupDir`, so its journal and transient
 state live under a per-run temporary directory removed on success, not a backup
@@ -454,54 +582,62 @@ Migration planning and apply:
 ```powershell
 # Dry-run: emits MigrationPlan, no mutation
 powershell -File tools\migrate-legacy-install.ps1 `
-  -Home "C:\path\to\consumer" `
+  -ProjectRoot "C:\path\to\consumer" `
   -DistDir "C:\path\to\release\dist" `
   -BackupDir "C:\path\to\private-backups"
 
 # Apply exactly the validated plan
 powershell -File tools\migrate-legacy-install.ps1 `
-  -Home "C:\path\to\consumer" `
+  -ProjectRoot "C:\path\to\consumer" `
   -DistDir "C:\path\to\release\dist" `
   -BackupDir "C:\path\to\private-backups" `
   -Apply
 
 # Roll back one applied transaction
 powershell -File tools\migrate-legacy-install.ps1 `
-  -Home "C:\path\to\consumer" `
+  -ProjectRoot "C:\path\to\consumer" `
   -BackupDir "C:\path\to\private-backups" `
   -Rollback `
   -MigrationId "20260731T210000Z-a1b2c3d4"
 
-# Resume an interrupted transaction to the same terminal state (idempotent)
+# Resume an interruption at a supported before/after-mutation seam (idempotent)
 powershell -File tools\migrate-legacy-install.ps1 `
-  -Home "C:\path\to\consumer" `
+  -ProjectRoot "C:\path\to\consumer" `
   -DistDir "C:\path\to\release\dist" `
   -BackupDir "C:\path\to\private-backups" `
   -Resume `
   -MigrationId "20260731T210000Z-a1b2c3d4"
 ```
 
-- `-Home` and `-BackupDir` are required for every mode (they locate the
-  transaction folder); `-DistDir` is additionally required for dry-run,
+- `-ProjectRoot` and `-BackupDir` are required for every mode (they locate the
+  transaction folder). `-Home` remains a compatibility alias for `-ProjectRoot`,
+  but current commands use the authority-bearing name. Planning, Apply, and
+  Resume reject the effective personal home with `PERSONAL_HOME_UNSUPPORTED`;
+  explicit Rollback remains available for recovery of an older transaction.
+  `-DistDir` is additionally required for dry-run,
   `-Apply`, and `-Resume`, which read or write generated bytes; the inspector
   and migrator read the generated profiles from `<DistDir>/claude` and
   `<DistDir>/gpt` -- `-DistDir` is the `dist/` tree produced by
   `tools/build-distributions.ps1`.
 - `-Apply` validates every precondition hash in a pre-flight pass and aborts
   before the first mutation (exit `2`) if any differs from the dry-run/backup
-  state. It mints a fresh `migration_id`, and refuses (exit `2`,
-  `INCOMPLETE_TRANSACTION`) if an unresolved transaction (status not
-  `applied`/`rolled_back`) for the same `-Home` already exists in `-BackupDir`,
-  naming that `-MigrationId`.
+  state. It mints a fresh `migration_id` only after validating prior transaction authority. A
+  valid unresolved transaction, or corrupt metadata/journal even under a terminal status label,
+  refuses (exit `2`, `INCOMPLETE_TRANSACTION`) for the same project root in `-BackupDir` rather
+  than layering another transaction.
 - `-Resume` and `-Rollback` are each mutually exclusive with `-Apply` and with
   each other, and require `-MigrationId`, reading release identity and payload
   locations from that transaction's `BackupManifest`. `-Resume` drives an
-  interrupted transaction forward idempotently (redoing generated installs from
-  `-DistDir`); `-Rollback` reverses the transaction from the backup alone.
+  interruption at a supported before/after-mutation seam forward idempotently (redoing generated
+  installs from `-DistDir`); `-Rollback` reverses the transaction from the backup alone.
+- The modes are also operationally single-operator. For the same canonical project root and backup
+  directory, never run `-Apply`, `-Resume`, or `-Rollback` concurrently in separate processes,
+  shells, agents, or scheduled tasks.
 - No interactive confirmation exists. Omitting `-Apply`/`-Resume`/`-Rollback`
   is the safe preview.
-- Exit codes are `0` success, `1` operational failure with the home left clean
-  (rollback complete or nothing mutated), `2` blocked/unsafe precondition or
+- Exit codes are `0` success, `1` operational failure with every verified
+  file mutation reversed (empty plan-time-created directories may remain),
+  `2` blocked/unsafe precondition or
   refused incomplete transaction (pre-mutation only), and `3` rollback failure
   requiring manual recovery from the retained backup.
 
@@ -569,16 +705,18 @@ in both files, which guarantees drift.
 The migration command must classify every target, require an explicit
 `-BackupDir`, create a byte-for-byte backup and manifest before the first
 mutation, require explicit `-Apply`, verify both generated profiles, and
-support rollback. Claude and GPT installation are one transaction: failure in
-either profile restores the pre-migration home and ledger. Existing `-Force`
+support rollback. Claude and GPT installation are one transaction: a caught failure in
+either profile restores verified begun mutations and the prior ledger. An interruption that tears
+a direct copy instead fails closed for retained-backup/manual recovery as qualified above. Existing `-Force`
 remains an expert override for isolated collisions, not the documented legacy
 cutover. Unknown foreign files are never silently adopted, overwritten, or
 deleted.
 
 ### Transaction mechanics are one shared, journaled, resumable engine
 
-The atomicity the migrator needs -- an ordered action set that either fully
-applies or fully rolls back, survives a crash, and re-applies idempotently --
+The action-boundary transactionality the migrator needs -- an ordered action set whose caught
+failures roll back every verified begun mutation and whose supported before/after-mutation crash
+seams resume idempotently --
 lives once in `tools/skill-mesh-transaction.ps1` with an explicit state machine
 (`prepared`/`applying`/`applied`/`rolling_back`/`rolled_back`/`failed_incomplete`),
 an append-only journal, strict reverse-order rollback, and precondition-hash
@@ -592,6 +730,11 @@ letting each tool implement backup/rollback its own way, which drifts and leaves
 crash-recovery undefined.
 
 ### Skill eligibility is manifest-driven; migration preserves consumer-only skills
+
+The four-class text in this section records the Step 46/47 design as it was accepted. It is not
+rewritten as though Step 46 shipped later behavior. The versioned Step 65 schema-v2 amendment in the
+data contract above introduces the fifth inspector value `shared-payload` and splits `_shared`
+migration ownership per file; Step 65 completed that amendment on 2026-08-13.
 
 `config/skill-manifest.json` is the single source of truth for what is a
 published, host-native-installable skill (50 records; the per-skill `status`
@@ -763,6 +906,11 @@ acceptance is recorded in Steps 49 and 50 below.
 - **Done when:** Fixtures for clean, generated (Claude at `.claude/skills` + GPT at `.github/skills`), legacy, mixed-owned, junction, absent-GPT, prior-wrong-target (`.copilot/skills` present from a pre-retarget GPT install), consumer-only (a `SKILL.md` tree absent from `config/skill-manifest.json`, e.g. `build-observer`), both-trees consumer-only (the same unmanifested skill present in BOTH `.claude/skills` and `.claude/skills-gpt`, e.g. `goblin-sweep`, which must classify consumer-only in each root rather than managed in either), and core-holder (`_shared`, located at `.claude/skills/_shared` inside the discovery root) homes produce stable classifications, with consumer-only and core-holder each distinct from `foreign`; the command is read-only under file-hash comparison; output uses consumer-home-relative paths by default, emits absolute paths only behind an explicit diagnostic flag, and never emits secret values; distribution tests pass.
 - **Depends on:** 44, 45
 - **Status:** DONE (2026-08-03), HARDENED (2026-08-04) — `tools/inspect-host-install.ps1` + `tests/distributions/test_host_inspect.py`. Read-only proven by full-tree SHA-256 before/after; text + stable `HostInstallReport` JSON (`schema_version` 1); default home-relative paths, `-AbsolutePaths` opt-in. Manifest-driven eligibility (managed/consumer-only/core-holder/foreign) with the `core:null` provider-native single-profile carve-out. Reuses `tools/skill-mesh-provenance.ps1` (dot-sourced, not forked). Deep review PASS (5 lenses: 0 high, 1 med [stale comment, fixed], lows). Merged to main (3a16d2b). The tool emits an additional top-level `legacy_skills_gpt` object (blessed in §5) to carry per-skill classification of the legacy `.claude/skills-gpt` tree without altering the fixed `profiles`/`legacy_shadows` shapes.
+  - **Later schema-v2 amendment (Step 65, DONE 2026-08-13):** v2 keeps the same object
+    shape but gains `shared-payload` as a fifth `skills[].eligibility` value and derives the
+    `_shared` entry's `owned` verdict/count contribution from a recursive per-file provenance scan.
+    The version bump makes those semantic changes explicit without revising Step 46's historical
+    schema-v1 four-class acceptance.
   - **Hardening pass (#83–#86), 2026-08-04:** a full-suite wrap found four defects in the shipped step, all fixed before Step 47 built on the report.
     - **#83 evidence_class inversion.** The tool mapped file PRESENCE to `observed`, inverting §7's runtime-provenance rule. Corrected to present → `host-convention`, absent → `unknown`; `observed` is now unreachable from this code path and a per-shape test plus a raw-output backstop assert it is never emitted.
     - **#84 consumer-byte echo.** An independent audit found **10** channels carrying consumer-controlled bytes into the DEFAULT report, where the issue named 2. Closed vocabularies (ledger `installs` keys, the `Profile:` header token) are now validated against the manifest's own `providers` object — sourced there rather than hardcoded, so a provider added in Phase 8 is honored automatically — with non-members dropped and counted via `ledger.unrecognized_provider_count` + a `LEDGER_UNKNOWN_PROVIDER` warning. A member is emitted as the manifest's OWN slug, never the consumer's spelling: the match is ordinal and case-insensitive, so a legitimate `-Provider CLAUDE` install (the installer's `ValidateSet` accepts it and does not normalize) is recognized and normalized rather than dropped as unknown — a false-clean preflight would be worse than the leak — while a culture-equal lookalike padded with ignorable characters (`claude` + U+00AD…, which PowerShell's `-contains` accepts) is refused outright. Both halves are locked by fixtures and by a mutation check. Consumer path text (skill directory names, link targets, warning name-lists) is bounded per segment to the skill-name charset with a length cap. The raw `-Home` value and this checkout's absolute manifest path are no longer echoed to stderr. The router version gate moved to `\A[0-9]{1,4}(\.[0-9]{1,4}){2}\z` (`$` also matches before a trailing newline in .NET, so an LF-terminated version was splitting the text report). Reporting a skill DIRECTORY NAME remains an explicit non-goal-to-suppress: naming what is installed is the report's purpose.
@@ -776,7 +924,21 @@ acceptance is recorded in Steps 49 and 50 below.
 - **Flags:** --reviewers deep --isolation worktree
 - **Files:** `tools/skill-mesh-transaction.ps1`, `tools/migrate-legacy-install.ps1`, `tools/install-skill-mesh.ps1`, `config/skill-manifest.json` (read-only eligibility source), `tests/distributions/`, `tests/distributions/legacy_install_fixtures.py`
 - **Produces:** Dry-run-default migration planning, collision inventory, required external backup directory, byte-preserving backup, source/target manifest and checksums, explicit `-Apply`, a shared `skill-mesh-transaction` engine (state machine + append-only journal) driving transactional Claude+GPT installation, ordered rollback, idempotent crash-resume, and post-install verification, with the installer's two-profile install routed through the same engine.
+- **Current reading rule for the historical Done-when below:** every unqualified "mid-`applying`"
+  or "mid-copy" convergence phrase is limited by Step 65 to the instrumented seams immediately
+  before or after a complete mutation. It does not cover torn bytes from interruption inside direct
+  `Copy-Item`; the qualification immediately following the Done-when is controlling.
 - **Done when:** A synthetic legacy home migrates to generated `.claude/skills` (Claude) and `.github/skills` (GPT) as one transaction (retiring any pre-retarget `.copilot/skills` GPT install found in the target home); `-Apply` without `-BackupDir` fails before mutation; the backup manifest records release identity plus every original and installed hash; the backup payload set equals the transaction's mutating action set -- every `retire`/overwriting-`install` pre-image is backed up while no byte-untouched (`preserve`d) tree's payload is copied (it appears in `preserved_files` by path and hash only); unknown foreign files block before mutation; injected failure in either provider restores both profiles and the prior ledger; rerun is idempotent; rollback restores original hashes and removes only migration-owned files; the transaction advances only through the legal `prepared` -> `applying` -> `applied` (or `applying` -> `rolling_back` -> `rolled_back`) states recorded in the backup manifest, writing an append-only journal record before and after each mutation; a simulated crash mid-`applying` re-applies via `-Resume` to the same terminal state and a failed undo lands `failed_incomplete` with the backup retained (exit `3`); a bare `-Apply` against a `-Home` that already holds an unresolved transaction (status not `applied`/`rolled_back`, `failed_incomplete` included) in `-BackupDir` refuses before mutation (exit `2`, `INCOMPLETE_TRANSACTION`) naming the `MigrationId`; the migrator and the installer's two-profile install share `tools/skill-mesh-transaction.ps1` so atomicity has one implementation while the installer's public behavior, ledger, and marker ownership stay unchanged; consumer-only skills (`build-observer`, `goblin-sweep`) and the `_shared` core-holder are classified against the manifest and PRESERVED byte-for-byte (never overwritten, retired, or treated as a block) while a genuinely foreign file still blocks; provider-native manifest skills (`core: null`) never trigger a missing-GPT-profile block; the rewritten ownership ledger indexes only migration-installed managed files and excludes every preserved consumer-only skill (`build-observer`, `goblin-sweep`) and the `_shared` core-holder, so ownership-safe uninstall never deletes them; a crash mid-`retire` and mid-`ledger` each resume via `-Resume` to the same terminal state; routing the installer's clean two-profile install through the shared engine leaves its public CLI, required parameters, and exit codes byte-identical (a test asserts it gains no required `-BackupDir` and emits no `migration_id`); the preserve-drift policy is the decided three-case policy of `documentation/step-47-decomposition-decision.md` §D2 — escalation to `failed_incomplete` is reserved for (1) mutated-path content-identity violations (`Assert-OurBytesAtTarget`, every undo branch that destroys or overwrites) and (2) a post-install verification failure on a preserved path after a fully-applied transaction, bounded to the failure set and reporting that every tool-mutated path was restored (never the MIXED/manual-recovery text), while (3) preserved-path drift during a pre-completion apply/resume abort lands `rolled_back` (exit 1 on the failure-triggered shared path; the explicit `-Rollback` path keeps exit 0) with an advisory diagnostic naming the path and its expected/observed hashes, and a follow-up bare `-Apply` re-plans and succeeds; the shared apply/resume rollback path is exercised by a test that crashes the apply at seq 0 via the existing `SKILL_MESH_TX_CRASH_AT` seam, edits a preserved file out-of-process, then `-Resume`s (asserting `rolled_back`, exit 1, the advisory, and the follow-up `-Apply` succeeding); the four stale comment blocks and the two status-line overclaims named in §D2 are corrected; `tests/distributions/test_path_choke_point.py` rides at its `5ef1045` state with the completeness claim removed from its docstring and the §D3 blind-spot classes documented (gate improvements are Step 47b's scope, not this step's acceptance); installer ownership tests and the full distribution suite pass.
+- **Step 65 recovery qualification (DONE 2026-08-13):** Step 47's
+  "simulated crash mid-applying" acceptance refers to the committed seams immediately before or
+  after a complete action mutation, including the named retire/ledger after-mutation seams. It is
+  not a guarantee that direct `Copy-Item` is byte-atomic: interruption inside that cmdlet can leave
+  torn bytes that fail both recorded hashes and require retained-backup/manual recovery. The same
+  amendment makes rollback authority durable-begin-only (including postcheck rollback), keeps
+  commit-only history observational, treats `applying` before the first begin as a legal
+  interrupted state, and adds a durably flushed transaction-level `rollback_complete` record after
+  successful undo and before the `rolled_back` status publish. This qualifies Step 47's historical
+  DONE contract and is part of Step 65's gated result; it does not rewrite Step 47's status.
 - **Depends on:** 46
 - **Status:** DONE (2026-08-05, merge `29d73dc`, branch commit `7ced00d`). The re-scoped step converged in exactly the ONE bounded confirming round the decomposition decision provided for. **Round 6 returned 0 Block findings across all six lenses** — the Block trend across rounds 1–6 was 4 → 5 → 4 → 1 → 6 → **0** — so the adversarial skeptic stage had nothing to run against, and the aggregated `NEEDS-WORK` was driven entirely by the ≥3-Nit soft-fail threshold. All 6 Nits were fixed before merge (sidecar `.review-deep/2026-08-05T17-28-01.json` records the review as run; `.review-deep/round6-summary.md` records the fixes). Full suite on `main`: see the run recorded in `README.md`; distributions alone 285 passed. What the round verified, largely by *running* code rather than reading it: the shared `$undo` is byte-identical to `5ef1045`'s plain wrapper; the `.GetNewClosure()` capture that carries the case-2 message actually works in PS 5.1 (reproduced with a standalone probe — had it silently failed, the corrected message would never have fired); the action ordering claim is true (`backup < preserve < retire < install < ledger`, rollback strict-reverse with `break` on first failure), which is precisely what made the old "MIXED" text false; and the content-identity spot-check is complete — all four destroying `Invoke-ActionUndo` branches call `Assert-OurBytesAtTarget`, and that function is untouched by the delta. The new coverage test **pins the revert**: re-landing the round-5 escalation now turns it red. The one defect this delta itself introduced was caught by the Bugs lens and fixed — an unguarded advisory that could throw (a preserved file held by an editor or AV scanner, or a `plan.json` missing `post_hash` under `Set-StrictMode`) and turn the explicit `-Rollback`'s exit 0 into exit 1 with zero JSON emitted. Two follow-ups are recorded rather than done: `failed_incomplete`'s downstream readers were corrected here, but the pre-existing raw (un-bounded) `rel_path` interpolation in `Assert-OurBytesAtTarget`'s throw — the same disclosure class #84 fixed for `New-Block` — is outside D2's scope and wants its own issue; and all gate work remains **Step 47b**'s.
 - **Superseded status (2026-08-05, pre-merge):** IN PROGRESS — re-scoped by the adopted decomposition decision, `documentation/step-47-decomposition-decision.md`. Round 5 of `/review-deep` over `5ef1045..bde8a5f` returned NEEDS-WORK (6 Block / 5 Nit / 9 FYI; two independent skeptics per Block finding; style the only PASS). The decisive finding: round 4's **single** Block demanded preserve-drift escalation on the shared apply/resume rollback path, and round 5's headline Block condemned exactly that escalation as a regression — a consumer's own edit to their own preserved file during downtime lands `failed_incomplete` (exit 3) with a false "the consumer home is MIXED" message (recoverable only via the manual remedy text; the false MIXED claim is the dangerous half, inviting a backup-restore over the consumer's newer edit). Two consecutive rounds Block'd **opposite policies on the same hunk**: the root cause is an undecided drift policy, not a bug list — so per the decision, do NOT run a sixth patch-and-review round. Decisions D1–D5: Step 47 keeps this Done-when and merges alone (gate-completeness findings route to Step 47b, which sits off the 48→50 critical path); the three-case drift policy is decided and folded into the Done-when above; the build resumes FROM branch `build-step-1785890195` by restoring both round-5-changed files to `5ef1045` — the tree round 4 found one Block from clean — and implementing the §D2 obligations; the confirming review is one bounded question (does the migrator implement §D2, including the content-identity spot-check on the edited undo branches). Round 5's outcome is NOT yet posted to #60 (operator decision pending). The round-5 gate holes (three in the gate's own Python — two downgraded to FYI/Nit by skeptic calibration — plus the `$null = <cmd>` idiom, string-literal suffixes, and a proven multi-command strict weakening) transfer to Step 47b's differential corpus. Audit trail: #60 comments (rounds 1–4) plus `.review-deep/` sidecars `2026-08-05T{09-19-45,10-49-12}` preserved with the build worktree.
@@ -854,14 +1016,14 @@ still blocks Step 50.
 | Dirty consumer repository | Applying cutover in the current coding-root branch could sweep unrelated parallel work | Code steps are skill-mesh-only; Step 50 is gated by a parked-work handshake (competing work landed/parked, no session mid-write, clean dedicated cutover branch off a known-clean base), runs FROM coding-root (which owns the cutover branch/commit/merge), and uses scoped adds only -- never a skill-mesh worktree committing coding-root |
 | Legacy foreign files | Existing `.claude/skills` files lack generated provenance | Inspector classifies first; migrator backs up and checksums before explicit apply; unknown files block |
 | Junction and symlink behavior | A legacy junction may escape the intended home or change between scan and write | Reuse `Resolve-SafePath`; re-resolve immediately before mutation; test Windows junction cases |
-| Rollback completeness | Partial migration could leave generated and legacy files mixed | One shared `skill-mesh-transaction` engine with an explicit state machine and append-only journal; strict reverse-order rollback; precondition-hash resume converges a crashed run; a failed undo halts at `failed_incomplete` (exit `3`) with the backup retained; failure-injection and crash-resume tests are mandatory acceptance |
+| Rollback completeness | Partial migration could leave generated and legacy files mixed | One shared `skill-mesh-transaction` engine with an explicit state machine and append-only journal; strict reverse-order rollback over durable begins; precondition-hash resume converges interruptions at tested before/after-mutation seams; a torn direct `Copy-Item` fails closed for manual recovery rather than claiming convergence; a failed undo halts at `failed_incomplete` (exit `3`) with the backup retained; failure-injection and crash-resume tests are mandatory acceptance |
 | Backup disclosure | Legacy skills and instruction-adjacent files may contain private workspace details | Require a backup directory outside the repository and discovery roots; never upload it; record relative paths and hashes rather than file contents in reports; document retention and secure deletion; pin the backup payload set to the mutating action set so byte-untouched consumer-only/core-holder trees are recorded by path and hash only and never copied |
 | Instruction duplication | Full `CLAUDE.md` and `AGENTS.md` copies will drift | Consumer handoff mandates one private shared source and thin host adapters |
 | Runtime registry masks missing GPT install | A GPT model can invoke skills through host injection even when no native GPT skill tree is installed | Step 43 disproved the assumed `.copilot/skills` root; Step 44 retargets GPT install to the real `.github/skills` root + YAML-frontmatter format, and Steps 43–45 prove native discovery + invocation early, before migration tooling is built on it; full acceptance (Step 49) and the live cutover (Step 50) re-record the actual discovered `SKILL.md` path and adapter identity |
 | Stale migration docs | Existing Step-41 wording can imply cutover happened or is still safe as originally designed | Step 48 replaces it with current inspector/migrator workflow and links the superseding plan |
 | Deprecated legacy tree retirement | Wholesale removal of `.claude/skills-gpt` can break current sessions AND silently destroy consumer-only entries that live only there (e.g. `goblin-sweep`'s GPT core -- no `.claude/skills` counterpart, no manifest record) | Classify `.claude/skills-gpt` against the manifest and surgically retire only the managed entry paths, leaving consumer-only entries byte-untouched in place (recorded by path and hash for audit, never payload-copied or deleted); retire only in the separate coding-root change after both native acceptance checks and rollback rehearsal |
-| Two-profile partial success | Claude replacement may succeed before GPT installation fails | Both providers are one ordered action set in the shared transaction engine; a GPT failure while `applying` rolls the committed Claude actions back in reverse `seq` order and restores the prior ledger, ending at `rolled_back` |
-| Consumer-only skills dropped or blocking | Private consumer skills (`build-observer`, `goblin-sweep`) and the `_shared` core-holder have no generated counterpart, so a binary owned/foreign split would drop them under `-Force` or block the whole cutover | Manifest-driven four-class eligibility (managed / consumer-only / core-holder / foreign); consumer-only and core-holder trees are preserved byte-for-byte and never block managed migration |
+| Two-profile partial success | Claude replacement may succeed before GPT installation fails | Both providers are one ordered action set in the shared transaction engine; a GPT failure while `applying` rolls every durable-begin Claude action back in reverse `seq` order and restores the prior ledger, ending at `rolled_back` when every inverse verifies |
+| Consumer-only skills dropped or blocking | Private consumer skills (`build-observer`, `goblin-sweep`) and the `_shared` core-holder have no generated counterpart, so a binary owned/foreign split would drop them under `-Force` or block the whole cutover | Step 46/47's manifest-driven schema-v1 four-class eligibility preserved consumer-only and core-holder trees. Step 65's completed schema-v2 fifth class, `shared-payload`, reports a marker-bearing `_shared` payload as owned while retaining per-file preservation for consumer-authored neighbours; the pure core-holder case remains preserved |
 | Best-effort containment gate | The static gate misses documented blind-spot expression shapes, and the content-identity half of the invariant is convention-guarded until Step 47b's tripwire lands | Runtime protections (`Resolve-HomeTarget` containment, `Assert-OurBytesAtTarget` content identity) are the consumer-machine controls, not the static gate; blind spots are documented in the gate module itself; Step 47's confirming review asks the content-identity question explicitly; `documentation/step-47-decomposition-decision.md` §D5's trigger re-escalates to an AST-based check on the first live false negative |
 
 Runtime-provenance rule: when a host does not expose which instruction file it
@@ -904,8 +1066,9 @@ discovered generated `SKILL.md` path.
   `retire`/overwriting-`install` pre-image is present, and a `preserve`d
   (byte-untouched) tree's bytes must NOT appear anywhere in the backup -- only
   its relative path and hash in `preserved_files`, including a consumer-only
-  entry (e.g. `goblin-sweep`'s GPT core) left in place while its managed
-  `.claude/skills-gpt` siblings are retired. This must be exercised with a
+  entry (e.g. `goblin-sweep`'s GPT core), a marker-free `_shared` core holder,
+  and every non-shipped consumer file beside a shipped `_shared` payload. This
+  must be exercised with a
   both-trees fixture: the same unmanifested skill present in BOTH
   `.claude/skills` and `.claude/skills-gpt` stays byte-for-byte intact in each
   root while managed siblings are installed or retired around it. The riskier
@@ -919,32 +1082,76 @@ discovered generated `SKILL.md` path.
   retention and deletion commands.
 - Unknown foreign collisions, path traversal, symlink/junction escape, and
   corrupt manifests must fail before mutation.
-- Inject failures at backup, first copy, mid-copy, ledger write, and
-  post-install verification; each path must leave either the original home or a
-  rollback-complete home.
+- Inject controlled failures at backup, first copy (including an exclusive-lock `Copy-Item`
+  failure), ledger write, and post-install verification; each caught path must leave either the
+  original home or a rollback-complete home. These are not a byte-level process kill inside
+  `Copy-Item`: a torn target must fail closed and retain the backup for manual recovery.
 - Reinstall must be idempotent.
 - The transaction advances only through legal state transitions (`prepared` ->
-  `applying` -> `applied`, or `... -> rolling_back -> rolled_back`); an illegal
-  transition or a missing before-mutation journal record fails the test.
-- Simulate a crash (interrupt mid-`applying`) and re-run via `-Resume`: the home
-  must converge to the same `applied` hashes without double-applying, proving
-  precondition-hash resume.
-- A bare `-Apply` whose `-Home`/`-BackupDir` already hold an unresolved
-  transaction (status not `applied`/`rolled_back`, `failed_incomplete` included)
-  must refuse before any mutation with exit `2` and `INCOMPLETE_TRANSACTION`,
-  naming the `MigrationId` to resume or roll back.
-- Force a rollback inverse step to fail: the run must land `failed_incomplete`
-  with the backup intact and exit `3`.
+  `applying` -> `applied`, or `... -> rolling_back -> rolled_back`). `applying` with zero begins is
+  legal between the durable state transition and the first action; an illegal transition or an
+  action mutation lacking its before-mutation `begin` fails the test.
+- Successful rollback must append and durably flush one final transaction-level
+  `rollback_complete` record before publishing `rolled_back`; its `begun_seqs` must equal the exact
+  durable-begin set. A crash after that flush leaves `rolling_back`, and explicit `-Rollback` must
+  publish `rolled_back` without replaying an inverse. A failed/incomplete rollback must publish no
+  valid completion record; a `rolling_back` retry without one must idempotently continue undo,
+  accepting an already-restored exact pre-state but refusing ambiguous or changed bytes.
+- Simulate crashes at the supported seams immediately before or after a complete mutation and
+  re-run via `-Resume`: the home must converge to the same `applied` hashes without
+  double-applying, proving precondition-hash resume at those seams.
+- Resume and explicit Rollback must seed their reverse-order undo set only from
+  prior journal `begin` records. A historical commit-only skipped action is
+  observation-only and must never gain skip/delete/overwrite authority; a matching post-state may
+  skip a mutating action only with a prior begin or when pre-state equals post-state as a true no-op.
+  A later
+  resumed-run failure must still undo every action actually begun by the earlier
+  process, and postcheck-triggered rollback must apply the same durable-begin filter.
+- Across preflight, forward mutation, resume, and rollback, a null recorded hash
+  must mean true absence only. A directory, non-file, unreadable file, hash
+  mismatch, corrupt retire payload, or target/payload double absence must never
+  satisfy an absent-file state or authorize another mutation.
+- Planning, Apply, and Resume with `-ProjectRoot` resolving to the effective
+  personal home must refuse pre-mutation with `PERSONAL_HOME_UNSUPPORTED`;
+  `-Home` remains an equivalent compatibility alias. Explicit Rollback must
+  remain available to restore an older transaction.
+- A bare `-Apply` must validate the complete metadata and journal of every same-root transaction
+  before trusting its status. Valid unresolved authority (`failed_incomplete` included) and corrupt
+  authority hidden under an `applied`/`rolled_back` label both refuse before mutation with exit `2`
+  and `INCOMPLETE_TRANSACTION`, rather than layering a new transaction.
+- A current `rolled_back` transaction with an exact valid `rollback_complete` record remains
+  resolved after legitimate later edits to restored paths. A markerless legacy `rolled_back`
+  transaction is resolved only while every begun mutating action remains at exact recorded
+  pre-state; otherwise a bare `-Apply` fails closed.
+- Explicit `-Resume` must perform the same complete metadata/journal validation before responding
+  to an `applied` or `rolled_back` label. It may emit the applied no-op or
+  `TRANSACTION_RESOLVED` only after validation; damaged/relabelled terminal authority refuses
+  without a resolved claim or home mutation.
+- Inject a manifest status-writer failure during rollback failure handling: the in-memory handle
+  and final diagnostic must remain at the last verified persisted status. The tool must not claim
+  `failed_incomplete` persisted when its write/read-back did not succeed.
+- Apply, Resume, and Rollback are single-operator modes: concurrent mutating processes for the same
+  canonical project root and backup directory are outside the contract and must be prevented by the
+  operator.
+- Force a rollback inverse step to fail with a functioning status writer: the run must land
+  `failed_incomplete` with the backup intact and exit `3`; the separate writer-failure case above
+  must retain the last verified status instead.
 - The installer's clean two-profile install and the migrator drive the same
-  `skill-mesh-transaction` engine; divergent atomicity behavior between them
+  `skill-mesh-transaction` engine; divergent transaction/recovery behavior between them
   fails the test.
 - Rollback must restore original hashes and preserve unrelated files.
-- A crash mid-`retire` (source moved, no `commit`) and a crash mid-`ledger` each
+- Rollback may restore a hash-verified legacy-v1 retire payload to a truly
+  absent, home-contained target without current retired-domain authority; that
+  exception must never be reachable from Resume or forward deletion. Rollback
+  must leave empty plan-time-created directories in place because their
+  ownership has no durable byte identity.
+- A crash at the after-mutation/before-commit seam for `retire` (source moved, no `commit`) and for `ledger` each
   resume via `-Resume` to the same terminal `applied` state -- the retire is
   completed, not re-driven from a now-absent source.
-- After migration the rewritten ownership ledger contains no entry for
-  `build-observer`, `goblin-sweep`, or `_shared`; ownership-safe uninstall
-  leaves all three intact.
+- After migration the rewritten ownership ledger contains no entry for preserved
+  `build-observer`, preserved `goblin-sweep`, or any non-shipped consumer file beside
+  `_shared`. It does index the exact shipped `_shared` payload files so uninstall can
+  remove those generated assets while leaving every non-shipped neighbour intact.
 - A preserved consumer-only skill referencing `_shared` (e.g. `goblin-sweep`)
   still resolves its core after migration, with managed siblings migrated to
   per-skill embedded cores and the preserved skill plus `_shared` untouched.
@@ -983,13 +1190,13 @@ behavior cannot be proven by unit tests alone.
 | D3 | D | `AGENTS.md` and `CLAUDE.md` become thin private adapters over one shared consumer instruction source | active |
 | D4 | D | Legacy migration uses inspect, backup, explicit apply, verify, and rollback—not blind `-Force` | active |
 | D5 | D | Product work and private consumer edits remain separate repository changes | active |
-| D6 | D | Skill eligibility is manifest-driven; migration classifies four classes and preserves consumer-only skills + the `_shared` core-holder, not the binary owned/foreign split | active |
+| D6 | D | Skill eligibility is manifest-driven; Step 46/47's schema-v1 four-class contract preserves consumer-only skills + the `_shared` core-holder, and Step 65 schema v2 distinguishes marker-bearing `shared-payload` while preserving mixed consumer files per file | active; Step 65 amendment DONE (2026-08-13) |
 | D7 | D | Copilot's native GPT discovery root is proven from a live session before migration tooling is built on it, not deferred to final acceptance | active (premise corrected) — the decision to prove early stands and paid off: Step 43 disproved the assumed `.copilot/skills` root and the real root is `.github/skills` (+ YAML frontmatter), caught before Steps 45-50 were built on it |
-| D8 | D | Installer and migrator share one journaled, resumable transaction engine (`tools/skill-mesh-transaction.ps1`) with an explicit state machine and ordered rollback, rather than each tool implementing atomicity | active |
+| D8 | D | Installer and migrator share one journaled, resumable transaction engine (`tools/skill-mesh-transaction.ps1`) with an explicit state machine and ordered rollback, rather than each tool implementing transaction recovery | active |
 | D9 | D | The backup payload set is pinned to the transaction's mutating action set -- byte-untouched consumer-only/core-holder trees are recorded by path+hash only, never copied -- reconciling rollback completeness with disclosure minimization | active |
 | D10 | D | Static release/package-integrity gates assert documentation STRUCTURE only (presence, order, resolvability, no private-content leak); real host acceptance is operator evidence (Steps 43/45/49/50) that no static test can substitute for | active |
 | D11 | D | The live coding-root cutover (Step 50) is owned by coding-root -- run from that repo against the skill-mesh release candidate, gated by a parked-work handshake and a dedicated cutover branch; the skill-mesh plan never commits coding-root state | active |
-| D12 | D | The rewritten ownership ledger indexes only migration-installed managed files and never lists preserved consumer-only skills or `_shared`, so ownership-safe uninstall cannot delete the four-class-protected trees | active |
+| D12 | D | The rewritten ownership ledger indexes only migration-installed files: it includes shipped `_shared` payload files, but never preserved consumer-only skills, a pure `_shared` core-holder, or non-shipped consumer files beside the payload | active; Step 65 amendment DONE (2026-08-13) |
 | P4 | P | No sixth patch-and-review round on Step 47 — the decomposition decision precedes any further code (session handoff directive, 2026-08-05) | active |
 | D13 | D | Step 47 splits: migrator + engine keep Step 47 and merge alone; the containment gate's improvement becomes Step 47b, off the 48→50 critical path (`step-47-decomposition-decision.md` §D1) | active |
 | D14 | D | Three-case preserve-drift policy: escalate only mutated-path content-identity violations and post-install verification failures on preserved paths after a fully-applied transaction (bounded to the failure set, corrected message); pre-completion preserve drift lands `rolled_back` + advisory (§D2) | active |

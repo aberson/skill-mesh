@@ -23,8 +23,11 @@
       - the install ledger state (absent | valid | corrupt; provider names only);
       - the router path, version, and classification (canonical | legacy | absent).
 
-    OWNERSHIP AUTHORITY = FILE-CONTENT PROVENANCE. Ownership is decided by the
-    shared, anchored marker parser (Test-SkillMeshProvenance from
+    GENERATED-CANDIDATE EVIDENCE = FILE-CONTENT PROVENANCE. The report's stable
+    `owned` field means the bounded file head matches an emitter-valid generated-header
+    shape. It does not mean the inspector consulted the ledger, and it proves neither
+    current-byte authorship nor that the bytes were not later edited. The field is
+    computed by the shared, anchored marker parser (Test-SkillMeshProvenance from
     tools/skill-mesh-provenance.ps1) applied to each file's head -- never the
     mutable ledger, and never a substring-anywhere scan. This inspector REUSES that
     parser; it does not fork it.
@@ -35,8 +38,32 @@
       consumer-only -- a SKILL.md-shaped tree whose name is NOT in the manifest
                        (classified per root; a .claude/skills twin never makes a
                        .github/skills or .claude/skills-gpt entry "managed").
-      core-holder   -- a `_shared` directory inside a discovery root, no SKILL.md.
+      shared-payload -- a `_shared` directory (no SKILL.md) holding at least one
+                       emitter-valid generated-header candidate. This is the stable
+                       payload-shaped classification; `owned` is decided PER FILE
+                       from header shape, not from a SKILL.md it structurally cannot
+                       have, and is not an authorship claim.
+      core-holder   -- a `_shared` directory inside a discovery root, no SKILL.md,
+                       and no marker-bearing file: purely consumer-held.
       foreign       -- anything else (no manifest record, no SKILL.md, not _shared).
+
+    WHY `_shared` NEEDS ITS OWN REPORTING RULE. Every other class decides `owned`
+    from its SKILL.md head, and a `_shared` directory has no SKILL.md -- so before
+    this rule it reported `owned=false` unconditionally, which after the payload
+    shipped meant reporting a directory full of generated-looking marker-bearing files
+    as unowned consumer content. It never surfaced as a failure anywhere, because
+    nothing is classed foreign and unowned_count stays 0; it had to be fixed
+    deliberately. Its header-shape parser mirrors migrate-legacy-install.ps1's
+    Get-DirEligibility + Test-SharedFileIsOurs. In the migrator, a match can contribute
+    to destructive retirement only for a candidate resident under the retired
+    project-root tree and only with independent plan/path/hash/state guards. Active-root
+    matches are advisory and retained; this report is never standalone mutation authority.
+
+    unowned_count is deliberately NOT extended to `_shared`. It counts SKILL.md-shaped
+    trees at managed-shaped paths that lack generated-header-candidate evidence -- the
+    "a host may load this but its header is not one our emitters produce" signal. A
+    consumer's own `_shared/README.md` is neither header-shaped nor loadable as a skill,
+    so counting it would turn a clean home into a dirty report.
 
     PATH DISPLAY. Default output is consumer-home-RELATIVE (consumer_home = '.').
     -AbsolutePaths switches DISPLAY to absolute; it changes nothing that is read.
@@ -113,7 +140,11 @@ $MANIFEST_PATH = Join-Path $REPO_ROOT 'config\skill-manifest.json'
 # owner (see tools/skill-mesh-discovery.ps1 for the rationale).
 . $DISCOVERY
 
-$SCHEMA_VERSION = 1
+# HostInstallReport v2 adds `shared-payload` to the closed eligibility vocabulary
+# and lets a generated-header-candidate `_shared` entry contribute one to `owned_count`. Both
+# are parser-visible semantic changes from the four-value/count behavior shipped
+# in v1, even though the JSON object shape itself is unchanged.
+$SCHEMA_VERSION = 2
 
 # Discovery roots (home-relative, POSIX form) and the legacy/retired resolution
 # shadows, all read from the shared owner rather than re-spelled.
@@ -122,6 +153,10 @@ $GPT_ROOT_REL = Get-SkillMeshDiscoveryRoot 'gpt'
 $LEGACY_SKILLS_GPT_REL = Get-SkillMeshLegacySkillsGptRoot
 $RETIRED_COPILOT_REL = Get-SkillMeshRetiredCopilotRoot
 $LEDGER_NAME = '.skill-mesh-install.json'
+# The shared support payload directory the builder emits at each profile root, as a
+# sibling of the per-skill dirs. Same spelling as migrate-legacy-install.ps1's
+# $SHARED_DIR_NAME and tools/build-distributions.ps1's $SHARED_DEST.
+$SHARED_DIR_NAME = '_shared'
 $LEGACY_ROUTER_REL = '.claude/lib/skill-router.ps1'
 $CANONICAL_ROUTER_REL = 'runtime/skill-router.ps1'
 $LEDGER_VERSION_EXPECTED = 1
@@ -156,7 +191,7 @@ function Get-HeadTextSafe([string]$absPath) {
 }
 
 function Test-HeadOwned([string]$headText) {
-    # Ownership authority: the anchored, shared marker parser (never a raw scan).
+    # Generated-candidate evidence: the anchored shared parser (never a raw scan).
     return (Test-SkillMeshProvenance $headText)
 }
 
@@ -189,15 +224,17 @@ function Resolve-KnownProvider([string]$value) {
 function Get-ProfileHeaderTag([string]$headText) {
     # The generated provenance header carries a `Profile: <profile>` line. Only a
     # value the manifest DECLARES as a provider is returned: build-distributions.ps1
-    # is the sole emitter of this line and writes nothing else, so any other token is
-    # hand-edited or hostile -- and the token charset [A-Za-z0-9_-] spells most
-    # credential shapes verbatim. The scan starts AT the generated header, so a decoy
-    # `Profile:` planted ABOVE it cannot win (Test-SkillMeshProvenance matches the
-    # header block anywhere in the head, not only at offset 0).
+    # is the supported emitter of this line, while a retained or reproduced header can
+    # contain any token. Treat values outside the closed provider vocabulary as untrusted
+    # and withhold them -- the token charset [A-Za-z0-9_-] spells most credential shapes
+    # verbatim. Get-SkillMeshHeaderBlock returns ONLY the exact
+    # validated header span from the shared ownership parser. This excludes decoys
+    # before its opener, below a merely opener-shaped string, and -- load-bearing --
+    # body text after the validated block's `-->` terminator.
     if ([string]::IsNullOrEmpty($headText)) { return $null }
-    $start = $headText.IndexOf((Get-SkillMeshHeaderOpen), [System.StringComparison]::Ordinal)
-    if ($start -lt 0) { return $null }
-    $m = [regex]::Match($headText.Substring($start), 'Profile:\s*([A-Za-z0-9_-]+)')
+    $header = Get-SkillMeshHeaderBlock $headText
+    if ([string]::IsNullOrEmpty($header)) { return $null }
+    $m = [regex]::Match($header, '(?m)^[ \t]*Profile:[ \t]*([A-Za-z0-9_-]+)[ \t]*\r?$')
     if (-not $m.Success) { return $null }
     return (Resolve-KnownProvider $m.Groups[1].Value)
 }
@@ -354,6 +391,30 @@ function Get-RootAnalysis([string]$rootRel) {
         $head = if ($hasSkillMd) { Get-HeadTextSafe $skillMd } else { '' }
         $owned = $hasSkillMd -and (Test-HeadOwned $head)
 
+        # PER-FILE generated-candidate classification for the shared payload. A `_shared` directory has no
+        # SKILL.md, so the line above can only ever answer "not owned" for it -- which
+        # is a misreport once the builder ships marker-bearing assets there. Scoped to
+        # the `_shared` name and to a SKILL.md-less directory so no other class changes
+        # its reporting rule, and read through the SAME anchored parser.
+        #
+        # `owned` is a generated-candidate signal downstream automation may inspect, so
+        # this loop is only ever as honest as that parser: a content-quoting operator
+        # file counted here would misclassify consumer bytes as payload-shaped. In
+        # migrate-legacy-install.ps1 the same match can participate in a destructive
+        # retire only when the candidate resides under the retired project-root tree and
+        # independent plan/path/hash/state guards also pass. Active-root matches are
+        # advisory and retained. The position + adjacency anchors prevent the quoted-
+        # header false positive; they do not prove authorship.
+        $isSharedDir = ($name -eq $SHARED_DIR_NAME) -and (-not $hasSkillMd)
+        $sharedOwnedFiles = 0
+        if ($isSharedDir) {
+            foreach ($f in @(Get-ChildItem -LiteralPath $dir.FullName -Recurse -File -Force `
+                        -ErrorAction SilentlyContinue)) {
+                if (Test-HeadOwned (Get-HeadTextSafe $f.FullName)) { $sharedOwnedFiles++ }
+            }
+            $owned = ($sharedOwnedFiles -gt 0)
+        }
+
         $inManifest = $script:ManifestMap.ContainsKey($name)
         $manifestStatus = $null
         $singleProfile = $false
@@ -364,8 +425,14 @@ function Get-RootAnalysis([string]$rootRel) {
 
         if ($inManifest) {
             $eligibility = 'managed'
-        } elseif ($name -eq '_shared' -and (-not $hasSkillMd)) {
-            $eligibility = 'core-holder'
+        } elseif ($isSharedDir) {
+            # Split PER FILE, not per directory: a `_shared` holding one or more
+            # emitter-valid generated-header candidates is a shared-payload root;
+            # one holding only the
+            # consumer's own files is still the legacy core-holder and stays
+            # preserved. The old unconditional 'core-holder' verdict reported the
+            # first case as the second.
+            $eligibility = $(if ($sharedOwnedFiles -gt 0) { 'shared-payload' } else { 'core-holder' })
         } elseif ($hasSkillMd) {
             $eligibility = 'consumer-only'
         } else {

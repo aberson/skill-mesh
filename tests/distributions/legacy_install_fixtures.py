@@ -121,6 +121,41 @@ def generated_core_md(profile):
     return _generated_header(profile) + "\n# shared core\n\nGenerated core body.\n"
 
 
+def header_quoting_doc():
+    """A consumer-authored doc that QUOTES a whole generated header verbatim.
+
+    Derived from ``_generated_header`` rather than spelled out, so it stays a byte-exact
+    copy of what the builder emits: a paraphrase would be rejected by contiguity alone
+    and would prove nothing about the position anchor, which is the only thing that can
+    separate a header from a faithful quotation of one.
+    """
+    return (
+        "# marker format (operator notes)\n"
+        "\n"
+        "skill-mesh stamps every file it generates with a header like this one:\n"
+        "\n"
+        "```\n"
+        + _generated_header("claude")
+        + "```\n"
+        "\n"
+        "Anything in this directory without that header is hand-authored and mine.\n"
+    )
+
+
+def forged_generated_header_doc():
+    """Consumer-authored bytes with a generated header at an emitter-legal position.
+
+    No content parser can distinguish this from generated output: the header is exact
+    and at file top. The active-root retire policy must therefore narrow the
+    consequence instead of trying a third header-parser heuristic.
+    """
+    return (
+        _generated_header("claude")
+        + "\n# consumer customization\n\n"
+        + "These notes are operator-owned even though the copied header says otherwise.\n"
+    )
+
+
 def hand_authored_skill_md(name):
     """A SKILL.md with NO provenance header -- foreign content at a managed path."""
     return (
@@ -248,6 +283,20 @@ def _core_holder(home):
           "# judge-core (shared core)\n\nHolds shared cores; this is not a skill (no SKILL.md).\n")
 
 
+def _shared_payload(home):
+    """A `_shared` directory holding the SHIPPED payload beside consumer content.
+
+    The distinguishing input against 10-core-holder is one marker-bearing file. That
+    directory has no SKILL.md and structurally never will, so an inspector that reads
+    ownership off SKILL.md alone reports it identically to the core-holder shape --
+    which is exactly the misreport this shape pins (`owned=false` over a directory of
+    skill-mesh's own generated assets).
+    """
+    write(home, CLAUDE_ROOT + "/_shared/" + SHARED_COLLIDING, generated_core_md("claude"))
+    write(home, CLAUDE_ROOT + "/_shared/" + SHARED_CONSUMER_ONLY,
+          "# operator notes\n\nConsumer-authored; no distribution ships this name.\n")
+
+
 def _foreign(home):
     """The ONLY input that yields eligibility 'foreign': a directory under a
     discovery root that is absent from the manifest, holds no SKILL.md, and is not
@@ -346,11 +395,18 @@ def _hostile(home):
     doc["installs"]["claude\nINJECTED_LEDGER_LINE: " + SECRET] = {"provider": "x"}
     doc["installs"]["Q" * 400] = {"provider": "x"}
     write(home, LEDGER_NAME, json.dumps(doc, indent=2) + "\n")
-    # A decoy `Profile:` line ABOVE the real generated header: the provenance parser
-    # matches its header block anywhere in the head, so arbitrary bytes may precede it.
+    # A decoy `Profile:` line ABOVE the real generated header, so `Get-ProfileHeaderTag`
+    # must start reading AT the header rather than at the first `Profile:` in the head.
+    #
+    # It goes INSIDE the YAML frontmatter, which is where a decoy can actually sit in a
+    # file skill-mesh still owns: the provenance parser is position-anchored, so bytes
+    # in front of the frontmatter would make the whole file read UNOWNED and the decoy
+    # would never be consulted -- the plant would pass by not being reached, which is
+    # exactly the tautology test_hostile_plants_are_actually_present exists to prevent.
     skill_md = Path(home) / CLAUDE_ROOT / "build-phase" / "SKILL.md"
-    skill_md.write_text("Profile: " + SECRET + "\n" + skill_md.read_text(encoding="utf-8"),
-                        encoding="utf-8")
+    text = skill_md.read_text(encoding="utf-8")
+    assert text.startswith("---\n"), "the generated fixture no longer leads with frontmatter"
+    skill_md.write_text("---\nProfile: " + SECRET + "\n" + text[len("---\n"):], encoding="utf-8")
     # Directory names: over-long, and one carrying the exact ', ' separator the
     # warning lists are joined with.
     #
@@ -385,6 +441,48 @@ MIGRATION_NATIVE = "context-slim"
 # Unmanifested consumer skills that must survive a migration byte-for-byte.
 MIGRATION_CONSUMER_ONLY = ("build-observer", "goblin-sweep")
 
+# The two populations a consumer `_shared/` holds once the builder ships a payload
+# there, and the reason Step 65 classifies that directory per FILE.
+#
+# SHARED_COLLIDING is a real asset name from the built payload
+# (tools/build-distributions.ps1 emits it into dist/<profile>/_shared/), planted
+# marker-LESS. It is the shape the live consumer home is actually in, and it is the
+# path the migration adopts: backed up, installed over, indexed, uninstallable.
+#
+# SHARED_CONSUMER_ONLY is deliberately NOT an asset the builder emits. It is the
+# control for the per-FILE rule: a directory-level reclassification would sweep it
+# into the managed set and drop it out of the preserve actions, the backup manifest,
+# the precondition and post-install checks, and the drift advisory all at once --
+# silently, since nothing on disk would change. The live `_shared/` holds 15 such
+# entries (README.md, five test_*.py, __pycache__, ...).
+#
+# test_legacy_migration.py asserts both facts against the REAL built distribution
+# (test_shared_fixture_names_match_the_built_payload), so a builder change that
+# started or stopped shipping either name reds here instead of quietly defusing the
+# per-FILE tests.
+SHARED_COLLIDING = "judge-core.md"
+SHARED_CONSUMER_ONLY = "operator-notes.md"
+
+# A THIRD `_shared` population: generated-looking bytes at a path no profile of the
+# current distribution ships. It is planted under both a LIVE provider root and the
+# RETIRED `.copilot/skills` root because iteration 3 intentionally gives those two
+# locations different consequences: advisory-only retention in the active root,
+# retirement in the retired root.
+SHARED_STALE_ASSET = "retired-core.md"
+
+# The adversarial fourth population: a consumer doc whose SUBJECT is the marker
+# format, quoting a whole header verbatim in a fenced block. Content-wise it is
+# indistinguishable from a generated file; only WHERE the block sits tells them
+# apart. Before the header parser was position-anchored this file classified
+# `managed`, planned a `retire`, and was deleted from the live home by -Apply.
+SHARED_QUOTING_DOC = "marker-format-notes.md"
+
+# A consumer-authored file under a manifest-named ACTIVE skill directory, carrying a
+# copied/forged generated header at file top. Unlike SHARED_QUOTING_DOC, the provenance
+# predicate MUST accept this shape to avoid false negatives on real generated files.
+# The safety regression therefore lives at the retire consequence, not the parser.
+ACTIVE_FORGED_HEADER_DOC = "consumer-header-notes.md"
+
 
 def legacy_skill_md(name):
     """The live legacy shape: a real hand-authored launcher at a managed path.
@@ -417,7 +515,9 @@ HOSTILE_DIR = "z" * 80 + ",injected"
 
 def migration_home(home, foreign=False, retired_copilot=True, consumer_only=True,
                    core_holder=True, legacy_ledger=True, stale_generated=False,
-                   equal_length_retired=False, hostile_foreign_name=False):
+                   equal_length_retired=False, hostile_foreign_name=False,
+                   shared_stale_generated=False, shared_retired_copilot=False,
+                   shared_quoting_doc=False, active_forged_header=False):
     """A consumer home in the pre-cutover state the migrator has to handle.
 
     Every flag isolates ONE classification input, so a test can build the same home
@@ -431,8 +531,32 @@ def migration_home(home, foreign=False, retired_copilot=True, consumer_only=True
         for name in MIGRATION_CONSUMER_ONLY:
             write(home, CLAUDE_ROOT + "/" + name + "/SKILL.md", consumer_skill_md(name))
     if core_holder:
-        write(home, CLAUDE_ROOT + "/_shared/judge-core.md",
+        # BOTH populations, always together. A `_shared` fixture carrying only the
+        # colliding name could not tell a correct per-FILE classification apart from
+        # a directory-wide one, and a fixture carrying only the non-colliding name
+        # would never exercise the adoption path at all.
+        write(home, CLAUDE_ROOT + "/_shared/" + SHARED_COLLIDING,
               "# judge-core (shared core)\n\nConsumer-held shared core; not a skill.\n")
+        write(home, CLAUDE_ROOT + "/_shared/" + SHARED_CONSUMER_ONLY,
+              "# operator notes\n\nConsumer-authored; no distribution ships this name.\n")
+    if shared_stale_generated:
+        # Marker-bearing, at a `_shared` path the current distribution does NOT ship:
+        # the FIRST of the two scenarios the marker-only half of the two-yeses rule is
+        # justified by -- a payload asset a newer build stopped emitting.
+        write(home, CLAUDE_ROOT + "/_shared/" + SHARED_STALE_ASSET, generated_core_md("claude"))
+    if shared_quoting_doc:
+        # Consumer-authored, and content-identical to a generated file everywhere except
+        # WHERE the header block sits. The control for the position anchor.
+        write(home, CLAUDE_ROOT + "/_shared/" + SHARED_QUOTING_DOC, header_quoting_doc())
+    if shared_retired_copilot:
+        # The SECOND marker-only scenario: a `_shared` payload copy left under the
+        # retired `.copilot/skills` root by a pre-retarget install. It reaches the retire
+        # set through the retired-root scan, whose `$sharedInstallRels` set can never
+        # match one of its paths -- so the marker is the only thing that classifies it.
+        write(home, RETIRED_COPILOT_ROOT + "/_shared/" + SHARED_COLLIDING,
+              generated_core_md("gpt"))
+        write(home, RETIRED_COPILOT_ROOT + "/_shared/" + SHARED_CONSUMER_ONLY,
+              "# operator notes\n\nConsumer-authored, left under the retired root.\n")
     if retired_copilot:
         # A pre-Step-44 GPT install at the RETIRED project-relative target. It
         # carries the provenance marker, so it is skill-mesh's OWN superseded file
@@ -440,10 +564,17 @@ def migration_home(home, foreign=False, retired_copilot=True, consumer_only=True
         write(home, RETIRED_COPILOT_ROOT + "/" + MIGRATION_MANAGED[0] + "/SKILL.md",
               generated_skill_md(MIGRATION_MANAGED[0], "gpt"))
     if stale_generated:
-        # A generated file the current distribution no longer emits, sitting inside
-        # a managed skill dir: skill-mesh's own, therefore retired, not blocked.
+        # Generated-looking bytes the current distribution no longer emits, sitting
+        # inside an ACTIVE managed skill dir: retained with a named advisory because
+        # content alone cannot authorize deletion there.
         write(home, CLAUDE_ROOT + "/" + MIGRATION_MANAGED[0] + "/stale-core.md",
               generated_core_md("claude"))
+    if active_forged_header:
+        # The regression that defeats every content-only ownership claim: the header
+        # is byte-exact and sits where an emitter would put it, but the file is a
+        # consumer customization. Apply must leave it byte-identical and advise.
+        write(home, CLAUDE_ROOT + "/" + MIGRATION_MANAGED[0] + "/" +
+              ACTIVE_FORGED_HEADER_DOC, forged_generated_header_doc())
     if equal_length_retired:
         # Two sibling retired trees whose directory names are the SAME length, so
         # the emptied-directory cleanup has to remove both.
@@ -501,6 +632,7 @@ _BUILDERS = {
     "22-migration-legacy": _migration_legacy,
     "23-migration-foreign": _migration_foreign,
     "24-migration-stale-generated": _migration_stale_generated,
+    "25-shared-payload": _shared_payload,
 }
 
 # Shapes this module builds directly. The junction shapes (05-junction and

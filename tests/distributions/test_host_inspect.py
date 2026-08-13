@@ -50,9 +50,15 @@ ALL_SHAPES = SYNTHESIZED + JUNCTION_SHAPES
 
 FILE_ATTRIBUTE_REPARSE_POINT = 0x400
 
-# The closed vocabularies the report may draw from.
+# HostInstallReport compatibility contract. V1 shipped the four-value eligibility
+# vocabulary below. V2 adds exactly `shared-payload` and changes the corresponding
+# `_shared` entry's owned-count semantics; the object shape otherwise stays stable.
+HOST_INSTALL_SCHEMA_VERSION = 2
+ELIGIBILITY_V1 = {"managed", "consumer-only", "core-holder", "foreign"}
+
+# The closed vocabularies the current report may draw from.
 PROVIDER_SLUGS = set(json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))["providers"])
-ELIGIBILITY = {"managed", "consumer-only", "core-holder", "foreign"}
+ELIGIBILITY = ELIGIBILITY_V1 | {"shared-payload"}
 EVIDENCE_CLASSES = {"host-convention", "unknown"}
 LINK_TYPES = {"directory", "junction", "symlink", "reparse", "absent"}
 LEDGER_STATES = {"absent", "valid", "corrupt"}
@@ -275,7 +281,8 @@ def test_inspector_is_read_only(kind, tmp_path):
 def test_schema_shape_is_stable(tmp_path):
     home = _materialize("02-generated", tmp_path / "home")
     d = _inspect_json(home)
-    assert d["schema_version"] == 1
+    assert d["schema_version"] == HOST_INSTALL_SCHEMA_VERSION
+    assert ELIGIBILITY - ELIGIBILITY_V1 == {"shared-payload"}
     for key in ("consumer_home", "instruction_files", "profiles", "legacy_skills_gpt",
                 "ledger", "router", "legacy_shadows", "warnings"):
         assert key in d, f"missing top-level key {key}"
@@ -286,6 +293,12 @@ def test_schema_shape_is_stable(tmp_path):
             assert key in prof
     for key in ("state", "providers", "unrecognized_provider_count"):
         assert key in d["ledger"], f"missing ledger key {key}"
+
+    text_report = _run_inspect(home, fmt="text")
+    assert text_report.returncode == 0, text_report.stderr
+    assert text_report.stdout.startswith(
+        f"skill-mesh host-install report (schema_version {HOST_INSTALL_SCHEMA_VERSION})\n"
+    )
 
 
 @pytest.mark.parametrize("kind", ALL_SHAPES)
@@ -341,6 +354,36 @@ def test_generated_home_both_owned(tmp_path):
     # loaded (see test_evidence_class_is_never_observed).
     claude_md = [f for f in d["instruction_files"] if f["rel_path"] == "CLAUDE.md"][0]
     assert claude_md["present"] is True and claude_md["evidence_class"] == "host-convention"
+
+
+def test_profile_header_tag_never_reads_body_text_after_the_validated_block(tmp_path):
+    """A body `Profile:` is not provenance metadata.
+
+    The file remains owned because its exact opener/marker/terminator block is valid,
+    but that block's real Profile continuation is removed and a known-provider decoy
+    is planted AFTER `-->`. Scanning from header-start to EOF reports the decoy as gpt;
+    scanning the exact shared-parser span reports unknown.
+    """
+    home = _materialize("02-generated", tmp_path / "home")
+    skill_md = home / fx.CLAUDE_ROOT / "build-phase" / "SKILL.md"
+    text = skill_md.read_text(encoding="utf-8")
+    profile_line = "     Profile: claude\n"
+    assert text.count(profile_line) == 1, "fixture has no unique header Profile line"
+    block_end = text.index("-->") + len("-->")
+    modified = text.replace(
+        profile_line, "     Profile continuation intentionally omitted.\n", 1)
+    modified += "\n# consumer body\n\nProfile: gpt\n"
+    assert modified.index("Profile: gpt") > block_end, "decoy did not land after the header"
+    with open(skill_md, "w", encoding="utf-8", newline="") as fh:
+        fh.write(modified)
+
+    d = _inspect_json(home)
+    claude = d["profiles"]["claude"]
+    assert _skill(claude, "build-phase")["owned"] is True, \
+        "removing optional Profile metadata invalidated the provenance block"
+    assert claude["adapter_sample"]["skill"] == "build-phase"
+    assert claude["adapter_sample"]["profile_header"] == "unknown", \
+        "body text after the validated header terminator was read as provenance metadata"
 
 
 def test_legacy_foreign_tree_at_managed_paths(tmp_path):
@@ -430,9 +473,47 @@ def test_core_holder_distinct_from_foreign(tmp_path):
     assert s is not None
     assert s["eligibility"] == "core-holder"
     assert s["has_skill_md"] is False
+    assert s["owned"] is False
     cl = d["profiles"]["claude"]
     assert cl["owned_count"] == 0 and cl["unowned_count"] == 0
     assert "MANAGED_PATH_UNOWNED" not in _codes(d)
+
+
+def test_shipped_shared_payload_is_reported_owned_not_core_holder(tmp_path):
+    """MINOR-4: the inspector read ownership off SKILL.md, and a `_shared` directory
+    structurally has none -- so once the builder started shipping marker-bearing
+    assets there, the inspector reported skill-mesh's own payload as an unowned
+    consumer core-holder (`eligibility=core-holder, owned=false`).
+
+    Nothing else catches it: `_shared` is never classed foreign and never increments
+    unowned_count, so Step 70's "zero foreign, zero unowned generated" clause passes
+    with the misreport in place."""
+    home = _materialize("25-shared-payload", tmp_path / "home")
+    d = _inspect_json(home)
+    s = _skill(d["profiles"]["claude"], "_shared")
+    assert s is not None
+    assert s["eligibility"] == "shared-payload", s
+    assert s["has_skill_md"] is False
+    assert s["owned"] is True, "a directory of marker-bearing assets reported unowned"
+    cl = d["profiles"]["claude"]
+    assert cl["owned_count"] == 1, cl["owned_count"]
+    # The consumer's own file in the same directory must not be counted as an
+    # unowned generated file -- it is neither generated nor loadable as a skill.
+    assert cl["unowned_count"] == 0, cl["unowned_count"]
+    assert "MANAGED_PATH_UNOWNED" not in _codes(d)
+
+
+def test_a_consumer_only_shared_dir_is_still_core_holder(tmp_path):
+    """Red-on-garbage pair for the case above: the ONLY difference between the two
+    shapes is one marker-bearing file, so a per-DIRECTORY reclassification -- every
+    `_shared` becomes owned -- fails this one, and no reclassification at all fails
+    its twin."""
+    payload = _inspect_json(_materialize("25-shared-payload", tmp_path / "p"))
+    holder = _inspect_json(_materialize("10-core-holder", tmp_path / "c"))
+    a = _skill(payload["profiles"]["claude"], "_shared")
+    b = _skill(holder["profiles"]["claude"], "_shared")
+    assert (a["eligibility"], a["owned"]) == ("shared-payload", True)
+    assert (b["eligibility"], b["owned"]) == ("core-holder", False)
 
 
 def test_foreign_is_distinct_from_consumer_only_and_core_holder(tmp_path):
@@ -456,11 +537,12 @@ def test_foreign_is_distinct_from_consumer_only_and_core_holder(tmp_path):
     assert "CONSUMER_ONLY_PRESENT" not in _codes(d)
 
 
-def test_all_four_eligibility_classes_are_reachable(tmp_path):
+def test_every_eligibility_class_is_reachable(tmp_path):
     """Every class in the declared vocabulary is produced by some shape. A class no
     fixture can produce is a contract the suite does not actually test."""
     seen = set()
-    for kind in ("02-generated", "08-consumer-only", "10-core-holder", "11-foreign"):
+    for kind in ("02-generated", "08-consumer-only", "10-core-holder",
+                 "25-shared-payload", "11-foreign"):
         d = _inspect_json(_materialize(kind, tmp_path / kind))
         for prof in _all_profiles(d):
             seen.update(s["eligibility"] for s in prof["skills"])
@@ -702,7 +784,14 @@ def test_hostile_plants_are_actually_present(tmp_path):
     assert any("\n" in k for k in keys), "newline ledger key plant missing"
     assert any(len(k) >= 400 for k in keys), "over-long ledger key plant missing"
     skill_md = (home / fx.CLAUDE_ROOT / "build-phase" / "SKILL.md").read_text(encoding="utf-8")
-    assert skill_md.startswith("Profile: " + fx.SECRET), "decoy Profile plant missing"
+    decoy = "Profile: " + fx.SECRET
+    assert decoy in skill_md, "decoy Profile plant missing"
+    # The plant only proves anything while it sits ABOVE the real header (so a scan that
+    # started at offset 0 would read it) in a file that is still OWNED (so the header tag
+    # is consulted at all). Both, or the decoy tests nothing.
+    assert skill_md.index(decoy) < skill_md.index("<!-- GENERATED FILE"), \
+        "the decoy no longer precedes the real provenance header"
+    assert skill_md.startswith("---\n"), "the decoy displaced the frontmatter"
     dirs = {p.name for p in (home / fx.CLAUDE_ROOT).iterdir() if p.is_dir()}
     assert "comma,injected-name" in dirs, "comma-bearing directory plant missing"
     assert any(len(n) == fx.OVERLONG_NAME_LEN for n in dirs), "over-long directory plant missing"

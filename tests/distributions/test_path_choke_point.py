@@ -186,9 +186,6 @@ SITE_EXEMPT = {
     ("tools/skill-mesh-transaction.ps1",
      "[System.IO.File]::WriteAllText($Path, '', (New-Object System.Text.UTF8Encoding($false)))"):
         "Creates the empty journal file at the caller-supplied journal path (see above).",
-    ("tools/skill-mesh-transaction.ps1",
-     "[System.IO.File]::AppendAllText($path, ($line + \"`n\"),"):
-        "Appends one journal record to the caller-supplied journal path (see above).",
     ("tools/migrate-legacy-install.ps1",
      "New-Item -ItemType Directory -Path $dir -Force | Out-Null"):
         "New-DirectoryFor creates the PARENT chain of an already-resolved path: every "

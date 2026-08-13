@@ -1,7 +1,7 @@
 <#
 .SYNOPSIS
     install-skill-mesh.ps1 -- install a generated host profile into a target home
-    WITHOUT making canonical files host-owned, with an ownership-safe uninstall.
+    WITHOUT making canonical files host-owned, with a ledger-scoped uninstall.
 
 .DESCRIPTION
     Copies one provider's generated discovery tree (produced by
@@ -23,18 +23,25 @@
     GPT profile to .github/skills. The project-relative .copilot/skills target used
     before the Step 43 proof is RETIRED -- Copilot does not discover it.)
 
-    OWNERSHIP AUTHORITY = FILE-CONTENT PROVENANCE, NOT THE LEDGER.
+    HISTORICAL OWNERSHIP-CANDIDATE GATES = PATH SCOPE PLUS FILE-CONTENT
+    PROVENANCE, NOT THE LEDGER ALONE.
     Every generated file carries the provenance marker from tools/skill-mesh-provenance.ps1
     (Get-SkillMeshMarker). Every destructive op is gated on the TARGET FILE'S content:
       - Install overwrite: a target may be written only if it does NOT exist OR it
         already bears the marker (a skill-mesh file). A target that exists WITHOUT the
         marker is FOREIGN -- refused by default; -Force is the explicit opt-in.
       - Uninstall delete / stale-removal: a file is deleted only if it bears the marker
-        AND the ledger lists it. The marker is the SAFETY gate ("ours to touch?"); the
-        ledger is only the SCOPING hint ("which marker file is this provider's").
-    Because the marker lives in the file's own bytes, a poisoned/mutable ledger can
-    never cause an operator (non-marker) file to be clobbered or deleted, and a
-    re-created operator file at a formerly-owned ("ghost") path is never clobbered.
+        AND the ledger lists it. The marker is the candidate gate ("generated-looking?"); the
+        ledger is only the SCOPING hint ("which marker file is this provider's"). This
+        covers the shared payload with no carve-out: `<subdir>/_shared/<asset>` is an
+        ordinary ledger-listed generated file. A marker-less or non-ledger-listed
+        consumer file in that same directory survives.
+    These two signals do NOT prove current-byte identity. A consumer customization
+    that retains a valid generated header at a ledger-listed path passes both gates;
+    the mandatory pre-live installed-hash repair recorded in the Step 65 decision
+    must close routine overwrite, stale removal, uninstall, and corrupt-ledger
+    fallback before any live install. Until then, the claims here are deliberately
+    limited to path scope plus marker presence, never "the current bytes are ours."
 
     The ledger (<Home>/.skill-mesh-install.json) is an index/hint only. It is written
     atomically (temp file + rename), read StrictMode-safely, and self-heals from a
@@ -47,7 +54,7 @@
 
     TRANSACTIONAL install (validate-before-mutate): scan for foreign collisions with
     NO change to the install home; a refusal is a TRUE no-op. On a partial-copy
-    failure, a reconciled recovery ledger records only skill-mesh's own marker files
+    failure, a reconciled recovery ledger records only marker-valid candidate files
     that actually exist on disk, so a retry resumes without -Force.
 
     ONLY-OWN-WHAT-YOU-CREATE (dirs): a directory is recorded in created_dirs only if
@@ -214,10 +221,11 @@ function Read-FileHead([string]$absPath, [int]$maxBytes = 8192) {
 }
 
 function Test-FileHasMarker([string]$absPath) {
-    # Ownership authority: is this file a WELL-FORMED skill-mesh-generated file? The
-    # check is ANCHORED to the generated header block (Test-SkillMeshProvenance), NOT a
-    # substring-anywhere scan -- so an operator file that merely mentions the token is
-    # NOT misclassified as owned.
+    # Candidate signal: does this file carry a well-formed generated header at an
+    # emitter-legal position? The anchored parser rejects a bare token mention and
+    # ordinary prose quotation, but cannot prove current-byte authorship: a consumer
+    # can retain or reproduce a valid header. Destructive authority needs the
+    # separate installed-byte identity repair recorded by Step 65.
     #
     # ASSUMPTION: the generated provenance header lives within the first 8 KB (it is
     # emitted at the very top, or immediately after a small YAML frontmatter, by
@@ -565,6 +573,17 @@ function Remove-OwnedFiles([string]$homeAbs, $entry) {
     # Delete a ledger-listed owned file ONLY if it (a) resolves inside the home
     # (untrusted-ledger containment) AND (b) bears the skill-mesh marker. A ledger
     # entry pointing at a foreign/operator (non-marker) file is NEVER deleted.
+    #
+    # THE SHARED PAYLOAD NEEDS NO SPECIAL CASE, and that is a property worth stating
+    # rather than leaving to luck. `<subdir>/_shared/<asset>` is an ordinary install
+    # target: it is written with a marker, it lands in `owned_files` like any other
+    # generated file, and it is removed here on the same two conditions. The
+    # consumer's marker-less or non-ledger-listed files in that same directory are
+    # removed by neither condition. This is only a scoping statement: a consumer edit
+    # that retains a valid header at a ledger-listed path still passes both, so the
+    # Step 65 decision records an installed-hash/current-byte-identity repair as a
+    # mandatory pre-live blocker. The same scoped conditions consume the ledger
+    # migrate-legacy-install.ps1 writes; see its New-LedgerJson contract note.
     if ($null -eq $entry) { return }
     foreach ($rel in @(Get-Field $entry 'owned_files' @())) {
         $abs = Get-ContainedAbs $rel $homeAbs
@@ -960,9 +979,9 @@ function Invoke-Install([string]$homeAbs) {
             Write-Host "install-skill-mesh: installed '$Provider' into $installRoot ($($ownedFinal.Count) files)."
         } catch {
             # Partial copy / TOCTOU abort: persist a RECONCILED recovery ledger listing
-            # only skill-mesh's own marker files that ACTUALLY exist on disk (prior +
-            # written), so a retry recognizes them as owned -- never a re-created
-            # operator file (which lacks the marker) as owned/foreign-clobberable.
+            # only marker-valid candidate files that ACTUALLY exist on disk (prior +
+            # written). This is recovery scope, not current-byte identity; the Step
+            # 65 installed-hash repair must precede live use.
             $candidate = New-CIStringSet
             foreach ($r in $priorOwnedRel) { [void]$candidate.Add($r) }
             foreach ($r in $writtenRel) { [void]$candidate.Add($r) }
@@ -981,8 +1000,8 @@ function Invoke-Install([string]$homeAbs) {
 
 function Get-ExistingOwned($rels, [string]$homeAbs) {
     # Reconcile an owned-set with reality: keep only entries that resolve inside home,
-    # exist on disk, AND bear the skill-mesh marker. Never persist a ghost (deleted)
-    # or a non-marker (operator) path as owned.
+    # exist on disk, AND bear the skill-mesh marker. Never persist a ghost or a
+    # marker-less path. A valid header alone does not prove current-byte authorship.
     $out = @()
     foreach ($rel in @($rels)) {
         $abs = Get-ContainedAbs $rel $homeAbs

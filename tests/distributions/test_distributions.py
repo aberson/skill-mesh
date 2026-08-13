@@ -219,7 +219,7 @@ def _provenance_verdicts(root, tmp_path):
 
     Shells out to the shipped predicate rather than re-implementing the header shape
     in Python: the whole point of the .js emitter is that ONE anchored check decides
-    ownership for every extension, so the test must ask that check.
+    generated-header-candidate status for every extension, so the test must ask it.
     """
     probe = tmp_path / "provenance_probe.ps1"
     probe.parent.mkdir(parents=True, exist_ok=True)
@@ -418,7 +418,8 @@ def test_generated_files_carry_provenance(dist_root):
                 assert f"Canonical source: <repo>/_shared/{rel.name}" in text, md
             else:
                 assert "Canonical source: skills/" in text, md
-            # the ownership-authority provenance marker is embedded in every file.
+            # The generated-candidate provenance marker is embedded in every file; it
+            # is not standalone proof of current-byte authorship.
             assert marker in text, f"missing provenance marker in {md}"
 
     for profile in ("claude", "gpt"):
@@ -468,9 +469,9 @@ def test_shared_payload_carries_valid_provenance_for_every_extension(dist_root, 
     """`Test-SkillMeshProvenance` is TRUE for every emitted `_shared/*` file.
 
     Regardless of extension, and the `.js` asset is the one that matters: a marker of
-    our own JS-flavoured wording would look fine by eye while making the shipped file
-    foreign to install, absent from `owned_files`, and undeletable by uninstall -- an
-    orphan a no-orphan gate still reports as clean.
+    our own JS-flavoured wording would look fine by eye while failing the shared
+    generated-header-candidate check. That removes one required lifecycle guard and can
+    strand emitted bytes even though a substring-only no-orphan gate reports clean.
     """
     marker = _marker_literal()
     for profile in ("claude", "gpt"):
@@ -494,6 +495,97 @@ def test_shared_payload_carries_valid_provenance_for_every_extension(dist_root, 
     header, _, body = js.partition("\n*/\n")
     assert "*/" not in header, "the wrapped header would close its own comment early"
     assert body.lstrip().startswith("export const meta"), body[:80]
+
+
+def test_every_generated_file_reads_owned_through_the_anchored_parser(dist_root, tmp_path):
+    """`Test-SkillMeshProvenance` is TRUE for EVERY emitted file of a real build.
+
+    The anti-stranding control for the header parser's anchors. That parser rejects a
+    header that is not contiguous, not at a line start, or not at a position one of the
+    build's emitters could have put it -- and the failure mode of getting any of those
+    wrong is the opposite of the one they exist to prevent: a genuinely emitted file
+    that fails the generated-candidate check cannot satisfy that required lifecycle
+    guard and can be stranded. Nothing else in the suite would
+    say so, because every other provenance assertion here is a substring check that an
+    unanchored and an anchored parser both satisfy.
+
+    Whole corpus, both profiles, every extension -- not a sample: a NEW emitter (or an
+    existing one moving its header) is exactly the change that would strand files, and
+    it would land as a handful of paths among two hundred."""
+    for profile in ("claude", "gpt"):
+        root = dist_root / profile
+        verdicts = _provenance_verdicts(root, tmp_path / profile)
+        expected = {p.relative_to(root).as_posix() for p in root.rglob("*") if p.is_file()}
+        assert set(verdicts) == expected, "the probe did not visit every emitted file"
+        unowned = sorted(rel for rel, ok in verdicts.items() if not ok)
+        assert not unowned, (
+            f"{profile}: {len(unowned)} emitted file(s) do NOT read as skill-mesh-owned "
+            f"through the shipped parser -- install would refuse them and uninstall "
+            f"could never remove them: {unowned}")
+
+
+def test_the_anchored_parser_rejects_a_document_that_quotes_the_header(dist_root, tmp_path):
+    """A file whose SUBJECT is the marker format supplies no generated-candidate evidence.
+
+    The header block is lifted VERBATIM out of a real emitted file, so the quoting cases
+    differ from the matching case in exactly one respect: where the block sits. Content
+    alone cannot separate them -- which is why the parser also anchors position, and why
+    this test would be satisfied by nothing weaker.
+
+    The stakes are not cosmetic. `_shared/` is classified per FILE by
+    migrate-legacy-install.ps1. Only a candidate resident under the retired project-root
+    tree can proceed toward a guarded `retire`, and only when independent plan/path/hash/
+    state checks pass; active-root matches are advisory and retained."""
+    src = next(p for p in (dist_root / "claude" / SHARED_DEST).iterdir()
+               if p.is_file() and p.suffix == ".md")
+    text = src.read_text(encoding="utf-8")
+    start = text.index(_PROV_OPEN)
+    header = text[start:text.index("-->", start) + 3]
+    assert header.count("\n") >= 2, "the lifted header is not the multi-line block"
+
+    probe = tmp_path / "cases"
+    probe.mkdir(parents=True, exist_ok=True)
+    (probe / "generated.md").write_text(header + "\n\n# body\n", encoding="utf-8")
+    (probe / "quoted.md").write_text(
+        "# marker format (operator notes)\n\nskill-mesh emits this header:\n\n"
+        "```\n" + header + "\n```\n\nMine carry no such block.\n", encoding="utf-8")
+    (probe / "scattered.md").write_text(
+        "# notes\n\nThe block opens with `" + _PROV_OPEN + "`.\n\n"
+        "Somewhere below it comes a line reading `Marker: " + _marker_literal() + "`,\n"
+        "and the whole thing is closed by `-->`.\n", encoding="utf-8")
+    # The SAME three tokens in the same order, starting at offset 0 so the position
+    # anchor is satisfied and only ADJACENCY can reject it. Without this case the
+    # scattered-token defect the parser was rewritten for is untested: `scattered.md`
+    # above is refused by position before contiguity is ever consulted.
+    (probe / "scattered_at_top.md").write_text(
+        _PROV_OPEN + "\n"
+        "This is the operator's own note about that opener.\n"
+        "\n"
+        "Marker: " + _marker_literal() + " is the line it carries.\n"
+        "\n"
+        "The block is terminated by -->, and that is the whole convention.\n",
+        encoding="utf-8")
+    # An end-anchored lazy frontmatter regex can backtrack past the FIRST close to a
+    # later Markdown horizontal rule, then bless a quoted generated header as an
+    # emitter-position candidate. The builder always inserts immediately after the
+    # first close, so this placement is consumer prose and must not match.
+    (probe / "frontmatter_then_rule_then_quoted.md").write_text(
+        "---\nname: consumer\n---\n# Consumer body\n\n---\n" + header + "\n",
+        encoding="utf-8")
+
+    verdicts = _provenance_verdicts(probe, tmp_path / "run")
+    assert verdicts["generated.md"] is True, \
+        "a header at an emitter-legal position stopped reading as owned"
+    assert verdicts["quoted.md"] is False, \
+        "a doc quoting the header verbatim in its body reads as skill-mesh-owned"
+    assert verdicts["scattered.md"] is False, \
+        "the three header tokens scattered through prose read as one header"
+    assert verdicts["scattered_at_top.md"] is False, \
+        "the three header tokens scattered across a document, but starting at offset 0, " \
+        "read as one contiguous header"
+    assert verdicts["frontmatter_then_rule_then_quoted.md"] is False, \
+        "a later Markdown rule was mistaken for the frontmatter close and a quoted " \
+        "header in consumer prose read as owned"
 
 
 def test_shared_payload_ships_no_pytest_module(dist_root):
@@ -875,8 +967,8 @@ def test_emitted_javascript_still_parses(dist_root, tmp_path):
 
     `Add-JsProvenance` displaces whatever was on line 1. Nothing else in `tests/` runs a
     JavaScript parser, so an unparseable-but-marker-valid `.js` would ship green: the
-    marker assertions would pass, the installer would own it, uninstall would remove it,
-    and the consumer would get a file their runtime refuses to load.
+    parser would see a generated-looking candidate (not standalone mutation authority),
+    while the consumer would get a file their runtime refuses to load.
     """
     real = dist_root / "claude" / SHARED_DEST / "score_skill.workflow.js"
     r = subprocess.run([NODE, "--check", str(real)], capture_output=True, text=True)
@@ -1949,8 +2041,8 @@ def test_preexisting_empty_dirs_survive_full_uninstall(dist_root, tmp_path):
 
 
 # --------------------------------------------------------------------------- #
-# Marker-based ownership (file-content provenance is the authority, NOT the
-# mutable ledger). Locks in the audit-driven class fix.
+# Generated-header candidate checks. File-content provenance is one guard; it does not
+# replace independent path, ledger, and current-byte authority. Locks in the parser fix.
 # --------------------------------------------------------------------------- #
 
 def _disco_rel(provider, *parts):
@@ -2096,7 +2188,8 @@ def test_corrupt_ledger_uninstall_recovers_not_silently_orphan(dist_root, tmp_pa
     diag = ru.stdout + ru.stderr
     assert ("lost track" in diag) or ("fallback" in diag) or ("CORRUPT" in diag), \
         "no loud lost-tracking diagnostic on corrupt-ledger uninstall"
-    # The marker-based fallback must have removed the orphaned skill-mesh files.
+    # The marker-based fallback must have removed files created by this test's
+    # immediately preceding install; the marker alone is not an authorship claim.
     assert not list(disco.rglob("*.md")), "corrupt-ledger uninstall silently orphaned files"
 
 
@@ -2335,7 +2428,8 @@ def test_corrupt_ledger_fallback_preserves_operator_dirs(dist_root, tmp_path):
     assert disco.is_dir(), "shared discovery root was deleted by the fallback"
     assert op_dir.is_dir(), "operator dir was deleted by the fallback"
     assert unrelated.read_text(encoding="utf-8") == "my notes, no marker"
-    # skill-mesh's marker files were removed.
+    # Marker-bearing files created by this test's preceding install were removed; the
+    # comment does not infer authorship from marker shape alone.
     assert not (disco / "build-phase" / "SKILL.md").exists()
 
 
