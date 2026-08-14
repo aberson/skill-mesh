@@ -939,6 +939,7 @@ def test_host_commands_pin_model_and_apply_no_tool_read_only_policy(tmp_path: Pa
     assert codex_argv[codex_argv.index("--ask-for-approval") + 1] == "never"
     assert "--ignore-user-config" in codex_argv
     assert "--ignore-rules" in codex_argv
+    assert codex_argv[codex_argv.index("exec") + 1] == "--skip-git-repo-check"
     assert "--ephemeral" in codex_argv
     assert 'cli_auth_credentials_store="file"' in codex_argv
     assert codex_response == evidence_dir / "review-response.json"
@@ -959,6 +960,15 @@ def test_host_commands_pin_model_and_apply_no_tool_read_only_policy(tmp_path: Pa
     assert "--safe-mode" in claude_argv
     assert "--no-session-persistence" in claude_argv
     assert claude_response == evidence_dir / "reviewer-stdout.txt"
+    retained_schema = json.loads(RESPONSE_SCHEMA.read_text(encoding="utf-8"))
+    assert "$schema" in retained_schema
+    claude_schema = json.loads(
+        claude_argv[claude_argv.index("--json-schema") + 1]
+    )
+    assert "$schema" not in claude_schema
+    assert claude_schema == {
+        key: value for key, value in retained_schema.items() if key != "$schema"
+    }
 
 
 def test_claude_identity_parser_handles_one_or_multiple_model_usage_entries() -> None:

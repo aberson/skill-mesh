@@ -410,6 +410,7 @@ def _host_command(
             "--sandbox", "read-only",
             "--ask-for-approval", "never",
             "exec",
+            "--skip-git-repo-check",
             "--ephemeral",
             "--ignore-user-config",
             "--ignore-rules",
@@ -420,7 +421,19 @@ def _host_command(
             prompt,
         ]
         return argv, response_path
-    compact_schema = response_schema.read_text(encoding="utf-8").replace("\r", "").replace("\n", "")
+    try:
+        claude_schema = json.loads(read_bounded(response_schema).decode("utf-8"))
+    except (UnicodeError, json.JSONDecodeError) as error:
+        raise HostRuntimeError("review response schema is not valid UTF-8 JSON") from error
+    if not isinstance(claude_schema, dict):
+        raise HostRuntimeError("review response schema is not one JSON object")
+    claude_schema.pop("$schema", None)
+    compact_schema = json.dumps(
+        claude_schema,
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=True,
+    )
     response_path = evidence_dir / "reviewer-stdout.txt"
     argv = [
         "-p", prompt,
