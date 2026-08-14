@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "status": "candidate-unqualified",
+  "step77_pairs": [
+    {
+      "claude_model": "sonnet",
+      "gpt_model": "gpt-5.6-terra",
+      "run_in_step77": true
+    },
+    {
+      "claude_model": "fable",
+      "gpt_model": "gpt-5.6-sol",
+      "run_in_step77": false,
+      "reason": "Step 77 uses the smaller representative subset requested by the operator."
+    }
+  ],
+  "reviewer_reasoning_effort": "medium",
+  "fallback_allowed": false,
+  "production_map_change_allowed": false
+}

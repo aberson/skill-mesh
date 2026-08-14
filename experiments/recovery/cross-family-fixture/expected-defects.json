@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "fixture_id": "skill-mesh-cross-family-order-total-v1",
+  "defects": [
+    {
+      "id": "CF-VALIDATION-001",
+      "requirement_id": "REQ-QUANTITY",
+      "title": "Non-positive quantities are accepted",
+      "requirement": "Every quantity must be a positive integer.",
+      "evidence": "The candidate removes the quantity validation before calculating subtotal.",
+      "match_terms": ["quantity", "positive", "validation"]
+    },
+    {
+      "id": "CF-TAX-001",
+      "requirement_id": "REQ-TAX",
+      "title": "Tax is calculated before the coupon",
+      "requirement": "Apply the coupon to merchandise before calculating tax.",
+      "evidence": "The candidate changes the tax base from discounted to subtotal.",
+      "match_terms": ["tax", "coupon", "subtotal", "discount"]
+    },
+    {
+      "id": "CF-BOUNDARY-001",
+      "requirement_id": "REQ-SHIPPING",
+      "title": "The free-shipping equality boundary is excluded",
+      "requirement": "Free shipping starts when the discounted total is greater than or equal to the threshold.",
+      "evidence": "The candidate changes the comparison from >= to >.",
+      "match_terms": ["shipping", "threshold", "boundary", "equal"]
+    }
+  ]
+}

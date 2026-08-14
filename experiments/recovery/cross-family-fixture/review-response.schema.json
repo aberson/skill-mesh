@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["run_id", "source_sha", "payload_sha256", "verdict", "summary", "findings"],
+  "properties": {
+    "run_id": {"type": "string", "minLength": 1, "maxLength": 100},
+    "source_sha": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "payload_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "verdict": {
+      "type": "string",
+      "enum": ["PASS", "NEEDS_WORK", "UNCERTAIN"]
+    },
+    "summary": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2000
+    },
+    "findings": {
+      "type": "array",
+      "maxItems": 20,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["requirement_id", "severity", "title", "evidence", "explanation"],
+        "properties": {
+          "requirement_id": {
+            "type": "string",
+            "enum": ["REQ-QUANTITY", "REQ-TAX", "REQ-SHIPPING", "REQ-ROUND", "OTHER"]
+          },
+          "severity": {
+            "type": "string",
+            "enum": ["BLOCK", "NIT"]
+          },
+          "title": {"type": "string", "minLength": 1, "maxLength": 300},
+          "evidence": {"type": "string", "minLength": 1, "maxLength": 2000},
+          "explanation": {"type": "string", "minLength": 1, "maxLength": 2000}
+        }
+      }
+    }
+  }
+}
