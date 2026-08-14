@@ -50,6 +50,8 @@ $script:LifecycleExitCode = 2
 $script:LiveSnapshotDeadlineSeconds = 600
 $script:LiveSnapshotParentTimeoutMilliseconds = 630000
 $script:LiveSnapshotMaxRecords = 100000
+$script:EvidenceDirApproved = $null
+$script:DisposableHomeApproved = $null
 
 function Get-CanonicalRealPath {
     param(
@@ -97,31 +99,40 @@ function Get-CanonicalRealPath {
 }
 
 function Write-Utf8NoBom([string]$Path, [string]$Text) {
-    $parent = Split-Path -Parent $Path
-    if ($parent -and -not (Test-Path -LiteralPath $parent)) {
-        $null = New-Item -ItemType Directory -Path $parent
+    $safeWritePath = Resolve-Contained -Path $Path -Scope Output
+    $safeWriteParent = Resolve-Contained -Path (Split-Path -Parent $safeWritePath) -Scope Output
+    if ($safeWriteParent -and -not (Test-Path -LiteralPath $safeWriteParent)) {
+        $null = New-Item -ItemType Directory -Path $safeWriteParent
     }
     $encoding = New-Object System.Text.UTF8Encoding($false)
-    [System.IO.File]::WriteAllText($Path, $Text, $encoding)
+    $safeWritePath = Resolve-Contained -Path $Path -Scope Output
+    [System.IO.File]::WriteAllText($safeWritePath, $Text, $encoding)
 }
 
 function Write-NewUtf8NoBom([string]$Path, [string]$Text) {
-    $parent = Split-Path -Parent $Path
-    if ($parent -and -not (Test-Path -LiteralPath $parent)) {
-        $null = New-Item -ItemType Directory -Path $parent
+    $safeNewPath = Resolve-Contained -Path $Path -Scope Output
+    $safeNewParent = Resolve-Contained -Path (Split-Path -Parent $safeNewPath) -Scope Output
+    if ($safeNewParent -and -not (Test-Path -LiteralPath $safeNewParent)) {
+        $null = New-Item -ItemType Directory -Path $safeNewParent
     }
-    if (Test-Path -LiteralPath $Path) {
-        throw "Evidence file already exists: $Path"
+    $safeNewPath = Resolve-Contained -Path $Path -Scope Output
+    if (Test-Path -LiteralPath $safeNewPath) {
+        throw "Evidence file already exists: $safeNewPath"
     }
-    $temporary = "$Path.tmp-$([Guid]::NewGuid().ToString('N'))"
+    $temporaryPath = "$safeNewPath.tmp-$([Guid]::NewGuid().ToString('N'))"
+    $safeTemporary = Resolve-Contained -Path $temporaryPath -Scope Output
     $encoding = New-Object System.Text.UTF8Encoding($false)
     try {
-        [System.IO.File]::WriteAllText($temporary, $Text, $encoding)
-        [System.IO.File]::Move($temporary, $Path)
+        $safeTemporary = Resolve-Contained -Path $temporaryPath -Scope Output
+        [System.IO.File]::WriteAllText($safeTemporary, $Text, $encoding)
+        $safeTemporary = Resolve-Contained -Path $temporaryPath -Scope Output
+        $safeNewPath = Resolve-Contained -Path $Path -Scope Output
+        [System.IO.File]::Move($safeTemporary, $safeNewPath)
     }
     finally {
-        if (Test-Path -LiteralPath $temporary) {
-            Remove-Item -Force -LiteralPath $temporary
+        if (Test-Path -LiteralPath $safeTemporary) {
+            $safeTemporary = Resolve-Contained -Path $temporaryPath -Scope Output
+            Remove-Item -Force -LiteralPath $safeTemporary
         }
     }
 }
@@ -143,6 +154,55 @@ function Test-SameOrChild([string]$Candidate, [string]$Root) {
         $rootFull + [System.IO.Path]::DirectorySeparatorChar,
         [System.StringComparison]::OrdinalIgnoreCase
     )
+}
+
+function Resolve-Contained {
+    param(
+        [Parameter(Mandatory = $true)][string]$Path,
+        [Parameter(Mandatory = $true)]
+        [ValidateSet('Output', 'Evidence', 'Disposable', 'EvidenceParent', 'DisposableParent', 'CredentialDestination')]
+        [string]$Scope
+    )
+
+    $resolved = Get-AbsolutePath $Path
+    $roots = switch ($Scope) {
+        'Output' { @($script:EvidenceDirApproved, $script:DisposableHomeApproved) }
+        'Evidence' { @($script:EvidenceDirApproved) }
+        'Disposable' { @($script:DisposableHomeApproved) }
+        'EvidenceParent' { @((Split-Path -Parent $script:EvidenceDirApproved)) }
+        'DisposableParent' { @((Split-Path -Parent $script:DisposableHomeApproved)) }
+        'CredentialDestination' { @((Get-CredentialPaths).destination) }
+    }
+    $roots = @($roots | Where-Object { -not [string]::IsNullOrWhiteSpace([string]$_) })
+    if ($roots.Count -eq 0) {
+        throw "Mutation scope is not approved: $Scope"
+    }
+    foreach ($root in $roots) {
+        if ([string]::IsNullOrWhiteSpace($root)) {
+            continue
+        }
+        if (-not [System.IO.Path]::IsPathRooted($root)) {
+            throw "Approved mutation root is not absolute: $root"
+        }
+        $frozenRoot = ([System.IO.Path]::GetFullPath($root)).TrimEnd('\', '/')
+        if ($resolved.Equals($frozenRoot, [System.StringComparison]::OrdinalIgnoreCase) -or
+            $resolved.StartsWith(
+                $frozenRoot + [System.IO.Path]::DirectorySeparatorChar,
+                [System.StringComparison]::OrdinalIgnoreCase
+            )) {
+            return $resolved
+        }
+    }
+    throw "Mutation path resolves outside its approved $Scope scope: $Path"
+}
+
+function Resolve-ReadOnlyCredentialPath([string]$Path) {
+    $resolved = Get-AbsolutePath $Path
+    $frozenSource = ([System.IO.Path]::GetFullPath((Get-CredentialPaths).source)).TrimEnd('\', '/')
+    if (-not $resolved.Equals($frozenSource, [System.StringComparison]::OrdinalIgnoreCase)) {
+        throw "Credential read path does not match its frozen source"
+    }
+    return $resolved
 }
 
 function Assert-NoReparsePoint([string]$Path, [string]$Label) {
@@ -179,7 +239,7 @@ function Get-WorktreeRoots {
     }
     finally {
         if ($null -eq $priorOptionalLocks) {
-            Remove-Item Env:GIT_OPTIONAL_LOCKS -ErrorAction SilentlyContinue
+            [System.Environment]::SetEnvironmentVariable('GIT_OPTIONAL_LOCKS', $null, 'Process')
         }
         else {
             $env:GIT_OPTIONAL_LOCKS = $priorOptionalLocks
@@ -400,12 +460,15 @@ function Get-TreeHash([string]$Root) {
 }
 
 function Copy-DirectoryContents([string]$Source, [string]$Destination) {
-    if (Test-Path -LiteralPath $Destination) {
-        throw "Copy destination already exists: $Destination"
+    $safeCopyDestination = Resolve-Contained -Path $Destination -Scope Output
+    if (Test-Path -LiteralPath $safeCopyDestination) {
+        throw "Copy destination already exists: $safeCopyDestination"
     }
-    $null = New-Item -ItemType Directory -Path $Destination
+    $safeCopyDestination = Resolve-Contained -Path $Destination -Scope Output
+    $null = New-Item -ItemType Directory -Path $safeCopyDestination
     Get-ChildItem -Force -LiteralPath $Source | ForEach-Object {
-        Copy-Item -Force -Recurse -LiteralPath $_.FullName -Destination $Destination
+        $safeCopyDestination = Resolve-Contained -Path $Destination -Scope Output
+        Copy-Item -Force -Recurse -LiteralPath $_.FullName -Destination $safeCopyDestination
     }
 }
 
@@ -449,9 +512,12 @@ function New-MaterializedMarketplace([string]$Destination, [string]$ReleaseName)
     }
     Copy-DirectoryContents $template $Destination
 
-    $basePlugin = Join-Path $Destination 'plugins\mesh-lifecycle-probe'
+    $safeMarketplaceDestination = Resolve-Contained -Path $Destination -Scope Output
+    $basePlugin = Join-Path $safeMarketplaceDestination 'plugins\mesh-lifecycle-probe'
+    $safeBasePlugin = Resolve-Contained -Path $basePlugin -Scope Output
     $pluginParent = Split-Path -Parent $basePlugin
-    Rename-Item -LiteralPath $basePlugin -NewName $script:PluginName
+    $safeBasePlugin = Resolve-Contained -Path $basePlugin -Scope Output
+    Rename-Item -LiteralPath $safeBasePlugin -NewName $script:PluginName
     $pluginRoot = Join-Path $pluginParent $script:PluginName
 
     if ($ReleaseName -eq 'v1') {
@@ -615,7 +681,9 @@ function Invoke-LoggedCommand(
     $script:CommandSequence++
     $sequence = $script:CommandSequence.ToString('D2')
     $commandDir = Join-Path $EvidenceDir "commands\$sequence-$Id"
-    $null = New-Item -ItemType Directory -Path $commandDir
+    $safeCommandDir = Resolve-Contained -Path $commandDir -Scope Evidence
+    $null = New-Item -ItemType Directory -Path $safeCommandDir
+    $commandDir = $safeCommandDir
     $displayArgs = @($Arguments | ForEach-Object { ConvertTo-CommandLineArgument $_ })
     $psi = New-Object System.Diagnostics.ProcessStartInfo
     $psi.FileName = $FilePath
@@ -1108,7 +1176,9 @@ function Get-DirectoryInventory([string]$Root) {
 function Write-ConsumerInventory([string]$Label) {
     $inventoryDir = Join-Path $EvidenceDir 'inventories'
     if (-not (Test-Path -LiteralPath $inventoryDir)) {
-        $null = New-Item -ItemType Directory -Path $inventoryDir
+        $safeInventoryDir = Resolve-Contained -Path $inventoryDir -Scope Evidence
+        $null = New-Item -ItemType Directory -Path $safeInventoryDir
+        $inventoryDir = $safeInventoryDir
     }
     $path = Join-Path $inventoryDir "$Label.tsv"
     $text = Get-DirectoryInventory $DisposableHome
@@ -1293,7 +1363,11 @@ function Copy-HostCredential {
     }
     Assert-CredentialSource
     $paths = Get-CredentialPaths
-    Copy-Item -LiteralPath $paths.source -Destination $paths.destination
+    $credentialSource = Resolve-ReadOnlyCredentialPath -Path $paths.source
+    $safeCredentialDestination = Resolve-Contained -Path $paths.destination -Scope CredentialDestination
+    $credentialSource = Resolve-ReadOnlyCredentialPath -Path $paths.source
+    $safeCredentialDestination = Resolve-Contained -Path $paths.destination -Scope CredentialDestination
+    Copy-Item -LiteralPath $credentialSource -Destination $safeCredentialDestination
     Add-Check 'credential-isolation' 'PASS' 'credential file presence only' 'One host credential file copied to the disposable home; bytes and the ephemeral live-snapshot HMAC key are not logged'
 }
 
@@ -1337,7 +1411,8 @@ function Replace-ActiveMarketplace([string]$Source) {
         if (-not (Test-SameOrChild $script:ActiveSource $EvidenceDir)) {
             throw "Active source escaped EvidenceDir"
         }
-        Remove-Item -Force -Recurse -LiteralPath $script:ActiveSource
+        $safeActiveSource = Resolve-Contained -Path $script:ActiveSource -Scope Evidence
+        Remove-Item -Force -Recurse -LiteralPath $safeActiveSource
     }
     Copy-DirectoryContents $Source $script:ActiveSource
 }
@@ -1355,6 +1430,8 @@ function Test-OutputHasMarker([string]$Text, [string]$Skill, $Release) {
 function Export-CandidateFixture {
     $archivePath = Join-Path $EvidenceDir 'candidate.zip'
     $treePath = Join-Path $EvidenceDir 'candidate-tree'
+    $safeArchivePath = Resolve-Contained -Path $archivePath -Scope Evidence
+    $safeTreePath = Resolve-Contained -Path $treePath -Scope Evidence
     $gitPath = (Get-Command git.exe -ErrorAction Stop).Source
     $candidatePaths = @(
         'experiments/recovery/lifecycle-probe',
@@ -1363,19 +1440,22 @@ function Export-CandidateFixture {
         'documentation/experiments/lifecycle-report-template.md',
         'documentation/experiments/lifecycle-runbook.md'
     )
-    $arguments = @('archive', '--format=zip', "--output=$archivePath", $CandidateSha, '--') + $candidatePaths
+    $safeArchivePath = Resolve-Contained -Path $archivePath -Scope Evidence
+    $arguments = @('archive', '--format=zip', "--output=$safeArchivePath", $CandidateSha, '--') + $candidatePaths
     $archiveResult = Invoke-LoggedCommand 'candidate-archive' $gitPath $arguments @{ GIT_OPTIONAL_LOCKS = '0' } $script:RepoRoot 120
-    if ($archiveResult.exit_code -ne 0 -or -not (Test-Path -LiteralPath $archivePath -PathType Leaf)) {
+    if ($archiveResult.exit_code -ne 0 -or -not (Test-Path -LiteralPath $safeArchivePath -PathType Leaf)) {
         throw "Candidate archive failed"
     }
-    Expand-Archive -LiteralPath $archivePath -DestinationPath $treePath
-    $script:CandidateTemplateRoot = Join-Path $treePath 'experiments\recovery\lifecycle-probe\marketplace-template'
-    $script:ReportTemplatePath = Join-Path $treePath 'documentation\experiments\lifecycle-report-template.md'
+    $safeArchivePath = Resolve-Contained -Path $archivePath -Scope Evidence
+    $safeTreePath = Resolve-Contained -Path $treePath -Scope Evidence
+    Expand-Archive -LiteralPath $safeArchivePath -DestinationPath $safeTreePath
+    $script:CandidateTemplateRoot = Join-Path $safeTreePath 'experiments\recovery\lifecycle-probe\marketplace-template'
+    $script:ReportTemplatePath = Join-Path $safeTreePath 'documentation\experiments\lifecycle-report-template.md'
     if (-not (Test-Path -LiteralPath $script:CandidateTemplateRoot -PathType Container) -or
         -not (Test-Path -LiteralPath $script:ReportTemplatePath -PathType Leaf)) {
         throw "Candidate archive is missing a Step 74 input"
     }
-    $archiveHash = Get-Sha256File $archivePath
+    $archiveHash = Get-Sha256File $safeArchivePath
     Add-Check 'candidate-source' 'PASS' 'candidate.zip' "commit=$CandidateSha; archive_sha256=$archiveHash"
 }
 
@@ -1890,15 +1970,24 @@ $allowedLiveAppends = @($preflightVolatility.append_paths)
 $opaqueLiveVolatility = @($preflightVolatility.opaque_paths)
 
 try {
-$null = New-Item -ItemType Directory -Force -Path (Split-Path -Parent $EvidenceDir)
-$null = New-Item -ItemType Directory -Force -Path (Split-Path -Parent $DisposableHome)
-$null = New-Item -ItemType Directory -Path $EvidenceDir
-$null = New-Item -ItemType Directory -Path $DisposableHome
-$null = New-Item -ItemType Directory -Path $consumerRoot
-$null = New-Item -ItemType Directory -Path $tempRoot
-$null = New-Item -ItemType Directory -Path $profileRoot
-$null = New-Item -ItemType Directory -Force -Path $appDataRoot
-$null = New-Item -ItemType Directory -Force -Path $localAppDataRoot
+$safeEvidenceParent = Resolve-Contained -Path (Split-Path -Parent $EvidenceDir) -Scope EvidenceParent
+$null = New-Item -ItemType Directory -Force -Path $safeEvidenceParent
+$safeDisposableParent = Resolve-Contained -Path (Split-Path -Parent $DisposableHome) -Scope DisposableParent
+$null = New-Item -ItemType Directory -Force -Path $safeDisposableParent
+$safeEvidenceDir = Resolve-Contained -Path $EvidenceDir -Scope Evidence
+$null = New-Item -ItemType Directory -Path $safeEvidenceDir
+$safeDisposableHome = Resolve-Contained -Path $DisposableHome -Scope Disposable
+$null = New-Item -ItemType Directory -Path $safeDisposableHome
+$safeConsumerRoot = Resolve-Contained -Path $consumerRoot -Scope Disposable
+$null = New-Item -ItemType Directory -Path $safeConsumerRoot
+$safeTempRoot = Resolve-Contained -Path $tempRoot -Scope Disposable
+$null = New-Item -ItemType Directory -Path $safeTempRoot
+$safeProfileRoot = Resolve-Contained -Path $profileRoot -Scope Disposable
+$null = New-Item -ItemType Directory -Path $safeProfileRoot
+$safeAppDataRoot = Resolve-Contained -Path $appDataRoot -Scope Disposable
+$null = New-Item -ItemType Directory -Force -Path $safeAppDataRoot
+$safeLocalAppDataRoot = Resolve-Contained -Path $localAppDataRoot -Scope Disposable
+$null = New-Item -ItemType Directory -Force -Path $safeLocalAppDataRoot
 $ownershipMarker = [ordered]@{
     goal_a_id = $GoalAId
     run_id = $RunId
@@ -2117,9 +2206,9 @@ finally {
         try {
             $beforeCleanup = Write-ConsumerInventory 'before-cleanup'
             Add-Check 'consumer-bytes-before-cleanup' 'PASS' $beforeCleanup.path "inventory_sha256=$($beforeCleanup.sha256)"
-            $cleanupTarget = Assert-CleanupTarget
-            Remove-Item -Force -Recurse -LiteralPath $cleanupTarget
-            if (Test-Path -LiteralPath $cleanupTarget) {
+            $safeCleanupTarget = Resolve-Contained -Path (Assert-CleanupTarget) -Scope Disposable
+            Remove-Item -Force -Recurse -LiteralPath $safeCleanupTarget
+            if (Test-Path -LiteralPath $safeCleanupTarget) {
                 throw "DisposableHome still exists after cleanup"
             }
             $null = $script:CleanupNotes.Add("DisposableHome removed")
@@ -2177,8 +2266,8 @@ catch {
     $outerFailure = $_.Exception.Message
     try {
         if (Test-Path -LiteralPath $DisposableHome -PathType Container) {
-            $cleanupTarget = Assert-CleanupTarget
-            Remove-Item -Force -Recurse -LiteralPath $cleanupTarget
+            $safeOuterCleanupTarget = Resolve-Contained -Path (Assert-CleanupTarget) -Scope Disposable
+            Remove-Item -Force -Recurse -LiteralPath $safeOuterCleanupTarget
         }
     }
     catch {

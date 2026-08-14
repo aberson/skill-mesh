@@ -29,6 +29,12 @@ logged. The live-root check compares them with an ephemeral keyed HMAC; neither 
 reusable credential digest is retained. The runner deletes the disposable profile in its guarded
 cleanup.
 
+Before each runner-owned write or delete, its destination is resolved against the frozen approved
+root. Evidence writes must remain inside the approved attempt directory. Disposable-profile writes
+and cleanup must remain inside the exact approved disposable home. The live homes and repository
+worktrees are read-only protected roots; the runner rejects any mutation target that resolves into
+them or escapes through a junction.
+
 ## Copy-paste procedure
 
 Run this entire block from the Skill Mesh repository root in Windows PowerShell 5.1:

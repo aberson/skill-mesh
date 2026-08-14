@@ -438,6 +438,65 @@ def test_runner_parses_without_power_shell_errors() -> None:
     assert result.returncode == 0, result.stderr
 
 
+def test_resolve_contained_rechecks_each_mutation_target(tmp_path: Path) -> None:
+    allowed = tmp_path / "allowed"
+    outside = tmp_path / "outside"
+    sibling = tmp_path / "sibling"
+    disposable = tmp_path / "disposable"
+    live_codex = tmp_path / "live-codex"
+    allowed.mkdir()
+    outside.mkdir()
+    sibling.mkdir()
+    disposable.mkdir()
+    live_codex.mkdir()
+    command = f"""
+. {_ps_quote(RUNNER)}
+$allowed = {_ps_quote(allowed)}
+$outside = {_ps_quote(outside)}
+$sibling = {_ps_quote(sibling)}
+$script:EvidenceDirApproved = $allowed
+$script:DisposableHomeApproved = {_ps_quote(disposable)}
+$script:LiveCodexHomeApproved = {_ps_quote(live_codex)}
+$HostName = 'codex'
+function Assert-Rejected([string]$Candidate, [string]$Scope) {{
+    $rejected = $false
+    try {{ $null = Resolve-Contained -Path $Candidate -Scope $Scope }}
+    catch {{ $rejected = $true }}
+    if (-not $rejected) {{ throw "unsafe mutation target was accepted: $Candidate" }}
+}}
+function Assert-CredentialReadRejected([string]$Candidate) {{
+    $rejected = $false
+    try {{ $null = Resolve-ReadOnlyCredentialPath -Path $Candidate }}
+    catch {{ $rejected = $true }}
+    if (-not $rejected) {{ throw "unsafe credential source was accepted: $Candidate" }}
+}}
+$safeInside = Resolve-Contained -Path (Join-Path $allowed 'run/attempt/file.txt') -Scope Evidence
+if (-not $safeInside.StartsWith($allowed, [StringComparison]::OrdinalIgnoreCase)) {{ exit 31 }}
+$credential = Join-Path $script:LiveCodexHomeApproved 'auth.json'
+$otherCredential = Join-Path $script:LiveCodexHomeApproved 'other.json'
+$safeCredential = Resolve-ReadOnlyCredentialPath -Path $credential
+if (-not $safeCredential.Equals($credential, [StringComparison]::OrdinalIgnoreCase)) {{ exit 32 }}
+Assert-CredentialReadRejected $otherCredential
+Assert-Rejected (Join-Path $allowed '../sibling/file.txt') Evidence
+Assert-Rejected (Join-Path $sibling 'file.txt') Evidence
+Assert-Rejected (Join-Path {_ps_quote(REPO_ROOT)} 'must-not-write.txt') Evidence
+$link = Join-Path $allowed 'late-link'
+$null = New-Item -ItemType Junction -Path $link -Target $outside
+Assert-Rejected (Join-Path $link 'file.txt') Evidence
+Remove-Item -Force -LiteralPath $link
+Remove-Item -Force -LiteralPath $allowed
+$null = New-Item -ItemType Junction -Path $allowed -Target $outside
+Assert-Rejected (Join-Path $allowed 'file.txt') Evidence
+Write-Output RESOLVER_OK
+"""
+    result = _run(
+        ["powershell.exe", "-NoLogo", "-NoProfile", "-NonInteractive", "-Command", command],
+        cwd=REPO_ROOT,
+    )
+    assert result.returncode == 0, result.stderr + result.stdout
+    assert result.stdout.strip() == "RESOLVER_OK"
+
+
 def test_codex_native_surface_uses_command_section_and_stops_on_new_commands() -> None:
     baseline = """Commands:
   add          Add a plugin
@@ -804,6 +863,8 @@ $script:MarketplaceName = "skill-mesh-lifecycle-market-$($script:ProbeId)"
 $script:TriggerAlpha = "SMLP-$($script:ProbeId.ToUpperInvariant())-ALPHA"
 $script:TriggerBeta = "SMLP-$($script:ProbeId.ToUpperInvariant())-BETA"
 $script:CandidateTemplateRoot = {_ps_quote(TEMPLATE)}
+$script:EvidenceDirApproved = {_ps_quote(tmp_path)}
+$script:DisposableHomeApproved = {_ps_quote(tmp_path)}
 $v1 = New-MaterializedMarketplace {_ps_quote(tmp_path / 'first-v1')} 'v1'
 $v1b = New-MaterializedMarketplace {_ps_quote(tmp_path / 'second-v1')} 'v1'
 $v2 = New-MaterializedMarketplace {_ps_quote(tmp_path / 'first-v2')} 'v2'
@@ -1031,6 +1092,34 @@ def test_runner_keeps_native_and_compatibility_operations_distinct() -> None:
     assert "$process.WaitForExit(150000)" not in text
     assert "deadline_seconds = 120" not in text
     assert "120 seconds and 100000 records" not in text
+
+
+def test_runner_rechecks_scoped_paths_after_topology_changes() -> None:
+    text = RUNNER.read_text(encoding="ascii")
+    assert "-AllowedRoots" not in text
+    assert "[ValidateSet('Output', 'Evidence', 'Disposable', 'EvidenceParent', 'DisposableParent', 'CredentialDestination')]" in text
+    for resolution, mutation in (
+        (
+            "$safeEvidenceParent = Resolve-Contained -Path (Split-Path -Parent $EvidenceDir) -Scope EvidenceParent",
+            "$null = New-Item -ItemType Directory -Force -Path $safeEvidenceParent",
+        ),
+        (
+            "$safeDisposableParent = Resolve-Contained -Path (Split-Path -Parent $DisposableHome) -Scope DisposableParent",
+            "$null = New-Item -ItemType Directory -Force -Path $safeDisposableParent",
+        ),
+        (
+            "$safeEvidenceDir = Resolve-Contained -Path $EvidenceDir -Scope Evidence",
+            "$null = New-Item -ItemType Directory -Path $safeEvidenceDir",
+        ),
+        (
+            "$safeDisposableHome = Resolve-Contained -Path $DisposableHome -Scope Disposable",
+            "$null = New-Item -ItemType Directory -Path $safeDisposableHome",
+        ),
+    ):
+        assert f"{resolution}\n{mutation}" in text
+    assert text.count("$safeCopyDestination = Resolve-Contained -Path $Destination -Scope Output") == 3
+    assert "$safeBasePlugin = Resolve-Contained -Path $basePlugin -Scope Output\n    Rename-Item" in text
+    assert "$safeTreePath = Resolve-Contained -Path $treePath -Scope Evidence\n    Expand-Archive" in text
 
 
 def test_docs_are_public_and_exact_tokens_are_consistent() -> None:
