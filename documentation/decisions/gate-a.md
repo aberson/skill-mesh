@@ -2,15 +2,14 @@
 
 ## Outcome first
 
-The current evidence does not authorize an architecture. Every load-bearing final result is
-`AMBIGUOUS`. The valid Gate A actions are `stop` or `bounded-follow-up-experiment`. `Proceed` is not
-valid.
+Gate A is `APPROVED` with terminal action `stop`. The one authorized bounded follow-up ran once. It
+stopped when Claude lifecycle attempt `a1` returned `FAIL` before the explicit update operation. The
+stop rule prevented Codex lifecycle `a1` and the Claude reviewer dispatcher `a0-r1` from running.
 
-The recommended action is one bounded follow-up. It has useful evidence to build on: both Codex
-runs that requested `gpt-5.6-terra` completed a real review and found all three seeded defects.
-The follow-up requires a quiet operator environment and valid Claude authentication supplied before
-approval. It performs zero live-home writes and does not implement a product. This recommendation
-uses `L-CLAUDE`, `L-CODEX`, `CF-M-CODEX`, `CF-M-CLAUDE`, `CF-D-CODEX`, and `CF-D-CLAUDE`.
+No architecture is selected. Goal B authorization is `no`, live cutover is `not-authorized`, and
+Phase 2 remains locked. No retry, correction, fallback model, additional host run, product work,
+Step 4 use, live-home write, merge, or cutover is authorized. This outcome uses `L-CLAUDE`,
+`L-CODEX`, `L-CLAUDE-A1`, `CF-M-CODEX`, `CF-M-CLAUDE`, `CF-D-CODEX`, and `CF-D-CLAUDE`.
 
 ## Evidence used
 
@@ -20,20 +19,25 @@ Each reference binds a raw report to its raw evidence manifest.
 |---|---|---|---|
 | `L-CLAUDE` | Claude lifecycle | `e478ba1cd8577d89eae6565a62efbf9740629524306143b00bd685e84261ff6d` | `3ac1020e58cd6da00793cbc4641aba46d6fc78cacd37ab3ce570550c5b60b916` |
 | `L-CODEX` | Codex lifecycle | `c92b65e8807f01fbdf3e38e83c2e5d1760f8d1484609ffb8197a832e61e3f453` | `58e2e204b43851e63053f7bb3e1977163a17080d86c2e1c12f992052f88ca9bc` |
+| `L-CLAUDE-A1` | Claude lifecycle bounded follow-up | `a3b2a90e4ac72b4964db1650cc4812a0646b9e98f78d178c591f912a36933d4f` | `33001429c8d2cdf5d22cf4c30fc4590a49a6376451401137b693b30dcc91ddd9` |
 | `CF-M-CODEX` | Final manual Codex run; requested `gpt-5.6-terra` | `1f29c4d4516a674d23e25073278b653346a8f46c8ced1d50eb83dac7b815e5ce` | `174d90314def22df5d5fe50d229354973d873b1b5e58808340a5bbb8771d13c7` |
 | `CF-M-CLAUDE` | Final manual Claude-host run; requested `sonnet` | `bfa635ed488d78fb135dfb540ebe26ffcb91c0e4576a31eec1c867d9f5941315` | `a46b30b32e64c0c6e25f7024b2ccf21b684555612d877c51006aa351b676ae6d` |
 | `CF-D-CODEX` | Final dispatcher Codex run; requested `gpt-5.6-terra` | `2efac6573b5a606bd5c7ae743811eb3fd786b6fa73e4e90b7fa543eaf504eb4a` | `50137bb7178b1b3685e8e2305882025308379827231ccb11e861e7e025df32ae` |
 | `CF-D-CLAUDE` | Final dispatcher Claude-host run; requested `sonnet` | `d372b76ec00abb2e854bcbf56188c4780c8c4792e9390a70d060e1ede6fbdb69` | `c8db1c6dcf3e806cbd293271db3f3cd9aa84b62f716f80d9e7e9dbc20fdfbf9f` |
 
-The external append-only index records earlier attempts and superseded candidates. The committed
-summaries are `documentation/evidence/goal-a/goala-20260814T021737Z-1b5ec416/lifecycle-report.md`
-and `documentation/evidence/goal-a/goala-20260814T021737Z-1b5ec416/cross-family-report.md`.
+The external append-only index records earlier attempts and superseded candidates. Its final
+SHA-256 is `94d26b399bf700b66d986cde6973023eeaafc9325077621718e4ddbaccb7078f`.
+The bounded follow-up appended exactly the `followup-lifecycle-claude-a1-report` and
+`followup-lifecycle-claude-a1-manifest` rows. It appended no Codex `a1` or dispatcher `a0-r1` row.
+The committed summaries are
+`documentation/evidence/goal-a/goala-20260814T021737Z-1b5ec416/lifecycle-report.md` and
+`documentation/evidence/goal-a/goala-20260814T021737Z-1b5ec416/cross-family-report.md`.
 
 | Committed packet artifact | SHA-256 |
 |---|---|
-| Lifecycle summary | `5b9a3d7144f1cb29197a9165e90f127cf3801c986cafcfbcbbf8789eac8811cf` |
-| Cross-family summary | `2e81fafc54082fdde837148b1fafecf40f78c5ea19046b29f9c9896edb0cbe36` |
-| Two-report `MANIFEST.sha256` | `9ad988b37f47afa257073904fec973301708251668d99273b9b4e2ab59265b37` |
+| Lifecycle summary | `64cbfb215d567113cb2b3f7ffef9b66e5883b556ee95568f8b26a3c07d2970b1` |
+| Cross-family summary | `847d58d0479f721d6cc1146ef945a53ee45c54640cbd4780076897790957bdac` |
+| Two-report `MANIFEST.sha256` | `301cd34f4667dd56ed17827ea7658c6fba396531fb68f9064d8b12b86dc9be95` |
 
 The two-report manifest excludes itself, this decision packet, and `plan.md` to avoid a hash cycle.
 
@@ -41,25 +45,20 @@ The two-report manifest excludes itself, this decision packet, and `plan.md` to 
 
 | Evidence | Topic | Observed fact | Inference | Recommendation | Unresolved premise | Smallest valid option | Cost | Step 4 effect |
 |---|---|---|---|---|---|---|---|---|
-| `L-CLAUDE` | Claude lifecycle | The run stopped before a host command because protected Codex database files changed. | A quiet session can remove this precondition failure. It does not guarantee lifecycle success. | Do not select an owner. | Native install, discovery, update, enable, disable, uninstall, and stale-cache behavior are unknown. | One quiet-session follow-up run. | One operator run plus review. | Keep frozen. |
-| `L-CODEX` | Codex lifecycle | The run stopped before a host command for the same safety reason. | No lifecycle conclusion is possible. | Do not select an owner. | Install, discovery, and uninstall are unknown. Native update, enable, and disable are known gaps. | One quiet-session follow-up run. | One operator run plus review. | Keep frozen. |
+| `L-CLAUDE`, `L-CLAUDE-A1` | Claude lifecycle | Initial `a0` stopped at safety preflight. In the quiet `a1` run, isolated authentication, v1 install, v1 discovery, containment, live-state comparison, and cleanup passed. Before explicit update, a fresh consumer returned the v2 marker, so the required lifecycle behavior failed. | Source-linked or hot-refresh behavior is plausible, but the evidence does not identify the mechanism. | Stop; do not select a lifecycle owner. | Explicit update, enable, disable, uninstall, and post-uninstall behavior remain unknown. | Terminal Gate A stop. | No further run. | Keep frozen. |
+| `L-CODEX` | Codex lifecycle | Initial `a0` stopped at safety preflight. Authorized `a1` was not reached after Claude `a1` failed. | No Codex lifecycle conclusion is possible. | Do not select an owner or run another attempt. | Install, discovery, and uninstall are unknown. Native update, enable, and disable remain known gaps. | Terminal Gate A stop. | No further run. | Keep frozen. |
 | `CF-M-CODEX` | Codex manual seam; requested `gpt-5.6-terra` | The real review exited `0`, returned `NEEDS_WORK`, and found three of three defects. Resolved identity was unavailable and protected files changed. | The sealed handoff works with the current Codex CLI. Exact model service and live-byte safety are not proved. | Keep as a candidate only. | Trusted resolved identity and quiet-state proof are absent. | Do not approve this reviewer direction now. | No follow-up cost. | No use of Step 4. |
 | `CF-D-CODEX` | Codex dispatcher seam; requested `gpt-5.6-terra` | It produced the same verdict and three detections. Identity and live-state evidence remained ambiguous. | The dispatcher seam also works, but one trial cannot show that it is better. | Do not choose this mechanism now. | Repeatability and exact model identity are unknown. | Defer the Codex-reviewer direction. | No follow-up cost. | No use of Step 4. |
-| `CF-M-CLAUDE`, `CF-D-CLAUDE` | Claude host, requested `sonnet` | Both Claude calls returned `401` because the saved OAuth token had expired. | Reauthentication is necessary. Success after reauthentication is unknown. | Refresh auth, then rerun only the one-action dispatcher route. | Review behavior and resolved identity are unmeasured. | One dispatcher rerun after reauthentication. | User reauthentication plus one run. | No use of Step 4. |
-| `CF-M-CODEX`, `CF-M-CLAUDE`, `CF-D-CODEX`, `CF-D-CLAUDE` | Safety and cleanup | Every started host was Job-contained. Every final run proved an empty Job and removed its exact disposable fixture. | The containment and cleanup boundary is working. | Reuse it unchanged. | Work delegated through an unrelated system service remains outside Job coverage. | No safety redesign. | None. | No effect. |
-| All six references | Attempt budget | The manual series used `a0`, `a1`, and `a2`. | More automatic corrections would become open-ended. | Stop current execution at Gate A. | A new experiment needs new authority. | Gate A follow-up or stop. | Human decision. | Keep frozen. |
+| `CF-M-CLAUDE`, `CF-D-CLAUDE` | Claude host, requested `sonnet` | Both earlier Claude calls returned `401`. The authorized dispatcher `a0-r1` was not reached after lifecycle failure. | The earlier authentication failure no longer describes the lifecycle credential check, but Claude reviewer behavior and identity remain unmeasured. | Do not run another reviewer attempt. | Review behavior and resolved identity are unknown. | Terminal Gate A stop. | No further run. | No use of Step 4. |
+| `L-CLAUDE-A1`, `CF-M-CODEX`, `CF-M-CLAUDE`, `CF-D-CODEX`, `CF-D-CLAUDE` | Safety and cleanup | Every started host was Job-contained. Claude lifecycle `a1` proved protected-state `MATCH`, an empty Job, and disposable cleanup. | The containment and cleanup boundary worked for the attempted paths. | Preserve the evidence; do not redesign safety controls in Goal A. | Work delegated through an unrelated system service remains outside Job coverage. | Terminal Gate A stop. | None. | No effect. |
+| All seven references | Attempt budget | The bounded follow-up was invoked once. Its first required attempt returned `FAIL`, so the committed stop rule prevented both later attempts. | Continuing would exceed the approved experiment contract. | End Goal A. | Any new experiment would require a new goal and new authority. | Terminal Gate A stop. | No further work. | Keep frozen. |
 
-## Options Abraham can approve
+## Terminal Gate A disposition
 
-### Option 1: bounded follow-up — recommended
+### Selected action: stop
 
-Approve only the experiment below. Unresolved product fields remain deferred. Phase 2 and all
-implementation remain locked. This recommendation uses all six evidence references above.
-
-### Option 2: stop
-
-End Goal A. Keep the Step 4 recovery artifact. Do not start Phase 2 or implement Skill Mesh product
-changes.
+End Goal A. Keep the Step 4 recovery artifact frozen. Do not start Phase 2 or implement Skill Mesh
+product changes.
 
 A terminal stop response states only `gate action=stop`, `Goal B authorization=no`, and
 `live cutover=not-authorized`. It creates no architecture packet because no later phase or validator
@@ -73,11 +72,20 @@ Goal A instead of inventing lifecycle-owner or Step 4 values that the evidence c
 | Goal B authorization | `no` |
 | Live cutover | `not-authorized` |
 
-### Proceed
+### Bounded follow-up — consumed
 
-Not available. The recovery plan forbids `proceed` while a load-bearing result is `AMBIGUOUS`.
+Abraham approved the exact experiment `goal-a-quiescent-qualification-v1`. It was invoked once.
+Claude lifecycle `a1` returned `FAIL`, which consumed the authorization and activated its mandatory
+stop rule. No retry, correction, fallback, Codex lifecycle `a1`, or dispatcher `a0-r1` is authorized.
 
-## Exact bounded follow-up proposal
+### Proceed — unavailable
+
+Not available. The evidence does not select an architecture, and Goal B authorization is `no`.
+
+## Historical bounded follow-up contract — consumed
+
+**CLOSED — EXECUTED ONCE — DO NOT RUN.** The content below preserves the exact authorized contract
+and command for audit. It grants no current execution authority.
 
 **Name:** `goal-a-quiescent-qualification-v1`
 
@@ -92,15 +100,14 @@ Not available. The recovery plan forbids `proceed` while a load-bearing result i
 
 - Keep the completed lifecycle `a0` evidence bound to executed candidate
   `3a17746fa1d04c24088effd8f3871afe10f1601f`; do not relabel it.
-- If Abraham approves this follow-up, use corrected lifecycle candidate
-  `0c72392ec51da5201c4f3c17272e2b79a32a055d` only for the two `a1` runs.
+- The approved follow-up specified corrected lifecycle candidate
+  `0c72392ec51da5201c4f3c17272e2b79a32a055d` for both `a1` run slots. Only Claude `a1` ran.
 - Reuse the cross-family candidate `7b094897a0e7afc4ffecaeac15f20d2d875614c8` without code changes.
 - Create no production router, receipt service, installer, migrator, or live-host file.
 - Keep Step 4 frozen and preserve every current attempt.
 
-If approved, the follow-up authorizes zero live-home writes. The reviewed runners cannot write
-either live home. If valid authentication is not already available, the valid Gate A action is
-`stop`.
+The follow-up authorized zero live-home writes. The reviewed runners could not write either live
+home. Its first required attempt returned `FAIL`, so the approved contract required `stop`.
 
 **Exact read paths:**
 
@@ -117,9 +124,8 @@ either live home. If valid authentication is not already available, the valid Ga
 | Codex lifecycle | `-HostName codex -RunId lifecycle-codex-20260814T065645Z-34c7074f -AttemptId a1 -CandidateSha 0c72392ec51da5201c4f3c17272e2b79a32a055d -RequestedModel gpt-5.6-terra -CredentialMode copy-file -ConsumerTimeoutSeconds 300` | `%LOCALAPPDATA%\SkillMesh\Evidence\goala-20260814T021737Z-1b5ec416\lifecycle\lifecycle-codex-20260814T065645Z-34c7074f\a1\` | `%LOCALAPPDATA%\SkillMesh\Homes\goala-20260814T021737Z-1b5ec416\lifecycle-codex-20260814T065645Z-34c7074f-a1` |
 | Claude reviewer dispatcher | `-Action Run -Direction gpt-to-claude -Mechanism reviewer-only-dispatcher -RunId cross-gpt-to-claude-reviewer-only-dispatcher-20260814T085608Z-c450d8b6 -AttemptId a0-r1 -CandidateSha 7b094897a0e7afc4ffecaeac15f20d2d875614c8 -RequestedReviewerModel sonnet -CredentialMode copy-file -ReviewerTimeoutSeconds 600` | `%LOCALAPPDATA%\SkillMesh\Evidence\goala-20260814T021737Z-1b5ec416\cross-family\cross-gpt-to-claude-reviewer-only-dispatcher-20260814T085608Z-c450d8b6\a0-r1\` | `%LOCALAPPDATA%\SkillMesh\Homes\goala-20260814T021737Z-1b5ec416\cross-gpt-to-claude-reviewer-only-dispatcher-20260814T085608Z-c450d8b6-a0-r1` |
 
-Only after Abraham approves this exact follow-up and its field values, run this exact block from
-Windows PowerShell 5.1. Before approval, do not run it. The block supplies every required path and
-parameter.
+This exact block was run once from Windows PowerShell 5.1 after Abraham approved the contract. It is
+retained only as historical evidence. Do not run it again.
 
 ```powershell
 $ErrorActionPreference = 'Stop'
@@ -396,7 +402,11 @@ foreach ($Target in $CleanupTargets) {
 
 ```
 
-No argument can change.
+No argument was changed. The block is consumed and must not run again.
+
+The block ran until the required stop and indexed only Claude lifecycle `a1`. That attempt returned
+`FAIL` before the explicit update command. Codex lifecycle `a1` and the Claude reviewer dispatcher
+`a0-r1` were not invoked.
 
 The cross-family run can create only this additional temporary runtime root:
 
@@ -418,7 +428,7 @@ Only these tracked packet paths can change after the follow-up:
 
 Every other repository path and live-home path is read-only.
 
-**Attempt limit:**
+**Historical attempt limit — consumed:**
 
 - One corrected `a1` for lifecycle series `lifecycle-claude-20260814T065643Z-e1ea3dd1`, bound to
   candidate `0c72392ec51da5201c4f3c17272e2b79a32a055d`.
@@ -430,7 +440,7 @@ Every other repository path and live-home path is read-only.
 - No manual-handoff rerun, Codex-reviewer rerun, runner edit, retry, or correction.
 - Any preflight or evidence ambiguity returns to Gate A as `stop`.
 
-**Exit evidence:**
+**Required exit evidence — not met:**
 
 - Claude Code lifecycle is `PASS`.
 - Codex lifecycle can be `PARTIAL` only for missing native update, enable, or disable operations.
@@ -448,13 +458,17 @@ Every other repository path and live-home path is read-only.
 - Any `AMBIGUOUS`, `FAIL`, authentication problem, preflight problem, or requested correction ends
   the follow-up as `stop`. No additional run is authorized.
 
-**Estimated operator cost:** supply a credential established outside this experiment, close active
-agent sessions, and run three host experiments. No product code or live installation is included.
-The proposal and its exit criteria are bound to all six evidence references above.
+Claude lifecycle `a1` returned `FAIL`. This activated the final bullet and closed the experiment.
 
-## Choice glossary
+**Historical estimated operator cost:** supply a credential established outside this experiment,
+close active agent sessions, and run up to three host experiments. The actual run stopped after the
+first experiment. No product code or live installation was included. The contract and its exit
+criteria are bound to the evidence references above.
 
-These definitions explain the allowed values. They do not approve an architecture.
+## Historical choice glossary
+
+These definitions preserve the choices that existed before the terminal decision. They do not
+approve an architecture or authorize another experiment.
 
 ### Gate action
 
@@ -522,12 +536,12 @@ Any one-direction choice must state the visible asymmetry.
 | Goal B `no` | Keep Phase 2 locked. |
 | Live cutover `not-authorized` | Permit no live install or cutover. This value is mandatory at Gate A. |
 
-## Recommended Gate A field values
+## Historical bounded-follow-up field values — consumed
 
-These recommended values authorize nothing unless Abraham approves them. If approved, they
-authorize only the follow-up above. They are bound to all six evidence references.
+Abraham approved these values for the one bounded follow-up. The first required attempt returned
+`FAIL`; the stop rule consumed and closed that authority. The table is retained only as provenance.
 
-| Field | Recommended value | Meaning and tradeoff |
+| Field | Historical approved value | Meaning and tradeoff |
 |---|---|---|
 | Gate action | `bounded-follow-up-experiment` | Gain decisive evidence without starting product work. |
 | Lifecycle owner for Claude Code | `deferred-by-follow-up` | No lifecycle owner is selected yet. |
@@ -543,7 +557,17 @@ authorize only the follow-up above. They are bound to all six evidence reference
 
 ## Abraham's decision
 
-**Status:** `READY_FOR_OPERATOR` after the final Step 78 gate passes.
+**Status:** `APPROVED`
 
-No agent can approve this gate. Abraham must state either `stop` or approve the exact bounded
-follow-up and its field values. A later bootstrap records that response and its message locator.
+**Decision locator:** Abraham's 2026-08-14 direct conversation response supplying the exact three
+terminal values below after the bounded follow-up result was reported.
+
+| Terminal record field | Approved value |
+|---|---|
+| Gate action | `stop` |
+| Goal B authorization | `no` |
+| Live cutover | `not-authorized` |
+
+This decision ends Goal A. It creates no architecture packet or remaining architecture-field record.
+It authorizes no retry, correction, fallback model, additional host run, Phase 2, Goal B, product
+work, Step 4 use, live-home write, merge, or live cutover.

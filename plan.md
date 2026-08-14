@@ -16,13 +16,13 @@ The approved product boundary is `documentation/product-charter.md`. The propose
 |---|---|---|
 | Decision redline D1-D15 | APPROVED 2026-08-13 | Recorded in the recovery plan |
 | Communication profile D16 | PROPOSED PILOT | Optional Goal P Steps 95-97; Phase 7 records the final choice |
-| Goal A execution | FOLLOW-UP APPROVED / NOT STARTED | Only `goal-a-quiescent-qualification-v1` is authorized |
+| Goal A execution | STOPPED | Gate A approved terminal action `stop` after the bounded follow-up failed |
 | Provider expansion | PARKED | A later operator decision must explicitly resume it |
 | Phase 0 — preserve work in progress and establish authority | DONE | Steps 72-74 passed |
 | Phase 1 — two architecture experiments | DONE | Step 78 packet and final gate passed |
-| Gate A — select architecture | APPROVED | Exact three-run bounded follow-up only |
-| Phase 2 — repair build controls | LOCKED | Gate A selects `proceed` and authorizes Goal B |
-| Goal P — communication pilot | OPTIONAL/LOCKED | Gate A approval and Abraham opts in |
+| Gate A — select architecture | APPROVED | Terminal action `stop`; no architecture selected |
+| Phase 2 — repair build controls | LOCKED | Gate A did not select `proceed`; Goal B is `no` |
+| Goal P — communication pilot | LOCKED / NOT AUTHORIZED | Its contract requires Gate A `proceed` and a separate opt-in |
 | Gate B — approve exact product steps | LOCKED | Abraham after control acceptance |
 | Phases 3-7 — implement, prove, and rehearse | LOCKED | Gate B approval |
 | Gate D — live cutover | LOCKED | Abraham after user acceptance testing and rehearsal |
@@ -31,11 +31,11 @@ The approved product boundary is `documentation/product-charter.md`. The propose
 
 ## Current instruction
 
-Goal A Steps 72-78 are complete. Abraham approved only the exact bounded follow-up
-`goal-a-quiescent-qualification-v1`. It is not started. Use the exact offline block in
-`documentation/decisions/gate-a.md` after all named agent sessions close and protected state becomes
-quiet. `Proceed` remains invalid. Product implementation, Step 4 use, Phase 2, live-home writes,
-retry, and correction remain unauthorized.
+Goal A ended with Gate A action `stop`. The one authorized bounded follow-up ran once. Claude
+lifecycle `a1` returned `FAIL`, so the contract stopped before Codex lifecycle `a1` and the Claude
+reviewer dispatcher `a0-r1`. Do not run the historical block again. No experiment, retry, correction,
+fallback model, product implementation, Step 4 use, Goal B, Phase 2, live-home write, merge, or live
+cutover is authorized.
 
 ## Goal A journal
 
@@ -171,16 +171,46 @@ repository-root full gate passed on the final Goal A candidate recorded in the e
 
 **Status:** APPROVED
 
-**Authorized action:** `bounded-follow-up-experiment`
+**Final gate action:** `stop`
 
-**Execution status:** NOT STARTED
+**Execution status:** STOPPED — approved contract terminal action `stop`
 
-**Proceed eligibility:** INVALID — every load-bearing result is `AMBIGUOUS`.
+**Proceed eligibility:** INVALID — no architecture is selected and Goal B authorization is `no`.
 
-**Recommended action:** `bounded-follow-up-experiment` named
-`goal-a-quiescent-qualification-v1` in `documentation/decisions/gate-a.md`.
+**Decision locator:** Abraham's 2026-08-14 direct conversation response supplying the exact three
+terminal values below after the bounded follow-up result was reported.
 
-**Alternative:** `stop`.
+| Terminal record field | Approved value |
+|---|---|
+| Gate action | `stop` |
+| Goal B authorization | `no` |
+| Live cutover | `not-authorized` |
+
+**Bounded-follow-up outcome:** The exact experiment `goal-a-quiescent-qualification-v1` was invoked
+once. Claude lifecycle `a1` returned `FAIL` before the explicit update command because a fresh
+consumer returned the candidate v2 marker where the acceptance criterion required installed-v1.
+The committed stop rule prevented Codex lifecycle `a1` and the Claude reviewer dispatcher `a0-r1`
+from running.
+
+**Claude `a1` evidence:**
+`%LOCALAPPDATA%\SkillMesh\Evidence\goala-20260814T021737Z-1b5ec416\lifecycle\lifecycle-claude-20260814T065643Z-e1ea3dd1\a1\report.md`
+
+**Raw evidence hashes:** report
+`a3b2a90e4ac72b4964db1650cc4812a0646b9e98f78d178c591f912a36933d4f`; manifest
+`33001429c8d2cdf5d22cf4c30fc4590a49a6376451401137b693b30dcc91ddd9`; final external index
+`94d26b399bf700b66d986cde6973023eeaafc9325077621718e4ddbaccb7078f`.
+
+**Committed summary hashes:** lifecycle
+`64cbfb215d567113cb2b3f7ffef9b66e5883b556ee95568f8b26a3c07d2970b1`; cross-family
+`847d58d0479f721d6cc1146ef945a53ee45c54640cbd4780076897790957bdac`; two-report manifest
+`301cd34f4667dd56ed17827ea7658c6fba396531fb68f9064d8b12b86dc9be95`.
+
+**Safety and cleanup:** Isolated copied-file authentication passed. All started processes were
+Job-contained. Protected live state matched before and after. The disposable home was removed. The
+raw provider output reported both Haiku and Sonnet usage, so one resolved model identity is not
+established. Raw evidence remains sealed and unchanged.
+
+### Historical bounded-follow-up approval — consumed
 
 **Approval locator:** Abraham's 2026-08-14 conversation response containing `(3) Approve`, directly
 answering the immediately preceding authorization prompt that named the exact experiment, commit,
@@ -215,8 +245,9 @@ input.
 the one authorized follow-up now rather than wait for reset. A quota or authentication failure is a
 stop result. It does not authorize a retry, correction, fallback model, or changed argument.
 
-**Offline handoff:** Before execution, close Claude Code, Codex CLI, ChatGPT desktop, this agent
-session, and IDE agent sessions; then run the committed block once from a plain Windows PowerShell
-5.1 window. Any stop condition ends the follow-up without retry or correction.
+**Offline handoff:** Abraham reported closing Claude Code, Codex CLI, ChatGPT desktop, VS Code, and
+all agent sessions, then running the committed block once from Windows PowerShell 5.1. The resulting
+stop condition consumed the authorization. The block must not run again.
 
-Phase 2, product implementation, Step 4 use, live-home writes, merge, and live cutover remain locked.
+Goal A is ended. Phase 2, Goal B, product implementation, Step 4 use, live-home writes, merge, and
+live cutover remain locked. No retry, correction, fallback, or additional experiment is authorized.

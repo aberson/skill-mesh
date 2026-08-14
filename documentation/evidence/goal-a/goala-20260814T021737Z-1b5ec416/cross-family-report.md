@@ -68,26 +68,28 @@ authentication error before a review.
   count and small latency difference are descriptive only.
 - These results do not qualify the requested `gpt-5.6-terra` and `sonnet` pair. They do not prove
   which exact model served either Codex review.
-- No Claude-direction comparison is possible until the credential is refreshed.
+- No Claude-direction cross-family comparison was produced; the terminal stop prevented the
+  authorized dispatcher from exercising the refreshed credential.
 - Active Codex database traffic prevents a claim that the experiment left every protected live byte
   unchanged.
 
 ## Unresolved premises
 
 - Whether a first-party Codex field can prove the resolved reviewer model.
-- Whether a Claude host that requests `sonnet` completes the same sealed review after reauthentication.
+- Whether a Claude host with valid isolated authentication completes the sealed review; the
+  authorized dispatcher was not reached.
 - Whether the protected live roots remain unchanged in a quiet operator session.
 - Whether either cross-family mechanism adds value on representative non-synthetic work.
 
-## Recommendation
+## Terminal disposition
 
-Do not select a release mechanism from these runs. Only Abraham can select `stop` or authorize the
-exact `goal-a-quiescent-qualification-v1` bounded follow-up at Gate A. No follow-up execution is
-authorized before that decision. Before approval, Abraham supplies valid Claude authentication
-outside this experiment. If approved, the follow-up uses only the copied credential, runs from a
-quiet operator session, and performs zero live-home writes. It does not repeat a Codex-reviewer run
-or claim that unavailable identity became resolved. No production router change is justified.
+Do not select a release mechanism from these runs. The one approved bounded follow-up was consumed
+when Claude lifecycle `a1` returned `FAIL` before the cross-family dispatcher. No new cross-family
+attempt ran, and the four evidence pairs above remain final. Gate A action is `stop`; no retry,
+correction, fallback model, additional host run, or production router change is authorized.
 
-This recommendation is bound to all four final report and manifest pairs in the Final evidence
+This terminal disposition is bound to all four final report and manifest pairs in the Final evidence
 identity table. The pair references are `CF-M-CODEX`, `CF-M-CLAUDE`, `CF-D-CODEX`, and
-`CF-D-CLAUDE` in `documentation/decisions/gate-a.md`.
+`CF-D-CLAUDE` in `documentation/decisions/gate-a.md`. It is also bound to Claude lifecycle `a1`
+report `a3b2a90e4ac72b4964db1650cc4812a0646b9e98f78d178c591f912a36933d4f` and manifest
+`33001429c8d2cdf5d22cf4c30fc4590a49a6376451401137b693b30dcc91ddd9`.
