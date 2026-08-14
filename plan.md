@@ -19,7 +19,7 @@ The approved product boundary is `documentation/product-charter.md`. The propose
 | Goal A execution | IN PROGRESS | Abraham approved normalized blob `d97b1960b01673ab8922adc806f7c0de76ba33a3` on 2026-08-13 |
 | Provider expansion | PARKED | A later operator decision must explicitly resume it |
 | Phase 0 — preserve work in progress and establish authority | DONE | Steps 72-74 passed |
-| Phase 1 — two architecture experiments | IN PROGRESS | Step 77 final attempts are in progress |
+| Phase 1 — two architecture experiments | IN PROGRESS | Step 78 evidence synthesis is in progress |
 | Gate A — select architecture | LOCKED | Abraham after both reports |
 | Phase 2 — repair build controls | LOCKED | Gate A selects `proceed` and authorizes Goal B |
 | Goal P — communication pilot | OPTIONAL/LOCKED | Gate A approval and Abraham opts in |
@@ -31,7 +31,7 @@ The approved product boundary is `documentation/product-charter.md`. The propose
 
 ## Current instruction
 
-Goal A is active. Step 4 is durably preserved but remains frozen and unstaged. Execute only Steps 72-78 and stop at Gate A. Step 77 final attempts are in progress; product implementation and live-host mutation remain unauthorized.
+Goal A is active. Step 4 is durably preserved but remains frozen and unstaged. Execute only Steps 72-78 and stop at Gate A. Step 78 evidence synthesis is in progress; product implementation and live-host mutation remain unauthorized.
 
 ## Goal A journal
 
@@ -109,7 +109,7 @@ The two manual `a1` attempts both started exactly one contained host and cleaned
 
 ### Step 77: Run the cross-family experiment
 
-**Status:** IN PROGRESS — final `a2` manual attempts and `a0` dispatcher attempts
+**Status:** DONE — all four final series returned `AMBIGUOUS`
 
 **Evidence root:** `%LOCALAPPDATA%\SkillMesh\Evidence\goala-20260814T021737Z-1b5ec416\cross-family\`
 
@@ -119,9 +119,19 @@ The two manual `a1` attempts both started exactly one contained host and cleaned
 
 **Retained Sonnet `a1` report:** `%LOCALAPPDATA%\SkillMesh\Evidence\goala-20260814T021737Z-1b5ec416\cross-family\cross-gpt-to-claude-manual-saved-handoff-20260814T085608Z-ec7c31e9\a1\report.md`
 
+**Final manual Terra report:** `%LOCALAPPDATA%\SkillMesh\Evidence\goala-20260814T021737Z-1b5ec416\cross-family\cross-claude-to-gpt-manual-saved-handoff-20260814T085608Z-cbbf95ed\a2\report.md`
+
+**Final manual Sonnet report:** `%LOCALAPPDATA%\SkillMesh\Evidence\goala-20260814T021737Z-1b5ec416\cross-family\cross-gpt-to-claude-manual-saved-handoff-20260814T085608Z-ec7c31e9\a2\report.md`
+
+**Final dispatcher Terra report:** `%LOCALAPPDATA%\SkillMesh\Evidence\goala-20260814T021737Z-1b5ec416\cross-family\cross-claude-to-gpt-reviewer-only-dispatcher-20260814T085608Z-40b14e58\a0\report.md`
+
+**Final dispatcher Sonnet report:** `%LOCALAPPDATA%\SkillMesh\Evidence\goala-20260814T021737Z-1b5ec416\cross-family\cross-gpt-to-claude-reviewer-only-dispatcher-20260814T085608Z-c450d8b6\a0\report.md`
+
+Both Terra mechanisms completed one real review, returned `NEEDS_WORK`, and detected all three seeded defects. Their overall results are `AMBIGUOUS` because Codex exposed no allowlisted resolved-model field and the active Codex session changed protected database files. Both Sonnet mechanisms reached Claude but returned `401` because the saved OAuth token had expired. All four attempts proved Job Object containment and disposable cleanup. The correction-attempt budget is exhausted.
+
 ### Step 78: Prepare Gate A
 
-**Status:** LOCKED
+**Status:** IN PROGRESS
 
 ## Gate A journal
 
