@@ -18,7 +18,7 @@ The approved product boundary is `documentation/product-charter.md`. The propose
 | Communication profile D16 | PROPOSED PILOT | Optional Goal P Steps 95-97; Phase 7 records the final choice |
 | Goal A execution | IN PROGRESS | Abraham approved normalized blob `d97b1960b01673ab8922adc806f7c0de76ba33a3` on 2026-08-13 |
 | Provider expansion | PARKED | A later operator decision must explicitly resume it |
-| Phase 0 — preserve work in progress and establish authority | IN PROGRESS | Step 72 passed; Step 73 is active |
+| Phase 0 — preserve work in progress and establish authority | IN PROGRESS | Steps 72-73 passed; Step 74 is ready |
 | Phase 1 — two architecture experiments | LOCKED | Phase 0 completion |
 | Gate A — select architecture | LOCKED | Abraham after both reports |
 | Phase 2 — repair build controls | LOCKED | Gate A selects `proceed` and authorizes Goal B |
@@ -31,7 +31,7 @@ The approved product boundary is `documentation/product-charter.md`. The propose
 
 ## Current instruction
 
-Goal A is active. Step 4 is durably preserved but remains frozen and unstaged. Execute only Steps 72-78 and stop at Gate A. Step 73 is the current action; product implementation and live-host mutation remain unauthorized.
+Goal A is active. Step 4 is durably preserved but remains frozen and unstaged. Execute only Steps 72-78 and stop at Gate A. Step 74 is the current action; product implementation and live-host mutation remain unauthorized.
 
 ## Goal A journal
 
@@ -57,13 +57,17 @@ The manifest records 14 files, `apply_check=PASS`, `hash_match=PASS`, and the un
 
 ### Step 73: Establish canonical plan authority
 
-**Status:** IN PROGRESS
+**Status:** DONE
 
-**Completion procedure:** Commit the scoped authority candidate first. Add the named issue notes and record their URLs. Then make a `plan.md`-only terminal commit that marks Step 73 `DONE`, unlocks Step 74, and names the external `bootstrap.md` locator. Create `recovery/goala-20260814T021737Z-1b5ec416` and its clean worktree from that terminal commit. Write the terminal commit, branch, worktree, commands, and evidence hashes to `bootstrap.md`. If any post-commit action fails, mark Step 73 `BLOCKED` and do not start Step 74.
+**Authority commit:** `8d8b57a`
+
+**Issue notes:** [#70](https://github.com/aberson/skill-mesh/issues/70#issuecomment-5288812441), [#71](https://github.com/aberson/skill-mesh/issues/71#issuecomment-5288812561), [#72](https://github.com/aberson/skill-mesh/issues/72#issuecomment-5288812663), [#73](https://github.com/aberson/skill-mesh/issues/73#issuecomment-5288812790), [#74](https://github.com/aberson/skill-mesh/issues/74#issuecomment-5288812922), [#75](https://github.com/aberson/skill-mesh/issues/75#issuecomment-5288813029), [#76](https://github.com/aberson/skill-mesh/issues/76#issuecomment-5288813128), [#77](https://github.com/aberson/skill-mesh/issues/77#issuecomment-5288813238), [#78](https://github.com/aberson/skill-mesh/issues/78#issuecomment-5288813348), [#79](https://github.com/aberson/skill-mesh/issues/79#issuecomment-5288813499), [#80](https://github.com/aberson/skill-mesh/issues/80#issuecomment-5288813627), [#81](https://github.com/aberson/skill-mesh/issues/81#issuecomment-5288813730), [#82](https://github.com/aberson/skill-mesh/issues/82#issuecomment-5288813810), and [#116](https://github.com/aberson/skill-mesh/issues/116#issuecomment-5288813896).
+
+**Bootstrap evidence:** `%LOCALAPPDATA%\SkillMesh\Evidence\goala-20260814T021737Z-1b5ec416\bootstrap.md`
 
 ### Step 74: Prepare the lifecycle fixture
 
-**Status:** LOCKED
+**Status:** READY
 
 ### Step 75: Run the lifecycle experiment
 
