@@ -19,7 +19,7 @@ The approved product boundary is `documentation/product-charter.md`. The propose
 | Goal A execution | IN PROGRESS | Abraham approved normalized blob `d97b1960b01673ab8922adc806f7c0de76ba33a3` on 2026-08-13 |
 | Provider expansion | PARKED | A later operator decision must explicitly resume it |
 | Phase 0 — preserve work in progress and establish authority | DONE | Steps 72-74 passed |
-| Phase 1 — two architecture experiments | IN PROGRESS | Steps 75 and 76 are ready |
+| Phase 1 — two architecture experiments | IN PROGRESS | Step 77 is in progress |
 | Gate A — select architecture | LOCKED | Abraham after both reports |
 | Phase 2 — repair build controls | LOCKED | Gate A selects `proceed` and authorizes Goal B |
 | Goal P — communication pilot | OPTIONAL/LOCKED | Gate A approval and Abraham opts in |
@@ -31,7 +31,7 @@ The approved product boundary is `documentation/product-charter.md`. The propose
 
 ## Current instruction
 
-Goal A is active. Step 4 is durably preserved but remains frozen and unstaged. Execute only Steps 72-78 and stop at Gate A. Steps 75 and 76 are ready; product implementation and live-host mutation remain unauthorized.
+Goal A is active. Step 4 is durably preserved but remains frozen and unstaged. Execute only Steps 72-78 and stop at Gate A. Step 77 is in progress; product implementation and live-host mutation remain unauthorized.
 
 ## Goal A journal
 
@@ -67,7 +67,7 @@ The manifest records 14 files, `apply_check=PASS`, `hash_match=PASS`, and the un
 
 ### Step 74: Prepare the lifecycle fixture
 
-**Status:** IN PROGRESS — bounded snapshot evidence-cap correction
+**Status:** DONE
 
 **Candidate commit:** `3a17746fa1d04c24088effd8f3871afe10f1601f`
 
@@ -93,21 +93,25 @@ The active Codex window changed protected SQLite databases during both safety pr
 
 **Status:** DONE
 
-**Candidate commit:** `c6f4519dffa506e8b1e7b177bf884736a276932c`
+**Candidate commit:** `8db941720cccbdf28dc1eadb32d51bf3c8c91550`
+
+**Superseded candidate:** `c6f4519dffa506e8b1e7b177bf884736a276932c`
 
 **Evidence:** `%LOCALAPPDATA%\SkillMesh\Evidence\goala-20260814T021737Z-1b5ec416\evidence-index.md`
 
 The fixture uses one deterministic synthetic candidate for both directions. This isolates the review handoff. It does not claim that a live Claude-family or GPT-family builder authored the candidate.
 
-The exact final bytes passed 40 focused tests, the private-path gate, PowerShell parsing, and `git diff --check`. Three independent read-only reviews passed the same staged tree. No reviewer host, model, or protected live-home scan ran during preparation.
+The exact corrected bytes passed 41 focused tests, the private-path gate, PowerShell parsing, and `git diff --check`. Three independent read-only reviews passed the bounded correction. No reviewer host, model, or protected live-home scan ran during preparation.
 
-The first Step 77 `a0` attempt stopped before reviewer launch because its complete 41,437-record snapshot was 19,750,121 bytes, above the 16 MiB general evidence cap. The retained report is `AMBIGUOUS`. Step 76 is reopened only to add a separate bounded snapshot-file cap; the 100,000-record and 600-second safety bounds do not change.
+The first Step 77 `a0` attempt stopped before reviewer launch because its complete 41,437-record snapshot was 19,750,121 bytes, above the 16 MiB general evidence cap. The retained report is `AMBIGUOUS`. The replacement candidate gives only raw snapshot files a separate 64 MiB cap. All other evidence keeps the 16 MiB cap. The 100,000-record and 600-second safety bounds do not change.
 
 ### Step 77: Run the cross-family experiment
 
-**Status:** BLOCKED — Step 76 bounded correction pending
+**Status:** IN PROGRESS
 
 **Evidence root:** `%LOCALAPPDATA%\SkillMesh\Evidence\goala-20260814T021737Z-1b5ec416\cross-family\`
+
+**Retained `a0` report:** `%LOCALAPPDATA%\SkillMesh\Evidence\goala-20260814T021737Z-1b5ec416\cross-family\cross-claude-to-gpt-manual-saved-handoff-20260814T085608Z-cbbf95ed\a0\report.md`
 
 ### Step 78: Prepare Gate A
 
