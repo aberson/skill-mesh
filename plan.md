@@ -91,7 +91,9 @@ The active Codex window changed protected SQLite databases during both safety pr
 
 ### Step 76: Prepare the cross-family fixture
 
-**Status:** READY
+**Status:** IN PROGRESS
+
+The fixture uses one deterministic synthetic candidate for both directions. This isolates the review handoff. It does not claim that a live Claude-family or GPT-family builder authored the candidate.
 
 ### Step 77: Run the cross-family experiment
 
