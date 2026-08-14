@@ -67,21 +67,21 @@ The manifest records 14 files, `apply_check=PASS`, `hash_match=PASS`, and the un
 
 ### Step 74: Prepare the lifecycle fixture
 
-**Status:** DONE
+**Status:** IN PROGRESS — returned after the first Step 75 preflight exceeded the reviewed snapshot bound
 
-**Candidate commit:** `0d06c42916f8953ec37f1a96e89b8a37cf82a77b`
+**Superseded candidate:** `0d06c42916f8953ec37f1a96e89b8a37cf82a77b`
 
 **Evidence:** `%LOCALAPPDATA%\SkillMesh\Evidence\goala-20260814T021737Z-1b5ec416\evidence-index.md`
 
-The exact candidate passed 262 focused and package-integrity tests. Three independent read-only reviews passed the same staged object identities.
+The first Step 75 command stopped before creating an evidence directory, disposable home, or host process. A read-only diagnostic measured 141 seconds to hash 2.93 GB across 41,435 protected records. The reviewed 120-second combined limit was therefore invalid. Step 74 is making a bounded timeout and candidate-identity correction; full-root coverage remains required.
 
 ### Step 75: Run the lifecycle experiment
 
-**Status:** READY
+**Status:** LOCKED — Step 74 correction in progress
 
 ### Step 76: Prepare the cross-family fixture
 
-**Status:** READY
+**Status:** LOCKED — Step 74 correction in progress
 
 ### Step 77: Run the cross-family experiment
 
