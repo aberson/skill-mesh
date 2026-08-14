@@ -1,8 +1,14 @@
 # Provider Expansion Plan — Gemini + Local Lanes (Phase 8, Steps 51-61)
 
-**Status:** BUILD-READY (not yet started). **Prerequisite satisfied:** Phase 7 (host-native discovery
-& consumer cutover, `documentation/host-native-discovery-cutover-plan.md`) completed through its final
-cutover step on 2026-08-09. Step numbering continues from Phase 7's highest step
+**Status:** PARKED — not an active execution authority. The approved Skill Mesh recovery in
+`plan.md` and `documentation/skill-mesh-recovery-plan.md` supersedes this plan for current work.
+Issues `#70` through `#82` remain open as parked history; do not dispatch them until a later
+operator decision explicitly resumes this track. The prior prerequisite state is retained below
+for historical accuracy.
+
+**Prior readiness:** Phase 7 (host-native discovery & consumer cutover,
+`documentation/host-native-discovery-cutover-plan.md`) completed through its final cutover step on
+2026-08-09. Step numbering continues from Phase 7's highest step
 — **currently 50** after the 2026-08-03 re-scope for the proven GPT discovery retarget. Phase 7
 has grown twice (42-48, then 42-50); **before `/repo-sync` mints issues for this plan, re-verify
 Phase 7's final highest step number and renumber this plan upward if Phase 7 grew past 50**
@@ -59,8 +65,9 @@ no external document is required to execute it.
 > also modifies `runtime/skill-router.ps1` (fail-loud startup validation of `deployment.profile`) and
 > deliberately remains `--reviewers code`.
 >
-> **Gate satisfied:** Phase 7 Step 50 (live coding-root cutover) is DONE, so `/build-phase` may run
-> this plan. `/repo-sync` (issue minting) may proceed when its live issue state is rechecked.
+> **Historical gate record:** Phase 7 Step 50 satisfied this plan's former prerequisite. The
+> current `PARKED` status supersedes that readiness statement. Neither `/build-phase` nor
+> `/repo-sync` may act on this plan without a later operator decision that explicitly resumes it.
 
 ---
 

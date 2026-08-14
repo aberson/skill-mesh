@@ -140,78 +140,18 @@ tests/                  calibration, distributions, package-integrity, release, 
   file can never enter an artifact; checksums cover the generated `dist/` (normalized CRLF→LF, BOM
   stripped) rather than the source checkout, whose line endings vary by clone.
 
-## Current state
+## Current authority
 
-**Phase 7 — Host-Native Discovery & Consumer Cutover, complete.** Steps 42–50 are DONE; Step 47b
-remains the separately scheduled, off-critical-path containment-gate hardening follow-up. Steps 42–46:
-the host-loading authority map (locked by 17 package-integrity tests); the live
-Copilot CLI v1.0.77 discovery-root proof, which **disproved** the assumed `.copilot/skills`
-target; the resulting GPT retarget to `.github/skills` with YAML-frontmatter `SKILL.md`; and the
-both-profile discovery proof (Step 45, #67) — with both profiles installed, Copilot dedups skills
-by name and the `.github/skills` GPT profile wins the `.claude/skills` collision by discovery-root
-precedence (`.github/skills` scanned first), so the migrator may install both profiles without the
-GPT skill being shadowed; and read-only host-install inspection (Step 46, #59) — `tools/inspect-host-install.ps1`
-plus `tests/distributions/test_host_inspect.py`, since **hardened** against the four defects a
-full-suite wrap found in it (#83–#86, closed 2026-08-04): the `evidence_class` inversion that let a
-bare `Test-Path` claim `observed`; ten channels echoing untrusted consumer bytes into the default
-report; four untested behaviors (no `foreign` fixture, the corrupt-ledger paths, router
-`canonical`/`legacy`, the `<external>` junction sentinel); and — highest blast radius — twelve
-committed fixture `SKILL.md` files sitting at real discovery paths, which made this repository
-publish phantom skills into its own host. Consumer-home fixtures are now synthesized at test time by
-`tests/distributions/legacy_install_fixtures.py` and a `git ls-files` gate keeps them from coming
-back. **Step 47 (reversible legacy-install migration, #60) is DONE** — merged `29d73dc` on
-2026-08-05. It had been re-scoped the same day by `documentation/step-47-decomposition-decision.md`
-after five review rounds of the unmerged `build-step-1785890195` branch failed to converge; the
-re-scoped step restored the two round-5-changed files to `5ef1045`, implemented the decided
-three-case preserve-drift policy, and merged alone. Its ONE bounded confirming round returned
-**0 Block findings across all six lenses** (the Block trend across rounds 1–6 was 4 → 5 → 4 → 1 → 6
-→ 0); all 6 Nits it did raise were fixed pre-merge. The load-bearing correction: a `rolled_back`
-status now claims only what it can prove — *every byte this tool mutated was restored* — because
-`preserve` actions carry no backup payload by design, so a consumer editing their own preserved
-skill during downtime gets an advisory naming the path and both hashes rather than a false "the
-consumer home is MIXED" claim that invited restoring a stale backup over their newer bytes.
-**Step 48 (#61) is also DONE** — merged `f377c54` on 2026-08-06. It produced
-`documentation/coding-root-cutover-handoff.md`, the copy-pasteable sequence Steps 49–50 execute, plus
-a structure gate (`tests/package-integrity/test_cutover_handoff.py`) that fails on an omitted **or
-mis-ordered** required unit and resolves every backticked command and path token — closing a real gap,
-since markdown links were already checked but command tokens were checked nowhere. Its four-lens
-review caught **two operator-safety Blocks**, both fixed pre-merge: the handoff sent an operator who
-hit exit 3 into `-Resume`/`-Rollback`, which both *refuse* `failed_incomplete` (unresolved AND
-terminal) — two dead ends and a blocked home; and the untracked-deletion fallback destroyed the
-managed legacy GPT tree while claiming backups that provably do not cover it.
+`plan.md` is the only mutable execution-status and evidence index. The approved recovery
+contract is `documentation/skill-mesh-recovery-plan.md`; the product boundary is
+`documentation/product-charter.md`. Do not copy volatile step status into this file.
 
-**Steps 49 and 50 are complete.** Step 49 recorded clean temporary-home host acceptance and rollback.
-Step 50 satisfied the verified-parking gate, installed 50 Claude and 47 GPT generated entries in the
-live consumer, confirmed both native hosts resolved the representative `plan-review` profile from their
-own discovery root, and preserved the legacy `-Model` router path through the generated compatibility
-shim. The external backup is retained; the coding-root-owned cutover branch retires 47 managed legacy GPT
-entries, preserves the consumer-only `goblin-sweep` tree by hash, and carries the GPT `judge-ui`
-calibration note forward byte-for-byte. **Step 47b** remains pending and off the completed cutover path.
-Current collected / passed / skipped counts for both the repo-root DONE gate and the
-`tests/` iteration gate live in `documentation/phase-75-baseline.md` (the one owner) — this
-section deliberately restates none of them, because a count copied into a status paragraph
-is a count that drifts.
+Read `plan.md` before acting. It names the current phase, gate, accepted contract identity,
+evidence locators, and deferred tracks. Do not infer current execution state from historical
+plans or status prose.
 
-(Step 45 also surfaced #69, **fixed in Phase 7.5 Step 68**: a colon-bearing `argument` value failed
-Copilot's YAML parse. It was never a builder defect — there is no Claude frontmatter builder; the
-canonical adapter's block is copied through verbatim, so the fix was to quote the value at its
-source (`skills/context-slim/providers/claude.md`), and a strict-PyYAML gate now grades both the
-canonical adapters and both emitted profiles. The same gate's key allowlist retired a live typo,
-`user-invokable` in `skills/claude-oauth-auth/providers/claude.md`, which had silently disabled
-that skill's deliberate `user-invocable: false` suppression. #87 fixed `/repo-sync`'s hardcoded default branch in minted issue-body links; its
-data-repair half is done for #56–#82, while #1–#37 still point at a plan doc that is not on any pushed
-branch of `aberson/coding-root` — a publishing gap in that repo, not a branch-name defect.)
-
-Phases 1–6 delivered the canonical `skills/` source tree, the provider-neutral router, and the
-distribution, installer, and release tooling. Plan:
-`documentation/host-native-discovery-cutover-plan.md` (it supersedes the unexecuted Step 41
-acceptance intent of `documentation/provider-neutral-skill-mesh-plan.md`). Phase 8 —
-`documentation/provider-expansion-plan.md` (Steps 51–61, Gemini + local lanes) — is BUILD-READY;
-the Phase 7 cutover prerequisite is satisfied. It has been through `/plan-expedite` (commit 5f3d9af): plan-review autofix
-resolved both authoring blockers (Step 55 re-scoped around `tools/gen_manifest.py`'s `LOCAL_CAPABLE`;
-Step 54 given a fork-on-failure provider-set obligation), plan-wrap returned READY (0 blockers, 0 gaps),
-and repo-sync minted umbrella #70 plus step issues #71–#82 — every step now carries `**Type:**` and a
-populated `**Issue:**`. The plan is ready for its next unblocked step.
+Historical implementation detail lives in `documentation/host-native-discovery-cutover-plan.md`,
+the Phase 7.5 status documents, and `documentation/step-4-checkpoint-2026-08-13.md`.
 
 ## Environment requirements
 

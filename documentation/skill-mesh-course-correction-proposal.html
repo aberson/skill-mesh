@@ -1,0 +1,409 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Skill Mesh course correction — redline proposal</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #f5f1e8;
+      --panel: #fffdf8;
+      --ink: #17201d;
+      --muted: #5c6964;
+      --line: #c8d1cb;
+      --accent: #155e54;
+      --accent-soft: #dceee9;
+      --warn: #8b4c16;
+      --warn-soft: #f7e5ce;
+      --danger: #8a2c35;
+      --danger-soft: #f7dfe1;
+      --ok: #236a3b;
+      --ok-soft: #dff0e4;
+      --shadow: 0 12px 30px rgba(23, 32, 29, .08);
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #111714;
+        --panel: #18201c;
+        --ink: #edf4ef;
+        --muted: #a9b7b0;
+        --line: #38463f;
+        --accent: #78d2c1;
+        --accent-soft: #203d37;
+        --warn: #f0b36f;
+        --warn-soft: #422e1d;
+        --danger: #f29ba5;
+        --danger-soft: #46262b;
+        --ok: #8bd3a0;
+        --ok-soft: #203b29;
+        --shadow: 0 12px 30px rgba(0, 0, 0, .25);
+      }
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font: 16px/1.55 ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    a { color: var(--accent); }
+    code, pre { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
+    .shell { width: min(1180px, calc(100% - 32px)); margin: 0 auto; }
+    header { padding: 64px 0 30px; }
+    .eyebrow { color: var(--accent); font-weight: 750; letter-spacing: .08em; text-transform: uppercase; font-size: .78rem; }
+    h1 { max-width: 900px; margin: 10px 0 14px; font-size: clamp(2.25rem, 7vw, 5rem); line-height: .98; letter-spacing: -.045em; }
+    .lede { max-width: 850px; color: var(--muted); font-size: 1.15rem; }
+    .status {
+      display: inline-flex; gap: 8px; align-items: center; margin-top: 16px; padding: 8px 12px;
+      border: 1px solid var(--warn); border-radius: 999px; color: var(--warn); background: var(--warn-soft); font-weight: 700;
+    }
+    .status::before { content: ""; width: 9px; height: 9px; border-radius: 50%; background: currentColor; }
+    nav {
+      position: sticky; top: 0; z-index: 5; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);
+      background: color-mix(in srgb, var(--bg) 90%, transparent); backdrop-filter: blur(12px);
+    }
+    nav .shell { display: flex; gap: 18px; overflow-x: auto; padding: 12px 0; white-space: nowrap; }
+    nav a { color: var(--muted); text-decoration: none; font-size: .9rem; font-weight: 650; }
+    nav a:hover { color: var(--accent); }
+    main { padding: 34px 0 80px; }
+    section { margin: 28px 0; }
+    h2 { margin: 0 0 14px; font-size: clamp(1.55rem, 3vw, 2.25rem); letter-spacing: -.025em; }
+    h3 { margin: 0 0 8px; font-size: 1.1rem; }
+    p { margin: 8px 0 14px; }
+    .grid { display: grid; gap: 16px; }
+    .grid.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .grid.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .card {
+      padding: 20px; border: 1px solid var(--line); border-radius: 16px; background: var(--panel); box-shadow: var(--shadow);
+    }
+    .hero-card { border-left: 7px solid var(--accent); padding: 24px; }
+    .big-choice { font-size: clamp(1.55rem, 4vw, 2.5rem); font-weight: 800; letter-spacing: -.03em; color: var(--accent); }
+    .tag { display: inline-block; padding: 3px 8px; border-radius: 999px; font-size: .76rem; font-weight: 750; background: var(--accent-soft); color: var(--accent); }
+    .tag.hard { background: var(--danger-soft); color: var(--danger); }
+    .tag.preferred { background: var(--accent-soft); color: var(--accent); }
+    .tag.experiment { background: var(--warn-soft); color: var(--warn); }
+    .tag.not-now { background: color-mix(in srgb, var(--muted) 16%, transparent); color: var(--muted); }
+    .callout { border-left: 5px solid var(--warn); background: var(--warn-soft); padding: 16px 18px; border-radius: 8px; }
+    .callout.ok { border-color: var(--ok); background: var(--ok-soft); }
+    .sequence { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 18px 0; }
+    .sequence span { padding: 9px 11px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); font-weight: 650; }
+    .sequence b { color: var(--accent); }
+    ul, ol { padding-left: 1.25rem; }
+    li + li { margin-top: 6px; }
+    .matrix { width: 100%; border-collapse: collapse; font-size: .92rem; }
+    .matrix th, .matrix td { padding: 11px 10px; text-align: left; vertical-align: top; border-bottom: 1px solid var(--line); }
+    .matrix th { color: var(--muted); font-size: .76rem; letter-spacing: .04em; text-transform: uppercase; }
+    .matrix tr:last-child td { border-bottom: 0; }
+    .table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 14px; background: var(--panel); }
+    .decision { border-left: 5px solid var(--warn); }
+    .decision[data-state="accepted"] { border-left-color: var(--ok); }
+    .decision header { padding: 0; display: flex; gap: 9px; align-items: center; flex-wrap: wrap; }
+    .decision-id { font-weight: 850; color: var(--accent); }
+    .filters { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+    button {
+      appearance: none; border: 1px solid var(--line); background: var(--panel); color: var(--ink); border-radius: 10px;
+      padding: 8px 11px; cursor: pointer; font: inherit; font-size: .88rem; font-weight: 700;
+    }
+    button:hover, button.active { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+    pre { overflow-x: auto; padding: 15px; border-radius: 12px; background: #0e1714; color: #e9f5ef; font-size: .86rem; }
+    .phase { position: relative; padding-left: 44px; }
+    .phase-number {
+      position: absolute; left: 0; top: 0; display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%;
+      background: var(--accent); color: var(--bg); font-weight: 850;
+    }
+    .muted { color: var(--muted); }
+    footer { padding: 28px 0 60px; color: var(--muted); border-top: 1px solid var(--line); }
+    @media (max-width: 780px) {
+      .grid.two, .grid.three { grid-template-columns: 1fr; }
+      header { padding-top: 38px; }
+      .shell { width: min(100% - 22px, 1180px); }
+    }
+    @media print {
+      nav, .filters, button { display: none !important; }
+      body { background: white; color: black; }
+      .card, .table-wrap { box-shadow: none; break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+  <header class="shell">
+    <div class="eyebrow">Skill Mesh · course-correction redline</div>
+    <h1>Keep the product. Change the path.</h1>
+    <p class="lede">A decision surface for Abraham Robison: narrow Skill Mesh to the portable workflow and evidence layer, test native Claude/Codex package lifecycle before more installer work, repair the build control plane, then finish with representative behavioral proof.</p>
+    <div class="status">D1-D15 approved 2026-08-13 — execution still requires the recovery-plan gates</div>
+  </header>
+
+  <nav aria-label="Proposal sections">
+    <div class="shell">
+      <a href="#recommendation">Recommendation</a>
+      <a href="#diagnosis">Corrected diagnosis</a>
+      <a href="#boundary">Product boundary</a>
+      <a href="#requirements">Requirements</a>
+      <a href="#experiment">Experiment</a>
+      <a href="#process">Process repairs</a>
+      <a href="#proof">Release proof</a>
+      <a href="#decisions">Decisions</a>
+    </div>
+  </nav>
+
+  <main class="shell">
+    <section id="recommendation">
+      <div class="card hero-card">
+        <div class="tag">Recommended course</div>
+        <div class="big-choice">Make targeted changes, then proceed.</div>
+        <p>Durably preserve Step 4, run separate package-lifecycle and cross-family execution experiments, halt for Abraham's architecture choice, repair the minimum control-plane outcomes, then resume against a narrower charter. Do not continue as-is, restart from zero, or adopt Omnigent now.</p>
+      </div>
+      <div class="grid three" style="margin-top:16px">
+        <article class="card"><h3>Keep</h3><p>Canonical workflows, model-role policy, deterministic conformance, behavioral evals, receipts, and the goal of thin Claude/Codex bindings.</p></article>
+        <article class="card"><h3>Test separately</h3><p>Who owns package lifecycle, and how Claude-family/GPT-family review executes. A passing spike recommends; Abraham chooses.</p></article>
+        <article class="card"><h3>Defer</h3><p>Omnigent adoption, local/Gemini, Copilot, exhaustive model matrices, and full skill decomposition.</p></article>
+      </div>
+    </section>
+
+    <section id="diagnosis">
+      <h2>The corrected delay diagnosis</h2>
+      <div class="callout ok">
+        <strong>Abraham did run the thin experiment.</strong> The plan records a measured reinstall overwriting customized bytes with exit 0 and no backup. The earlier critique overstated the evidence.
+      </div>
+      <div class="sequence" aria-label="Improved decision sequence">
+        <span>Observe</span><b>→</b><span>Reproduce + measure</span><b>→</b><span>Classify</span><b>→</b><span>Sketch smallest options</span><b>→</b><span>Rebaseline if architecture changes</span><b>→</b><span>Approve + sync plan/issue</span><b>→</b><span>Implement</span>
+      </div>
+      <div class="grid two">
+        <article class="card">
+          <h3>What actually went wrong</h3>
+          <p>The measured safety defect expanded into installer + migrator + write-ahead authority/recovery + locking work while the plan was still marked unsafe and its declared files were narrower. The four-file WIP reached <strong>+1,843/-277</strong>.</p>
+        </article>
+        <article class="card">
+          <h3>What was not wrong</h3>
+          <p>Wanting multiple lenses, deterministic tests, Claude/GPT resilience, and a future cheaper model lane was rational. The missing discipline was to expose each addition's unique proof, matrix cost, and defer/relax option.</p>
+        </article>
+      </div>
+      <div class="callout" style="margin-top:16px">
+        <strong>Host/model correction:</strong> the shipped second host layer is GitHub Copilot-specific, not native Codex. A host adapter (Claude Code/Copilot/Codex) and a model family (Claude/GPT) are separate axes. Codex needs an explicit audit and retarget, while cross-family execution needs its own seam.
+      </div>
+    </section>
+
+    <section id="boundary">
+      <h2>A narrower, clearer product</h2>
+      <div class="grid two">
+        <article class="card">
+          <span class="tag">Skill Mesh owns</span>
+          <ul>
+            <li>Portable workflow contracts</li>
+            <li>Thin Claude Code + Codex bindings (Codex is prospective)</li>
+            <li>Model roles and qualified-pair policy</li>
+            <li>Conformance and behavioral evaluation</li>
+            <li>Versioned run receipts and evidence</li>
+          </ul>
+        </article>
+        <article class="card">
+          <span class="tag">Hosts own, if proven</span>
+          <ul>
+            <li>Install, update, discovery, and version cache</li>
+            <li>Disable and uninstall</li>
+            <li>Host permissions and session mechanics</li>
+            <li>Native manifests and marketplaces</li>
+          </ul>
+        </article>
+        <article class="card">
+          <span class="tag">Dev Observatory owns</span>
+          <ul>
+            <li>Bounded evidence ingestion</li>
+            <li>Normalization, freshness, and errors</li>
+            <li>Artifact-backed summary/at-a-glance views</li>
+            <li>Mechanical Transparency wiring views</li>
+          </ul>
+          <p class="muted">Consumer only; never a runtime broker.</p>
+        </article>
+        <article class="card">
+          <span class="tag">Utility standard owns</span>
+          <ul>
+            <li>Profiles and conformance manifests</li>
+            <li>Evidence vocabulary and publication rules</li>
+            <li>Contract owner/version/locator declarations</li>
+          </ul>
+          <p class="muted">Standalone; not a Dev Observatory folder.</p>
+        </article>
+      </div>
+    </section>
+
+    <section id="requirements">
+      <h2>Relax the matrix, not the truth</h2>
+      <div class="table-wrap">
+        <table class="matrix">
+          <thead><tr><th>Keep hard</th><th>Relax / qualify</th><th>Not now</th></tr></thead>
+          <tbody><tr>
+            <td>Real Claude + Codex runs<br>Request + resolution status always<br>Actual resolved ID or named waiver<br>No silent fallback<br>One real cross-family case<br>Safe consumer-byte handling</td>
+            <td>Routine exact pins → qualified aliases<br>Every permutation → representative seams<br>Cross-family every run → selected high-risk seams<br>Quality claim → measured experiment<br>Utility hookups → independent board track</td>
+            <td>Omnigent adoption<br>Local/Gemini<br>Copilot<br>Provider-count goals<br>Full skill decomposition</td>
+          </tr></tbody>
+        </table>
+      </div>
+      <div class="grid two" style="margin-top:16px">
+        <article class="card"><h3>Requested model</h3><p>What config asked for: an exact ID or qualified alias.</p></article>
+        <article class="card"><h3>Resolved model</h3><p>What the host/server reports actually ran. If unavailable, record that honestly and require a named release waiver—never infer it.</p></article>
+      </div>
+      <p><strong>Candidate peers, not presumed equivalents:</strong> Fable ↔ Sol and Sonnet ↔ Terra. Qualification evidence controls the map.</p>
+    </section>
+
+    <section id="experiment">
+      <h2>Two experiments, then an operator halt</h2>
+      <div class="grid two">
+        <article class="card">
+          <span class="tag experiment">A · package lifecycle</span>
+          <h3>Use a unique probe, not an existing skill</h3>
+          <p>Package two uniquely named probe skills plus a shared reference and helper. Install, resolve source, update, disable, uninstall, and test consumer-byte authority in isolated Claude Code and Codex profiles. This avoids a shadowed <code>plan-redline</code> false pass.</p>
+        </article>
+        <article class="card">
+          <span class="tag experiment">B · cross-family execution</span>
+          <h3>Distribution does not choose the reviewer seam</h3>
+          <p>Audit Claude, Copilot-specific, native Codex, and provider-router layers. Compare manual receipted handoff, a bounded external-review dispatcher, and deferred seamless automation on an immutable seeded diff.</p>
+        </article>
+      </div>
+      <div class="callout" style="margin-top:16px">
+        <strong>No self-authorizing spike.</strong> PASS/PARTIAL/FAIL/AMBIGUOUS results produce recommendations. Abraham chooses package ownership, cross-family execution, and Step 4 disposition before implementation resumes.
+      </div>
+      <div class="grid two" style="margin-top:16px">
+        <article class="card"><h3>Lifecycle both pass</h3><p>Recommend native lifecycle, then compare one-time manual cutover/retirement with a bounded legacy utility. Do not presume a permanent migrator.</p></article>
+        <article class="card"><h3>Lifecycle partial/fail</h3><p>Recommend the smallest host-specific compatibility option or separately re-charter the installer.</p></article>
+        <article class="card"><h3>Dispatcher passes</h3><p>Recommend retaining only the bounded cross-family review seam, with explicit receipt/fallback policy.</p></article>
+        <article class="card"><h3>Manual only / ambiguous</h3><p>Surface the asymmetry or missing premise; do not turn adapter labels into execution proof.</p></article>
+      </div>
+    </section>
+
+    <section id="process">
+      <h2>Fix by size and urgency</h2>
+      <div class="grid three">
+        <article class="card">
+          <span class="tag hard">Immediate</span>
+          <ul>
+            <li>External binary patch + hashes + apply-check</li>
+            <li>Immutable acceptance snapshot at dispatch</li>
+            <li>Allow / quick-amend / redline lanes</li>
+            <li>Focused iteration + one full gate per SHA/config</li>
+            <li>One stable status pointer</li>
+          </ul>
+        </article>
+        <article class="card">
+          <span class="tag experiment">Prerequisite repair</span>
+          <ul>
+            <li>Acceptance/plan-step affects verdict</li>
+            <li>Nits no longer automatically block</li>
+            <li>Uncertainty cannot advance</li>
+            <li>Immutable candidate SHA review</li>
+            <li>Gate evidence is reused by SHA/config</li>
+            <li>Manual pre/post scope check + scoped staging</li>
+            <li>Small planning-calibration replacement</li>
+          </ul>
+        </article>
+        <article class="card">
+          <span class="tag not-now">Later multi-file redesign</span>
+          <ul>
+            <li>Decompose ~1,000-line cores</li>
+            <li>Progressively disclose optional paths</li>
+            <li>Move mechanics into tested scripts</li>
+            <li>Forward-test canonical + generated packages</li>
+            <li>Then use/adapt skill-iterate narrowly</li>
+          </ul>
+          <p class="muted">Only after correcting semantics and evals.</p>
+        </article>
+      </div>
+      <div class="callout" style="margin-top:16px">
+        <strong>Phone-a-friend alone is insufficient.</strong> Check scope before dispatch and after the candidate diff. New authority/product acceptance/material breach stops; adjacent tests/docs may be logged, and bounded same-subsystem growth may get a quick amendment. Terra → Sol is only for uncertain diagnosis and supplies evidence, not permission.
+      </div>
+    </section>
+
+    <section id="proof">
+      <h2>Representative release proof</h2>
+      <div class="grid three">
+        <article class="card"><h3>1 · plan-redline</h3><p>Claude + Codex, disposable document fixture, Fable/Sol candidate lane, equivalent inventory/artifact contract.</p></article>
+        <article class="card"><h3>2 · build-step</h3><p>Disposable code fixture, seeded defects, at least one real Sonnet/Terra-family direction (both when supported), deterministic tests primary.</p></article>
+        <article class="card"><h3>3 · session-wrap</h3><p>Disposable repository, live messaging/mutation disabled, minimal receipt + bounded same-version Observatory projection + explicit deferrals.</p></article>
+      </div>
+      <p class="muted">Behavioral equivalence means the same required outcomes, safety invariants, and artifact schema—not identical prose or hidden reasoning.</p>
+    </section>
+
+    <section>
+      <h2>Provisional path after approval</h2>
+      <div class="grid two">
+        <article class="card phase"><span class="phase-number">0</span><h3>Preserve + manual controls</h3><p>Verified recovery artifact first; no live install.</p></article>
+        <article class="card phase"><span class="phase-number">1</span><h3>Two experiments</h3><p>Native lifecycle and cross-family execution.</p></article>
+        <article class="card phase"><span class="phase-number">2</span><h3>Abraham's decision gate</h3><p>Experiments recommend; operator chooses and plan updates.</p></article>
+        <article class="card phase"><span class="phase-number">3</span><h3>Minimum control repair</h3><p>Hard outcomes only, bootstrapped manually and proven.</p></article>
+        <article class="card phase"><span class="phase-number">4</span><h3>Conditional product/hosts</h3><p>Chosen distribution seam, Codex retarget, chosen review seam.</p></article>
+        <article class="card phase"><span class="phase-number">5</span><h3>Models + receipt + proof</h3><p>Qualify pairs and run representative evidence.</p></article>
+        <article class="card phase"><span class="phase-number">6</span><h3>Observatory consumer</h3><p>Same-receipt projection; consumer-owned display.</p></article>
+        <article class="card phase"><span class="phase-number">7</span><h3>Docs + UAT + release</h3><p>Walkthrough, exact-SHA/config gates, rehearsal, cutover.</p></article>
+        <article class="card phase"><span class="phase-number">U</span><h3>Independent utility board track</h3><p>Re-redline, then resume, split, reduce, or retire each hookup. No dependency into phase 7.</p></article>
+      </div>
+    </section>
+
+    <section id="decisions">
+      <h2>Decision Inventory</h2>
+      <p>Abraham approved D1-D15 as written on 2026-08-13. D16 is a later, non-blocking communication pilot. It does not reopen the approved architecture direction.</p>
+      <div class="filters" aria-label="Decision filters">
+        <button class="active" data-filter="all">All</button>
+        <button data-filter="hard">Hard</button>
+        <button data-filter="preferred">Preferred</button>
+        <button data-filter="experiment">Experiment</button>
+        <button data-filter="not-now">Not now</button>
+      </div>
+      <div class="grid two" id="decision-grid">
+        <article class="card decision" data-kind="hard"><header><span class="decision-id">D1</span><span class="tag hard">hard</span></header><h3>Experiments do not authorize themselves</h3><p>Both reports halt at R2; Abraham selects package ownership, reviewer execution, and Step 4 disposition.</p></article>
+        <article class="card decision" data-kind="experiment"><header><span class="decision-id">D2</span><span class="tag experiment">experiment</span></header><h3>Unique structural lifecycle probe</h3><p>Two probe skills + shared asset prevent shadowed discovery while testing package shape.</p></article>
+        <article class="card decision" data-kind="experiment"><header><span class="decision-id">D3</span><span class="tag experiment">experiment</span></header><h3>Separate cross-family seam spike</h3><p>Compare manual receipt, bounded dispatcher, and deferred seamless automation.</p></article>
+        <article class="card decision" data-kind="hard"><header><span class="decision-id">D4</span><span class="tag hard">hard</span></header><h3>Minimum control outcomes</h3><p>Acceptance gates, advisory Nits, fail-closed uncertainty, immutable bytes, scoped staging, and deduplicated gates.</p></article>
+        <article class="card decision" data-kind="hard"><header><span class="decision-id">D5</span><span class="tag hard">hard</span></header><h3>Three-lane change control</h3><p>Allow, quick-amend, or redline at pre-dispatch and after candidate diff.</p></article>
+        <article class="card decision" data-kind="preferred"><header><span class="decision-id">D6</span><span class="tag preferred">preferred</span></header><h3>Automate the scope sentinel later</h3><p>First prove the manual rule; avoid another premature control subsystem.</p></article>
+        <article class="card decision" data-kind="preferred"><header><span class="decision-id">D7</span><span class="tag preferred">preferred</span></header><h3>Capacity escalation is advisory</h3><p>Terra may ask Sol only for uncertain diagnosis/options; neither may authorize scope.</p></article>
+        <article class="card decision" data-kind="hard"><header><span class="decision-id">D8</span><span class="tag hard">hard</span></header><h3>Unavailable resolution needs a waiver</h3><p>All-unavailable evidence cannot silently satisfy exact-model transparency.</p></article>
+        <article class="card decision" data-kind="preferred"><header><span class="decision-id">D9</span><span class="tag preferred">preferred</span></header><h3>Qualified aliases for routine work</h3><p>Exact pins for release/eval/high-risk where supported; request/status always visible.</p></article>
+        <article class="card decision" data-kind="hard"><header><span class="decision-id">D10</span><span class="tag hard">hard</span></header><h3>One producer-owned receipt</h3><p>Observatory consumes a redacted same-version projection; utility standard remains independent.</p></article>
+        <article class="card decision" data-kind="preferred"><header><span class="decision-id">D11</span><span class="tag preferred">preferred</span></header><h3>Utilities remain board track U</h3><p>Re-redline each seam; no hidden dependency into the Skill Mesh architecture release.</p></article>
+        <article class="card decision" data-kind="not-now"><header><span class="decision-id">D12</span><span class="tag not-now">not now</span></header><h3>Defer multi-file decomposition</h3><p>Redesign explicitly later; skill-iterate is only a constrained post-redesign helper.</p></article>
+        <article class="card decision" data-kind="hard"><header><span class="decision-id">D13</span><span class="tag hard">hard</span></header><h3>Name the supported Codex surface</h3><p>Target Codex CLI/ChatGPT desktop; the current IDE extension needs an explicit compatibility requirement.</p></article>
+        <article class="card decision" data-kind="hard"><header><span class="decision-id">D14</span><span class="tag hard">hard</span></header><h3>Small planning guardrails before product work</h3><p>Replace conflicting rules and add commitment/anti-goal goldens; full redesign stays later.</p></article>
+        <article class="card decision" data-kind="experiment"><header><span class="decision-id">D15</span><span class="tag experiment">experiment</span></header><h3>Do not presume a permanent legacy tool</h3><p>If native lifecycle wins, compare one-time manual cutover/retirement with a bounded utility.</p></article>
+        <article class="card decision" data-kind="experiment"><header><span class="decision-id">D16</span><span class="tag experiment">experiment</span></header><h3>Pilot plain operational English</h3><p>Use a small STE-inspired profile, preserve exact technical strings, make length targets advisory, and decide adoption from comprehension UAT.</p></article>
+      </div>
+      <div class="card" style="margin-top:16px">
+        <h3>Recorded authority</h3>
+        <pre id="reply">D1-D15: approved by Abraham Robison on 2026-08-13.
+D16: recommended pilot; decide during Phase 7 UAT.
+No implementation or live cutover is authorized by this record.</pre>
+        <button id="copy-reply" type="button">Copy authority summary</button>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="shell">
+      <p><strong>Provenance:</strong> requested by Abraham Robison; prepared 2026-08-13 from repository evidence, operator feedback, and current first-party documentation.</p>
+      <p>Full rationale and citations: <code>documentation/skill-mesh-course-correction-plan.md</code>. Omnigent is preserved separately in <code>documentation/omnigent-revisit-seed.md</code>.</p>
+    </div>
+  </footer>
+
+  <script>
+    const buttons = [...document.querySelectorAll('[data-filter]')];
+    const decisions = [...document.querySelectorAll('.decision')];
+    buttons.forEach(button => button.addEventListener('click', () => {
+      buttons.forEach(item => item.classList.remove('active'));
+      button.classList.add('active');
+      const filter = button.dataset.filter;
+      decisions.forEach(card => card.hidden = filter !== 'all' && card.dataset.kind !== filter);
+    }));
+    document.getElementById('copy-reply').addEventListener('click', async event => {
+      const value = document.getElementById('reply').innerText;
+      try {
+        await navigator.clipboard.writeText(value);
+        event.currentTarget.textContent = 'Copied';
+        setTimeout(() => event.currentTarget.textContent = 'Copy response template', 1400);
+      } catch {
+        event.currentTarget.textContent = 'Select and copy the template above';
+      }
+    });
+  </script>
+</body>
+</html>
