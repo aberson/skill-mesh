@@ -1,0 +1,18 @@
+{
+  "name": "{{PLUGIN_NAME}}",
+  "version": "{{SEMVER}}",
+  "description": "Disposable two-skill package for Skill Mesh lifecycle evidence",
+  "author": {
+    "name": "Skill Mesh Goal A"
+  },
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Lifecycle {{PROBE_ID}}",
+    "shortDescription": "Prove isolated plugin lifecycle behavior.",
+    "longDescription": "Two disposable skills expose markers from shared package files.",
+    "developerName": "Skill Mesh Goal A",
+    "category": "Developer Tools",
+    "capabilities": ["Read"],
+    "defaultPrompt": "Use an installed lifecycle-test skill when the user names it."
+  }
+}

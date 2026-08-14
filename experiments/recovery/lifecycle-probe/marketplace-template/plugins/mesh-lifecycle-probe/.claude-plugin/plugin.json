@@ -1,0 +1,8 @@
+{
+  "name": "{{PLUGIN_NAME}}",
+  "description": "Disposable two-skill package for Skill Mesh lifecycle evidence",
+  "version": "{{SEMVER}}",
+  "author": {
+    "name": "Skill Mesh Goal A"
+  }
+}
