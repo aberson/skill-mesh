@@ -25,6 +25,7 @@ from evidence import canonical_json_bytes, read_bounded, sha256_file, write_new
 SNAPSHOT_DEADLINE_SECONDS = 600
 SNAPSHOT_PARENT_TIMEOUT_SECONDS = 630
 SNAPSHOT_MAX_RECORDS = 100_000
+SNAPSHOT_EVIDENCE_MAX_BYTES = 64 * 1024 * 1024
 REPARSE_DISCOVERY_SECONDS = 120
 MAX_CREDENTIAL_BYTES = 16 * 1024 * 1024
 JOB_BLOB = "187d26bcadd4a776b02410c0295792c025d05c70"
@@ -315,7 +316,11 @@ def take_snapshot(
         for record in records
     ):
         raise HostRuntimeError("protected live-state snapshot changed while it was read")
-    write_new(destination, canonical_json_bytes(payload))
+    write_new(
+        destination,
+        canonical_json_bytes(payload),
+        maximum=SNAPSHOT_EVIDENCE_MAX_BYTES,
+    )
     return payload
 
 

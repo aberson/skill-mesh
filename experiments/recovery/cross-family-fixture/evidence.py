@@ -56,8 +56,15 @@ def read_bounded(path: Path, maximum: int = MAX_EVIDENCE_FILE_BYTES) -> bytes:
     return payload
 
 
-def write_new(path: Path, payload: bytes) -> None:
-    if len(payload) > MAX_EVIDENCE_FILE_BYTES:
+def write_new(
+    path: Path,
+    payload: bytes,
+    *,
+    maximum: int = MAX_EVIDENCE_FILE_BYTES,
+) -> None:
+    if type(maximum) is not int or maximum <= 0:
+        raise EvidenceError("evidence output bound is invalid")
+    if len(payload) > maximum:
         raise EvidenceError(f"evidence output exceeds the size bound: {path.name}")
     if not path.parent.is_dir() or path.parent.is_symlink():
         raise EvidenceError(f"evidence parent is not one regular directory: {path.parent}")

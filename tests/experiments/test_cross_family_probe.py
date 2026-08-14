@@ -810,6 +810,11 @@ def test_evidence_writes_are_create_new_and_collision_safe(tmp_path: Path) -> No
         evidence.write_new(destination, b"replacement\n")
     assert destination.read_bytes() == b"first\n"
 
+    bounded = tmp_path / "bounded.txt"
+    with pytest.raises(evidence.EvidenceError, match="size bound"):
+        evidence.write_new(bounded, b"123", maximum=2)
+    evidence.write_new(bounded, b"123", maximum=3)
+
 
 def test_report_renderer_requires_exact_keys_and_closes_all_placeholders() -> None:
     evidence = _load_evidence_helpers()
@@ -1065,6 +1070,38 @@ def test_snapshot_contract_covers_live_roots_and_detects_any_record_change(
     )
     assert status == "AMBIGUOUS"
     assert detail["changed_paths"] == ["codex/session"]
+
+
+def test_snapshot_evidence_uses_its_separate_64_mib_bound(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    host = _load_host_runtime()
+    payload = {"schema": 1, "status": "COMPLETE", "records": []}
+    captured: dict[str, object] = {}
+    monkeypatch.setattr(
+        host.subprocess,
+        "run",
+        lambda *args, **kwargs: subprocess.CompletedProcess(
+            args=args[0],
+            returncode=0,
+            stdout=json.dumps(payload, separators=(",", ":")).encode("ascii"),
+            stderr=b"",
+        ),
+    )
+
+    def fake_write(path: Path, content: bytes, *, maximum: int) -> None:
+        captured.update(path=path, content=content, maximum=maximum)
+
+    monkeypatch.setattr(host, "write_new", fake_write)
+    destination = tmp_path / "live-before.json"
+    assert host.take_snapshot(
+        tmp_path / "helper.py",
+        {"schema": 1},
+        destination,
+    ) == payload
+    assert captured["path"] == destination
+    assert captured["maximum"] == 64 * 1024 * 1024
 
 
 def test_job_invocation_requires_proof_that_the_job_is_empty(
@@ -1337,6 +1374,7 @@ def test_what_if_plan_is_deterministic_and_writes_nothing(tmp_path: Path) -> Non
     }
     run_plan = probe.what_if_plan(run_request, run_paths, candidate)
     assert run_plan["host_start_count"] == 1
+    assert run_plan["snapshot_policy"]["max_evidence_bytes"] == 64 * 1024 * 1024
     assert str(run_paths["live_codex"] / "auth.json") in run_plan["read_targets"]
     assert str(run_paths["evidence"] / "candidate-before.json") in run_plan["write_targets"]
     assert str(run_paths["evidence"] / "candidate-after.json") in run_plan["write_targets"]
@@ -1896,6 +1934,7 @@ def test_codex_resolution_uses_the_single_native_npm_cli_binary(
 
 def test_interrupted_attempt_publishes_ambiguous_and_cleans_only_with_job_proof(
     tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     probe = _load_probe()
     request = _probe_request(
@@ -1977,6 +2016,22 @@ def test_interrupted_attempt_publishes_ambiguous_and_cleans_only_with_job_proof(
         + "\n",
         encoding="ascii",
     )
+    snapshot_payload = '{"records":[],"schema":1,"status":"COMPLETE"}\n'
+    for name in ("live-before.json", "live-after.json"):
+        (safe_paths["evidence"] / name).write_text(
+            snapshot_payload,
+            encoding="ascii",
+        )
+    snapshot_read_bounds: list[tuple[str, int | None]] = []
+    real_read_bounded = probe.read_bounded
+
+    def capture_read_bound(path: Path, *args, **kwargs) -> bytes:
+        if path.name in {"live-before.json", "live-after.json"}:
+            maximum = args[0] if args else kwargs.get("maximum")
+            snapshot_read_bounds.append((path.name, maximum))
+        return real_read_bounded(path, *args, **kwargs)
+
+    monkeypatch.setattr(probe, "read_bounded", capture_read_bound)
     safe = probe.publish_ambiguous_failure(
         request=request,
         candidate=candidate,
@@ -1991,6 +2046,10 @@ def test_interrupted_attempt_publishes_ambiguous_and_cleans_only_with_job_proof(
     assert "Cleanup status | `PASS`" in safe_report
     assert safe["host_started"] is True
     assert not safe_paths["fixture"].exists()
+    assert snapshot_read_bounds == [
+        ("live-before.json", 64 * 1024 * 1024),
+        ("live-after.json", 64 * 1024 * 1024),
+    ]
 
     collision_paths, collision_prepared = prepare_case("collision")
     (collision_paths["evidence"] / "report.md").write_text(

@@ -22,6 +22,9 @@ reviewer and one after it. An incomplete baseline stops before the host starts. 
 delta is `AMBIGUOUS`, including Codex database or session activity. The probe retains the reviewer
 evidence after such a delta and never reports that no live mutation occurred.
 
+Each raw snapshot file has a separate 64 MiB cap. The general evidence-file cap remains 16 MiB.
+The snapshot still stops at 100,000 records, 600 seconds, or any incomplete or changing record.
+
 The experiment:
 
 - creates only the named disposable fixture root and evidence directory;

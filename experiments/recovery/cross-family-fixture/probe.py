@@ -1167,8 +1167,18 @@ def publish_ambiguous_failure(
     after_path = evidence_dir / "live-after.json"
     if before_path.is_file() and after_path.is_file():
         try:
-            before = json.loads(read_bounded(before_path).decode("ascii"))
-            after = json.loads(read_bounded(after_path).decode("ascii"))
+            before = json.loads(
+                read_bounded(
+                    before_path,
+                    host_runtime.SNAPSHOT_EVIDENCE_MAX_BYTES,
+                ).decode("ascii")
+            )
+            after = json.loads(
+                read_bounded(
+                    after_path,
+                    host_runtime.SNAPSHOT_EVIDENCE_MAX_BYTES,
+                ).decode("ascii")
+            )
             live_status, live_detail = host_runtime.compare_snapshots(before, after)
         except Exception as snapshot_error:
             live_detail = {"reason": f"snapshot comparison failed: {type(snapshot_error).__name__}"}
@@ -1403,6 +1413,7 @@ def what_if_plan(
             "deadline_seconds": host_runtime.SNAPSHOT_DEADLINE_SECONDS,
             "parent_timeout_seconds": host_runtime.SNAPSHOT_PARENT_TIMEOUT_SECONDS,
             "max_records": host_runtime.SNAPSHOT_MAX_RECORDS,
+            "max_evidence_bytes": host_runtime.SNAPSHOT_EVIDENCE_MAX_BYTES,
             "reparse_inventory_deadline_seconds": host_runtime.REPARSE_DISCOVERY_SECONDS,
         },
         "fallback_allowed": False,
