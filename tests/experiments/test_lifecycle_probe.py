@@ -274,7 +274,13 @@ def _make_whatif_repo(tmp_path: Path, host: str = "codex") -> dict[str, object]:
     shutil.copy2(REPORT_TEMPLATE, repo / "documentation" / "experiments" / REPORT_TEMPLATE.name)
     shutil.copy2(RUNBOOK, repo / "documentation" / "experiments" / RUNBOOK.name)
     goal_a_id = "goala-20260814T040000Z-1234abcd"
-    (repo / "plan.md").write_text(f"**GoalAId:** `{goal_a_id}`\n", encoding="utf-8")
+    plan_path = repo / "plan.md"
+    plan_path.write_text(
+        f"**GoalAId:** `{goal_a_id}`\n\n"
+        "### Step 74: Prepare the lifecycle fixture\n\n"
+        "**Status:** IN PROGRESS\n",
+        encoding="utf-8",
+    )
     (repo / "tests" / "experiments").mkdir(parents=True, exist_ok=True)
     (repo / "tests" / "experiments" / "test_lifecycle_probe.py").write_text("# fixture\n", encoding="utf-8")
 
@@ -284,12 +290,22 @@ def _make_whatif_repo(tmp_path: Path, host: str = "codex") -> dict[str, object]:
     _git(repo, "add", ".")
     _git(repo, "commit", "-m", "fixture")
     candidate_sha = _git(repo, "rev-parse", "HEAD")
+    plan_path.write_text(
+        f"**GoalAId:** `{goal_a_id}`\n\n"
+        "### Step 74: Prepare the lifecycle fixture\n\n"
+        "**Status:** DONE\n\n"
+        f"**Candidate commit:** `{candidate_sha}`\n",
+        encoding="utf-8",
+    )
+    _git(repo, "add", "plan.md")
+    _git(repo, "commit", "-m", "record candidate")
 
     local_app_data = tmp_path / "localappdata"
     goal_root = local_app_data / "SkillMesh" / "Evidence" / goal_a_id
     goal_root.mkdir(parents=True)
     (goal_root / "evidence-index.md").write_text(
-        f"| `step74-candidate` | `git:{candidate_sha}` | `test` | fixture |\n",
+        "| `step74-candidate` | `git:1111111111111111111111111111111111111111` | `test` | superseded fixture |\n"
+        f"| `step74-candidate` | `git:{candidate_sha}` | `test` | active fixture |\n",
         encoding="utf-8",
     )
 
@@ -824,6 +840,9 @@ def test_whatif_is_deterministic_complete_and_launches_no_host(tmp_path: Path, h
     plan = json.loads(first.stdout)
     assert plan["candidate_sha"] == fixture["candidate_sha"]
     assert plan["host"] == host
+    assert plan["live_snapshot"]["deadline_seconds"] == 600
+    assert plan["live_snapshot"]["parent_timeout_seconds"] == 630
+    assert plan["live_snapshot"]["max_records"] == 100_000
     assert any(path.endswith("report.md") for path in plan["write_targets"])
     assert any(path.endswith("manifest.sha256") for path in plan["write_targets"])
     assert len(plan["rendered_fixture_files"]) == 24
@@ -886,11 +905,22 @@ def test_whatif_rejects_host_run_id_mismatch_and_unrecorded_candidate(tmp_path: 
     assert result.returncode == 2
     assert "host does not match" in result.stderr
 
+    plan_path = Path(fixture["repo"]) / "plan.md"
+    original_plan = plan_path.read_text(encoding="utf-8")
+    plan_path.write_text(
+        original_plan.replace(str(fixture["candidate_sha"]), "f" * 40),
+        encoding="utf-8",
+    )
+    result = _run(fixture["args"], cwd=fixture["repo"], env=fixture["env"])
+    assert result.returncode == 2
+    assert "does not match the active Step 74 candidate" in result.stderr
+    plan_path.write_text(original_plan, encoding="utf-8")
+
     evidence_index = Path(fixture["env"]["LOCALAPPDATA"]) / "SkillMesh" / "Evidence" / "goala-20260814T040000Z-1234abcd" / "evidence-index.md"
     evidence_index.write_text("# no candidate\n", encoding="utf-8")
     result = _run(fixture["args"], cwd=fixture["repo"], env=fixture["env"])
     assert result.returncode == 2
-    assert "not recorded" in result.stderr
+    assert "exactly one matching Step 74 row" in result.stderr
 
 
 @pytest.mark.parametrize(
@@ -994,6 +1024,13 @@ def test_runner_keeps_native_and_compatibility_operations_distinct() -> None:
     assert "A prior process tree is not confirmed stopped" in text
     assert "live_snapshot.py" in text
     assert '"-I -B $' in text
+    assert "$script:LiveSnapshotDeadlineSeconds = 600" in text
+    assert "$script:LiveSnapshotParentTimeoutMilliseconds = 630000" in text
+    assert "$parentExited = $process.WaitForExit($script:LiveSnapshotParentTimeoutMilliseconds)" in text
+    assert "deadline_seconds = $script:LiveSnapshotDeadlineSeconds" in text
+    assert "$process.WaitForExit(150000)" not in text
+    assert "deadline_seconds = 120" not in text
+    assert "120 seconds and 100000 records" not in text
 
 
 def test_docs_are_public_and_exact_tokens_are_consistent() -> None:

@@ -47,6 +47,9 @@ $script:LiveSnapshotHmacKeyHex = ''
 $script:UsageStatus = 'unavailable'
 $script:CostStatus = 'unavailable'
 $script:LifecycleExitCode = 2
+$script:LiveSnapshotDeadlineSeconds = 600
+$script:LiveSnapshotParentTimeoutMilliseconds = 630000
+$script:LiveSnapshotMaxRecords = 100000
 
 function Get-CanonicalRealPath {
     param(
@@ -236,9 +239,19 @@ function Assert-RequiredParameters {
 }
 
 function Assert-CandidateIdentity {
-    $recordedGoalAId = Select-String -LiteralPath (Join-Path $script:RepoRoot 'plan.md') -Pattern '^\*\*GoalAId:\*\* `([^`]+)`$'
+    $planPath = Join-Path $script:RepoRoot 'plan.md'
+    $recordedGoalAId = Select-String -LiteralPath $planPath -Pattern '^\*\*GoalAId:\*\* `([^`]+)`$'
     if (-not $recordedGoalAId -or $recordedGoalAId.Matches[0].Groups[1].Value -ne $GoalAId) {
         throw "GoalAId does not match plan.md"
+    }
+    $planText = Get-Content -Raw -LiteralPath $planPath
+    $step74Section = [regex]::Match($planText, '(?ms)^### Step 74:.*?(?=^### Step |\z)')
+    $recordedCandidate = [regex]::Match(
+        $step74Section.Value,
+        '(?m)^\*\*Candidate commit:\*\* `([0-9a-f]{40})`'
+    )
+    if (-not $recordedCandidate.Success -or $recordedCandidate.Groups[1].Value -ne $CandidateSha) {
+        throw "CandidateSha does not match the active Step 74 candidate in plan.md"
     }
 
     & git --no-optional-locks -C $script:RepoRoot cat-file -e "$CandidateSha^{commit}" 2>$null
@@ -265,9 +278,12 @@ function Assert-CandidateIdentity {
     if (-not (Test-Path -LiteralPath $indexPath -PathType Leaf)) {
         throw "Goal A evidence index is missing: $indexPath"
     }
-    $candidateLine = Select-String -LiteralPath $indexPath -Pattern '^\| `step74-candidate`'
-    if (-not $candidateLine -or -not @($candidateLine | Where-Object { $_.Line.Contains($CandidateSha) })) {
-        throw "CandidateSha is not recorded in the Goal A evidence index"
+    $candidateLines = @(
+        Select-String -LiteralPath $indexPath -Pattern '^\| `step74-candidate`' |
+            Where-Object { [regex]::Match($_.Line, '[0-9a-f]{40}').Value -eq $CandidateSha }
+    )
+    if ($candidateLines.Count -ne 1) {
+        throw "CandidateSha must have exactly one matching Step 74 row in the Goal A evidence index"
     }
 }
 
@@ -863,7 +879,7 @@ function Invoke-LiveSnapshotHelper([string]$RequestJson) {
         $stderrTask = $process.StandardError.ReadToEndAsync()
         $process.StandardInput.Write($RequestJson)
         $process.StandardInput.Close()
-        $parentExited = $process.WaitForExit(150000)
+        $parentExited = $process.WaitForExit($script:LiveSnapshotParentTimeoutMilliseconds)
         if (-not $parentExited) {
             $null = (& taskkill.exe /PID $process.Id /T /F 2>&1 | Out-String)
             $parentExited = $process.WaitForExit(10000)
@@ -913,8 +929,8 @@ function Get-LiveHomeSnapshot([string]$ClaudeHome, [string]$CodexHome) {
     $request = [ordered]@{
         schema = 1
         hmac_key_hex = $script:LiveSnapshotHmacKeyHex
-        deadline_seconds = 120
-        max_records = 100000
+        deadline_seconds = $script:LiveSnapshotDeadlineSeconds
+        max_records = $script:LiveSnapshotMaxRecords
         roots = @(
             [ordered]@{ label = 'claude'; path = (Get-AbsolutePath $ClaudeHome) },
             [ordered]@{ label = 'codex'; path = (Get-AbsolutePath $CodexHome) },
@@ -1843,8 +1859,11 @@ $plan = [ordered]@{
     live_snapshot = [ordered]@{
         helper = '<REPO_ROOT>/experiments/recovery/lifecycle-probe/live_snapshot.py'
         invocation = 'python -I -B <helper>; request and ephemeral HMAC key are sent only on redirected stdin'
+        deadline_seconds = $script:LiveSnapshotDeadlineSeconds
+        parent_timeout_seconds = [int]($script:LiveSnapshotParentTimeoutMilliseconds / 1000)
+        max_records = $script:LiveSnapshotMaxRecords
         roots = @('<LIVE_CLAUDE_HOME>', '<LIVE_CODEX_HOME>', '<USERPROFILE>/.agents', 'unique local reparse targets')
-        limits = '120 seconds and 100000 records per complete snapshot; parent process timeout is 150 seconds'
+        limits = "$($script:LiveSnapshotDeadlineSeconds) seconds and $($script:LiveSnapshotMaxRecords) records per complete snapshot; parent process timeout is $([int]($script:LiveSnapshotParentTimeoutMilliseconds / 1000)) seconds"
         credential_comparison = 'ephemeral HMAC held in runner memory; no credential digest, bytes, or key is retained'
     }
     process_containment = [ordered]@{

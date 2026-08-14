@@ -19,7 +19,7 @@ Expected results:
 1. Close other Claude Code and Codex processes that can change plugin settings.
 2. Run from the clean Goal A worktree.
 3. Confirm `plan.md` names the expected Goal A ID.
-4. Confirm `evidence-index.md` has exactly one `step74-candidate` row.
+4. Confirm `evidence-index.md` has exactly one `step74-candidate` row for the candidate named in `plan.md`.
 5. Do not edit the runner, fixture, template, or this runbook after that commit.
 
 The runner copies only the selected host credential file into its disposable profile. It removes
@@ -38,15 +38,25 @@ $ErrorActionPreference = 'Stop'
 $goalAId = 'goala-20260814T021737Z-1b5ec416'
 $goalRoot = Join-Path $env:LOCALAPPDATA "SkillMesh\Evidence\$goalAId"
 $evidenceIndex = Join-Path $goalRoot 'evidence-index.md'
-$candidateLines = @(Select-String -LiteralPath $evidenceIndex -Pattern '^\| `step74-candidate`')
-if ($candidateLines.Count -ne 1) { throw "Expected one step74-candidate row; found $($candidateLines.Count)" }
-$candidateLine = $candidateLines[0]
-$candidateSha = [regex]::Match($candidateLine.Line, '[0-9a-f]{40}').Value
-if ($candidateSha -notmatch '^[0-9a-f]{40}$') { throw 'Step 74 candidate SHA is invalid' }
-
-$recordedGoalA = Select-String -LiteralPath .\plan.md -Pattern '^\*\*GoalAId:\*\* `([^`]+)`$'
+$planPath = '.\plan.md'
+$recordedGoalA = Select-String -LiteralPath $planPath -Pattern '^\*\*GoalAId:\*\* `([^`]+)`$'
 if (-not $recordedGoalA -or $recordedGoalA.Matches[0].Groups[1].Value -ne $goalAId) {
     throw 'plan.md does not name the expected Goal A ID'
+}
+$planText = Get-Content -Raw -LiteralPath $planPath
+$step74Section = [regex]::Match($planText, '(?ms)^### Step 74:.*?(?=^### Step |\z)')
+$candidateMatch = [regex]::Match(
+    $step74Section.Value,
+    '(?m)^\*\*Candidate commit:\*\* `([0-9a-f]{40})`'
+)
+if (-not $candidateMatch.Success) { throw 'plan.md does not name an active Step 74 candidate' }
+$candidateSha = $candidateMatch.Groups[1].Value
+$candidateLines = @(
+    Select-String -LiteralPath $evidenceIndex -Pattern '^\| `step74-candidate`' |
+        Where-Object { [regex]::Match($_.Line, '[0-9a-f]{40}').Value -eq $candidateSha }
+)
+if ($candidateLines.Count -ne 1) {
+    throw "Expected one Step 74 evidence row for $candidateSha; found $($candidateLines.Count)"
 }
 
 function New-EightHex {
@@ -131,8 +141,10 @@ Each attempt must retain `manifest.sha256` and either `report.md` or the fail-cl
 source trees, redacted command records, consumer inventories, and both live-surface snapshots.
 Confirm that the manifest covers every retained file except itself.
 
-The candidate-owned snapshot helper runs as `python -I -B`. Each complete snapshot is limited to 120
-seconds and 100,000 records. The live-surface evidence covers the complete Claude, Codex, and sibling
+The candidate-owned snapshot helper runs as `python -I -B`. Each complete snapshot is limited to 600
+seconds and 100,000 records; its parent waits at most 630 seconds. The bound is more than four times
+the measured 141-second scan of 2.93 GB and 41,435 records on this Goal A host. The live-surface
+evidence covers the complete Claude, Codex, and sibling
 `.agents` roots. It records local junction targets separately. The only permitted concurrent change
 is append-only growth in the same exact Codex session file that the preflight sample found active.
 That exception makes live-root attribution `UNAVAILABLE` and the run no better than `PARTIAL`.
