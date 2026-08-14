@@ -67,7 +67,7 @@ The manifest records 14 files, `apply_check=PASS`, `hash_match=PASS`, and the un
 
 ### Step 74: Prepare the lifecycle fixture
 
-**Status:** DONE
+**Status:** IN PROGRESS — bounded snapshot evidence-cap correction
 
 **Candidate commit:** `3a17746fa1d04c24088effd8f3871afe10f1601f`
 
@@ -101,9 +101,11 @@ The fixture uses one deterministic synthetic candidate for both directions. This
 
 The exact final bytes passed 40 focused tests, the private-path gate, PowerShell parsing, and `git diff --check`. Three independent read-only reviews passed the same staged tree. No reviewer host, model, or protected live-home scan ran during preparation.
 
+The first Step 77 `a0` attempt stopped before reviewer launch because its complete 41,437-record snapshot was 19,750,121 bytes, above the 16 MiB general evidence cap. The retained report is `AMBIGUOUS`. Step 76 is reopened only to add a separate bounded snapshot-file cap; the 100,000-record and 600-second safety bounds do not change.
+
 ### Step 77: Run the cross-family experiment
 
-**Status:** IN PROGRESS
+**Status:** BLOCKED — Step 76 bounded correction pending
 
 **Evidence root:** `%LOCALAPPDATA%\SkillMesh\Evidence\goala-20260814T021737Z-1b5ec416\cross-family\`
 
