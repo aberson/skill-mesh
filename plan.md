@@ -18,8 +18,8 @@ The approved product boundary is `documentation/product-charter.md`. The propose
 | Communication profile D16 | PROPOSED PILOT | Optional Goal P Steps 95-97; Phase 7 records the final choice |
 | Goal A execution | IN PROGRESS | Abraham approved normalized blob `d97b1960b01673ab8922adc806f7c0de76ba33a3` on 2026-08-13 |
 | Provider expansion | PARKED | A later operator decision must explicitly resume it |
-| Phase 0 — preserve work in progress and establish authority | IN PROGRESS | Steps 72-73 passed; Step 74 is ready |
-| Phase 1 — two architecture experiments | LOCKED | Phase 0 completion |
+| Phase 0 — preserve work in progress and establish authority | DONE | Steps 72-74 passed |
+| Phase 1 — two architecture experiments | IN PROGRESS | Steps 75 and 76 are ready |
 | Gate A — select architecture | LOCKED | Abraham after both reports |
 | Phase 2 — repair build controls | LOCKED | Gate A selects `proceed` and authorizes Goal B |
 | Goal P — communication pilot | OPTIONAL/LOCKED | Gate A approval and Abraham opts in |
@@ -31,7 +31,7 @@ The approved product boundary is `documentation/product-charter.md`. The propose
 
 ## Current instruction
 
-Goal A is active. Step 4 is durably preserved but remains frozen and unstaged. Execute only Steps 72-78 and stop at Gate A. Step 74 is the current action; product implementation and live-host mutation remain unauthorized.
+Goal A is active. Step 4 is durably preserved but remains frozen and unstaged. Execute only Steps 72-78 and stop at Gate A. Steps 75 and 76 are ready; product implementation and live-host mutation remain unauthorized.
 
 ## Goal A journal
 
@@ -67,15 +67,21 @@ The manifest records 14 files, `apply_check=PASS`, `hash_match=PASS`, and the un
 
 ### Step 74: Prepare the lifecycle fixture
 
-**Status:** READY
+**Status:** DONE
+
+**Candidate commit:** `0d06c42916f8953ec37f1a96e89b8a37cf82a77b`
+
+**Evidence:** `%LOCALAPPDATA%\SkillMesh\Evidence\goala-20260814T021737Z-1b5ec416\evidence-index.md`
+
+The exact candidate passed 262 focused and package-integrity tests. Three independent read-only reviews passed the same staged object identities.
 
 ### Step 75: Run the lifecycle experiment
 
-**Status:** LOCKED
+**Status:** READY
 
 ### Step 76: Prepare the cross-family fixture
 
-**Status:** LOCKED
+**Status:** READY
 
 ### Step 77: Run the cross-family experiment
 
