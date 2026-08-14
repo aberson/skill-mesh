@@ -91,13 +91,21 @@ The active Codex window changed protected SQLite databases during both safety pr
 
 ### Step 76: Prepare the cross-family fixture
 
-**Status:** IN PROGRESS
+**Status:** DONE
+
+**Candidate commit:** `c6f4519dffa506e8b1e7b177bf884736a276932c`
+
+**Evidence:** `%LOCALAPPDATA%\SkillMesh\Evidence\goala-20260814T021737Z-1b5ec416\evidence-index.md`
 
 The fixture uses one deterministic synthetic candidate for both directions. This isolates the review handoff. It does not claim that a live Claude-family or GPT-family builder authored the candidate.
 
+The exact final bytes passed 40 focused tests, the private-path gate, PowerShell parsing, and `git diff --check`. Three independent read-only reviews passed the same staged tree. No reviewer host, model, or protected live-home scan ran during preparation.
+
 ### Step 77: Run the cross-family experiment
 
-**Status:** LOCKED
+**Status:** IN PROGRESS
+
+**Evidence root:** `%LOCALAPPDATA%\SkillMesh\Evidence\goala-20260814T021737Z-1b5ec416\cross-family\`
 
 ### Step 78: Prepare Gate A
 
