@@ -81,7 +81,13 @@ The first Step 75 command stopped before creating an evidence directory, disposa
 
 ### Step 75: Run the lifecycle experiment
 
-**Status:** READY
+**Status:** DONE — both host series returned `AMBIGUOUS` before host invocation
+
+**Claude evidence:** `%LOCALAPPDATA%\SkillMesh\Evidence\goala-20260814T021737Z-1b5ec416\lifecycle\lifecycle-claude-20260814T065643Z-e1ea3dd1\a0\report.md`
+
+**Codex evidence:** `%LOCALAPPDATA%\SkillMesh\Evidence\goala-20260814T021737Z-1b5ec416\lifecycle\lifecycle-codex-20260814T065645Z-34c7074f\a0\report.md`
+
+The active Codex window changed protected SQLite databases during both safety preflights. The runner retained valid reports and manifests, removed each disposable home, and launched no host command. Gate A must recommend `stop` or a bounded follow-up lifecycle experiment from a quiescent operator context; these runs do not support a native-lifecycle conclusion.
 
 ### Step 76: Prepare the cross-family fixture
 
