@@ -16,11 +16,11 @@ The approved product boundary is `documentation/product-charter.md`. The propose
 |---|---|---|
 | Decision redline D1-D15 | APPROVED 2026-08-13 | Recorded in the recovery plan |
 | Communication profile D16 | PROPOSED PILOT | Optional Goal P Steps 95-97; Phase 7 records the final choice |
-| Goal A execution | IN PROGRESS | Abraham approved normalized blob `d97b1960b01673ab8922adc806f7c0de76ba33a3` on 2026-08-13 |
+| Goal A execution | DONE — AT GATE A | Steps 72-78 passed; no execution authority remains |
 | Provider expansion | PARKED | A later operator decision must explicitly resume it |
 | Phase 0 — preserve work in progress and establish authority | DONE | Steps 72-74 passed |
-| Phase 1 — two architecture experiments | IN PROGRESS | Step 78 evidence synthesis is in progress |
-| Gate A — select architecture | LOCKED | Abraham after both reports |
+| Phase 1 — two architecture experiments | DONE | Step 78 packet and final gate passed |
+| Gate A — select architecture | READY_FOR_OPERATOR | Abraham selects `stop` or the exact bounded follow-up |
 | Phase 2 — repair build controls | LOCKED | Gate A selects `proceed` and authorizes Goal B |
 | Goal P — communication pilot | OPTIONAL/LOCKED | Gate A approval and Abraham opts in |
 | Gate B — approve exact product steps | LOCKED | Abraham after control acceptance |
@@ -31,7 +31,10 @@ The approved product boundary is `documentation/product-charter.md`. The propose
 
 ## Current instruction
 
-Goal A is active. Step 4 is durably preserved but remains frozen and unstaged. Execute only Steps 72-78 and stop at Gate A. Step 78 evidence synthesis is in progress; product implementation and live-host mutation remain unauthorized.
+Goal A Steps 72-78 are complete. No execution action is authorized. Gate A is ready for Abraham.
+`Proceed` is invalid because every load-bearing result is `AMBIGUOUS`. Abraham can select `stop` or
+approve the exact bounded follow-up in `documentation/decisions/gate-a.md`. Product implementation,
+Step 4 use, Phase 2, and live-host mutation remain unauthorized.
 
 ## Goal A journal
 
@@ -69,25 +72,37 @@ The manifest records 14 files, `apply_check=PASS`, `hash_match=PASS`, and the un
 
 **Status:** DONE
 
-**Candidate commit:** `3a17746fa1d04c24088effd8f3871afe10f1601f`
+**Candidate commit:** `0c72392ec51da5201c4f3c17272e2b79a32a055d`
 
-**Superseded candidate:** `0d06c42916f8953ec37f1a96e89b8a37cf82a77b`
+**Superseded candidates:** `3a17746fa1d04c24088effd8f3871afe10f1601f`,
+`0d06c42916f8953ec37f1a96e89b8a37cf82a77b`
 
 **Evidence:** `%LOCALAPPDATA%\SkillMesh\Evidence\goala-20260814T021737Z-1b5ec416\evidence-index.md`
 
 **Preflight evidence:** `%LOCALAPPDATA%\SkillMesh\Evidence\goala-20260814T021737Z-1b5ec416\step75-preflight-timeout.md`
 
-The first Step 75 command stopped before creating an evidence directory, disposable home, or host process. A read-only diagnostic measured 141 seconds to hash 2.93 GB across 41,435 protected records. The corrected candidate uses fixed 600-second and 630-second bounds. It passed the exact 262-test focused and package-integrity gate. Three independent read-only reviews passed the same staged object identities. Full-root coverage and the 100,000-record limit remain unchanged.
+The first Step 75 command stopped before creating an evidence directory, disposable home, or host
+process. A read-only diagnostic measured 141 seconds to hash 2.93 GB across 41,435 protected
+records. Executed candidate `3a17746fa1d04c24088effd8f3871afe10f1601f` uses fixed 600-second
+and 630-second bounds. It passed the exact 262-test focused and package-integrity gate plus three
+independent reviews. After the Step 78 full gate exposed a structural mutation-containment gap, the
+new candidate `0c72392ec51da5201c4f3c17272e2b79a32a055d` passed the 28-test lifecycle suite,
+the 9-test path-choke suite, the ASCII and private-path gates, and two independent reviews. It has
+not run against either live host. Full-root coverage and the 100,000-record limit remain unchanged.
 
 ### Step 75: Run the lifecycle experiment
 
 **Status:** DONE — both host series returned `AMBIGUOUS` before host invocation
 
+**Executed candidate:** `3a17746fa1d04c24088effd8f3871afe10f1601f`
+
 **Claude evidence:** `%LOCALAPPDATA%\SkillMesh\Evidence\goala-20260814T021737Z-1b5ec416\lifecycle\lifecycle-claude-20260814T065643Z-e1ea3dd1\a0\report.md`
 
 **Codex evidence:** `%LOCALAPPDATA%\SkillMesh\Evidence\goala-20260814T021737Z-1b5ec416\lifecycle\lifecycle-codex-20260814T065645Z-34c7074f\a0\report.md`
 
-The active Codex window changed protected SQLite databases during both safety preflights. The runner retained valid reports and manifests, removed each disposable home, and launched no host command. Gate A must recommend `stop` or a bounded follow-up lifecycle experiment from a quiescent operator context; these runs do not support a native-lifecycle conclusion.
+Protected Codex database files changed during both safety-preflight intervals; attribution is
+unavailable. The runner retained valid reports and manifests, removed each disposable home, and
+launched no host command. These runs do not support a native-lifecycle conclusion.
 
 ### Step 76: Prepare the cross-family fixture
 
@@ -115,24 +130,51 @@ The two manual `a1` attempts both started exactly one contained host and cleaned
 
 **Retained `a0` report:** `%LOCALAPPDATA%\SkillMesh\Evidence\goala-20260814T021737Z-1b5ec416\cross-family\cross-claude-to-gpt-manual-saved-handoff-20260814T085608Z-cbbf95ed\a0\report.md`
 
-**Retained Terra `a1` report:** `%LOCALAPPDATA%\SkillMesh\Evidence\goala-20260814T021737Z-1b5ec416\cross-family\cross-claude-to-gpt-manual-saved-handoff-20260814T085608Z-cbbf95ed\a1\report.md`
+**Retained Codex `a1` report, requested `gpt-5.6-terra`:** `%LOCALAPPDATA%\SkillMesh\Evidence\goala-20260814T021737Z-1b5ec416\cross-family\cross-claude-to-gpt-manual-saved-handoff-20260814T085608Z-cbbf95ed\a1\report.md`
 
-**Retained Sonnet `a1` report:** `%LOCALAPPDATA%\SkillMesh\Evidence\goala-20260814T021737Z-1b5ec416\cross-family\cross-gpt-to-claude-manual-saved-handoff-20260814T085608Z-ec7c31e9\a1\report.md`
+**Retained Claude-host `a1` report, requested `sonnet`:** `%LOCALAPPDATA%\SkillMesh\Evidence\goala-20260814T021737Z-1b5ec416\cross-family\cross-gpt-to-claude-manual-saved-handoff-20260814T085608Z-ec7c31e9\a1\report.md`
 
-**Final manual Terra report:** `%LOCALAPPDATA%\SkillMesh\Evidence\goala-20260814T021737Z-1b5ec416\cross-family\cross-claude-to-gpt-manual-saved-handoff-20260814T085608Z-cbbf95ed\a2\report.md`
+**Final manual Codex report, requested `gpt-5.6-terra`:** `%LOCALAPPDATA%\SkillMesh\Evidence\goala-20260814T021737Z-1b5ec416\cross-family\cross-claude-to-gpt-manual-saved-handoff-20260814T085608Z-cbbf95ed\a2\report.md`
 
-**Final manual Sonnet report:** `%LOCALAPPDATA%\SkillMesh\Evidence\goala-20260814T021737Z-1b5ec416\cross-family\cross-gpt-to-claude-manual-saved-handoff-20260814T085608Z-ec7c31e9\a2\report.md`
+**Final manual Claude-host report, requested `sonnet`:** `%LOCALAPPDATA%\SkillMesh\Evidence\goala-20260814T021737Z-1b5ec416\cross-family\cross-gpt-to-claude-manual-saved-handoff-20260814T085608Z-ec7c31e9\a2\report.md`
 
-**Final dispatcher Terra report:** `%LOCALAPPDATA%\SkillMesh\Evidence\goala-20260814T021737Z-1b5ec416\cross-family\cross-claude-to-gpt-reviewer-only-dispatcher-20260814T085608Z-40b14e58\a0\report.md`
+**Final dispatcher Codex report, requested `gpt-5.6-terra`:** `%LOCALAPPDATA%\SkillMesh\Evidence\goala-20260814T021737Z-1b5ec416\cross-family\cross-claude-to-gpt-reviewer-only-dispatcher-20260814T085608Z-40b14e58\a0\report.md`
 
-**Final dispatcher Sonnet report:** `%LOCALAPPDATA%\SkillMesh\Evidence\goala-20260814T021737Z-1b5ec416\cross-family\cross-gpt-to-claude-reviewer-only-dispatcher-20260814T085608Z-c450d8b6\a0\report.md`
+**Final dispatcher Claude-host report, requested `sonnet`:** `%LOCALAPPDATA%\SkillMesh\Evidence\goala-20260814T021737Z-1b5ec416\cross-family\cross-gpt-to-claude-reviewer-only-dispatcher-20260814T085608Z-c450d8b6\a0\report.md`
 
-Both Terra mechanisms completed one real review, returned `NEEDS_WORK`, and detected all three seeded defects. Their overall results are `AMBIGUOUS` because Codex exposed no allowlisted resolved-model field and the active Codex session changed protected database files. Both Sonnet mechanisms reached Claude but returned `401` because the saved OAuth token had expired. All four attempts proved Job Object containment and disposable cleanup. The correction-attempt budget is exhausted.
+Both Codex runs requested `gpt-5.6-terra`, completed one real review, returned `NEEDS_WORK`, and
+detected all three seeded defects. Codex exposed no allowlisted resolved-model field. Protected
+database files changed during both intervals; attribution is unavailable. Both Claude-host runs
+requested `sonnet` and returned `401` because the saved OAuth token had expired. All four attempts
+proved Job Object containment and disposable cleanup. The correction-attempt budget is exhausted.
 
 ### Step 78: Prepare Gate A
 
-**Status:** IN PROGRESS
+**Status:** DONE
+
+**Lifecycle summary:** `documentation/evidence/goal-a/goala-20260814T021737Z-1b5ec416/lifecycle-report.md`
+
+**Cross-family summary:** `documentation/evidence/goal-a/goala-20260814T021737Z-1b5ec416/cross-family-report.md`
+
+**Summary manifest:** `documentation/evidence/goal-a/goala-20260814T021737Z-1b5ec416/MANIFEST.sha256`
+
+**Decision packet:** `documentation/decisions/gate-a.md`
+
+**External full gate:** `%LOCALAPPDATA%\SkillMesh\Evidence\goala-20260814T021737Z-1b5ec416\gate-a-full-gate.md`
+
+The two committed summaries are bound by SHA-256. Every recommendation cites the raw reports and
+manifests. Focused experiment and package-integrity tests passed. Both distributions built. The
+repository-root full gate passed on the final Goal A candidate recorded in the external report.
 
 ## Gate A journal
 
-**Status:** LOCKED
+**Status:** READY_FOR_OPERATOR
+
+**Proceed eligibility:** INVALID — every load-bearing result is `AMBIGUOUS`.
+
+**Recommended action:** `bounded-follow-up-experiment` named
+`goal-a-quiescent-qualification-v1` in `documentation/decisions/gate-a.md`.
+
+**Alternative:** `stop`.
+
+Only Abraham can choose. Phase 2, product implementation, Step 4 use, and live cutover remain locked.
