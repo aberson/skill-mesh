@@ -16,11 +16,11 @@ The approved product boundary is `documentation/product-charter.md`. The propose
 |---|---|---|
 | Decision redline D1-D15 | APPROVED 2026-08-13 | Recorded in the recovery plan |
 | Communication profile D16 | PROPOSED PILOT | Optional Goal P Steps 95-97; Phase 7 records the final choice |
-| Goal A execution | DONE — AT GATE A | Steps 72-78 passed; no execution authority remains |
+| Goal A execution | FOLLOW-UP APPROVED / NOT STARTED | Only `goal-a-quiescent-qualification-v1` is authorized |
 | Provider expansion | PARKED | A later operator decision must explicitly resume it |
 | Phase 0 — preserve work in progress and establish authority | DONE | Steps 72-74 passed |
 | Phase 1 — two architecture experiments | DONE | Step 78 packet and final gate passed |
-| Gate A — select architecture | READY_FOR_OPERATOR | Abraham selects `stop` or the exact bounded follow-up |
+| Gate A — select architecture | APPROVED | Exact three-run bounded follow-up only |
 | Phase 2 — repair build controls | LOCKED | Gate A selects `proceed` and authorizes Goal B |
 | Goal P — communication pilot | OPTIONAL/LOCKED | Gate A approval and Abraham opts in |
 | Gate B — approve exact product steps | LOCKED | Abraham after control acceptance |
@@ -31,10 +31,11 @@ The approved product boundary is `documentation/product-charter.md`. The propose
 
 ## Current instruction
 
-Goal A Steps 72-78 are complete. No execution action is authorized. Gate A is ready for Abraham.
-`Proceed` is invalid because every load-bearing result is `AMBIGUOUS`. Abraham can select `stop` or
-approve the exact bounded follow-up in `documentation/decisions/gate-a.md`. Product implementation,
-Step 4 use, Phase 2, and live-host mutation remain unauthorized.
+Goal A Steps 72-78 are complete. Abraham approved only the exact bounded follow-up
+`goal-a-quiescent-qualification-v1`. It is not started. Use the exact offline block in
+`documentation/decisions/gate-a.md` after all named agent sessions close and protected state becomes
+quiet. `Proceed` remains invalid. Product implementation, Step 4 use, Phase 2, live-home writes,
+retry, and correction remain unauthorized.
 
 ## Goal A journal
 
@@ -168,7 +169,11 @@ repository-root full gate passed on the final Goal A candidate recorded in the e
 
 ## Gate A journal
 
-**Status:** READY_FOR_OPERATOR
+**Status:** APPROVED
+
+**Authorized action:** `bounded-follow-up-experiment`
+
+**Execution status:** NOT STARTED
 
 **Proceed eligibility:** INVALID — every load-bearing result is `AMBIGUOUS`.
 
@@ -177,4 +182,41 @@ repository-root full gate passed on the final Goal A candidate recorded in the e
 
 **Alternative:** `stop`.
 
-Only Abraham can choose. Phase 2, product implementation, Step 4 use, and live cutover remain locked.
+**Approval locator:** Abraham's 2026-08-14 conversation response containing `(3) Approve`, directly
+answering the immediately preceding authorization prompt that named the exact experiment, commit,
+scope, stop rules, and every field below.
+
+**Approved experiment:** `goal-a-quiescent-qualification-v1` in the Gate A packet at commit
+`215618be14bbba2aa3130a99dea3fffa96bed071`, with no argument, candidate, attempt, path, scope, or
+stop-rule change.
+
+| Approved field | Value |
+|---|---|
+| Gate action | `bounded-follow-up-experiment` |
+| Lifecycle owner for Claude Code | `deferred-by-follow-up` |
+| Lifecycle owner for Codex | `deferred-by-follow-up` |
+| Step 4 disposition | `deferred-by-follow-up` |
+| Cross-family mechanism | `deferred-by-follow-up` |
+| Permitted cross-family direction | `deferred-by-follow-up` |
+| Copilot disposition | `quarantine` |
+| Resolved-identity waiver | `none` |
+| Existing control branch | `reference-only` |
+| Goal B authorization | `no` |
+| Live cutover | `not-authorized` |
+
+**Authentication evidence:** Abraham reported that normal Claude Code authentication was completed
+and a 2026-08-14 Haiku smoke call returned the single word `ok`. The smoke ran with an ambient Claude
+OAuth environment variable, so it does not independently prove the runner's isolated copied-file
+credential path; the runner's disposable `auth status` check remains authoritative. The related
+ignored outer-workspace settings correction is outside the Goal A worktree and is not an experiment
+input.
+
+**Quota decision:** Abraham reported Claude Max usage at 98 percent used and explicitly chose to run
+the one authorized follow-up now rather than wait for reset. A quota or authentication failure is a
+stop result. It does not authorize a retry, correction, fallback model, or changed argument.
+
+**Offline handoff:** Before execution, close Claude Code, Codex CLI, ChatGPT desktop, this agent
+session, and IDE agent sessions; then run the committed block once from a plain Windows PowerShell
+5.1 window. Any stop condition ends the follow-up without retry or correction.
+
+Phase 2, product implementation, Step 4 use, live-home writes, merge, and live cutover remain locked.
