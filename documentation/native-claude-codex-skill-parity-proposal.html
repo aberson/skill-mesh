@@ -156,7 +156,9 @@
       .arrow { transform: rotate(90deg); justify-self: center; }
       .stats { grid-template-columns: repeat(2, 1fr); }
     }
+    @page { margin: 14mm; }
     @media print {
+      * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
       :root, :root[data-theme="light"], :root[data-theme="dark"] {
         color-scheme: light;
         --ground: #ffffff; --surface: #ffffff; --surface-2: #f1f4f3;
@@ -169,7 +171,10 @@
       }
       .topbar { display: none; }
       body { background: var(--ground); color: var(--ink); }
-      .card { box-shadow: none; break-inside: avoid; }
+      .card, .stat, .node, .rule, .notice, tr { box-shadow: none; break-inside: avoid; }
+      h1, h2 { break-after: avoid; }
+      thead { display: table-header-group; }
+      .risk-wrap, pre { overflow: visible; }
       section { break-inside: auto; }
       a { color: inherit; text-decoration: none; }
     }
@@ -179,22 +184,22 @@
   <main class="wrap">
     <div class="topbar"><button class="theme" id="theme" type="button" aria-label="Color theme: system; activate to change" aria-live="polite">theme: system</button></div>
     <header>
-      <div class="eyebrow">Goal NP proposal · publication 4 · Terra bootstrap recovery amendment · awaiting recovery plan signoff</div>
+      <div class="eyebrow">Goal NP proposal · publication 5 · Terra bootstrap process-recording recovery amendment · awaiting recovery plan signoff</div>
       <h1>Native Claude + Codex skill parity</h1>
       <p class="thesis">One maintained behavior source per skill, native packages for both hosts, every skill qualified, known utilities wired, and one reversible cutover—without reviving the router or GitHub Copilot.</p>
       <div class="ribbon">
         <span class="chip hold">Proposal only — no implementation authority</span>
-        <span class="chip">Publication 4 · six-file recovery bundle</span>
+        <span class="chip">Publication 5 · six-file recovery bundle</span>
         <span class="chip">41 steps · 39 code + 2 operator</span>
         <span class="chip">2 approval gates</span>
       </div>
     </header>
 
     <section aria-labelledby="terra-title">
-      <p class="kicker">Publication 4 recovery amendment</p>
-      <h2 id="terra-title">Publication 3 stopped before Terra; Publication 4 makes the launch boundary executable.</h2>
+      <p class="kicker">Publication 5 recovery amendment</p>
+      <h2 id="terra-title">Publication 4 stopped before Terra; Publication 5 repairs process-result recording.</h2>
       <div class="card feedback">
-        <p><strong>What happened:</strong> Abraham approved the exact Publication-3 bundle at commit <code>71a5aea3fd21320d2fbb3cb9228bc52e42cb3215</code>. Its launcher allocated the frozen request below, then stopped at terminal phase <code>blocked</code> while the live-home scan tried to read the coordinator-locked <code>%USERPROFILE%\.codex\goals_1.sqlite</code>. The stop occurred before the authentication copy, publication-anchor checks, prompt construction, Codex executable invocation, tests, commit, or any live discovery write.</p>
+        <p><strong>Publication 3:</strong> Abraham approved commit <code>71a5aea3fd21320d2fbb3cb9228bc52e42cb3215</code>. Its single request stopped at terminal phase <code>blocked</code> while the active coordinator locked <code>%USERPROFILE%\.codex\goals_1.sqlite</code>. It stopped before a prompt or model process; the frozen root remains historical input only.</p>
         <dl class="source">
           <dt>Publication-3 approval file</dt><dd><code>%LOCALAPPDATA%\SkillMesh\Evidence\GoalNP\Publication3\approval1-message.txt</code> · file SHA-256 <code>33d3e1756ed2bfd661698da3dfdf85a921380efd87fe3d635b777dafe3c6e04b</code> · normalized message SHA-256 <code>66df8cd413fddd097e80dc63ccfacab221e96c72c795345d14b72ae1ae3474ef</code></dd>
           <dt>Publication-3 handoff</dt><dd><code>%LOCALAPPDATA%\SkillMesh\Evidence\GoalNP\Publication3\terra-transition-handoff-71a5aea3fd21320d2fbb3cb9228bc52e42cb3215.txt</code> · SHA-256 <code>8382385b90568e947b7aa1abe53d4089650817fb5a72a33b014d5d19d62bd453</code></dd>
@@ -202,9 +207,17 @@
           <dt>Frozen evidence root</dt><dd><code>%LOCALAPPDATA%\SkillMesh\Evidence\GoalNP\TerraBootstrap\tba-b7e5898e6389ff19b3ce34738f16b47d0a832dfc4625789fbcf4308352f2b1a0</code></dd>
           <dt>Terminal state</dt><dd><code>state.json</code> · SHA-256 <code>ae59a6ac7f512d2e399675fe541b916d1710c209a13b45433642cf019a07df97</code> · updated <code>2026-08-15T17:38:35.0297115Z</code> · only that state file and the empty <code>instruction-free-launch-roots\</code> directory exist · canonical three-entry root-manifest SHA-256 <code>9b01de1f550019a8bf81c23431925b6f38a173ec1ce22023c765a2a8d290cdcf</code></dd>
         </dl>
-        <p><strong>What Publication 4 changes:</strong> the user first saves the approved external command block, closes this Codex/VS Code/Claude/ChatGPT UI, and runs <code>Preflight</code> from an independent ordinary Windows PowerShell 5.1 window. <code>Preflight</code> is repeatable and zero-write: on PASS it emits JSON to stdout and allocates no Terra-bootstrap evidence root; a failed check exits nonzero with no PASS record or request root. It enforces the exact Publication-4 approval, clean bundle and tool identities, stable two-pass whole live-<code>CODEX_HOME</code> bytes, exact immutable P3 blocked evidence, zero Code/Codex/Claude/ChatGPT/Cursor processes, and a clean full ancestry. Only a PASS permits <code>Run</code>; <code>Run</code> independently repeats the same shared preflight and only after PASS atomically creates the new Publication-4 request lineage. A locked or incomplete scan before allocation is a retryable pre-attempt refusal. From allocation onward, any failure is terminal and no retry is allowed. The user may reopen an agent only after <code>Run</code>, for the later read-only <code>Inspect</code>.</p>
-        <p>This is a launch-boundary recovery, not a model-policy rewrite. Publication 4 carries forward the direct Codex <code>gpt-5.6-terra</code>/<code>xhigh</code> envelope for <code>ADMIN-BOOTSTRAP</code> and all 39 numbered <code>Type: code</code> orchestration slots, plus zero-model administrative synchronization. D01–D10 and D08's controlled maintenance/evaluation roles stay unchanged; NP-12 and NP-40 still test native Claude and native Codex separately. It adds no router, fallback, live discovery/config write, cutover authority, approval gate, or retry of the closed Publication-3 lineage.</p>
-        <p class="notice"><strong>Publication-3 Approval 1 was valid and consumed by its terminal pre-model lineage; it cannot be reused.</strong> Only fresh recovery Approval 1 on the final reviewed Publication-4 six-file bundle can create the distinct Publication-4 request.</p>
+        <p><strong>Publication 4:</strong> Abraham approved commit <code>58223098887468953570ecf153494871c5404605</code>. Its launcher passed the standalone zero-write boundary, claimed request <code>tba-461c20be4d35c7255a83d05f91f16c5bccbdd5a36af738360bcedc330ab6b1e4</code>, and produced valid prompt-input JSON. Windows PowerShell 5.1 then exposed an empty <code>Process.ExitCode</code>, so the recorder terminally blocked before <code>codex exec</code> or any Terra/model execution.</p>
+        <dl class="source">
+          <dt>Publication-4 approval</dt><dd><code>%LOCALAPPDATA%\SkillMesh\Evidence\GoalNP\Publication4\approval1-message.txt</code> · file SHA-256 <code>2f74ea66ac7bdac38b419fd24b7e6caa9479de007bc178e69acd54f9f8b42857</code> · normalized message SHA-256 <code>1a7698085d7bc12e74d60874e0d64b4d069b039470ab17701541cfe6c77202fe</code></dd>
+          <dt>Frozen evidence root</dt><dd><code>%LOCALAPPDATA%\SkillMesh\Evidence\GoalNP\TerraBootstrap\tba-461c20be4d35c7255a83d05f91f16c5bccbdd5a36af738360bcedc330ab6b1e4</code></dd>
+          <dt>Terminal state</dt><dd><code>blocked</code> · state SHA-256 <code>4517ecd2d5ff948bbcf7763e32686797f65b5112ceb14e71c96c8222e6e12e05</code> · canonical nine-entry root-manifest SHA-256 <code>893c099e299a5152f26edd912a5bfcdc75bd69e030dfd40653c0365ffe4d5e44</code></dd>
+          <dt>Last completed child</dt><dd>valid prompt-input stdout JSON SHA-256 <code>31757cf1c4ac11f2eb6f63880e92b3a036f82e0f185866edf9ae98619c5e7681</code> · empty stderr · exact terminal error <code>implementation-prompt-input exited .</code></dd>
+          <dt>Effects not reached</dt><dd>no <code>codex exec</code>, Terra/model process, result, test, ADMIN diff, commit, product mutation, or live-home drift; Publication-3 evidence remained unchanged</dd>
+        </dl>
+        <p><strong>What Publication 5 changes:</strong> both production <code>Start-Process -PassThru</code> sites immediately validate and cache the process handle, drain the child, reject a null or non-integer raw exit code before any cast, and use one cached exit integer thereafter. The repeatable zero-write <code>Preflight</code> exercises that same capture primitive with exactly two pinned <code>cmd.exe</code> children returning expected exit codes 0 and 37 before a new root may be claimed. <code>Run</code> independently repeats the gate. The fresh request domain, approval path, digest, and root are Publication-5-specific.</p>
+        <p>This is a process-recording recovery, not a model-policy rewrite. Publication 5 carries forward the direct Codex <code>gpt-5.6-terra</code>/<code>xhigh</code> envelope for <code>ADMIN-BOOTSTRAP</code> and all 39 numbered <code>Type: code</code> orchestration slots, plus zero-model administrative synchronization. D01–D10, D08, the 41-step DAG, NP-12/NP-40 native-host separation, and Approval 2 stay unchanged. It adds no router, fallback, additional model call, live discovery/config write, cutover authority, approval gate, or retry of either closed lineage.</p>
+        <p class="notice"><strong>Publication-3 and Publication-4 Approval 1 were each valid and consumed by a terminal pre-model lineage; neither can be reused.</strong> Only fresh recovery Approval 1 on the final reviewed Publication-5 six-file bundle can create the distinct Publication-5 request.</p>
       </div>
     </section>
 
@@ -250,7 +263,7 @@
       <h2 id="timeline-title">Build freely after signoff; touch live discovery only at the end.</h2>
       <p class="lead">The detailed plan has 41 bounded steps. This is the operator-level map.</p>
       <ol class="timeline">
-        <li class="card phase gate"><span class="id">A1</span><div><h3>Recovery Approval 1 — approve the exact Publication-4 bundle</h3><span class="meta">before ADMIN-BOOTSTRAP</span><p>Records P01–P10 and unchanged D01–D10, binds the detailed plan, Terra recovery amendment, precommitted launcher/result schema, proposal, and pointer, and authorizes the distinct Publication-4 request plus the unchanged direct Codex <code>gpt-5.6-terra</code>/<code>xhigh</code> envelope to run ADMIN-BOOTSTRAP and all 39 numbered code steps. ADMIN-SYNC remains zero-model. The approval also covers the already-planned disposable two-host proofs, tests, and rehearsal, but no live discovery write.</p><div class="after"><strong>Afterwards:</strong> save the external block, close this UI, run <code>Preflight</code> then <code>Run</code> from standalone PowerShell, and proceed only after the administrative aggregate records PASS.</div></div></li>
+        <li class="card phase gate"><span class="id">A1</span><div><h3>Recovery Approval 1 — approve the exact Publication-5 bundle</h3><span class="meta">before ADMIN-BOOTSTRAP</span><p>Records P01–P10 and unchanged D01–D10, binds the detailed plan, Terra recovery amendment, precommitted launcher/result schema, proposal, and pointer, and authorizes the distinct Publication-5 request plus the unchanged direct Codex <code>gpt-5.6-terra</code>/<code>xhigh</code> envelope to run ADMIN-BOOTSTRAP and all 39 numbered code steps. ADMIN-SYNC remains zero-model. The approval also covers the already-planned disposable two-host proofs, tests, and rehearsal, but no live discovery write.</p><div class="after"><strong>Afterwards:</strong> save the external block, close this UI, run <code>Preflight</code> then <code>Run</code> from standalone PowerShell, and proceed only after the administrative aggregate records PASS.</div></div></li>
         <li class="card phase"><span class="id">01</span><div><h3>Protect and reconcile current work</h3><span class="meta">NP-01</span><p>Hash/export every overlapping dirty path, adopt the four preserved Step 4 files through review, and establish clean candidate lineage without sweeping unrelated WIP.</p><div class="after"><strong>Afterwards:</strong> Skill Mesh has a recoverable, reviewed starting point; active checkouts remain unchanged.</div></div></li>
         <li class="card phase"><span class="id">02</span><div><h3>Make canonical source and native Codex real</h3><span class="meta">NP-02–NP-10</span><p>Migrate support assets, replace the active <code>gpt</code>/Copilot provider concept with <code>codex</code>, generate native packages, promote seven custom skills, and prepare the disposable two-host canary.</p><div class="after"><strong>Afterwards:</strong> all package and adapter bytes needed for the real-host substrate proof are frozen and testable.</div></div></li>
         <li class="card phase"><span class="id">03</span><div><h3>Prove the substrate; build transaction and evaluation contracts</h3><span class="meta">NP-11–NP-19 · operator NP-12</span><p>Freeze 14 controlled D08 profiles plus two native invoking-session profiles, prove both bounded phone-a-friend scopes, run the disposable real-host discovery/core/asset/named-call proof, add hash-chained receipts and rollback primitives, then replace scalar/same-host skill evaluation with the dual-host Pareto matrix.</p><div class="after"><strong>Afterwards:</strong> a valid placement/core-load contradiction has stopped the architecture, or model calls are exact, role-separated, resumable, no-fallback, and unable to average away a one-host regression.</div></div></li>
@@ -283,7 +296,7 @@
     <section aria-labelledby="defaults-title">
       <p class="kicker">Defaults I chose on your behalf</p>
       <h2 id="defaults-title">D01–D10 are the redline.</h2>
-      <p class="lead">Publication 4 preserves P01–P10, D01–D10, and D08's controlled evaluation/native-qualification contract. The recovery amendment changes only the pre-model live-home and quiescent-launch boundary around the already-approved Terra executor; the exact six-file bundle requires fresh recovery Approval 1.</p>
+      <p class="lead">Publication 5 preserves P01–P10, D01–D10, and D08's controlled evaluation/native-qualification contract. The recovery amendment changes only process-result recording and its pre-claim deterministic canary around the already-approved Terra executor; the exact six-file bundle requires fresh recovery Approval 1.</p>
       <div class="defaults">
         <div class="card default"><span class="id">D01</span><div><div class="what">Promote all seven custom global Claude skills into the portable catalog.</div><div class="why">They are already installed in the live global Claude catalog; leaving them behind would make “parity” false.</div><div class="tweak"><b>Tweak:</b> name a specific skill that should remain Claude-only, with the reason.</div></div></div>
         <div class="card default"><span class="id">D02</span><div><div class="what">Reverify and adopt the four preserved Step 4 files as the installer/migrator starting point.</div><div class="why">They contain reviewed safety work and have a hash-bound recovery bundle; discarding them recreates work.</div><div class="tweak"><b>Tweak:</b> require a clean rewrite instead, while retaining the bundle only as reference.</div></div></div>
@@ -323,6 +336,7 @@
             <tr><td>Model identity is unavailable</td><td>Requested and reported identities remain separate; unavailable is visible and never copied from the request.</td></tr>
             <tr><td>An interactive native call emits no receipt</td><td>Observatory shows <code>instrumented</code>, <code>best-effort</code>, or <code>unobserved</code>; no record never becomes proof that no skill call occurred.</td></tr>
             <tr><td>Quota interrupts exhaustive qualification</td><td>Immutable attempt lineage resumes INCOMPLETE work with the same fingerprint; no model fallback or score retry.</td></tr>
+            <tr><td>Windows PowerShell loses a child exit code</td><td>Both production sites cache a validated process handle before waiting, capture the raw integer exit code exactly once, and record only that value; a zero-write pinned <code>cmd.exe</code> 0/37 canary proves the primitive before request claim.</td></tr>
             <tr><td>Live cutover fails halfway</td><td>Approval 2 binds one transaction, exact backup, postchecks, and reverse-order rollback across files, State, runtimes, and refs.</td></tr>
           </tbody>
         </table>
@@ -331,32 +345,31 @@
 
     <section aria-labelledby="feedback-title">
       <p class="kicker">Give feedback</p>
-      <h2 id="feedback-title">Approve Publication 4 after its exact-byte freeze, or request another revision.</h2>
+      <h2 id="feedback-title">Approve Publication 5 after its exact-byte freeze, or request another revision.</h2>
       <div class="card feedback">
-        <p class="lead">P01–P10, D01–D10, D08, the base plan, and Approval 2 remain unchanged. Publication-3 Approval 1 was consumed by its closed terminal request and is not reusable. Publication 4 is awaiting fresh recovery Approval 1; use the approval sentence only when the exact digests below match and the external ordered review attestations report PASS:</p>
+        <p class="lead">P01–P10, D01–D10, D08, the base plan, and Approval 2 remain unchanged. Publication-3 and Publication-4 Approval 1 were consumed by their closed terminal requests and are not reusable. Publication 5 is awaiting fresh recovery Approval 1; use the approval sentence only when the exact digests in the external handoff match and the ordered reviews report their required PASS/READY verdicts:</p>
         <pre>APPROVE THE RECOVERY PLAN
-Approve Goal NP plan Publication 4 with D01-D10 and the Terra bootstrap recovery amendment.
+Approve Goal NP plan Publication 5 with D01-D10 and the Terra bootstrap process-recording recovery amendment.
 
 REQUEST ANOTHER REVISION — NOT AN APPROVAL
-Terra bootstrap recovery, D08, or &lt;NP-ID/section&gt;: &lt;requested change&gt;</pre>
-        <p class="notice"><strong>Viewing this page authorizes nothing.</strong> Recovery Approval 1 authorizes only the exact Publication-4 preflight/request transition, repaired launcher, unchanged result schema and direct Codex Terra/<code>xhigh</code> execution envelope, zero-model administrative sync, their versioned records, and NP-01 through NP-41. It does not reopen or retry Publication 3, and it still forbids live discovery writes. Approval 2 remains required for the exact frozen cutover.</p>
+Terra bootstrap process-recording recovery, D08, or &lt;NP-ID/section&gt;: &lt;requested change&gt;</pre>
+        <p class="notice"><strong>Viewing this page authorizes nothing.</strong> Recovery Approval 1 authorizes only the exact Publication-5 preflight/request transition, repaired process recorder and two fixed pre-claim <code>cmd.exe</code> canary children, unchanged result schema and direct Codex Terra/<code>xhigh</code> execution envelope, zero-model administrative sync, their versioned records, and NP-01 through NP-41. It does not reopen, retry, or adopt Publication 3 or 4, and it still forbids live discovery writes. Approval 2 remains required for the exact frozen cutover.</p>
         <dl class="source">
-          <dt>Publication-4 bundle</dt><dd><code>documentation/native-claude-codex-skill-parity-plan.md</code>, <code>documentation/native-claude-codex-skill-parity-terra-amendment.md</code>, this proposal, <code>plan.md</code>, <code>tools/run-goal-np-terra-bootstrap.ps1</code>, and <code>schemas/terra-bootstrap-result-v1.schema.json</code></dd>
+          <dt>Publication-5 bundle</dt><dd><code>documentation/native-claude-codex-skill-parity-plan.md</code>, <code>documentation/native-claude-codex-skill-parity-terra-amendment.md</code>, this proposal, <code>plan.md</code>, <code>tools/run-goal-np-terra-bootstrap.ps1</code>, and <code>schemas/terra-bootstrap-result-v1.schema.json</code></dd>
           <dt>Base-plan SHA-256</dt><dd>3c8b3e84b2e192ce1d53cd7488afc8a051a614ee6316df59dad5985af5b73b4d</dd>
-          <dt>Amendment SHA-256</dt><dd><code>14b182255e3c00b3fd39cc2a075e0d1b6b2636b2c9e2314d05800a419bdf62f8</code></dd>
-          <dt>Launcher SHA-256</dt><dd><code>d3f93186c4b4c18d7ef687496e0860661da84e32a354496de291eaf36d1ae237</code></dd>
           <dt>Result-schema SHA-256</dt><dd>3b6e35eab00a036e48ceb011633c2ad15aebca1af73c59058dd48a92d6243f06</dd>
-          <dt>Publication-4 review</dt><dd><code>Required external order: PLAN-REVIEW → PLAN-WRAP → PLAN-REDLINE; every PASS verdict must bind these exact bytes</code></dd>
-          <dt>Approval binding</dt><dd>the final reviewed Publication-4 commit and exact six file hashes named by the recovery Approval-1 handoff</dd>
+          <dt>Mutable bundle hashes</dt><dd>the final Publication-5 commit plus exact pointer, amendment, proposal, and launcher SHA-256 values are bound only in the external handoff, avoiding self-digests</dd>
+          <dt>Publication-5 review</dt><dd><code>Required external order: PLAN-REVIEW → PLAN-REDLINE → PLAN-WRAP; every PASS/READY verdict must bind the same exact bytes</code></dd>
+          <dt>Approval binding</dt><dd>the final reviewed Publication-5 commit, derived request ID, and exact six file hashes named by the recovery Approval-1 handoff</dd>
           <dt>Canonical pointer</dt><dd>plan.md</dd>
           <dt>Proposal</dt><dd>documentation/native-claude-codex-skill-parity-proposal.html</dd>
           <dt>Planning branch</dt><dd>plan/native-codex-skill-parity</dd>
-          <dt>Next after approval</dt><dd>save the external Publication-4 block; close this Codex/VS Code/Claude/ChatGPT UI; from standalone Windows PowerShell run <code>Preflight</code>, then only on PASS run <code>Run</code>; do not reply “closed; continue” or reopen an agent before <code>Run</code>; later use read-only <code>Inspect</code>, complete zero-model administrative sync, then NP-01—no live cutover</dd>
+          <dt>Next after approval</dt><dd>save the external Publication-5 block; close this Codex/VS Code/Claude/ChatGPT UI; from standalone Windows PowerShell run <code>Preflight</code>, then only on PASS run <code>Run</code>; do not reply “closed; continue” or reopen an agent before <code>Run</code>; later use read-only <code>Inspect</code>, complete zero-model administrative sync, then NP-01—no live cutover</dd>
         </dl>
       </div>
     </section>
 
-    <footer>Skill Mesh · Goal NP proposal · native Claude/Codex parity · Publication 4 · 2026-08-15</footer>
+    <footer>Skill Mesh · Goal NP proposal · native Claude/Codex parity · Publication 5 · 2026-08-15</footer>
   </main>
   <script>
     (() => {

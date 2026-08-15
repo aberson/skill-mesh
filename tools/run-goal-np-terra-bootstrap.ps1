@@ -15,7 +15,7 @@ param(
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version 2.0
 
-$ExpectedApproval = 'Approve Goal NP plan Publication 4 with D01-D10 and the Terra bootstrap recovery amendment.'
+$ExpectedApproval = 'Approve Goal NP plan Publication 5 with D01-D10 and the Terra bootstrap process-recording recovery amendment.'
 $ExpectedBranch = 'plan/native-codex-skill-parity'
 $ExpectedCodexVersion = 'codex-cli 0.147.0'
 $ExpectedCodexHash = '935a1911ed2556e4ffcec995f4886ac2ac425863ba26fed264df62e30272ad9d'
@@ -23,13 +23,77 @@ $ExpectedCodexPackageHash = 'bbaf3b9597b54bc1d4cf4aea93870e9035629d79bdaba582340
 $ExpectedPythonVersion = 'Python 3.14.3'
 $ExpectedPythonHash = 'cce21c0e8710e304273e98ac4b2b0f5aceb639acbcd2343cbaa5c4e81619c45b'
 $ExpectedLockHash = 'c197caa7da4306f0b744c9d352ce4c1a858d57514453c1ec1d249c83564cd555'
+$PriorP4RequestId = 'tba-461c20be4d35c7255a83d05f91f16c5bccbdd5a36af738360bcedc330ab6b1e4'
+$PriorP4ApprovedCommit = '58223098887468953570ecf153494871c5404605'
+$PriorP4ApprovalMessageHash = '1a7698085d7bc12e74d60874e0d64b4d069b039470ab17701541cfe6c77202fe'
+$PriorP4ApprovalMessageFileHash = '2f74ea66ac7bdac38b419fd24b7e6caa9479de007bc178e69acd54f9f8b42857'
+$PriorP4StateHash = '4517ecd2d5ff948bbcf7763e32686797f65b5112ceb14e71c96c8222e6e12e05'
+$PriorP4RootManifestHash = '893c099e299a5152f26edd912a5bfcdc75bd69e030dfd40653c0365ffe4d5e44'
+$PriorP4RootEntryCount = 9
 $PriorP3RequestId = 'tba-b7e5898e6389ff19b3ce34738f16b47d0a832dfc4625789fbcf4308352f2b1a0'
 $PriorP3ApprovedCommit = '71a5aea3fd21320d2fbb3cb9228bc52e42cb3215'
 $PriorP3ApprovalMessageHash = '66df8cd413fddd097e80dc63ccfacab221e96c72c795345d14b72ae1ae3474ef'
+$PriorP3ApprovalMessageFileHash = '33d3e1756ed2bfd661698da3dfdf85a921380efd87fe3d635b777dafe3c6e04b'
 $PriorP3StateHash = 'ae59a6ac7f512d2e399675fe541b916d1710c209a13b45433642cf019a07df97'
 $PriorP3RootManifestHash = '9b01de1f550019a8bf81c23431925b6f38a173ec1ce22023c765a2a8d290cdcf'
 $PriorP3RootEntryCount = 3
+$FailureCodes = @(
+    'PROCESS_START_FAILED',
+    'PROCESS_HANDLE_UNAVAILABLE',
+    'PROCESS_TIMEOUT',
+    'PROCESS_EXIT_CODE_UNAVAILABLE',
+    'PROCESS_EXIT_NONZERO',
+    'PROCESS_CANARY_FAILED',
+    'PRIOR_PUBLICATION4_EVIDENCE_MISMATCH',
+    'PRIOR_PUBLICATION3_EVIDENCE_MISMATCH',
+    'UNEXPECTED_FAILURE'
+)
 $Utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+
+function New-P5Failure(
+    [string]$Code,
+    [string]$Label,
+    [string]$Message,
+    [System.Exception]$InnerException = $null,
+    [string]$CauseCode = $null
+) {
+    if ($FailureCodes -cnotcontains $Code) { throw "Unknown Publication-5 failure code: $Code" }
+    if ([string]::IsNullOrWhiteSpace($Label)) { $Label = 'launcher' }
+    $rendered = "[$Code] [$Label] $Message"
+    $exception = if ($InnerException) {
+        New-Object System.InvalidOperationException($rendered, $InnerException)
+    } else {
+        New-Object System.InvalidOperationException($rendered)
+    }
+    $exception.Data['error_code'] = $Code
+    $exception.Data['error_label'] = $Label
+    if ($CauseCode) { $exception.Data['cause_code'] = $CauseCode }
+    return $exception
+}
+
+function Get-P5FailureMetadata([System.Exception]$Exception) {
+    $code = 'UNEXPECTED_FAILURE'
+    $label = 'launcher'
+    $causeCode = $null
+    if ($Exception.Data.Contains('error_code') -and
+        $FailureCodes -ccontains ([string]$Exception.Data['error_code'])) {
+        $code = [string]$Exception.Data['error_code']
+    }
+    if ($Exception.Data.Contains('error_label') -and
+        -not [string]::IsNullOrWhiteSpace([string]$Exception.Data['error_label'])) {
+        $label = [string]$Exception.Data['error_label']
+    }
+    if ($Exception.Data.Contains('cause_code') -and
+        $FailureCodes -ccontains ([string]$Exception.Data['cause_code'])) {
+        $causeCode = [string]$Exception.Data['cause_code']
+    }
+    return [ordered]@{
+        error_code = $code
+        error_label = $label
+        error = $Exception.Message
+        cause_code = $causeCode
+    }
+}
 
 function Get-Sha256Text([string]$Text) {
     $sha = [System.Security.Cryptography.SHA256]::Create()
@@ -171,7 +235,7 @@ function Get-NormalizedProcessName([string]$Name) {
 function Get-QuiescenceProof {
     if ($PSVersionTable.PSVersion.Major -ne 5 -or $PSVersionTable.PSVersion.Minor -ne 1 -or
         $PSVersionTable.PSEdition -cne 'Desktop') {
-        throw 'Publication 4 requires Windows PowerShell 5.1 Desktop.'
+        throw 'Publication 5 requires Windows PowerShell 5.1 Desktop.'
     }
     $processes = @(Get-CimInstance -ClassName Win32_Process -Property ProcessId, ParentProcessId, Name, CreationDate -ErrorAction Stop)
     if ($processes.Count -eq 0) { throw 'The process census is empty.' }
@@ -211,7 +275,7 @@ function Get-QuiescenceProof {
         $currentId = $parentId
     }
     if ($ancestry.Count -eq 0 -or $ancestry[0] -cne 'powershell') {
-        throw 'Publication 4 must run in standalone powershell.exe, not an embedded or substituted shell.'
+        throw 'Publication 5 must run in standalone powershell.exe, not an embedded or substituted shell.'
     }
     $ancestryRoot = $ancestry[$ancestry.Count - 1]
     if ($ancestryRoot -notin @('explorer', 'windowsterminal')) {
@@ -219,12 +283,12 @@ function Get-QuiescenceProof {
     }
     $forbiddenAncestors = @($ancestry.ToArray() | Where-Object { $forbiddenNames -ccontains $_ })
     if ($forbiddenAncestors.Count -ne 0) {
-        throw ('Publication 4 must run from independent ordinary PowerShell; forbidden ancestry: ' +
+        throw ('Publication 5 must run from independent ordinary PowerShell; forbidden ancestry: ' +
             (($forbiddenAncestors | Sort-Object -Unique) -join ', '))
     }
     if ($globalForbidden.Count -ne 0) {
         $names = @($globalForbidden | ForEach-Object { Get-NormalizedProcessName $_.Name } | Sort-Object -Unique)
-        throw ('Publication 4 requires all Code, Codex, Claude, ChatGPT, and Cursor processes to be closed: ' +
+        throw ('Publication 5 requires all Code, Codex, Claude, ChatGPT, and Cursor processes to be closed: ' +
             ($names -join ', '))
     }
     return [ordered]@{
@@ -242,39 +306,135 @@ function Test-ManifestEqual([System.Collections.IDictionary]$Left, [System.Colle
         $Left.sha256 -ceq $Right.sha256)
 }
 
+function Assert-LiveCodexHomeUnchanged(
+    [System.Collections.IDictionary]$Expected,
+    [string]$Label
+) {
+    $actual = Get-CodexHomeManifest $script:LiveCodexHome
+    if (-not (Test-ManifestEqual $Expected $actual)) {
+        throw "The live CODEX_HOME changed at boundary: $Label"
+    }
+    return $actual
+}
+
+function Get-PriorP4EvidenceProof {
+    try {
+        $priorRoot = Join-Path $env:LOCALAPPDATA ('SkillMesh\Evidence\GoalNP\TerraBootstrap\' + $PriorP4RequestId)
+        $priorStatePath = Join-Path $priorRoot 'state.json'
+        $priorApprovalPath = Join-Path $env:LOCALAPPDATA 'SkillMesh\Evidence\GoalNP\Publication4\approval1-message.txt'
+        if (-not (Test-Path -LiteralPath $priorApprovalPath -PathType Leaf)) {
+            throw 'The frozen Publication-4 approval file is absent.'
+        }
+        $approvalItem = Get-Item -LiteralPath $priorApprovalPath -Force -ErrorAction Stop
+        if (($approvalItem.Attributes -band [System.IO.FileAttributes]::ReparsePoint) -ne 0) {
+            throw 'The frozen Publication-4 approval file is a reparse point.'
+        }
+        Assert-NoAlternateDataStream $approvalItem.FullName
+        $approvalFileHash = Get-FileSha256 $approvalItem.FullName
+        if ($approvalFileHash -cne $PriorP4ApprovalMessageFileHash) {
+            throw 'The frozen Publication-4 approval file hash changed.'
+        }
+        if (-not (Test-Path -LiteralPath $priorStatePath -PathType Leaf)) {
+            throw 'The frozen Publication-4 blocked state is absent.'
+        }
+        $stateHash = Get-FileSha256 $priorStatePath
+        if ($stateHash -cne $PriorP4StateHash) { throw 'The frozen Publication-4 blocked state hash changed.' }
+        $state = Get-Content -LiteralPath $priorStatePath -Raw | ConvertFrom-Json
+        if ($state.schema_version -ne 1 -or $state.request_id -cne $PriorP4RequestId -or
+            $state.phase -cne 'blocked' -or $state.approved_commit -cne $PriorP4ApprovedCommit -or
+            $state.approval_message_sha256 -cne $PriorP4ApprovalMessageHash) {
+            throw 'The frozen Publication-4 blocked state identity changed.'
+        }
+        $rootManifest = Get-OrdinalTreeManifest $priorRoot
+        if (-not $rootManifest.exists -or $rootManifest.entry_count -ne $PriorP4RootEntryCount -or
+            $rootManifest.sha256 -cne $PriorP4RootManifestHash) {
+            throw 'The frozen Publication-4 blocked evidence root changed.'
+        }
+        return [ordered]@{
+            request_id = $PriorP4RequestId
+            approved_commit = $PriorP4ApprovedCommit
+            approval_message_sha256 = $PriorP4ApprovalMessageHash
+            approval_message_file_sha256 = $approvalFileHash
+            state_sha256 = $stateHash
+            root_manifest = $rootManifest
+        }
+    }
+    catch {
+        $metadata = Get-P5FailureMetadata $_.Exception
+        if ($metadata.error_code -ceq 'PRIOR_PUBLICATION4_EVIDENCE_MISMATCH') { throw $_.Exception }
+        throw (New-P5Failure 'PRIOR_PUBLICATION4_EVIDENCE_MISMATCH' 'publication-4-evidence' `
+            $_.Exception.Message $_.Exception)
+    }
+}
+
+function Assert-PriorP4EvidenceUnchanged([System.Collections.IDictionary]$Expected) {
+    $actual = Get-PriorP4EvidenceProof
+    if ($actual.approval_message_file_sha256 -cne $Expected.approval_message_file_sha256 -or
+        $actual.state_sha256 -cne $Expected.state_sha256 -or
+        -not (Test-ManifestEqual $actual.root_manifest $Expected.root_manifest)) {
+        throw (New-P5Failure 'PRIOR_PUBLICATION4_EVIDENCE_MISMATCH' 'publication-4-evidence' `
+            'Publication-4 blocked evidence changed during Publication-5 execution.')
+    }
+    return $actual
+}
+
 function Get-PriorP3EvidenceProof {
-    $priorRoot = Join-Path $env:LOCALAPPDATA ('SkillMesh\Evidence\GoalNP\TerraBootstrap\' + $PriorP3RequestId)
-    $priorStatePath = Join-Path $priorRoot 'state.json'
-    if (-not (Test-Path -LiteralPath $priorStatePath -PathType Leaf)) {
-        throw 'The frozen Publication-3 blocked state is absent.'
+    try {
+        $priorRoot = Join-Path $env:LOCALAPPDATA ('SkillMesh\Evidence\GoalNP\TerraBootstrap\' + $PriorP3RequestId)
+        $priorStatePath = Join-Path $priorRoot 'state.json'
+        $priorApprovalPath = Join-Path $env:LOCALAPPDATA 'SkillMesh\Evidence\GoalNP\Publication3\approval1-message.txt'
+        if (-not (Test-Path -LiteralPath $priorApprovalPath -PathType Leaf)) {
+            throw 'The frozen Publication-3 approval file is absent.'
+        }
+        $approvalItem = Get-Item -LiteralPath $priorApprovalPath -Force -ErrorAction Stop
+        if (($approvalItem.Attributes -band [System.IO.FileAttributes]::ReparsePoint) -ne 0) {
+            throw 'The frozen Publication-3 approval file is a reparse point.'
+        }
+        Assert-NoAlternateDataStream $approvalItem.FullName
+        $approvalFileHash = Get-FileSha256 $approvalItem.FullName
+        if ($approvalFileHash -cne $PriorP3ApprovalMessageFileHash) {
+            throw 'The frozen Publication-3 approval file hash changed.'
+        }
+        if (-not (Test-Path -LiteralPath $priorStatePath -PathType Leaf)) {
+            throw 'The frozen Publication-3 blocked state is absent.'
+        }
+        $stateHash = Get-FileSha256 $priorStatePath
+        if ($stateHash -cne $PriorP3StateHash) { throw 'The frozen Publication-3 blocked state hash changed.' }
+        $state = Get-Content -LiteralPath $priorStatePath -Raw | ConvertFrom-Json
+        if ($state.schema_version -ne 1 -or $state.request_id -cne $PriorP3RequestId -or
+            $state.phase -cne 'blocked' -or $state.approved_commit -cne $PriorP3ApprovedCommit -or
+            $state.approval_message_sha256 -cne $PriorP3ApprovalMessageHash) {
+            throw 'The frozen Publication-3 blocked state identity changed.'
+        }
+        $rootManifest = Get-OrdinalTreeManifest $priorRoot
+        if (-not $rootManifest.exists -or $rootManifest.entry_count -ne $PriorP3RootEntryCount -or
+            $rootManifest.sha256 -cne $PriorP3RootManifestHash) {
+            throw 'The frozen Publication-3 blocked evidence root changed.'
+        }
+        return [ordered]@{
+            request_id = $PriorP3RequestId
+            approved_commit = $PriorP3ApprovedCommit
+            approval_message_sha256 = $PriorP3ApprovalMessageHash
+            approval_message_file_sha256 = $approvalFileHash
+            state_sha256 = $stateHash
+            root_manifest = $rootManifest
+        }
     }
-    $stateHash = Get-FileSha256 $priorStatePath
-    if ($stateHash -cne $PriorP3StateHash) { throw 'The frozen Publication-3 blocked state hash changed.' }
-    $state = Get-Content -LiteralPath $priorStatePath -Raw | ConvertFrom-Json
-    if ($state.schema_version -ne 1 -or $state.request_id -cne $PriorP3RequestId -or
-        $state.phase -cne 'blocked' -or $state.approved_commit -cne $PriorP3ApprovedCommit -or
-        $state.approval_message_sha256 -cne $PriorP3ApprovalMessageHash) {
-        throw 'The frozen Publication-3 blocked state identity changed.'
-    }
-    $rootManifest = Get-OrdinalTreeManifest $priorRoot
-    if (-not $rootManifest.exists -or $rootManifest.entry_count -ne $PriorP3RootEntryCount -or
-        $rootManifest.sha256 -cne $PriorP3RootManifestHash) {
-        throw 'The frozen Publication-3 blocked evidence root changed.'
-    }
-    return [ordered]@{
-        request_id = $PriorP3RequestId
-        approved_commit = $PriorP3ApprovedCommit
-        approval_message_sha256 = $PriorP3ApprovalMessageHash
-        state_sha256 = $stateHash
-        root_manifest = $rootManifest
+    catch {
+        $metadata = Get-P5FailureMetadata $_.Exception
+        if ($metadata.error_code -ceq 'PRIOR_PUBLICATION3_EVIDENCE_MISMATCH') { throw $_.Exception }
+        throw (New-P5Failure 'PRIOR_PUBLICATION3_EVIDENCE_MISMATCH' 'publication-3-evidence' `
+            $_.Exception.Message $_.Exception)
     }
 }
 
 function Assert-PriorP3EvidenceUnchanged([System.Collections.IDictionary]$Expected) {
     $actual = Get-PriorP3EvidenceProof
-    if ($actual.state_sha256 -cne $Expected.state_sha256 -or
+    if ($actual.approval_message_file_sha256 -cne $Expected.approval_message_file_sha256 -or
+        $actual.state_sha256 -cne $Expected.state_sha256 -or
         -not (Test-ManifestEqual $actual.root_manifest $Expected.root_manifest)) {
-        throw 'Publication-3 blocked evidence changed during Publication-4 execution.'
+        throw (New-P5Failure 'PRIOR_PUBLICATION3_EVIDENCE_MISMATCH' 'publication-3-evidence' `
+            'Publication-3 blocked evidence changed during Publication-5 execution.')
     }
     return $actual
 }
@@ -304,6 +464,158 @@ function Get-ClosedConfigArguments {
     return $arguments.ToArray()
 }
 
+function Get-CapturedProcessExitCode(
+    [System.Diagnostics.Process]$Process,
+    [string]$Label
+) {
+    try {
+        if (-not $Process.HasExited) {
+            throw (New-P5Failure 'PROCESS_EXIT_CODE_UNAVAILABLE' $Label `
+                'The process had not exited before exit-code capture.')
+        }
+        $rawExitCode = $Process.ExitCode
+    }
+    catch {
+        $metadata = Get-P5FailureMetadata $_.Exception
+        if ($metadata.error_code -eq 'PROCESS_EXIT_CODE_UNAVAILABLE') { throw $_.Exception }
+        throw (New-P5Failure 'PROCESS_EXIT_CODE_UNAVAILABLE' $Label `
+            'The process exit-code getter failed after the process wait completed.' $_.Exception)
+    }
+    if ($null -eq $rawExitCode) {
+        throw (New-P5Failure 'PROCESS_EXIT_CODE_UNAVAILABLE' $Label `
+            'The process returned a null exit code after its handle was cached and it exited.')
+    }
+    if ($rawExitCode -isnot [int]) {
+        throw (New-P5Failure 'PROCESS_EXIT_CODE_UNAVAILABLE' $Label `
+            ('The process returned a non-Int32 exit code: ' + $rawExitCode.GetType().FullName))
+    }
+    $exitCode = [int]$rawExitCode
+    return $exitCode
+}
+
+function Wait-CapturedProcessExitCode(
+    [System.Diagnostics.Process]$Process,
+    [string]$Label,
+    [int]$TimeoutMilliseconds
+) {
+    $timedOut = $false
+    try {
+        if (-not $Process.WaitForExit($TimeoutMilliseconds)) {
+            $timedOut = $true
+            $Process.Kill()
+        }
+        $Process.WaitForExit()
+    }
+    catch {
+        $metadata = Get-P5FailureMetadata $_.Exception
+        if ($metadata.error_code -ne 'UNEXPECTED_FAILURE') { throw $_.Exception }
+        throw (New-P5Failure 'UNEXPECTED_FAILURE' $Label `
+            'Process wait or timeout cleanup failed.' $_.Exception)
+    }
+    $exitCode = Get-CapturedProcessExitCode $Process $Label
+    if ($timedOut) {
+        throw (New-P5Failure 'PROCESS_TIMEOUT' $Label `
+            "The process exceeded its $TimeoutMilliseconds-millisecond limit.")
+    }
+    return $exitCode
+}
+
+function Invoke-ProcessExitCanaryCase(
+    [string]$CmdExe,
+    [int]$ExpectedExitCode
+) {
+    $label = 'process-canary-exit-' + $ExpectedExitCode
+    $process = $null
+    try {
+        try {
+            $process = Start-Process -FilePath $CmdExe -ArgumentList @(
+                '/d', '/s', '/c', ('"exit ' + $ExpectedExitCode + '"')
+            ) -NoNewWindow -PassThru
+            $rawHandle = $process.Handle
+        }
+        catch {
+            if ($null -eq $process) {
+                throw (New-P5Failure 'PROCESS_START_FAILED' $label 'The process could not be started.' $_.Exception)
+            }
+            throw (New-P5Failure 'PROCESS_HANDLE_UNAVAILABLE' $label `
+                'The process handle could not be acquired immediately after start.' $_.Exception)
+        }
+        if ($null -eq $rawHandle -or $rawHandle -isnot [IntPtr] -or $rawHandle -eq [IntPtr]::Zero) {
+            throw (New-P5Failure 'PROCESS_HANDLE_UNAVAILABLE' $label `
+                'The process returned an invalid handle immediately after start.')
+        }
+        $cachedHandle = [IntPtr]$rawHandle
+        $exitCode = Wait-CapturedProcessExitCode $process $label 30000
+        if ($exitCode -ne $ExpectedExitCode) {
+            throw (New-P5Failure 'PROCESS_CANARY_FAILED' $label `
+                "The process-exit canary expected $ExpectedExitCode and observed $exitCode.")
+        }
+        return [ordered]@{
+            expected_exit_code = $ExpectedExitCode
+            observed_exit_code = $exitCode
+        }
+    }
+    catch {
+        $originalFailure = $_.Exception
+        if ($process) {
+            try {
+                if (-not $process.HasExited) {
+                    $process.Kill()
+                    $process.WaitForExit()
+                }
+            }
+            catch {
+                throw (New-P5Failure 'UNEXPECTED_FAILURE' $label `
+                    'Process-exit canary cleanup failed.' $_.Exception)
+            }
+        }
+        throw $originalFailure
+    }
+    finally {
+        if ($process) { $process.Dispose() }
+    }
+}
+
+function Invoke-ProcessExitCanary {
+    try {
+        $systemDirectory = [Environment]::SystemDirectory
+        if ([string]::IsNullOrWhiteSpace($systemDirectory) -or
+            -not [System.IO.Path]::IsPathRooted($systemDirectory)) {
+            throw (New-P5Failure 'PROCESS_CANARY_FAILED' 'process-exit-canary' `
+                'The canonical Windows system directory is unavailable.')
+        }
+        $cmdExe = Join-Path ([System.IO.Path]::GetFullPath($systemDirectory).TrimEnd('\')) 'cmd.exe'
+        if (-not (Test-Path -LiteralPath $cmdExe -PathType Leaf)) {
+            throw (New-P5Failure 'PROCESS_CANARY_FAILED' 'process-exit-canary' `
+                'The canonical System32 cmd.exe is unavailable.')
+        }
+        $cmdItem = Get-Item -LiteralPath $cmdExe -Force -ErrorAction Stop
+        if (($cmdItem.Attributes -band [System.IO.FileAttributes]::ReparsePoint) -ne 0 -or
+            -not $cmdItem.FullName.Equals($cmdExe, [StringComparison]::OrdinalIgnoreCase)) {
+            throw (New-P5Failure 'PROCESS_CANARY_FAILED' 'process-exit-canary' `
+                'The canonical System32 cmd.exe identity is invalid.')
+        }
+        Assert-NoAlternateDataStream $cmdItem.FullName
+        $cmdHash = Get-FileSha256 $cmdItem.FullName
+        $cases = @(
+            Invoke-ProcessExitCanaryCase $cmdExe 0
+            Invoke-ProcessExitCanaryCase $cmdExe 37
+        )
+        return [ordered]@{
+            executable = $cmdItem.FullName
+            executable_sha256 = $cmdHash
+            cases = $cases
+        }
+    }
+    catch {
+        $metadata = Get-P5FailureMetadata $_.Exception
+        if ($metadata.error_code -eq 'PROCESS_CANARY_FAILED') { throw $_.Exception }
+        $failureLabel = if ($metadata.error_label -eq 'launcher') { 'process-exit-canary' } else { $metadata.error_label }
+        throw (New-P5Failure 'PROCESS_CANARY_FAILED' $failureLabel `
+            'The Windows PowerShell 5.1 process-exit canary failed.' $_.Exception $metadata.error_code)
+    }
+}
+
 function Invoke-RecordedProcess(
     [string]$Label,
     [string]$FilePath,
@@ -314,21 +626,55 @@ function Invoke-RecordedProcess(
     if (-not $OutputRoot) { $OutputRoot = $script:EvidenceRoot }
     $stdout = Join-Path $OutputRoot ($Label + '.stdout.txt')
     $stderr = Join-Path $OutputRoot ($Label + '.stderr.txt')
-    $process = Start-Process -FilePath $FilePath -ArgumentList $Arguments -NoNewWindow -PassThru `
-        -RedirectStandardOutput $stdout -RedirectStandardError $stderr
-    if (-not $process.WaitForExit($TimeoutMilliseconds)) {
-        $process.Kill()
-        $process.WaitForExit()
-        throw "$Label exceeded its $TimeoutMilliseconds-millisecond limit."
+    $process = $null
+    try {
+        try {
+            $process = Start-Process -FilePath $FilePath -ArgumentList $Arguments -NoNewWindow -PassThru `
+                -RedirectStandardOutput $stdout -RedirectStandardError $stderr
+            $rawHandle = $process.Handle
+        }
+        catch {
+            if ($null -eq $process) {
+                throw (New-P5Failure 'PROCESS_START_FAILED' $Label 'The process could not be started.' $_.Exception)
+            }
+            throw (New-P5Failure 'PROCESS_HANDLE_UNAVAILABLE' $Label `
+                'The process handle could not be acquired immediately after start.' $_.Exception)
+        }
+        if ($null -eq $rawHandle -or $rawHandle -isnot [IntPtr] -or $rawHandle -eq [IntPtr]::Zero) {
+            throw (New-P5Failure 'PROCESS_HANDLE_UNAVAILABLE' $Label `
+                'The process returned an invalid handle immediately after start.')
+        }
+        $cachedHandle = [IntPtr]$rawHandle
+        $exitCode = Wait-CapturedProcessExitCode $process $Label $TimeoutMilliseconds
+        if ($exitCode -ne 0) {
+            throw (New-P5Failure 'PROCESS_EXIT_NONZERO' $Label "The process exited $exitCode.")
+        }
+        return [ordered]@{
+            exit_code = $exitCode
+            stdout_path = $stdout
+            stdout_sha256 = Get-FileSha256 $stdout
+            stderr_path = $stderr
+            stderr_sha256 = Get-FileSha256 $stderr
+        }
     }
-    $process.WaitForExit()
-    if ($process.ExitCode -ne 0) { throw "$Label exited $($process.ExitCode)." }
-    return [ordered]@{
-        exit_code = $process.ExitCode
-        stdout_path = $stdout
-        stdout_sha256 = Get-FileSha256 $stdout
-        stderr_path = $stderr
-        stderr_sha256 = Get-FileSha256 $stderr
+    catch {
+        $originalFailure = $_.Exception
+        if ($process) {
+            try {
+                if (-not $process.HasExited) {
+                    $process.Kill()
+                    $process.WaitForExit()
+                }
+            }
+            catch {
+                throw (New-P5Failure 'UNEXPECTED_FAILURE' $Label `
+                    'Process failure cleanup failed.' $_.Exception)
+            }
+        }
+        throw $originalFailure
+    }
+    finally {
+        if ($process) { $process.Dispose() }
     }
 }
 
@@ -364,14 +710,22 @@ function Get-PromptInputProof([string]$Label, [string]$CallLaunchRoot) {
     $quiescenceBefore = Get-QuiescenceProof
     $arguments = @('--model', 'gpt-5.6-terra') + @(Get-ClosedConfigArguments) + @(
         '--sandbox', 'read-only', '--cd', $CallLaunchRoot, '--add-dir', $script:RepoRoot,
-        'debug', 'prompt-input', 'Goal-NP-Publication-4-Terra-bootstrap-prompt-surface-proof'
+        'debug', 'prompt-input', 'Goal-NP-Publication-5-Terra-bootstrap-prompt-surface-proof'
     )
     $proof = $null
+    $liveCodexHomeBefore = Assert-LiveCodexHomeUnchanged $script:LiveCodexHomeBefore `
+        ($Label + '-before-prompt-input')
+    $priorP4Before = Assert-PriorP4EvidenceUnchanged $script:PriorP4Before
+    $priorP3Before = Assert-PriorP3EvidenceUnchanged $script:PriorP3Before
     try {
         $proof = Invoke-RecordedProcess ($Label + '-prompt-input') $script:CodexExe $arguments $script:EvidenceRoot 120000
     }
     finally {
         $quiescenceAfter = Get-QuiescenceProof
+        $liveCodexHomeAfter = Assert-LiveCodexHomeUnchanged $script:LiveCodexHomeBefore `
+            ($Label + '-after-prompt-input')
+        $priorP4After = Assert-PriorP4EvidenceUnchanged $script:PriorP4Before
+        $priorP3After = Assert-PriorP3EvidenceUnchanged $script:PriorP3Before
     }
     $text = Get-Content -LiteralPath $proof.stdout_path -Raw
     $null = $text | ConvertFrom-Json
@@ -397,6 +751,12 @@ function Get-PromptInputProof([string]$Label, [string]$CallLaunchRoot) {
         launch_root = $CallLaunchRoot
         quiescence_before = $quiescenceBefore
         quiescence_after = $quiescenceAfter
+        live_codex_home_before = $liveCodexHomeBefore
+        live_codex_home_after = $liveCodexHomeAfter
+        prior_publication4_before = $priorP4Before
+        prior_publication4_after = $priorP4After
+        prior_publication3_before = $priorP3Before
+        prior_publication3_after = $priorP3After
     }
 }
 
@@ -437,6 +797,12 @@ function Invoke-Terra(
         prompt_input_proof_sha256 = $promptInputProof.process.stdout_sha256
         prompt_input_quiescence_before = $promptInputProof.quiescence_before
         prompt_input_quiescence_after = $promptInputProof.quiescence_after
+        live_codex_home_before_prompt_input = $promptInputProof.live_codex_home_before
+        live_codex_home_after_prompt_input = $promptInputProof.live_codex_home_after
+        prior_publication4_before_prompt_input = $promptInputProof.prior_publication4_before
+        prior_publication4_after_prompt_input = $promptInputProof.prior_publication4_after
+        prior_publication3_before_prompt_input = $promptInputProof.prior_publication3_before
+        prior_publication3_after_prompt_input = $promptInputProof.prior_publication3_after
     }
     Write-Utf8NoBom $invocationPath (($invocation | ConvertTo-Json -Depth 8) + "`n")
     $preRepoIdentity = Get-RepoIdentity ($Label + '-pre')
@@ -460,41 +826,75 @@ function Invoke-Terra(
     }
     Write-Utf8NoBom (Join-Path $script:EvidenceRoot ($Label + '.pre-identity.json')) (($preIdentity | ConvertTo-Json -Depth 6) + "`n")
     $preCallQuiescence = Get-QuiescenceProof
-    $process = Start-Process -FilePath $script:CodexExe -ArgumentList $arguments -NoNewWindow -PassThru `
-        -RedirectStandardInput $PromptPath -RedirectStandardOutput $jsonl -RedirectStandardError $stderr
-    $failureMessage = $null
+    $liveCodexHomeBeforeCodex = Assert-LiveCodexHomeUnchanged $script:LiveCodexHomeBefore `
+        ($Label + '-before-codex')
+    $priorP4BeforeCodex = Assert-PriorP4EvidenceUnchanged $script:PriorP4Before
+    $priorP3BeforeCodex = Assert-PriorP3EvidenceUnchanged $script:PriorP3Before
+    $process = $null
+    $processFailure = $null
     $exitCode = $null
     try {
-        if (-not $process.WaitForExit(3600000)) {
-            $process.Kill()
-            $process.WaitForExit()
-            $failureMessage = "$Label Codex process exceeded the 3600-second limit."
+        try {
+            try {
+                $process = Start-Process -FilePath $script:CodexExe -ArgumentList $arguments -NoNewWindow -PassThru `
+                    -RedirectStandardInput $PromptPath -RedirectStandardOutput $jsonl -RedirectStandardError $stderr
+                $rawHandle = $process.Handle
+            }
+            catch {
+                if ($null -eq $process) {
+                    throw (New-P5Failure 'PROCESS_START_FAILED' $Label 'The Codex process could not be started.' $_.Exception)
+                }
+                throw (New-P5Failure 'PROCESS_HANDLE_UNAVAILABLE' $Label `
+                    'The Codex process handle could not be acquired immediately after start.' $_.Exception)
+            }
+            if ($null -eq $rawHandle -or $rawHandle -isnot [IntPtr] -or $rawHandle -eq [IntPtr]::Zero) {
+                throw (New-P5Failure 'PROCESS_HANDLE_UNAVAILABLE' $Label `
+                    'The Codex process returned an invalid handle immediately after start.')
+            }
+            $cachedHandle = [IntPtr]$rawHandle
+            $exitCode = Wait-CapturedProcessExitCode $process $Label 3600000
+            if ($exitCode -ne 0) {
+                throw (New-P5Failure 'PROCESS_EXIT_NONZERO' $Label "The Codex process exited $exitCode.")
+            }
         }
-        else { $process.WaitForExit() }
-        $exitCode = $process.ExitCode
-        if (-not $failureMessage -and $exitCode -ne 0) { $failureMessage = "$Label Codex process exited $exitCode." }
-    }
-    catch {
-        $failureMessage = "$Label Codex process handling failed: $($_.Exception.Message)"
-        if (-not $process.HasExited) {
-            $process.Kill()
-            $process.WaitForExit()
+        catch {
+            $processFailure = $_.Exception
+            if ($process) {
+                try {
+                    if (-not $process.HasExited) {
+                        $process.Kill()
+                        $process.WaitForExit()
+                    }
+                }
+                catch {
+                    $processFailure = New-P5Failure 'UNEXPECTED_FAILURE' $Label `
+                        'Codex process failure cleanup failed.' $_.Exception
+                }
+            }
         }
-        if ($process.HasExited) { $exitCode = $process.ExitCode }
     }
     finally {
-        $postRepoIdentity = Get-RepoIdentity ($Label + '-post')
-        $postIdentity = [ordered]@{
-            codex_executable = $script:CodexExe
-            codex_version = (& $script:CodexExe --version).Trim()
-            codex_executable_sha256 = Get-FileSha256 $script:CodexExe
-            argv_sha256 = Get-Sha256Text (($arguments | ConvertTo-Json -Compress) + "`n")
-            prompt_sha256 = Get-FileSha256 $PromptPath
-            repo = $postRepoIdentity
+        try {
+            $postRepoIdentity = Get-RepoIdentity ($Label + '-post')
+            $postIdentity = [ordered]@{
+                codex_executable = $script:CodexExe
+                codex_version = (& $script:CodexExe --version).Trim()
+                codex_executable_sha256 = Get-FileSha256 $script:CodexExe
+                argv_sha256 = Get-Sha256Text (($arguments | ConvertTo-Json -Compress) + "`n")
+                prompt_sha256 = Get-FileSha256 $PromptPath
+                repo = $postRepoIdentity
+            }
+            Write-Utf8NoBom (Join-Path $script:EvidenceRoot ($Label + '.post-identity.json')) (($postIdentity | ConvertTo-Json -Depth 6) + "`n")
         }
-        Write-Utf8NoBom (Join-Path $script:EvidenceRoot ($Label + '.post-identity.json')) (($postIdentity | ConvertTo-Json -Depth 6) + "`n")
+        finally {
+            if ($process) { $process.Dispose() }
+        }
     }
     $postCallQuiescence = Get-QuiescenceProof
+    $liveCodexHomeAfterCodex = Assert-LiveCodexHomeUnchanged $script:LiveCodexHomeBefore `
+        ($Label + '-after-codex')
+    $priorP4AfterCodex = Assert-PriorP4EvidenceUnchanged $script:PriorP4Before
+    $priorP3AfterCodex = Assert-PriorP3EvidenceUnchanged $script:PriorP3Before
     foreach ($field in @('codex_executable', 'codex_version', 'codex_executable_sha256', 'argv_sha256', 'prompt_sha256')) {
         if ($preIdentity[$field] -cne $postIdentity[$field]) { throw "$Label changed protected process identity field $field." }
     }
@@ -506,13 +906,14 @@ function Invoke-Terra(
         $preRepoIdentity.status_count -ne $postRepoIdentity.status_count -or
         $preRepoIdentity.worktree_tree -cne $postRepoIdentity.worktree_tree
     )) { throw "$Label changed the worktree despite read-only review authority." }
-    if ($failureMessage) { throw $failureMessage }
+    if ($processFailure) { throw $processFailure }
     if (-not (Test-Path -LiteralPath $last -PathType Leaf)) { throw "$Label did not publish its result." }
     $result = Get-Content -LiteralPath $last -Raw | ConvertFrom-Json
     if ($result.verdict -ne 'PASS') { throw "$Label returned $($result.verdict)." }
     $materialFindings = @($result.findings | Where-Object { $_.severity -in @('blocker', 'significant') })
     if ($materialFindings.Count -ne 0) { throw "$Label returned PASS with material findings." }
     return [ordered]@{
+        exit_code = $exitCode
         jsonl_path = $jsonl
         jsonl_sha256 = Get-FileSha256 $jsonl
         stderr_path = $stderr
@@ -526,15 +927,23 @@ function Invoke-Terra(
         post_identity_sha256 = Get-FileSha256 (Join-Path $script:EvidenceRoot ($Label + '.post-identity.json'))
         pre_call_quiescence = $preCallQuiescence
         post_call_quiescence = $postCallQuiescence
+        live_codex_home_before_codex = $liveCodexHomeBeforeCodex
+        live_codex_home_after_codex = $liveCodexHomeAfterCodex
+        prior_publication4_before_codex = $priorP4BeforeCodex
+        prior_publication4_after_codex = $priorP4AfterCodex
+        prior_publication3_before_codex = $priorP3BeforeCodex
+        prior_publication3_after_codex = $priorP3AfterCodex
     }
 }
 
 function Invoke-ZeroWritePreflight {
     if (Test-Path -LiteralPath $script:EvidenceRoot) {
-        throw 'This deterministic Publication-4 lineage already exists. Run Inspect; do not create another attempt.'
+        throw 'This deterministic Publication-5 lineage already exists. Run Inspect; do not create another attempt.'
     }
     $quiescenceBefore = Get-QuiescenceProof
+    $priorP4Before = Get-PriorP4EvidenceProof
     $priorP3Before = Get-PriorP3EvidenceProof
+    $processExitCanary = Invoke-ProcessExitCanary
 
     $liveCodexHome = if ([string]::IsNullOrWhiteSpace($env:CODEX_HOME)) {
         Join-Path $env:USERPROFILE '.codex'
@@ -636,10 +1045,11 @@ function Invoke-ZeroWritePreflight {
     if ((Get-FileSha256 $liveAuthPath) -cne $liveAuthHash) {
         throw 'The live Codex authentication bytes changed during zero-write preflight.'
     }
+    $priorP4After = Assert-PriorP4EvidenceUnchanged $priorP4Before
     $priorP3After = Assert-PriorP3EvidenceUnchanged $priorP3Before
     $quiescenceAfter = Get-QuiescenceProof
     if (Test-Path -LiteralPath $script:EvidenceRoot) {
-        throw 'The Publication-4 evidence root appeared during zero-write preflight.'
+        throw 'The Publication-5 evidence root appeared during zero-write preflight.'
     }
 
     return [ordered]@{
@@ -677,6 +1087,9 @@ function Invoke-ZeroWritePreflight {
         live_codex_home = $liveCodexHome
         live_codex_home_manifest = $liveCodexHomeSecond
         live_auth_sha256 = $liveAuthHash
+        process_exit_canary = $processExitCanary
+        prior_publication4_before = $priorP4Before
+        prior_publication4_after = $priorP4After
         prior_publication3_before = $priorP3Before
         prior_publication3_after = $priorP3After
         quiescence_before = $quiescenceBefore
@@ -712,23 +1125,40 @@ $AllowedAdminPaths = @(
     'tests/package-integrity/test_goal_np_admin_sync.py'
 )
 
-$script:CanonicalApprovalMessageFile = Join-Path $env:LOCALAPPDATA 'SkillMesh\Evidence\GoalNP\Publication4\approval1-message.txt'
-$suppliedApprovalPath = [System.IO.Path]::GetFullPath($ApprovalMessageFile)
-$canonicalApprovalPath = [System.IO.Path]::GetFullPath($script:CanonicalApprovalMessageFile)
-if (-not $suppliedApprovalPath.Equals($canonicalApprovalPath, [StringComparison]::OrdinalIgnoreCase)) {
-    throw 'ApprovalMessageFile is not the canonical Publication-4 approval path.'
+try {
+    $script:CanonicalApprovalMessageFile = Join-Path $env:LOCALAPPDATA 'SkillMesh\Evidence\GoalNP\Publication5\approval1-message.txt'
+    $suppliedApprovalPath = [System.IO.Path]::GetFullPath($ApprovalMessageFile)
+    $canonicalApprovalPath = [System.IO.Path]::GetFullPath($script:CanonicalApprovalMessageFile)
+    if (-not $suppliedApprovalPath.Equals($canonicalApprovalPath, [StringComparison]::OrdinalIgnoreCase)) {
+        throw (New-P5Failure 'UNEXPECTED_FAILURE' 'approval-message' `
+            'ApprovalMessageFile is not the canonical Publication-5 approval path.')
+    }
+    if (-not (Test-Path -LiteralPath $canonicalApprovalPath -PathType Leaf)) {
+        throw (New-P5Failure 'UNEXPECTED_FAILURE' 'approval-message' 'ApprovalMessageFile does not exist.')
+    }
+    $approvalItem = Get-Item -LiteralPath $canonicalApprovalPath -Force -ErrorAction Stop
+    if (($approvalItem.Attributes -band [System.IO.FileAttributes]::ReparsePoint) -ne 0) {
+        throw (New-P5Failure 'UNEXPECTED_FAILURE' 'approval-message' 'ApprovalMessageFile is a reparse point.')
+    }
+    Assert-NoAlternateDataStream $approvalItem.FullName
+    $expectedApprovalBytes = $Utf8NoBom.GetBytes($ExpectedApproval + "`n")
+    $actualApprovalBytes = [System.IO.File]::ReadAllBytes($canonicalApprovalPath)
+    if ([Convert]::ToBase64String($actualApprovalBytes) -cne [Convert]::ToBase64String($expectedApprovalBytes)) {
+        throw (New-P5Failure 'UNEXPECTED_FAILURE' 'approval-message' `
+            'Approval message is not exact UTF-8 without BOM, with one final LF, for Publication 5.')
+    }
 }
-if (-not (Test-Path -LiteralPath $canonicalApprovalPath -PathType Leaf)) { throw 'ApprovalMessageFile does not exist.' }
-$expectedApprovalBytes = $Utf8NoBom.GetBytes($ExpectedApproval + "`n")
-$actualApprovalBytes = [System.IO.File]::ReadAllBytes($canonicalApprovalPath)
-if ([Convert]::ToBase64String($actualApprovalBytes) -cne [Convert]::ToBase64String($expectedApprovalBytes)) {
-    throw 'Approval message is not exact UTF-8 without BOM, with one final LF, for Publication 4.'
+catch {
+    if ($_.Exception.Data.Contains('error_code')) { throw $_.Exception }
+    throw (New-P5Failure 'UNEXPECTED_FAILURE' 'approval-message' $_.Exception.Message $_.Exception)
 }
 $script:ApprovalMessageHash = Get-Sha256Text $ExpectedApproval
 $identityText = @(
-    'publication-4-recovery-v1',
+    'publication-5-recovery-v1',
     $ApprovedCommit,
     $script:ApprovalMessageHash,
+    $PriorP4RequestId,
+    $PriorP4StateHash,
     $PriorP3RequestId,
     $PriorP3StateHash
 ) -join "`n"
@@ -737,6 +1167,8 @@ $script:EvidenceRoot = Join-Path $env:LOCALAPPDATA ('SkillMesh\Evidence\GoalNP\T
 $script:StatePath = Join-Path $script:EvidenceRoot 'state.json'
 
 if ($Action -eq 'Inspect') {
+    $null = Get-PriorP4EvidenceProof
+    $null = Get-PriorP3EvidenceProof
     if (-not (Test-Path -LiteralPath $script:StatePath -PathType Leaf)) { throw 'No matching Terra bootstrap state exists.' }
     $stateText = Get-Content -LiteralPath $script:StatePath -Raw
     $state = $stateText | ConvertFrom-Json
@@ -762,14 +1194,21 @@ if ($Action -eq 'Inspect') {
     exit 0
 }
 
-$preflight = Invoke-ZeroWritePreflight
+try {
+    $preflight = Invoke-ZeroWritePreflight
+}
+catch {
+    $metadata = Get-P5FailureMetadata $_.Exception
+    if ($metadata.error_code -ne 'UNEXPECTED_FAILURE') { throw $_.Exception }
+    throw (New-P5Failure 'UNEXPECTED_FAILURE' 'preflight' $_.Exception.Message $_.Exception)
+}
 if ($Action -eq 'Preflight') {
     $preflight | ConvertTo-Json -Depth 12
     exit 0
 }
 
 if (Test-Path -LiteralPath $script:EvidenceRoot) {
-    throw 'This deterministic Publication-4 lineage already exists. Run Inspect; do not create another attempt.'
+    throw 'This deterministic Publication-5 lineage already exists. Run Inspect; do not create another attempt.'
 }
 New-Item -ItemType Directory -Path $script:EvidenceRoot | Out-Null
 $script:LaunchRoot = Join-Path $script:EvidenceRoot 'instruction-free-launch-roots'
@@ -783,9 +1222,10 @@ foreach ($name in $EnvironmentNames) {
     $OriginalEnvironment[$name] = [Environment]::GetEnvironmentVariable($name, 'Process')
 }
 $script:DisposableCodexHome = $null
-$LiveCodexHome = $preflight.live_codex_home
-$LiveCodexHomeBefore = $preflight.live_codex_home_manifest
-$PriorP3Before = $preflight.prior_publication3_after
+$script:LiveCodexHome = $preflight.live_codex_home
+$script:LiveCodexHomeBefore = $preflight.live_codex_home_manifest
+$script:PriorP4Before = $preflight.prior_publication4_after
+$script:PriorP3Before = $preflight.prior_publication3_after
 $bundleHashes = $preflight.bundle_sha256
 $baseArgvHash = $preflight.base_argv_sha256
 $PythonExe = $preflight.python.executable
@@ -804,6 +1244,7 @@ try {
     if (-not (Test-ManifestEqual $LiveCodexHomeBefore $postAllocationLiveCodexHome)) {
         throw 'The live CODEX_HOME changed after preflight and before execution.'
     }
+    $PriorP4PostAllocation = Assert-PriorP4EvidenceUnchanged $PriorP4Before
     $PriorP3PostAllocation = Assert-PriorP3EvidenceUnchanged $PriorP3Before
     $script:DisposableCodexHome = Join-Path $script:EvidenceRoot 'disposable-codex-home'
     New-Item -ItemType Directory -Path $script:DisposableCodexHome | Out-Null
@@ -823,6 +1264,9 @@ try {
         codex_executable_sha256 = $ExpectedCodexHash
         python_executable_sha256 = $ExpectedPythonHash
         live_codex_home_before = $LiveCodexHomeBefore
+        process_exit_canary = $preflight.process_exit_canary
+        prior_publication4_before = $PriorP4Before
+        prior_publication4_post_allocation = $PriorP4PostAllocation
         prior_publication3_before = $PriorP3Before
         prior_publication3_post_allocation = $PriorP3PostAllocation
         post_allocation_quiescence = $postAllocationQuiescence
@@ -830,7 +1274,7 @@ try {
     }
 
     $implementationPrompt = @"
-Implement only ADMIN-BOOTSTRAP for Goal NP Publication 4 at commit $ApprovedCommit.
+Implement only ADMIN-BOOTSTRAP for Goal NP Publication 5 at commit $ApprovedCommit.
 The exact owner worktree is $RepoRoot. Read $RepoRoot\plan.md,
 $RepoRoot\documentation\native-claude-codex-skill-parity-plan.md, and
 $RepoRoot\documentation\native-claude-codex-skill-parity-terra-amendment.md. The amendment controls
@@ -947,7 +1391,7 @@ deterministic gates.
     Write-Utf8NoBom $candidateEvidencePath (($candidateEvidence | ConvertTo-Json -Depth 10) + "`n")
 
     $reviewPrompt = @"
-    Independently review the exact uncommitted ADMIN-BOOTSTRAP candidate for Goal NP Publication 4.
+    Independently review the exact uncommitted ADMIN-BOOTSTRAP candidate for Goal NP Publication 5.
 The owner worktree is $RepoRoot and the approved commit is $ApprovedCommit. Read the exact plan at
 $RepoRoot\documentation\native-claude-codex-skill-parity-plan.md and controlling amendment at
 $RepoRoot\documentation\native-claude-codex-skill-parity-terra-amendment.md. The candidate evidence
@@ -977,12 +1421,8 @@ Do not change any file. End with schema-valid JSON only. PASS permits no blocker
     $review = Invoke-Terra 'review' 'read-only' $reviewPromptPath $expectedReviewIdentity
     Write-State 'review-pass' @{ implementation = $implementation; review = $review; candidate_tree = $candidateTree }
 
-    $LiveCodexHomeAfter = Get-CodexHomeManifest $LiveCodexHome
-    if ($LiveCodexHomeBefore.exists -ne $LiveCodexHomeAfter.exists -or
-        $LiveCodexHomeBefore.entry_count -ne $LiveCodexHomeAfter.entry_count -or
-        $LiveCodexHomeBefore.sha256 -cne $LiveCodexHomeAfter.sha256) {
-        throw 'The live Codex home changed during the disposable Terra envelope.'
-    }
+    $LiveCodexHomeAfter = Assert-LiveCodexHomeUnchanged $LiveCodexHomeBefore 'before-commit'
+    $PriorP4BeforeCommit = Assert-PriorP4EvidenceUnchanged $PriorP4Before
     $PriorP3BeforeCommit = Assert-PriorP3EvidenceUnchanged $PriorP3Before
     $preCommitQuiescence = Get-QuiescenceProof
     Remove-DisposableCodexHome
@@ -1003,6 +1443,8 @@ Do not change any file. End with schema-valid JSON only. PASS permits no blocker
     $adminCommit = (& git rev-parse HEAD).Trim()
     $finalStatus = @(& git status --porcelain=v1 --untracked-files=all)
     if ($finalStatus.Count -ne 0) { throw 'ADMIN commit did not leave a clean worktree.' }
+    $LiveCodexHomeTerminal = Assert-LiveCodexHomeUnchanged $LiveCodexHomeBefore 'success'
+    $PriorP4Terminal = Assert-PriorP4EvidenceUnchanged $PriorP4Before
     $PriorP3Terminal = Assert-PriorP3EvidenceUnchanged $PriorP3Before
 
     $receipt = [ordered]@{
@@ -1031,6 +1473,11 @@ Do not change any file. End with schema-valid JSON only. PASS permits no blocker
         root_tests = $rootTests
         live_codex_home_before = $LiveCodexHomeBefore
         live_codex_home_after = $LiveCodexHomeAfter
+        live_codex_home_terminal = $LiveCodexHomeTerminal
+        process_exit_canary = $preflight.process_exit_canary
+        prior_publication4_before = $PriorP4Before
+        prior_publication4_before_commit = $PriorP4BeforeCommit
+        prior_publication4_terminal = $PriorP4Terminal
         prior_publication3_before = $PriorP3Before
         prior_publication3_before_commit = $PriorP3BeforeCommit
         prior_publication3_terminal = $PriorP3Terminal
@@ -1046,7 +1493,19 @@ Do not change any file. End with schema-valid JSON only. PASS permits no blocker
 }
 catch {
     $originalError = $_
-    $blocked = [ordered]@{ error = $originalError.Exception.Message }
+    $failure = Get-P5FailureMetadata $originalError.Exception
+    $terminalException = $originalError.Exception
+    if (-not $originalError.Exception.Data.Contains('error_code')) {
+        $terminalException = New-P5Failure 'UNEXPECTED_FAILURE' 'launcher' `
+            $originalError.Exception.Message $originalError.Exception
+        $failure = Get-P5FailureMetadata $terminalException
+    }
+    $blocked = [ordered]@{
+        error_code = $failure.error_code
+        error_label = $failure.error_label
+        error = $originalError.Exception.Message
+    }
+    if ($failure.cause_code) { $blocked['cause_code'] = $failure.cause_code }
     try {
         Remove-DisposableCodexHome
         $blocked['disposable_codex_home_removed'] = $true
@@ -1069,6 +1528,17 @@ catch {
             $blocked['live_codex_home_manifest_error'] = $_.Exception.Message
         }
     }
+    if ($PriorP4Before) {
+        try {
+            $blockedPriorP4After = Assert-PriorP4EvidenceUnchanged $PriorP4Before
+            $blocked['prior_publication4_after'] = $blockedPriorP4After
+            $blocked['prior_publication4_unchanged'] = $true
+        }
+        catch {
+            $blocked['prior_publication4_unchanged'] = $false
+            $blocked['prior_publication4_manifest_error'] = $_.Exception.Message
+        }
+    }
     if ($PriorP3Before) {
         try {
             $blockedPriorP3After = Assert-PriorP3EvidenceUnchanged $PriorP3Before
@@ -1083,7 +1553,7 @@ catch {
     if (Test-Path -LiteralPath $script:EvidenceRoot) {
         Write-State 'blocked' $blocked
     }
-    throw $originalError
+    throw $terminalException
 }
 finally {
     try { Remove-DisposableCodexHome }
