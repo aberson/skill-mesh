@@ -1,0 +1,356 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>Native Claude/Codex Skill Parity — proposal</title>
+  <style>
+    :root {
+      --ground: #f4f7f6;
+      --surface: #ffffff;
+      --surface-2: #eaf1ef;
+      --ink: #17211f;
+      --ink-soft: #45534f;
+      --muted: #5f6e6a;
+      --line: #d5dfdc;
+      --line-strong: #bac9c5;
+      --accent: #087d70;
+      --accent-ink: #075b52;
+      --accent-soft: #dff1ed;
+      --amber: #8c5508;
+      --amber-soft: #f7ecd7;
+      --danger: #a23d32;
+      --danger-soft: #f8e8e5;
+      --shadow: 0 1px 2px rgba(18, 39, 34, .05), 0 10px 28px -16px rgba(18, 39, 34, .24);
+      --sans: system-ui, "Segoe UI Variable Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      --mono: ui-monospace, "Cascadia Code", "Cascadia Mono", Consolas, monospace;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --ground: #0b1211; --surface: #121c1a; --surface-2: #182522;
+        --ink: #eaf0ee; --ink-soft: #abb7b4; --muted: #81908c;
+        --line: #243531; --line-strong: #354a45;
+        --accent: #42bcae; --accent-ink: #85d9cf; --accent-soft: #123b36;
+        --amber: #e1a657; --amber-soft: #382b16;
+        --danger: #ef8f83; --danger-soft: #3c201d;
+        --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 12px 34px -18px rgba(0, 0, 0, .7);
+      }
+    }
+    :root[data-theme="light"] {
+      --ground: #f4f7f6; --surface: #ffffff; --surface-2: #eaf1ef;
+      --ink: #17211f; --ink-soft: #45534f; --muted: #5f6e6a;
+      --line: #d5dfdc; --line-strong: #bac9c5;
+      --accent: #087d70; --accent-ink: #075b52; --accent-soft: #dff1ed;
+      --amber: #8c5508; --amber-soft: #f7ecd7;
+      --danger: #a23d32; --danger-soft: #f8e8e5;
+      --shadow: 0 1px 2px rgba(18, 39, 34, .05), 0 10px 28px -16px rgba(18, 39, 34, .24);
+    }
+    :root[data-theme="dark"] {
+      --ground: #0b1211; --surface: #121c1a; --surface-2: #182522;
+      --ink: #eaf0ee; --ink-soft: #abb7b4; --muted: #81908c;
+      --line: #243531; --line-strong: #354a45;
+      --accent: #42bcae; --accent-ink: #85d9cf; --accent-soft: #123b36;
+      --amber: #e1a657; --amber-soft: #382b16;
+      --danger: #ef8f83; --danger-soft: #3c201d;
+      --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 12px 34px -18px rgba(0, 0, 0, .7);
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0; background: var(--ground); color: var(--ink);
+      font-family: var(--sans); line-height: 1.58;
+      -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
+    }
+    a { color: var(--accent-ink); }
+    code { font-family: var(--mono); font-size: .86em; }
+    button { font: inherit; }
+    .wrap { width: min(70rem, calc(100% - 2rem)); margin: 0 auto; padding: 1.25rem 0 4rem; }
+    .topbar { display: flex; justify-content: flex-end; }
+    .theme {
+      border: 1px solid var(--line-strong); border-radius: 999px; padding: .35rem .7rem;
+      color: var(--ink-soft); background: var(--surface); cursor: pointer; font-family: var(--mono);
+      font-size: .75rem;
+    }
+    header { padding: clamp(1.2rem, 5vw, 3.4rem) 0 1rem; }
+    .eyebrow {
+      color: var(--accent-ink); font: 700 .72rem/1 var(--mono); letter-spacing: .13em;
+      text-transform: uppercase;
+    }
+    h1 {
+      margin: .65rem 0 .75rem; max-width: 18ch; font-size: clamp(2.25rem, 7vw, 4.3rem);
+      line-height: .98; letter-spacing: -.045em; text-wrap: balance;
+    }
+    .thesis { max-width: 55ch; color: var(--ink-soft); font-size: clamp(1.06rem, 2.5vw, 1.32rem); }
+    .ribbon { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: 1.35rem; }
+    .chip {
+      border: 1px solid var(--line-strong); background: var(--surface); border-radius: 999px;
+      color: var(--ink-soft); padding: .3rem .65rem; font: .78rem/1.4 var(--mono);
+    }
+    .chip.go { border-color: var(--accent); color: var(--accent-ink); background: var(--accent-soft); font-weight: 700; }
+    .chip.hold { border-color: var(--amber); color: var(--amber); background: var(--amber-soft); font-weight: 700; }
+    section { margin-top: clamp(2.4rem, 6vw, 4rem); }
+    .kicker { display: flex; align-items: center; gap: .7rem; margin: 0 0 .8rem; color: var(--muted); font: 700 .7rem/1 var(--mono); letter-spacing: .12em; text-transform: uppercase; }
+    .kicker::after { content: ""; height: 1px; flex: 1; background: var(--line); }
+    h2 { margin: 0 0 .5rem; font-size: clamp(1.45rem, 3vw, 2rem); letter-spacing: -.02em; line-height: 1.15; }
+    h3 { margin: 0; font-size: 1rem; }
+    .lead { max-width: 67ch; margin: 0 0 1.25rem; color: var(--ink-soft); }
+    .card { border: 1px solid var(--line); border-radius: 14px; background: var(--surface); box-shadow: var(--shadow); }
+    .heard { padding: clamp(1rem, 3vw, 1.55rem); display: grid; grid-template-columns: 1fr 1fr; gap: 1rem 1.4rem; }
+    .heard-item { display: grid; grid-template-columns: 1.5rem 1fr; gap: .55rem; }
+    .heard-item .n { color: var(--accent); font: 800 .82rem/1.7 var(--mono); }
+    .heard-item .ask { color: var(--muted); font-size: .82rem; display: block; }
+    .heard-item strong { display: block; margin-top: .1rem; font-weight: 660; }
+    .heard-item .answer { color: var(--ink-soft); font-size: .9rem; }
+    .architecture { padding: clamp(1rem, 3vw, 1.5rem); }
+    .flow { display: grid; grid-template-columns: 1fr auto 1fr auto 1fr; align-items: stretch; gap: .65rem; }
+    .node { border: 1px solid var(--line-strong); border-radius: 11px; padding: .85rem; background: var(--surface-2); }
+    .node b { display: block; }
+    .node span { color: var(--ink-soft); font-size: .84rem; }
+    .arrow { align-self: center; color: var(--accent); font-weight: 800; }
+    .rule { margin-top: 1rem; padding: .85rem 1rem; border-left: 4px solid var(--accent); background: var(--accent-soft); color: var(--accent-ink); border-radius: 5px 10px 10px 5px; }
+    .stats { display: grid; grid-template-columns: repeat(5, 1fr); gap: .7rem; margin-top: 1rem; }
+    .stat { padding: .75rem; text-align: center; }
+    .stat .num { display: block; font: 750 1.55rem/1.1 var(--mono); }
+    .stat .label { color: var(--muted); font-size: .76rem; }
+    .timeline { list-style: none; padding: 0; margin: 0; display: grid; gap: .7rem; }
+    .phase { display: grid; grid-template-columns: auto 1fr; gap: .9rem; padding: .9rem 1rem; }
+    .phase .id { width: 2rem; height: 2rem; display: grid; place-items: center; border-radius: 50%; background: var(--accent-soft); border: 1px solid var(--accent); color: var(--accent-ink); font: 800 .75rem/1 var(--mono); }
+    .phase .meta { color: var(--muted); font: .72rem/1.4 var(--mono); }
+    .phase p { margin: .22rem 0; color: var(--ink-soft); font-size: .9rem; }
+    .phase .after { color: var(--accent-ink); font-size: .85rem; }
+    .gate { border-color: var(--amber); }
+    .gate .id { background: var(--amber-soft); border-color: var(--amber); color: var(--amber); }
+    .picks { padding: 1rem 1.2rem; display: grid; grid-template-columns: 1fr 1fr; gap: .5rem 1.5rem; }
+    .pick { display: grid; grid-template-columns: 2.5rem 1fr; gap: .45rem; font-size: .9rem; }
+    .pick .id { color: var(--accent-ink); font: 800 .72rem/1.7 var(--mono); }
+    .pick span:last-child { color: var(--ink-soft); }
+    .defaults { display: grid; gap: .65rem; }
+    .default { display: grid; grid-template-columns: auto 1fr; gap: .8rem; padding: .9rem 1rem; }
+    .default .id { color: var(--amber); border: 1px solid var(--amber); background: var(--amber-soft); border-radius: 6px; padding: .14rem .4rem; font: 800 .72rem/1.4 var(--mono); height: fit-content; }
+    .default .what { font-weight: 670; }
+    .default .why { color: var(--ink-soft); font-size: .86rem; margin-top: .15rem; }
+    .default .tweak { color: var(--muted); font-size: .82rem; margin-top: .18rem; }
+    .default .tweak b { color: var(--amber); }
+    .cuts { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    .cut { padding: 1rem 1.1rem; }
+    .cut ul { margin: .5rem 0 0; padding-left: 1.1rem; color: var(--ink-soft); font-size: .9rem; }
+    .risk-wrap { overflow-x: auto; }
+    table { border-collapse: collapse; width: 100%; }
+    th { text-align: left; color: var(--muted); font: 700 .68rem/1.3 var(--mono); letter-spacing: .08em; text-transform: uppercase; }
+    th, td { padding: .65rem .8rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+    tr:last-child td { border-bottom: 0; }
+    td { color: var(--ink-soft); font-size: .88rem; }
+    td:first-child { color: var(--ink); font-weight: 650; }
+    .feedback { padding: clamp(1rem, 3vw, 1.5rem); }
+    pre { margin: .8rem 0; padding: .85rem 1rem; overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--surface-2); color: var(--ink); font: .85rem/1.6 var(--mono); }
+    .source { display: grid; grid-template-columns: max-content 1fr; gap: .45rem 1rem; padding-top: 1rem; border-top: 1px solid var(--line); }
+    .source dt { color: var(--muted); font: 700 .68rem/1.6 var(--mono); text-transform: uppercase; letter-spacing: .06em; }
+    .source dd { margin: 0; font: .8rem/1.6 var(--mono); word-break: break-word; }
+    .notice { color: var(--danger); background: var(--danger-soft); border: 1px solid var(--danger); border-radius: 10px; padding: .8rem 1rem; font-size: .9rem; }
+    footer { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--line); color: var(--muted); font: .76rem/1.5 var(--mono); }
+    :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+    @media (max-width: 48rem) {
+      .heard, .picks, .cuts { grid-template-columns: 1fr; }
+      .flow { grid-template-columns: 1fr; }
+      .arrow { transform: rotate(90deg); justify-self: center; }
+      .stats { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media print {
+      :root, :root[data-theme="light"], :root[data-theme="dark"] {
+        color-scheme: light;
+        --ground: #ffffff; --surface: #ffffff; --surface-2: #f1f4f3;
+        --ink: #111716; --ink-soft: #313b38; --muted: #53615d;
+        --line: #ccd5d2; --line-strong: #aebcb8;
+        --accent: #087d70; --accent-ink: #075b52; --accent-soft: #e5f2ef;
+        --amber: #80500b; --amber-soft: #f7ecd7;
+        --danger: #8e3027; --danger-soft: #f8e8e5;
+        --shadow: none;
+      }
+      .topbar { display: none; }
+      body { background: var(--ground); color: var(--ink); }
+      .card { box-shadow: none; break-inside: avoid; }
+      section { break-inside: auto; }
+      a { color: inherit; text-decoration: none; }
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <div class="topbar"><button class="theme" id="theme" type="button" aria-label="Color theme: system; activate to change" aria-live="polite">theme: system</button></div>
+    <header>
+      <div class="eyebrow">Goal NP proposal · publication 1 · awaiting plan signoff</div>
+      <h1>Native Claude + Codex skill parity</h1>
+      <p class="thesis">One maintained behavior source per skill, native packages for both hosts, every skill qualified, known utilities wired, and one reversible cutover—without reviving the router or GitHub Copilot.</p>
+      <div class="ribbon">
+        <span class="chip hold">Proposal only — no implementation authority</span>
+        <span class="chip go">Plan-review + plan-wrap + plan-redline PASS</span>
+        <span class="chip">41 steps · 39 code + 2 operator</span>
+        <span class="chip">2 approvals total</span>
+      </div>
+    </header>
+
+    <section aria-labelledby="heard-title">
+      <p class="kicker">What I heard</p>
+      <h2 id="heard-title">The brief is parity and maintainability—not another value experiment.</h2>
+      <p class="lead">These are the requests that shaped the plan. If one mapping is wrong, reply with the number or decision ID.</p>
+      <div class="card heard">
+        <div class="heard-item"><span class="n">1</span><span><span class="ask">“I already know these skills are useful.”</span><strong>Full catalog cutover.</strong><span class="answer">No one-skill pilot and no contrived usefulness test.</span></span></div>
+        <div class="heard-item"><span class="n">2</span><span><span class="ask">“Claude skills in Claude; Codex skills in Codex.”</span><strong>Native discovery on both hosts.</strong><span class="answer">Claude keeps its existing topology; Codex gets <code>$CODEX_EFFECTIVE_HOME\.agents\skills</code>.</span></span></div>
+        <div class="heard-item"><span class="n">3</span><span><span class="ask">“Do not maintain two copies by hand.”</span><strong>One authored core.</strong><span class="answer">Provider adapters are explicit; both complete host packages are generated from canonical source.</span></span></div>
+        <div class="heard-item"><span class="n">4</span><span><span class="ask">“Test it for each skill.”</span><strong>Exhaustive native qualification.</strong><span class="answer">Every shipped host cell passes individually; no average and no waiver-by-omission.</span></span></div>
+        <div class="heard-item"><span class="n">5</span><span><span class="ask">“Wire the utilities I built; do not wait for friction.”</span><strong>Closed 13-project hookup map.</strong><span class="answer">Known callers, fixtures, native smokes, receipts, and read-only Observatory views land together.</span></span></div>
+        <div class="heard-item"><span class="n">6</span><span><span class="ask">“Ablation should not optimize the core for one model.”</span><strong>New <code>skill-ablation</code>.</strong><span class="answer">Either family may propose; both production hosts can veto; deterministic code decides acceptance.</span></span></div>
+      </div>
+    </section>
+
+    <section aria-labelledby="shape-title">
+      <p class="kicker">Why this shape</p>
+      <h2 id="shape-title">Shared authorship, native execution, immutable releases.</h2>
+      <p class="lead">“Shared core” means one file is authored—not that live hosts chase a mutable checkout. That keeps daily maintenance simple without making nested repos, worktrees, Windows links, or cloud sandboxes fragile.</p>
+      <div class="card architecture">
+        <div class="flow" role="img" aria-label="Canonical source builds immutable release packages, then two native discovery trees">
+          <div class="node"><b>Canonical source</b><span><code>core.md</code> + Claude/Codex adapters + declared assets</span></div>
+          <div class="arrow" aria-hidden="true">→</div>
+          <div class="node"><b>Immutable release</b><span>self-contained host packages + release-owned utility runtimes + hashes</span></div>
+          <div class="arrow" aria-hidden="true">→</div>
+          <div class="node"><b>Native discovery</b><span>Claude managed files + <code>$CODEX_EFFECTIVE_HOME\.agents\skills</code> for Codex</span></div>
+        </div>
+        <div class="rule"><strong>No router, no automatic fallback, no live mutable-core pointer.</strong> Editing source changes neither host until a qualified release is activated.</div>
+      </div>
+      <div class="stats" aria-label="Qualification targets">
+        <div class="card stat"><span class="num">58</span><span class="label">Claude global skills</span></div>
+        <div class="card stat"><span class="num">55</span><span class="label">Codex global skills</span></div>
+        <div class="card stat"><span class="num">113</span><span class="label">global native cells</span></div>
+        <div class="card stat"><span class="num">39</span><span class="label">utility-flow cells</span></div>
+        <div class="card stat"><span class="num">2</span><span class="label">human approvals</span></div>
+      </div>
+    </section>
+
+    <section aria-labelledby="timeline-title">
+      <p class="kicker">What lands, phase by phase</p>
+      <h2 id="timeline-title">Build freely after signoff; touch live discovery only at the end.</h2>
+      <p class="lead">The detailed plan has 41 bounded steps. This is the operator-level map.</p>
+      <ol class="timeline">
+        <li class="card phase gate"><span class="id">A1</span><div><h3>Approval 1 — approve this exact plan</h3><span class="meta">before NP-01</span><p>Records P01–P10 and D01–D10, creates the workspace/issue receipts, and authorizes isolated code work, disposable hosts, tests, and rehearsal. It authorizes no live discovery write.</p><div class="after"><strong>Afterwards:</strong> the administrative recorder runs the exact <code>/repo-sync</code> contract, then implementation starts.</div></div></li>
+        <li class="card phase"><span class="id">01</span><div><h3>Protect and reconcile current work</h3><span class="meta">NP-01</span><p>Hash/export every overlapping dirty path, adopt the four preserved Step 4 files through review, and establish clean candidate lineage without sweeping unrelated WIP.</p><div class="after"><strong>Afterwards:</strong> Skill Mesh has a recoverable, reviewed starting point; active checkouts remain unchanged.</div></div></li>
+        <li class="card phase"><span class="id">02</span><div><h3>Make canonical source and native Codex real</h3><span class="meta">NP-02–NP-10</span><p>Migrate support assets, replace the active <code>gpt</code>/Copilot provider concept with <code>codex</code>, generate native packages, promote seven custom skills, and prepare the disposable two-host canary.</p><div class="after"><strong>Afterwards:</strong> all package and adapter bytes needed for the real-host substrate proof are frozen and testable.</div></div></li>
+        <li class="card phase"><span class="id">03</span><div><h3>Prove the substrate; build transaction and evaluation contracts</h3><span class="meta">NP-11–NP-19 · operator NP-12</span><p>Freeze exact model roles, run the disposable real-host discovery/core/asset/named-call proof, add hash-chained receipts and rollback primitives, then replace scalar/same-host skill evaluation with the dual-host Pareto matrix.</p><div class="after"><strong>Afterwards:</strong> a valid placement/core-load contradiction has stopped the architecture, or model calls are exact, resumable, no-fallback, and unable to average away a one-host regression.</div></div></li>
+        <li class="card phase"><span class="id">04</span><div><h3>Create <code>skill-ablation</code></h3><span class="meta">NP-20</span><p>The new skill is added only after the neutral evaluator exists. It copies the baseline exactly, blinds candidates, gets independent family proposals, and returns reject, indeterminate, or a Pareto-safe frontier.</p><div class="after"><strong>Afterwards:</strong> ablation is a supported maintenance operation, not an ad hoc prompt tied to whichever model opened the session.</div></div></li>
+        <li class="card phase"><span class="id">05</span><div><h3>Wire utilities and repo-local skills</h3><span class="meta">NP-21–NP-34</span><p>Implement all 13 known utility bindings, create missing Codex counterparts, add truthful telemetry, and make Dev Observatory a bounded read-only consumer. Every binding targets a future non-editable release-owned runtime rather than an owner worktree.</p><div class="after"><strong>Afterwards:</strong> all 13 have mechanical callers, fixtures, runtime contracts, and receipt/view coverage under their declared required/advisory policy.</div></div></li>
+        <li class="card phase"><span class="id">06</span><div><h3>Integrate, build immutable runtimes, and rehearse rollback</h3><span class="meta">NP-35–NP-39</span><p>Reconcile old plans/instructions, land clean non-live work, freeze a content-addressed release with non-editable utility runtimes, and prove both successful and injected-failure transactions—including Git refs, dirty bytes, discovery roots, State, and runtime sets.</p><div class="after"><strong>Afterwards:</strong> one immutable qualification request binds the exact candidate, released runtime bytes, and exact rollback.</div></div></li>
+        <li class="card phase"><span class="id">07</span><div><h3>Qualify every cell</h3><span class="meta">operator NP-40</span><p>Run 113 global native cells, required repo-local cells, integrated workflows, and 39 utility cells from disposable homes. Auth/quota is resumable INCOMPLETE; fallback, substitution, or a missing cell cannot pass.</p><div class="after"><strong>Afterwards:</strong> only a terminal PASS aggregate can advance to packet freeze.</div></div></li>
+        <li class="card phase"><span class="id">08</span><div><h3>Freeze the Approval-2 packet</h3><span class="meta">NP-41</span><p>Rehash the entire qualification lineage and freeze exact source, release/runtime, candidate, mutation, backup, postcheck, and rollback identities into one canonical packet.</p><div class="after"><strong>Afterwards:</strong> implementation stops at WAITING FOR APPROVAL 2; no live script may run yet.</div></div></li>
+        <li class="card phase gate"><span class="id">A2</span><div><h3>Approval 2 — approve the frozen deliverable</h3><span class="meta">after NP-41</span><p>Abraham receives exact commits, release/runtime hashes, mutation paths, backup, postchecks, and rollback command. Approval authorizes one live apply plus automatic rollback on a required postcheck failure.</p><div class="after"><strong>Afterwards:</strong> close hosts, run the frozen script once, verify native discovery, then resume ordinary qualified updates.</div></div></li>
+      </ol>
+    </section>
+
+    <section aria-labelledby="picks-title">
+      <p class="kicker">Choices you already made</p>
+      <h2 id="picks-title">P01–P10 are the brief, not agent inventions.</h2>
+      <div class="card picks">
+        <div class="pick"><span class="id">P01</span><span>Full Claude/Codex parity; no usefulness pilot.</span></div>
+        <div class="pick"><span class="id">P02</span><span>One authored core, explicit adapters, generated packages.</span></div>
+        <div class="pick"><span class="id">P03</span><span><code>$CODEX_EFFECTIVE_HOME\.agents\skills</code>; no duplicate <code>dev/.agents/skills</code> global catalog.</span></div>
+        <div class="pick"><span class="id">P04</span><span>Preserve Claude’s working junction and consumer files.</span></div>
+        <div class="pick"><span class="id">P05</span><span>One full migration, then one maintained sync flow.</span></div>
+        <div class="pick"><span class="id">P06</span><span>No active Copilot, router, or automatic fallback.</span></div>
+        <div class="pick"><span class="id">P07</span><span>Test every shipped skill on every supported host.</span></div>
+        <div class="pick"><span class="id">P08</span><span>Wire known utilities now; Observatory stays read-only.</span></div>
+        <div class="pick"><span class="id">P09</span><span>Either model may propose; both hosts veto regressions.</span></div>
+        <div class="pick"><span class="id">P10</span><span>Two approvals: plan, then frozen live deliverable.</span></div>
+      </div>
+    </section>
+
+    <section aria-labelledby="defaults-title">
+      <p class="kicker">Defaults I chose on your behalf</p>
+      <h2 id="defaults-title">D01–D10 are the redline.</h2>
+      <p class="lead">Each default states what it changes, why it is here, and the safest tweak axis. Anything you do not mention lands as written.</p>
+      <div class="defaults">
+        <div class="card default"><span class="id">D01</span><div><div class="what">Promote all seven custom global Claude skills into the portable catalog.</div><div class="why">They are already installed in the live global Claude catalog; leaving them behind would make “parity” false.</div><div class="tweak"><b>Tweak:</b> name a specific skill that should remain Claude-only, with the reason.</div></div></div>
+        <div class="card default"><span class="id">D02</span><div><div class="what">Reverify and adopt the four preserved Step 4 files as the installer/migrator starting point.</div><div class="why">They contain reviewed safety work and have a hash-bound recovery bundle; discarding them recreates work.</div><div class="tweak"><b>Tweak:</b> require a clean rewrite instead, while retaining the bundle only as reference.</div></div></div>
+        <div class="card default"><span class="id">D03</span><div><div class="what">Retire only hash-classified managed Copilot files; adopt reviewed drift into canonical source or preserve it in recovery; always preserve foreign content.</div><div class="why">The old profile is obsolete as a host, but its mixed tree cannot be safely deleted wholesale or treated as uniformly foreign.</div><div class="tweak"><b>Tweak:</b> preserve all legacy bytes indefinitely instead of retiring exact owned paths.</div></div></div>
+        <div class="card default"><span class="id">D04</span><div><div class="what">Retain the first-cutover release and backup for at least 30 days and 10 successful normal activations/invocations, whichever is later.</div><div class="why">Time alone does not prove the cutover is stable; invocations alone may happen too quickly.</div><div class="tweak"><b>Tweak:</b> increase the time or activation/invocation count. Shortening either is not recommended.</div></div></div>
+        <div class="card default"><span class="id">D05</span><div><div class="what">Keep model requests in versioned config, not permanent prose in skill cores.</div><div class="why">Models change; a profile update should force visible rebaseline/requalification without rewriting behavior.</div><div class="tweak"><b>Tweak:</b> require a separate plan approval for every profile change rather than normal reviewed maintenance.</div></div></div>
+        <div class="card default"><span class="id">D06</span><div><div class="what">Hash/export/classify every in-scope Goal-NP-overlapping dirty path before using or superseding it.</div><div class="why">The coding root and utility repos contain valuable WIP on exact target paths; unrelated WIP remains out of scope.</div><div class="tweak"><b>Tweak:</b> choose a specific in-scope path’s disposition up front; never waive byte-backed recovery.</div></div></div>
+        <div class="card default"><span class="id">D07</span><div><div class="what">At cutover, untrack only manifest-managed generated Claude files and retire the legacy tracked ledger.</div><div class="why">Otherwise every future sync dirties the coding-root repo; consumer/private skill files stay tracked and untouched.</div><div class="tweak"><b>Tweak:</b> keep generated files committed, accepting a commit for every qualified release.</div></div></div>
+        <div class="card default"><span class="id">D08</span><div><div class="what">Production/proposal: Opus 4.8 <code>xhigh</code> and <code>gpt-5.6-sol</code> <code>ultra</code>. Grading: Sonnet 5 <code>xhigh</code> and <code>gpt-5.6-terra</code> <code>medium</code>.</div><div class="why">Strong production families generate/challenge; balanced opposite-family graders measure. Exact requests are recorded and never silently substituted.</div><div class="tweak"><b>Tweak:</b> replace an exact model or effort now. Any later change rebaselines; fallback stays forbidden.</div></div></div>
+        <div class="card default"><span class="id">D09</span><div><div class="what">Create <code>skill-ablation</code> after the common evaluator, and classify every ablation as high-impact.</div><div class="why">Creating it earlier would encode the very one-host bias it is meant to prevent.</div><div class="tweak"><b>Tweak:</b> omit the dedicated skill and expose only the underlying matrix command.</div></div></div>
+        <div class="card default"><span class="id">D10</span><div><div class="what">Keep coding-root, Career Ops, On Brand, and Measure Twice discovery-path commits unmerged until Approval 2.</div><div class="why">Those tracked paths are live discovery/config surfaces; merging them early would bypass the live gate.</div><div class="tweak"><b>Tweak:</b> split non-live source commits from discovery-path commits where the owner repo supports a clean boundary.</div></div></div>
+      </div>
+    </section>
+
+    <section aria-labelledby="cuts-title">
+      <p class="kicker">Not in this cutover</p>
+      <h2 id="cuts-title">Cut on purpose.</h2>
+      <div class="cuts">
+        <div class="card cut"><h3>Invocation and provider cuts</h3><ul><li>GitHub Copilot support as an active endpoint</li><li>Generic model/provider router</li><li>Automatic provider or fallback-model selection</li><li>New providers, local models, or model-equivalence claims</li></ul></div>
+        <div class="card cut"><h3>Product-scope cuts</h3><ul><li>Wholesale behavior redesign during migration</li><li>New utility product features beyond documented interfaces</li><li>Observatory routing, mutation, or runtime dependency</li><li>Forcing three Claude-native skills into false portability</li></ul></div>
+      </div>
+    </section>
+
+    <section aria-labelledby="risks-title">
+      <p class="kicker">Risks worth knowing</p>
+      <h2 id="risks-title">The plan is large; the gates are deliberately mechanical.</h2>
+      <div class="card risk-wrap">
+        <table>
+          <thead><tr><th>Risk</th><th>Built-in answer</th></tr></thead>
+          <tbody>
+            <tr><td>Codex omits skills from its initial list</td><td>7,500-character Skill Mesh metadata ceiling plus native discovery proof for all 55 names.</td></tr>
+            <tr><td>A renamed Copilot adapter looks native but is not</td><td>All adapters get a forbidden-token/native-primitive audit and a real host cell.</td></tr>
+            <tr><td>A core edit favors its proposing model</td><td>Both hosts execute; high-impact work uses both proposals and both judge families; one-host regression vetoes.</td></tr>
+            <tr><td>Utility calls depend on disposable worktrees</td><td>Locked, non-editable release-owned runtimes; external-reference scan; exact runtime hashes in qualification and rollback.</td></tr>
+            <tr><td>Dirty WIP is lost or swept into commits</td><td>External byte inventory, classifications, isolated worktrees, scoped commits, and Git-state rollback rehearsal.</td></tr>
+            <tr><td>Model identity is unavailable</td><td>Requested and reported identities remain separate; unavailable is visible and never copied from the request.</td></tr>
+            <tr><td>Quota interrupts exhaustive qualification</td><td>Immutable attempt lineage resumes INCOMPLETE work with the same fingerprint; no model fallback or score retry.</td></tr>
+            <tr><td>Live cutover fails halfway</td><td>Approval 2 binds one transaction, exact backup, postchecks, and reverse-order rollback across files, State, runtimes, and refs.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section aria-labelledby="feedback-title">
+      <p class="kicker">Give feedback</p>
+      <h2 id="feedback-title">Approve the defaults, or change only the IDs you care about.</h2>
+      <div class="card feedback">
+        <p class="lead">The P-items record choices already made. Approve the D-items as written (with a scalar receipt override if desired), or request a plan revision before approval:</p>
+        <pre>APPROVE AS WRITTEN
+Approve Goal NP plan with D01-D10.
+
+APPROVE WITH THE DECLARED D04 RECEIPT OVERRIDE
+Approve Goal NP plan with D01-D10.
+D04: retain first-cutover backup for 60 days.
+
+REQUEST A REVISED PLAN — NOT AN APPROVAL
+D09: omit the dedicated skill; expose only the matrix command.</pre>
+        <p class="notice"><strong>Viewing this page authorizes nothing.</strong> Approval 1 authorizes only NP-01 through NP-41 and still forbids live discovery writes. Approval 2 remains required for the exact frozen cutover.</p>
+        <dl class="source">
+          <dt>Source of truth</dt><dd>documentation/native-claude-codex-skill-parity-plan.md</dd>
+          <dt>Source SHA-256</dt><dd>0b7cdd3903c93a70728dd3bf95142048966ce7cb44ebcd577c878727f91260b5</dd>
+          <dt>Canonical pointer</dt><dd>plan.md</dd>
+          <dt>Proposal</dt><dd>documentation/native-claude-codex-skill-parity-proposal.html</dd>
+          <dt>Planning branch</dt><dd>plan/native-codex-skill-parity</dd>
+          <dt>Next after approval</dt><dd>record Approval 1, run exact /repo-sync, then NP-01—no live cutover</dd>
+        </dl>
+      </div>
+    </section>
+
+    <footer>Skill Mesh · Goal NP proposal · native Claude/Codex parity · publication 1 · 2026-08-14</footer>
+  </main>
+  <script>
+    (() => {
+      const root = document.documentElement;
+      const button = document.getElementById('theme');
+      const order = ['system', 'light', 'dark'];
+      let current = 'system';
+      button.addEventListener('click', () => {
+        current = order[(order.indexOf(current) + 1) % order.length];
+        if (current === 'system') root.removeAttribute('data-theme');
+        else root.setAttribute('data-theme', current);
+        button.textContent = `theme: ${current}`;
+        button.setAttribute('aria-label', `Color theme: ${current}; activate to change`);
+      });
+    })();
+  </script>
+</body>
+</html>

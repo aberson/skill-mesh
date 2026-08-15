@@ -1,41 +1,55 @@
 # Skill Mesh plan
 
-## Goal
+## Current goal
 
-Deliver materially consistent Skill Mesh workflows in Claude Code and Codex. Show model and fallback evidence, prove one real cross-family review, and keep cutover recoverable.
+Prepare Goal NP: ship the same maintained Skill Mesh behaviors through native Claude Code and Codex
+discovery, wire the known utility portfolio, expose truthful model evidence through Dev Observatory,
+and make shared-core maintenance dual-host safe.
 
 ## Main execution plan
 
-Use `documentation/skill-mesh-recovery-plan.md` for requirements, step contracts, operator gates, proof, and rollback.
+Use `documentation/native-claude-codex-skill-parity-plan.md` for the proposed Goal NP scope, step
+contracts, test matrix, two approval gates, migration, proof, and rollback. Its operator-facing redline
+is `documentation/native-claude-codex-skill-parity-proposal.html`.
 
-The approved product boundary is `documentation/product-charter.md`. The proposed operator-facing communication pilot is `documentation/operator-communication-profile.md`.
+`documentation/skill-mesh-recovery-plan.md` remains the historical authority for ended Goal A. Goal NP
+does not reinterpret that evidence or revive its stopped experiment.
 
 ## Progress
 
 | Unit | Status | Who or what unlocks it |
 |---|---|---|
-| Decision redline D1-D15 | APPROVED 2026-08-13 | Recorded in the recovery plan |
-| Communication profile D16 | PROPOSED PILOT | Optional Goal P Steps 95-97; Phase 7 records the final choice |
+| Goal NP plan | READY FOR OPERATOR / AWAITING APPROVAL 1 | Abraham approves the exact plan and D01–D10, or requests a revision |
+| Goal NP implementation | NOT AUTHORIZED | Approval 1 on the exact Goal NP plan/proposal |
+| Goal NP live cutover | LOCKED | Approval 2 on the immutable deliverable after disposable rehearsal |
 | Goal A execution | STOPPED | Gate A approved terminal action `stop` after the bounded follow-up failed |
-| Provider expansion | PARKED | A later operator decision must explicitly resume it |
-| Phase 0 — preserve work in progress and establish authority | DONE | Steps 72-74 passed |
-| Phase 1 — two architecture experiments | DONE | Step 78 packet and final gate passed |
-| Gate A — select architecture | APPROVED | Terminal action `stop`; no architecture selected |
-| Phase 2 — repair build controls | LOCKED | Gate A did not select `proceed`; Goal B is `no` |
-| Goal P — communication pilot | LOCKED / NOT AUTHORIZED | Its contract requires Gate A `proceed` and a separate opt-in |
-| Gate B — approve exact product steps | LOCKED | Abraham after control acceptance |
-| Phases 3-7 — implement, prove, and rehearse | LOCKED | Gate B approval |
-| Gate D — live cutover | LOCKED | Abraham after user acceptance testing and rehearsal |
-| Board Track U — utility hookups | INDEPENDENT/LOCKED | Re-redline after Phase 2; implement against the release |
-| Later Track L — skill decomposition | NOT NOW | Recovery completion |
+| Historical Gate A | APPROVED | Terminal action `stop`; no architecture selected |
+| Historical Goal B / Phase 2 / Step 4 | LOCKED | Goal NP may adopt the four preserved files only after Approval 1 and its own gates |
+| Historical Goal P | LOCKED / NOT AUTHORIZED | Not part of Goal NP |
 
 ## Current instruction
 
-Goal A ended with Gate A action `stop`. The one authorized bounded follow-up ran once. Claude
-lifecycle `a1` returned `FAIL`, so the contract stopped before Codex lifecycle `a1` and the Claude
-reviewer dispatcher `a0-r1`. Do not run the historical block again. No experiment, retry, correction,
-fallback model, product implementation, Step 4 use, Goal B, Phase 2, live-home write, merge, or live
-cutover is authorized.
+Await Abraham's Goal NP plan decision. Do not implement a skill, adopt the preserved Step 4 files,
+invoke Claude/Codex hosts, change utility or Observatory repositories, write a live skill home, retire
+`.github/skills`, or cut over. Approval 1 authorizes only NP-01 through NP-41; Approval 2 remains
+required for the exact frozen live operation.
+
+## Goal NP planning journal
+
+**Status:** READY FOR OPERATOR / AWAITING APPROVAL 1
+
+**Planning authority:** On 2026-08-14 Abraham approved the full native Claude/Codex parity planning
+direction, placement at the user `.agents/skills` scope, exhaustive per-skill tests, known utility and
+Dev Observatory integration, a one-time migration, and exactly two human signoffs: the final plan and
+the final deliverable/live cutover.
+
+**Maintenance direction:** Either model may propose a core edit; both production host families must
+veto regressions. `skill-ablation` is included after the common evaluation matrix exists.
+
+**Review sequence:** plan-review PASS; plan-wrap READY with no gaps; plan-redline PASS. The standalone
+proposal maps P01–P10 to Abraham's choices and D01–D10 to agent defaults.
+
+**Implementation authority:** none until Abraham approves the exact reviewed Goal NP plan.
 
 ## Goal A journal
 
