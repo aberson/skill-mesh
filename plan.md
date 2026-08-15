@@ -19,7 +19,7 @@ does not reinterpret that evidence or revive its stopped experiment.
 
 | Unit | Status | Who or what unlocks it |
 |---|---|---|
-| Goal NP plan | READY FOR OPERATOR / AWAITING APPROVAL 1 | Abraham approves the exact plan and D01–D10, or requests a revision |
+| Goal NP plan | READY FOR OPERATOR / AWAITING APPROVAL 1 | Abraham approves the exact publication-2 plan and D01–D10, or requests another revision |
 | Goal NP implementation | NOT AUTHORIZED | Approval 1 on the exact Goal NP plan/proposal |
 | Goal NP live cutover | LOCKED | Approval 2 on the immutable deliverable after disposable rehearsal |
 | Goal A execution | STOPPED | Gate A approved terminal action `stop` after the bounded follow-up failed |
@@ -29,10 +29,12 @@ does not reinterpret that evidence or revive its stopped experiment.
 
 ## Current instruction
 
-Await Abraham's Goal NP plan decision. Do not implement a skill, adopt the preserved Step 4 files,
+Await Abraham's Goal NP publication-2 decision. Do not implement a skill, adopt the preserved Step 4 files,
 invoke Claude/Codex hosts, change utility or Observatory repositories, write a live skill home, retire
-`.github/skills`, or cut over. Approval 1 authorizes only NP-01 through NP-41; Approval 2 remains
-required for the exact frozen live operation.
+`.github/skills`, or cut over. Approval 1 authorizes only its versioned administrative bootstrap
+artifacts and issue synchronization (request/receipts, schemas, workspace registry, journal, and the
+exact hash-bound Claude-native `/repo-sync`) plus NP-01 through NP-41; Approval 2 remains required for the
+exact frozen live operation.
 
 ## Goal NP planning journal
 
@@ -43,11 +45,27 @@ direction, placement at the user `.agents/skills` scope, exhaustive per-skill te
 Dev Observatory integration, a one-time migration, and exactly two human signoffs: the final plan and
 the final deliverable/live cutover.
 
-**Maintenance direction:** Either model may propose a core edit; both production host families must
-veto regressions. `skill-ablation` is included after the common evaluation matrix exists.
+**Maintenance direction:** Either controlled production family may propose a core edit; both controlled
+production hosts must veto regressions. `skill-ablation` is included after the common evaluation matrix
+exists. D08 publication 2 treats model assignments as workload-role bindings rather than equivalence:
+Fable/Sol for seed planning; Opus/Terra for controlled production, proposal, challenge, and fresh strong
+gates; Sonnet/Luna for parallel advisory judging; and deterministic Pareto code for final acceptance.
+Native skills remain on the invoking session: initial qualification binds Claude config alias
+`opus`/`xhigh` and Codex config exact Sol/`ultra` without changing live settings. The exact native
+`/build-step` and controlled-production stuck scopes may each use one same-family, read-only Fable/Sol
+phone-a-friend diagnosis per authorized parent context; Fable also requires the recorded retention
+policy. Judges and gates cannot invoke it.
 
-**Review sequence:** plan-review PASS; plan-wrap READY with no gaps; plan-redline PASS. The standalone
-proposal maps P01–P10 to Abraham's choices and D01–D10 to agent defaults.
+**Redline feedback:** Abraham accepted D01–D07 and D09–D10 on 2026-08-14, pending Approval 1, and
+requested investigation/revision of D08. The investigation found that publication 1 mixed an
+unstated workload-role mapping with stale Opus 4.8 wording. Publication 2 makes the controlled-role
+basis, native-session boundary, fresh-context grading cascade, and bounded two-scope phone-a-friend
+exception explicit without inferring Claude's effective identity from its `opus` alias.
+This feedback is not Approval 1.
+
+**Review sequence:** publication 2 plan-review PASS; plan-wrap READY with no blockers, significant
+gaps, or missing items; plan-redline PASS. The standalone proposal maps P01–P10 to Abraham's choices
+and D01–D10 to agent defaults.
 
 **Implementation authority:** none until Abraham approves the exact reviewed Goal NP plan.
 
