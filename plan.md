@@ -8,9 +8,19 @@ and make shared-core maintenance dual-host safe.
 
 ## Main execution plan
 
-Use `documentation/native-claude-codex-skill-parity-plan.md` for the proposed Goal NP scope, step
-contracts, test matrix, two approval gates, migration, proof, and rollback. Its operator-facing redline
-is `documentation/native-claude-codex-skill-parity-proposal.html`.
+Publication 3 is one six-file approval bundle:
+
+- `documentation/native-claude-codex-skill-parity-plan.md` — the detailed Goal NP base plan;
+- `documentation/native-claude-codex-skill-parity-terra-amendment.md` — the narrow controlling
+  amendment for the Goal-NP administrative and numbered code-step executor;
+- `documentation/native-claude-codex-skill-parity-proposal.html` — the operator-facing redline;
+- this `plan.md` — the canonical status and authority pointer;
+- `tools/run-goal-np-terra-bootstrap.ps1` — the precommitted, post-Approval direct Terra first-producer launcher; and
+- `schemas/terra-bootstrap-result-v1.schema.json` — its closed model-result contract.
+
+The detailed plan still owns scope, the 41-step DAG, D01–D10, D08 evaluation roles, two native-host
+qualification, two approval gates, migration, proof, and rollback. Where—and only where—the Terra
+amendment names an orchestration or administrative-executor surface, the amendment controls.
 
 `documentation/skill-mesh-recovery-plan.md` remains the historical authority for ended Goal A. Goal NP
 does not reinterpret that evidence or revive its stopped experiment.
@@ -19,8 +29,8 @@ does not reinterpret that evidence or revive its stopped experiment.
 
 | Unit | Status | Who or what unlocks it |
 |---|---|---|
-| Goal NP plan | READY FOR OPERATOR / AWAITING APPROVAL 1 | Abraham approves the exact publication-2 plan and D01–D10, or requests another revision |
-| Goal NP implementation | NOT AUTHORIZED | Approval 1 on the exact Goal NP plan/proposal |
+| Goal NP plan | AWAITING REVISED APPROVAL 1 | Abraham approves the exact Publication-3 six-file bundle, or requests another revision |
+| Goal NP implementation | NOT AUTHORIZED | Revised Approval 1 on the exact Publication-3 bundle |
 | Goal NP live cutover | LOCKED | Approval 2 on the immutable deliverable after disposable rehearsal |
 | Goal A execution | STOPPED | Gate A approved terminal action `stop` after the bounded follow-up failed |
 | Historical Gate A | APPROVED | Terminal action `stop`; no architecture selected |
@@ -29,16 +39,18 @@ does not reinterpret that evidence or revive its stopped experiment.
 
 ## Current instruction
 
-Await Abraham's Goal NP publication-2 decision. Do not implement a skill, adopt the preserved Step 4 files,
-invoke Claude/Codex hosts, change utility or Observatory repositories, write a live skill home, retire
-`.github/skills`, or cut over. Approval 1 authorizes only its versioned administrative bootstrap
-artifacts and issue synchronization (request/receipts, schemas, workspace registry, journal, and the
-exact hash-bound Claude-native `/repo-sync`) plus NP-01 through NP-41; Approval 2 remains required for the
-exact frozen live operation.
+Await Abraham's revised Goal NP Publication-3 decision. Do not implement a skill, adopt the preserved
+Step 4 files, invoke Claude/Codex hosts, change utility or Observatory repositories, write a live skill
+home, retire `.github/skills`, or cut over. The earlier Publication-2 approval sentence is preserved as
+history but does not authorize Publication-3 execution. Revised Approval 1 authorizes only the exact
+direct Codex `gpt-5.6-terra`/`xhigh` administrative and Goal-NP code-orchestration envelope, its
+precommitted launcher/result schema, versioned bootstrap, zero-model issue-synchronization artifacts,
+and NP-01 through NP-41. Approval 2 remains
+required for the exact frozen live operation.
 
 ## Goal NP planning journal
 
-**Status:** READY FOR OPERATOR / AWAITING APPROVAL 1
+**Status:** AWAITING REVISED APPROVAL 1
 
 **Planning authority:** On 2026-08-14 Abraham approved the full native Claude/Codex parity planning
 direction, placement at the user `.agents/skills` scope, exhaustive per-skill tests, known utility and
@@ -47,7 +59,7 @@ the final deliverable/live cutover.
 
 **Maintenance direction:** Either controlled production family may propose a core edit; both controlled
 production hosts must veto regressions. `skill-ablation` is included after the common evaluation matrix
-exists. D08 publication 2 treats model assignments as workload-role bindings rather than equivalence:
+exists. Publication 3 preserves D01–D10 and D08's workload-role bindings without change:
 Fable/Sol for seed planning; Opus/Terra for controlled production, proposal, challenge, and fresh strong
 gates; Sonnet/Luna for parallel advisory judging; and deterministic Pareto code for final acceptance.
 Native skills remain on the invoking session: initial qualification binds Claude config alias
@@ -56,6 +68,14 @@ Native skills remain on the invoking session: initial qualification binds Claude
 phone-a-friend diagnosis per authorized parent context; Fable also requires the recorded retention
 policy. Judges and gates cannot invoke it.
 
+**Terra amendment:** Abraham requested the executor change because the Claude quota needed for the
+Publication-2 implementation path is unavailable. Publication 3 therefore replaces only Goal-NP
+`ADMIN-BOOTSTRAP` and all 39 numbered `Type: code` orchestration slots with the amendment's direct
+Codex `gpt-5.6-terra`/`xhigh` envelope. ADMIN-SYNC itself becomes a committed zero-model deterministic
+operation. It does not turn Terra into a
+native-qualification session, change D08's controlled evaluation assignments, remove Claude from
+NP-12/NP-40, add a router/fallback, authorize a live-home write, or create another approval gate.
+
 **Redline feedback:** Abraham accepted D01–D07 and D09–D10 on 2026-08-14, pending Approval 1, and
 requested investigation/revision of D08. The investigation found that publication 1 mixed an
 unstated workload-role mapping with stale Opus 4.8 wording. Publication 2 makes the controlled-role
@@ -63,11 +83,11 @@ basis, native-session boundary, fresh-context grading cascade, and bounded two-s
 exception explicit without inferring Claude's effective identity from its `opus` alias.
 This feedback is not Approval 1.
 
-**Review sequence:** publication 2 plan-review PASS; plan-wrap READY with no blockers, significant
-gaps, or missing items; plan-redline PASS. The standalone proposal maps P01–P10 to Abraham's choices
-and D01–D10 to agent defaults.
+**Review sequence:** Publication 3 plan-review PASS; plan-wrap PASS; plan-redline PASS on the exact
+six-file bundle. The bundle is ready for revised Approval 1. The standalone proposal maps P01–P10 to
+Abraham's choices and D01–D10 to the preserved agent defaults.
 
-**Implementation authority:** none until Abraham approves the exact reviewed Goal NP plan.
+**Implementation authority:** none until Abraham approves the exact reviewed Publication-3 bundle.
 
 ## Goal A journal
 
