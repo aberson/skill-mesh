@@ -8,7 +8,7 @@ and make shared-core maintenance dual-host safe.
 
 ## Main execution plan
 
-Publication 3 is one six-file approval bundle:
+Publication 4 is one six-file recovery approval bundle:
 
 - `documentation/native-claude-codex-skill-parity-plan.md` — the detailed Goal NP base plan;
 - `documentation/native-claude-codex-skill-parity-terra-amendment.md` — the narrow controlling
@@ -29,8 +29,8 @@ does not reinterpret that evidence or revive its stopped experiment.
 
 | Unit | Status | Who or what unlocks it |
 |---|---|---|
-| Goal NP plan | AWAITING REVISED APPROVAL 1 | Abraham approves the exact Publication-3 six-file bundle, or requests another revision |
-| Goal NP implementation | NOT AUTHORIZED | Revised Approval 1 on the exact Publication-3 bundle |
+| Goal NP plan | AWAITING RECOVERY APPROVAL 1 | Abraham approves the exact reviewed Publication-4 six-file bundle, or requests another revision |
+| Goal NP implementation | NOT AUTHORIZED | Recovery Approval 1 on the exact Publication-4 bundle |
 | Goal NP live cutover | LOCKED | Approval 2 on the immutable deliverable after disposable rehearsal |
 | Goal A execution | STOPPED | Gate A approved terminal action `stop` after the bounded follow-up failed |
 | Historical Gate A | APPROVED | Terminal action `stop`; no architecture selected |
@@ -39,27 +39,38 @@ does not reinterpret that evidence or revive its stopped experiment.
 
 ## Current instruction
 
-Await Abraham's revised Goal NP Publication-3 decision. Do not implement a skill, adopt the preserved
-Step 4 files, invoke Claude/Codex hosts, change utility or Observatory repositories, write a live skill
-home, retire `.github/skills`, or cut over. The earlier Publication-2 approval sentence is preserved as
-history but does not authorize Publication-3 execution. Revised Approval 1 authorizes only the exact
+Await Abraham's Goal NP Publication-4 recovery decision after the required external ordered reviews.
+Do not implement a skill, adopt the
+preserved Step 4 files, invoke Claude/Codex hosts, change utility or Observatory repositories, write a
+live skill home, retire `.github/skills`, or cut over. Publication 3 was approved, but its one permitted
+bootstrap lineage stopped terminally before any model call; neither that approval nor its evidence root
+authorizes a retry. Recovery Approval 1 authorizes only the exact
 direct Codex `gpt-5.6-terra`/`xhigh` administrative and Goal-NP code-orchestration envelope, its
-precommitted launcher/result schema, versioned bootstrap, zero-model issue-synchronization artifacts,
-and NP-01 through NP-41. Approval 2 remains
+repaired precommitted launcher, unchanged result schema, versioned bootstrap, zero-model issue-synchronization
+artifacts, and NP-01 through NP-41. Approval 2 remains
 required for the exact frozen live operation.
 
 ## Goal NP planning journal
 
-**Status:** AWAITING REVISED APPROVAL 1
+**Status:** AWAITING RECOVERY APPROVAL 1 — PUBLICATION 3 TERMINAL PRE-MODEL
 
 **Planning authority:** On 2026-08-14 Abraham approved the full native Claude/Codex parity planning
 direction, placement at the user `.agents/skills` scope, exhaustive per-skill tests, known utility and
-Dev Observatory integration, a one-time migration, and exactly two human signoffs: the final plan and
-the final deliverable/live cutover.
+Dev Observatory integration, a one-time migration, and exactly two approval gates: Approval 1 for the
+final plan and Approval 2 for the final deliverable/live cutover. A superseding plan publication or
+terminal pre-model recovery requires a fresh exact Approval-1 sentence without creating a third gate.
+
+**Publication-3 terminal record:** Abraham supplied the exact Publication-3 Approval-1 sentence on
+2026-08-15. The create-new request
+`tba-b7e5898e6389ff19b3ce34738f16b47d0a832dfc4625789fbcf4308352f2b1a0` stopped while attesting the
+live Codex home because `goals_1.sqlite` was locked by the active coordinator session. The durable
+`blocked` state SHA-256 is `ae59a6ac7f512d2e399675fe541b916d1710c209a13b45433642cf019a07df97`.
+No prompt, model process, test, Git mutation, or product mutation occurred. The request and its entire
+evidence root are immutable and terminal: they must not be retried, deleted, altered, or reused.
 
 **Maintenance direction:** Either controlled production family may propose a core edit; both controlled
 production hosts must veto regressions. `skill-ablation` is included after the common evaluation matrix
-exists. Publication 3 preserves D01–D10 and D08's workload-role bindings without change:
+exists. Publication 4 preserves D01–D10 and D08's workload-role bindings without change:
 Fable/Sol for seed planning; Opus/Terra for controlled production, proposal, challenge, and fresh strong
 gates; Sonnet/Luna for parallel advisory judging; and deterministic Pareto code for final acceptance.
 Native skills remain on the invoking session: initial qualification binds Claude config alias
@@ -68,11 +79,14 @@ Native skills remain on the invoking session: initial qualification binds Claude
 phone-a-friend diagnosis per authorized parent context; Fable also requires the recorded retention
 policy. Judges and gates cannot invoke it.
 
-**Terra amendment:** Abraham requested the executor change because the Claude quota needed for the
-Publication-2 implementation path is unavailable. Publication 3 therefore replaces only Goal-NP
+**Terra recovery amendment:** Abraham requested the executor change because the Claude quota needed for
+the Publication-2 implementation path is unavailable. Publication 4 carries forward Publication 3's
+replacement of only Goal-NP
 `ADMIN-BOOTSTRAP` and all 39 numbered `Type: code` orchestration slots with the amendment's direct
 Codex `gpt-5.6-terra`/`xhigh` envelope. ADMIN-SYNC itself becomes a committed zero-model deterministic
-operation. It does not turn Terra into a
+operation. Publication 4 changes only the pre-model launcher boundary: a repeatable zero-write
+`Preflight` must prove a quiescent standalone PowerShell context and complete stable live-home
+attestation before `Run` may claim a new request root. It does not turn Terra into a
 native-qualification session, change D08's controlled evaluation assignments, remove Claude from
 NP-12/NP-40, add a router/fallback, authorize a live-home write, or create another approval gate.
 
@@ -83,11 +97,13 @@ basis, native-session boundary, fresh-context grading cascade, and bounded two-s
 exception explicit without inferring Claude's effective identity from its `opus` alias.
 This feedback is not Approval 1.
 
-**Review sequence:** Publication 3 plan-review PASS; plan-wrap PASS; plan-redline PASS on the exact
-six-file bundle. The bundle is ready for revised Approval 1. The standalone proposal maps P01–P10 to
-Abraham's choices and D01–D10 to the preserved agent defaults.
+**Review sequence:** Publication 4 must pass plan-review, then plan-wrap, then plan-redline on one stable
+six-file bundle. Exact-byte verdicts are retained outside the publication; any non-PASS or hash drift
+returns this status to revision. The standalone proposal maps P01–P10 to Abraham's choices and D01–D10
+to the preserved agent defaults.
 
-**Implementation authority:** none until Abraham approves the exact reviewed Publication-3 bundle.
+**Implementation authority:** none until Abraham approves the exact reviewed Publication-4 bundle with
+the exact recovery sentence. Publication 3 supplies historical evidence only.
 
 ## Goal A journal
 

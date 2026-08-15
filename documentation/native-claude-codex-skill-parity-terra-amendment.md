@@ -1,22 +1,23 @@
-# Goal NP Publication 3 — Terra orchestration amendment
+# Goal NP Publication 4 — Terra bootstrap recovery amendment
 
-**Status:** AWAITING REVISED APPROVAL 1
+**Status:** AWAITING RECOVERY APPROVAL 1
 **Base publication:** `documentation/native-claude-codex-skill-parity-plan.md` at commit
 `9c224efda851a3501f130830f5cd22b212fc36f0`
 **Base-plan SHA-256:** `3c8b3e84b2e192ce1d53cd7488afc8a051a614ee6316df59dad5985af5b73b4d`
-**Requested change:** run Goal NP through Codex `gpt-5.6-terra`/`xhigh` because the Claude
-implementation quota is unavailable.
+**Requested change:** preserve Publication 3's Codex `gpt-5.6-terra`/`xhigh` orchestration decision and
+repair only the pre-model bootstrap boundary that terminally blocked its approved first attempt.
 
 This document is a narrow controlling amendment. It does not authorize implementation by itself.
-Publication 3 is the exact commit containing this amendment, the base plan, `plan.md`,
+Publication 4 is the exact commit containing this amendment, the base plan, `plan.md`,
 `documentation/native-claude-codex-skill-parity-proposal.html`, the precommitted post-Approval launcher
 `tools/run-goal-np-terra-bootstrap.ps1`, and its
-`schemas/terra-bootstrap-result-v1.schema.json`. The earlier Publication-2 approval sentence cannot
-authorize these bytes.
+`schemas/terra-bootstrap-result-v1.schema.json`. Publication 3's Approval-1 sentence was consumed by a
+terminal pre-model request; neither it nor any earlier approval sentence can authorize these bytes or
+retry that request.
 
 ## 1. What this amendment changes
 
-The following Publication-2 surfaces are superseded:
+Publication 4 carries forward Publication 3's supersession of these Publication-2 surfaces:
 
 1. the Claude Code/`opus` `ADMIN-BOOTSTRAP` executor and its 76-row installed-Claude closure;
 2. the Claude-native `/repo-sync` model call in `ADMIN-SYNC`;
@@ -41,15 +42,19 @@ In particular, this amendment does **not** change:
 Terra is therefore the Goal-NP implementation orchestrator, not a relabeling of the Codex native
 qualification session and not a cross-vendor equivalence claim.
 
-## 2. Publication-3 authority
+## 2. Publication-4 authority and recovery boundary
 
-The only valid revised Approval-1 sentence is:
+The only valid recovery Approval-1 sentence is:
 
 ```text
-Approve Goal NP plan Publication 3 with D01-D10 and the Terra orchestration amendment.
+Approve Goal NP plan Publication 4 with D01-D10 and the Terra bootstrap recovery amendment.
 ```
 
-Approval is valid only when its receipt binds the final Publication-3 commit and SHA-256 of all six
+Its UTF-8 text SHA-256 is `1a7698085d7bc12e74d60874e0d64b4d069b039470ab17701541cfe6c77202fe`.
+The canonical UTF-8-without-BOM file with exactly one final LF has SHA-256
+`2f74ea66ac7bdac38b419fd24b7e6caa9479de007bc178e69acd54f9f8b42857`.
+
+Approval is valid only when its receipt binds the final Publication-4 commit and SHA-256 of all six
 bundle files. It authorizes the amended administrative prelude, NP-01 through NP-41, disposable
 tests/hosts/evidence, and the base plan's non-live candidate work. It does not authorize a live Claude
 or Codex discovery-home write, live State mutation, Approval-2 receipt, cutover, activation, or live
@@ -59,11 +64,34 @@ Any different model, effort, executable, configuration, prompt, retry, child cal
 or ambient project/user skill, plugin, or MCP dependency is `INVALID`; it is never a fallback.
 Codex's executable-bound system-skill descriptors are treated separately in Section 3.2.
 
+### 2.1 Frozen Publication-3 terminal evidence
+
+Publication 3 was committed at `71a5aea3fd21320d2fbb3cb9228bc52e42cb3215` and received its exact
+Approval-1 sentence. Its single create-new bootstrap request is
+`tba-b7e5898e6389ff19b3ce34738f16b47d0a832dfc4625789fbcf4308352f2b1a0`. The request stopped while
+hashing the active live Codex home because `%USERPROFILE%\.codex\goals_1.sqlite` was locked by the
+coordinator session. The failure happened before an implementation prompt, Codex/Terra process,
+deterministic test, Git mutation, or product mutation.
+
+The immutable Publication-3 state is `blocked` with SHA-256
+`ae59a6ac7f512d2e399675fe541b916d1710c209a13b45433642cf019a07df97`. Its evidence root contains only
+that 601-byte `state.json` and an empty `instruction-free-launch-roots` directory; the canonical
+three-entry whole-root manifest SHA-256 is
+`9b01de1f550019a8bf81c23431925b6f38a173ec1ce22023c765a2a8d290cdcf`. Publication 4 treats that root as
+read-only recovery input at
+`%LOCALAPPDATA%\SkillMesh\Evidence\GoalNP\TerraBootstrap\tba-b7e5898e6389ff19b3ce34738f16b47d0a832dfc4625789fbcf4308352f2b1a0`.
+It may not be retried, deleted, changed, renamed, adopted as a new request,
+or used as authority for a model call. Any mismatch is `PRIOR_EVIDENCE_MISMATCH` and stops before a
+Publication-4 evidence root exists.
+
+Publication 4 is a replacement publication under the existing Approval-1 gate, not a third approval
+gate. Its new sentence, commit, recovery-domain request ID, and evidence root create a distinct lineage.
+
 ## 3. Exact Terra execution envelope
 
 ### 3.1 Frozen host identity
 
-Publication 3 requires:
+Publication 4 requires:
 
 - Codex CLI version exactly `codex-cli 0.147.0`;
 - native executable resolved below `%APPDATA%` at
@@ -140,9 +168,11 @@ Codex's executable-bound system-skill descriptors remain visible. A process may 
 only when its system trigger applies, but it confers no additional path, tool, network, model, or
 write authority; repo/user skills remain absent and forbidden. The launcher copies `auth.json` into
 a request-bound disposable `CODEX_HOME`, never records credential values, allows any provider refresh
-only against that copy, and removes the entire disposable home before committing. An ordinal whole-
-tree path/type/length/content manifest proves the live `CODEX_HOME` is byte-identical before and
-after; any drift stops before the ADMIN commit.
+only against that copy, and removes the entire disposable home before committing. A complete ordinal
+whole-tree path/type/length/content manifest proves the live `CODEX_HOME` is byte-identical before and
+after. The scanner refuses a root or entry reparse point, an alternate data stream, a sharing/access
+error, partial enumeration, or any unreadable default stream; it never treats a partial manifest as a
+baseline. Any drift or unattestable final state stops before the ADMIN commit.
 
 Immediately before each model process, `codex debug prompt-input` runs from that process's exact
 instruction-free launch root with the same disposable `CODEX_HOME`, owner grant, and config/feature
@@ -169,25 +199,66 @@ No process may spawn a subagent or phone-a-friend. This restriction concerns Goa
 orchestration only; it does not modify the D08/native-skill friend behavior that NP-12 and NP-40 must
 qualify.
 
+### 3.4 Publication-4 zero-write readiness boundary
+
+`Preflight` is repeatable, advisory, and non-consuming. It invokes no Codex/model process and creates or
+changes no launcher-owned repository, evidence, approval, temporary, Git-object/index, or live-home
+path. Ordinary OS access metadata and telemetry are outside the launcher's control and are not claimed
+as writes. `Run` does not trust an earlier result: it invokes the same in-process readiness function
+again before its first filesystem mutation.
+
+That function requires Desktop Windows PowerShell 5.1; uses one Win32 process census to validate the
+complete current-process ancestry by PID and creation time; rejects a `Code`, `Cursor`, `codex`,
+`claude`, or `ChatGPT` ancestor; and requires zero live processes with those names system-wide. It does
+not terminate a process or retain command lines. A missing, reused, cyclic, or temporally impossible
+ancestry edge fails closed. A standalone shell reached through only an ordinary terminal/explorer chain
+is permitted.
+
+With `GIT_OPTIONAL_LOCKS=0`, `core.fsmonitor=false`, and `core.untrackedCache=false`, the function uses
+only read-only Git inspection and validates the exact branch, commit, clean status, six committed bundle
+blobs, Codex and Python identities, canonical Publication-4 approval bytes, absent Publication-4 request
+root, and frozen Publication-3 evidence. It computes the complete live-`CODEX_HOME` manifest twice and
+requires the two scans to be byte-identical. It runs no temporary-index, `write-tree`, prompt-input,
+test, or model operation. On PASS, `Preflight` emits only a deterministic JSON readiness record to
+stdout. A failed readiness check exits nonzero, emits no PASS record, and creates no request/evidence
+root.
+
+Pre-claim quiescence or live-home failures are readiness failures, not execution attempts, and may be
+checked again after the environment is made quiescent. Authority/publication mismatches fail closed.
+Once `Run` exclusively creates the distinct Publication-4 request root, any failure is terminal and the
+root may not be deleted, reset, or reused.
+
 ## 4. First-producer and administrative sequence
 
 The missing Codex `$build-step` is not installed, discovered, invoked, or treated as authority.
-Publication 3 resolves the bootstrap cycle with the precommitted
+Publication 4 preserves the Publication-3 direct executor and repairs its pre-model readiness boundary
+with the precommitted
 `tools/run-goal-np-terra-bootstrap.ps1` launcher and
 `schemas/terra-bootstrap-result-v1.schema.json`. The launcher is part of the approved publication,
-not an ADMIN output. `Run` validates the approval sentence, six publication blobs, clean branch/HEAD/
-status, Codex version/executable, closed argv, instruction-free per-call roots, deterministic request
-ID/evidence root, frozen prompts, result schema, output hashes, and terminal state. Read-only `Inspect`
-revalidates the exact request/state identity and, for PASS, the canonical receipt path/hash/content;
-it does not pretend to rerun the pre-call anchor after the ADMIN commit. `Run` is create-new: a crash
-or non-PASS leaves durable `blocked` state, and another
-model attempt under that lineage is forbidden. Publication 3 then proceeds:
+not an ADMIN output. `Preflight` implements Section 3.4 without claiming a request. `Run` independently
+repeats that exact gate, then exclusively claims a new root and stores the in-memory readiness record as
+`preflight.json` before any later effect. Its request identity is the lowercase SHA-256 of the canonical
+UTF-8/LF payload `publication-4-recovery-v1`, final Publication-4 commit, exact Approval-1 text hash,
+frozen Publication-3 request ID, and frozen Publication-3 state hash, joined with one LF between fields
+and no final LF; the visible ID is `tba-<digest>`. This cannot address or retry the Publication-3 lineage.
 
-1. After revised Approval 1, the operator runs the publication launcher against the clean
-   Publication-3 signoff worktree from ordinary PowerShell after closing every other Codex, ChatGPT,
-   IDE-agent, and Claude session. No coordinator model invokes it. Its frozen implementation prompt
-   allows only the base plan's closed 15-path ADMIN Files set and uses the committed result schema.
-2. Before review, the launcher validates every ADMIN output and the exact 661-byte requirements lock;
+After the claim, `Run` validates the closed argv, instruction-free per-call roots, frozen prompts,
+result schema, output hashes, and terminal state. It rechecks process quiescence immediately before and
+after prompt-input and every Codex process, and it revalidates both live-home and Publication-3 evidence
+before committing and on every terminal/catch path. Read-only `Inspect` revalidates the exact
+Publication-4 request/state identity and, for PASS, the canonical receipt path/hash/content; it bypasses
+the launch quiescence gate so a later agent may inspect without acquiring execution authority. `Run` is
+create-new: a crash or non-PASS after root claim leaves durable `blocked` state, and another model attempt
+under that lineage is forbidden. Publication 4 then proceeds:
+
+1. After recovery Approval 1, the operator copies the command block, closes this Codex/VS Code and every
+   other Codex, ChatGPT, Cursor, IDE-agent, and Claude session, then opens standalone ordinary Windows
+   PowerShell. No coordinator model invokes the launcher. The operator runs `Preflight`; only a PASS
+   permits `Run`, which repeats the same gate. Reopening or continuing an agent before `Run` exits makes
+   the ancestry non-quiescent and must be refused. The frozen implementation prompt allows only the base
+   plan's closed 15-path ADMIN Files set and uses the committed result schema.
+2. After the new root is claimed, the launcher records the readiness proof, then before review validates
+   every ADMIN output and the exact 661-byte requirements lock;
    validates CPython `3.14.3` and executable SHA-256
    `cce21c0e8710e304273e98ac4b2b0f5aceb639acbcd2343cbaa5c4e81619c45b`; creates a request-owned
    venv/cache/temp tree; installs only `--require-hashes --only-binary=:all:` dependencies; runs the
@@ -197,7 +268,8 @@ model attempt under that lineage is forbidden. Publication 3 then proceeds:
    paths, implementation JSONL hash, and deterministic test receipts. It cannot edit. `PASS` with a
    blocker or significant finding is rejected by the deterministic launcher even though the shared
    Structured-Outputs-compatible result schema permits those severities for non-PASS responses.
-4. The launcher revalidates live-home and Git identity, stages exactly the reviewed candidate tree,
+4. The launcher revalidates live-home, frozen Publication-3 evidence, and Git identity, stages exactly
+   the reviewed candidate tree,
    creates the fixed ADMIN commit only after every gate passes, and seals immutable implementation/
    review evidence. Neither model process commits, updates an issue, or writes external State.
 5. The committed `bootstrap-goal-np-approval.ps1 -Action Prepare` records the exact revised sentence,
@@ -244,7 +316,8 @@ implementation-model call; their existing Begin/Run/Resume/Record/Finalize contr
 mandatory stop/reopen boundaries remain.
 
 All controller requests and receipts bind both the immutable base plan and this amendment, the final
-Publication-3 commit/hashes, `terra-direct-v1`, Codex version/executable hash/base argv, prompt/schema
+Publication-4 commit/hashes and frozen Publication-3 recovery evidence, `terra-direct-v1`, Codex
+version/executable hash/base argv, prompt/schema
 hashes, requested identity plus reported-identity status/value when available, call IDs, parent/round, stdout/stderr/last-message hashes, and
 the deterministic gate/commit/CAS/finalizer/issue/status lineage. Stale Publication-2 Claude executor
 fields or mixed Claude/Terra implementation attempts are invalid. References to the product's native
@@ -253,26 +326,34 @@ Claude or Codex package tests are not stale implementation attempts.
 ## 6. External transition handoff
 
 The following is an immutable template, not a publication blob that contains its own hash. After the
-Publication-3 commit is created, the publisher generates a separate external handoff by substituting
+Publication-4 commit is created, the publisher generates a separate external handoff by substituting
 the final commit and six file hashes, hashes that handoff, and gives it to the operator. Neither the
-commit nor this amendment embeds its own digest. Do not start Codex before revised Approval 1. After
-approval, the receiving operator/agent invokes only the publication launcher and the committed
-deterministic controller; it must not add an uncounted coordinator model call.
+commit nor this amendment embeds its own digest. Do not start Codex before recovery Approval 1. The
+operator must copy the launch block, close the active Codex/IDE UI, and execute it in standalone Windows
+PowerShell; replying to or reopening an agent before `Run` exits recreates forbidden ancestry. After
+`Run` exits, `Inspect` may be invoked from a reopened session. No coordinator model may add a call.
 
 ```text
-Execute Goal NP under Abraham's explicit revised Approval 1 for Publication 3. Work persistently
+Execute Goal NP under Abraham's explicit recovery Approval 1 for Publication 4. Work persistently
 through the approved direct Codex Terra controller workflow and stop at WAITING FOR APPROVAL 2.
 
 AUTHORITY
-After Abraham supplies the exact revised approval, the operator creates or byte-identically adopts
-`%LOCALAPPDATA%\SkillMesh\Evidence\GoalNP\Publication3\approval1-message.txt` as UTF-8 without a BOM,
+After Abraham supplies the exact recovery approval, the operator creates or byte-identically adopts
+`%LOCALAPPDATA%\SkillMesh\Evidence\GoalNP\Publication4\approval1-message.txt` as UTF-8 without a BOM,
 containing exactly this one line plus one final LF:
-Approve Goal NP plan Publication 3 with D01-D10 and the Terra orchestration amendment.
+Approve Goal NP plan Publication 4 with D01-D10 and the Terra bootstrap recovery amendment.
+
+Publication 3 is terminal historical input, not retry authority:
+- commit: 71a5aea3fd21320d2fbb3cb9228bc52e42cb3215
+- request: tba-b7e5898e6389ff19b3ce34738f16b47d0a832dfc4625789fbcf4308352f2b1a0
+- blocked state SHA-256: ae59a6ac7f512d2e399675fe541b916d1710c209a13b45433642cf019a07df97
+- whole-root manifest SHA-256: 9b01de1f550019a8bf81c23431925b6f38a173ec1ce22023c765a2a8d290cdcf
+Never retry, delete, alter, rename, or reuse that request or evidence root.
 
 Publication bundle:
 - worktree: %LOCALAPPDATA%\SkillMesh\Worktrees\native-codex-skill-parity-plan
 - branch: plan/native-codex-skill-parity
-- commit: <publication-3-commit>
+- commit: <publication-4-commit>
 - plan.md SHA-256: <plan-sha256>
 - base detailed plan SHA-256: <base-plan-sha256>
 - Terra amendment SHA-256: <terra-amendment-sha256>
@@ -285,27 +366,31 @@ Start read-only. Verify the exact worktree, branch, HEAD, clean status, all six 
 and Terra/xhigh availability. Do not pull, rebase, amend, normalize, install a skill, or substitute
 publication bytes. A mismatch stops.
 
-Close every other Codex, ChatGPT, IDE-agent, and Claude session. From the clean publication worktree,
-run the launcher directly in ordinary Windows PowerShell; do not ask another model session to
-coordinate or wrap it. Materialize the already-approved sentence at its canonical external path,
-refusing an unequal existing file, and substitute only `<publication-3-commit>` with the commit bound
-above:
+Copy the block below. Then close this Codex/VS Code UI and every other Codex, ChatGPT, Cursor,
+IDE-agent, and Claude session. Open standalone ordinary Windows PowerShell, change to the clean
+publication worktree, and run the copied block yourself. Do not reply `closed; continue`, ask another
+model session to coordinate it, or reopen an agent before `Run` exits. Materialize the already-approved
+sentence at its canonical external path, refusing an unequal existing file, and substitute only
+`<publication-4-commit>` with the commit bound above:
 
-$approvalMessage = 'Approve Goal NP plan Publication 3 with D01-D10 and the Terra orchestration amendment.'
-$approvalMessageFile = Join-Path $env:LOCALAPPDATA 'SkillMesh\Evidence\GoalNP\Publication3\approval1-message.txt'
+$approvalMessage = 'Approve Goal NP plan Publication 4 with D01-D10 and the Terra bootstrap recovery amendment.'
+$approvalMessageFile = Join-Path $env:LOCALAPPDATA 'SkillMesh\Evidence\GoalNP\Publication4\approval1-message.txt'
 $approvalMessageParent = Split-Path -Parent $approvalMessageFile
 $approvalMessageBytes = (New-Object System.Text.UTF8Encoding($false)).GetBytes($approvalMessage + "`n")
 if (-not (Test-Path -LiteralPath $approvalMessageParent -PathType Container)) { New-Item -ItemType Directory -Path $approvalMessageParent | Out-Null }
-if (Test-Path -LiteralPath $approvalMessageFile -PathType Leaf) { $existingApprovalBytes = [System.IO.File]::ReadAllBytes($approvalMessageFile); if ([Convert]::ToBase64String($existingApprovalBytes) -cne [Convert]::ToBase64String($approvalMessageBytes)) { throw 'Existing Publication-3 approval message is not byte-identical; do not continue.' } } else { [System.IO.File]::WriteAllBytes($approvalMessageFile, $approvalMessageBytes) }
-powershell.exe -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .\tools\run-goal-np-terra-bootstrap.ps1 -Action Run -ApprovedCommit <publication-3-commit> -ApprovalMessageFile $approvalMessageFile
+if (Test-Path -LiteralPath $approvalMessageFile -PathType Leaf) { $existingApprovalBytes = [System.IO.File]::ReadAllBytes($approvalMessageFile); if ([Convert]::ToBase64String($existingApprovalBytes) -cne [Convert]::ToBase64String($approvalMessageBytes)) { throw 'Existing Publication-4 approval message is not byte-identical; do not continue.' } } else { [System.IO.File]::WriteAllBytes($approvalMessageFile, $approvalMessageBytes) }
+$preflightJson = powershell.exe -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .\tools\run-goal-np-terra-bootstrap.ps1 -Action Preflight -ApprovedCommit <publication-4-commit> -ApprovalMessageFile $approvalMessageFile
+if ($LASTEXITCODE -ne 0) { throw 'Publication-4 readiness preflight did not PASS; close the reported session or resolve the read-only readiness condition, then rerun Preflight. No Run attempt was created.' }
+$preflightJson
+powershell.exe -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .\tools\run-goal-np-terra-bootstrap.ps1 -Action Run -ApprovedCommit <publication-4-commit> -ApprovalMessageFile $approvalMessageFile
 if ($LASTEXITCODE -ne 0) { throw 'Terra ADMIN bootstrap failed; do not continue.' }
-$terraStateJson = powershell.exe -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .\tools\run-goal-np-terra-bootstrap.ps1 -Action Inspect -ApprovedCommit <publication-3-commit> -ApprovalMessageFile $approvalMessageFile
+$terraStateJson = powershell.exe -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .\tools\run-goal-np-terra-bootstrap.ps1 -Action Inspect -ApprovedCommit <publication-4-commit> -ApprovalMessageFile $approvalMessageFile
 if ($LASTEXITCODE -ne 0) { throw 'Terra ADMIN bootstrap inspection failed; do not continue.' }
 $terraState = $terraStateJson | ConvertFrom-Json
 if ($terraState.phase -cne 'pass') { throw 'Terra ADMIN bootstrap is not PASS; do not continue.' }
 $terraState
 
-For ADMIN-BOOTSTRAP and the 39 Type-code implementation/review model slots, use only Publication 3's
+For ADMIN-BOOTSTRAP and the 39 Type-code implementation/review model slots, use only Publication 4's
 terra-direct-v1 process envelope. In those implementation/orchestration slots, do not invoke a missing
 $build-step, Claude, /repo-sync, $repo-sync, a router, a repo/user skill, a plugin, MCP, hook, memory,
 fallback model, or unlisted helper. This prohibition does not suppress the unchanged base-plan-authorized
@@ -329,17 +414,18 @@ the exact receipt and minimal authorized next action. Otherwise finish NP-41, ve
 WAITING FOR APPROVAL 2, and report the packet path/hash and exact Approval-2 action without executing it.
 ```
 
-The external handoff is operator guidance, not another model request or approval. The launcher owns
-the first model call and refuses to run before the exact revised approval sentence and anchor pass.
+The external handoff is operator guidance, not another model request or approval. The launcher's
+repeatable `Preflight` owns no call or request; create-new `Run` owns the first model call and refuses to
+claim its evidence root before the exact recovery sentence and zero-write readiness gate pass.
 
 ## 7. Review and publication gate
 
-Before this amendment can be offered for revised Approval 1:
+Before this amendment can be offered for recovery Approval 1:
 
 1. `git diff --check` passes;
 2. the base plan's 41 steps, fields, flags, DAG, D08 counts, and Approval-2 boundary remain unchanged;
-3. every Publication-2 implementation-executor reference is either explicitly superseded here or
-   remains clearly a product/native-qualification reference;
+3. every Publication-2/3 implementation-executor reference is either explicitly superseded here,
+   retained as frozen recovery evidence, or remains clearly a product/native-qualification reference;
 4. plan-review, plan-wrap, and plan-redline each PASS in that order on the exact six-file bundle;
 5. start/end SHA-256 is identical for every exact-byte review; and
 6. the publisher creates the external handoff with the final commit and six hashes without changing

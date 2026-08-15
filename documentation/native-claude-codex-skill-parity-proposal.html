@@ -179,24 +179,32 @@
   <main class="wrap">
     <div class="topbar"><button class="theme" id="theme" type="button" aria-label="Color theme: system; activate to change" aria-live="polite">theme: system</button></div>
     <header>
-      <div class="eyebrow">Goal NP proposal · publication 3 · Terra orchestration amendment · awaiting revised plan signoff</div>
+      <div class="eyebrow">Goal NP proposal · publication 4 · Terra bootstrap recovery amendment · awaiting recovery plan signoff</div>
       <h1>Native Claude + Codex skill parity</h1>
       <p class="thesis">One maintained behavior source per skill, native packages for both hosts, every skill qualified, known utilities wired, and one reversible cutover—without reviving the router or GitHub Copilot.</p>
       <div class="ribbon">
         <span class="chip hold">Proposal only — no implementation authority</span>
-        <span class="chip">Publication 3 · review / wrap / redline PASS</span>
+        <span class="chip">Publication 4 · six-file recovery bundle</span>
         <span class="chip">41 steps · 39 code + 2 operator</span>
-        <span class="chip">2 approvals total</span>
+        <span class="chip">2 approval gates</span>
       </div>
     </header>
 
     <section aria-labelledby="terra-title">
-      <p class="kicker">Publication 3 amendment</p>
-      <h2 id="terra-title">Terra runs Goal NP; both native hosts still qualify what it builds.</h2>
+      <p class="kicker">Publication 4 recovery amendment</p>
+      <h2 id="terra-title">Publication 3 stopped before Terra; Publication 4 makes the launch boundary executable.</h2>
       <div class="card feedback">
-        <p><strong>Why this changed:</strong> the Claude quota needed by Publication 2's implementation path is unavailable. The revised plan uses a precommitted direct Codex <code>gpt-5.6-terra</code>/<code>xhigh</code> launcher for <code>ADMIN-BOOTSTRAP</code> and all 39 numbered <code>Type: code</code> orchestration slots; administrative issue synchronization itself is deterministic and zero-model.</p>
-        <p>This is an executor amendment, not a model-policy rewrite. D01–D10 and D08's controlled maintenance/evaluation roles stay unchanged; NP-12 and NP-40 still test native Claude and native Codex separately. It adds no router, fallback, live discovery/config write, cutover authority, or third approval. Authentication is copied into a disposable Codex home; the launcher proves the live Codex home is byte-identical before and after.</p>
-        <p class="notice"><strong>The earlier Publication-2 approval sentence does not authorize execution.</strong> Only revised Approval 1 on the exact Publication-3 six-file bundle can start the amended path.</p>
+        <p><strong>What happened:</strong> Abraham approved the exact Publication-3 bundle at commit <code>71a5aea3fd21320d2fbb3cb9228bc52e42cb3215</code>. Its launcher allocated the frozen request below, then stopped at terminal phase <code>blocked</code> while the live-home scan tried to read the coordinator-locked <code>%USERPROFILE%\.codex\goals_1.sqlite</code>. The stop occurred before the authentication copy, publication-anchor checks, prompt construction, Codex executable invocation, tests, commit, or any live discovery write.</p>
+        <dl class="source">
+          <dt>Publication-3 approval file</dt><dd><code>%LOCALAPPDATA%\SkillMesh\Evidence\GoalNP\Publication3\approval1-message.txt</code> · file SHA-256 <code>33d3e1756ed2bfd661698da3dfdf85a921380efd87fe3d635b777dafe3c6e04b</code> · normalized message SHA-256 <code>66df8cd413fddd097e80dc63ccfacab221e96c72c795345d14b72ae1ae3474ef</code></dd>
+          <dt>Publication-3 handoff</dt><dd><code>%LOCALAPPDATA%\SkillMesh\Evidence\GoalNP\Publication3\terra-transition-handoff-71a5aea3fd21320d2fbb3cb9228bc52e42cb3215.txt</code> · SHA-256 <code>8382385b90568e947b7aa1abe53d4089650817fb5a72a33b014d5d19d62bd453</code></dd>
+          <dt>Terminal request</dt><dd><code>tba-b7e5898e6389ff19b3ce34738f16b47d0a832dfc4625789fbcf4308352f2b1a0</code></dd>
+          <dt>Frozen evidence root</dt><dd><code>%LOCALAPPDATA%\SkillMesh\Evidence\GoalNP\TerraBootstrap\tba-b7e5898e6389ff19b3ce34738f16b47d0a832dfc4625789fbcf4308352f2b1a0</code></dd>
+          <dt>Terminal state</dt><dd><code>state.json</code> · SHA-256 <code>ae59a6ac7f512d2e399675fe541b916d1710c209a13b45433642cf019a07df97</code> · updated <code>2026-08-15T17:38:35.0297115Z</code> · only that state file and the empty <code>instruction-free-launch-roots\</code> directory exist · canonical three-entry root-manifest SHA-256 <code>9b01de1f550019a8bf81c23431925b6f38a173ec1ce22023c765a2a8d290cdcf</code></dd>
+        </dl>
+        <p><strong>What Publication 4 changes:</strong> the user first saves the approved external command block, closes this Codex/VS Code/Claude/ChatGPT UI, and runs <code>Preflight</code> from an independent ordinary Windows PowerShell 5.1 window. <code>Preflight</code> is repeatable and zero-write: on PASS it emits JSON to stdout and allocates no Terra-bootstrap evidence root; a failed check exits nonzero with no PASS record or request root. It enforces the exact Publication-4 approval, clean bundle and tool identities, stable two-pass whole live-<code>CODEX_HOME</code> bytes, exact immutable P3 blocked evidence, zero Code/Codex/Claude/ChatGPT/Cursor processes, and a clean full ancestry. Only a PASS permits <code>Run</code>; <code>Run</code> independently repeats the same shared preflight and only after PASS atomically creates the new Publication-4 request lineage. A locked or incomplete scan before allocation is a retryable pre-attempt refusal. From allocation onward, any failure is terminal and no retry is allowed. The user may reopen an agent only after <code>Run</code>, for the later read-only <code>Inspect</code>.</p>
+        <p>This is a launch-boundary recovery, not a model-policy rewrite. Publication 4 carries forward the direct Codex <code>gpt-5.6-terra</code>/<code>xhigh</code> envelope for <code>ADMIN-BOOTSTRAP</code> and all 39 numbered <code>Type: code</code> orchestration slots, plus zero-model administrative synchronization. D01–D10 and D08's controlled maintenance/evaluation roles stay unchanged; NP-12 and NP-40 still test native Claude and native Codex separately. It adds no router, fallback, live discovery/config write, cutover authority, approval gate, or retry of the closed Publication-3 lineage.</p>
+        <p class="notice"><strong>Publication-3 Approval 1 was valid and consumed by its terminal pre-model lineage; it cannot be reused.</strong> Only fresh recovery Approval 1 on the final reviewed Publication-4 six-file bundle can create the distinct Publication-4 request.</p>
       </div>
     </section>
 
@@ -233,7 +241,7 @@
         <div class="card stat"><span class="num">55</span><span class="label">Codex global skills</span></div>
         <div class="card stat"><span class="num">113</span><span class="label">global native cells</span></div>
         <div class="card stat"><span class="num">39</span><span class="label">utility-flow cells</span></div>
-        <div class="card stat"><span class="num">2</span><span class="label">human approvals</span></div>
+        <div class="card stat"><span class="num">2</span><span class="label">approval gates</span></div>
       </div>
     </section>
 
@@ -242,7 +250,7 @@
       <h2 id="timeline-title">Build freely after signoff; touch live discovery only at the end.</h2>
       <p class="lead">The detailed plan has 41 bounded steps. This is the operator-level map.</p>
       <ol class="timeline">
-        <li class="card phase gate"><span class="id">A1</span><div><h3>Revised Approval 1 — approve the exact Publication-3 bundle</h3><span class="meta">before ADMIN-BOOTSTRAP</span><p>Records P01–P10 and unchanged D01–D10, binds the detailed plan, Terra amendment, precommitted launcher/result schema, proposal, and pointer, and authorizes the direct Codex <code>gpt-5.6-terra</code>/<code>xhigh</code> envelope to run ADMIN-BOOTSTRAP and all 39 numbered code steps. ADMIN-SYNC is zero-model. The approval also covers the already-planned disposable two-host proofs, tests, and rehearsal, but no live discovery write.</p><div class="after"><strong>Afterwards:</strong> implementation starts only after the administrative aggregate records PASS.</div></div></li>
+        <li class="card phase gate"><span class="id">A1</span><div><h3>Recovery Approval 1 — approve the exact Publication-4 bundle</h3><span class="meta">before ADMIN-BOOTSTRAP</span><p>Records P01–P10 and unchanged D01–D10, binds the detailed plan, Terra recovery amendment, precommitted launcher/result schema, proposal, and pointer, and authorizes the distinct Publication-4 request plus the unchanged direct Codex <code>gpt-5.6-terra</code>/<code>xhigh</code> envelope to run ADMIN-BOOTSTRAP and all 39 numbered code steps. ADMIN-SYNC remains zero-model. The approval also covers the already-planned disposable two-host proofs, tests, and rehearsal, but no live discovery write.</p><div class="after"><strong>Afterwards:</strong> save the external block, close this UI, run <code>Preflight</code> then <code>Run</code> from standalone PowerShell, and proceed only after the administrative aggregate records PASS.</div></div></li>
         <li class="card phase"><span class="id">01</span><div><h3>Protect and reconcile current work</h3><span class="meta">NP-01</span><p>Hash/export every overlapping dirty path, adopt the four preserved Step 4 files through review, and establish clean candidate lineage without sweeping unrelated WIP.</p><div class="after"><strong>Afterwards:</strong> Skill Mesh has a recoverable, reviewed starting point; active checkouts remain unchanged.</div></div></li>
         <li class="card phase"><span class="id">02</span><div><h3>Make canonical source and native Codex real</h3><span class="meta">NP-02–NP-10</span><p>Migrate support assets, replace the active <code>gpt</code>/Copilot provider concept with <code>codex</code>, generate native packages, promote seven custom skills, and prepare the disposable two-host canary.</p><div class="after"><strong>Afterwards:</strong> all package and adapter bytes needed for the real-host substrate proof are frozen and testable.</div></div></li>
         <li class="card phase"><span class="id">03</span><div><h3>Prove the substrate; build transaction and evaluation contracts</h3><span class="meta">NP-11–NP-19 · operator NP-12</span><p>Freeze 14 controlled D08 profiles plus two native invoking-session profiles, prove both bounded phone-a-friend scopes, run the disposable real-host discovery/core/asset/named-call proof, add hash-chained receipts and rollback primitives, then replace scalar/same-host skill evaluation with the dual-host Pareto matrix.</p><div class="after"><strong>Afterwards:</strong> a valid placement/core-load contradiction has stopped the architecture, or model calls are exact, role-separated, resumable, no-fallback, and unable to average away a one-host regression.</div></div></li>
@@ -275,7 +283,7 @@
     <section aria-labelledby="defaults-title">
       <p class="kicker">Defaults I chose on your behalf</p>
       <h2 id="defaults-title">D01–D10 are the redline.</h2>
-      <p class="lead">Publication 3 preserves D01–D10 and D08's controlled evaluation/native-qualification contract. The Terra amendment changes only the Goal-NP administrative and numbered code-step executor; the exact six-file bundle still requires revised Approval 1.</p>
+      <p class="lead">Publication 4 preserves P01–P10, D01–D10, and D08's controlled evaluation/native-qualification contract. The recovery amendment changes only the pre-model live-home and quiescent-launch boundary around the already-approved Terra executor; the exact six-file bundle requires fresh recovery Approval 1.</p>
       <div class="defaults">
         <div class="card default"><span class="id">D01</span><div><div class="what">Promote all seven custom global Claude skills into the portable catalog.</div><div class="why">They are already installed in the live global Claude catalog; leaving them behind would make “parity” false.</div><div class="tweak"><b>Tweak:</b> name a specific skill that should remain Claude-only, with the reason.</div></div></div>
         <div class="card default"><span class="id">D02</span><div><div class="what">Reverify and adopt the four preserved Step 4 files as the installer/migrator starting point.</div><div class="why">They contain reviewed safety work and have a hash-bound recovery bundle; discarding them recreates work.</div><div class="tweak"><b>Tweak:</b> require a clean rewrite instead, while retaining the bundle only as reference.</div></div></div>
@@ -323,31 +331,32 @@
 
     <section aria-labelledby="feedback-title">
       <p class="kicker">Give feedback</p>
-      <h2 id="feedback-title">Approve Publication 3, or request another exact revision.</h2>
+      <h2 id="feedback-title">Approve Publication 4 after its exact-byte freeze, or request another revision.</h2>
       <div class="card feedback">
-        <p class="lead">D01–D10 remain unchanged. Publication-3 review, wrap, and redline are complete. Revised Approval 1 is still absent; the prior Publication-2 sentence is not reusable. Use one of these mutually exclusive responses:</p>
-        <pre>APPROVE THE REVISED PLAN
-Approve Goal NP plan Publication 3 with D01-D10 and the Terra orchestration amendment.
+        <p class="lead">P01–P10, D01–D10, D08, the base plan, and Approval 2 remain unchanged. Publication-3 Approval 1 was consumed by its closed terminal request and is not reusable. Publication 4 is awaiting fresh recovery Approval 1; use the approval sentence only when the exact digests below match and the external ordered review attestations report PASS:</p>
+        <pre>APPROVE THE RECOVERY PLAN
+Approve Goal NP plan Publication 4 with D01-D10 and the Terra bootstrap recovery amendment.
 
 REQUEST ANOTHER REVISION — NOT AN APPROVAL
-Terra amendment, D08, or &lt;NP-ID/section&gt;: &lt;requested change&gt;</pre>
-        <p class="notice"><strong>Viewing this page authorizes nothing.</strong> Revised Approval 1 authorizes only the exact Publication-3 direct Codex Terra/<code>xhigh</code> launcher and code-orchestration envelope, zero-model administrative sync, their versioned records, and NP-01 through NP-41; it still forbids live discovery writes. Approval 2 remains required for the exact frozen cutover.</p>
+Terra bootstrap recovery, D08, or &lt;NP-ID/section&gt;: &lt;requested change&gt;</pre>
+        <p class="notice"><strong>Viewing this page authorizes nothing.</strong> Recovery Approval 1 authorizes only the exact Publication-4 preflight/request transition, repaired launcher, unchanged result schema and direct Codex Terra/<code>xhigh</code> execution envelope, zero-model administrative sync, their versioned records, and NP-01 through NP-41. It does not reopen or retry Publication 3, and it still forbids live discovery writes. Approval 2 remains required for the exact frozen cutover.</p>
         <dl class="source">
-          <dt>Publication-3 bundle</dt><dd><code>documentation/native-claude-codex-skill-parity-plan.md</code>, <code>documentation/native-claude-codex-skill-parity-terra-amendment.md</code>, this proposal, <code>plan.md</code>, <code>tools/run-goal-np-terra-bootstrap.ps1</code>, and <code>schemas/terra-bootstrap-result-v1.schema.json</code></dd>
+          <dt>Publication-4 bundle</dt><dd><code>documentation/native-claude-codex-skill-parity-plan.md</code>, <code>documentation/native-claude-codex-skill-parity-terra-amendment.md</code>, this proposal, <code>plan.md</code>, <code>tools/run-goal-np-terra-bootstrap.ps1</code>, and <code>schemas/terra-bootstrap-result-v1.schema.json</code></dd>
           <dt>Base-plan SHA-256</dt><dd>3c8b3e84b2e192ce1d53cd7488afc8a051a614ee6316df59dad5985af5b73b4d</dd>
-          <dt>Amendment SHA-256</dt><dd>1f202cc36ea793cd31b5711d97d48031f601246bfd08086fe4ddc48cddb0c44e</dd>
-          <dt>Launcher SHA-256</dt><dd>ba797ba817cf59cec0ccd637965004b88dd1577bf31c290776ed2ab524c30f6c</dd>
+          <dt>Amendment SHA-256</dt><dd><code>14b182255e3c00b3fd39cc2a075e0d1b6b2636b2c9e2314d05800a419bdf62f8</code></dd>
+          <dt>Launcher SHA-256</dt><dd><code>d3f93186c4b4c18d7ef687496e0860661da84e32a354496de291eaf36d1ae237</code></dd>
           <dt>Result-schema SHA-256</dt><dd>3b6e35eab00a036e48ceb011633c2ad15aebca1af73c59058dd48a92d6243f06</dd>
-          <dt>Approval binding</dt><dd>the final reviewed publication commit and exact six file hashes named by the revised Approval-1 handoff</dd>
+          <dt>Publication-4 review</dt><dd><code>Required external order: PLAN-REVIEW → PLAN-WRAP → PLAN-REDLINE; every PASS verdict must bind these exact bytes</code></dd>
+          <dt>Approval binding</dt><dd>the final reviewed Publication-4 commit and exact six file hashes named by the recovery Approval-1 handoff</dd>
           <dt>Canonical pointer</dt><dd>plan.md</dd>
           <dt>Proposal</dt><dd>documentation/native-claude-codex-skill-parity-proposal.html</dd>
           <dt>Planning branch</dt><dd>plan/native-codex-skill-parity</dd>
-          <dt>Next after approval</dt><dd>run the precommitted bounded Terra launcher, record revised Approval 1, complete zero-model administrative sync, then NP-01—no live cutover</dd>
+          <dt>Next after approval</dt><dd>save the external Publication-4 block; close this Codex/VS Code/Claude/ChatGPT UI; from standalone Windows PowerShell run <code>Preflight</code>, then only on PASS run <code>Run</code>; do not reply “closed; continue” or reopen an agent before <code>Run</code>; later use read-only <code>Inspect</code>, complete zero-model administrative sync, then NP-01—no live cutover</dd>
         </dl>
       </div>
     </section>
 
-    <footer>Skill Mesh · Goal NP proposal · native Claude/Codex parity · Publication 3 · 2026-08-15</footer>
+    <footer>Skill Mesh · Goal NP proposal · native Claude/Codex parity · Publication 4 · 2026-08-15</footer>
   </main>
   <script>
     (() => {
