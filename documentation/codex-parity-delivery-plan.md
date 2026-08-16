@@ -261,7 +261,7 @@ harmlessly when their evidence file is absent.
   direct-in-tree across the existing worktrees; do NOT create a new isolation worktree
   (this step IS git choreography), and use path-scoped `git add` only.
 - **Type:** code
-- **Issue:** #
+- **Issue:** #118
 - **Flags:** --reviewers auto
 - **Files:** plan.md, documentation/native-claude-codex-skill-parity-plan.md,
   documentation/native-claude-codex-skill-parity-terra-amendment.md,
@@ -290,7 +290,7 @@ harmlessly when their evidence file is absent.
   `tools/migrate-legacy-install.ps1`, `tests/distributions/test_distributions.py`,
   `tests/distributions/test_legacy_migration.py`. Closes #116.
 - **Type:** code
-- **Issue:** #
+- **Issue:** #119
 - **Flags:** --reviewers deep
 - **Files:** tools/install-skill-mesh.ps1, tools/migrate-legacy-install.ps1,
   tests/distributions/test_distributions.py, tests/distributions/test_legacy_migration.py
@@ -317,7 +317,7 @@ harmlessly when their evidence file is absent.
   extend `tools/release.ps1` `-Provider` handling (default `'both'` at release.ps1:102,
   forwarded at :213) to cover codex.
 - **Type:** code
-- **Issue:** #
+- **Issue:** #120
 - **Flags:** --reviewers deep
 - **Files:** config/skill-manifest.json, tools/gen_manifest.py, tools/build-distributions.ps1,
   tests/package-integrity/frontmatter_contract.py, tests/package-integrity/expected_inventory.json,
@@ -344,7 +344,7 @@ harmlessly when their evidence file is absent.
   `config/model-mapping.json` + `config/model-tier-map.json` (producing files) and decide
   whether a codex provider entry is required for tier resolution; add it if so.
 - **Type:** code
-- **Issue:** #
+- **Issue:** #121
 - **Flags:** --reviewers code
 - **Files:** skills/task-handoff/providers/codex.md, skills/user-orient/providers/codex.md,
   skills/lesson-harvest/providers/codex.md, skills/plan-review/providers/codex.md,
@@ -370,7 +370,7 @@ harmlessly when their evidence file is absent.
   removes cleanly, path-guard proves zero writes outside the temp home. No codex invocation
   anywhere in this step.
 - **Type:** code
-- **Issue:** #
+- **Issue:** #122
 - **Flags:** --reviewers deep
 - **Files:** tools/skill-mesh-discovery.ps1, tools/install-skill-mesh.ps1,
   tools/inspect-host-install.ps1, tools/probe-codex-skills.ps1, tests/distributions/
@@ -389,7 +389,7 @@ harmlessly when their evidence file is absent.
   test to the enlarged catalog. Record any per-skill authoring deltas in the delta log.
 - **Type:** conditional
 - **Condition:** grep -qi "M1: PASS" documentation/parity-deltas.md
-- **Issue:** #
+- **Issue:** #123
 - **Flags:** --reviewers code
 - **Files:** skills/{plan-init,plan-feature,plan-expedite,plan-merge,plan-redline,plan-trim,plan-wrap,repo-init,repo-sync,repo-update,user-wrap,user-project}/providers/codex.md,
   config/skill-manifest.json, tests/package-integrity/expected_inventory.json,
@@ -409,7 +409,7 @@ harmlessly when their evidence file is absent.
   degradation as a delta-log row.
 - **Type:** conditional
 - **Condition:** grep -qi "M1: PASS" documentation/parity-deltas.md
-- **Issue:** #
+- **Issue:** #124
 - **Flags:** --reviewers code
 - **Files:** skills/{build-phase,build-step,build-queue,review-deep,review-gauntlet,review-proof,review-uat,skill-iterate,skill-evolve,skill-eval-setup,tier-escalate,tier-offload,judge-ui,test-prune,goblin-do,goblin-suggest}/providers/codex.md,
   config/skill-manifest.json, tests/package-integrity/expected_inventory.json,
@@ -431,7 +431,7 @@ harmlessly when their evidence file is absent.
   and CLAUDE.md Commands (CLAUDE.md:64–72 gains the codex build/install variants).
 - **Type:** conditional
 - **Condition:** grep -qi "M1: PASS" documentation/parity-deltas.md
-- **Issue:** #
+- **Issue:** #125
 - **Flags:** --reviewers code
 - **Files:** skills/{memory-distill,observatory-doctor,research-prospect,user-afterparty,user-brainstorm,user-debug,user-draft,user-gateway,user-lavishify,user-learn,user-pm,user-shakedown,user-uat,user-walkthrough}/providers/codex.md,
   config/skill-manifest.json, tests/package-integrity/expected_inventory.json,
@@ -450,7 +450,7 @@ harmlessly when their evidence file is absent.
   log row says otherwise.
 - **Type:** conditional
 - **Condition:** test -s documentation/findings/codex-parity-m2-deltas.md
-- **Issue:** #
+- **Issue:** #126
 - **Flags:** --reviewers code
 - **Files:** skills/*/core.md and skills/*/providers/codex.md (delta-dependent),
   documentation/parity-deltas.md, documentation/findings/codex-parity-m2-deltas.md
@@ -468,7 +468,7 @@ harmlessly when their evidence file is absent.
   skill's current SKILL.md as the producing source.
 - **Type:** conditional
 - **Condition:** grep -qi "M1: PASS" documentation/parity-deltas.md
-- **Issue:** #
+- **Issue:** #127
 - **Flags:** --reviewers code
 - **Files:** skills/{build-observer,citation-distill,citation-review,citation-sweep,citation-triage,goblin-sweep,repo-wrap}/,
   config/skill-manifest.json, tests/package-integrity/expected_inventory.json,
@@ -497,7 +497,7 @@ harmlessly when their evidence file is absent.
   fails-open test asserts absent `DEV_UTILITIES_ROOT` produces zero behavior change and a
   malformed opt-in config produces exactly one advisory line, never a halt.
 - **Type:** code
-- **Issue:** #
+- **Issue:** #128
 - **Flags:** --reviewers deep
 - **Files:** skills/{judge-ui,plan-feature,plan-init,plan-review,repo-update,review-deep,review-gauntlet,review-proof,skill-evolve,skill-iterate,tier-escalate,tier-offload,user-afterparty,user-gateway,user-uat,user-wrap}/core.md,
   tests/package-integrity/ (new hookup-presence + fails-open tests)
@@ -521,7 +521,7 @@ harmlessly when their evidence file is absent.
   Step-43 surfaces, record that as a named cross-plan dependency in the delta log and in
   this step's report instead of building it here.
 - **Type:** code
-- **Issue:** #
+- **Issue:** #129
 - **Flags:** --reviewers code
 - **Files:** dev repo: .claude/observatory/registry.toml (if hookups are registry-borne);
   documentation/parity-deltas.md (cross-plan dependency rows if any)
@@ -536,7 +536,7 @@ harmlessly when their evidence file is absent.
 
 ### Step M1: Pilot bring-up in a real Codex session
 - **Source step:** Step 5 (pass 1)
-- **Issue:** #
+- **Issue:** #130
 - **Commands:**
   ```powershell
   # 1. Probe (read-only): confirm effective home + current root state
@@ -571,7 +571,7 @@ harmlessly when their evidence file is absent.
 
 ### Step M2: End-to-end workflow parity pass
 - **Source step:** Step 8 (pass 2)
-- **Issue:** #
+- **Issue:** #131
 - **Commands:**
   ```powershell
   # Ensure full catalog is installed
@@ -593,7 +593,7 @@ harmlessly when their evidence file is absent.
 
 ### Step M3: Acceptance + delta triage
 - **Source step:** Steps 9–10 (pass 3)
-- **Issue:** #
+- **Issue:** #132
 - **Commands:**
   ```powershell
   powershell -File tools\inspect-host-install.ps1 -Provider codex
@@ -609,7 +609,7 @@ harmlessly when their evidence file is absent.
 
 ### Step M4: Wired-profile rollout + observatory wiring UAT
 - **Source step:** Steps 11–12 (pass 3)
-- **Issue:** #
+- **Issue:** #133
 - **Commands:**
   ```powershell
   # Reinstall the wired profiles over the live install (the D-CP14 operator-gated write).
