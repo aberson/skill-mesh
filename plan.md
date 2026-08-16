@@ -8,7 +8,7 @@ and make shared-core maintenance dual-host safe.
 
 ## Main execution plan
 
-Publication 5 is one six-file recovery approval bundle:
+Publication 6 is one six-file recovery approval bundle:
 
 - `documentation/native-claude-codex-skill-parity-plan.md` — the detailed Goal NP base plan;
 - `documentation/native-claude-codex-skill-parity-terra-amendment.md` — the narrow controlling
@@ -29,8 +29,8 @@ does not reinterpret that evidence or revive its stopped experiment.
 
 | Unit | Status | Who or what unlocks it |
 |---|---|---|
-| Goal NP plan | AWAITING RECOVERY APPROVAL 1 | Abraham approves the exact reviewed Publication-5 six-file bundle, or requests another revision |
-| Goal NP implementation | NOT AUTHORIZED | Recovery Approval 1 on the exact Publication-5 bundle |
+| Goal NP plan | AWAITING RECOVERY APPROVAL 1 | Abraham approves the exact reviewed Publication-6 six-file bundle, or requests another revision |
+| Goal NP implementation | NOT AUTHORIZED | Recovery Approval 1 on the exact Publication-6 bundle |
 | Goal NP live cutover | LOCKED | Approval 2 on the immutable deliverable after disposable rehearsal |
 | Goal A execution | STOPPED | Gate A approved terminal action `stop` after the bounded follow-up failed |
 | Historical Gate A | APPROVED | Terminal action `stop`; no architecture selected |
@@ -39,26 +39,27 @@ does not reinterpret that evidence or revive its stopped experiment.
 
 ## Current instruction
 
-Await Abraham's Goal NP Publication-5 recovery decision after the required external ordered reviews.
+Await Abraham's Goal NP Publication-6 recovery decision after the required external ordered reviews.
 Do not implement a skill, adopt the
 preserved Step 4 files, invoke Claude/Codex hosts, change utility or Observatory repositories, write a
-live skill home, retire `.github/skills`, or cut over. Publications 3 and 4 were each approved, but their
-single permitted bootstrap lineages stopped terminally before any model call; neither approval nor
-either evidence root authorizes a retry. Recovery Approval 1 authorizes only the exact
+live skill home, retire `.github/skills`, or cut over. Publications 3, 4, and 5 were each approved, and
+their single permitted bootstrap lineages are terminal; none of those approvals or evidence roots
+authorizes a retry. Recovery Approval 1 authorizes only the exact
 direct Codex `gpt-5.6-terra`/`xhigh` administrative and Goal-NP code-orchestration envelope, its
-repaired precommitted launcher, unchanged result schema, versioned bootstrap, zero-model issue-synchronization
-artifacts, and NP-01 through NP-41. Approval 2 remains
+precommitted launcher with sandbox attestation and stable model-result failure recording, unchanged
+result schema, versioned bootstrap, zero-model issue-synchronization artifacts, and NP-01 through
+NP-41. Approval 2 remains
 required for the exact frozen live operation.
 
 ## Goal NP planning journal
 
-**Status:** AWAITING RECOVERY APPROVAL 1 — PUBLICATIONS 3 AND 4 TERMINAL PRE-MODEL
+**Status:** AWAITING RECOVERY APPROVAL 1 — PUBLICATIONS 3, 4, AND 5 TERMINAL
 
 **Planning authority:** On 2026-08-14 Abraham approved the full native Claude/Codex parity planning
 direction, placement at the user `.agents/skills` scope, exhaustive per-skill tests, known utility and
 Dev Observatory integration, a one-time migration, and exactly two approval gates: Approval 1 for the
 final plan and Approval 2 for the final deliverable/live cutover. A superseding plan publication or
-terminal pre-model recovery requires a fresh exact Approval-1 sentence without creating a third gate.
+terminal bootstrap recovery requires a fresh exact Approval-1 sentence without creating a third gate.
 
 **Publication-3 terminal record:** Abraham supplied the exact Publication-3 Approval-1 sentence on
 2026-08-15 for commit `71a5aea3fd21320d2fbb3cb9228bc52e42cb3215`. Its canonical approval-file
@@ -88,9 +89,40 @@ process, result, test, ADMIN diff, commit, or product mutation occurred; the liv
 Publication-3 root remained unchanged. The Publication-4 request and its entire evidence root are
 immutable and terminal: they must not be retried, deleted, altered, renamed, reused, or adopted.
 
+**Publication-5 terminal record:** Abraham supplied the exact Publication-5 Approval-1 sentence on
+2026-08-15 for commit `6d292bb37c37944c71ed8b18214fabb23f22869e`. Its canonical approval-file
+SHA-256 is `5ad7472cb113d6965de18204dc1b7f860a0c2982ad1e8152e34547efa714a8e3`, and its normalized
+approval-text SHA-256 is `2d19ad716f3179baf67c67c77d19dfb29697ea5b2e6f2b0a0d1fe87ee03d0f47`.
+Its frozen 13,450-byte external handoff is
+`%LOCALAPPDATA%\SkillMesh\Evidence\GoalNP\Publication5\terra-transition-handoff-6d292bb37c37944c71ed8b18214fabb23f22869e.txt`
+with SHA-256 `ee92b0f882772af327d25d0bec82c9d381ff9e2f309611dd0856d0589c62030e`.
+The create-new request
+`tba-03e474757a5e0c92e8d3f0bd4c5a0731a742397a43c99d5e027016643fced916` passed the fixed exit-code
+canary, claimed its root, and completed one real Codex implementation process requesting
+`gpt-5.6-terra`/`xhigh`; Codex exposed no independent resolved-identity field.
+The retained invocation requested `workspace-write`; `implementation.invocation.json` has SHA-256
+`3752f8ea94fd57bb72d3d495d2ba88e8a6068d80552dc9ef9f0292714887ff36`. Its preceding prompt-input
+proof had nevertheless been hard-coded to `read-only` and has SHA-256
+`a50ad81bae6f73f5d85c369f5ebce0904a903a23ce90c6dced83a890d5b7ea8b`. The requested-Terra process
+returned the schema-valid `BLOCKED` result “Implementation cannot proceed: this session grants
+read-only filesystem access and rejects writes”; `implementation.result.json` has SHA-256
+`2e56256153e3c50de8c981a1d13e53e1e18fb495276f3c34517a1ef8895c295c`. The launcher stored that
+known model result as `UNEXPECTED_FAILURE` with exact error `implementation returned BLOCKED.` The
+model never attempted a filesystem write: all 11 recorded command-execution starts were
+inspection/read commands, with one bundled read declined. P5 therefore observed a model refusal, not
+an operating-system write denial. The
+durable `blocked` state SHA-256 is
+`b0e9355ff3f39c1ccca196ae45ebe7c4f042c9fcd2587d84882c7d9af4724f50`; the canonical 17-entry
+whole-root manifest SHA-256 is
+`11f84ea3e5140a2832586f63fc362c97b92286b1663c91df2c80fb7784d6f700`. The repository remained clean
+at the approved commit, all 15 ADMIN paths remained absent, the disposable Codex home was removed, and
+the live Codex home plus Publication-3/4 roots remained unchanged. No test, ADMIN diff, commit, issue,
+or product mutation occurred. The Publication-5 request and its entire evidence root are immutable and
+terminal: they must not be retried, deleted, altered, renamed, reused, or adopted.
+
 **Maintenance direction:** Either controlled production family may propose a core edit; both controlled
 production hosts must veto regressions. `skill-ablation` is included after the common evaluation matrix
-exists. Publication 5 preserves D01–D10 and D08's workload-role bindings without change:
+exists. Publication 6 preserves D01–D10 and D08's workload-role bindings without change:
 Fable/Sol for seed planning; Opus/Terra for controlled production, proposal, challenge, and fresh strong
 gates; Sonnet/Luna for parallel advisory judging; and deterministic Pareto code for final acceptance.
 Native skills remain on the invoking session: initial qualification binds Claude config alias
@@ -100,16 +132,53 @@ phone-a-friend diagnosis per authorized parent context; Fable also requires the 
 policy. Judges and gates cannot invoke it.
 
 **Terra recovery amendment:** Abraham requested the executor change because the Claude quota needed for
-the Publication-2 implementation path is unavailable. Publication 5 carries forward Publication 4's
+the Publication-2 implementation path is unavailable. Publication 6 carries forward Publication 5's
 replacement of only Goal-NP
 `ADMIN-BOOTSTRAP` and all 39 numbered `Type: code` orchestration slots with the amendment's direct
 Codex `gpt-5.6-terra`/`xhigh` envelope. ADMIN-SYNC itself becomes a committed zero-model deterministic
-operation. Publication 5 retains the zero-write
-`Preflight`, which must prove a quiescent standalone PowerShell context and complete stable live-home
-attestation before `Run` may claim a new request root, and repairs only process-result recording. Both
-production `Start-Process -PassThru` sites cache a valid process handle immediately, drain the child,
-capture a non-null integer exit code exactly once, and use only that cached value. A pre-claim,
-zero-write `cmd.exe` exit-0/nonzero canary exercises the same primitive during every shared preflight.
+operation. Publication 6 retains Publication 5's repaired process recorder and fixed `cmd.exe`
+exit-0/nonzero canary. Its repeatable, non-consuming `Preflight` must prove a quiescent standalone
+PowerShell context, complete stable live-home attestation, and the implementation-shaped model-visible
+`workspace-write` permission surface before `Run` may claim a new request root. That non-model proof's
+only content-bearing write surface is the fresh contained
+`%LOCALAPPDATA%\SkillMesh\Staging\GoalNP\Publication6\<request-id>\permission-attestation` subtree.
+That subtree contains the disposable Codex home, output, and `temp` children; both process `TEMP` and
+`TMP` are pinned to that normal `temp` child for the diagnostic and every Terra model process. Preflight
+may create missing normal ancestors on that fixed staging route, records their ownership, and removes
+only launcher-created ancestors after proving them empty. Before PASS, the request root and every such
+ancestor must be absent; Preflight writes no repository, evidence, approval, or live-home path.
+`Run` repeats the proof before claim, retains that exact staging layout through the proof/model sequence,
+copies the proof into the claimed root, and cleans staging in its terminal boundary. The external
+operator block treats a nonzero Run as recheckable only when its exact terminal JSON proves the expected
+request root absent; a present root or unproven absence is terminal and must not be retried. The ADMIN
+implementation and review calls use the approved repository as primary `--cd`, omit the redundant
+repository `--add-dir`, and repeat the matching prompt-input proof immediately before each model call:
+`workspace-write` for implementation and `read-only` for review. A mismatch stops before that model
+call. Debug and exec both set `skills.bundled.enabled=false` and
+`skills.include_instructions=false`; the proof must show no skills block and zero skill locators, and an
+unsupported or ignored disable fails preclaim. Debug and exec share every supported explicit
+model/config/disable/sandbox/cd flag. Debug does not receive the exec-only authority/output closure;
+`codex exec` adds `--skip-git-repo-check`, `--ephemeral`, `--ignore-user-config`, `--ignore-rules`,
+`--strict-config`, and its schema/JSON/output flags. Pinned 0.147.0 specifically rejects
+`--strict-config` on `codex debug`, while the proof parser rejects any resulting ambient project/rule
+content. The parser also compares the complete normalized permission/environment texts: environment
+siblings are cwd, PowerShell, local `yyyy-MM-dd`, `America/Los_Angeles`, then filesystem; workspace-write
+filesystem entries are read `:root`, write repository, write `:slash_tmp`, write `:tmpdir`, then read
+repository `.git`, `.agents`, and `.codex`, in that order; read-only has only read `:root`. No remainder
+is accepted. Before and after each ADMIN exec, complete scratch manifests must show no
+`codex-home\skills\.system`. After a zero exit, the JSONL transcript must be nonempty and every line
+must be a nonempty, parseable single event object; executable request fields may not reference a
+`.system/.../SKILL.md` path and no native skill event/type is allowed. Model/output text is not an
+executable-request surface. Timeout, start/handle, and nonzero-exit failures preserve their terminal
+process code after the scratch check and do not claim transcript acceptance. A detected transcript
+violation is `MODEL_VERDICT_INVALID`. In those ADMIN calls, every Codex/model/CLI name and behavior is a frozen
+approved input to generic local code/review, not authority to discover or validate current OpenAI/Codex
+product facts. No skill or transitive skill-tree authority is available; if the model says one is
+required, it returns schema-valid `BLOCKED` before mutation and never expands network access. Known
+schema-valid
+non-PASS model verdicts receive stable terminal failure codes rather than
+`UNEXPECTED_FAILURE`, and the external operator block is one fail-stop script scope so a failed action
+cannot fall through to later parsing or inspection commands.
 This does not turn Terra into a
 native-qualification session, change D08's controlled evaluation assignments, remove Claude from
 NP-12/NP-40, add a router/fallback, authorize a live-home write, or create another approval gate.
@@ -121,17 +190,17 @@ basis, native-session boundary, fresh-context grading cascade, and bounded two-s
 exception explicit without inferring Claude's effective identity from its `opus` alias.
 This feedback is not Approval 1.
 
-**Review sequence:** Publication 5 must complete plan-review, then plan-redline, then plan-wrap with
+**Review sequence:** Publication 6 must complete plan-review, then plan-redline, then plan-wrap with
 required verdicts PASS, PASS, and READY on one stable six-file bundle. Exact-byte verdicts are retained
 outside the publication; any blocking verdict or hash drift
 returns this status to revision. The standalone proposal maps P01–P10 to Abraham's choices and D01–D10
 to the preserved agent defaults.
 
-**Implementation authority:** none until Abraham approves the exact reviewed Publication-5 bundle with
-the exact recovery sentence. Publications 3 and 4 supply historical evidence only.
+**Implementation authority:** none until Abraham approves the exact reviewed Publication-6 bundle with
+the exact recovery sentence. Publications 3, 4, and 5 supply historical evidence only.
 
 **Required recovery Approval-1 sentence:**
-`Approve Goal NP plan Publication 5 with D01-D10 and the Terra bootstrap process-recording recovery amendment.`
+`Approve Goal NP plan Publication 6 with D01-D10 and the Terra sandbox-attestation recovery amendment.`
 
 ## Goal A journal
 

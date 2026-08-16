@@ -15,7 +15,7 @@ param(
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version 2.0
 
-$ExpectedApproval = 'Approve Goal NP plan Publication 5 with D01-D10 and the Terra bootstrap process-recording recovery amendment.'
+$ExpectedApproval = 'Approve Goal NP plan Publication 6 with D01-D10 and the Terra sandbox-attestation recovery amendment.'
 $ExpectedBranch = 'plan/native-codex-skill-parity'
 $ExpectedCodexVersion = 'codex-cli 0.147.0'
 $ExpectedCodexHash = '935a1911ed2556e4ffcec995f4886ac2ac425863ba26fed264df62e30272ad9d'
@@ -23,6 +23,13 @@ $ExpectedCodexPackageHash = 'bbaf3b9597b54bc1d4cf4aea93870e9035629d79bdaba582340
 $ExpectedPythonVersion = 'Python 3.14.3'
 $ExpectedPythonHash = 'cce21c0e8710e304273e98ac4b2b0f5aceb639acbcd2343cbaa5c4e81619c45b'
 $ExpectedLockHash = 'c197caa7da4306f0b744c9d352ce4c1a858d57514453c1ec1d249c83564cd555'
+$PriorP5RequestId = 'tba-03e474757a5e0c92e8d3f0bd4c5a0731a742397a43c99d5e027016643fced916'
+$PriorP5ApprovedCommit = '6d292bb37c37944c71ed8b18214fabb23f22869e'
+$PriorP5ApprovalMessageHash = '2d19ad716f3179baf67c67c77d19dfb29697ea5b2e6f2b0a0d1fe87ee03d0f47'
+$PriorP5ApprovalMessageFileHash = '5ad7472cb113d6965de18204dc1b7f860a0c2982ad1e8152e34547efa714a8e3'
+$PriorP5StateHash = 'b0e9355ff3f39c1ccca196ae45ebe7c4f042c9fcd2587d84882c7d9af4724f50'
+$PriorP5RootManifestHash = '11f84ea3e5140a2832586f63fc362c97b92286b1663c91df2c80fb7784d6f700'
+$PriorP5RootEntryCount = 17
 $PriorP4RequestId = 'tba-461c20be4d35c7255a83d05f91f16c5bccbdd5a36af738360bcedc330ab6b1e4'
 $PriorP4ApprovedCommit = '58223098887468953570ecf153494871c5404605'
 $PriorP4ApprovalMessageHash = '1a7698085d7bc12e74d60874e0d64b4d069b039470ab17701541cfe6c77202fe'
@@ -44,20 +51,28 @@ $FailureCodes = @(
     'PROCESS_EXIT_CODE_UNAVAILABLE',
     'PROCESS_EXIT_NONZERO',
     'PROCESS_CANARY_FAILED',
+    'PERMISSION_ATTESTATION_FAILED',
+    'PERMISSION_STAGING_COLLISION',
+    'PERMISSION_STAGING_CLEANUP_FAILED',
+    'MODEL_VERDICT_BLOCKED',
+    'MODEL_VERDICT_CHANGES_REQUIRED',
+    'MODEL_VERDICT_INVALID',
+    'MODEL_PASS_MATERIAL_FINDINGS',
+    'PRIOR_PUBLICATION5_EVIDENCE_MISMATCH',
     'PRIOR_PUBLICATION4_EVIDENCE_MISMATCH',
     'PRIOR_PUBLICATION3_EVIDENCE_MISMATCH',
     'UNEXPECTED_FAILURE'
 )
 $Utf8NoBom = New-Object System.Text.UTF8Encoding($false)
 
-function New-P5Failure(
+function New-P6Failure(
     [string]$Code,
     [string]$Label,
     [string]$Message,
     [System.Exception]$InnerException = $null,
     [string]$CauseCode = $null
 ) {
-    if ($FailureCodes -cnotcontains $Code) { throw "Unknown Publication-5 failure code: $Code" }
+    if ($FailureCodes -cnotcontains $Code) { throw "Unknown Publication-6 failure code: $Code" }
     if ([string]::IsNullOrWhiteSpace($Label)) { $Label = 'launcher' }
     $rendered = "[$Code] [$Label] $Message"
     $exception = if ($InnerException) {
@@ -71,7 +86,7 @@ function New-P5Failure(
     return $exception
 }
 
-function Get-P5FailureMetadata([System.Exception]$Exception) {
+function Get-P6FailureMetadata([System.Exception]$Exception) {
     $code = 'UNEXPECTED_FAILURE'
     $label = 'launcher'
     $causeCode = $null
@@ -93,6 +108,21 @@ function Get-P5FailureMetadata([System.Exception]$Exception) {
         error = $Exception.Message
         cause_code = $causeCode
     }
+}
+
+function New-P6ModelVerdictFailure(
+    [string]$Code,
+    [string]$Label,
+    [string]$Verdict,
+    [string]$Message,
+    [string]$ResultPath,
+    [string]$ResultSha256
+) {
+    $exception = New-P6Failure $Code $Label $Message
+    $exception.Data['model_verdict'] = $Verdict
+    $exception.Data['model_result_path'] = $ResultPath
+    $exception.Data['model_result_sha256'] = $ResultSha256
+    return $exception
 }
 
 function Get-Sha256Text([string]$Text) {
@@ -235,7 +265,7 @@ function Get-NormalizedProcessName([string]$Name) {
 function Get-QuiescenceProof {
     if ($PSVersionTable.PSVersion.Major -ne 5 -or $PSVersionTable.PSVersion.Minor -ne 1 -or
         $PSVersionTable.PSEdition -cne 'Desktop') {
-        throw 'Publication 5 requires Windows PowerShell 5.1 Desktop.'
+        throw 'Publication 6 requires Windows PowerShell 5.1 Desktop.'
     }
     $processes = @(Get-CimInstance -ClassName Win32_Process -Property ProcessId, ParentProcessId, Name, CreationDate -ErrorAction Stop)
     if ($processes.Count -eq 0) { throw 'The process census is empty.' }
@@ -275,7 +305,7 @@ function Get-QuiescenceProof {
         $currentId = $parentId
     }
     if ($ancestry.Count -eq 0 -or $ancestry[0] -cne 'powershell') {
-        throw 'Publication 5 must run in standalone powershell.exe, not an embedded or substituted shell.'
+        throw 'Publication 6 must run in standalone powershell.exe, not an embedded or substituted shell.'
     }
     $ancestryRoot = $ancestry[$ancestry.Count - 1]
     if ($ancestryRoot -notin @('explorer', 'windowsterminal')) {
@@ -283,12 +313,12 @@ function Get-QuiescenceProof {
     }
     $forbiddenAncestors = @($ancestry.ToArray() | Where-Object { $forbiddenNames -ccontains $_ })
     if ($forbiddenAncestors.Count -ne 0) {
-        throw ('Publication 5 must run from independent ordinary PowerShell; forbidden ancestry: ' +
+        throw ('Publication 6 must run from independent ordinary PowerShell; forbidden ancestry: ' +
             (($forbiddenAncestors | Sort-Object -Unique) -join ', '))
     }
     if ($globalForbidden.Count -ne 0) {
         $names = @($globalForbidden | ForEach-Object { Get-NormalizedProcessName $_.Name } | Sort-Object -Unique)
-        throw ('Publication 5 requires all Code, Codex, Claude, ChatGPT, and Cursor processes to be closed: ' +
+        throw ('Publication 6 requires all Code, Codex, Claude, ChatGPT, and Cursor processes to be closed: ' +
             ($names -join ', '))
     }
     return [ordered]@{
@@ -313,6 +343,67 @@ function Assert-LiveCodexHomeUnchanged(
     $actual = Get-CodexHomeManifest $script:LiveCodexHome
     if (-not (Test-ManifestEqual $Expected $actual)) {
         throw "The live CODEX_HOME changed at boundary: $Label"
+    }
+    return $actual
+}
+
+function Get-PriorP5EvidenceProof {
+    try {
+        $priorRoot = Join-Path $env:LOCALAPPDATA ('SkillMesh\Evidence\GoalNP\TerraBootstrap\' + $PriorP5RequestId)
+        $priorStatePath = Join-Path $priorRoot 'state.json'
+        $priorApprovalPath = Join-Path $env:LOCALAPPDATA 'SkillMesh\Evidence\GoalNP\Publication5\approval1-message.txt'
+        if (-not (Test-Path -LiteralPath $priorApprovalPath -PathType Leaf)) {
+            throw 'The frozen Publication-5 approval file is absent.'
+        }
+        $approvalItem = Get-Item -LiteralPath $priorApprovalPath -Force -ErrorAction Stop
+        if (($approvalItem.Attributes -band [System.IO.FileAttributes]::ReparsePoint) -ne 0) {
+            throw 'The frozen Publication-5 approval file is a reparse point.'
+        }
+        Assert-NoAlternateDataStream $approvalItem.FullName
+        $approvalFileHash = Get-FileSha256 $approvalItem.FullName
+        if ($approvalFileHash -cne $PriorP5ApprovalMessageFileHash) {
+            throw 'The frozen Publication-5 approval file hash changed.'
+        }
+        if (-not (Test-Path -LiteralPath $priorStatePath -PathType Leaf)) {
+            throw 'The frozen Publication-5 blocked state is absent.'
+        }
+        $stateHash = Get-FileSha256 $priorStatePath
+        if ($stateHash -cne $PriorP5StateHash) { throw 'The frozen Publication-5 blocked state hash changed.' }
+        $state = Get-Content -LiteralPath $priorStatePath -Raw | ConvertFrom-Json
+        if ($state.schema_version -ne 1 -or $state.request_id -cne $PriorP5RequestId -or
+            $state.phase -cne 'blocked' -or $state.approved_commit -cne $PriorP5ApprovedCommit -or
+            $state.approval_message_sha256 -cne $PriorP5ApprovalMessageHash) {
+            throw 'The frozen Publication-5 blocked state identity changed.'
+        }
+        $rootManifest = Get-OrdinalTreeManifest $priorRoot
+        if (-not $rootManifest.exists -or $rootManifest.entry_count -ne $PriorP5RootEntryCount -or
+            $rootManifest.sha256 -cne $PriorP5RootManifestHash) {
+            throw 'The frozen Publication-5 blocked evidence root changed.'
+        }
+        return [ordered]@{
+            request_id = $PriorP5RequestId
+            approved_commit = $PriorP5ApprovedCommit
+            approval_message_sha256 = $PriorP5ApprovalMessageHash
+            approval_message_file_sha256 = $approvalFileHash
+            state_sha256 = $stateHash
+            root_manifest = $rootManifest
+        }
+    }
+    catch {
+        $metadata = Get-P6FailureMetadata $_.Exception
+        if ($metadata.error_code -ceq 'PRIOR_PUBLICATION5_EVIDENCE_MISMATCH') { throw $_.Exception }
+        throw (New-P6Failure 'PRIOR_PUBLICATION5_EVIDENCE_MISMATCH' 'publication-5-evidence' `
+            $_.Exception.Message $_.Exception)
+    }
+}
+
+function Assert-PriorP5EvidenceUnchanged([System.Collections.IDictionary]$Expected) {
+    $actual = Get-PriorP5EvidenceProof
+    if ($actual.approval_message_file_sha256 -cne $Expected.approval_message_file_sha256 -or
+        $actual.state_sha256 -cne $Expected.state_sha256 -or
+        -not (Test-ManifestEqual $actual.root_manifest $Expected.root_manifest)) {
+        throw (New-P6Failure 'PRIOR_PUBLICATION5_EVIDENCE_MISMATCH' 'publication-5-evidence' `
+            'Publication-5 blocked evidence changed during Publication-6 execution.')
     }
     return $actual
 }
@@ -360,9 +451,9 @@ function Get-PriorP4EvidenceProof {
         }
     }
     catch {
-        $metadata = Get-P5FailureMetadata $_.Exception
+        $metadata = Get-P6FailureMetadata $_.Exception
         if ($metadata.error_code -ceq 'PRIOR_PUBLICATION4_EVIDENCE_MISMATCH') { throw $_.Exception }
-        throw (New-P5Failure 'PRIOR_PUBLICATION4_EVIDENCE_MISMATCH' 'publication-4-evidence' `
+        throw (New-P6Failure 'PRIOR_PUBLICATION4_EVIDENCE_MISMATCH' 'publication-4-evidence' `
             $_.Exception.Message $_.Exception)
     }
 }
@@ -372,8 +463,8 @@ function Assert-PriorP4EvidenceUnchanged([System.Collections.IDictionary]$Expect
     if ($actual.approval_message_file_sha256 -cne $Expected.approval_message_file_sha256 -or
         $actual.state_sha256 -cne $Expected.state_sha256 -or
         -not (Test-ManifestEqual $actual.root_manifest $Expected.root_manifest)) {
-        throw (New-P5Failure 'PRIOR_PUBLICATION4_EVIDENCE_MISMATCH' 'publication-4-evidence' `
-            'Publication-4 blocked evidence changed during Publication-5 execution.')
+        throw (New-P6Failure 'PRIOR_PUBLICATION4_EVIDENCE_MISMATCH' 'publication-4-evidence' `
+            'Publication-4 blocked evidence changed during Publication-6 execution.')
     }
     return $actual
 }
@@ -421,9 +512,9 @@ function Get-PriorP3EvidenceProof {
         }
     }
     catch {
-        $metadata = Get-P5FailureMetadata $_.Exception
+        $metadata = Get-P6FailureMetadata $_.Exception
         if ($metadata.error_code -ceq 'PRIOR_PUBLICATION3_EVIDENCE_MISMATCH') { throw $_.Exception }
-        throw (New-P5Failure 'PRIOR_PUBLICATION3_EVIDENCE_MISMATCH' 'publication-3-evidence' `
+        throw (New-P6Failure 'PRIOR_PUBLICATION3_EVIDENCE_MISMATCH' 'publication-3-evidence' `
             $_.Exception.Message $_.Exception)
     }
 }
@@ -433,8 +524,8 @@ function Assert-PriorP3EvidenceUnchanged([System.Collections.IDictionary]$Expect
     if ($actual.approval_message_file_sha256 -cne $Expected.approval_message_file_sha256 -or
         $actual.state_sha256 -cne $Expected.state_sha256 -or
         -not (Test-ManifestEqual $actual.root_manifest $Expected.root_manifest)) {
-        throw (New-P5Failure 'PRIOR_PUBLICATION3_EVIDENCE_MISMATCH' 'publication-3-evidence' `
-            'Publication-3 blocked evidence changed during Publication-5 execution.')
+        throw (New-P6Failure 'PRIOR_PUBLICATION3_EVIDENCE_MISMATCH' 'publication-3-evidence' `
+            'Publication-3 blocked evidence changed during Publication-6 execution.')
     }
     return $actual
 }
@@ -447,6 +538,8 @@ function Get-ClosedConfigArguments {
         'project_doc_max_bytes=0',
         'project_doc_fallback_filenames=[]',
         'agents.enabled=false',
+        'skills.bundled.enabled=false',
+        'skills.include_instructions=false',
         'web_search=disabled'
     )) {
         $arguments.Add('--config')
@@ -464,29 +557,698 @@ function Get-ClosedConfigArguments {
     return $arguments.ToArray()
 }
 
+function Get-ExpectedPermissionInstructionsText([string]$Sandbox) {
+    $sandboxSentence = switch -CaseSensitive ($Sandbox) {
+        'workspace-write' {
+            'Filesystem sandboxing defines which files can be read or written. `sandbox_mode` is `workspace-write`: The sandbox permits reading files, and editing files in `cwd` and `writable_roots`. Editing files in other directories requires approval. Network access is restricted.'
+        }
+        'read-only' {
+            'Filesystem sandboxing defines which files can be read or written. `sandbox_mode` is `read-only`: The sandbox only permits reading files. Network access is restricted.'
+        }
+        default { throw "Unsupported permission-instructions sandbox: $Sandbox" }
+    }
+    return @(
+        '<permissions instructions>',
+        $sandboxSentence,
+        'Approval policy is currently never. Do not provide the `sandbox_permissions` for any reason, commands will be rejected.',
+        '</permissions instructions>'
+    ) -join "`n"
+}
+
+function Get-ExpectedEnvironmentContextText(
+    [string]$Sandbox,
+    [string]$OwnerRoot
+) {
+    $root = [System.IO.Path]::GetFullPath($OwnerRoot).TrimEnd('\')
+    $writeEntries = if ($Sandbox -ceq 'workspace-write') {
+        '<entry access="write"><path>' + $root + '</path></entry>' +
+        '<entry access="write"><special>:slash_tmp</special></entry>' +
+        '<entry access="write"><special>:tmpdir</special></entry>'
+    }
+    elseif ($Sandbox -ceq 'read-only') { '' }
+    else { throw "Unsupported environment-context sandbox: $Sandbox" }
+    $protectedReadEntries = if ($Sandbox -ceq 'workspace-write') {
+        '<entry access="read"><path>' + (Join-Path $root '.git') + '</path></entry>' +
+        '<entry access="read"><path>' + (Join-Path $root '.agents') + '</path></entry>' +
+        '<entry access="read"><path>' + (Join-Path $root '.codex') + '</path></entry>'
+    } else { '' }
+    $filesystem = '<filesystem><workspace_roots><root>' + $root + '</root></workspace_roots>' +
+        '<permission_profile type="managed"><file_system type="restricted">' +
+        '<entry access="read"><special>:root</special></entry>' + $writeEntries +
+        $protectedReadEntries + '</file_system></permission_profile></filesystem>'
+    return @(
+        '<environment_context>',
+        ('  <cwd>' + $root + '</cwd>'),
+        '  <shell>powershell</shell>',
+        ('  <current_date>' + [DateTime]::Now.ToString('yyyy-MM-dd') + '</current_date>'),
+        '  <timezone>America/Los_Angeles</timezone>',
+        ('  ' + $filesystem),
+        '</environment_context>'
+    ) -join "`n"
+}
+
+function New-PermissionAttestationCanaryJson(
+    [string]$Sandbox,
+    [string]$Cwd,
+    [string[]]$WorkspaceRoots,
+    [string[]]$WritePaths,
+    [string]$ProfileType = 'managed',
+    [string]$FileSystemType = 'restricted',
+    [int]$ProfileCount = 1,
+    [string]$DiagnosticText = 'permission-parser-canary',
+    [string]$PermissionExtraText = '',
+    [string]$EnvironmentExtraText = '',
+    [string]$ExtraAmbientText = ''
+) {
+    $rootTags = (($WorkspaceRoots | ForEach-Object { '<root>' + $_ + '</root>' }) -join '')
+    $writeTags = (($WritePaths | ForEach-Object {
+        '<entry access="write"><path>' + $_ + '</path></entry>'
+    }) -join '')
+    $specialWrites = if ($Sandbox -ceq 'workspace-write') {
+        '<entry access="write"><special>:slash_tmp</special></entry>' +
+        '<entry access="write"><special>:tmpdir</special></entry>'
+    } else { '' }
+    $protectedReads = if ($Sandbox -ceq 'workspace-write' -and $WorkspaceRoots.Count -ne 0) {
+        '<entry access="read"><path>' + (Join-Path $WorkspaceRoots[0] '.git') + '</path></entry>' +
+        '<entry access="read"><path>' + (Join-Path $WorkspaceRoots[0] '.agents') + '</path></entry>' +
+        '<entry access="read"><path>' + (Join-Path $WorkspaceRoots[0] '.codex') + '</path></entry>'
+    } else { '' }
+    $permissions = Get-ExpectedPermissionInstructionsText $Sandbox
+    if (-not [string]::IsNullOrWhiteSpace($PermissionExtraText)) {
+        $permissions = $permissions.Replace(
+            "`n</permissions instructions>",
+            ("`n" + $PermissionExtraText + "`n</permissions instructions>")
+        )
+    }
+    $profileMarkup = ''
+    for ($profileIndex = 0; $profileIndex -lt $ProfileCount; $profileIndex++) {
+        $profileMarkup += '<permission_profile type="' + $ProfileType + '"><file_system type="' +
+            $FileSystemType + '"><entry access="read"><special>:root</special></entry>' +
+            $writeTags + $specialWrites + $protectedReads + '</file_system></permission_profile>'
+    }
+    $environment = @(
+        '<environment_context>',
+        ('  <cwd>' + $Cwd + '</cwd>'),
+        '  <shell>powershell</shell>',
+        ('  <current_date>' + [DateTime]::Now.ToString('yyyy-MM-dd') + '</current_date>'),
+        '  <timezone>America/Los_Angeles</timezone>',
+        ('  <filesystem><workspace_roots>' + $rootTags + '</workspace_roots>' +
+            $profileMarkup + '</filesystem>'),
+        '</environment_context>'
+    ) -join "`n"
+    if (-not [string]::IsNullOrWhiteSpace($EnvironmentExtraText)) {
+        $environment = $environment.Replace(
+            "`n</environment_context>",
+            ("`n" + $EnvironmentExtraText + "`n</environment_context>")
+        )
+    }
+    $developerContent = @([ordered]@{ type = 'input_text'; text = $permissions })
+    if (-not [string]::IsNullOrWhiteSpace($ExtraAmbientText)) {
+        $developerContent += [ordered]@{ type = 'input_text'; text = $ExtraAmbientText }
+    }
+    $items = @(
+        [ordered]@{ type = 'message'; role = 'developer'; content = $developerContent },
+        [ordered]@{
+            type = 'message'
+            role = 'user'
+            content = @([ordered]@{ type = 'input_text'; text = $environment })
+        },
+        [ordered]@{
+            type = 'message'
+            role = 'user'
+            content = @([ordered]@{ type = 'input_text'; text = $DiagnosticText })
+        }
+    )
+    return ($items | ConvertTo-Json -Depth 6 -Compress)
+}
+
+function Assert-PermissionAttestationJson(
+    [string]$JsonText,
+    [ValidateSet('read-only', 'workspace-write')]
+    [string]$ExpectedSandbox,
+    [string]$ExpectedRoot,
+    [string]$ExpectedDiagnosticText,
+    [string]$Label
+) {
+    try {
+        $root = [System.IO.Path]::GetFullPath($ExpectedRoot).TrimEnd('\')
+        $payload = $JsonText | ConvertFrom-Json
+        $items = @($payload)
+        if ($items.Count -ne 3) { throw 'Prompt input must contain exactly three message items.' }
+        $expectedRoles = @('developer', 'user', 'user')
+        $expectedContentCounts = @(1, 1, 1)
+        for ($itemIndex = 0; $itemIndex -lt 3; $itemIndex++) {
+            $item = $items[$itemIndex]
+            if (-not $item.PSObject.Properties['type'] -or [string]$item.type -cne 'message' -or
+                -not $item.PSObject.Properties['role'] -or [string]$item.role -cne $expectedRoles[$itemIndex] -or
+                -not $item.PSObject.Properties['content'] -or
+                @($item.content).Count -ne $expectedContentCounts[$itemIndex]) {
+                throw "Prompt input message shape is invalid at item $itemIndex."
+            }
+            foreach ($content in @($item.content)) {
+                if (-not $content -or -not $content.PSObject.Properties['type'] -or
+                    [string]$content.type -cne 'input_text' -or
+                    -not $content.PSObject.Properties['text'] -or
+                    [string]::IsNullOrWhiteSpace([string]$content.text)) {
+                    throw "Prompt input contains non-text or empty content at item $itemIndex."
+                }
+            }
+        }
+        $permissionText = [string]$items[0].content[0].text
+        $environmentText = [string]$items[1].content[0].text
+        $diagnosticText = [string]$items[2].content[0].text
+        if ($diagnosticText -cne $ExpectedDiagnosticText) {
+            throw 'Prompt input diagnostic user text is not exact.'
+        }
+        $normalizedPermissionText = $permissionText.Replace("`r`n", "`n").Replace("`r", "`n").Trim()
+        if ($normalizedPermissionText -cne (Get-ExpectedPermissionInstructionsText $ExpectedSandbox)) {
+            throw 'Permissions text differs from the complete closed permission grammar.'
+        }
+        if ([regex]::Matches($permissionText, '<permissions instructions>').Count -ne 1 -or
+            [regex]::Matches($permissionText, '</permissions instructions>').Count -ne 1) {
+            throw 'Permissions block tags are not singular and closed.'
+        }
+        $sandboxMatches = [regex]::Matches($permissionText, 'sandbox_mode` is `([^`]+)`')
+        if ($sandboxMatches.Count -ne 1 -or
+            $sandboxMatches[0].Groups[1].Value -cne $ExpectedSandbox) {
+            throw "Effective sandbox is not exactly $ExpectedSandbox."
+        }
+        $approvalMatches = [regex]::Matches($permissionText, 'Approval policy is currently ([^.]+)\.')
+        if ($approvalMatches.Count -ne 1 -or $approvalMatches[0].Groups[1].Value -cne 'never') {
+            throw 'Effective approval policy is not exactly never.'
+        }
+        if ([regex]::Matches($permissionText, 'Approval policy is currently').Count -ne 1 -or
+            [regex]::Matches($permissionText, 'Network access is').Count -ne 1 -or
+            [regex]::Matches($permissionText, 'Network access is restricted\.').Count -ne 1) {
+            throw 'Effective network policy is not exactly restricted.'
+        }
+
+        if ([regex]::Matches($environmentText, '<environment_context>').Count -ne 1 -or
+            [regex]::Matches($environmentText, '</environment_context>').Count -ne 1) {
+            throw 'Environment block tags are not singular and closed.'
+        }
+        $cwdMatches = [regex]::Matches($environmentText, '<cwd>([^<]+)</cwd>')
+        if ($cwdMatches.Count -ne 1) { throw 'Prompt input does not expose exactly one cwd.' }
+        $effectiveCwd = [System.IO.Path]::GetFullPath($cwdMatches[0].Groups[1].Value).TrimEnd('\')
+        if (-not $effectiveCwd.Equals($root, [StringComparison]::OrdinalIgnoreCase)) {
+            throw 'Effective cwd is not the exact owner worktree.'
+        }
+        $workspaceRootContainer = [regex]::Matches(
+            $environmentText,
+            '(?s)<workspace_roots>(.*?)</workspace_roots>'
+        )
+        if ($workspaceRootContainer.Count -ne 1) {
+            throw 'Prompt input does not expose exactly one workspace-roots container.'
+        }
+        $workspaceRootMatches = [regex]::Matches(
+            $workspaceRootContainer[0].Groups[1].Value,
+            '<root>([^<]+)</root>'
+        )
+        if ($workspaceRootMatches.Count -ne 1) {
+            throw 'Effective workspace roots are not the exact closed owner set.'
+        }
+        $effectiveWorkspaceRoot = [System.IO.Path]::GetFullPath(
+            $workspaceRootMatches[0].Groups[1].Value
+        ).TrimEnd('\')
+        if (-not $effectiveWorkspaceRoot.Equals($root, [StringComparison]::OrdinalIgnoreCase)) {
+            throw 'Effective workspace root is not the exact owner worktree.'
+        }
+
+        if ([regex]::Matches($environmentText, '<permission_profile\b').Count -ne 1 -or
+            [regex]::Matches($environmentText, '</permission_profile>').Count -ne 1 -or
+            [regex]::Matches($environmentText, '<file_system\b').Count -ne 1 -or
+            [regex]::Matches($environmentText, '</file_system>').Count -ne 1) {
+            throw 'Permission-profile and restricted-filesystem tags are not singular and closed.'
+        }
+        $allProfileMatches = [regex]::Matches(
+            $environmentText,
+            '(?s)<permission_profile\b[^>]*>.*?</permission_profile>'
+        )
+        $profileMatches = [regex]::Matches(
+            $environmentText,
+            '(?s)<permission_profile type="managed">(.*?)</permission_profile>'
+        )
+        if ($allProfileMatches.Count -ne 1 -or $profileMatches.Count -ne 1) {
+            throw 'Prompt input does not expose exactly one managed permission profile.'
+        }
+        $profileText = $profileMatches[0].Value
+        $allFileSystemMatches = [regex]::Matches($profileText, '(?s)<file_system\b[^>]*>.*?</file_system>')
+        $restrictedFileSystemMatches = [regex]::Matches(
+            $profileText,
+            '(?s)<file_system type="restricted">(.*?)</file_system>'
+        )
+        if ($allFileSystemMatches.Count -ne 1 -or $restrictedFileSystemMatches.Count -ne 1) {
+            throw 'Permission profile does not expose exactly one restricted filesystem.'
+        }
+        $restrictedFileSystemText = $restrictedFileSystemMatches[0].Value
+        $writePathMatches = [regex]::Matches(
+            $restrictedFileSystemText,
+            '<entry access="write"><path>([^<]+)</path></entry>'
+        )
+        $writePaths = @($writePathMatches | ForEach-Object {
+            [System.IO.Path]::GetFullPath($_.Groups[1].Value).TrimEnd('\')
+        })
+        $specialWriteMatches = [regex]::Matches(
+            $restrictedFileSystemText,
+            '<entry access="write"><special>([^<]+)</special></entry>'
+        )
+        $specialWrites = @($specialWriteMatches | ForEach-Object { $_.Groups[1].Value })
+        $allWriteEntries = [regex]::Matches(
+            $restrictedFileSystemText,
+            '(?s)<entry\b[^>]*\baccess="write"[^>]*>.*?</entry>'
+        )
+        if ($allWriteEntries.Count -ne ($writePaths.Count + $specialWrites.Count)) {
+            throw 'Restricted filesystem contains an unknown write-entry form.'
+        }
+        if ($ExpectedSandbox -ceq 'workspace-write') {
+            if ($writePaths.Count -ne 1 -or
+                -not $writePaths[0].Equals($root, [StringComparison]::OrdinalIgnoreCase)) {
+                throw 'Effective filesystem write paths are not the exact owner worktree.'
+            }
+            if ($specialWrites.Count -ne 2 -or $specialWrites[0] -cne ':slash_tmp' -or
+                $specialWrites[1] -cne ':tmpdir') {
+                throw 'Effective special write paths are not the closed Codex temporary set.'
+            }
+        }
+        elseif ($writePaths.Count -ne 0 -or $specialWrites.Count -ne 0) {
+            throw 'Read-only permission profile exposes a write entry.'
+        }
+        $normalizedEnvironmentText = $environmentText.Replace("`r`n", "`n").Replace("`r", "`n").Trim()
+        if ($normalizedEnvironmentText -cne (Get-ExpectedEnvironmentContextText $ExpectedSandbox $root)) {
+            throw 'Environment text differs from the complete closed environment grammar.'
+        }
+
+        $allClosedTexts = @($permissionText, $environmentText, $diagnosticText)
+        foreach ($forbidden in @(
+            'AGENTS.md instructions for', 'GitHub Copilot workspace adapter', '.agents/skills/',
+            '.agents\skills\', '.github/skills/', '.github\skills\', '<apps_instructions>',
+            '<plugins_instructions>', '<recommended_plugins>', '<skills_instructions>',
+            '</skills_instructions>', '/skills/.system/', '\skills\.system\'
+        )) {
+            foreach ($text in $allClosedTexts) {
+                if ($text.IndexOf($forbidden, [StringComparison]::OrdinalIgnoreCase) -ge 0) {
+                    throw "Prompt input contains forbidden ambient input: $forbidden"
+                }
+            }
+        }
+        foreach ($text in $allClosedTexts) {
+            if ([regex]::Matches($text, '\(file:\s*[^\)]+\)', [System.Text.RegularExpressions.RegexOptions]::IgnoreCase).Count -ne 0) {
+                throw 'Prompt input exposes a forbidden skill or file locator.'
+            }
+        }
+        return [ordered]@{
+            effective_sandbox = $ExpectedSandbox
+            effective_approval_policy = 'never'
+            effective_network_policy = 'restricted'
+            effective_cwd = $effectiveCwd
+            workspace_roots = @($effectiveWorkspaceRoot)
+            filesystem_write_paths = $writePaths
+            special_write_paths = $specialWrites
+            system_skill_instruction_block_count = 0
+            system_skill_locator_count = 0
+        }
+    }
+    catch {
+        $metadata = Get-P6FailureMetadata $_.Exception
+        if ($metadata.error_code -ceq 'PERMISSION_ATTESTATION_FAILED') { throw $_.Exception }
+        throw (New-P6Failure 'PERMISSION_ATTESTATION_FAILED' $Label $_.Exception.Message $_.Exception)
+    }
+}
+
+function Invoke-PermissionParserCanary([string]$OwnerRoot) {
+    $root = [System.IO.Path]::GetFullPath($OwnerRoot).TrimEnd('\')
+    $acceptedJson = New-PermissionAttestationCanaryJson 'workspace-write' $root @($root) @($root) `
+        'managed' 'restricted' 1 'permission-parser-canary'
+    $accepted = Assert-PermissionAttestationJson $acceptedJson 'workspace-write' $root `
+        'permission-parser-canary' 'permission-parser-canary-accept'
+    $rejectCases = @(
+        [ordered]@{
+            name = 'read-only'
+            json = New-PermissionAttestationCanaryJson 'read-only' $root @($root) @() `
+                'managed' 'restricted' 1 'permission-parser-canary'
+        },
+        [ordered]@{
+            name = 'wrong-cwd'
+            json = New-PermissionAttestationCanaryJson 'workspace-write' ($root + '\wrong') @($root) @($root) `
+                'managed' 'restricted' 1 'permission-parser-canary'
+        },
+        [ordered]@{
+            name = 'missing-write-path'
+            json = New-PermissionAttestationCanaryJson 'workspace-write' $root @($root) @() `
+                'managed' 'restricted' 1 'permission-parser-canary'
+        },
+        [ordered]@{
+            name = 'extra-write-path'
+            json = New-PermissionAttestationCanaryJson 'workspace-write' $root @($root) @($root, ($root + '\extra')) `
+                'managed' 'restricted' 1 'permission-parser-canary'
+        },
+        [ordered]@{
+            name = 'unmanaged-profile'
+            json = New-PermissionAttestationCanaryJson 'workspace-write' $root @($root) @($root) `
+                'unmanaged' 'restricted' 1 'permission-parser-canary'
+        },
+        [ordered]@{
+            name = 'unrestricted-filesystem'
+            json = New-PermissionAttestationCanaryJson 'workspace-write' $root @($root) @($root) `
+                'managed' 'unrestricted' 1 'permission-parser-canary'
+        },
+        [ordered]@{
+            name = 'duplicate-profile'
+            json = New-PermissionAttestationCanaryJson 'workspace-write' $root @($root) @($root) `
+                'managed' 'restricted' 2 'permission-parser-canary'
+        },
+        [ordered]@{
+            name = 'extra-ambient-content'
+            json = New-PermissionAttestationCanaryJson 'workspace-write' $root @($root) @($root) `
+                'managed' 'restricted' 1 'permission-parser-canary' '' '' '<memory>unexpected</memory>'
+        },
+        [ordered]@{
+            name = 'permission-embedded-text'
+            json = New-PermissionAttestationCanaryJson 'workspace-write' $root @($root) @($root) `
+                'managed' 'restricted' 1 'permission-parser-canary' '<memory>unexpected</memory>'
+        },
+        [ordered]@{
+            name = 'environment-embedded-text'
+            json = New-PermissionAttestationCanaryJson 'workspace-write' $root @($root) @($root) `
+                'managed' 'restricted' 1 'permission-parser-canary' '' '<memory>unexpected</memory>'
+        },
+        [ordered]@{
+            name = 'system-skills-block'
+            json = New-PermissionAttestationCanaryJson 'workspace-write' $root @($root) @($root) `
+                'managed' 'restricted' 1 'permission-parser-canary' `
+                '<skills_instructions>unexpected</skills_instructions>'
+        },
+        [ordered]@{
+            name = 'system-skill-locator'
+            json = New-PermissionAttestationCanaryJson 'workspace-write' $root @($root) @($root) `
+                'managed' 'restricted' 1 'permission-parser-canary' `
+                '(file: C:/canary/skills/.system/sample/SKILL.md)'
+        }
+    )
+    $rejected = New-Object System.Collections.Generic.List[string]
+    foreach ($case in $rejectCases) {
+        $didReject = $false
+        try {
+            $null = Assert-PermissionAttestationJson $case.json 'workspace-write' $root `
+                'permission-parser-canary' ('permission-parser-canary-' + $case.name)
+        }
+        catch {
+            $metadata = Get-P6FailureMetadata $_.Exception
+            if ($metadata.error_code -cne 'PERMISSION_ATTESTATION_FAILED') { throw $_.Exception }
+            $didReject = $true
+        }
+        if (-not $didReject) {
+            throw (New-P6Failure 'PERMISSION_ATTESTATION_FAILED' 'permission-parser-canary' `
+                ('Parser canary accepted forbidden case: ' + $case.name))
+        }
+        $rejected.Add($case.name)
+    }
+    return [ordered]@{
+        accepted_case_count = 1
+        rejected_case_count = $rejected.Count
+        rejected_cases = $rejected.ToArray()
+        system_skill_surface_absent = ($accepted.system_skill_instruction_block_count -eq 0 -and
+            $accepted.system_skill_locator_count -eq 0)
+    }
+}
+
+function Assert-PermissionStagingDirectory([string]$Path) {
+    $item = Get-Item -LiteralPath $Path -Force -ErrorAction Stop
+    if (-not $item.PSIsContainer -or
+        ($item.Attributes -band [System.IO.FileAttributes]::ReparsePoint) -ne 0) {
+        throw "Permission-staging directory identity is invalid: $Path"
+    }
+    Assert-NoAlternateDataStream $item.FullName
+    return $item.FullName.TrimEnd('\')
+}
+
+function New-PermissionStagingLayout {
+    $localAppData = [System.IO.Path]::GetFullPath($env:LOCALAPPDATA).TrimEnd('\')
+    $skillMeshRoot = Join-Path $localAppData 'SkillMesh'
+    if (-not (Test-Path -LiteralPath $skillMeshRoot -PathType Container)) {
+        throw 'The SkillMesh local application-data root is absent.'
+    }
+    $null = Assert-PermissionStagingDirectory $skillMeshRoot
+    $stagingRoot = Join-Path $skillMeshRoot 'Staging'
+    $goalRoot = Join-Path $stagingRoot 'GoalNP'
+    $publicationRoot = Join-Path $goalRoot 'Publication6'
+    $requestRoot = Join-Path $publicationRoot $script:RequestId
+    $attestationRoot = Join-Path $requestRoot 'permission-attestation'
+    $codexHome = Join-Path $attestationRoot 'codex-home'
+    $outputRoot = Join-Path $attestationRoot 'output'
+    $tempRoot = Join-Path $attestationRoot 'temp'
+    $createdParents = New-Object System.Collections.Generic.List[string]
+    $layout = [ordered]@{
+        staging_root = [System.IO.Path]::GetFullPath($stagingRoot).TrimEnd('\')
+        request_root = [System.IO.Path]::GetFullPath($requestRoot).TrimEnd('\')
+        attestation_root = [System.IO.Path]::GetFullPath($attestationRoot).TrimEnd('\')
+        codex_home = [System.IO.Path]::GetFullPath($codexHome).TrimEnd('\')
+        output_root = [System.IO.Path]::GetFullPath($outputRoot).TrimEnd('\')
+        temp_root = [System.IO.Path]::GetFullPath($tempRoot).TrimEnd('\')
+        created_parents = @()
+        request_root_owned = $false
+    }
+    try {
+        foreach ($directory in @($stagingRoot, $goalRoot, $publicationRoot)) {
+            if (Test-Path -LiteralPath $directory) {
+                $null = Assert-PermissionStagingDirectory $directory
+            }
+            else {
+                New-Item -ItemType Directory -Path $directory | Out-Null
+                $createdParents.Add([System.IO.Path]::GetFullPath($directory).TrimEnd('\'))
+                $layout.created_parents = $createdParents.ToArray()
+                $null = Assert-PermissionStagingDirectory $directory
+            }
+        }
+        if (Test-Path -LiteralPath $requestRoot) {
+            throw (New-P6Failure 'PERMISSION_STAGING_COLLISION' 'permission-staging' `
+                'The deterministic Publication-6 permission-staging request path already exists; no cleanup was attempted.')
+        }
+        New-Item -ItemType Directory -Path $requestRoot | Out-Null
+        $layout.request_root_owned = $true
+        $null = Assert-PermissionStagingDirectory $requestRoot
+        foreach ($directory in @($attestationRoot, $codexHome, $outputRoot, $tempRoot)) {
+            New-Item -ItemType Directory -Path $directory | Out-Null
+            $null = Assert-PermissionStagingDirectory $directory
+        }
+        return $layout
+    }
+    catch {
+        $creationFailure = $_.Exception
+        if ($layout.request_root_owned -or @($layout.created_parents).Count -ne 0) {
+            try { Remove-PermissionStagingLayout $layout }
+            catch { throw $_.Exception }
+        }
+        throw $creationFailure
+    }
+}
+
+function Remove-PermissionStagingLayout([System.Collections.IDictionary]$Layout) {
+    try {
+        $localAppData = [System.IO.Path]::GetFullPath($env:LOCALAPPDATA).TrimEnd('\')
+        $expectedStagingRoot = Join-Path $localAppData 'SkillMesh\Staging'
+        $expectedRequestRoot = Join-Path $expectedStagingRoot ('GoalNP\Publication6\' + $script:RequestId)
+        $stagingRoot = [System.IO.Path]::GetFullPath([string]$Layout.staging_root).TrimEnd('\')
+        $requestRoot = [System.IO.Path]::GetFullPath([string]$Layout.request_root).TrimEnd('\')
+        if (-not $stagingRoot.Equals($expectedStagingRoot, [StringComparison]::OrdinalIgnoreCase) -or
+            -not $requestRoot.Equals($expectedRequestRoot, [StringComparison]::OrdinalIgnoreCase) -or
+            -not $requestRoot.StartsWith($stagingRoot + '\', [StringComparison]::OrdinalIgnoreCase)) {
+            throw 'Refusing to remove a permission-staging path outside the exact Publication-6 request root.'
+        }
+        $unownedRequestRoot = $false
+        if ((Test-Path -LiteralPath $requestRoot) -and [bool]$Layout.request_root_owned) {
+            $null = Get-OrdinalTreeManifest $requestRoot
+            Remove-Item -LiteralPath $requestRoot -Recurse -Force
+            if (Test-Path -LiteralPath $requestRoot) { throw 'Permission-staging request cleanup was incomplete.' }
+        }
+        elseif (Test-Path -LiteralPath $requestRoot) {
+            $unownedRequestRoot = $true
+        }
+        $allowedParents = @(
+            (Join-Path $expectedStagingRoot 'GoalNP\Publication6'),
+            (Join-Path $expectedStagingRoot 'GoalNP'),
+            $expectedStagingRoot
+        )
+        $createdParents = @($Layout.created_parents)
+        [Array]::Reverse($createdParents)
+        foreach ($parent in $createdParents) {
+            $resolvedParent = [System.IO.Path]::GetFullPath([string]$parent).TrimEnd('\')
+            $isAllowed = @($allowedParents | Where-Object {
+                $resolvedParent.Equals($_, [StringComparison]::OrdinalIgnoreCase)
+            }).Count -eq 1
+            if (-not $isAllowed) { throw "Refusing to remove unexpected staging parent: $resolvedParent" }
+            if (Test-Path -LiteralPath $resolvedParent) {
+                $null = Assert-PermissionStagingDirectory $resolvedParent
+                if (@(Get-ChildItem -LiteralPath $resolvedParent -Force -ErrorAction Stop).Count -ne 0) {
+                    if ($unownedRequestRoot) { continue }
+                    throw "Created permission-staging parent is not empty: $resolvedParent"
+                }
+                Remove-Item -LiteralPath $resolvedParent -Force
+            }
+        }
+    }
+    catch {
+        $metadata = Get-P6FailureMetadata $_.Exception
+        if ($metadata.error_code -ceq 'PERMISSION_STAGING_CLEANUP_FAILED') { throw $_.Exception }
+        throw (New-P6Failure 'PERMISSION_STAGING_CLEANUP_FAILED' 'permission-staging-cleanup' `
+            $_.Exception.Message $_.Exception)
+    }
+}
+
+function Invoke-PreclaimPermissionAttestation(
+    [string]$CodexExe,
+    [string]$LiveAuthPath,
+    [string]$LiveAuthSha256,
+    [string]$LiveCodexHome,
+    [System.Collections.IDictionary]$ExpectedLiveCodexHomeManifest,
+    [bool]$RetainStaging
+) {
+    $layout = $null
+    $originalCodexHome = [Environment]::GetEnvironmentVariable('CODEX_HOME', 'Process')
+    $originalTemp = [Environment]::GetEnvironmentVariable('TEMP', 'Process')
+    $originalTmp = [Environment]::GetEnvironmentVariable('TMP', 'Process')
+    $failure = $null
+    $cleanupFailure = $null
+    $result = $null
+    $liveBefore = Get-CodexHomeManifest $LiveCodexHome
+    if (-not (Test-ManifestEqual $ExpectedLiveCodexHomeManifest $liveBefore)) {
+        throw (New-P6Failure 'PERMISSION_ATTESTATION_FAILED' 'preclaim-live-home' `
+            'The live CODEX_HOME changed before permission attestation.')
+    }
+    $priorP5Before = Get-PriorP5EvidenceProof
+    $priorP4Before = Get-PriorP4EvidenceProof
+    $priorP3Before = Get-PriorP3EvidenceProof
+    $liveAfter = $null
+    $priorP5After = $null
+    $priorP4After = $null
+    $priorP3After = $null
+    try {
+        $layout = New-PermissionStagingLayout
+        $scratchAuthPath = Join-Path $layout.codex_home 'auth.json'
+        Copy-Item -LiteralPath $LiveAuthPath -Destination $scratchAuthPath
+        $scratchAuthItem = Get-Item -LiteralPath $scratchAuthPath -Force -ErrorAction Stop
+        if (($scratchAuthItem.Attributes -band [System.IO.FileAttributes]::ReparsePoint) -ne 0) {
+            throw 'Permission-staging Codex authentication copy is a reparse point.'
+        }
+        Assert-NoAlternateDataStream $scratchAuthItem.FullName
+        if ((Get-FileSha256 $scratchAuthPath) -cne $LiveAuthSha256) {
+            throw 'Permission-staging Codex authentication copy mismatch.'
+        }
+        $env:CODEX_HOME = $layout.codex_home
+        $env:TEMP = $layout.temp_root
+        $env:TMP = $layout.temp_root
+        $arguments = @('--model', 'gpt-5.6-terra') + @(Get-ClosedConfigArguments) + @(
+            '--sandbox', 'workspace-write', '--cd', $script:RepoRoot,
+            'debug', 'prompt-input', 'Goal-NP-Publication-6-preclaim-permission-attestation'
+        )
+        $process = Invoke-RecordedProcess 'preclaim-permission' $CodexExe $arguments $layout.output_root 120000
+        if ((Get-Item -LiteralPath $process.stderr_path -Force).Length -ne 0) {
+            throw 'Pinned Codex permission diagnostic wrote stderr.'
+        }
+        $jsonText = (Get-Content -LiteralPath $process.stdout_path -Raw).Trim()
+        $effective = Assert-PermissionAttestationJson $jsonText 'workspace-write' $script:RepoRoot `
+            'Goal-NP-Publication-6-preclaim-permission-attestation' 'preclaim-permission-attestation'
+        $result = [ordered]@{
+            diagnostic = 'codex debug prompt-input'
+            diagnostic_status = 'supported'
+            debug_strict_config_supported = $false
+            requested_sandbox = 'workspace-write'
+            requested_cwd = $script:RepoRoot
+            requested_additional_writable_directory_count = 0
+            requested_temp_root = $layout.temp_root
+            argv_sha256 = Get-Sha256Text (($arguments | ConvertTo-Json -Compress) + "`n")
+            stdout_path = $process.stdout_path
+            stdout_sha256 = $process.stdout_sha256
+            stderr_path = $process.stderr_path
+            stderr_sha256 = $process.stderr_sha256
+            scratch_manifest_before_cleanup = Get-OrdinalTreeManifest $layout.request_root
+            effective = $effective
+            effective_projection_sha256 = Get-Sha256Text (($effective | ConvertTo-Json -Depth 6 -Compress) + "`n")
+            layout = $layout
+            scratch_retained_for_run = $RetainStaging
+        }
+    }
+    catch {
+        $failure = $_.Exception
+    }
+    finally {
+        if ($null -eq $originalCodexHome) { Remove-Item Env:CODEX_HOME -ErrorAction SilentlyContinue }
+        else { $env:CODEX_HOME = $originalCodexHome }
+        if ($null -eq $originalTemp) { Remove-Item Env:TEMP -ErrorAction SilentlyContinue }
+        else { $env:TEMP = $originalTemp }
+        if ($null -eq $originalTmp) { Remove-Item Env:TMP -ErrorAction SilentlyContinue }
+        else { $env:TMP = $originalTmp }
+        try {
+            $liveAfter = Get-CodexHomeManifest $LiveCodexHome
+            if (-not (Test-ManifestEqual $ExpectedLiveCodexHomeManifest $liveAfter)) {
+                throw 'The live CODEX_HOME changed during permission attestation.'
+            }
+            $priorP5After = Assert-PriorP5EvidenceUnchanged $priorP5Before
+            $priorP4After = Assert-PriorP4EvidenceUnchanged $priorP4Before
+            $priorP3After = Assert-PriorP3EvidenceUnchanged $priorP3Before
+        }
+        catch {
+            $failure = New-P6Failure 'PERMISSION_ATTESTATION_FAILED' 'preclaim-protected-boundary' `
+                $_.Exception.Message $_.Exception
+        }
+        if ($layout -and ((-not $RetainStaging) -or $failure)) {
+            try { Remove-PermissionStagingLayout $layout }
+            catch { $cleanupFailure = $_.Exception }
+        }
+    }
+    if ($cleanupFailure) { throw $cleanupFailure }
+    if ($failure) {
+        $metadata = Get-P6FailureMetadata $failure
+        if ($metadata.error_code -in @(
+            'PERMISSION_ATTESTATION_FAILED', 'PERMISSION_STAGING_COLLISION',
+            'PERMISSION_STAGING_CLEANUP_FAILED'
+        )) { throw $failure }
+        throw (New-P6Failure 'PERMISSION_ATTESTATION_FAILED' 'preclaim-permission-attestation' `
+            $failure.Message $failure)
+    }
+    if (-not $RetainStaging) {
+        $result['scratch_removed'] = $true
+        $result['stdout_path'] = $null
+        $result['stderr_path'] = $null
+        $result['layout'] = $null
+    }
+    else {
+        $result['scratch_removed'] = $false
+    }
+    $result['live_codex_home_before'] = $liveBefore
+    $result['live_codex_home_after'] = $liveAfter
+    $result['prior_publication5_before'] = $priorP5Before
+    $result['prior_publication5_after'] = $priorP5After
+    $result['prior_publication4_before'] = $priorP4Before
+    $result['prior_publication4_after'] = $priorP4After
+    $result['prior_publication3_before'] = $priorP3Before
+    $result['prior_publication3_after'] = $priorP3After
+    return $result
+}
+
 function Get-CapturedProcessExitCode(
     [System.Diagnostics.Process]$Process,
     [string]$Label
 ) {
     try {
         if (-not $Process.HasExited) {
-            throw (New-P5Failure 'PROCESS_EXIT_CODE_UNAVAILABLE' $Label `
+            throw (New-P6Failure 'PROCESS_EXIT_CODE_UNAVAILABLE' $Label `
                 'The process had not exited before exit-code capture.')
         }
         $rawExitCode = $Process.ExitCode
     }
     catch {
-        $metadata = Get-P5FailureMetadata $_.Exception
+        $metadata = Get-P6FailureMetadata $_.Exception
         if ($metadata.error_code -eq 'PROCESS_EXIT_CODE_UNAVAILABLE') { throw $_.Exception }
-        throw (New-P5Failure 'PROCESS_EXIT_CODE_UNAVAILABLE' $Label `
+        throw (New-P6Failure 'PROCESS_EXIT_CODE_UNAVAILABLE' $Label `
             'The process exit-code getter failed after the process wait completed.' $_.Exception)
     }
     if ($null -eq $rawExitCode) {
-        throw (New-P5Failure 'PROCESS_EXIT_CODE_UNAVAILABLE' $Label `
+        throw (New-P6Failure 'PROCESS_EXIT_CODE_UNAVAILABLE' $Label `
             'The process returned a null exit code after its handle was cached and it exited.')
     }
     if ($rawExitCode -isnot [int]) {
-        throw (New-P5Failure 'PROCESS_EXIT_CODE_UNAVAILABLE' $Label `
+        throw (New-P6Failure 'PROCESS_EXIT_CODE_UNAVAILABLE' $Label `
             ('The process returned a non-Int32 exit code: ' + $rawExitCode.GetType().FullName))
     }
     $exitCode = [int]$rawExitCode
@@ -507,14 +1269,14 @@ function Wait-CapturedProcessExitCode(
         $Process.WaitForExit()
     }
     catch {
-        $metadata = Get-P5FailureMetadata $_.Exception
+        $metadata = Get-P6FailureMetadata $_.Exception
         if ($metadata.error_code -ne 'UNEXPECTED_FAILURE') { throw $_.Exception }
-        throw (New-P5Failure 'UNEXPECTED_FAILURE' $Label `
+        throw (New-P6Failure 'UNEXPECTED_FAILURE' $Label `
             'Process wait or timeout cleanup failed.' $_.Exception)
     }
     $exitCode = Get-CapturedProcessExitCode $Process $Label
     if ($timedOut) {
-        throw (New-P5Failure 'PROCESS_TIMEOUT' $Label `
+        throw (New-P6Failure 'PROCESS_TIMEOUT' $Label `
             "The process exceeded its $TimeoutMilliseconds-millisecond limit.")
     }
     return $exitCode
@@ -535,19 +1297,19 @@ function Invoke-ProcessExitCanaryCase(
         }
         catch {
             if ($null -eq $process) {
-                throw (New-P5Failure 'PROCESS_START_FAILED' $label 'The process could not be started.' $_.Exception)
+                throw (New-P6Failure 'PROCESS_START_FAILED' $label 'The process could not be started.' $_.Exception)
             }
-            throw (New-P5Failure 'PROCESS_HANDLE_UNAVAILABLE' $label `
+            throw (New-P6Failure 'PROCESS_HANDLE_UNAVAILABLE' $label `
                 'The process handle could not be acquired immediately after start.' $_.Exception)
         }
         if ($null -eq $rawHandle -or $rawHandle -isnot [IntPtr] -or $rawHandle -eq [IntPtr]::Zero) {
-            throw (New-P5Failure 'PROCESS_HANDLE_UNAVAILABLE' $label `
+            throw (New-P6Failure 'PROCESS_HANDLE_UNAVAILABLE' $label `
                 'The process returned an invalid handle immediately after start.')
         }
         $cachedHandle = [IntPtr]$rawHandle
         $exitCode = Wait-CapturedProcessExitCode $process $label 30000
         if ($exitCode -ne $ExpectedExitCode) {
-            throw (New-P5Failure 'PROCESS_CANARY_FAILED' $label `
+            throw (New-P6Failure 'PROCESS_CANARY_FAILED' $label `
                 "The process-exit canary expected $ExpectedExitCode and observed $exitCode.")
         }
         return [ordered]@{
@@ -565,7 +1327,7 @@ function Invoke-ProcessExitCanaryCase(
                 }
             }
             catch {
-                throw (New-P5Failure 'UNEXPECTED_FAILURE' $label `
+                throw (New-P6Failure 'UNEXPECTED_FAILURE' $label `
                     'Process-exit canary cleanup failed.' $_.Exception)
             }
         }
@@ -581,18 +1343,18 @@ function Invoke-ProcessExitCanary {
         $systemDirectory = [Environment]::SystemDirectory
         if ([string]::IsNullOrWhiteSpace($systemDirectory) -or
             -not [System.IO.Path]::IsPathRooted($systemDirectory)) {
-            throw (New-P5Failure 'PROCESS_CANARY_FAILED' 'process-exit-canary' `
+            throw (New-P6Failure 'PROCESS_CANARY_FAILED' 'process-exit-canary' `
                 'The canonical Windows system directory is unavailable.')
         }
         $cmdExe = Join-Path ([System.IO.Path]::GetFullPath($systemDirectory).TrimEnd('\')) 'cmd.exe'
         if (-not (Test-Path -LiteralPath $cmdExe -PathType Leaf)) {
-            throw (New-P5Failure 'PROCESS_CANARY_FAILED' 'process-exit-canary' `
+            throw (New-P6Failure 'PROCESS_CANARY_FAILED' 'process-exit-canary' `
                 'The canonical System32 cmd.exe is unavailable.')
         }
         $cmdItem = Get-Item -LiteralPath $cmdExe -Force -ErrorAction Stop
         if (($cmdItem.Attributes -band [System.IO.FileAttributes]::ReparsePoint) -ne 0 -or
             -not $cmdItem.FullName.Equals($cmdExe, [StringComparison]::OrdinalIgnoreCase)) {
-            throw (New-P5Failure 'PROCESS_CANARY_FAILED' 'process-exit-canary' `
+            throw (New-P6Failure 'PROCESS_CANARY_FAILED' 'process-exit-canary' `
                 'The canonical System32 cmd.exe identity is invalid.')
         }
         Assert-NoAlternateDataStream $cmdItem.FullName
@@ -608,10 +1370,10 @@ function Invoke-ProcessExitCanary {
         }
     }
     catch {
-        $metadata = Get-P5FailureMetadata $_.Exception
+        $metadata = Get-P6FailureMetadata $_.Exception
         if ($metadata.error_code -eq 'PROCESS_CANARY_FAILED') { throw $_.Exception }
         $failureLabel = if ($metadata.error_label -eq 'launcher') { 'process-exit-canary' } else { $metadata.error_label }
-        throw (New-P5Failure 'PROCESS_CANARY_FAILED' $failureLabel `
+        throw (New-P6Failure 'PROCESS_CANARY_FAILED' $failureLabel `
             'The Windows PowerShell 5.1 process-exit canary failed.' $_.Exception $metadata.error_code)
     }
 }
@@ -635,19 +1397,19 @@ function Invoke-RecordedProcess(
         }
         catch {
             if ($null -eq $process) {
-                throw (New-P5Failure 'PROCESS_START_FAILED' $Label 'The process could not be started.' $_.Exception)
+                throw (New-P6Failure 'PROCESS_START_FAILED' $Label 'The process could not be started.' $_.Exception)
             }
-            throw (New-P5Failure 'PROCESS_HANDLE_UNAVAILABLE' $Label `
+            throw (New-P6Failure 'PROCESS_HANDLE_UNAVAILABLE' $Label `
                 'The process handle could not be acquired immediately after start.' $_.Exception)
         }
         if ($null -eq $rawHandle -or $rawHandle -isnot [IntPtr] -or $rawHandle -eq [IntPtr]::Zero) {
-            throw (New-P5Failure 'PROCESS_HANDLE_UNAVAILABLE' $Label `
+            throw (New-P6Failure 'PROCESS_HANDLE_UNAVAILABLE' $Label `
                 'The process returned an invalid handle immediately after start.')
         }
         $cachedHandle = [IntPtr]$rawHandle
         $exitCode = Wait-CapturedProcessExitCode $process $Label $TimeoutMilliseconds
         if ($exitCode -ne 0) {
-            throw (New-P5Failure 'PROCESS_EXIT_NONZERO' $Label "The process exited $exitCode.")
+            throw (New-P6Failure 'PROCESS_EXIT_NONZERO' $Label "The process exited $exitCode.")
         }
         return [ordered]@{
             exit_code = $exitCode
@@ -667,7 +1429,7 @@ function Invoke-RecordedProcess(
                 }
             }
             catch {
-                throw (New-P5Failure 'UNEXPECTED_FAILURE' $Label `
+                throw (New-P6Failure 'UNEXPECTED_FAILURE' $Label `
                     'Process failure cleanup failed.' $_.Exception)
             }
         }
@@ -695,26 +1457,23 @@ function Assert-AdminScope {
 }
 
 function Remove-DisposableCodexHome {
-    if (-not $script:DisposableCodexHome -or -not (Test-Path -LiteralPath $script:DisposableCodexHome)) { return }
-    $resolvedEvidence = [System.IO.Path]::GetFullPath($script:EvidenceRoot).TrimEnd('\')
-    $resolvedTarget = [System.IO.Path]::GetFullPath($script:DisposableCodexHome).TrimEnd('\')
-    $expectedTarget = Join-Path $resolvedEvidence 'disposable-codex-home'
-    if ($resolvedTarget -cne $expectedTarget -or -not $resolvedTarget.StartsWith($resolvedEvidence + '\', [StringComparison]::OrdinalIgnoreCase)) {
-        throw 'Refusing to remove a disposable Codex home outside the exact evidence root.'
-    }
-    Remove-Item -LiteralPath $resolvedTarget -Recurse -Force
+    if (-not $script:PermissionStagingLayout) { return }
+    Remove-PermissionStagingLayout $script:PermissionStagingLayout
     $script:DisposableCodexHome = $null
+    $script:PermissionStagingLayout = $null
 }
 
-function Get-PromptInputProof([string]$Label, [string]$CallLaunchRoot) {
+function Get-PromptInputProof([string]$Label, [string]$Sandbox) {
     $quiescenceBefore = Get-QuiescenceProof
+    $diagnosticText = 'Goal-NP-Publication-6-' + $Label + '-prompt-surface-proof'
     $arguments = @('--model', 'gpt-5.6-terra') + @(Get-ClosedConfigArguments) + @(
-        '--sandbox', 'read-only', '--cd', $CallLaunchRoot, '--add-dir', $script:RepoRoot,
-        'debug', 'prompt-input', 'Goal-NP-Publication-5-Terra-bootstrap-prompt-surface-proof'
+        '--sandbox', $Sandbox, '--cd', $script:RepoRoot,
+        'debug', 'prompt-input', $diagnosticText
     )
     $proof = $null
     $liveCodexHomeBefore = Assert-LiveCodexHomeUnchanged $script:LiveCodexHomeBefore `
         ($Label + '-before-prompt-input')
+    $priorP5Before = Assert-PriorP5EvidenceUnchanged $script:PriorP5Before
     $priorP4Before = Assert-PriorP4EvidenceUnchanged $script:PriorP4Before
     $priorP3Before = Assert-PriorP3EvidenceUnchanged $script:PriorP3Before
     try {
@@ -724,39 +1483,297 @@ function Get-PromptInputProof([string]$Label, [string]$CallLaunchRoot) {
         $quiescenceAfter = Get-QuiescenceProof
         $liveCodexHomeAfter = Assert-LiveCodexHomeUnchanged $script:LiveCodexHomeBefore `
             ($Label + '-after-prompt-input')
+        $priorP5After = Assert-PriorP5EvidenceUnchanged $script:PriorP5Before
         $priorP4After = Assert-PriorP4EvidenceUnchanged $script:PriorP4Before
         $priorP3After = Assert-PriorP3EvidenceUnchanged $script:PriorP3Before
     }
-    $text = Get-Content -LiteralPath $proof.stdout_path -Raw
-    $null = $text | ConvertFrom-Json
-    foreach ($forbidden in @(
-        'AGENTS.md instructions for', 'GitHub Copilot workspace adapter', '.agents/skills/',
-        '.agents\skills\', '.github/skills/', '.github\skills\', '<apps_instructions>',
-        '<plugins_instructions>', '<recommended_plugins>'
-    )) {
-        if ($text.IndexOf($forbidden, [StringComparison]::OrdinalIgnoreCase) -ge 0) {
-            throw "Prompt-input proof contains forbidden ambient input: $forbidden"
-        }
+    if ((Get-Item -LiteralPath $proof.stderr_path -Force).Length -ne 0) {
+        throw (New-P6Failure 'PERMISSION_ATTESTATION_FAILED' ($Label + '-prompt-input') `
+            'Pinned Codex prompt-input proof wrote stderr.')
     }
-    $systemSkillMatches = [regex]::Matches($text, '\(file:\s*([^\)]+)\)')
-    foreach ($match in $systemSkillMatches) {
-        $locator = $match.Groups[1].Value.Replace('\', '/')
-        if ($locator.IndexOf('/skills/.system/', [StringComparison]::OrdinalIgnoreCase) -lt 0) {
-            throw "Prompt-input proof contains a non-system skill locator: $locator"
-        }
-    }
+    $text = (Get-Content -LiteralPath $proof.stdout_path -Raw).Trim()
+    $effective = Assert-PermissionAttestationJson $text $Sandbox $script:RepoRoot `
+        $diagnosticText ($Label + '-prompt-input')
     return [ordered]@{
         process = $proof
-        system_skill_descriptor_count = $systemSkillMatches.Count
-        launch_root = $CallLaunchRoot
+        requested_sandbox = $Sandbox
+        requested_cwd = $script:RepoRoot
+        requested_additional_writable_directory_count = 0
+        debug_strict_config_supported = $false
+        argv_sha256 = Get-Sha256Text (($arguments | ConvertTo-Json -Compress) + "`n")
+        effective = $effective
+        effective_projection_sha256 = Get-Sha256Text (($effective | ConvertTo-Json -Depth 6 -Compress) + "`n")
         quiescence_before = $quiescenceBefore
         quiescence_after = $quiescenceAfter
         live_codex_home_before = $liveCodexHomeBefore
         live_codex_home_after = $liveCodexHomeAfter
+        prior_publication5_before = $priorP5Before
+        prior_publication5_after = $priorP5After
         prior_publication4_before = $priorP4Before
         prior_publication4_after = $priorP4After
         prior_publication3_before = $priorP3Before
         prior_publication3_after = $priorP3After
+    }
+}
+
+function Assert-NoSystemSkillScratchSurface([string]$Label) {
+    if (-not $script:PermissionStagingLayout -or
+        [string]::IsNullOrWhiteSpace([string]$script:PermissionStagingLayout.codex_home)) {
+        throw (New-P6Failure 'MODEL_VERDICT_INVALID' $Label `
+            'The retained permission-staging CODEX_HOME is unavailable for the system-skill surface check.')
+    }
+    $codexHome = [System.IO.Path]::GetFullPath([string]$script:PermissionStagingLayout.codex_home).TrimEnd('\')
+    $systemSkillRoot = Join-Path $codexHome 'skills\.system'
+    if (Test-Path -LiteralPath $systemSkillRoot) {
+        throw (New-P6Failure 'MODEL_VERDICT_INVALID' $Label `
+            'The disposable CODEX_HOME contains a forbidden bundled system-skill subtree.')
+    }
+    return [ordered]@{
+        system_skill_root = $systemSkillRoot
+        system_skill_root_exists = $false
+        codex_home_manifest = Get-OrdinalTreeManifest $codexHome
+        request_scratch_manifest = Get-OrdinalTreeManifest $script:PermissionStagingLayout.request_root
+    }
+}
+
+function Test-SystemSkillPathLiteral([string]$Text) {
+    if ([string]::IsNullOrEmpty($Text)) { return $false }
+    return $Text.Replace('\', '/') -match '(?i)(^|/+|["''\s])skills/+\.system(?:/+|["''\s]|$)'
+}
+
+function Test-NativeSkillEventValue([string]$Value) {
+    if ([string]::IsNullOrWhiteSpace($Value)) { return $false }
+    return $Value -match '(?i)(^|[._:/-])skills?($|[._:/-])'
+}
+
+function Assert-NoSystemSkillJsonEvent(
+    [object]$EventObject,
+    [int]$LineNumber,
+    [string]$Label
+) {
+    $eventFieldNames = @('type', 'event', 'name', 'tool', 'tool_name', 'tool_type', 'action', 'action_type')
+    $requestFieldNames = @(
+        'command', 'argv', 'arguments', 'args', 'input', 'tool_input', 'parameters',
+        'path', 'file_path', 'cwd'
+    )
+    $outputFieldNames = @(
+        'aggregated_output', 'output', 'stdout', 'stderr', 'text', 'message', 'content',
+        'result', 'response', 'last_message', 'final_output', 'tool_output', 'error', 'summary'
+    )
+    $requestKindPattern = '(?i)(^|[._-])(?:command|command_execution|shell_command|exec_command|tool_call|tool_request|function_call|function_request|mcp_tool_call|custom_tool_call|dynamic_tool_call|computer_action|action_request)($|[._-])'
+    $outputKindPattern = '(?i)(^|[._-])(?:output|result|response)($|[._-])'
+    $requestFieldCount = 0
+    $pending = New-Object 'System.Collections.Generic.Queue[object]'
+    $pending.Enqueue([pscustomobject]@{
+        value = $EventObject
+        suppressed_output = $false
+        inspect_request_text = $false
+    })
+    while ($pending.Count -ne 0) {
+        $state = $pending.Dequeue()
+        $node = $state.value
+        if ($null -eq $node -or [bool]$state.suppressed_output) { continue }
+        if ($node -is [string]) {
+            if ([bool]$state.inspect_request_text -and (Test-SystemSkillPathLiteral $node)) {
+                throw (New-P6Failure 'MODEL_VERDICT_INVALID' $Label `
+                    "The model JSONL executable request references a forbidden system-skill path at line $LineNumber.")
+            }
+            continue
+        }
+        if ($node -is [ValueType]) { continue }
+        if ($node -is [System.Collections.IEnumerable] -and
+            $node -isnot [System.Collections.IDictionary] -and
+            $node -isnot [System.Management.Automation.PSCustomObject]) {
+            foreach ($value in $node) {
+                if ($null -ne $value) {
+                    $pending.Enqueue([pscustomobject]@{
+                        value = $value
+                        suppressed_output = $false
+                        inspect_request_text = [bool]$state.inspect_request_text
+                    })
+                }
+            }
+            continue
+        }
+
+        $properties = New-Object System.Collections.Generic.List[object]
+        if ($node -is [System.Collections.IDictionary]) {
+            foreach ($key in $node.Keys) {
+                $properties.Add([pscustomobject]@{ name = [string]$key; value = $node[$key] })
+            }
+        }
+        elseif ($node -is [System.Management.Automation.PSCustomObject]) {
+            foreach ($property in $node.PSObject.Properties) {
+                $properties.Add([pscustomobject]@{ name = $property.Name; value = $property.Value })
+            }
+        }
+        else { continue }
+
+        $discriminators = New-Object System.Collections.Generic.List[string]
+        $hasCommandField = $false
+        $hasToolIdentity = $false
+        $hasToolPayload = $false
+        foreach ($property in $properties) {
+            $fieldName = ([string]$property.name).ToLowerInvariant()
+            $value = $property.value
+            if ($fieldName -in @('command', 'argv')) { $hasCommandField = $true }
+            if ($fieldName -in @('tool', 'tool_name')) { $hasToolIdentity = $true }
+            if ($fieldName -in @('arguments', 'args', 'input', 'tool_input', 'parameters')) {
+                $hasToolPayload = $true
+            }
+            if ($eventFieldNames -ccontains $fieldName -and $value -is [string]) {
+                if (Test-NativeSkillEventValue $value) {
+                    throw (New-P6Failure 'MODEL_VERDICT_INVALID' $Label `
+                        "The model JSONL transcript exposes a native skill invocation event at line $LineNumber.")
+                }
+                $discriminators.Add($value)
+            }
+        }
+        $isOutputNode = @($discriminators | Where-Object { $_ -match $outputKindPattern }).Count -ne 0
+        $isRequestNode = (-not [bool]$state.inspect_request_text) -and (-not $isOutputNode) -and (
+            @($discriminators | Where-Object { $_ -match $requestKindPattern }).Count -ne 0 -or
+            $hasCommandField -or ($hasToolIdentity -and $hasToolPayload)
+        )
+        foreach ($property in $properties) {
+            $fieldName = ([string]$property.name).ToLowerInvariant()
+            $value = $property.value
+            if ($null -eq $value) { continue }
+            $childSuppressed = $false
+            $childInspect = $false
+            if ([bool]$state.inspect_request_text) {
+                $childInspect = $true
+            }
+            elseif ($outputFieldNames -ccontains $fieldName) {
+                $childSuppressed = $true
+            }
+            elseif ($isRequestNode -and $requestFieldNames -ccontains $fieldName) {
+                $childInspect = $true
+                $requestFieldCount++
+            }
+            $pending.Enqueue([pscustomobject]@{
+                value = $value
+                suppressed_output = $childSuppressed
+                inspect_request_text = $childInspect
+            })
+        }
+    }
+    return [ordered]@{
+        executable_request_field_count = $requestFieldCount
+        system_skill_path_reference_count = 0
+        native_skill_event_count = 0
+    }
+}
+
+function Assert-NoSystemSkillJsonLine(
+    [string]$Line,
+    [int]$LineNumber,
+    [string]$Label
+) {
+    if ([string]::IsNullOrWhiteSpace($Line)) {
+        throw (New-P6Failure 'MODEL_VERDICT_INVALID' $Label `
+            "The model JSONL transcript contains an empty record at line $LineNumber.")
+    }
+    try { $eventObject = $Line | ConvertFrom-Json }
+    catch {
+        throw (New-P6Failure 'MODEL_VERDICT_INVALID' $Label `
+            "The model JSONL transcript contains invalid JSON at line $LineNumber." $_.Exception)
+    }
+    if ($null -eq $eventObject -or $eventObject -isnot [System.Management.Automation.PSCustomObject] -or
+        @($eventObject).Count -ne 1 -or @($eventObject.PSObject.Properties).Count -eq 0) {
+        throw (New-P6Failure 'MODEL_VERDICT_INVALID' $Label `
+            "The model JSONL transcript record at line $LineNumber is not one event object.")
+    }
+    return Assert-NoSystemSkillJsonEvent $eventObject $LineNumber $Label
+}
+
+function Invoke-SystemSkillJsonlParserCanary {
+    $systemSkillPath = 'C:\scratch\skills\.system\review-agent\SKILL.md'
+    $acceptedCases = [ordered]@{
+        'aggregated-output-literal' = ([ordered]@{
+            type = 'item.completed'
+            item = [ordered]@{
+                type = 'command_execution'
+                command = 'Write-Output safe'
+                aggregated_output = $systemSkillPath
+            }
+        } | ConvertTo-Json -Depth 6 -Compress)
+        'agent-text-literal' = ([ordered]@{
+            type = 'item.completed'
+            item = [ordered]@{ type = 'agent_message'; text = $systemSkillPath }
+        } | ConvertTo-Json -Depth 6 -Compress)
+    }
+    foreach ($name in $acceptedCases.Keys) {
+        $null = Assert-NoSystemSkillJsonLine $acceptedCases[$name] 1 ('jsonl-canary-' + $name)
+    }
+    $rejectedCases = [ordered]@{
+        'command-request-path' = ([ordered]@{
+            type = 'item.started'
+            item = [ordered]@{
+                type = 'command_execution'
+                command = ('Get-Content -LiteralPath "' + $systemSkillPath + '"')
+            }
+        } | ConvertTo-Json -Depth 6 -Compress)
+        'tool-request-path' = ([ordered]@{
+            type = 'item.started'
+            item = [ordered]@{
+                type = 'mcp_tool_call'
+                tool_name = 'read_file'
+                arguments = [ordered]@{ path = $systemSkillPath }
+            }
+        } | ConvertTo-Json -Depth 6 -Compress)
+        'native-skill-event' = ([ordered]@{
+            type = 'item.started'
+            item = [ordered]@{ type = 'skill_invocation'; name = 'review-agent' }
+        } | ConvertTo-Json -Depth 6 -Compress)
+        'malformed-json' = '{'
+        'non-object-json' = '"not-an-event"'
+    }
+    $rejected = New-Object System.Collections.Generic.List[string]
+    foreach ($name in $rejectedCases.Keys) {
+        $didReject = $false
+        try { $null = Assert-NoSystemSkillJsonLine $rejectedCases[$name] 1 ('jsonl-canary-' + $name) }
+        catch {
+            $metadata = Get-P6FailureMetadata $_.Exception
+            if ($metadata.error_code -cne 'MODEL_VERDICT_INVALID') { throw $_.Exception }
+            $didReject = $true
+        }
+        if (-not $didReject) {
+            throw (New-P6Failure 'MODEL_VERDICT_INVALID' 'jsonl-parser-canary' `
+                ('JSONL parser canary accepted forbidden case: ' + $name))
+        }
+        $rejected.Add($name)
+    }
+    return [ordered]@{
+        accepted_case_count = $acceptedCases.Count
+        accepted_cases = @($acceptedCases.Keys)
+        rejected_case_count = $rejected.Count
+        rejected_cases = $rejected.ToArray()
+    }
+}
+
+function Assert-NoSystemSkillJsonl(
+    [string]$Path,
+    [string]$Label
+) {
+    if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
+        throw (New-P6Failure 'MODEL_VERDICT_INVALID' $Label 'The model JSONL transcript is absent.')
+    }
+    $lineCount = 0
+    $requestFieldCount = 0
+    foreach ($line in [System.IO.File]::ReadAllLines($Path, $Utf8NoBom)) {
+        $lineCount++
+        $lineProof = Assert-NoSystemSkillJsonLine $line $lineCount $Label
+        $requestFieldCount += $lineProof.executable_request_field_count
+    }
+    if ($lineCount -eq 0) {
+        throw (New-P6Failure 'MODEL_VERDICT_INVALID' $Label 'The model JSONL transcript is empty.')
+    }
+    return [ordered]@{
+        line_count = $lineCount
+        jsonl_sha256 = Get-FileSha256 $Path
+        executable_request_field_count = $requestFieldCount
+        system_skill_path_reference_count = 0
+        native_skill_event_count = 0
     }
 }
 
@@ -766,16 +1783,33 @@ function Invoke-Terra(
     [string]$PromptPath,
     [System.Collections.IDictionary]$ExpectedRepoIdentity
 ) {
-    $callLaunchRoot = Join-Path $script:LaunchRoot $Label
-    if (-not (Test-Path -LiteralPath $callLaunchRoot -PathType Container)) {
-        New-Item -ItemType Directory -Path $callLaunchRoot | Out-Null
+    $expectedCodexHome = [System.IO.Path]::GetFullPath($script:PermissionStagingLayout.codex_home).TrimEnd('\')
+    $effectiveCodexHome = [System.IO.Path]::GetFullPath($env:CODEX_HOME).TrimEnd('\')
+    if (-not $effectiveCodexHome.Equals($expectedCodexHome, [StringComparison]::OrdinalIgnoreCase)) {
+        throw (New-P6Failure 'PERMISSION_ATTESTATION_FAILED' ($Label + '-codex-home') `
+            'Codex process does not use the retained permission-staging CODEX_HOME.')
     }
-    $promptInputProof = Get-PromptInputProof $Label $callLaunchRoot
+    $env:TEMP = $script:PermissionStagingLayout.temp_root
+    $env:TMP = $script:PermissionStagingLayout.temp_root
+    foreach ($name in @('TEMP', 'TMP')) {
+        $effectiveTemp = [System.IO.Path]::GetFullPath([Environment]::GetEnvironmentVariable($name, 'Process')).TrimEnd('\')
+        if (-not $effectiveTemp.Equals($script:PermissionStagingLayout.temp_root, [StringComparison]::OrdinalIgnoreCase)) {
+            throw (New-P6Failure 'PERMISSION_ATTESTATION_FAILED' ($Label + '-temp-root') `
+                "$name is not the retained permission-staging temporary root.")
+        }
+    }
+    $promptInputProof = Get-PromptInputProof $Label $Sandbox
+    if ($Label -ceq 'implementation' -and
+        $promptInputProof.effective_projection_sha256 -cne $script:PreclaimPermissionProjectionHash) {
+        throw (New-P6Failure 'PERMISSION_ATTESTATION_FAILED' 'implementation-permission-projection' `
+            'Post-claim implementation permission projection differs from the pre-claim attestation.')
+    }
+    $systemSkillScratchBefore = Assert-NoSystemSkillScratchSurface ($Label + '-before-model-skill-surface')
     $jsonl = Join-Path $script:EvidenceRoot ($Label + '.jsonl')
     $stderr = Join-Path $script:EvidenceRoot ($Label + '.stderr.txt')
     $last = Join-Path $script:EvidenceRoot ($Label + '.result.json')
     $arguments = @('exec', '--model', 'gpt-5.6-terra') + @(Get-ClosedConfigArguments) + @(
-        '--sandbox', $Sandbox, '--cd', $callLaunchRoot, '--add-dir', $script:RepoRoot,
+        '--sandbox', $Sandbox, '--cd', $script:RepoRoot,
         '--skip-git-repo-check', '--ephemeral', '--ignore-user-config', '--ignore-rules',
         '--strict-config', '--output-schema', $script:ResultSchema, '--json',
         '--output-last-message', $last, '-'
@@ -785,6 +1819,8 @@ function Invoke-Terra(
         requested_model = 'gpt-5.6-terra'
         requested_reasoning_effort = 'xhigh'
         sandbox = $Sandbox
+        cwd = $script:RepoRoot
+        additional_writable_directory_count = 0
         arguments = $arguments
         environment = [ordered]@{
             CODEX_HOME = $env:CODEX_HOME
@@ -799,10 +1835,13 @@ function Invoke-Terra(
         prompt_input_quiescence_after = $promptInputProof.quiescence_after
         live_codex_home_before_prompt_input = $promptInputProof.live_codex_home_before
         live_codex_home_after_prompt_input = $promptInputProof.live_codex_home_after
+        prior_publication5_before_prompt_input = $promptInputProof.prior_publication5_before
+        prior_publication5_after_prompt_input = $promptInputProof.prior_publication5_after
         prior_publication4_before_prompt_input = $promptInputProof.prior_publication4_before
         prior_publication4_after_prompt_input = $promptInputProof.prior_publication4_after
         prior_publication3_before_prompt_input = $promptInputProof.prior_publication3_before
         prior_publication3_after_prompt_input = $promptInputProof.prior_publication3_after
+        system_skill_scratch_before_model = $systemSkillScratchBefore
     }
     Write-Utf8NoBom $invocationPath (($invocation | ConvertTo-Json -Depth 8) + "`n")
     $preRepoIdentity = Get-RepoIdentity ($Label + '-pre')
@@ -828,11 +1867,13 @@ function Invoke-Terra(
     $preCallQuiescence = Get-QuiescenceProof
     $liveCodexHomeBeforeCodex = Assert-LiveCodexHomeUnchanged $script:LiveCodexHomeBefore `
         ($Label + '-before-codex')
+    $priorP5BeforeCodex = Assert-PriorP5EvidenceUnchanged $script:PriorP5Before
     $priorP4BeforeCodex = Assert-PriorP4EvidenceUnchanged $script:PriorP4Before
     $priorP3BeforeCodex = Assert-PriorP3EvidenceUnchanged $script:PriorP3Before
     $process = $null
     $processFailure = $null
     $exitCode = $null
+    $systemSkillScratchAfter = $null
     try {
         try {
             try {
@@ -842,19 +1883,19 @@ function Invoke-Terra(
             }
             catch {
                 if ($null -eq $process) {
-                    throw (New-P5Failure 'PROCESS_START_FAILED' $Label 'The Codex process could not be started.' $_.Exception)
+                    throw (New-P6Failure 'PROCESS_START_FAILED' $Label 'The Codex process could not be started.' $_.Exception)
                 }
-                throw (New-P5Failure 'PROCESS_HANDLE_UNAVAILABLE' $Label `
+                throw (New-P6Failure 'PROCESS_HANDLE_UNAVAILABLE' $Label `
                     'The Codex process handle could not be acquired immediately after start.' $_.Exception)
             }
             if ($null -eq $rawHandle -or $rawHandle -isnot [IntPtr] -or $rawHandle -eq [IntPtr]::Zero) {
-                throw (New-P5Failure 'PROCESS_HANDLE_UNAVAILABLE' $Label `
+                throw (New-P6Failure 'PROCESS_HANDLE_UNAVAILABLE' $Label `
                     'The Codex process returned an invalid handle immediately after start.')
             }
             $cachedHandle = [IntPtr]$rawHandle
             $exitCode = Wait-CapturedProcessExitCode $process $Label 3600000
             if ($exitCode -ne 0) {
-                throw (New-P5Failure 'PROCESS_EXIT_NONZERO' $Label "The Codex process exited $exitCode.")
+                throw (New-P6Failure 'PROCESS_EXIT_NONZERO' $Label "The Codex process exited $exitCode.")
             }
         }
         catch {
@@ -867,7 +1908,7 @@ function Invoke-Terra(
                     }
                 }
                 catch {
-                    $processFailure = New-P5Failure 'UNEXPECTED_FAILURE' $Label `
+                    $processFailure = New-P6Failure 'UNEXPECTED_FAILURE' $Label `
                         'Codex process failure cleanup failed.' $_.Exception
                 }
             }
@@ -875,6 +1916,7 @@ function Invoke-Terra(
     }
     finally {
         try {
+            $systemSkillScratchAfter = Assert-NoSystemSkillScratchSurface ($Label + '-after-model-skill-surface')
             $postRepoIdentity = Get-RepoIdentity ($Label + '-post')
             $postIdentity = [ordered]@{
                 codex_executable = $script:CodexExe
@@ -893,6 +1935,7 @@ function Invoke-Terra(
     $postCallQuiescence = Get-QuiescenceProof
     $liveCodexHomeAfterCodex = Assert-LiveCodexHomeUnchanged $script:LiveCodexHomeBefore `
         ($Label + '-after-codex')
+    $priorP5AfterCodex = Assert-PriorP5EvidenceUnchanged $script:PriorP5Before
     $priorP4AfterCodex = Assert-PriorP4EvidenceUnchanged $script:PriorP4Before
     $priorP3AfterCodex = Assert-PriorP3EvidenceUnchanged $script:PriorP3Before
     foreach ($field in @('codex_executable', 'codex_version', 'codex_executable_sha256', 'argv_sha256', 'prompt_sha256')) {
@@ -907,11 +1950,34 @@ function Invoke-Terra(
         $preRepoIdentity.worktree_tree -cne $postRepoIdentity.worktree_tree
     )) { throw "$Label changed the worktree despite read-only review authority." }
     if ($processFailure) { throw $processFailure }
+    $systemSkillJsonlProof = Assert-NoSystemSkillJsonl $jsonl ($Label + '-jsonl-skill-surface')
     if (-not (Test-Path -LiteralPath $last -PathType Leaf)) { throw "$Label did not publish its result." }
     $result = Get-Content -LiteralPath $last -Raw | ConvertFrom-Json
-    if ($result.verdict -ne 'PASS') { throw "$Label returned $($result.verdict)." }
+    $resultHash = Get-FileSha256 $last
+    switch -CaseSensitive ([string]$result.verdict) {
+        'BLOCKED' {
+            throw (New-P6ModelVerdictFailure 'MODEL_VERDICT_BLOCKED' $Label 'BLOCKED' `
+                "$Label returned schema-valid BLOCKED." $last $resultHash)
+        }
+        'CHANGES_REQUIRED' {
+            throw (New-P6ModelVerdictFailure 'MODEL_VERDICT_CHANGES_REQUIRED' $Label 'CHANGES_REQUIRED' `
+                "$Label returned schema-valid CHANGES_REQUIRED." $last $resultHash)
+        }
+        'INVALID' {
+            throw (New-P6ModelVerdictFailure 'MODEL_VERDICT_INVALID' $Label 'INVALID' `
+                "$Label returned schema-valid INVALID." $last $resultHash)
+        }
+        'PASS' { }
+        default {
+            throw (New-P6ModelVerdictFailure 'MODEL_VERDICT_INVALID' $Label ([string]$result.verdict) `
+                "$Label returned an unsupported verdict." $last $resultHash)
+        }
+    }
     $materialFindings = @($result.findings | Where-Object { $_.severity -in @('blocker', 'significant') })
-    if ($materialFindings.Count -ne 0) { throw "$Label returned PASS with material findings." }
+    if ($materialFindings.Count -ne 0) {
+        throw (New-P6ModelVerdictFailure 'MODEL_PASS_MATERIAL_FINDINGS' $Label 'PASS' `
+            "$Label returned PASS with material findings." $last $resultHash)
+    }
     return [ordered]@{
         exit_code = $exitCode
         jsonl_path = $jsonl
@@ -919,16 +1985,21 @@ function Invoke-Terra(
         stderr_path = $stderr
         stderr_sha256 = Get-FileSha256 $stderr
         result_path = $last
-        result_sha256 = Get-FileSha256 $last
+        result_sha256 = $resultHash
         invocation_path = $invocationPath
         invocation_sha256 = Get-FileSha256 $invocationPath
         prompt_input_proof = $promptInputProof
+        system_skill_scratch_before_model = $systemSkillScratchBefore
+        system_skill_scratch_after_model = $systemSkillScratchAfter
+        system_skill_jsonl_proof = $systemSkillJsonlProof
         pre_identity_sha256 = Get-FileSha256 (Join-Path $script:EvidenceRoot ($Label + '.pre-identity.json'))
         post_identity_sha256 = Get-FileSha256 (Join-Path $script:EvidenceRoot ($Label + '.post-identity.json'))
         pre_call_quiescence = $preCallQuiescence
         post_call_quiescence = $postCallQuiescence
         live_codex_home_before_codex = $liveCodexHomeBeforeCodex
         live_codex_home_after_codex = $liveCodexHomeAfterCodex
+        prior_publication5_before_codex = $priorP5BeforeCodex
+        prior_publication5_after_codex = $priorP5AfterCodex
         prior_publication4_before_codex = $priorP4BeforeCodex
         prior_publication4_after_codex = $priorP4AfterCodex
         prior_publication3_before_codex = $priorP3BeforeCodex
@@ -936,11 +2007,12 @@ function Invoke-Terra(
     }
 }
 
-function Invoke-ZeroWritePreflight {
+function Invoke-P6Preflight([bool]$RetainPermissionStaging) {
     if (Test-Path -LiteralPath $script:EvidenceRoot) {
-        throw 'This deterministic Publication-5 lineage already exists. Run Inspect; do not create another attempt.'
+        throw 'This deterministic Publication-6 lineage already exists. Run Inspect; do not create another attempt.'
     }
     $quiescenceBefore = Get-QuiescenceProof
+    $priorP5Before = Get-PriorP5EvidenceProof
     $priorP4Before = Get-PriorP4EvidenceProof
     $priorP3Before = Get-PriorP3EvidenceProof
     $processExitCanary = Invoke-ProcessExitCanary
@@ -958,6 +2030,11 @@ function Invoke-ZeroWritePreflight {
     if (-not $liveCodexHomeFirst.exists) { throw 'The live CODEX_HOME is absent.' }
     $liveAuthPath = Join-Path $liveCodexHome 'auth.json'
     if (-not (Test-Path -LiteralPath $liveAuthPath -PathType Leaf)) { throw 'Codex authentication is unavailable.' }
+    $liveAuthItem = Get-Item -LiteralPath $liveAuthPath -Force -ErrorAction Stop
+    if (($liveAuthItem.Attributes -band [System.IO.FileAttributes]::ReparsePoint) -ne 0) {
+        throw 'Live Codex authentication is a reparse point.'
+    }
+    Assert-NoAlternateDataStream $liveAuthItem.FullName
     $liveAuthHash = Get-FileSha256 $liveAuthPath
 
     $gitCommand = Get-Command git -CommandType Application | Select-Object -First 1
@@ -1031,28 +2108,35 @@ function Invoke-ZeroWritePreflight {
     if ((Get-FileSha256 $pythonExe) -cne $ExpectedPythonHash) { throw 'Pinned CPython executable hash mismatch.' }
 
     $baseArgvTemplate = @('exec', '--model', 'gpt-5.6-terra') + @(Get-ClosedConfigArguments) + @(
-        '--sandbox', '<sandbox>', '--cd', '<instruction-free-launch-root>', '--add-dir', '<owner-worktree>',
+        '--sandbox', '<sandbox>', '--cd', '<owner-worktree>',
         '--skip-git-repo-check', '--ephemeral', '--ignore-user-config', '--ignore-rules',
         '--strict-config', '--output-schema', '<result-schema>', '--json',
         '--output-last-message', '<last-message-file>', '-'
     )
     $baseArgvHash = Get-Sha256Text (($baseArgvTemplate | ConvertTo-Json -Compress) + "`n")
+    $permissionParserCanary = Invoke-PermissionParserCanary $script:RepoRoot
+    $systemSkillJsonlParserCanary = Invoke-SystemSkillJsonlParserCanary
+    $permissionAttestation = $null
+    try {
+        $permissionAttestation = Invoke-PreclaimPermissionAttestation $codexExe $liveAuthPath $liveAuthHash `
+            $liveCodexHome $liveCodexHomeFirst $RetainPermissionStaging
 
     $liveCodexHomeSecond = Get-CodexHomeManifest $liveCodexHome
     if (-not (Test-ManifestEqual $liveCodexHomeFirst $liveCodexHomeSecond)) {
-        throw 'The live CODEX_HOME changed during zero-write preflight.'
+        throw 'The live CODEX_HOME changed during Publication-6 preflight.'
     }
     if ((Get-FileSha256 $liveAuthPath) -cne $liveAuthHash) {
-        throw 'The live Codex authentication bytes changed during zero-write preflight.'
+        throw 'The live Codex authentication bytes changed during Publication-6 preflight.'
     }
+    $priorP5After = Assert-PriorP5EvidenceUnchanged $priorP5Before
     $priorP4After = Assert-PriorP4EvidenceUnchanged $priorP4Before
     $priorP3After = Assert-PriorP3EvidenceUnchanged $priorP3Before
     $quiescenceAfter = Get-QuiescenceProof
     if (Test-Path -LiteralPath $script:EvidenceRoot) {
-        throw 'The Publication-5 evidence root appeared during zero-write preflight.'
+        throw 'The Publication-6 evidence root appeared during preflight.'
     }
 
-    return [ordered]@{
+        return [ordered]@{
         schema_version = 1
         action = 'Preflight'
         verdict = 'PASS'
@@ -1084,16 +2168,30 @@ function Invoke-ZeroWritePreflight {
             executable_sha256 = $ExpectedPythonHash
         }
         base_argv_sha256 = $baseArgvHash
+        permission_parser_canary = $permissionParserCanary
+        system_skill_jsonl_parser_canary = $systemSkillJsonlParserCanary
+        permission_attestation = $permissionAttestation
         live_codex_home = $liveCodexHome
         live_codex_home_manifest = $liveCodexHomeSecond
         live_auth_sha256 = $liveAuthHash
         process_exit_canary = $processExitCanary
+        prior_publication5_before = $priorP5Before
+        prior_publication5_after = $priorP5After
         prior_publication4_before = $priorP4Before
         prior_publication4_after = $priorP4After
         prior_publication3_before = $priorP3Before
         prior_publication3_after = $priorP3After
         quiescence_before = $quiescenceBefore
         quiescence_after = $quiescenceAfter
+        }
+    }
+    catch {
+        $preflightFailure = $_.Exception
+        if ($permissionAttestation -and $permissionAttestation.layout) {
+            try { Remove-PermissionStagingLayout $permissionAttestation.layout }
+            catch { throw $_.Exception }
+        }
+        throw $preflightFailure
     }
 }
 
@@ -1126,47 +2224,53 @@ $AllowedAdminPaths = @(
 )
 
 try {
-    $script:CanonicalApprovalMessageFile = Join-Path $env:LOCALAPPDATA 'SkillMesh\Evidence\GoalNP\Publication5\approval1-message.txt'
+    $script:CanonicalApprovalMessageFile = Join-Path $env:LOCALAPPDATA 'SkillMesh\Evidence\GoalNP\Publication6\approval1-message.txt'
     $suppliedApprovalPath = [System.IO.Path]::GetFullPath($ApprovalMessageFile)
     $canonicalApprovalPath = [System.IO.Path]::GetFullPath($script:CanonicalApprovalMessageFile)
     if (-not $suppliedApprovalPath.Equals($canonicalApprovalPath, [StringComparison]::OrdinalIgnoreCase)) {
-        throw (New-P5Failure 'UNEXPECTED_FAILURE' 'approval-message' `
-            'ApprovalMessageFile is not the canonical Publication-5 approval path.')
+        throw (New-P6Failure 'UNEXPECTED_FAILURE' 'approval-message' `
+            'ApprovalMessageFile is not the canonical Publication-6 approval path.')
     }
     if (-not (Test-Path -LiteralPath $canonicalApprovalPath -PathType Leaf)) {
-        throw (New-P5Failure 'UNEXPECTED_FAILURE' 'approval-message' 'ApprovalMessageFile does not exist.')
+        throw (New-P6Failure 'UNEXPECTED_FAILURE' 'approval-message' 'ApprovalMessageFile does not exist.')
     }
     $approvalItem = Get-Item -LiteralPath $canonicalApprovalPath -Force -ErrorAction Stop
     if (($approvalItem.Attributes -band [System.IO.FileAttributes]::ReparsePoint) -ne 0) {
-        throw (New-P5Failure 'UNEXPECTED_FAILURE' 'approval-message' 'ApprovalMessageFile is a reparse point.')
+        throw (New-P6Failure 'UNEXPECTED_FAILURE' 'approval-message' 'ApprovalMessageFile is a reparse point.')
     }
     Assert-NoAlternateDataStream $approvalItem.FullName
     $expectedApprovalBytes = $Utf8NoBom.GetBytes($ExpectedApproval + "`n")
     $actualApprovalBytes = [System.IO.File]::ReadAllBytes($canonicalApprovalPath)
     if ([Convert]::ToBase64String($actualApprovalBytes) -cne [Convert]::ToBase64String($expectedApprovalBytes)) {
-        throw (New-P5Failure 'UNEXPECTED_FAILURE' 'approval-message' `
-            'Approval message is not exact UTF-8 without BOM, with one final LF, for Publication 5.')
+        throw (New-P6Failure 'UNEXPECTED_FAILURE' 'approval-message' `
+            'Approval message is not exact UTF-8 without BOM, with one final LF, for Publication 6.')
     }
 }
 catch {
     if ($_.Exception.Data.Contains('error_code')) { throw $_.Exception }
-    throw (New-P5Failure 'UNEXPECTED_FAILURE' 'approval-message' $_.Exception.Message $_.Exception)
+    throw (New-P6Failure 'UNEXPECTED_FAILURE' 'approval-message' $_.Exception.Message $_.Exception)
 }
 $script:ApprovalMessageHash = Get-Sha256Text $ExpectedApproval
 $identityText = @(
-    'publication-5-recovery-v1',
+    'publication-6-sandbox-attestation-recovery-v1',
     $ApprovedCommit,
     $script:ApprovalMessageHash,
+    $PriorP5RequestId,
+    $PriorP5StateHash,
+    $PriorP5RootManifestHash,
     $PriorP4RequestId,
     $PriorP4StateHash,
+    $PriorP4RootManifestHash,
     $PriorP3RequestId,
-    $PriorP3StateHash
+    $PriorP3StateHash,
+    $PriorP3RootManifestHash
 ) -join "`n"
 $script:RequestId = 'tba-' + (Get-Sha256Text $identityText)
 $script:EvidenceRoot = Join-Path $env:LOCALAPPDATA ('SkillMesh\Evidence\GoalNP\TerraBootstrap\' + $script:RequestId)
 $script:StatePath = Join-Path $script:EvidenceRoot 'state.json'
 
 if ($Action -eq 'Inspect') {
+    $null = Get-PriorP5EvidenceProof
     $null = Get-PriorP4EvidenceProof
     $null = Get-PriorP3EvidenceProof
     if (-not (Test-Path -LiteralPath $script:StatePath -PathType Leaf)) { throw 'No matching Terra bootstrap state exists.' }
@@ -1195,23 +2299,56 @@ if ($Action -eq 'Inspect') {
 }
 
 try {
-    $preflight = Invoke-ZeroWritePreflight
+    $preflight = Invoke-P6Preflight ($Action -ceq 'Run')
 }
 catch {
-    $metadata = Get-P5FailureMetadata $_.Exception
-    if ($metadata.error_code -ne 'UNEXPECTED_FAILURE') { throw $_.Exception }
-    throw (New-P5Failure 'UNEXPECTED_FAILURE' 'preflight' $_.Exception.Message $_.Exception)
+    $preflightException = $_.Exception
+    $metadata = Get-P6FailureMetadata $preflightException
+    if (-not $preflightException.Data.Contains('error_code')) {
+        $preflightException = New-P6Failure 'UNEXPECTED_FAILURE' 'preflight' `
+            $_.Exception.Message $_.Exception
+        $metadata = Get-P6FailureMetadata $preflightException
+    }
+    $preflightFailure = [ordered]@{
+        schema_version = 1
+        action = $Action
+        verdict = 'BLOCKED'
+        request_id = $script:RequestId
+        approved_commit = $ApprovedCommit
+        error_code = $metadata.error_code
+        error_label = $metadata.error_label
+        error = $preflightException.Message
+        evidence_root_absent = -not (Test-Path -LiteralPath $script:EvidenceRoot)
+    }
+    if ($metadata.cause_code) { $preflightFailure['cause_code'] = $metadata.cause_code }
+    [Console]::Out.Write(($preflightFailure | ConvertTo-Json -Depth 6) + "`n")
+    throw $preflightException
 }
 if ($Action -eq 'Preflight') {
     $preflight | ConvertTo-Json -Depth 12
     exit 0
 }
 
-if (Test-Path -LiteralPath $script:EvidenceRoot) {
-    throw 'This deterministic Publication-5 lineage already exists. Run Inspect; do not create another attempt.'
+$script:PermissionStagingLayout = $preflight.permission_attestation.layout
+try {
+    if (-not $script:PermissionStagingLayout -or
+        -not (Test-Path -LiteralPath $script:PermissionStagingLayout.request_root -PathType Container)) {
+        throw (New-P6Failure 'PERMISSION_ATTESTATION_FAILED' 'permission-staging-retention' `
+            'Run preflight did not retain the exact permission-staging request root.')
+    }
+    if (Test-Path -LiteralPath $script:EvidenceRoot) {
+        throw 'This deterministic Publication-6 lineage already exists. Run Inspect; do not create another attempt.'
+    }
+    New-Item -ItemType Directory -Path $script:EvidenceRoot | Out-Null
 }
-New-Item -ItemType Directory -Path $script:EvidenceRoot | Out-Null
-$script:LaunchRoot = Join-Path $script:EvidenceRoot 'instruction-free-launch-roots'
+catch {
+    $claimFailure = $_.Exception
+    if ($script:PermissionStagingLayout) {
+        try { Remove-DisposableCodexHome }
+        catch { throw $_.Exception }
+    }
+    throw $claimFailure
+}
 $previous = Get-Location
 $EnvironmentNames = @(
     'CODEX_HOME', 'TEMP', 'TMP', 'PIP_CACHE_DIR', 'PYTHONNOUSERSITE',
@@ -1221,20 +2358,22 @@ $OriginalEnvironment = [ordered]@{}
 foreach ($name in $EnvironmentNames) {
     $OriginalEnvironment[$name] = [Environment]::GetEnvironmentVariable($name, 'Process')
 }
-$script:DisposableCodexHome = $null
+$script:DisposableCodexHome = $script:PermissionStagingLayout.codex_home
 $script:LiveCodexHome = $preflight.live_codex_home
 $script:LiveCodexHomeBefore = $preflight.live_codex_home_manifest
+$script:PriorP5Before = $preflight.prior_publication5_after
 $script:PriorP4Before = $preflight.prior_publication4_after
 $script:PriorP3Before = $preflight.prior_publication3_after
+$script:PreclaimPermissionProjectionHash = $preflight.permission_attestation.effective_projection_sha256
 $bundleHashes = $preflight.bundle_sha256
 $baseArgvHash = $preflight.base_argv_sha256
 $PythonExe = $preflight.python.executable
 $script:CodexExe = $preflight.codex.executable
 $script:ResultSchema = Join-Path $RepoRoot 'schemas\terra-bootstrap-result-v1.schema.json'
+$script:PermissionCleanupAttempted = $false
 try {
     $preflightPath = Join-Path $script:EvidenceRoot 'preflight.json'
     Write-Utf8NoBom $preflightPath (($preflight | ConvertTo-Json -Depth 12) + "`n")
-    New-Item -ItemType Directory -Path $script:LaunchRoot | Out-Null
     $LiveAuthPath = Join-Path $LiveCodexHome 'auth.json'
     if (-not (Test-Path -LiteralPath $LiveAuthPath -PathType Leaf)) { throw 'Codex authentication is unavailable.' }
     if ((Get-FileSha256 $LiveAuthPath) -cne $preflight.live_auth_sha256) {
@@ -1244,15 +2383,23 @@ try {
     if (-not (Test-ManifestEqual $LiveCodexHomeBefore $postAllocationLiveCodexHome)) {
         throw 'The live CODEX_HOME changed after preflight and before execution.'
     }
+    $PriorP5PostAllocation = Assert-PriorP5EvidenceUnchanged $PriorP5Before
     $PriorP4PostAllocation = Assert-PriorP4EvidenceUnchanged $PriorP4Before
     $PriorP3PostAllocation = Assert-PriorP3EvidenceUnchanged $PriorP3Before
-    $script:DisposableCodexHome = Join-Path $script:EvidenceRoot 'disposable-codex-home'
-    New-Item -ItemType Directory -Path $script:DisposableCodexHome | Out-Null
-    Copy-Item -LiteralPath $LiveAuthPath -Destination (Join-Path $script:DisposableCodexHome 'auth.json')
     if ((Get-FileSha256 (Join-Path $script:DisposableCodexHome 'auth.json')) -cne $preflight.live_auth_sha256) {
-        throw 'Disposable Codex authentication copy mismatch.'
+        throw 'Retained permission-staging Codex authentication copy mismatch.'
+    }
+    $preclaimStdoutPath = Join-Path $script:EvidenceRoot 'preclaim-permission.stdout.json'
+    $preclaimStderrPath = Join-Path $script:EvidenceRoot 'preclaim-permission.stderr.txt'
+    Copy-Item -LiteralPath $preflight.permission_attestation.stdout_path -Destination $preclaimStdoutPath
+    Copy-Item -LiteralPath $preflight.permission_attestation.stderr_path -Destination $preclaimStderrPath
+    if ((Get-FileSha256 $preclaimStdoutPath) -cne $preflight.permission_attestation.stdout_sha256 -or
+        (Get-FileSha256 $preclaimStderrPath) -cne $preflight.permission_attestation.stderr_sha256) {
+        throw 'Retained pre-claim permission proof copy mismatch.'
     }
     $env:CODEX_HOME = $script:DisposableCodexHome
+    $env:TEMP = $script:PermissionStagingLayout.temp_root
+    $env:TMP = $script:PermissionStagingLayout.temp_root
 
     Set-Location $RepoRoot
     $postAllocationQuiescence = Get-QuiescenceProof
@@ -1265,6 +2412,11 @@ try {
         python_executable_sha256 = $ExpectedPythonHash
         live_codex_home_before = $LiveCodexHomeBefore
         process_exit_canary = $preflight.process_exit_canary
+        preclaim_permission_stdout_sha256 = Get-FileSha256 $preclaimStdoutPath
+        preclaim_permission_stderr_sha256 = Get-FileSha256 $preclaimStderrPath
+        preclaim_permission_projection_sha256 = $script:PreclaimPermissionProjectionHash
+        prior_publication5_before = $PriorP5Before
+        prior_publication5_post_allocation = $PriorP5PostAllocation
         prior_publication4_before = $PriorP4Before
         prior_publication4_post_allocation = $PriorP4PostAllocation
         prior_publication3_before = $PriorP3Before
@@ -1274,18 +2426,24 @@ try {
     }
 
     $implementationPrompt = @"
-Implement only ADMIN-BOOTSTRAP for Goal NP Publication 5 at commit $ApprovedCommit.
+Implement only ADMIN-BOOTSTRAP for Goal NP Publication 6 at commit $ApprovedCommit.
 The exact owner worktree is $RepoRoot. Read $RepoRoot\plan.md,
 $RepoRoot\documentation\native-claude-codex-skill-parity-plan.md, and
 $RepoRoot\documentation\native-claude-codex-skill-parity-terra-amendment.md. The amendment controls
 the implementation executor. Modify only the 15 ADMIN paths enumerated there and in the base plan.
 Implement the Terra-direct executor fields and zero-model deterministic issue synchronization.
+This is only local generic repository implementation against frozen approved inputs. All Codex,
+model, and CLI strings and behavior are opaque literals; their names are incidental. This is not a
+request to discover or validate current OpenAI or Codex facts, docs, settings, setup, troubleshooting,
+prompting, model choice, APIs, or SDKs. If a genuine system trigger nevertheless requires an unavailable
+capability, return schema-valid BLOCKED without attempting web or network access.
 Do not commit, stage, mutate GitHub, invoke another model, install dependencies, run tests, use a
 repo/user skill, plugin, MCP, web, or browser, write a live discovery/config home, or touch any other
-path. Built-in system-skill instructions may be read and followed when their system trigger requires
-it, but they add no path, tool, network, model, or write authority. The outer launcher owns the exact
-contained tests and review. End with schema-valid JSON only; PASS means the files are ready for those
-deterministic gates.
+path. No system-skill trigger applies to this frozen generic task; do not open or invoke a system skill.
+If you judge that a system-skill trigger nevertheless applies, return schema-valid BLOCKED before any
+mutation and do not attempt web or network access. The outer launcher owns the exact contained tests
+and review. End with schema-valid JSON only; PASS means the files are ready for those deterministic
+gates.
 "@
     $implementationPromptPath = Join-Path $script:EvidenceRoot 'implementation-prompt.txt'
     Write-Utf8NoBom $implementationPromptPath $implementationPrompt
@@ -1332,9 +2490,7 @@ deterministic gates.
     $pipInstall = Invoke-RecordedProcess 'pip-install' $VenvPython @(
         '-m', 'pip', 'install', '--require-hashes', '--only-binary=:all:', '-r', $LockPath
     ) $script:EvidenceRoot
-    $ReviewLaunchRoot = Join-Path $script:LaunchRoot 'review'
-    New-Item -ItemType Directory -Path $ReviewLaunchRoot -Force | Out-Null
-    $ReviewInputRoot = Join-Path $ReviewLaunchRoot 'review-input'
+    $ReviewInputRoot = Join-Path $script:EvidenceRoot 'review-input'
     New-Item -ItemType Directory -Path $ReviewInputRoot | Out-Null
     $focusedTests = Invoke-RecordedProcess 'focused-tests' $VenvPython @(
         '-m', 'pytest', '-q', '-o', ('cache_dir=' + $PytestCacheRoot),
@@ -1391,7 +2547,7 @@ deterministic gates.
     Write-Utf8NoBom $candidateEvidencePath (($candidateEvidence | ConvertTo-Json -Depth 10) + "`n")
 
     $reviewPrompt = @"
-    Independently review the exact uncommitted ADMIN-BOOTSTRAP candidate for Goal NP Publication 5.
+Independently review the exact uncommitted ADMIN-BOOTSTRAP candidate for Goal NP Publication 6.
 The owner worktree is $RepoRoot and the approved commit is $ApprovedCommit. Read the exact plan at
 $RepoRoot\documentation\native-claude-codex-skill-parity-plan.md and controlling amendment at
 $RepoRoot\documentation\native-claude-codex-skill-parity-terra-amendment.md. The candidate evidence
@@ -1400,9 +2556,15 @@ diff is $($candidateDiff.stdout_path) with SHA-256 $($candidateDiff.stdout_sha25
 the candidate tree, implementation JSONL, contained lock-based test results, path scope, and diff gate.
 Check standalone executability, security/capability boundaries, schemas, zero-model issue sync, crash
 behavior, exact 15-path scope, and absence of live/GitHub/model side effects. You are read-only. Do not
-invoke another model or use a repo/user skill, plugin, MCP, web, or browser. Built-in system-skill
-instructions may be read and followed when their system trigger requires it, but they add no authority.
-Do not change any file. End with schema-valid JSON only. PASS permits no blocker or significant gap.
+change any file. This is only local generic repository review against frozen approved inputs. All Codex, model, and CLI
+strings and behavior are opaque literals; their names are incidental. This is not a request to discover
+or validate current OpenAI or Codex facts, docs, settings, setup, troubleshooting, prompting, model
+choice, APIs, or SDKs. If a genuine system trigger nevertheless requires an unavailable capability,
+return schema-valid BLOCKED without attempting web or network access. Do not invoke another model or
+use a repo/user skill, plugin, MCP, web, or browser. No system-skill trigger applies to this frozen generic
+task; do not open or invoke a system skill. If you judge that a system-skill trigger nevertheless applies,
+return schema-valid BLOCKED and do not attempt web or network access. End with schema-valid JSON only.
+PASS permits no blocker or significant gap.
 "@
     $reviewPromptPath = Join-Path $script:EvidenceRoot 'review-prompt.txt'
     Write-Utf8NoBom $reviewPromptPath $reviewPrompt
@@ -1422,10 +2584,16 @@ Do not change any file. End with schema-valid JSON only. PASS permits no blocker
     Write-State 'review-pass' @{ implementation = $implementation; review = $review; candidate_tree = $candidateTree }
 
     $LiveCodexHomeAfter = Assert-LiveCodexHomeUnchanged $LiveCodexHomeBefore 'before-commit'
+    $PriorP5BeforeCommit = Assert-PriorP5EvidenceUnchanged $PriorP5Before
     $PriorP4BeforeCommit = Assert-PriorP4EvidenceUnchanged $PriorP4Before
     $PriorP3BeforeCommit = Assert-PriorP3EvidenceUnchanged $PriorP3Before
     $preCommitQuiescence = Get-QuiescenceProof
     Remove-DisposableCodexHome
+    foreach ($name in @('CODEX_HOME', 'TEMP', 'TMP')) {
+        $value = $OriginalEnvironment[$name]
+        if ($null -eq $value) { Remove-Item -Path ('Env:' + $name) -ErrorAction SilentlyContinue }
+        else { Set-Item -Path ('Env:' + $name) -Value $value }
+    }
 
     $changed = @(Assert-AdminScope)
     & git add -- $AllowedAdminPaths
@@ -1438,12 +2606,13 @@ Do not change any file. End with schema-valid JSON only. PASS permits no blocker
     }
     $stagedTree = (& git write-tree).Trim()
     if ($LASTEXITCODE -ne 0 -or $stagedTree -cne $candidateTree) { throw 'Staged tree differs from the reviewed candidate tree.' }
-    & git commit -m 'chore(goal-np): bootstrap approval tooling'
+    $commitOutput = @(& git commit -m 'chore(goal-np): bootstrap approval tooling')
     if ($LASTEXITCODE -ne 0) { throw 'ADMIN commit failed.' }
     $adminCommit = (& git rev-parse HEAD).Trim()
     $finalStatus = @(& git status --porcelain=v1 --untracked-files=all)
     if ($finalStatus.Count -ne 0) { throw 'ADMIN commit did not leave a clean worktree.' }
     $LiveCodexHomeTerminal = Assert-LiveCodexHomeUnchanged $LiveCodexHomeBefore 'success'
+    $PriorP5Terminal = Assert-PriorP5EvidenceUnchanged $PriorP5Before
     $PriorP4Terminal = Assert-PriorP4EvidenceUnchanged $PriorP4Before
     $PriorP3Terminal = Assert-PriorP3EvidenceUnchanged $PriorP3Before
 
@@ -1475,6 +2644,9 @@ Do not change any file. End with schema-valid JSON only. PASS permits no blocker
         live_codex_home_after = $LiveCodexHomeAfter
         live_codex_home_terminal = $LiveCodexHomeTerminal
         process_exit_canary = $preflight.process_exit_canary
+        prior_publication5_before = $PriorP5Before
+        prior_publication5_before_commit = $PriorP5BeforeCommit
+        prior_publication5_terminal = $PriorP5Terminal
         prior_publication4_before = $PriorP4Before
         prior_publication4_before_commit = $PriorP4BeforeCommit
         prior_publication4_terminal = $PriorP4Terminal
@@ -1493,12 +2665,12 @@ Do not change any file. End with schema-valid JSON only. PASS permits no blocker
 }
 catch {
     $originalError = $_
-    $failure = Get-P5FailureMetadata $originalError.Exception
+    $failure = Get-P6FailureMetadata $originalError.Exception
     $terminalException = $originalError.Exception
     if (-not $originalError.Exception.Data.Contains('error_code')) {
-        $terminalException = New-P5Failure 'UNEXPECTED_FAILURE' 'launcher' `
+        $terminalException = New-P6Failure 'UNEXPECTED_FAILURE' 'launcher' `
             $originalError.Exception.Message $originalError.Exception
-        $failure = Get-P5FailureMetadata $terminalException
+        $failure = Get-P6FailureMetadata $terminalException
     }
     $blocked = [ordered]@{
         error_code = $failure.error_code
@@ -1506,13 +2678,25 @@ catch {
         error = $originalError.Exception.Message
     }
     if ($failure.cause_code) { $blocked['cause_code'] = $failure.cause_code }
+    foreach ($field in @('model_verdict', 'model_result_path', 'model_result_sha256')) {
+        if ($terminalException.Data.Contains($field)) { $blocked[$field] = $terminalException.Data[$field] }
+    }
+    $script:PermissionCleanupAttempted = $true
     try {
         Remove-DisposableCodexHome
         $blocked['disposable_codex_home_removed'] = $true
     }
     catch {
+        $cleanupException = $_.Exception
         $blocked['disposable_codex_home_removed'] = $false
-        $blocked['disposable_codex_home_cleanup_error'] = $_.Exception.Message
+        $blocked['disposable_codex_home_cleanup_error'] = $cleanupException.Message
+        $blocked['cause_code'] = $failure.error_code
+        $terminalException = New-P6Failure 'PERMISSION_STAGING_CLEANUP_FAILED' `
+            'permission-staging-cleanup' $cleanupException.Message $cleanupException $failure.error_code
+        $failure = Get-P6FailureMetadata $terminalException
+        $blocked['error_code'] = $failure.error_code
+        $blocked['error_label'] = $failure.error_label
+        $blocked['error'] = $terminalException.Message
     }
     if ($LiveCodexHome -and $LiveCodexHomeBefore) {
         try {
@@ -1526,6 +2710,17 @@ catch {
         }
         catch {
             $blocked['live_codex_home_manifest_error'] = $_.Exception.Message
+        }
+    }
+    if ($PriorP5Before) {
+        try {
+            $blockedPriorP5After = Assert-PriorP5EvidenceUnchanged $PriorP5Before
+            $blocked['prior_publication5_after'] = $blockedPriorP5After
+            $blocked['prior_publication5_unchanged'] = $true
+        }
+        catch {
+            $blocked['prior_publication5_unchanged'] = $false
+            $blocked['prior_publication5_manifest_error'] = $_.Exception.Message
         }
     }
     if ($PriorP4Before) {
@@ -1552,11 +2747,14 @@ catch {
     }
     if (Test-Path -LiteralPath $script:EvidenceRoot) {
         Write-State 'blocked' $blocked
+        [Console]::Out.Write((Get-Content -LiteralPath $script:StatePath -Raw))
     }
     throw $terminalException
 }
 finally {
-    try { Remove-DisposableCodexHome }
+    try {
+        if (-not $script:PermissionCleanupAttempted) { Remove-DisposableCodexHome }
+    }
     finally {
         foreach ($name in $EnvironmentNames) {
             $value = $OriginalEnvironment[$name]
