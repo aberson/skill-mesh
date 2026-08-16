@@ -10,8 +10,8 @@
 - **Current state:** paused deliberately; Publication 8 is uncommitted and has no exact-byte Recovery
   Approval 1 (the bounded repair/revision authorization was narrower)
 - **Durability:** this canonical copy is isolated on `docs/goal-np-journey`, so it does not add a path
-  to or change the exact Publication 8 candidate; the original reconstruction remains outside the P8
-  worktree under `dev/docs/investigations`
+  to or change the exact Publication 8 candidate; the former reconstruction under
+  `dev/docs/investigations` is retained only as a pointer to this document
 
 > This is an operator worklog and recovery aid. It is not an approval, a launcher receipt, a test
 > gate, a request record, or Publication 8 evidence. Conversation-only review results are recorded as
