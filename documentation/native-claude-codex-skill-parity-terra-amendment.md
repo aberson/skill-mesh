@@ -1,24 +1,26 @@
-# Goal NP Publication 6 — Terra bootstrap sandbox-attestation recovery amendment
+# Goal NP Publication 7 — Terra bootstrap writable-root grammar recovery amendment
 
 **Status:** AWAITING RECOVERY APPROVAL 1
 **Base publication:** `documentation/native-claude-codex-skill-parity-plan.md` at commit
 `9c224efda851a3501f130830f5cd22b212fc36f0`
 **Base-plan SHA-256:** `3c8b3e84b2e192ce1d53cd7488afc8a051a614ee6316df59dad5985af5b73b4d`
-**Requested change:** preserve Publication 5's Codex `gpt-5.6-terra`/`xhigh` orchestration and repaired
-Windows PowerShell 5.1 process recorder, and repair only the sandbox-attestation, known model-result
-classification, and external fail-stop boundaries exposed by its approved terminal attempt.
+**Requested change:** preserve Publication 6's Codex `gpt-5.6-terra`/`xhigh` orchestration, repaired
+Windows PowerShell 5.1 process recorder, permission attestation, stable model-result classification, and
+external fail-stop boundary, and correct only the omitted workspace-write writable-root grammar exposed
+by its approved, non-consuming preclaim failure.
 
 This document is a narrow controlling amendment. It does not authorize implementation by itself.
-Publication 6 is the exact commit containing this amendment, the base plan, `plan.md`,
+Publication 7 is the exact commit containing this amendment, the base plan, `plan.md`,
 `documentation/native-claude-codex-skill-parity-proposal.html`, the precommitted post-Approval launcher
 `tools/run-goal-np-terra-bootstrap.ps1`, and its
 `schemas/terra-bootstrap-result-v1.schema.json`. Publications 3, 4, and 5 each consumed their Approval-1
-sentence in a terminal request; none of those sentences or any earlier approval can authorize these
-bytes or retry any request.
+sentence in a terminal request. Publication 6 received Approval 1, but `Preflight` stopped before claim
+and created no request lineage. None of those sentences or any earlier approval can authorize these
+bytes, retry a terminal request, or run the superseded Publication-6 launcher.
 
 ## 1. What this amendment changes
 
-Publication 6 carries forward Publication 5's supersession of these Publication-2 surfaces:
+Publication 7 carries forward Publication 6's supersession of these Publication-2 surfaces:
 
 1. the Claude Code/`opus` `ADMIN-BOOTSTRAP` executor and its 76-row installed-Claude closure;
 2. the Claude-native `/repo-sync` model call in `ADMIN-SYNC`;
@@ -30,31 +32,29 @@ Publication 6 carries forward Publication 5's supersession of these Publication-
 They are replaced by the direct Codex/Terra contracts below. When one of those named surfaces
 conflicts with the base plan, this amendment controls. All other base-plan text remains controlling.
 
-Publication 6 retains Publication 5's child-process result-recording repair and additionally supersedes
-only these Publication-5 boundaries:
+Publication 7 retains every Publication-6 executor boundary and supersedes only this
+Publication-6 permission-renderer defect:
 
-1. the approved repository becomes the primary `--cd` workspace for both ADMIN model calls; the
-   redundant instruction-free `--cd` plus repository `--add-dir` shape is removed without asserting
-   that Publication 5 proved that shape defective;
-2. `Get-PromptInputProof` receives the following call's exact sandbox instead of hard-coding
-   `read-only`, uses the same primary workspace and sandbox in `codex debug prompt-input`, and
-   mechanically attests the resulting model-visible permission surface before any corresponding
-   `codex exec` call;
-3. a schema-valid Terra result of `BLOCKED`, `INVALID`, or `CHANGES_REQUIRED`, or a `PASS` carrying a
-   material finding, maps to its own
-   stable terminal launcher failure code instead of the unknown-exception code; and
-4. the external PowerShell handoff is one explicitly delimited fail-stop script scope, so a failed
-   Preflight, Run, parse, contract check, or Inspect ends the scope before any later command executes.
+1. `Get-ExpectedPermissionInstructionsText` receives the canonical owner root and, for
+   `workspace-write` only, appends the exact line `` The writable root is `<canonical-owner-root>`.``
+   after the approval sentence and before `</permissions instructions>`; the initial character is one
+   ASCII space, the backticks are literal, and the path is the already-attested sole workspace root;
+2. the accepted workspace-write canary derives that annotation from its first and only workspace root,
+   while independent `missing-writable-root-annotation` and `wrong-writable-root-annotation` canaries
+   remove the annotation and replace it with a wrong root; both
+   must be rejected under strict whole-text equality; and
+3. a permission-text mismatch may surface only deterministic expected/actual whole-text SHA-256,
+   expected/actual line counts, a one-based first differing line number, expected/actual booleans saying
+   whether that line exists, and nullable SHA-256 values for only those two lines. It must not emit raw
+   permission text, path-bearing line content, or arrays of other line hashes.
 
 The repair changes no model task, result schema, call count, capability envelope, process recorder,
-canary, or declared sandbox; only the primary-workspace shape changes as named above. Publication-6
-authority and recovery-evidence references necessarily replace their Publication-5 counterparts. It
-grants no additional model or production process. In addition to the two retained process canaries, it
-authorizes exactly one pinned pre-claim non-model `codex debug prompt-input` diagnostic per invocation
-of the shared readiness gate, within the scratch boundary in Section 3.4. It makes the already-approved
-closed production process envelope prove its effective model-visible
-sandbox before using the matching model call, and classify a known model verdict without disguising it
-as an unexpected launcher failure.
+declared sandbox, primary workspace, or equality policy. Publication-7 authority and recovery-evidence
+references necessarily replace their Publication-6 counterparts. It grants no additional model or
+production process. The retained process canary and pinned non-model `codex debug prompt-input`
+diagnostic keep their exact call counts and scratch boundary. The correction makes the existing strict
+renderer match the pinned CLI's complete workspace-write grammar; it does not relax, trim, ignore, or
+accept an unknown permission line.
 
 In particular, this amendment does **not** change:
 
@@ -69,19 +69,19 @@ In particular, this amendment does **not** change:
 Terra is therefore the Goal-NP implementation orchestrator, not a relabeling of the Codex native
 qualification session and not a cross-vendor equivalence claim.
 
-## 2. Publication-6 authority and recovery boundary
+## 2. Publication-7 authority and recovery boundary
 
 The only valid recovery Approval-1 sentence is:
 
 ```text
-Approve Goal NP plan Publication 6 with D01-D10 and the Terra sandbox-attestation recovery amendment.
+Approve Goal NP plan Publication 7 with D01-D10 and the Terra writable-root grammar recovery amendment.
 ```
 
-Its UTF-8 text SHA-256 is `ad20542c0d5dc9b77fbab14413998f614ab178ca4949a1269f06c08f24b3407e`.
+Its UTF-8 text SHA-256 is `fe5736f56b0edb305ef2e1632d5882a6d85d930c06862d9ec9ce26a28b9a23aa`.
 The canonical UTF-8-without-BOM file with exactly one final LF has SHA-256
-`064e50a53d93dc976cb98b87a5a49d0260d91f88aadddb23bcd8bf60d9be2add`.
+`a849c6f49c9557ee7e11bdc4c01f324e17fe260d5abdc648141715d22120f8a5`.
 
-Approval is valid only when its receipt binds the final Publication-6 commit and SHA-256 of all six
+Approval is valid only when its receipt binds the final Publication-7 commit and SHA-256 of all six
 bundle files. It authorizes the amended administrative prelude, NP-01 through NP-41, disposable
 tests/hosts/evidence, and the base plan's non-live candidate work. It does not authorize a live Claude
 or Codex discovery-home write, live State mutation, Approval-2 receipt, cutover, activation, or live
@@ -107,15 +107,16 @@ The immutable Publication-3 state is `blocked` with SHA-256
 `ae59a6ac7f512d2e399675fe541b916d1710c209a13b45433642cf019a07df97`. Its evidence root contains only
 that 601-byte `state.json` and an empty `instruction-free-launch-roots` directory; the canonical
 three-entry whole-root manifest SHA-256 is
-`9b01de1f550019a8bf81c23431925b6f38a173ec1ce22023c765a2a8d290cdcf`. Publication 6 treats that root as
+`9b01de1f550019a8bf81c23431925b6f38a173ec1ce22023c765a2a8d290cdcf`. Publication 7 treats that root as
 read-only recovery input at
 `%LOCALAPPDATA%\SkillMesh\Evidence\GoalNP\TerraBootstrap\tba-b7e5898e6389ff19b3ce34738f16b47d0a832dfc4625789fbcf4308352f2b1a0`.
 Its canonical Approval-1 file SHA-256 is
 `33d3e1756ed2bfd661698da3dfdf85a921380efd87fe3d635b777dafe3c6e04b`; the normalized approval-text
 SHA-256 is `66df8cd413fddd097e80dc63ccfacab221e96c72c795345d14b72ae1ae3474ef`.
 It may not be retried, deleted, changed, renamed, adopted as a new request, or used as authority for a
-model call. Any mismatch is `PRIOR_PUBLICATION3_EVIDENCE_MISMATCH` and stops before a Publication-6
-evidence root exists.
+model call. An initial mismatch is `PRIOR_PUBLICATION3_EVIDENCE_MISMATCH` and stops before a
+Publication-7 evidence root exists; the same mismatch on a recheck after claim seals durable terminal
+`blocked` evidence in the existing P7 root.
 
 ### 2.2 Frozen Publication-4 terminal evidence
 
@@ -137,10 +138,11 @@ frozen Publication-3 evidence remained unchanged.
 The immutable Publication-4 state is `blocked` with SHA-256
 `4517ecd2d5ff948bbcf7763e32686797f65b5112ceb14e71c96c8222e6e12e05`. The canonical whole-root manifest
 has exactly nine entries and SHA-256
-`893c099e299a5152f26edd912a5bfcdc75bd69e030dfd40653c0365ffe4d5e44`. Publication 6 treats every byte
+`893c099e299a5152f26edd912a5bfcdc75bd69e030dfd40653c0365ffe4d5e44`. Publication 7 treats every byte
 under that root as read-only recovery input. It may not be retried, deleted, changed, renamed, repaired,
-adopted, or used as authority for a model call. Any mismatch reports
-`PRIOR_PUBLICATION4_EVIDENCE_MISMATCH` and stops before a Publication-6 evidence root exists.
+adopted, or used as authority for a model call. An initial mismatch reports
+`PRIOR_PUBLICATION4_EVIDENCE_MISMATCH` and stops before a Publication-7 evidence root exists; the same
+mismatch on a recheck after claim seals durable terminal `blocked` evidence in the existing P7 root.
 
 ### 2.3 Frozen Publication-5 terminal evidence
 
@@ -177,19 +179,60 @@ manifest has exactly 17 entries and SHA-256
 The approved repository remained clean at `6d292bb37c37944c71ed8b18214fabb23f22869e`, all 15 ADMIN outputs
 remained absent, the request-owned disposable Codex home was removed, and the live Codex home plus both
 earlier roots remained unchanged. No deterministic test, ADMIN diff, commit, issue mutation, or product
-mutation occurred. Publication 6 treats every P5 byte as read-only recovery input. The request/root may
+mutation occurred. Publication 7 treats every P5 byte as read-only recovery input. The request/root may
 not be retried, deleted, changed, renamed, repaired, adopted, or used as authority for another model call.
-Any mismatch reports `PRIOR_PUBLICATION5_EVIDENCE_MISMATCH` and stops before a Publication-6 evidence
-root exists.
+An initial mismatch reports `PRIOR_PUBLICATION5_EVIDENCE_MISMATCH` and stops before a Publication-7
+evidence root exists; the same mismatch on a recheck after claim seals durable terminal `blocked`
+evidence in the existing P7 root.
 
-Publication 6 is a replacement publication under the existing Approval-1 gate, not a third approval
+### 2.4 Frozen Publication-6 approved preclaim record
+
+Publication 6 was committed at `d0f83210e3092e18a28ee24db20a1af95887c31b` and received its exact
+Approval-1 sentence. Its canonical approval file is
+`%LOCALAPPDATA%\SkillMesh\Evidence\GoalNP\Publication6\approval1-message.txt`; the file SHA-256 is
+`064e50a53d93dc976cb98b87a5a49d0260d91f88aadddb23bcd8bf60d9be2add`, and the normalized
+approval-text SHA-256 is `ad20542c0d5dc9b77fbab14413998f614ab178ca4949a1269f06c08f24b3407e`.
+Its frozen external handoff is
+`%LOCALAPPDATA%\SkillMesh\Evidence\GoalNP\Publication6\terra-transition-handoff-d0f83210e3092e18a28ee24db20a1af95887c31b.txt`
+with length 18,494 bytes and SHA-256
+`ae085575b9441080ece62194cd4a3144df809eaa9d70b2ed2fcd76624d455b47`.
+
+The derived Publication-6 request identity was
+`tba-cc76394efc1359d75b406ce5a2d2300d5ed41020b5cf7fc972ba3039dc3a6ab0`, but `Run` was never started
+and its TerraBootstrap evidence root was never created. The launcher reproduces that ID from the
+original 12-field preimage: `publication-6-sandbox-attestation-recovery-v1`, Publication-6 commit and
+approval-text hash, then the P5, P4, and P3 request/state/root-manifest triples. The operator-reported
+terminal JSON from the
+standalone, repeatable, non-consuming `Preflight` had `verdict=BLOCKED`,
+`error_code=PERMISSION_ATTESTATION_FAILED`, `error_label=preclaim-permission-attestation`, full error
+`[PERMISSION_ATTESTATION_FAILED] [preclaim-permission-attestation] Permissions text differs from the complete closed permission grammar.`, and
+`evidence_root_absent=true`. Pinned Codex 0.147.0 supplied the additional workspace-write permission
+line `` The writable root is `<approved-repository>`.`` including its leading ASCII space. The
+launcher expected four normalized lines because its accepted canary and expected template shared the
+same omission. Newline normalization was not the failure.
+
+No `codex exec`, Terra/model call, request claim, state, test, ADMIN diff, commit, issue, product, or
+repository mutation occurred. The repository remained clean at the approved commit, all 15 ADMIN paths
+remained absent, and the permission scratch was removed. This record is not a terminal claimed
+lineage, and Publication 7 invents no Publication-6 failure receipt, state, or evidence manifest. The
+preflight scratch output was removed by design. Publication 7 verifies only the
+exact canonical approval bytes and hashes and handoff hash; that its approved commit descends from the
+Publication-6 approved commit; absence of the Publication-6 TerraBootstrap request root; and absence of the complete
+`%LOCALAPPDATA%\SkillMesh\Staging\GoalNP\Publication6` staging publication root and its exact
+`tba-cc76394efc1359d75b406ce5a2d2300d5ed41020b5cf7fc972ba3039dc3a6ab0` child. An initial mismatch is
+`PRIOR_PUBLICATION6_PRECLAIM_MISMATCH` and stops before a Publication-7 evidence root exists; the same
+mismatch on a recheck after claim seals durable terminal `blocked` evidence in the existing P7 root.
+The Publication-6 launcher must not be modified in place or rerun; its approval remains bound to those
+superseded bytes and cannot authorize Publication 7.
+
+Publication 7 is a replacement publication under the existing Approval-1 gate, not a third approval
 gate. Its new sentence, commit, recovery-domain request ID, and evidence root create a distinct lineage.
 
 ## 3. Exact Terra execution envelope
 
 ### 3.1 Frozen host identity
 
-Publication 6 requires:
+Publication 7 requires:
 
 - Codex CLI version exactly `codex-cli 0.147.0`;
 - native executable resolved below `%APPDATA%` at
@@ -343,23 +386,23 @@ No process may spawn a subagent or phone-a-friend. This restriction concerns Goa
 orchestration only; it does not modify the D08/native-skill friend behavior that NP-12 and NP-40 must
 qualify.
 
-### 3.4 Publication-6 pre-claim readiness, sandbox attestation, and result boundary
+### 3.4 Publication-7 pre-claim readiness, writable-root grammar, and result boundary
 
 `Preflight` is repeatable, advisory, and non-consuming. It invokes no `codex exec` or model process and
 creates or changes no launcher-owned repository, evidence, approval, Git-object/index, or live-home path.
 Its only content-bearing write surface is the exact fresh staging subtree
-`%LOCALAPPDATA%\SkillMesh\Staging\GoalNP\Publication6\<request-id>\permission-attestation` containing a
+`%LOCALAPPDATA%\SkillMesh\Staging\GoalNP\Publication7\<request-id>\permission-attestation` containing a
 scratch-only `CODEX_HOME`, copied authentication, output, and a dedicated `temp` child for the pinned
 non-model `codex debug prompt-input` process. The child process's `TEMP` and `TMP` are both set to that
 exact normal staging child; no OS-default temporary path is authorized. Every component must be a
 normal non-reparse path with no alternate
 data stream; a stale target is `PERMISSION_STAGING_COLLISION`, never reusable scratch. The launcher may
-create missing normal ancestors on the fixed `Staging\GoalNP\Publication6\<request-id>` route, records
+create missing normal ancestors on the fixed `Staging\GoalNP\Publication7\<request-id>` route, records
 which ancestors it created, and removes only those launcher-created ancestors after proving each empty.
 The launcher
 manifests the live Codex home before and after without writing it. `Preflight` removes the complete
 request root and all launcher-created ancestors; their absence plus continued absence of the
-Publication-6 evidence root is mandatory before PASS. A cleanup failure is
+Publication-7 evidence root is mandatory before PASS. A cleanup failure is
 `PERMISSION_STAGING_CLEANUP_FAILED`; any other containment mismatch is
 `PERMISSION_ATTESTATION_FAILED`.
 Ordinary OS access metadata and telemetry are outside the launcher's control and are not claimed as
@@ -381,6 +424,16 @@ root equal to that repository; and a managed permission profile whose only ordin
 path is that repository. Exactly two Codex temporary special writes, `:slash_tmp` then `:tmpdir`, must
 accompany it; the read-only review proof permits no ordinary or special write entry.
 
+The workspace-write permission renderer takes that canonical owner root as an explicit argument. Its
+complete normalized permissions text contains the exact line
+`` The writable root is `<canonical-owner-root>`.`` after the approval sentence and immediately before
+the closing `</permissions instructions>` tag. The initial character is one ASCII space; the backticks,
+path spelling, terminal period, and line position are significant. Read-only permissions contain no
+writable-root annotation. The accepted workspace-write canary obtains the annotation from the first and
+only `workspace_roots` value. The independent `missing-writable-root-annotation` and
+`wrong-writable-root-annotation` canaries must both fail; acceptance cannot be proved only by a fixture
+emitted through the same expected-text helper.
+
 Field checks are not the acceptance boundary. After CRLF/lone-CR to LF normalization and outer trim,
 the complete permissions text must equal the launcher's pinned sandbox-specific template with no
 remainder. The complete environment text must equal its reconstructed grammar, whose sibling order is
@@ -395,15 +448,22 @@ rejects ambient project instructions, project config, plugin/MCP/hook input, eve
 attestation. The parser accepts exactly three `message` items and three text parts in order: one
 `developer` item with one nonempty permissions `input_text`, one `user` item with one nonempty
 environment `input_text`, and one `user` item with the exact nonempty diagnostic `input_text`. Any extra
-item, content part, role, content type, skills block, locator, or text drift fails. Any parse,
-cardinality, identity,
-permission, path, cleanup, or containment
-mismatch is `PERMISSION_ATTESTATION_FAILED`, emits no PASS, and leaves no request/evidence root.
+item, content part, role, content type, skills block, locator, or text drift fails. In `Preflight` or
+the repeated pre-claim proof, any parse, cardinality, identity, permission, path, cleanup, or
+containment mismatch is `PERMISSION_ATTESTATION_FAILED`, emits no PASS, and leaves no request/evidence
+root. A per-call mismatch after `Run` claims the root records terminal `blocked` evidence and never
+authorizes another call or retry. For a permissions-text mismatch, diagnostic metadata may add only
+`permission_expected_sha256`, `permission_actual_sha256`, `permission_expected_line_count`,
+`permission_actual_line_count`, the one-based `permission_first_differing_line_number`,
+`permission_expected_line_present`, `permission_actual_line_present`, and nullable
+`permission_expected_line_sha256` / `permission_actual_line_sha256` for only that differing line. It
+never includes raw permission text, the differing line's content, an unredacted path, or arrays of other
+line hashes.
 
 The attestation and `codex exec` remain separate pinned CLI processes. Reusing the same executable hash,
 closed explicit permission shape across their documented diagnostic/exec command surfaces,
 repository workspace, and retained disposable home narrows but cannot
-eliminate the time-of-check/time-of-use interval. Publication 6 therefore claims only the exact
+eliminate the time-of-check/time-of-use interval. Publication 7 therefore claims only the exact
 model-visible debug surface and its continuity controls, not an independently observed kernel policy for
 the later model process. A subsequent model refusal is recorded under its stable model-verdict code; it
 never retroactively turns the proof into PASS evidence about the execution process.
@@ -433,8 +493,10 @@ only an ordinary terminal/explorer chain is permitted.
 
 With `GIT_OPTIONAL_LOCKS=0`, `core.fsmonitor=false`, and `core.untrackedCache=false`, the function uses
 only read-only Git inspection and validates the exact branch, commit, clean status, six committed bundle
-blobs, Codex and Python identities, canonical Publication-6 approval bytes, absent Publication-6 request
-root, and frozen Publication-3, Publication-4, and Publication-5 evidence including each canonical approval file. It
+blobs, Codex and Python identities, canonical Publication-7 approval bytes, absent Publication-7 request
+root, frozen Publication-3, Publication-4, and Publication-5 evidence, and the exact Publication-6
+preclaim record described in Section 2.4. The P6 check includes its canonical approval file and handoff,
+approved commit ancestry, and absent evidence-request, staging-request, and staging-publication roots. It
 computes the complete live-`CODEX_HOME` manifest twice and
 requires the two scans to be byte-identical. Other than the contained permission proof above, it runs no
 temporary-index, `write-tree`, test, or model operation. On PASS, `Preflight` emits only a deterministic JSON readiness record to
@@ -443,14 +505,15 @@ root.
 
 Pre-claim quiescence or live-home failures are readiness failures, not execution attempts, and may be
 checked again after the environment is made quiescent. Authority/publication mismatches fail closed.
-Once `Run` exclusively creates the distinct Publication-6 request root, any failure is terminal and the
+Once `Run` exclusively creates the distinct Publication-7 request root, any failure is terminal and the
 root may not be deleted, reset, or reused.
 
 The process-recorder failure-code vocabulary is closed:
 `PROCESS_START_FAILED`, `PROCESS_HANDLE_UNAVAILABLE`, `PROCESS_TIMEOUT`,
 `PROCESS_EXIT_CODE_UNAVAILABLE`, `PROCESS_EXIT_NONZERO`, `PROCESS_CANARY_FAILED`,
 `PERMISSION_ATTESTATION_FAILED`, `PERMISSION_STAGING_COLLISION`,
-`PERMISSION_STAGING_CLEANUP_FAILED`, `PRIOR_PUBLICATION5_EVIDENCE_MISMATCH`,
+`PERMISSION_STAGING_CLEANUP_FAILED`, `PRIOR_PUBLICATION6_PRECLAIM_MISMATCH`,
+`PRIOR_PUBLICATION5_EVIDENCE_MISMATCH`,
 `PRIOR_PUBLICATION4_EVIDENCE_MISMATCH`, `PRIOR_PUBLICATION3_EVIDENCE_MISMATCH`,
 `MODEL_VERDICT_BLOCKED`, `MODEL_VERDICT_CHANGES_REQUIRED`, `MODEL_VERDICT_INVALID`,
 `MODEL_PASS_MATERIAL_FINDINGS`, and `UNEXPECTED_FAILURE`. Before claim, a canary failure emits a stable nonzero failure with
@@ -467,20 +530,23 @@ never expands authority.
 ## 4. First-producer and administrative sequence
 
 The missing Codex `$build-step` is not installed, discovered, invoked, or treated as authority.
-Publication 6 preserves Publication 5's direct executor and Windows PowerShell 5.1 process-result
-recorder and changes only the primary-workspace, permission-attestation, known-result classification,
-and external fail-stop boundaries with the precommitted
+Publication 7 preserves Publication 6's direct executor, Windows PowerShell 5.1 process-result recorder,
+primary workspace, strict permission attestation, stable result classification, and external fail-stop
+boundary. It changes only the exact workspace-write permission renderer and its canary/diagnostic
+closure in the precommitted
 `tools/run-goal-np-terra-bootstrap.ps1` launcher and
 `schemas/terra-bootstrap-result-v1.schema.json`. The launcher is part of the approved publication,
 not an ADMIN output. `Preflight` implements Section 3.4 without claiming a request. `Run` independently
 repeats that exact gate, then exclusively claims a new root and stores the in-memory readiness record as
 `preflight.json` before any later effect. Its request identity is the lowercase SHA-256 of the canonical
-UTF-8/LF payload `publication-6-sandbox-attestation-recovery-v1`, final Publication-6 commit, exact
-Approval-1 text hash, then the frozen request ID, state hash, and whole-root-manifest hash for
-Publication 5, Publication 4, and Publication 3 in that order, joined with one LF between fields and no
-final LF; the visible ID is `tba-<digest>`. This cannot address,
-retry, or rehabilitate any terminal earlier lineage. The fresh evidence root is
-`%LOCALAPPDATA%\SkillMesh\Evidence\GoalNP\TerraBootstrap\<publication-6-request-id>` and must be absent
+UTF-8/LF payload fields: `publication-7-writable-root-grammar-recovery-v1`, final Publication-7 commit,
+exact Publication-7 Approval-1 text hash; Publication-6 approved commit, request ID, normalized approval
+hash, approval-file hash, and handoff hash; then the frozen request ID, state hash, and
+whole-root-manifest hash for Publication 5, Publication 4, and Publication 3 in that order. These 17
+fields are joined with one LF between fields and no final LF; the visible ID is `tba-<digest>`. This
+cannot address, retry, or rehabilitate any terminal earlier lineage or reuse the superseded
+Publication-6 preclaim publication. The fresh evidence root is
+`%LOCALAPPDATA%\SkillMesh\Evidence\GoalNP\TerraBootstrap\<publication-7-request-id>` and must be absent
 through the final pre-claim check.
 
 At both production child-process sites—`Invoke-RecordedProcess`, which owns prompt-input and deterministic
@@ -499,13 +565,13 @@ infer or retry a model call.
 After the claim, `Run` validates the closed argv, primary owner workspace, frozen prompts,
 result schema, output hashes, and terminal state. It rechecks process quiescence immediately before and
 after prompt-input and every Codex process. After allocation, immediately before each prompt-input or
-Codex process, before commit, on success, and on every catch path it revalidates live-home plus both
-frozen Publication-3/4/5 roots and canonical approval files. Read-only `Inspect` revalidates those same frozen
-roots and approval files plus the exact
-Publication-6 request/state identity and, for PASS, the canonical receipt path/hash/content; it bypasses
+Codex process, before commit, on success, and on every catch path it revalidates live-home, frozen
+Publication-3/4/5 roots and approval files, and the Publication-6 approval/handoff/commit plus all three absence
+predicates. Read-only `Inspect` revalidates those same frozen inputs plus the exact
+Publication-7 request/state identity and, for PASS, the canonical receipt path/hash/content; it bypasses
 the launch quiescence gate so a later agent may inspect without acquiring execution authority. `Run` is
 create-new: a crash or non-PASS after root claim leaves durable `blocked` state, and another model attempt
-under that lineage is forbidden. Publication 6 then proceeds:
+under that lineage is forbidden. Publication 7 then proceeds:
 
 1. After recovery Approval 1, the operator copies the command block, closes this Codex/VS Code and every
    other Codex, ChatGPT, Cursor, IDE-agent, and Claude session, then opens standalone ordinary Windows
@@ -527,7 +593,8 @@ under that lineage is forbidden. Publication 6 then proceeds:
    paths, implementation JSONL hash, and deterministic test receipts. It cannot edit. `PASS` with a
    blocker or significant finding is rejected by the deterministic launcher even though the shared
    Structured-Outputs-compatible result schema permits those severities for non-PASS responses.
-4. The launcher revalidates live-home, frozen Publication-3 and Publication-4 evidence, and Git identity,
+4. The launcher revalidates live-home, frozen Publication-3 through Publication-5 evidence,
+   Publication-6 preclaim inputs and all three absence predicates, and Git identity,
    stages exactly
    the reviewed candidate tree,
    creates the fixed ADMIN commit only after every gate passes, and seals immutable implementation/
@@ -576,7 +643,8 @@ implementation-model call; their existing Begin/Run/Resume/Record/Finalize contr
 mandatory stop/reopen boundaries remain.
 
 All controller requests and receipts bind both the immutable base plan and this amendment, the final
-Publication-6 commit/hashes and frozen Publication-3/Publication-4/Publication-5 recovery evidence,
+Publication-7 commit/hashes, frozen Publication-3/Publication-4/Publication-5 recovery evidence, and the
+Publication-6 approved preclaim input,
 `terra-direct-v1`, Codex
 version/executable hash/base argv, prompt/schema
 hashes, requested identity plus reported-identity status/value when available, call IDs, parent/round, stdout/stderr/last-message hashes, and
@@ -587,76 +655,79 @@ Claude or Codex package tests are not stale implementation attempts.
 ## 6. External transition handoff
 
 The following is an immutable template, not a publication blob that contains its own hash. After the
-Publication-6 commit and exact-byte reviews exist, the publisher generates a separate handoff under
-`%LOCALAPPDATA%\SkillMesh\Evidence\GoalNP\Publication6\terra-transition-handoff-<publication-6-commit>.txt`
-by substituting only the named Publication-6 placeholders, then hashes and gives it to the operator.
-Neither the commit nor this amendment embeds its own digest. Do not create the Publication-6 approval
+Publication-7 commit and exact-byte reviews exist, the publisher generates a separate handoff under
+`%LOCALAPPDATA%\SkillMesh\Evidence\GoalNP\Publication7\terra-transition-handoff-<publication-7-commit>.txt`
+by substituting only the named Publication-7 placeholders, then hashes and gives it to the operator.
+Neither the commit nor this amendment embeds its own digest. Do not create the Publication-7 approval
 file, run the launcher, or start Codex before recovery Approval 1. The operator must copy the launch
 block, close the active Codex/IDE UI, and execute it in standalone Windows PowerShell; replying to or
 reopening an agent before `Run` exits recreates forbidden ancestry. After `Run` exits, `Inspect` may be
 invoked from a reopened session. No coordinator model may add a call.
 
 ```text
-Goal NP Publication 6 — Terra bootstrap sandbox-attestation recovery handoff
+Goal NP Publication 7 — Terra bootstrap writable-root grammar recovery handoff
 
-Version: publication-6-sandbox-attestation-recovery-v1
+Version: publication-7-writable-root-grammar-recovery-v1
 Status: AWAITING RECOVERY APPROVAL 1
 
 This handoff is operator guidance only. Reading, copying, or hashing it does not grant Approval 1.
-Do not create the Publication-6 approval message, run Preflight, invoke Terra, or start any Goal-NP
+Do not create the Publication-7 approval message, run Preflight, invoke Terra, or start any Goal-NP
 implementation until Abraham supplies the exact approval sentence below in a new message.
 
 EXACT RECOVERY APPROVAL-1 SENTENCE
 
-Approve Goal NP plan Publication 6 with D01-D10 and the Terra sandbox-attestation recovery amendment.
+Approve Goal NP plan Publication 7 with D01-D10 and the Terra writable-root grammar recovery amendment.
 
 The approval file must contain only that sentence as UTF-8 without BOM plus exactly one final LF.
 Canonical future path:
-%LOCALAPPDATA%\SkillMesh\Evidence\GoalNP\Publication6\approval1-message.txt
-Trimmed text SHA-256: ad20542c0d5dc9b77fbab14413998f614ab178ca4949a1269f06c08f24b3407e
-LF-terminated file SHA-256: 064e50a53d93dc976cb98b87a5a49d0260d91f88aadddb23bcd8bf60d9be2add
+%LOCALAPPDATA%\SkillMesh\Evidence\GoalNP\Publication7\approval1-message.txt
+Trimmed text SHA-256: fe5736f56b0edb305ef2e1632d5882a6d85d930c06862d9ec9ce26a28b9a23aa
+LF-terminated file SHA-256: a849c6f49c9557ee7e11bdc4c01f324e17fe260d5abdc648141715d22120f8a5
 
-PUBLICATION-6 AUTHORITY
+PUBLICATION-7 AUTHORITY
 
 Worktree: %LOCALAPPDATA%\SkillMesh\Worktrees\native-codex-skill-parity-plan
 Branch: plan/native-codex-skill-parity
-Commit: <publication-6-commit>
+Commit: <publication-7-commit>
 
 Six-file bundle:
 - plan.md
-  SHA-256: <publication-6-plan-sha256>
+  SHA-256: <publication-7-plan-sha256>
 - documentation/native-claude-codex-skill-parity-plan.md
-  SHA-256: <publication-6-base-plan-sha256>
+  SHA-256: <publication-7-base-plan-sha256>
 - documentation/native-claude-codex-skill-parity-terra-amendment.md
-  SHA-256: <publication-6-terra-amendment-sha256>
+  SHA-256: <publication-7-terra-amendment-sha256>
 - documentation/native-claude-codex-skill-parity-proposal.html
-  SHA-256: <publication-6-proposal-sha256>
+  SHA-256: <publication-7-proposal-sha256>
 - tools/run-goal-np-terra-bootstrap.ps1
-  SHA-256: <publication-6-terra-launcher-sha256>
+  SHA-256: <publication-7-terra-launcher-sha256>
 - schemas/terra-bootstrap-result-v1.schema.json
-  SHA-256: <publication-6-terra-result-schema-sha256>
+  SHA-256: <publication-7-terra-result-schema-sha256>
 
 Ordered publication gates on those exact bytes:
-1. plan-review: <publication-6-plan-review-verdict>
-2. plan-redline: <publication-6-plan-redline-verdict>
-3. plan-wrap: <publication-6-plan-wrap-verdict>
+1. plan-review: <publication-7-plan-review-verdict>
+2. plan-redline: <publication-7-plan-redline-verdict>
+3. plan-wrap: <publication-7-plan-wrap-verdict>
 
-Publication 6 keeps D01-D10, D08, the 41-step Goal-NP DAG, the two native qualification profiles,
+Publication 7 keeps D01-D10, D08, the 41-step Goal-NP DAG, the two native qualification profiles,
 the unchanged direct Terra/xhigh model and call envelope, and the Approval-2/live-cutover prohibition.
-It retains Publication 5's process recorder and cmd.exe canary, makes the repository the primary
-workspace, adds pre-claim and per-call exact sandbox/zero-skill attestation plus scratch/transcript
-zero-skill audits, records known model verdicts under stable codes, and wraps the operator commands in
-one fail-stop PowerShell scope.
+It retains Publication 6's process recorder, cmd.exe canary, repository primary workspace, strict
+sandbox/zero-skill attestation, scratch/transcript audits, stable model-verdict codes, and fail-stop
+operator scope. Its only execution correction is the exact leading-space workspace-write writable-root
+annotation plus independent missing/wrong-root reject canaries and hash-only mismatch diagnostics.
 
 Debug and exec share every supported explicit model/config/disable/sandbox/cd flag; exec alone adds its
 skip/ephemeral/ignore/strict/schema/JSON/output closure. The normalized permission and environment texts
 must match their complete reconstructed grammars with no remainder. Workspace-write orders read :root,
 write repository, write :slash_tmp, write :tmpdir, then read repository .git, .agents, and .codex;
-read-only has only read :root. Both skill-disable flags must be effective, with no skills block/locator.
+read-only has only read :root. Its permissions text also carries the exact leading-space
+`` The writable root is `<canonical-owner-root>`.`` line; read-only does not. Both skill-disable flags
+must be effective, with no skills block/locator.
 
 Start read-only. Verify the exact worktree, branch, HEAD, clean status, all six hashes, Codex CLI
 0.147.0, native executable SHA-256 935a1911ed2556e4ffcec995f4886ac2ac425863ba26fed264df62e30272ad9d,
-and Terra/xhigh availability. Verify all three frozen prior evidence roots and approval files exactly. Do not
+and Terra/xhigh availability. Verify all three frozen prior evidence roots and approval files exactly,
+then verify the Publication-6 approval/handoff/commit and all three required absence predicates. Do not
 pull, rebase, amend, normalize, install a skill, modify prior evidence, or substitute publication bytes.
 A mismatch stops.
 
@@ -720,22 +791,60 @@ clean at the approved commit, all 15 ADMIN outputs remained absent, and no test,
 product mutation occurred. Its live Codex home and both earlier roots remained unchanged.
 Never retry, delete, rename, alter, repair, reuse, or adopt that request, root, or output.
 
-FRESH PUBLICATION-6 LINEAGE
+SUPERSEDED PUBLICATION-6 PRECLAIM INPUT — NEVER RERUN OR MODIFY
 
-Request domain: publication-6-sandbox-attestation-recovery-v1
-Expected request ID: <publication-6-request-id>
+Publication-6 commit: d0f83210e3092e18a28ee24db20a1af95887c31b
+Publication-6 handoff:
+%LOCALAPPDATA%\SkillMesh\Evidence\GoalNP\Publication6\terra-transition-handoff-d0f83210e3092e18a28ee24db20a1af95887c31b.txt
+Handoff size: 18,494 bytes
+Handoff SHA-256: ae085575b9441080ece62194cd4a3144df809eaa9d70b2ed2fcd76624d455b47
+Approval file:
+%LOCALAPPDATA%\SkillMesh\Evidence\GoalNP\Publication6\approval1-message.txt
+Approval-file SHA-256: 064e50a53d93dc976cb98b87a5a49d0260d91f88aadddb23bcd8bf60d9be2add
+Normalized approval-text SHA-256: ad20542c0d5dc9b77fbab14413998f614ab178ca4949a1269f06c08f24b3407e
+Original request domain: publication-6-sandbox-attestation-recovery-v1
+Expected request ID: tba-cc76394efc1359d75b406ce5a2d2300d5ed41020b5cf7fc972ba3039dc3a6ab0
+Expected request root:
+%LOCALAPPDATA%\SkillMesh\Evidence\GoalNP\TerraBootstrap\tba-cc76394efc1359d75b406ce5a2d2300d5ed41020b5cf7fc972ba3039dc3a6ab0
+Evidence request root status: ABSENT
+Publication-6 staging request root:
+%LOCALAPPDATA%\SkillMesh\Staging\GoalNP\Publication6\tba-cc76394efc1359d75b406ce5a2d2300d5ed41020b5cf7fc972ba3039dc3a6ab0
+Staging request root status: ABSENT
+Publication-6 staging publication root:
+%LOCALAPPDATA%\SkillMesh\Staging\GoalNP\Publication6
+Staging publication root status: ABSENT
+
+The operator-reported Preflight terminal JSON was BLOCKED with
+PERMISSION_ATTESTATION_FAILED / preclaim-permission-attestation and message suffix
+`Permissions text differs from the complete closed permission grammar.` Its full `error` string was
+`[PERMISSION_ATTESTATION_FAILED] [preclaim-permission-attestation] Permissions text differs from the complete closed permission grammar.`
+and `evidence_root_absent=true`. Preflight scratch output was removed by design; this is context, not a
+durable P6 launcher receipt. The durable inputs are the exact commit, approval file, and handoff above;
+the evidence-request, staging-request, and staging-publication absences are live preclaim predicates.
+
+Run never started, no request lineage or state was created, and no model, repository, ADMIN, issue, or
+product mutation occurred. Publication 7 supersedes the unchanged P6 invocation because its launcher
+and publication bytes differ. Never edit or rerun Publication 6, and never reuse its exact-byte approval
+as authority for Publication 7.
+
+FRESH PUBLICATION-7 LINEAGE
+
+Request domain: publication-7-writable-root-grammar-recovery-v1
+Expected request ID: <publication-7-request-id>
 Expected fresh evidence root:
-%LOCALAPPDATA%\SkillMesh\Evidence\GoalNP\TerraBootstrap\<publication-6-request-id>
+%LOCALAPPDATA%\SkillMesh\Evidence\GoalNP\TerraBootstrap\<publication-7-request-id>
 
-The request digest is SHA-256 over exactly 12 UTF-8 fields joined by one LF with no final LF: the domain
-above, Publication-6 commit, normalized Publication-6 approval-text hash, then request ID, state hash,
-and whole-root-manifest hash for frozen P5, P4, and P3 in that order. The root must be absent before
-claim. Preflight and Run revalidate all three earlier roots byte-for-byte. Once Run claims the P6 root,
+The request digest is SHA-256 over exactly 17 UTF-8 fields joined by one LF with no final LF: the domain
+above; Publication-7 commit and normalized Publication-7 approval-text hash; Publication-6 commit,
+request ID, normalized approval-text hash, approval-file hash, and handoff hash; then request ID, state
+hash, and whole-root-manifest hash for frozen P5, P4, and P3 in that order. Absence values are live
+predicates and are not digest fields. The P7 root must be absent before claim. Preflight and Run
+revalidate all prior inputs and predicates. Once Run claims the P7 root,
 every failure is terminal; never retry, delete, alter, rename, reuse, or adopt it.
 
 OPERATOR BOUNDARY AFTER THE EXACT APPROVAL IS SUPPLIED
 
-1. While this handoff is visible, copy from the `BEGIN PUBLICATION-6 POWERSHELL SCRIPT` comment through
+1. While this handoff is visible, copy from the `BEGIN PUBLICATION-7 POWERSHELL SCRIPT` comment through
    the matching `END` comment, inclusive. Those two comment lines are part of the valid script.
 2. Close this Codex/VS Code UI and every other Code, Codex, Claude, ChatGPT, Cursor, or IDE-agent
    process. Do not ask a model or tool to launch the block.
@@ -746,12 +855,12 @@ OPERATOR BOUNDARY AFTER THE EXACT APPROVAL IS SUPPLIED
    the forbidden agent ancestry.
 5. Preflight is repeatable and non-consuming. It exercises the pinned cmd.exe exit-code canary and the
    contained non-model sandbox proof, must remove all staging scratch, and must PASS before Run. Run
-   independently repeats every check, then creates exactly one Publication-6 lineage. Any post-claim
+   independently repeats every check, then creates exactly one Publication-7 lineage. Any post-claim
    failure is terminal. A nonzero Run is recheckable only when exact terminal JSON binds this
    commit/request and proves `evidence_root_absent=true`; a present root or unproven absence is terminal.
 6. Inspect is read-only and may also be run after reopening a session once Run has exited.
 
-# >>> BEGIN PUBLICATION-6 POWERSHELL SCRIPT - COPY FROM THIS LINE
+# >>> BEGIN PUBLICATION-7 POWERSHELL SCRIPT - COPY FROM THIS LINE
 & {
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version 2.0
@@ -759,10 +868,10 @@ Set-StrictMode -Version 2.0
 $repoRoot = Join-Path $env:LOCALAPPDATA 'SkillMesh\Worktrees\native-codex-skill-parity-plan'
 Set-Location -LiteralPath $repoRoot
 
-$approvedCommit = '<publication-6-commit>'
-$expectedRequestId = '<publication-6-request-id>'
-$approvalMessage = 'Approve Goal NP plan Publication 6 with D01-D10 and the Terra sandbox-attestation recovery amendment.'
-$approvalMessageFile = Join-Path $env:LOCALAPPDATA 'SkillMesh\Evidence\GoalNP\Publication6\approval1-message.txt'
+$approvedCommit = '<publication-7-commit>'
+$expectedRequestId = '<publication-7-request-id>'
+$approvalMessage = 'Approve Goal NP plan Publication 7 with D01-D10 and the Terra writable-root grammar recovery amendment.'
+$approvalMessageFile = Join-Path $env:LOCALAPPDATA 'SkillMesh\Evidence\GoalNP\Publication7\approval1-message.txt'
 $approvalMessageParent = Split-Path -Parent $approvalMessageFile
 $approvalMessageBytes = (New-Object System.Text.UTF8Encoding($false)).GetBytes($approvalMessage + "`n")
 
@@ -793,11 +902,11 @@ if (-not (Test-Path -LiteralPath $approvalMessageParent -PathType Container)) {
 }
 if (Test-Path -LiteralPath $approvalMessageFile) {
     if (-not (Test-Path -LiteralPath $approvalMessageFile -PathType Leaf)) {
-        throw 'The canonical Publication-6 approval path exists but is not a file; do not continue.'
+        throw 'The canonical Publication-7 approval path exists but is not a file; do not continue.'
     }
     $existingApprovalBytes = [System.IO.File]::ReadAllBytes($approvalMessageFile)
     if ([Convert]::ToBase64String($existingApprovalBytes) -cne [Convert]::ToBase64String($approvalMessageBytes)) {
-        throw 'Existing Publication-6 approval message is not byte-identical; do not continue.'
+        throw 'Existing Publication-7 approval message is not byte-identical; do not continue.'
     }
 } else {
     [System.IO.File]::WriteAllBytes($approvalMessageFile, $approvalMessageBytes)
@@ -814,14 +923,14 @@ $preflightOutput = @(& powershell.exe @launcherArgs -Action Preflight)
 $preflightExit = $LASTEXITCODE
 if ($preflightExit -ne 0) {
     $preflightOutput | ForEach-Object { Write-Output ([string]$_) }
-    throw 'Publication-6 readiness preflight did not PASS. Resolve only the reported pre-claim condition after confirming no request root exists; no Run attempt was created.'
+    throw 'Publication-7 readiness preflight did not PASS. Resolve only the reported pre-claim condition after confirming no request root exists; no Run attempt was created.'
 }
-$preflight = ConvertFrom-TerminalJson -ProcessOutput $preflightOutput -Label 'Publication-6 Preflight'
+$preflight = ConvertFrom-TerminalJson -ProcessOutput $preflightOutput -Label 'Publication-7 Preflight'
 if ($preflight.verdict -cne 'PASS' -or
     $preflight.approved_commit -cne $approvedCommit -or
     $preflight.request_id -cne $expectedRequestId -or
     $preflight.evidence_root_absent -ne $true) {
-    throw 'Publication-6 readiness output is not the exact PASS contract; do not start Run.'
+    throw 'Publication-7 readiness output is not the exact PASS contract; do not start Run.'
 }
 $preflight | ConvertTo-Json -Depth 12
 
@@ -830,9 +939,9 @@ $terraRunExit = $LASTEXITCODE
 if ($terraRunExit -ne 0) {
     $terraRunOutput | ForEach-Object { Write-Output ([string]$_) }
     try {
-        $terraRunFailure = ConvertFrom-TerminalJson -ProcessOutput $terraRunOutput -Label 'Publication-6 failed Run'
+        $terraRunFailure = ConvertFrom-TerminalJson -ProcessOutput $terraRunOutput -Label 'Publication-7 failed Run'
     } catch {
-        throw 'Terra ADMIN bootstrap failed and evidence-root absence could not be proven from terminal JSON. Treat the Publication-6 lineage as terminal; do not retry or delete evidence.'
+        throw 'Terra ADMIN bootstrap failed and evidence-root absence could not be proven from terminal JSON. Treat the Publication-7 lineage as terminal; do not retry or delete evidence.'
     }
     $rootAbsentProperty = $terraRunFailure.PSObject.Properties['evidence_root_absent']
     $actionProperty = $terraRunFailure.PSObject.Properties['action']
@@ -846,11 +955,11 @@ if ($terraRunExit -ne 0) {
         [string]$verdictProperty.Value -ceq 'BLOCKED' -and
         [string]$commitProperty.Value -ceq $approvedCommit -and
         [string]$requestProperty.Value -ceq $expectedRequestId) {
-        throw 'Publication-6 Run stopped in its repeated pre-claim readiness gate with the evidence root proven absent. No Run lineage was claimed; correct only the reported readiness condition, then start again with Preflight.'
+        throw 'Publication-7 Run stopped in its repeated pre-claim readiness gate with the evidence root proven absent. No Run lineage was claimed; correct only the reported readiness condition, then start again with Preflight.'
     }
-    throw 'Terra ADMIN bootstrap failed after evidence claim, or root absence was not proven. This Publication-6 Run lineage is terminal; do not retry or delete its evidence.'
+    throw 'Terra ADMIN bootstrap failed after evidence claim, or root absence was not proven. This Publication-7 Run lineage is terminal; do not retry or delete its evidence.'
 }
-$terraRun = ConvertFrom-TerminalJson -ProcessOutput $terraRunOutput -Label 'Publication-6 Run'
+$terraRun = ConvertFrom-TerminalJson -ProcessOutput $terraRunOutput -Label 'Publication-7 Run'
 if ($terraRun.verdict -cne 'PASS' -or $terraRun.admin_commit -notmatch '^[0-9a-f]{40}$') {
     throw 'Terra ADMIN bootstrap did not return its exact PASS contract; do not continue.'
 }
@@ -862,7 +971,7 @@ if ($terraStateExit -ne 0) {
     $terraStateOutput | ForEach-Object { Write-Output ([string]$_) }
     throw 'Terra ADMIN bootstrap inspection failed; do not continue.'
 }
-$terraState = ConvertFrom-TerminalJson -ProcessOutput $terraStateOutput -Label 'Publication-6 Inspect'
+$terraState = ConvertFrom-TerminalJson -ProcessOutput $terraStateOutput -Label 'Publication-7 Inspect'
 if ($terraState.phase -cne 'pass' -or
     $terraState.approved_commit -cne $approvedCommit -or
     $terraState.request_id -cne $expectedRequestId -or
@@ -871,11 +980,11 @@ if ($terraState.phase -cne 'pass' -or
 }
 $terraState | ConvertTo-Json -Depth 12
 }
-# <<< END PUBLICATION-6 POWERSHELL SCRIPT - COPY THROUGH THIS LINE
+# <<< END PUBLICATION-7 POWERSHELL SCRIPT - COPY THROUGH THIS LINE
 
 AFTER TERRA ADMIN PASS
 
-For ADMIN-BOOTSTRAP and the 39 Type-code implementation/review model slots, use only Publication 6's
+For ADMIN-BOOTSTRAP and the 39 Type-code implementation/review model slots, use only Publication 7's
 terra-direct-v1 process envelope. In those implementation/orchestration slots, do not invoke a missing
 $build-step, Claude, /repo-sync, $repo-sync, a router, a repo/user skill, a plugin, MCP, hook, memory,
 fallback model, or unlisted helper. This prohibition does not suppress the unchanged base-plan-authorized
@@ -913,7 +1022,7 @@ Before this amendment can be offered for recovery Approval 1:
 
 1. `git diff --check` passes;
 2. the base plan's 41 steps, fields, flags, DAG, D08 counts, and Approval-2 boundary remain unchanged;
-3. every Publication-2/3/4/5 implementation-executor reference is either explicitly superseded here,
+3. every Publication-2/3/4/5/6 implementation-executor reference is either explicitly superseded here,
    retained as frozen recovery evidence, or remains clearly a product/native-qualification reference;
 4. plan-review and plan-redline return PASS, then plan-wrap returns READY, in that order on the exact
    six-file bundle;
