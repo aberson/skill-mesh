@@ -1,0 +1,223 @@
+<title>Codex Parity Delivery</title>
+<style>
+  :root {
+    --ground: #f5f8f7; --surface: #ffffff; --surface-2: #eef3f2;
+    --ink: #16201e; --ink-soft: #45524f; --muted: #64726e;
+    --hairline: #d8e0dd; --hairline-strong: #c3cecb;
+    --accent: #0d8577; --accent-ink: #075a50; --accent-soft: #e0f0ed;
+    --turn: #a5680f; --turn-soft: #f6ecd8;
+    --shadow: 0 1px 2px rgba(20,40,36,.05), 0 8px 24px -12px rgba(20,40,36,.14);
+    --sans: system-ui, "Segoe UI Variable Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, "Cascadia Code", "Cascadia Mono", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #0c1312; --surface: #131c1b; --surface-2: #17211f;
+      --ink: #e9efed; --ink-soft: #aab5b2; --muted: #7d8b88;
+      --hairline: #243230; --hairline-strong: #31413e;
+      --accent: #3bb6a6; --accent-ink: #7fd6c9; --accent-soft: #123c37;
+      --turn: #d69b4f; --turn-soft: #372c16;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 10px 30px -14px rgba(0,0,0,.55);
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #0c1312; --surface: #131c1b; --surface-2: #17211f;
+    --ink: #e9efed; --ink-soft: #aab5b2; --muted: #7d8b88;
+    --hairline: #243230; --hairline-strong: #31413e;
+    --accent: #3bb6a6; --accent-ink: #7fd6c9; --accent-soft: #123c37;
+    --turn: #d69b4f; --turn-soft: #372c16;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 10px 30px -14px rgba(0,0,0,.55);
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--ground); color: var(--ink); font-family: var(--sans); line-height: 1.6; -webkit-font-smoothing: antialiased; }
+  .wrap { max-width: 62rem; margin: 0 auto; padding: clamp(1.25rem, 4vw, 3rem) clamp(1rem, 4vw, 2rem) 4rem; }
+  .eyebrow { font-family: var(--mono); font-size: .72rem; letter-spacing: .14em; text-transform: uppercase; color: var(--accent-ink); font-weight: 600; }
+  h1 { font-size: clamp(2rem, 6vw, 2.9rem); line-height: 1.04; margin: .5rem 0 0; letter-spacing: -.02em; text-wrap: balance; font-weight: 680; }
+  h1 .cmd { font-family: var(--mono); font-weight: 600; }
+  h1 .dash { color: var(--accent); }
+  .thesis { font-size: clamp(1.02rem, 2.4vw, 1.25rem); color: var(--ink-soft); margin: .9rem 0 0; max-width: 52ch; text-wrap: pretty; }
+  .ribbon { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: 1.5rem; font-family: var(--mono); font-size: .8rem; }
+  .chip { display: inline-flex; align-items: center; gap: .4rem; padding: .3rem .6rem; border-radius: 999px; border: 1px solid var(--hairline-strong); background: var(--surface); color: var(--ink-soft); white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .chip.hot { border-color: var(--turn); color: var(--turn); background: var(--turn-soft); font-weight: 600; }
+  .chip.ok { border-color: var(--accent); color: var(--accent-ink); background: var(--accent-soft); font-weight: 600; }
+  section { margin-top: clamp(2.25rem, 5vw, 3.25rem); }
+  .kicker { font-family: var(--mono); font-size: .72rem; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin: 0 0 .9rem; display: flex; align-items: center; gap: .6rem; }
+  .kicker::after { content: ""; flex: 1; height: 1px; background: var(--hairline); }
+  h2 { font-size: 1.45rem; margin: 0 0 .5rem; letter-spacing: -.01em; font-weight: 660; }
+  p.lead { margin: 0 0 1.25rem; color: var(--ink-soft); max-width: 62ch; }
+  code, td code, .heard-item code { font-family: var(--mono); font-size: .84em; color: var(--accent-ink); background: var(--accent-soft); padding: .05rem .3rem; border-radius: 4px; }
+  .card { background: var(--surface); border: 1px solid var(--hairline); border-radius: 14px; box-shadow: var(--shadow); }
+  .heard { padding: clamp(1.1rem, 3vw, 1.6rem); }
+  .heard-grid { display: grid; gap: 1rem 1.4rem; grid-template-columns: 1fr 1fr; }
+  @media (max-width: 44rem) { .heard-grid { grid-template-columns: 1fr; } }
+  .heard-item { display: flex; gap: .65rem; align-items: flex-start; }
+  .heard-item .mk { color: var(--accent); font-weight: 700; line-height: 1.5; flex: none; }
+  .heard-item b { font-weight: 620; display: block; }
+  .heard-item span.becomes { color: var(--ink-soft); font-size: .92rem; }
+  .phase { padding: 1rem 1.25rem; margin-bottom: .8rem; }
+  .phase .pk { font-family: var(--mono); font-size: .78rem; color: var(--muted); }
+  .phase b { font-weight: 640; }
+  .phase .after { font-family: var(--mono); font-size: .8rem; color: var(--accent-ink); background: var(--accent-soft); border-radius: 8px; padding: .35rem .6rem; display: inline-block; margin-top: .5rem; }
+  .gate { border-left: 3px solid var(--turn); }
+  table { width: 100%; border-collapse: collapse; font-size: .92rem; }
+  .tablewrap { overflow-x: auto; }
+  th { text-align: left; font-family: var(--mono); font-size: .72rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 600; padding: .5rem .7rem; border-bottom: 1px solid var(--hairline-strong); }
+  td { padding: .55rem .7rem; border-bottom: 1px solid var(--hairline); vertical-align: top; }
+  td.id { font-family: var(--mono); font-weight: 600; color: var(--accent-ink); white-space: nowrap; }
+  td.id.warm { color: var(--turn); }
+  .cut-list, .risk-list { margin: 0; padding: 0 0 0 1.1rem; color: var(--ink-soft); }
+  .cut-list li, .risk-list li { margin: .4rem 0; }
+  .grammar { padding: 1.1rem 1.3rem; font-family: var(--mono); font-size: .86rem; }
+  .grammar div { padding: .15rem 0; }
+  .grammar .c { color: var(--muted); }
+  footer { margin-top: 3rem; color: var(--muted); font-size: .84rem; font-family: var(--mono); }
+  a { color: var(--accent-ink); }
+</style>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">skill-mesh · phase CP · proposal v2 · 2026-08-16</div>
+    <h1><span class="cmd">codex parity</span> <span class="dash">—</span> ship skills to a second model family</h1>
+    <p class="thesis">Every portable skill becomes a Codex-native package generated from the same core that already serves Claude and Copilot — delivered additively, cohort by cohort, with differences recorded instead of gated.</p>
+    <div class="ribbon">
+      <span class="chip ok">12 automated steps</span>
+      <span class="chip">3 build passes · 4 operator gates</span>
+      <span class="chip">47 portable skills → codex</span>
+      <span class="chip">7 utilities wired · 16 cores</span>
+      <span class="chip hot">M1 + M4 = the two real-home writes</span>
+    </div>
+  </header>
+
+  <section id="heard">
+    <p class="kicker">what I heard</p>
+    <h2>Four ratifications, one product outcome.</h2>
+    <div class="card heard">
+      <div class="heard-grid">
+        <div class="heard-item"><span class="mk">→</span><div><b>Claude-led implementation</b><span class="becomes">The Terra executor lane dissolves; the launcher parks. No more publications — the normal plan→build pipeline delivers.</span></div></div>
+        <div class="heard-item"><span class="mk">→</span><div><b>Publication 8 closed unapproved</b><span class="becomes">Its 9-file candidate commits as historical record in Step 1; both dirty worktrees come clean; history unifies on <code>main</code>.</span></div></div>
+        <div class="heard-item"><span class="mk">→</span><div><b>Matrix downgraded to backlog</b><span class="becomes">Representative smokes + a parity delta log are the gates. Close-not-exact: differences get rows, not vetoes.</span></div></div>
+        <div class="heard-item"><span class="mk">→</span><div><b>Additive first, destructive never (here)</b><span class="becomes">Automated steps write only repo, dist/, and temp homes. M1's real install is the one scoped-approval write. Cutover is a future plan.</span></div></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="shape">
+    <p class="kicker">why this shape</p>
+    <h2>The rails exist; the unknown is fenced.</h2>
+    <p class="lead">skill-mesh is already a two-provider, manifest-driven system — 50 skills, deterministic generation, transactional install with ledger-scoped uninstall. Codex is a <b>third provider on proven rails</b>, not a new architecture. The one genuine unknown — whether Codex actually discovers skills at <code>.agents/skills</code> — is unproven on this machine, so the plan authors only 5 providers before testing it live (M1), and cohorts B–D are conditional on <code>M1: PASS</code>. Worst case on failure: one authoring step sunk, not forty-seven.</p>
+  </section>
+
+  <section id="phases">
+    <p class="kicker">three passes, three gates</p>
+    <h2>Each pass ends with something you can run.</h2>
+    <div class="card phase">
+      <div class="pk">PASS 1 · Steps 1–5 · close out, harden, generate, install-path</div>
+      <b>Goal NP closed + history unified (1) · installer hardening lands, #116 closes (2) · codex generation surface (3) · 5 pilot providers + delta log (4) · install path + temp-home smoke (5)</b>
+      <div class="after">Afterwards: run M1 — pilot bring-up in a real Codex session</div>
+    </div>
+    <div class="card phase gate">
+      <div class="pk">GATE · M1 · the discovery verdict</div>
+      <b>Probe, rehearse on a disposable home, then the first real-root install. Codex lists and invokes the pilot; Copilot shared-root visibility recorded. Verdict line <code>M1: PASS</code> unlocks pass 2.</b>
+    </div>
+    <div class="card phase">
+      <div class="pk">PASS 2 · Steps 6–8 · cohorts B, C, D</div>
+      <b>Pipeline family (12) · build/review/skill/tier families (16) · remainder (14) → all 47 portable skills, README/CLAUDE.md updated, whole-catalog budget green</b>
+      <div class="after">Afterwards: run M2 — end-to-end workflow parity pass</div>
+    </div>
+    <div class="card phase gate">
+      <div class="pk">GATE · M2 · pipelines behave similarly</div>
+      <b>plan-feature → plan-review → plan-wrap → session-wrap on a toy project, in Codex. Blocking deltas marked <code>fix</code> feed Step 9.</b>
+    </div>
+    <div class="card phase">
+      <div class="pk">PASS 3 · Steps 9–12 · fix, promote, wire</div>
+      <b>Worst-delta fixes (9, fires only if M2 found any) · 7 custom skills promoted with all three providers (10) · 7 utility advisory calls reconciled into 16 canonical cores (11) · wiring made observatory-visible (12)</b>
+      <div class="after">Afterwards: run M4 — wired reinstall + observatory wiring UAT · then M3 — acceptance + triage → /repo-update</div>
+    </div>
+    <div class="card phase gate">
+      <div class="pk">GATE · M4 · see the wiring</div>
+      <b>Operator reinstalls the wired profiles over the live homes (the second and last real-home write), then verifies the 16 skills' utility hookups through dev-observatory and one live advisory line with <code>DEV_UTILITIES_ROOT</code> set.</b>
+    </div>
+  </section>
+
+  <section id="picked">
+    <p class="kicker">locked in</p>
+    <h2>Your calls from this session.</h2>
+    <div class="card tablewrap">
+      <table>
+        <tr><th>ID</th><th>Choice</th></tr>
+        <tr><td class="id">P1</td><td>Terra executor amendment reverted — Claude-led implementation.</td></tr>
+        <tr><td class="id">P2</td><td>Publication 8 closed unapproved; launcher parked, never invoked.</td></tr>
+        <tr><td class="id">P3</td><td>Exhaustive 113-cell matrix → backlog; smokes + delta log gate instead.</td></tr>
+        <tr><td class="id">P4</td><td>Additive/destructive split; destructive cutover out of scope.</td></tr>
+        <tr><td class="id">P5</td><td>Close on parity branch, merge to <code>main</code>; new work on main.</td></tr>
+        <tr><td class="id">P6</td><td>Step-4 installer WIP finished as early plan step (closes #116).</td></tr>
+        <tr><td class="id">P7</td><td>Pilot = mixed probe: 3 simple + 2 pipeline skills.</td></tr>
+        <tr><td class="id">P8</td><td>Shared <code>.agents/skills</code> root policy decided on M1 evidence.</td></tr>
+        <tr><td class="id">P9</td><td>Utility wiring + observatory-visible UAT are in scope (your redline).</td></tr>
+      </table>
+    </div>
+  </section>
+
+  <section id="defaults">
+    <p class="kicker">defaults worth your eyes</p>
+    <h2>Reference by ID to tweak.</h2>
+    <div class="card tablewrap">
+      <table>
+        <tr><th>ID</th><th>What</th><th>Why</th><th>Tweak axis</th></tr>
+        <tr><td class="id warm">D-CP9</td><td>Step 9 (M2 delta fixes) keeps <code>--reviewers code</code></td><td>Changes bounded by triaged rows; claude/gpt byte-regression tests guard core edits</td><td><code>D-CP9 -&gt; deep</code> if core-edit ripple worries you</td></tr>
+        <tr><td class="id warm">D-CP3</td><td>Step 1 commits P8 content with <code>--reviewers auto</code> (gates only)</td><td>Content already survived five review generations + independent audit; re-review restarts the treadmill</td><td><code>D-CP3 -&gt; code</code> to add agent review anyway</td></tr>
+        <tr><td class="id warm">D-CP10</td><td>Steps 2/3/5 escalated to <code>--reviewers deep</code>; run build passes in an Opus window</td><td>Blast surfaces match review-deep's high-stakes classes (destructive-authority installer, manifest key-shape, discovery-root map)</td><td><code>D-CP10 -&gt; gauntlet</code> to de-escalate any of the three</td></tr>
+        <tr><td class="id">D-CP12</td><td>Pilot five: task-handoff, user-orient, lesson-harvest, plan-review, session-wrap</td><td>Three prove format/discovery cheaply; two expose subagent/artifact abstraction gaps early</td><td><code>D-CP12 -&gt; swap X for Y</code></td></tr>
+        <tr><td class="id">D-CP7</td><td>Parity targets the <em>installed</em> Codex CLI, not the 0.147.0 pin</td><td>The pin belonged to the parked launcher; live usage runs what you run; M-steps record the version</td><td><code>D-CP7 -&gt; pin 0.147.0</code></td></tr>
+        <tr><td class="id">D-CP5</td><td>Cohorts B–D conditional on <code>M1: PASS</code> in the delta log</td><td>Don't author 42 more providers before discovery is proven</td><td><code>D-CP5 -&gt; unconditional</code></td></tr>
+        <tr><td class="id">D-CP11</td><td>Issue label <code>Phase CP Step N:</code>, steps 1–12 + M1–M4</td><td>Fresh namespace; parity plan's 41 steps were never synced; next issues #117+</td><td><code>D-CP11 -&gt; &lt;other label&gt;</code></td></tr>
+        <tr><td class="id warm">D-CP13</td><td>Advisory calls live in canonical cores, fail open on every host</td><td>Installed-copy edits are overwritten on reinstall; canonical wiring generates to all three providers; absent <code>DEV_UTILITIES_ROOT</code> → silent skip</td><td><code>D-CP13 -&gt; ?</code> to discuss host scoping</td></tr>
+        <tr><td class="id warm">D-CP14</td><td>Wired-profile reinstall over live homes happens only in M4, by you</td><td>It overwrites the drifted installed cores — safe only after Step 11 adopts the drift upstream; runs on the Step-2-hardened installer</td><td><code>D-CP14 -&gt; automate</code> to let pass 3 reinstall unattended</td></tr>
+        <tr><td class="id">D-CP15</td><td>Observatory visibility is UAT evidence; observatory features stay in its own plan</td><td>dev-observatory Steps 32–42 are dirty and Step 43 unbuilt in ITS plan; Step 12 verifies or records a named dependency, never rebuilds</td><td><code>D-CP15 -&gt; absorb</code> to pull Step 43 into Phase CP</td></tr>
+      </table>
+    </div>
+    <p class="lead" style="margin-top:1rem">Full inventory (P1–P8, D-CP1–D-CP12) lives in the plan's Appendix — stable IDs, append-only.</p>
+  </section>
+
+  <section id="cuts">
+    <p class="kicker">not in v1</p>
+    <h2>Cut on purpose.</h2>
+    <div class="card heard">
+      <ul class="cut-list">
+        <li><b>Destructive cutover</b> — legacy Copilot-profile retirement, junction retargeting: future plan, heavy approval packet preserved for it.</li>
+        <li><b>Exhaustive qualification matrix</b> — backlog per P3; the delta log + real-session smokes replace it as gate.</li>
+        <li><b>skill-ablation + eval substrate</b> — deferred (old D09); needs the neutral substrate that doesn't exist yet.</li>
+        <li><b>Launcher slimming</b> — the parked 3,313-line launcher is debt, not a blocker; revisit after product ships.</li>
+        <li><b>Gemini + local lanes</b> — <code>provider-expansion-plan.md</code> stays PARKED; it will inherit Step 3's provider surface when resumed.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section id="risks">
+    <p class="kicker">what could bite</p>
+    <h2>And the built-in answer.</h2>
+    <div class="card heard">
+      <ul class="risk-list">
+        <li><b>Codex doesn't read <code>.agents/skills</code></b> → M1 fires after only 5 providers exist; cohorts stay skipped; sunk cost ≈ one step.</li>
+        <li><b>Skill-list budget truncation</b> (8,000-char floor, 47–54 names) → budget tests from Step 3; M1/M2 verify on the real host; descriptions are authored and trimmable.</li>
+        <li><b>Step-4 failing test is a real installer defect</b> → Step 2 demands root-cause fix + full suites before anything builds on the installer.</li>
+        <li><b>Heavy skills degrade on Codex</b> (no Agent/Workflow/Artifact) → cores already define fallbacks + <code>required_tool_missing</code> halts; degradations become delta rows, never silent.</li>
+        <li><b><code>plan.md</code> hygiene tests assert exact strings</b> → impact table pins them (<code>Provider expansion | PARKED</code> survives Step 1's edit); full-root gate proves it.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section id="reply">
+    <p class="kicker">reply grammar</p>
+    <h2>Scan, then reply in chat. IDs make it cheap.</h2>
+    <div class="card grammar">
+      <div><span class="c"># accept everything:</span> ship it</div>
+      <div><span class="c"># tweak a default:</span> D-CP9 -&gt; deep</div>
+      <div><span class="c"># swap pilot member:</span> D-CP12 -&gt; swap lesson-harvest for user-draft</div>
+      <div><span class="c"># reverse a choice:</span> P7 -&gt; simple-first</div>
+      <div><span class="c"># ask before deciding:</span> D-CP7 ?</div>
+    </div>
+    <footer>
+      source of truth: <code>documentation/codex-parity-delivery-plan.md</code> · this proposal is a view, not an authority · silence means the plan stands
+    </footer>
+  </section>
+</div>
