@@ -182,9 +182,14 @@ junction targets, or legacy roots.
 
 **D-CP3 — Publication 8 is committed as-is, unapproved, as historical record** (ratification
 b). Its 9-file content already absorbed five review generations + an independent boundary
-audit; re-reviewing it would restart the treadmill this course change ends. The build-step
-committing it runs `--reviewers auto` (gates only) for exactly this reason; the course-change
-note added to `plan.md` is the only new prose.
+audit; re-reviewing it would restart the treadmill this course change ends. Step 1 is an
+operator step — no `/build-step` dispatch and no reviewers — for exactly this reason; the
+gates it must still satisfy are the repo-root `python -m pytest` in its Done-when. The
+course-change note added to `plan.md` is the only new prose. *(changed 2026-08-16: this
+decision originally read "the build-step committing it runs `--reviewers auto` (gates only)";
+Step 1 was retyped to `operator` when it emerged that `/build-step` offers only
+`--isolation worktree|docker` and cannot satisfy the step's direct-in-tree constraint. The
+substance — P8 content committed as-is, without re-review, gates only — is unchanged.)*
 
 **D-CP4 — Close-not-exact parity, recorded not gated.** Per the product charter
 ("materially consistent … visible differences allowed") and ratification (c): representative
@@ -231,11 +236,26 @@ plan; this plan adds a coordination note, not observatory features.
 
 ## 7. Build Steps
 
-Three-pass structure: **pass 1** = Steps 1–5, then M1; **pass 2** = Steps 6–8 (conditions
-read M1's verdict), then M2; **pass 3** = Steps 9–12 (Step 9's condition reads M2's
-findings; Steps 11–12 are unconditional — utility wiring is Claude/Copilot value regardless
-of the codex verdict), then M3 + M4. Run `/build-phase` per pass; conditional steps skip
-harmlessly when their evidence file is absent.
+Three-pass structure, driven by **explicit `--steps`**. The pass boundary is a *sequencing*
+decision, not a predicate — Steps 11–12 stay unconditional per P9, and a bare
+`/build-phase --plan <this file>` would run them in pass 1.
+
+| Pass | Invocation (from the repo root) | Then |
+|---|---|---|
+| 1 | `/build-phase --plan documentation/codex-parity-delivery-plan.md --steps 2,3,4,5` | operator M1 |
+| 2 | `/build-phase --plan documentation/codex-parity-delivery-plan.md --steps 6,7,8` | operator M2 |
+| 3 | `/build-phase --plan documentation/codex-parity-delivery-plan.md --steps 9,10,11,12` | operator M3 + M4 |
+
+**Step 1 is not in any pass** — it is `Type: operator`, done by hand before pass 1, and marked
+`Status: DONE` in this file when finished.
+
+Cohort steps 6–8/10 read M1's verdict from `documentation/parity-deltas.md`. Their predicates
+are **absence-safe** (`test -f … && grep -qi …`): a bare `grep` against a missing file exits
+`2`, which build-phase's conditional ABI treats as a HALT, not a skip — the guard makes the
+missing-file case exit `1` so the steps skip cleanly whether the delta log is absent or merely
+lacks the verdict. Steps 11–12 sit in pass 3 because Step 11 deliberately moves `dist/claude`
+and `dist/gpt` bytes, which would contaminate the byte-regression compare Steps 3/5 and the
+cohorts depend on — a sequencing constraint, not a conditional one.
 
 ### Automated Steps
 (These run unattended via /build-phase.)
@@ -260,9 +280,11 @@ harmlessly when their evidence file is absent.
   absolute paths per worktree; no rebase/history rewrite — ever). Work
   direct-in-tree across the existing worktrees; do NOT create a new isolation worktree
   (this step IS git choreography), and use path-scoped `git add` only.
-- **Type:** code
+  **Why this is an operator step:** `/build-step` offers only `--isolation worktree|docker`
+  — there is no direct-in-tree mode — so the step's own hard constraint cannot be satisfied
+  by any `/build-step` dispatch. It is driven by hand; no reviewers, no worktree, no iteration.
+- **Type:** operator
 - **Issue:** #118
-- **Flags:** --reviewers auto
 - **Files:** plan.md, documentation/native-claude-codex-skill-parity-plan.md,
   documentation/native-claude-codex-skill-parity-terra-amendment.md,
   documentation/native-claude-codex-skill-parity-proposal.html,
@@ -388,7 +410,7 @@ harmlessly when their evidence file is absent.
   repo-update, task-handoff adjacents user-wrap and user-project. Generate; extend budget
   test to the enlarged catalog. Record any per-skill authoring deltas in the delta log.
 - **Type:** conditional
-- **Condition:** grep -qi "M1: PASS" documentation/parity-deltas.md
+- **Condition:** test -f documentation/parity-deltas.md && grep -qi "M1: PASS" documentation/parity-deltas.md
 - **Issue:** #123
 - **Flags:** --reviewers code
 - **Files:** skills/{plan-init,plan-feature,plan-expedite,plan-merge,plan-redline,plan-trim,plan-wrap,repo-init,repo-sync,repo-update,user-wrap,user-project}/providers/codex.md,
@@ -408,7 +430,7 @@ harmlessly when their evidence file is absent.
   spawns, worktrees) — map each to the core's documented fallback and record every
   degradation as a delta-log row.
 - **Type:** conditional
-- **Condition:** grep -qi "M1: PASS" documentation/parity-deltas.md
+- **Condition:** test -f documentation/parity-deltas.md && grep -qi "M1: PASS" documentation/parity-deltas.md
 - **Issue:** #124
 - **Flags:** --reviewers code
 - **Files:** skills/{build-phase,build-step,build-queue,review-deep,review-gauntlet,review-proof,review-uat,skill-iterate,skill-evolve,skill-eval-setup,tier-escalate,tier-offload,judge-ui,test-prune,goblin-do,goblin-suggest}/providers/codex.md,
@@ -430,7 +452,7 @@ harmlessly when their evidence file is absent.
   (README.md:459–472, "47 of 50 … both hosts" prose + provider table gains the codex row)
   and CLAUDE.md Commands (CLAUDE.md:64–72 gains the codex build/install variants).
 - **Type:** conditional
-- **Condition:** grep -qi "M1: PASS" documentation/parity-deltas.md
+- **Condition:** test -f documentation/parity-deltas.md && grep -qi "M1: PASS" documentation/parity-deltas.md
 - **Issue:** #125
 - **Flags:** --reviewers code
 - **Files:** skills/{memory-distill,observatory-doctor,research-prospect,user-afterparty,user-brainstorm,user-debug,user-draft,user-gateway,user-lavishify,user-learn,user-pm,user-shakedown,user-uat,user-walkthrough}/providers/codex.md,
@@ -467,7 +489,7 @@ harmlessly when their evidence file is absent.
   the established promotion pattern; manifest entries; generate all three dists. Read each
   skill's current SKILL.md as the producing source.
 - **Type:** conditional
-- **Condition:** grep -qi "M1: PASS" documentation/parity-deltas.md
+- **Condition:** test -f documentation/parity-deltas.md && grep -qi "M1: PASS" documentation/parity-deltas.md
 - **Issue:** #127
 - **Flags:** --reviewers code
 - **Files:** skills/{build-observer,citation-distill,citation-review,citation-sweep,citation-triage,goblin-sweep,repo-wrap}/,
@@ -536,6 +558,7 @@ harmlessly when their evidence file is absent.
 
 ### Step M1: Pilot bring-up in a real Codex session
 - **Source step:** Step 5 (pass 1)
+- **Type:** operator
 - **Issue:** #130
 - **Commands:**
   ```powershell
@@ -571,6 +594,7 @@ harmlessly when their evidence file is absent.
 
 ### Step M2: End-to-end workflow parity pass
 - **Source step:** Step 8 (pass 2)
+- **Type:** operator
 - **Issue:** #131
 - **Commands:**
   ```powershell
@@ -593,6 +617,7 @@ harmlessly when their evidence file is absent.
 
 ### Step M3: Acceptance + delta triage
 - **Source step:** Steps 9–10 (pass 3)
+- **Type:** operator
 - **Issue:** #132
 - **Commands:**
   ```powershell
@@ -609,6 +634,7 @@ harmlessly when their evidence file is absent.
 
 ### Step M4: Wired-profile rollout + observatory wiring UAT
 - **Source step:** Steps 11–12 (pass 3)
+- **Type:** operator
 - **Issue:** #133
 - **Commands:**
   ```powershell
@@ -689,7 +715,7 @@ IDs are stable and append-only; reversals keep their ID with `changed <date>`.
 | P8 | P | Shared .agents/skills root policy decided on M1 evidence | accepted 2026-08-16 |
 | D-CP1 | D | Codex = third provider on existing manifest/generator/installer rails | accepted 2026-08-16 |
 | D-CP2 | D | Additive-only writes; M1 real-root install is the scoped-approval write | accepted 2026-08-16 |
-| D-CP3 | D | P8 content committed as-is; Step 1 runs --reviewers auto | accepted 2026-08-16 |
+| D-CP3 | D | P8 content committed as-is; Step 1 is operator-driven, gates only | accepted 2026-08-16, changed 2026-08-16 (was "Step 1 runs --reviewers auto") |
 | D-CP4 | D | Close-not-exact parity; deltas recorded, gate only on operator `fix` | accepted 2026-08-16 |
 | D-CP5 | D | Cohorts B–D conditional on `M1: PASS` in the delta log | accepted 2026-08-16 |
 | D-CP6 | D | Shared-root guard work only if M1 evidence demands it | accepted 2026-08-16 |
