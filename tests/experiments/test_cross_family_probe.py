@@ -28,6 +28,9 @@ REVIEW_CONTRACT = FIXTURE_SOURCE / "review_contract.py"
 EVIDENCE_HELPERS = FIXTURE_SOURCE / "evidence.py"
 HOST_RUNTIME = FIXTURE_SOURCE / "host_runtime.py"
 PROBE = FIXTURE_SOURCE / "probe.py"
+PINNED_DEFECT_INVENTORY_SHA256 = (
+    "98baaa178e41dc23e5de70e3161de78c66b9c91052c4d0d99295ae1a8928ed37"
+)
 
 
 def _load_review_contract():
@@ -202,6 +205,112 @@ def _load_candidate_module(candidate: Path):
     return module
 
 
+def _candidate_source_with_inventory(target: Path, inventory_bytes: bytes) -> Path:
+    source_paths = (
+        FIXTURE_SOURCE / "seed/base/README.md",
+        PROMPT_TEMPLATE,
+        RESPONSE_SCHEMA,
+        MODEL_POLICY,
+        REPORT_TEMPLATE,
+    )
+    for source in source_paths:
+        destination = target / source.relative_to(REPO_ROOT)
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_bytes(source.read_bytes())
+    inventory = target / INVENTORY.relative_to(REPO_ROOT)
+    inventory.parent.mkdir(parents=True, exist_ok=True)
+    inventory.write_bytes(inventory_bytes)
+    return target
+
+
+@pytest.mark.parametrize(
+    "line_ending",
+    (b"\n", b"\r\n", b"\r"),
+    ids=("lf", "crlf", "lone-cr"),
+)
+def test_prepare_seals_one_canonical_defect_inventory_identity_for_all_line_endings(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    line_ending: bytes,
+) -> None:
+    probe = _load_probe()
+    canonical_inventory = (
+        INVENTORY.read_bytes().replace(b"\r\n", b"\n").replace(b"\r", b"\n")
+    )
+    source_root = _candidate_source_with_inventory(
+        tmp_path / "candidate-source",
+        canonical_inventory.replace(b"\n", line_ending),
+    )
+    monkeypatch.setattr(probe, "candidate_source_root", lambda: source_root)
+    request = _probe_request(
+        tmp_path / "local", tmp_path / ".claude", tmp_path / ".codex"
+    )
+    paths = {
+        "fixture": tmp_path / "fixture",
+        "evidence": tmp_path / "evidence",
+        "live_claude": tmp_path / ".claude",
+        "live_codex": tmp_path / ".codex",
+    }
+
+    prepared = probe.prepare(request, REPO_ROOT, paths)
+
+    inventory_artifact = paths["evidence"] / "defect-inventory.json"
+    assert inventory_artifact.read_bytes() == canonical_inventory
+    assert b"\r" not in inventory_artifact.read_bytes()
+    assert (
+        hashlib.sha256(inventory_artifact.read_bytes()).hexdigest()
+        == PINNED_DEFECT_INVENTORY_SHA256
+    )
+    fixture_json = json.loads((paths["evidence"] / "fixture.json").read_bytes())
+    receipt_json = json.loads((paths["evidence"] / "prepare-receipt.json").read_bytes())
+    assert prepared["fixture"]["defect_inventory_sha256"] == PINNED_DEFECT_INVENTORY_SHA256
+    assert prepared["receipt"]["defect_inventory_sha256"] == PINNED_DEFECT_INVENTORY_SHA256
+    assert fixture_json["defect_inventory_sha256"] == PINNED_DEFECT_INVENTORY_SHA256
+    assert receipt_json["defect_inventory_sha256"] == PINNED_DEFECT_INVENTORY_SHA256
+    manifest = dict(
+        line.split("  ", 1)[::-1]
+        for line in (paths["evidence"] / "prepare-manifest.sha256")
+        .read_text(encoding="utf-8")
+        .splitlines()
+    )
+    assert manifest["defect-inventory.json"] == PINNED_DEFECT_INVENTORY_SHA256
+    loaded = probe.load_prepared(request, paths)
+    assert (
+        loaded["fixture"]["defect_inventory_sha256"]
+        == loaded["receipt"]["defect_inventory_sha256"]
+    )
+    assert loaded["receipt"]["defect_inventory_sha256"] == PINNED_DEFECT_INVENTORY_SHA256
+
+
+def test_prepare_rejects_fixture_and_canonical_inventory_identity_drift(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    probe = _load_probe()
+    create_fixture = probe.create_fixture.create_fixture
+
+    def create_drifted_fixture(*args, **kwargs):
+        fixture = create_fixture(*args, **kwargs)
+        return {**fixture, "defect_inventory_sha256": "0" * 64}
+
+    monkeypatch.setattr(probe.create_fixture, "create_fixture", create_drifted_fixture)
+    request = _probe_request(
+        tmp_path / "local", tmp_path / ".claude", tmp_path / ".codex"
+    )
+    paths = {
+        "fixture": tmp_path / "fixture",
+        "evidence": tmp_path / "evidence",
+        "live_claude": tmp_path / ".claude",
+        "live_codex": tmp_path / ".codex",
+    }
+
+    with pytest.raises(probe.ProbeError, match="canonical source"):
+        probe.prepare(request, REPO_ROOT, paths)
+
+    assert not (paths["evidence"] / "defect-inventory.json").exists()
+    assert not (paths["evidence"] / "prepare-receipt.json").exists()
+
+
 def test_fixture_creation_is_deterministic_clean_and_hides_oracle(tmp_path: Path) -> None:
     first = tmp_path / "first"
     second = tmp_path / "second"
@@ -214,7 +323,7 @@ def test_fixture_creation_is_deterministic_clean_and_hides_oracle(tmp_path: Path
     assert first_result["candidate_sha"] == "a02b8d5b42682a688b588b17dca221166e6bd647"
     assert first_result["candidate_tree_sha256"] == "3783ed5a9ead148f4dc13d8da224a021d5465647cf97788aede6afca8e1d1885"
     assert first_result["diff_sha256"] == "68d7b836cb1b2892da7ad6f492c555d94cc363fa2b065c3e33fe0fe5c4830333"
-    assert first_result["defect_inventory_sha256"] == "98baaa178e41dc23e5de70e3161de78c66b9c91052c4d0d99295ae1a8928ed37"
+    assert first_result["defect_inventory_sha256"] == PINNED_DEFECT_INVENTORY_SHA256
     assert len(str(first_result["base_sha"])) == 40
     assert len(str(first_result["candidate_sha"])) == 40
     assert _run(["git", "status", "--porcelain=v1", "--untracked-files=all"], cwd=first).stdout == ""
@@ -1393,6 +1502,99 @@ def test_what_if_plan_is_deterministic_and_writes_nothing(tmp_path: Path) -> Non
     assert sorted(path.relative_to(tmp_path) for path in tmp_path.rglob("*")) == []
 
 
+@pytest.mark.parametrize(
+    ("action", "mechanism", "expected_sequence", "expected_status"),
+    (
+        ("Prepare", "manual-saved-handoff", ["prepare"], "PREPARED"),
+        (
+            "Run",
+            "reviewer-only-dispatcher",
+            ["prepare", "load_prepared", "execute_review"],
+            "COMPLETE",
+        ),
+        (
+            "InvokeSavedHandoff",
+            "manual-saved-handoff",
+            ["load_prepared", "execute_review"],
+            "COMPLETE",
+        ),
+    ),
+)
+def test_main_reopens_monolithic_run_and_preserves_other_action_flows(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    action: str,
+    mechanism: str,
+    expected_sequence: list[str],
+    expected_status: str,
+) -> None:
+    probe = _load_probe()
+    request = _probe_request(
+        tmp_path / "local",
+        tmp_path / ".claude",
+        tmp_path / ".codex",
+        action=action,
+        mechanism=mechanism,
+    )
+    request["what_if"] = False
+    paths = {
+        "fixture": Path(request["fixture_root"]),
+        "evidence": Path(request["evidence_dir"]),
+        "live_claude": Path(request["live_claude_home"]),
+        "live_codex": Path(request["live_codex_home"]),
+    }
+    candidate = {"candidate_sha": request["candidate_sha"]}
+    produced = {
+        "source": "prepare",
+        "receipt": {"payload_sha256": "1" * 64},
+    }
+    reopened = {
+        "source": "load_prepared",
+        "receipt": {"payload_sha256": "1" * 64},
+    }
+    sequence: list[str] = []
+    emitted: list[dict[str, object]] = []
+    monkeypatch.setattr(
+        probe.sys,
+        "stdin",
+        type("Input", (), {"buffer": io.BytesIO(b"synthetic request")})(),
+    )
+    monkeypatch.setattr(probe, "load_request", lambda _raw: request)
+    monkeypatch.setattr(probe, "repository_root", lambda: REPO_ROOT)
+    monkeypatch.setattr(probe, "validate_paths", lambda _request, _repo: paths)
+    monkeypatch.setattr(probe, "validate_candidate", lambda _request, _repo: candidate)
+    monkeypatch.setattr(
+        probe,
+        "reinvoke_candidate_runtime",
+        lambda _raw, _request, _repo: None,
+    )
+
+    def fake_prepare(_request, _repo, _paths):
+        sequence.append("prepare")
+        return produced
+
+    def fake_load_prepared(_request, _paths):
+        if action == "Run":
+            assert sequence == ["prepare"]
+        sequence.append("load_prepared")
+        return reopened
+
+    def fake_execute_review(_request, _candidate, prepared, _repo, _paths):
+        sequence.append("execute_review")
+        assert prepared is reopened
+        return {"experiment_result": "PASS"}
+
+    monkeypatch.setattr(probe, "prepare", fake_prepare)
+    monkeypatch.setattr(probe, "load_prepared", fake_load_prepared)
+    monkeypatch.setattr(probe, "execute_review", fake_execute_review)
+    monkeypatch.setattr(probe, "_emit", lambda value: emitted.append(dict(value)))
+
+    assert probe.main() == 0
+
+    assert sequence == expected_sequence
+    assert emitted[-1]["status"] == expected_status
+
+
 def test_rejected_saved_handoff_what_if_preserves_every_existing_byte(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -1563,6 +1765,7 @@ def test_prepare_creates_a_sealed_host_free_handoff_and_detects_tampering(
         repo=REPO_ROOT,
         paths=paths,
     )
+    assert report_values["DEFECT_INVENTORY_SHA256"] == PINNED_DEFECT_INVENTORY_SHA256
     template = REPORT_TEMPLATE.read_text(encoding="utf-8")
     assert set(report_values) == set(re.findall(r"\{\{([A-Z0-9_]+)\}\}", template))
     rendered_report = probe.render_template(template, report_values)
@@ -1599,6 +1802,197 @@ def test_prepare_creates_a_sealed_host_free_handoff_and_detects_tampering(
     (evidence_dir / "review-request.md").write_text("tampered", encoding="utf-8")
     with pytest.raises(probe.ProbeError, match="prepared artifact hash differs"):
         probe.load_prepared(request, paths)
+
+
+@pytest.mark.parametrize(
+    ("action", "mechanism"),
+    (
+        ("Run", "reviewer-only-dispatcher"),
+        ("InvokeSavedHandoff", "manual-saved-handoff"),
+    ),
+    ids=("monolithic-run", "saved-handoff"),
+)
+def test_main_publishes_ambiguous_failure_when_reviewer_mutates_inventory(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capfd: pytest.CaptureFixture[str],
+    action: str,
+    mechanism: str,
+) -> None:
+    probe = _load_probe()
+    request = _probe_request(
+        tmp_path / "local",
+        tmp_path / ".claude",
+        tmp_path / ".codex",
+        action=action,
+        mechanism=mechanism,
+    )
+    request["fixture_root"] = str(tmp_path / "fixture")
+    request["evidence_dir"] = str(tmp_path / "evidence")
+    request["what_if"] = False
+    paths = {
+        "fixture": Path(request["fixture_root"]),
+        "evidence": Path(request["evidence_dir"]),
+        "live_claude": Path(request["live_claude_home"]),
+        "live_codex": Path(request["live_codex_home"]),
+    }
+    real_prepare = probe.prepare
+    real_load_prepared = probe.load_prepared
+    real_execute_review = probe.execute_review
+    if action == "InvokeSavedHandoff":
+        prepare_request = dict(request)
+        prepare_request["action"] = "Prepare"
+        real_prepare(prepare_request, REPO_ROOT, paths)
+    inventory_path = paths["evidence"] / "defect-inventory.json"
+    sequence: list[str] = []
+    reviewer_calls = 0
+
+    def fake_run_reviewer(**_kwargs):
+        nonlocal reviewer_calls
+        reviewer_calls += 1
+        receipt = json.loads(
+            (paths["evidence"] / "prepare-receipt.json").read_bytes()
+        )
+        response = {
+            "run_id": request["run_id"],
+            "source_sha": receipt["seeded_candidate_sha"],
+            "payload_sha256": receipt["payload_sha256"],
+            "verdict": "NEEDS_WORK",
+            "summary": "Synthetic response reaches the post-review inventory check.",
+            "findings": [],
+        }
+        inventory_path.write_bytes(inventory_path.read_bytes() + b" ")
+        return {"response_bytes": probe.canonical_json_bytes(response)}
+
+    inventory_reads: list[Path] = []
+    original_read_bounded = probe.read_bounded
+
+    def tracked_read_bounded(path: Path, *args, **kwargs):
+        if Path(path) == inventory_path:
+            inventory_reads.append(Path(path))
+        return original_read_bounded(path, *args, **kwargs)
+
+    grade_called = False
+
+    def forbidden_grade(_response, _inventory):
+        nonlocal grade_called
+        grade_called = True
+        pytest.fail("grading must not run after sealed inventory mutation")
+
+    def tracked_prepare(_request, _repo, _paths):
+        sequence.append("prepare")
+        return real_prepare(_request, _repo, _paths)
+
+    def tracked_load_prepared(_request, _paths):
+        sequence.append("load_prepared")
+        return real_load_prepared(_request, _paths)
+
+    def tracked_execute_review(_request, _candidate, _prepared, _repo, _paths):
+        sequence.append("execute_review")
+        return real_execute_review(
+            _request,
+            _candidate,
+            _prepared,
+            _repo,
+            _paths,
+        )
+
+    monkeypatch.setattr(probe.host_runtime, "run_reviewer", fake_run_reviewer)
+    monkeypatch.setattr(probe, "read_bounded", tracked_read_bounded)
+    monkeypatch.setattr(probe.review_contract, "grade_response", forbidden_grade)
+    monkeypatch.setattr(probe, "prepare", tracked_prepare)
+    monkeypatch.setattr(probe, "load_prepared", tracked_load_prepared)
+    monkeypatch.setattr(probe, "execute_review", tracked_execute_review)
+    monkeypatch.setattr(
+        probe.sys,
+        "stdin",
+        type(
+            "Input",
+            (),
+            {"buffer": io.BytesIO(probe.canonical_json_bytes(request))},
+        )(),
+    )
+    monkeypatch.setattr(probe, "repository_root", lambda: REPO_ROOT)
+    monkeypatch.setattr(probe, "validate_paths", lambda _request, _repo: paths)
+    monkeypatch.setattr(
+        probe,
+        "validate_candidate",
+        lambda _request, _repo: {
+            "candidate_sha": request["candidate_sha"],
+            "job_helper_sha256": "1" * 64,
+            "snapshot_helper_sha256": "2" * 64,
+        },
+    )
+    monkeypatch.setattr(
+        probe,
+        "reinvoke_candidate_runtime",
+        lambda _raw, _request, _repo: None,
+    )
+
+    assert probe.main() == 0
+
+    output = json.loads(capfd.readouterr().out)
+    expected_sequence = (
+        ["prepare", "load_prepared", "execute_review"]
+        if action == "Run"
+        else ["load_prepared", "execute_review"]
+    )
+    assert sequence == expected_sequence
+    assert output["status"] == "COMPLETE"
+    assert output["experiment_result"] == "AMBIGUOUS"
+    assert output["host_started"] is None
+    assert output["resolved_status"] == "unavailable"
+    assert output["detected_defect_count"] == 0
+    assert "fallback_report" not in output
+
+    assert reviewer_calls == 1
+    assert inventory_reads == [inventory_path]
+    assert grade_called is False
+    assert (paths["evidence"] / "candidate-after.json").is_file()
+    assert not paths["fixture"].exists()
+
+    report_path = paths["evidence"] / "report.md"
+    manifest_path = paths["evidence"] / "MANIFEST.sha256"
+    report = report_path.read_text(encoding="utf-8")
+    assert output["report"] == str(report_path)
+    assert output["manifest"] == str(manifest_path)
+    assert "**AMBIGUOUS**" in report
+    assert (
+        "ProbeError: defect inventory bytes differ from the prepared receipt"
+        in report
+    )
+    assert "Reviewer verdict | `UNCERTAIN`" in report
+    assert "Detected seeded defect count | `0`" in report
+    assert "Detected seeded defect IDs | []" in report
+    assert (
+        "The attempt did not produce a trustworthy parsed reviewer result."
+        in report
+    )
+    assert "Synthetic response reaches the post-review inventory check." not in report
+    assert not (paths["evidence"] / "fallback-report.txt").exists()
+
+    manifest_lines = manifest_path.read_text(encoding="utf-8").splitlines()
+    manifest_entries: dict[str, str] = {}
+    for line in manifest_lines:
+        assert re.fullmatch(r"[0-9a-f]{64}  [^\r\n]+", line)
+        digest, relative = line.split("  ", 1)
+        assert relative not in manifest_entries
+        manifest_entries[relative] = digest
+    retained_files = sorted(
+        path.relative_to(paths["evidence"]).as_posix()
+        for path in paths["evidence"].rglob("*")
+        if path.is_file() and path != manifest_path
+    )
+    assert list(manifest_entries) == retained_files
+    for relative, digest in manifest_entries.items():
+        assert (
+            hashlib.sha256((paths["evidence"] / relative).read_bytes()).hexdigest()
+            == digest
+        )
+    assert manifest_entries["defect-inventory.json"] == hashlib.sha256(
+        inventory_path.read_bytes()
+    ).hexdigest()
+    assert manifest_entries["defect-inventory.json"] != PINNED_DEFECT_INVENTORY_SHA256
 
 
 def test_runtime_git_helper_does_not_inherit_ambient_git_redirection(

@@ -106,14 +106,6 @@ def run_git_bytes(target: Path, *arguments: str, executable: str) -> bytes:
     return completed.stdout
 
 
-def sha256_file(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as stream:
-        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
-
-
 def tree_sha256(target: Path) -> str:
     digest = hashlib.sha256()
     for relative in TRACKED_PATHS:
@@ -155,7 +147,10 @@ def create_fixture(target: Path, requested_git: str | None = None) -> dict[str, 
     run_git(target, "commit", "--no-gpg-sign", "-m", "base: correct order total", executable=resolved_git)
     base_sha = run_git(target, "rev-parse", "HEAD", executable=resolved_git)
 
-    shutil.copyfile(candidate_source, target / "order_totals.py")
+    candidate_payload = (
+        candidate_source.read_bytes().replace(b"\r\n", b"\n").replace(b"\r", b"\n")
+    )
+    (target / "order_totals.py").write_bytes(candidate_payload)
     run_git(target, "add", "--", "order_totals.py", executable=resolved_git)
     run_git(target, "commit", "--no-gpg-sign", "-m", "candidate: simplify order total", executable=resolved_git)
     candidate_sha = run_git(target, "rev-parse", "HEAD", executable=resolved_git)
@@ -184,7 +179,9 @@ def create_fixture(target: Path, requested_git: str | None = None) -> dict[str, 
         "candidate_tree_sha256": tree_sha256(target),
         "diff_sha256": hashlib.sha256(diff).hexdigest(),
         "diff_utf8": diff_text,
-        "defect_inventory_sha256": sha256_file(inventory),
+        "defect_inventory_sha256": hashlib.sha256(
+            inventory.read_bytes().replace(b"\r\n", b"\n").replace(b"\r", b"\n")
+        ).hexdigest(),
         "tracked_paths": list(TRACKED_PATHS),
         "public_test_command": ["python", "-m", "unittest", "-q"],
     }

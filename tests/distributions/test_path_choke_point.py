@@ -166,6 +166,15 @@ FILE_EXEMPT = {
         "takes no consumer-home parameter.",
     "tools/gen-router-shim.ps1":
         "Writes a generated shim into the repo tree; takes no consumer-home parameter.",
+    "tools/run-goal-np-terra-bootstrap.ps1":
+        "One-off, fixed-boundary Publication-8 launcher; it has no consumer-home "
+        "parameter. Its sole caller-supplied path is equality-checked against the "
+        "canonical Publication-8 approval path before use and is never a mutation "
+        "target. Mutations are confined to the script-derived repository root plus "
+        "its exact ADMIN allowlist and deterministic LOCALAPPDATA SkillMesh Evidence/"
+        "Staging roots. Staging cleanup re-derives the exact request root and checks "
+        "directory identity, ownership, containment, and emptiness. This exemption "
+        "is exact to this launcher and must be removed if that boundary broadens.",
     "runtime/skill-router.ps1":
         "Runtime dispatch: writes only its own session-state file, whose path is "
         "validated by Resolve-SafePath before use. Not a consumer-home installer.",

@@ -1,0 +1,434 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>Native Claude/Codex Skill Parity — proposal</title>
+  <style>
+    :root {
+      --ground: #f4f7f6;
+      --surface: #ffffff;
+      --surface-2: #eaf1ef;
+      --ink: #17211f;
+      --ink-soft: #45534f;
+      --muted: #5f6e6a;
+      --line: #d5dfdc;
+      --line-strong: #bac9c5;
+      --accent: #087d70;
+      --accent-ink: #075b52;
+      --accent-soft: #dff1ed;
+      --amber: #8c5508;
+      --amber-soft: #f7ecd7;
+      --danger: #a23d32;
+      --danger-soft: #f8e8e5;
+      --shadow: 0 1px 2px rgba(18, 39, 34, .05), 0 10px 28px -16px rgba(18, 39, 34, .24);
+      --sans: system-ui, "Segoe UI Variable Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      --mono: ui-monospace, "Cascadia Code", "Cascadia Mono", Consolas, monospace;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --ground: #0b1211; --surface: #121c1a; --surface-2: #182522;
+        --ink: #eaf0ee; --ink-soft: #abb7b4; --muted: #81908c;
+        --line: #243531; --line-strong: #354a45;
+        --accent: #42bcae; --accent-ink: #85d9cf; --accent-soft: #123b36;
+        --amber: #e1a657; --amber-soft: #382b16;
+        --danger: #ef8f83; --danger-soft: #3c201d;
+        --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 12px 34px -18px rgba(0, 0, 0, .7);
+      }
+    }
+    :root[data-theme="light"] {
+      --ground: #f4f7f6; --surface: #ffffff; --surface-2: #eaf1ef;
+      --ink: #17211f; --ink-soft: #45534f; --muted: #5f6e6a;
+      --line: #d5dfdc; --line-strong: #bac9c5;
+      --accent: #087d70; --accent-ink: #075b52; --accent-soft: #dff1ed;
+      --amber: #8c5508; --amber-soft: #f7ecd7;
+      --danger: #a23d32; --danger-soft: #f8e8e5;
+      --shadow: 0 1px 2px rgba(18, 39, 34, .05), 0 10px 28px -16px rgba(18, 39, 34, .24);
+    }
+    :root[data-theme="dark"] {
+      --ground: #0b1211; --surface: #121c1a; --surface-2: #182522;
+      --ink: #eaf0ee; --ink-soft: #abb7b4; --muted: #81908c;
+      --line: #243531; --line-strong: #354a45;
+      --accent: #42bcae; --accent-ink: #85d9cf; --accent-soft: #123b36;
+      --amber: #e1a657; --amber-soft: #382b16;
+      --danger: #ef8f83; --danger-soft: #3c201d;
+      --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 12px 34px -18px rgba(0, 0, 0, .7);
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0; background: var(--ground); color: var(--ink);
+      font-family: var(--sans); line-height: 1.58;
+      -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
+    }
+    a { color: var(--accent-ink); }
+    code { font-family: var(--mono); font-size: .86em; }
+    button { font: inherit; }
+    .wrap { width: min(70rem, calc(100% - 2rem)); margin: 0 auto; padding: 1.25rem 0 4rem; }
+    .topbar { display: flex; justify-content: flex-end; }
+    .theme {
+      border: 1px solid var(--line-strong); border-radius: 999px; padding: .35rem .7rem;
+      color: var(--ink-soft); background: var(--surface); cursor: pointer; font-family: var(--mono);
+      font-size: .75rem;
+    }
+    header { padding: clamp(1.2rem, 5vw, 3.4rem) 0 1rem; }
+    .eyebrow {
+      color: var(--accent-ink); font: 700 .72rem/1 var(--mono); letter-spacing: .13em;
+      text-transform: uppercase;
+    }
+    h1 {
+      margin: .65rem 0 .75rem; max-width: 18ch; font-size: clamp(2.25rem, 7vw, 4.3rem);
+      line-height: .98; letter-spacing: -.045em; text-wrap: balance;
+    }
+    .thesis { max-width: 55ch; color: var(--ink-soft); font-size: clamp(1.06rem, 2.5vw, 1.32rem); }
+    .ribbon { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: 1.35rem; }
+    .chip {
+      border: 1px solid var(--line-strong); background: var(--surface); border-radius: 999px;
+      color: var(--ink-soft); padding: .3rem .65rem; font: .78rem/1.4 var(--mono);
+    }
+    .chip.go { border-color: var(--accent); color: var(--accent-ink); background: var(--accent-soft); font-weight: 700; }
+    .chip.hold { border-color: var(--amber); color: var(--amber); background: var(--amber-soft); font-weight: 700; }
+    section { margin-top: clamp(2.4rem, 6vw, 4rem); }
+    .kicker { display: flex; align-items: center; gap: .7rem; margin: 0 0 .8rem; color: var(--muted); font: 700 .7rem/1 var(--mono); letter-spacing: .12em; text-transform: uppercase; }
+    .kicker::after { content: ""; height: 1px; flex: 1; background: var(--line); }
+    h2 { margin: 0 0 .5rem; font-size: clamp(1.45rem, 3vw, 2rem); letter-spacing: -.02em; line-height: 1.15; }
+    h3 { margin: 0; font-size: 1rem; }
+    .lead { max-width: 67ch; margin: 0 0 1.25rem; color: var(--ink-soft); }
+    .card { border: 1px solid var(--line); border-radius: 14px; background: var(--surface); box-shadow: var(--shadow); }
+    .heard { padding: clamp(1rem, 3vw, 1.55rem); display: grid; grid-template-columns: 1fr 1fr; gap: 1rem 1.4rem; }
+    .heard-item { display: grid; grid-template-columns: 1.5rem 1fr; gap: .55rem; }
+    .heard-item .n { color: var(--accent); font: 800 .82rem/1.7 var(--mono); }
+    .heard-item .ask { color: var(--muted); font-size: .82rem; display: block; }
+    .heard-item strong { display: block; margin-top: .1rem; font-weight: 660; }
+    .heard-item .answer { color: var(--ink-soft); font-size: .9rem; }
+    .architecture { padding: clamp(1rem, 3vw, 1.5rem); }
+    .flow { display: grid; grid-template-columns: 1fr auto 1fr auto 1fr; align-items: stretch; gap: .65rem; }
+    .node { border: 1px solid var(--line-strong); border-radius: 11px; padding: .85rem; background: var(--surface-2); }
+    .node b { display: block; }
+    .node span { color: var(--ink-soft); font-size: .84rem; }
+    .arrow { align-self: center; color: var(--accent); font-weight: 800; }
+    .rule { margin-top: 1rem; padding: .85rem 1rem; border-left: 4px solid var(--accent); background: var(--accent-soft); color: var(--accent-ink); border-radius: 5px 10px 10px 5px; }
+    .stats { display: grid; grid-template-columns: repeat(5, 1fr); gap: .7rem; margin-top: 1rem; }
+    .stat { padding: .75rem; text-align: center; }
+    .stat .num { display: block; font: 750 1.55rem/1.1 var(--mono); }
+    .stat .label { color: var(--muted); font-size: .76rem; }
+    .timeline { list-style: none; padding: 0; margin: 0; display: grid; gap: .7rem; }
+    .phase { display: grid; grid-template-columns: auto 1fr; gap: .9rem; padding: .9rem 1rem; }
+    .phase .id { width: 2rem; height: 2rem; display: grid; place-items: center; border-radius: 50%; background: var(--accent-soft); border: 1px solid var(--accent); color: var(--accent-ink); font: 800 .75rem/1 var(--mono); }
+    .phase .meta { color: var(--muted); font: .72rem/1.4 var(--mono); }
+    .phase p { margin: .22rem 0; color: var(--ink-soft); font-size: .9rem; }
+    .phase .after { color: var(--accent-ink); font-size: .85rem; }
+    .gate { border-color: var(--amber); }
+    .gate .id { background: var(--amber-soft); border-color: var(--amber); color: var(--amber); }
+    .picks { padding: 1rem 1.2rem; display: grid; grid-template-columns: 1fr 1fr; gap: .5rem 1.5rem; }
+    .pick { display: grid; grid-template-columns: 2.5rem 1fr; gap: .45rem; font-size: .9rem; }
+    .pick .id { color: var(--accent-ink); font: 800 .72rem/1.7 var(--mono); }
+    .pick span:last-child { color: var(--ink-soft); }
+    .defaults { display: grid; gap: .65rem; }
+    .default { display: grid; grid-template-columns: auto 1fr; gap: .8rem; padding: .9rem 1rem; }
+    .default .id { color: var(--amber); border: 1px solid var(--amber); background: var(--amber-soft); border-radius: 6px; padding: .14rem .4rem; font: 800 .72rem/1.4 var(--mono); height: fit-content; }
+    .default .what { font-weight: 670; }
+    .default .why { color: var(--ink-soft); font-size: .86rem; margin-top: .15rem; }
+    .default .tweak { color: var(--muted); font-size: .82rem; margin-top: .18rem; }
+    .default .tweak b { color: var(--amber); }
+    .cuts { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    .cut { padding: 1rem 1.1rem; }
+    .cut ul { margin: .5rem 0 0; padding-left: 1.1rem; color: var(--ink-soft); font-size: .9rem; }
+    .risk-wrap { overflow-x: auto; }
+    table { border-collapse: collapse; width: 100%; }
+    th { text-align: left; color: var(--muted); font: 700 .68rem/1.3 var(--mono); letter-spacing: .08em; text-transform: uppercase; }
+    th, td { padding: .65rem .8rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+    tr:last-child td { border-bottom: 0; }
+    td { color: var(--ink-soft); font-size: .88rem; }
+    td:first-child { color: var(--ink); font-weight: 650; }
+    .feedback { padding: clamp(1rem, 3vw, 1.5rem); }
+    pre { margin: .8rem 0; padding: .85rem 1rem; overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--surface-2); color: var(--ink); font: .85rem/1.6 var(--mono); }
+    .source { display: grid; grid-template-columns: max-content 1fr; gap: .45rem 1rem; padding-top: 1rem; border-top: 1px solid var(--line); }
+    .source dt { color: var(--muted); font: 700 .68rem/1.6 var(--mono); text-transform: uppercase; letter-spacing: .06em; }
+    .source dd { margin: 0; font: .8rem/1.6 var(--mono); word-break: break-word; }
+    .notice { color: var(--danger); background: var(--danger-soft); border: 1px solid var(--danger); border-radius: 10px; padding: .8rem 1rem; font-size: .9rem; }
+    footer { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--line); color: var(--muted); font: .76rem/1.5 var(--mono); }
+    :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+    @media (max-width: 48rem) {
+      .heard, .picks, .cuts { grid-template-columns: 1fr; }
+      .flow { grid-template-columns: 1fr; }
+      .arrow { transform: rotate(90deg); justify-self: center; }
+      .stats { grid-template-columns: repeat(2, 1fr); }
+    }
+    @page { margin: 14mm; }
+    @media print {
+      * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+      :root, :root[data-theme="light"], :root[data-theme="dark"] {
+        color-scheme: light;
+        --ground: #ffffff; --surface: #ffffff; --surface-2: #f1f4f3;
+        --ink: #111716; --ink-soft: #313b38; --muted: #53615d;
+        --line: #ccd5d2; --line-strong: #aebcb8;
+        --accent: #087d70; --accent-ink: #075b52; --accent-soft: #e5f2ef;
+        --amber: #80500b; --amber-soft: #f7ecd7;
+        --danger: #8e3027; --danger-soft: #f8e8e5;
+        --shadow: none;
+      }
+      .topbar { display: none; }
+      body { background: var(--ground); color: var(--ink); }
+      .card, .stat, .node, .rule, .notice, tr { box-shadow: none; break-inside: avoid; }
+      h1, h2 { break-after: avoid; }
+      thead { display: table-header-group; }
+      .risk-wrap, pre { overflow: visible; }
+      section { break-inside: auto; }
+      a { color: inherit; text-decoration: none; }
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <div class="topbar"><button class="theme" id="theme" type="button" aria-label="Color theme: system; activate to change" aria-live="polite">theme: system</button></div>
+    <header>
+      <div class="eyebrow">Goal NP proposal · publication 8 · Terra Windows sandbox-enforcement recovery amendment · awaiting recovery plan signoff</div>
+      <h1>Native Claude + Codex skill parity</h1>
+      <p class="thesis">One maintained behavior source per skill, native packages for both hosts, every skill qualified, known utilities wired, and one reversible cutover—without reviving the router or GitHub Copilot.</p>
+      <div class="ribbon">
+        <span class="chip hold">Proposal only — no implementation authority</span>
+        <span class="chip">Publication 8 · ten-file recovery bundle</span>
+        <span class="chip">41 steps · 39 code + 2 operator</span>
+        <span class="chip">2 approval gates</span>
+      </div>
+    </header>
+
+    <section aria-labelledby="heard-title">
+      <p class="kicker">What I heard</p>
+      <h2 id="heard-title">The brief is parity and maintainability—not another value experiment.</h2>
+      <p class="lead">These are the requests that shaped the plan. If one mapping is wrong, reply with the number or decision ID.</p>
+      <div class="card heard">
+        <div class="heard-item"><span class="n">1</span><span><span class="ask">“I already know these skills are useful.”</span><strong>Full catalog cutover.</strong><span class="answer">No one-skill pilot and no contrived usefulness test.</span></span></div>
+        <div class="heard-item"><span class="n">2</span><span><span class="ask">“Claude skills in Claude; Codex skills in Codex.”</span><strong>Native discovery on both hosts.</strong><span class="answer">Claude keeps its existing topology; Codex gets <code>$CODEX_EFFECTIVE_HOME\.agents\skills</code>.</span></span></div>
+        <div class="heard-item"><span class="n">3</span><span><span class="ask">“Do not maintain two copies by hand.”</span><strong>One authored core.</strong><span class="answer">Provider adapters are explicit; both complete host packages are generated from canonical source.</span></span></div>
+        <div class="heard-item"><span class="n">4</span><span><span class="ask">“Test it for each skill.”</span><strong>Exhaustive native qualification.</strong><span class="answer">Every shipped host cell passes individually; no average and no waiver-by-omission.</span></span></div>
+        <div class="heard-item"><span class="n">5</span><span><span class="ask">“Wire the utilities I built; do not wait for friction.”</span><strong>Closed 13-project hookup map.</strong><span class="answer">Known callers, fixtures, native smokes, receipts, and read-only Observatory views land together.</span></span></div>
+        <div class="heard-item"><span class="n">6</span><span><span class="ask">“Ablation should not optimize the core for one model.”</span><strong>New <code>skill-ablation</code>.</strong><span class="answer">Either family may propose; both production hosts can veto; deterministic code decides acceptance.</span></span></div>
+      </div>
+    </section>
+
+    <section aria-labelledby="shape-title">
+      <p class="kicker">Why this shape</p>
+      <h2 id="shape-title">Shared authorship, native execution, immutable releases.</h2>
+      <p class="lead">“Shared core” means one file is authored—not that live hosts chase a mutable checkout. That keeps daily maintenance simple without making nested repos, worktrees, Windows links, or cloud sandboxes fragile.</p>
+      <article aria-labelledby="terra-title">
+      <p class="kicker">Publication 8 recovery amendment</p>
+      <h2 id="terra-title">Publication 7 proved a Windows read-only downgrade; Publication 8 enforces the intended sandbox.</h2>
+      <div class="card feedback">
+        <p><strong>Publication 3:</strong> Abraham approved commit <code>71a5aea3fd21320d2fbb3cb9228bc52e42cb3215</code>. Its single request stopped at terminal phase <code>blocked</code> while the active coordinator locked <code>%USERPROFILE%\.codex\goals_1.sqlite</code>. It stopped before a prompt or model process; the frozen root remains historical input only.</p>
+        <dl class="source">
+          <dt>Publication-3 approval file</dt><dd><code>%LOCALAPPDATA%\SkillMesh\Evidence\GoalNP\Publication3\approval1-message.txt</code> · file SHA-256 <code>33d3e1756ed2bfd661698da3dfdf85a921380efd87fe3d635b777dafe3c6e04b</code> · normalized message SHA-256 <code>66df8cd413fddd097e80dc63ccfacab221e96c72c795345d14b72ae1ae3474ef</code></dd>
+          <dt>Publication-3 handoff</dt><dd><code>%LOCALAPPDATA%\SkillMesh\Evidence\GoalNP\Publication3\terra-transition-handoff-71a5aea3fd21320d2fbb3cb9228bc52e42cb3215.txt</code> · SHA-256 <code>8382385b90568e947b7aa1abe53d4089650817fb5a72a33b014d5d19d62bd453</code></dd>
+          <dt>Terminal request</dt><dd><code>tba-b7e5898e6389ff19b3ce34738f16b47d0a832dfc4625789fbcf4308352f2b1a0</code></dd>
+          <dt>Frozen evidence root</dt><dd><code>%LOCALAPPDATA%\SkillMesh\Evidence\GoalNP\TerraBootstrap\tba-b7e5898e6389ff19b3ce34738f16b47d0a832dfc4625789fbcf4308352f2b1a0</code></dd>
+          <dt>Terminal state</dt><dd><code>state.json</code> · SHA-256 <code>ae59a6ac7f512d2e399675fe541b916d1710c209a13b45433642cf019a07df97</code> · updated <code>2026-08-15T17:38:35.0297115Z</code> · only that state file and the empty <code>instruction-free-launch-roots\</code> directory exist · canonical three-entry root-manifest SHA-256 <code>9b01de1f550019a8bf81c23431925b6f38a173ec1ce22023c765a2a8d290cdcf</code></dd>
+        </dl>
+        <p><strong>Publication 4:</strong> Abraham approved commit <code>58223098887468953570ecf153494871c5404605</code>. Its launcher passed the standalone zero-write boundary, claimed request <code>tba-461c20be4d35c7255a83d05f91f16c5bccbdd5a36af738360bcedc330ab6b1e4</code>, and produced valid prompt-input JSON. Windows PowerShell 5.1 then exposed an empty <code>Process.ExitCode</code>, so the recorder terminally blocked before <code>codex exec</code> or any Terra/model execution.</p>
+        <dl class="source">
+          <dt>Publication-4 approval</dt><dd><code>%LOCALAPPDATA%\SkillMesh\Evidence\GoalNP\Publication4\approval1-message.txt</code> · file SHA-256 <code>2f74ea66ac7bdac38b419fd24b7e6caa9479de007bc178e69acd54f9f8b42857</code> · normalized message SHA-256 <code>1a7698085d7bc12e74d60874e0d64b4d069b039470ab17701541cfe6c77202fe</code></dd>
+          <dt>Frozen evidence root</dt><dd><code>%LOCALAPPDATA%\SkillMesh\Evidence\GoalNP\TerraBootstrap\tba-461c20be4d35c7255a83d05f91f16c5bccbdd5a36af738360bcedc330ab6b1e4</code></dd>
+          <dt>Terminal state</dt><dd><code>blocked</code> · state SHA-256 <code>4517ecd2d5ff948bbcf7763e32686797f65b5112ceb14e71c96c8222e6e12e05</code> · canonical nine-entry root-manifest SHA-256 <code>893c099e299a5152f26edd912a5bfcdc75bd69e030dfd40653c0365ffe4d5e44</code></dd>
+          <dt>Last completed child</dt><dd>valid prompt-input stdout JSON SHA-256 <code>31757cf1c4ac11f2eb6f63880e92b3a036f82e0f185866edf9ae98619c5e7681</code> · empty stderr · exact terminal error <code>implementation-prompt-input exited .</code></dd>
+          <dt>Effects not reached</dt><dd>no <code>codex exec</code>, Terra/model process, result, test, ADMIN diff, commit, product mutation, or live-home drift; Publication-3 evidence remained unchanged</dd>
+        </dl>
+        <p><strong>Publication 5:</strong> Abraham approved commit <code>6d292bb37c37944c71ed8b18214fabb23f22869e</code>. Its repaired process canary passed and one real Codex implementation process ran, requesting <code>gpt-5.6-terra</code>/<code>xhigh</code>/<code>workspace-write</code>; no independent resolved-model field was exposed. The requested-Terra process returned schema-valid <code>BLOCKED</code>, saying its model-visible session was read-only. The retained prompt-input proof had itself been hard-coded to <code>read-only</code>, so it could not attest the implementation call and does not prove that Codex downgraded that call. The model issued no filesystem-write command: all 11 recorded command starts were inspections/reads, with one bundled read declined. P5 therefore records a model refusal, not an observed operating-system write denial.</p>
+        <dl class="source">
+          <dt>Publication-5 approval</dt><dd><code>%LOCALAPPDATA%\SkillMesh\Evidence\GoalNP\Publication5\approval1-message.txt</code> · file SHA-256 <code>5ad7472cb113d6965de18204dc1b7f860a0c2982ad1e8152e34547efa714a8e3</code> · normalized message SHA-256 <code>2d19ad716f3179baf67c67c77d19dfb29697ea5b2e6f2b0a0d1fe87ee03d0f47</code></dd>
+          <dt>Publication-5 handoff</dt><dd><code>%LOCALAPPDATA%\SkillMesh\Evidence\GoalNP\Publication5\terra-transition-handoff-6d292bb37c37944c71ed8b18214fabb23f22869e.txt</code> · 13,450 bytes · SHA-256 <code>ee92b0f882772af327d25d0bec82c9d381ff9e2f309611dd0856d0589c62030e</code></dd>
+          <dt>Frozen evidence root</dt><dd><code>%LOCALAPPDATA%\SkillMesh\Evidence\GoalNP\TerraBootstrap\tba-03e474757a5e0c92e8d3f0bd4c5a0731a742397a43c99d5e027016643fced916</code></dd>
+          <dt>Terminal state</dt><dd><code>blocked</code> · state SHA-256 <code>b0e9355ff3f39c1ccca196ae45ebe7c4f042c9fcd2587d84882c7d9af4724f50</code> · canonical 17-entry root-manifest SHA-256 <code>11f84ea3e5140a2832586f63fc362c97b92286b1663c91df2c80fb7784d6f700</code></dd>
+          <dt>Invocation and result</dt><dd>requested Terra/<code>xhigh</code>/<code>workspace-write</code> invocation SHA-256 <code>3752f8ea94fd57bb72d3d495d2ba88e8a6068d80552dc9ef9f0292714887ff36</code> · hard-coded read-only proof SHA-256 <code>a50ad81bae6f73f5d85c369f5ebce0904a903a23ce90c6dced83a890d5b7ea8b</code> · <code>BLOCKED</code> result SHA-256 <code>2e56256153e3c50de8c981a1d13e53e1e18fb495276f3c34517a1ef8895c295c</code></dd>
+          <dt>Effects not reached</dt><dd>repository remained clean at the approved commit; all 15 ADMIN outputs remained absent; no test, diff, commit, issue, product, prior-evidence, or live-home mutation occurred</dd>
+        </dl>
+        <p><strong>Publication 6:</strong> Abraham approved commit <code>d0f83210e3092e18a28ee24db20a1af95887c31b</code>. Its standalone, non-consuming <code>Preflight</code> stopped before request claim. Operator-reported terminal JSON had <code>verdict=BLOCKED</code>, <code>error_code=PERMISSION_ATTESTATION_FAILED</code>, <code>error_label=preclaim-permission-attestation</code>, message suffix <code>Permissions text differs from the complete closed permission grammar.</code>, and <code>evidence_root_absent=true</code>. That report retained no expected or actual permission hashes, line counts, or permission text, and its staging scratch was removed. The earlier claim that P6 proved only a missing writable-root line was unsupported and is withdrawn; P7 was the first publication to prove that the pinned diagnostic exposed the complete canonical four-line <code>read-only</code> grammar.</p>
+        <dl class="source">
+          <dt>Publication-6 approval</dt><dd><code>%LOCALAPPDATA%\SkillMesh\Evidence\GoalNP\Publication6\approval1-message.txt</code> · file SHA-256 <code>064e50a53d93dc976cb98b87a5a49d0260d91f88aadddb23bcd8bf60d9be2add</code> · normalized message SHA-256 <code>ad20542c0d5dc9b77fbab14413998f614ab178ca4949a1269f06c08f24b3407e</code></dd>
+          <dt>Publication-6 handoff</dt><dd><code>%LOCALAPPDATA%\SkillMesh\Evidence\GoalNP\Publication6\terra-transition-handoff-d0f83210e3092e18a28ee24db20a1af95887c31b.txt</code> · 18,494 bytes · SHA-256 <code>ae085575b9441080ece62194cd4a3144df809eaa9d70b2ed2fcd76624d455b47</code></dd>
+          <dt>Unclaimed request identity</dt><dd><code>tba-cc76394efc1359d75b406ce5a2d2300d5ed41020b5cf7fc972ba3039dc3a6ab0</code> · its TerraBootstrap request root is absent · its exact staging request root is absent · the complete Publication-6 staging publication root is absent</dd>
+          <dt>Effects not reached</dt><dd><code>Run</code> never started; no request state or durable failure receipt exists; no <code>codex exec</code>, Terra/model process, test, ADMIN diff, commit, issue, product, repository, prior-evidence, or live-home mutation occurred</dd>
+        </dl>
+        <p><strong>Publication 7:</strong> Abraham approved commit <code>40d671d75e1aa6c6b31eab70caa8f4d07ed51383</code>. Its standalone, non-consuming <code>Preflight</code> stopped before request claim. Operator-reported terminal JSON had <code>verdict=BLOCKED</code>, <code>error_code=PERMISSION_ATTESTATION_FAILED</code>, <code>error_label=preclaim-permission-attestation</code>, message suffix <code>Permissions text differs from the complete closed permission grammar.</code>, and <code>evidence_root_absent=true</code>. The expected text had five lines; the actual text had four; and the first difference was line 2. Reproduction of the reported hashes proves that expected line 2 was the workspace-write sandbox sentence while actual line 2 was the canonical read-only sandbox sentence. The absent writable-root line explains the shorter read-only grammar, but it is a consequence of the Windows downgrade rather than the sole defect.</p>
+        <dl class="source">
+          <dt>Publication-7 approval</dt><dd><code>%LOCALAPPDATA%\SkillMesh\Evidence\GoalNP\Publication7\approval1-message.txt</code> · 104 bytes · file SHA-256 <code>a849c6f49c9557ee7e11bdc4c01f324e17fe260d5abdc648141715d22120f8a5</code> · normalized message SHA-256 <code>fe5736f56b0edb305ef2e1632d5882a6d85d930c06862d9ec9ce26a28b9a23aa</code></dd>
+          <dt>Publication-7 handoff</dt><dd><code>%LOCALAPPDATA%\SkillMesh\Evidence\GoalNP\Publication7\terra-transition-handoff-40d671d75e1aa6c6b31eab70caa8f4d07ed51383.txt</code> · 21,345 bytes · SHA-256 <code>c0554be563284c8fe9eb2f4aa2985505c76d39eb17dd1aeb1313dd78f3b43f81</code></dd>
+          <dt>Unclaimed request identity</dt><dd><code>tba-f3b13b6337e230003d8721ad759b398d31536eae9d9b2bdf0860ff8b1d849568</code> · its TerraBootstrap request root is absent · its exact staging request root is absent · the complete Publication-7 staging publication root is absent</dd>
+          <dt>Whole-text telemetry</dt><dd>expected five-line workspace-write SHA-256 <code>aa613097ace0f175545df760139a7bbc9c505a0feb207dbc2552438ce70db03d</code> · actual four-line canonical read-only SHA-256 <code>29dad5ed6993c5e717376e0a1c84d54ab60ee593510916ac6cee4295e803315d</code></dd>
+          <dt>Differing line-2 telemetry</dt><dd>expected workspace-write line SHA-256 <code>06c4b2fd6aab85ab9ea0e5598cbcdead5142d7cb56e851770163c1b9f480338b</code> · actual canonical read-only line SHA-256 <code>d9cebe887c2ee11798faa526216e1d4af5d90cd47231862b50eb60cc5ac76464</code></dd>
+          <dt>Effects not reached</dt><dd><code>Run</code> never started; no request state or durable failure receipt exists; no <code>codex exec</code>, Terra/model process, test, ADMIN diff, commit, issue, product, repository, prior-evidence, or live-home mutation occurred</dd>
+        </dl>
+        <p><strong>What Publication 8 changes:</strong> every closed Codex debug and execution argument vector is built from the same configuration function and now includes the exact scalar <code>windows.sandbox="unelevated"</code>. In pinned Codex 0.147.0 on Windows, that selects <code>RestrictedToken</code> enforcement and prevents the requested <code>workspace-write</code> sandbox from being forced to canonical read-only when Windows sandbox enforcement is disabled.</p>
+        <p>An explicitly authorized disposable pre-publication A/B <code>codex debug prompt-input</code> diagnostic proved the change on the pinned host binary. With no override it reproduced P7's exact <code>29dad5ed6993c5e717376e0a1c84d54ab60ee593510916ac6cee4295e803315d</code> four-line read-only profile and zero write paths; with one exact unelevated override it produced the exact <code>aa613097ace0f175545df760139a7bbc9c505a0feb207dbc2552438ce70db03d</code> five-line workspace-write profile and one managed/restricted write path. Both cases exited zero with empty stderr. No model request or <code>codex exec</code> occurred, all scratch was removed, and repository, live-auth, prior-root, and staging predicates remained unchanged. This is pre-publication diagnostic context, not a Terra request, receipt, state, or digest input.</p>
+        <p><strong>Publication-8 planning review history:</strong> This is a reconstructable chronology of superseded planning candidates, not publication evidence.</p>
+        <ol>
+          <li><strong>A — initial six-file candidate:</strong> plan-review returned <code>FAIL</code> because the launcher would claim a request root before running a baseline gate already known red at clean P7 and because documentation gaps remained. No approval, commit, request, or evidence resulted. Abraham then authorized only the bounded baseline-gate repair and Publication-8 revision described below.</li>
+          <li><strong>B — first eight-file candidate after that authorized repair:</strong> plan-review returned <code>PASS</code>; the following plan-redline returned <code>FAIL</code> on the legacy review-order contradiction, incomplete operator chain, proposal order and source metadata, and revision grammar. Correcting those findings changed bytes and invalidated the preceding plan-review PASS.</li>
+          <li><strong>C — corrected eight-file candidate:</strong> plan-review returned <code>PASS</code>; the following plan-redline returned <code>FAIL</code> because the same unqualified <code>defect_inventory_sha256</code> named both LF-normalized fixture-builder bytes, SHA-256 <code>98baaa178e41dc23e5de70e3161de78c66b9c91052c4d0d99295ae1a8928ed37</code>, and raw CRLF sealed-probe bytes, SHA-256 <code>24c336217fba1a6d1d177b754a34be77275e0c797a50d48ea0a7e5d9401c2752</code>. Expanding the bundle to repair that boundary invalidated both verdicts.</li>
+          <li><strong>D — first ten-file candidate:</strong> its exact-byte tests passed, but fresh plan-review returned <code>FAIL</code> because monolithic <code>Run</code> bypassed <code>load_prepared</code> and post-host inventory-digest enforcement, the negative tamper regression was missing, and this review provenance was incomplete. Plan-redline and plan-wrap did not run. No approval, commit, request, or evidence resulted.</li>
+          <li><strong>E — corrected ten-file candidate after the direct-Run boundary repair:</strong> fresh plan-review returned <code>FAIL</code> because its negative regression called <code>execute_review</code> directly and the documents claimed inventory drift produced no report, while production <code>main()</code> intentionally publishes bounded <code>AMBIGUOUS</code> failure evidence for both <code>Run</code> and <code>InvokeSavedHandoff</code>. Plan-redline and plan-wrap did not run. No approval or commit resulted. That review is non-evidentiary, non-authorizing, and non-reusable; it created no durable launcher record, receipt, state, request root, or Publication-8 evidence root.</li>
+        </ol>
+        <p>The current narrow closure makes <code>Run</code> reopen its sealed handoff through <code>load_prepared</code>. After the host returns and response-contract handling completes, <code>execute_review</code> performs one bounded inventory read, hashes those bytes against the receipt immediately before inventory JSON parsing and grading, and then parses those same bytes. Production-path negative tamper regressions drive both <code>Run</code> and <code>InvokeSavedHandoff</code> through <code>main()</code> and prove that inventory drift fails before grading and before normal-result reduction or publication. The only final publication is the bounded <code>AMBIGUOUS</code> failure pair, <code>report.md</code> plus <code>MANIFEST.sha256</code>: it records the integrity failure, fixes <code>detected_defect_count</code> at <code>0</code>, keeps uncertainty-bearing reviewer and resolution fields <code>UNCERTAIN</code> or unavailable, and contains no grade or normal/conclusive result. This preserves the established status contract: <code>COMPLETE</code> means bounded evidence publication completed, while <code>AMBIGUOUS</code> means the experiment reached no conclusion. Every external reviewer output above is planning/review context only: it is non-evidentiary, non-authorizing, non-reusable, and created no durable launcher record, receipt, state, request root, or Publication-8 evidence root. The current revised ten-file bytes must restart and complete plan-review <code>PASS</code> → plan-redline <code>PASS</code> → plan-wrap <code>READY</code> in that order.</p>
+        <p>Before any Publication-8 request claim, the ten-file bundle repairs two deterministic gate families reproduced red at clean P7 HEAD. The cross-family fixture builder normalizes CRLF and lone CR to LF at its candidate-copy and declared-inventory hash boundaries. The probe now LF-canonicalizes that inventory at its source/sealing boundary, rejects fixture/canonical-source and fixture/receipt identity drift, and the focused probe tests cover LF, CRLF, lone-CR, and mismatch cases. The path-choke test gives exactly this one-off, fixed-boundary launcher a written whole-file exemption: it has no consumer-home parameter, its only caller-supplied path is a non-mutation approval path checked for exact equality, and its repository, ADMIN, Evidence, and Staging mutations remain confined to launcher-derived boundaries. The exemption must be removed if that boundary broadens. None of these repairs narrows collection, skips or xfails a test, or weakens the unchanged repository-root <code>python -m pytest</code> DONE gate or the launcher's mandatory full-root pytest gate. Abraham authorized this bounded repair and revision, but that authority is not Recovery Approval 1 and authorizes no <code>Preflight</code>, <code>Run</code>, model call, implementation, or live mutation.</p>
+        <p>The attestation is not relaxed. Workspace-write still requires exact normalized equality with the complete five-line grammar, including the exact leading-space line <code> The writable root is `&lt;canonical-owner-root&gt;`.</code> after the approval sentence and before the closing permissions tag. Read-only still requires its exact four-line grammar with no writable-root annotation. The accepted canary takes the annotation from its first and only workspace root; independent <code>missing-writable-root-annotation</code> and <code>wrong-writable-root-annotation</code> canaries must fail. A mismatch still exposes only whole-text hashes, line counts, a one-based first-difference index, line-presence booleans, and nullable hashes for those two differing lines; no raw permission or path-bearing line text is emitted.</p>
+        <p>The fresh request digest binds exactly 22 immutable LF-joined fields: domain <code>publication-8-windows-sandbox-enforcement-recovery-v1</code>; Publication-8 commit and approval-text hash; Publication-7 commit, request ID, approval-text hash, approval-file hash, and handoff hash; Publication-6 commit, request ID, approval-text hash, approval-file hash, and handoff hash; then the P5, P4, and P3 request/state/root-manifest triples. The final approved commit binds the complete ten-file tree, so the baseline repair adds no request-preimage field and the 22-field request identity remains unchanged. The retired P7 telemetry tuple remains operator-reported historical context, not a digest or durable receipt. Exactly six fail-closed absences remain live predicates rather than digest literals: P7 evidence-request root, staging-request root, and staging-publication root; plus P6 evidence-request root, staging-request root, and staging-publication root. The fresh P8 request ID and external handoff are deliberately unavailable until the final ten files, commit, and exact approval bytes are frozen and reviewed.</p>
+        <p>This is a Windows sandbox-enforcement recovery plus a bounded baseline-gate repair, not a model-policy or plan-scope rewrite. Publication 8 preserves Publication 7's corrected grammar, direct Codex <code>gpt-5.6-terra</code>/<code>xhigh</code> envelope, repository primary workspace, repaired recorder and canary, exact zero-skill/sandbox attestation, stable model-verdict codes, fail-stop operator scope, zero-model administrative synchronization, D01–D10, D08, the 41-step DAG, NP-12/NP-40 native-host separation, Approval 2, and the exact ten-file bundle. The Windows proof and diagnostic metadata are launcher readiness/state fields, not additions to the unchanged model-result schema. It adds no model call, router, fallback, live discovery/config write, cutover authority, approval gate, or retry of a closed lineage. Because debug and execution remain separate processes, the attestation narrows but does not erase their time-of-check/time-of-use interval.</p>
+        <p class="notice"><strong>Publication-3, Publication-4, and Publication-5 Approval 1 were each consumed by a terminal lineage. Publication-6 and Publication-7 Approval 1 were non-consuming, but each remains bound to its now-superseded exact bytes.</strong> None can authorize Publication 8. Only fresh recovery Approval 1 on the final reviewed Publication-8 ten-file bundle can create the distinct Publication-8 request.</p>
+      </div>
+      </article>
+      <div class="card architecture">
+        <div class="flow" role="img" aria-label="Canonical source builds immutable release packages, then two native discovery trees">
+          <div class="node"><b>Canonical source</b><span><code>core.md</code> + Claude/Codex adapters + declared assets</span></div>
+          <div class="arrow" aria-hidden="true">→</div>
+          <div class="node"><b>Immutable release</b><span>self-contained host packages + release-owned utility runtimes + hashes</span></div>
+          <div class="arrow" aria-hidden="true">→</div>
+          <div class="node"><b>Native discovery</b><span>Claude managed files + <code>$CODEX_EFFECTIVE_HOME\.agents\skills</code> for Codex</span></div>
+        </div>
+        <div class="rule"><strong>No router, no automatic fallback, no live mutable-core pointer.</strong> Editing source changes neither host until a qualified release is activated. A native skill runs on the already-open session model; D08's controlled maintenance profiles do not silently retarget that session.</div>
+      </div>
+      <div class="stats" aria-label="Qualification targets">
+        <div class="card stat"><span class="num">58</span><span class="label">Claude global skills</span></div>
+        <div class="card stat"><span class="num">55</span><span class="label">Codex global skills</span></div>
+        <div class="card stat"><span class="num">113</span><span class="label">global native cells</span></div>
+        <div class="card stat"><span class="num">39</span><span class="label">utility-flow cells</span></div>
+        <div class="card stat"><span class="num">2</span><span class="label">approval gates</span></div>
+      </div>
+    </section>
+
+    <section aria-labelledby="timeline-title">
+      <p class="kicker">What lands, phase by phase</p>
+      <h2 id="timeline-title">Build freely after signoff; touch live discovery only at the end.</h2>
+      <p class="lead">The detailed plan has 41 bounded steps. This is the operator-level map.</p>
+      <ol class="timeline">
+        <li class="card phase gate"><span class="id">A1</span><div><h3>Recovery Approval 1 — approve the exact Publication-8 bundle</h3><span class="meta">before ADMIN-BOOTSTRAP</span><p>Records P01–P10 and unchanged D01–D10, binds the detailed plan, Windows sandbox-enforcement recovery amendment, precommitted launcher/unchanged result schema, proposal, pointer, and four bounded baseline-gate repair files, and authorizes the distinct Publication-8 request plus the unchanged direct Codex <code>gpt-5.6-terra</code>/<code>xhigh</code> envelope to run ADMIN-BOOTSTRAP and all 39 numbered code steps. ADMIN-SYNC remains zero-model. The approval also covers the already-planned disposable two-host proofs, tests, and rehearsal, but no live discovery write.</p><div class="after"><strong>Afterwards:</strong> save the external fail-stop block, close this UI, and from standalone PowerShell run the external launcher gates in order: <code>Preflight</code> → <code>Run</code> → launcher <code>Inspect</code>. Only after launcher <code>Inspect</code> reports the exact PASS lineage may the committed controller run <code>Prepare</code> → zero-model <code>Sync</code> → controller <code>Inspect</code> → <code>RunBootstrapNP01</code> for NP-01. Neither <code>Inspect</code> gate may be skipped.</div></div></li>
+        <li class="card phase"><span class="id">01</span><div><h3>Protect and reconcile current work</h3><span class="meta">NP-01</span><p>Hash/export every overlapping dirty path, adopt the four preserved Step 4 files through review, and establish clean candidate lineage without sweeping unrelated WIP.</p><div class="after"><strong>Afterwards:</strong> Skill Mesh has a recoverable, reviewed starting point; active checkouts remain unchanged.</div></div></li>
+        <li class="card phase"><span class="id">02</span><div><h3>Make canonical source and native Codex real</h3><span class="meta">NP-02–NP-10</span><p>Migrate support assets, replace the active <code>gpt</code>/Copilot provider concept with <code>codex</code>, generate native packages, promote seven custom skills, and prepare the disposable two-host canary.</p><div class="after"><strong>Afterwards:</strong> all package and adapter bytes needed for the real-host substrate proof are frozen and testable.</div></div></li>
+        <li class="card phase"><span class="id">03</span><div><h3>Prove the substrate; build transaction and evaluation contracts</h3><span class="meta">NP-11–NP-19 · operator NP-12</span><p>Freeze 14 controlled D08 profiles plus two native invoking-session profiles, prove both bounded phone-a-friend scopes, run the disposable real-host discovery/core/asset/named-call proof, add hash-chained receipts and rollback primitives, then replace scalar/same-host skill evaluation with the dual-host Pareto matrix.</p><div class="after"><strong>Afterwards:</strong> a valid placement/core-load contradiction has stopped the architecture, or model calls are exact, role-separated, resumable, no-fallback, and unable to average away a one-host regression.</div></div></li>
+        <li class="card phase"><span class="id">04</span><div><h3>Create <code>skill-ablation</code></h3><span class="meta">NP-20</span><p>The new skill is added only after the neutral evaluator exists. It copies the baseline exactly, blinds candidates, gets independent family proposals, and returns reject, indeterminate, or a Pareto-safe frontier.</p><div class="after"><strong>Afterwards:</strong> ablation is a supported maintenance operation, not an ad hoc prompt tied to whichever model opened the session.</div></div></li>
+        <li class="card phase"><span class="id">05</span><div><h3>Wire utilities and repo-local skills</h3><span class="meta">NP-21–NP-34</span><p>Implement all 13 known utility bindings, create missing Codex counterparts, add truthful telemetry, and make Dev Observatory a bounded read-only consumer. Every binding targets a future non-editable release-owned runtime rather than an owner worktree.</p><div class="after"><strong>Afterwards:</strong> all 13 have mechanical callers, fixtures, runtime contracts, and receipt/view coverage under their declared required/advisory policy.</div></div></li>
+        <li class="card phase"><span class="id">06</span><div><h3>Integrate, build immutable runtimes, and rehearse rollback</h3><span class="meta">NP-35–NP-39</span><p>Reconcile old plans/instructions, land clean non-live work, freeze a content-addressed release with non-editable utility runtimes, and prove both successful and injected-failure transactions—including Git refs, dirty bytes, discovery roots, State, and runtime sets.</p><div class="after"><strong>Afterwards:</strong> one immutable qualification request binds the exact candidate, released runtime bytes, and exact rollback.</div></div></li>
+        <li class="card phase"><span class="id">07</span><div><h3>Qualify every cell</h3><span class="meta">operator NP-40</span><p>Run 113 global native cells, required repo-local cells, integrated workflows, and 39 utility cells from disposable homes. Auth/quota is resumable INCOMPLETE; fallback, substitution, or a missing cell cannot pass.</p><div class="after"><strong>Afterwards:</strong> only a terminal PASS aggregate can advance to packet freeze.</div></div></li>
+        <li class="card phase"><span class="id">08</span><div><h3>Freeze the Approval-2 packet</h3><span class="meta">NP-41</span><p>Rehash the entire qualification lineage and freeze exact source, release/runtime, candidate, mutation, backup, postcheck, and rollback identities into one canonical packet.</p><div class="after"><strong>Afterwards:</strong> implementation stops at WAITING FOR APPROVAL 2; no live script may run yet.</div></div></li>
+        <li class="card phase gate"><span class="id">A2</span><div><h3>Approval 2 — approve the frozen deliverable</h3><span class="meta">after NP-41</span><p>Abraham receives exact commits, release/runtime hashes, mutation paths, backup, postchecks, and rollback command. Approval authorizes one preallocated live transaction plus automatic rollback on a required postcheck failure; byte-identical pre-journal restart and same-transaction crash recovery do not create another transaction.</p><div class="after"><strong>Afterwards:</strong> close all named hosts/agent sessions, let the frozen quiescence check pass, run the frozen script, verify native discovery, then resume ordinary qualified updates.</div></div></li>
+      </ol>
+    </section>
+
+    <section aria-labelledby="picks-title">
+      <p class="kicker">Choices you already made</p>
+      <h2 id="picks-title">P01–P10 are the brief, not agent inventions.</h2>
+      <div class="card picks">
+        <div class="pick"><span class="id">P01</span><span>Full Claude/Codex parity; no usefulness pilot.</span></div>
+        <div class="pick"><span class="id">P02</span><span>One authored core, explicit adapters, generated packages.</span></div>
+        <div class="pick"><span class="id">P03</span><span><code>$CODEX_EFFECTIVE_HOME\.agents\skills</code>; no duplicate <code>dev/.agents/skills</code> global catalog.</span></div>
+        <div class="pick"><span class="id">P04</span><span>Preserve Claude’s working junction and consumer files.</span></div>
+        <div class="pick"><span class="id">P05</span><span>One full migration, then one maintained sync flow.</span></div>
+        <div class="pick"><span class="id">P06</span><span>No active Copilot, router, or automatic fallback.</span></div>
+        <div class="pick"><span class="id">P07</span><span>Test every shipped skill on every supported host.</span></div>
+        <div class="pick"><span class="id">P08</span><span>Wire known utilities now; Observatory stays read-only.</span></div>
+        <div class="pick"><span class="id">P09</span><span>Either model may propose; both hosts veto regressions.</span></div>
+        <div class="pick"><span class="id">P10</span><span>Two approvals: plan, then frozen live deliverable.</span></div>
+      </div>
+    </section>
+
+    <section aria-labelledby="defaults-title">
+      <p class="kicker">Defaults I chose on your behalf</p>
+      <h2 id="defaults-title">D01–D10 are the redline.</h2>
+      <p class="lead">Publication 8 preserves P01–P10, D01–D10, D08's controlled evaluation/native-qualification contract, and every Publication-7 executor boundary. The recovery amendment adds only the closed Windows sandbox-enforcement scalar to the shared debug/execution argument vector and its fail-closed proof while retaining the strict five-line workspace-write grammar; the bounded clean-P7 gate repair leaves full-root pytest unchanged; and the exact ten-file bundle requires fresh recovery Approval 1.</p>
+      <div class="defaults">
+        <div class="card default"><span class="id">D01</span><div><div class="what">Promote all seven custom global Claude skills into the portable catalog.</div><div class="why">They are already installed in the live global Claude catalog; leaving them behind would make “parity” false.</div><div class="tweak"><b>Tweak:</b> name a specific skill that should remain Claude-only, with the reason.</div></div></div>
+        <div class="card default"><span class="id">D02</span><div><div class="what">Reverify and adopt the four preserved Step 4 files as the installer/migrator starting point.</div><div class="why">They contain reviewed safety work and have a hash-bound recovery bundle; discarding them recreates work.</div><div class="tweak"><b>Tweak:</b> require a clean rewrite instead, while retaining the bundle only as reference.</div></div></div>
+        <div class="card default"><span class="id">D03</span><div><div class="what">Retire only hash-classified managed Copilot files; adopt reviewed drift into canonical source or preserve it in recovery; always preserve foreign content.</div><div class="why">The old profile is obsolete as a host, but its mixed tree cannot be safely deleted wholesale or treated as uniformly foreign.</div><div class="tweak"><b>Tweak:</b> preserve all legacy bytes indefinitely instead of retiring exact owned paths.</div></div></div>
+        <div class="card default"><span class="id">D04</span><div><div class="what">Retain the first-cutover release and backup for at least 30 days and 10 successful normal activations/invocations, whichever is later.</div><div class="why">Time alone does not prove the cutover is stable; invocations alone may happen too quickly.</div><div class="tweak"><b>Tweak:</b> increase the time or activation/invocation count. Shortening either is not recommended.</div></div></div>
+        <div class="card default"><span class="id">D05</span><div><div class="what">Keep model requests in versioned config, not permanent prose in skill cores.</div><div class="why">Models change; a profile update should force visible rebaseline/requalification without rewriting behavior.</div><div class="tweak"><b>Tweak:</b> require a separate plan approval for every profile change rather than normal reviewed maintenance.</div></div></div>
+        <div class="card default"><span class="id">D06</span><div><div class="what">Hash/export/classify every in-scope Goal-NP-overlapping dirty path before using or superseding it.</div><div class="why">The coding root and utility repos contain valuable WIP on exact target paths; unrelated WIP remains out of scope.</div><div class="tweak"><b>Tweak:</b> choose a specific in-scope path’s disposition up front; never waive byte-backed recovery.</div></div></div>
+        <div class="card default"><span class="id">D07</span><div><div class="what">At cutover, untrack only manifest-managed generated Claude files and retire the legacy tracked ledger.</div><div class="why">Otherwise every future sync dirties the coding-root repo; consumer/private skill files stay tracked and untouched.</div><div class="tweak"><b>Tweak:</b> keep generated files committed, accepting a commit for every qualified release.</div></div></div>
+        <div class="card default"><span class="id">D08</span><div><div class="what">Role binding—not model equivalence. Controlled maintenance/evaluation uses Fable <code>xhigh</code> / Sol <code>max</code> for seed planning; Opus 5 <code>xhigh</code> / Terra <code>xhigh</code> for production execution, proposal, challenge, and fresh strong gates; and Sonnet 5 <code>high</code> / Luna <code>medium</code> for parallel advisory judging. Native skills remain on the open session: initial qualification binds Claude config alias <code>opus</code>/<code>xhigh</code> and Codex config exact Sol/<code>ultra</code>, without changing live settings.</div><div class="why">Both fresh Opus/Terra gates evaluate every high-impact candidate; deterministic per-gate, per-host Pareto code—not an LLM—accepts or rejects. After the two-failed-round/oscillation trigger, either native <code>/build-step</code> or controlled production may call one same-family, read-only Fable/Sol friend per authorized parent context. Trigger, identity, visibility, output hash, and lineage are recorded; judges and gates cannot escalate. Fable receives only a bounded retention-eligible packet and requires explicit acceptance of at least 30-day provider retention. Refusal is terminal <code>INVALID</code> for required qualification/profile proof, while ordinary <code>/build-step</code> reports the unavailable friend and continues fail-open; neither path changes policy or falls back. Primary sources: OpenAI's <a href="https://developers.openai.com/api/docs/models/gpt-5.6-sol">Sol</a>, <a href="https://developers.openai.com/api/docs/models/gpt-5.6-terra">Terra</a>, and <a href="https://developers.openai.com/api/docs/models/gpt-5.6-luna">Luna</a> descriptions and Anthropic's <a href="https://platform.claude.com/docs/en/about-claude/models/choosing-a-model">model-selection guidance</a> support these workload roles, not cross-vendor equivalence.</div><div class="tweak"><b>Tweak:</b> request another D08 revision. Any later profile change rebaselines and requalifies; substitution and fallback remain forbidden.</div></div></div>
+        <div class="card default"><span class="id">D09</span><div><div class="what">Create <code>skill-ablation</code> after the common evaluator, and classify every ablation as high-impact.</div><div class="why">Creating it earlier would encode the very one-host bias it is meant to prevent.</div><div class="tweak"><b>Tweak:</b> omit the dedicated skill and expose only the underlying matrix command.</div></div></div>
+        <div class="card default"><span class="id">D10</span><div><div class="what">Keep coding-root, Career Ops, On Brand, and Measure Twice discovery-path commits unmerged until Approval 2.</div><div class="why">Those tracked paths are live discovery/config surfaces; merging them early would bypass the live gate.</div><div class="tweak"><b>Tweak:</b> split non-live source commits from discovery-path commits where the owner repo supports a clean boundary.</div></div></div>
+      </div>
+    </section>
+
+    <section aria-labelledby="cuts-title">
+      <p class="kicker">Not in this cutover</p>
+      <h2 id="cuts-title">Cut on purpose.</h2>
+      <div class="cuts">
+        <div class="card cut"><h3>Invocation and provider cuts</h3><ul><li>GitHub Copilot support as an active endpoint</li><li>Generic model/provider router</li><li>Automatic provider or fallback-model selection</li><li>New providers, local models, or model-equivalence claims</li></ul></div>
+        <div class="card cut"><h3>Product-scope cuts</h3><ul><li>Wholesale behavior redesign during migration</li><li>New utility product features beyond documented interfaces</li><li>Observatory routing, mutation, or runtime dependency</li><li>Forcing three Claude-native skills into false portability</li></ul></div>
+      </div>
+    </section>
+
+    <section aria-labelledby="risks-title">
+      <p class="kicker">Risks worth knowing</p>
+      <h2 id="risks-title">The plan is large; the gates are deliberately mechanical.</h2>
+      <div class="card risk-wrap">
+        <table>
+          <thead><tr><th>Risk</th><th>Built-in answer</th></tr></thead>
+          <tbody>
+            <tr><td>Codex omits skills from its initial list</td><td>A conservative 7,500-character Skill Mesh cap plus measurement of the complete effective catalog against Codex's dynamic 2%/unknown-context 8,000-character budget, and native discovery proof for all 55 names.</td></tr>
+            <tr><td>A renamed Copilot adapter looks native but is not</td><td>All adapters get a forbidden-token/native-primitive audit and a real host cell.</td></tr>
+            <tr><td>A core edit favors its proposing model</td><td>Both hosts execute; high-impact work uses both proposals, Sonnet/Luna advisory judges, both fresh Opus/Terra gates on every candidate, and a deterministic one-host-regression veto.</td></tr>
+            <tr><td>Production silently escalates to the top tier</td><td>Only the exact native-build-step or controlled-production stuck scope may call one same-family Fable/Sol friend per parent context; it is read-only, advisory, retention-gated for Fable, fully recorded, and unavailable to judges and gates.</td></tr>
+            <tr><td>Utility calls depend on disposable worktrees</td><td>Locked, non-editable release-owned runtimes; external-reference scan; exact runtime hashes in qualification and rollback.</td></tr>
+            <tr><td>Dirty WIP is lost or swept into commits</td><td>External byte inventory, classifications, isolated worktrees, scoped commits, and Git-state rollback rehearsal.</td></tr>
+            <tr><td>Model identity is unavailable</td><td>Requested and reported identities remain separate; unavailable is visible and never copied from the request.</td></tr>
+            <tr><td>An interactive native call emits no receipt</td><td>Observatory shows <code>instrumented</code>, <code>best-effort</code>, or <code>unobserved</code>; no record never becomes proof that no skill call occurred.</td></tr>
+            <tr><td>Quota interrupts exhaustive qualification</td><td>Immutable attempt lineage resumes INCOMPLETE work with the same fingerprint; no model fallback or score retry.</td></tr>
+            <tr><td>Windows PowerShell loses a child exit code</td><td>Both production sites cache a validated process handle before waiting, capture the raw integer exit code exactly once, and record only that value; a zero-write pinned <code>cmd.exe</code> 0/37 canary proves the primitive before request claim.</td></tr>
+            <tr><td>Requested and model-visible sandboxes disagree</td><td>P7's line-2 telemetry first proved that the pinned diagnostic exposed canonical read-only instead of requested workspace-write; pinned-source analysis and the authorized no-model A/B diagnostic isolated disabled Windows sandbox enforcement as the cause. Every closed debug and execution vector now carries <code>windows.sandbox="unelevated"</code>, selecting <code>RestrictedToken</code>; the contained non-model proof must still match the complete five-line workspace-write grammar before claim and again before each model call. Independent missing/wrong-root canaries remain, hash-only mismatches stop under <code>PERMISSION_ATTESTATION_FAILED</code>, and the separate-process TOCTOU interval remains explicit.</td></tr>
+            <tr><td>Live cutover fails halfway</td><td>Approval 2 binds one transaction, exact backup, postchecks, and reverse-order rollback across files, State, runtimes, and refs.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section aria-labelledby="feedback-title">
+      <p class="kicker">Give feedback</p>
+      <h2 id="feedback-title">Approve Publication 8 after its exact-byte freeze, or request another revision.</h2>
+      <div class="card feedback">
+        <p class="lead">P01–P10, D01–D10, D08, the base plan, and Approval 2 remain unchanged. Publication-3, Publication-4, and Publication-5 Approval 1 were consumed by their closed terminal requests. Publication-6 and Publication-7 Approval 1 were non-consuming, but neither can authorize changed publication bytes and neither retired launcher may be rerun. Publication 8 is awaiting fresh recovery Approval 1; use the approval sentence only when the exact digests in the external handoff match and the ordered reviews report their required PASS/READY verdicts:</p>
+        <pre>APPROVE THE RECOVERY PLAN
+Approve Goal NP plan Publication 8 with D01-D10 and the Terra Windows sandbox-enforcement recovery amendment.
+
+REQUEST ANOTHER REVISION — NOT AN APPROVAL
+&lt;D-ID&gt;: &lt;requested change&gt;
+  &lt;D-ID&gt; ::= D01 | D02 | D03 | D04 | D05 | D06 | D07 | D08 | D09 | D10
+Terra Windows sandbox-enforcement recovery: &lt;requested change&gt;
+NP-&lt;NN&gt;: &lt;requested change&gt;  where &lt;NN&gt; is a two-digit integer from 01 through 41
+Section &lt;section name&gt;: &lt;requested change&gt;</pre>
+        <p class="notice"><strong>Viewing this page authorizes nothing.</strong> Recovery Approval 1 authorizes only the exact Publication-8 contained preflight/request transition, retained process recorder and two fixed pre-claim <code>cmd.exe</code> canary children, closed <code>windows.sandbox="unelevated"</code> debug/execution vectors, strict pinned non-model permission proofs, unchanged result schema and direct Codex Terra/<code>xhigh</code> execution envelope, bounded preclaim baseline-gate repairs, zero-model administrative sync, their versioned records, and NP-01 through NP-41. It does not reopen, retry, adopt, or modify Publication 3, 4, 5, 6, or 7, and it still forbids live discovery writes. Approval 2 remains required for the exact frozen cutover.</p>
+        <dl class="source">
+          <dt>Publication-8 bundle</dt><dd><code>plan.md</code>, <code>documentation/native-claude-codex-skill-parity-plan.md</code>, <code>documentation/native-claude-codex-skill-parity-terra-amendment.md</code>, <code>documentation/native-claude-codex-skill-parity-proposal.html</code>, <code>tools/run-goal-np-terra-bootstrap.ps1</code>, <code>schemas/terra-bootstrap-result-v1.schema.json</code>, <code>experiments/recovery/cross-family-fixture/create_fixture.py</code>, <code>experiments/recovery/cross-family-fixture/probe.py</code>, <code>tests/experiments/test_cross_family_probe.py</code>, and <code>tests/distributions/test_path_choke_point.py</code></dd>
+          <dt>Base-plan SHA-256</dt><dd>bc00170453275b72c13060cf94a61ddca2aa1d259cf2420a33725bec826cdf06</dd>
+          <dt>Result-schema SHA-256</dt><dd>3b6e35eab00a036e48ceb011633c2ad15aebca1af73c59058dd48a92d6243f06</dd>
+          <dt>Publication-8 approval hashes</dt><dd>normalized text SHA-256 <code>c54648e8eedfebb9181ea04043cca948692a78e35bd3f42b7cca92352be74c79</code> · canonical 110-byte UTF-8-without-BOM plus one LF file SHA-256 <code>2c9b4f34f0c53a634725f608b724558cf920a9e0d606b4a09707d7e15744ce7e</code></dd>
+          <dt>Bundle hashes</dt><dd>the final Publication-8 commit plus all ten exact SHA-256 values are bound only in the external handoff, avoiding self-digests; that handoff and the unchanged 22-field request identity remain unavailable until the bundle is frozen</dd>
+          <dt>Publication-8 review</dt><dd><code>Required external order: plan-review PASS → plan-redline PASS → plan-wrap READY; every verdict must bind the same exact bytes</code></dd>
+          <dt>Approval binding</dt><dd>the final reviewed Publication-8 commit, derived request ID, and exact ten file hashes named by the recovery Approval-1 handoff</dd>
+          <dt>Source of truth</dt><dd><code>documentation/native-claude-codex-skill-parity-plan.md</code> — the detailed canonical executable plan containing the Decision Inventory and stable <code>Proposal:</code> locator</dd>
+          <dt>Status/authority pointer</dt><dd><code>plan.md</code> — publication status and authority pointer only</dd>
+          <dt>Proposal</dt><dd>documentation/native-claude-codex-skill-parity-proposal.html</dd>
+          <dt>Planning branch</dt><dd>plan/native-codex-skill-parity</dd>
+          <dt>Next after approval</dt><dd>save and copy the complete marked external Publication-8 fail-stop block; close this Codex/VS Code/Claude/ChatGPT UI; from standalone Windows PowerShell run external launcher <code>Preflight</code> → <code>Run</code> → launcher <code>Inspect</code>; do not reply “closed; continue” or reopen an agent before <code>Run</code> exits; after launcher <code>Inspect</code> reports the exact PASS lineage, run committed controller <code>Prepare</code> → zero-model <code>Sync</code> → controller <code>Inspect</code> → <code>RunBootstrapNP01</code> for NP-01, using only preceding outputs; neither inspection gate may be skipped, and no live cutover is authorized</dd>
+        </dl>
+      </div>
+    </section>
+
+    <footer>Skill Mesh · Goal NP proposal · native Claude/Codex parity · Publication 8 · 2026-08-15</footer>
+  </main>
+  <script>
+    (() => {
+      const root = document.documentElement;
+      const button = document.getElementById('theme');
+      const order = ['system', 'light', 'dark'];
+      let current = 'system';
+      button.addEventListener('click', () => {
+        current = order[(order.indexOf(current) + 1) % order.length];
+        if (current === 'system') root.removeAttribute('data-theme');
+        else root.setAttribute('data-theme', current);
+        button.textContent = `theme: ${current}`;
+        button.setAttribute('aria-label', `Color theme: ${current}; activate to change`);
+      });
+    })();
+  </script>
+</body>
+</html>

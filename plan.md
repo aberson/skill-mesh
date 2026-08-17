@@ -1,41 +1,412 @@
 # Skill Mesh plan
 
-## Goal
+## Current goal
 
-Deliver materially consistent Skill Mesh workflows in Claude Code and Codex. Show model and fallback evidence, prove one real cross-family review, and keep cutover recoverable.
+Execute Phase CP (`documentation/codex-parity-delivery-plan.md`): ship the same maintained Skill Mesh
+behaviors through native Claude Code and Codex discovery, wire the known utility portfolio, expose
+truthful model evidence through Dev Observatory, and make shared-core maintenance multi-host safe.
+
+The goal is unchanged from Goal NP; the delivery path is not. Goal NP's two-approval publication gate
+was closed unapproved on 2026-08-16 and replaced by Phase CP's additive, cohort-based rollout — a
+five-skill pilot proven on a real host first, then cohorts gated on that evidence.
 
 ## Main execution plan
 
-Use `documentation/skill-mesh-recovery-plan.md` for requirements, step contracts, operator gates, proof, and rollback.
+Publication 8 is one exact ten-file recovery approval bundle, in the launcher's required order:
 
-The approved product boundary is `documentation/product-charter.md`. The proposed operator-facing communication pilot is `documentation/operator-communication-profile.md`.
+- this `plan.md` — the publication-status and authority pointer;
+- `documentation/native-claude-codex-skill-parity-plan.md` — the canonical executable Goal NP plan
+  and source of truth;
+- `documentation/native-claude-codex-skill-parity-terra-amendment.md` — the narrow controlling
+  amendment for the Goal-NP administrative and numbered code-step executor;
+- `documentation/native-claude-codex-skill-parity-proposal.html` — the operator-facing redline;
+- `tools/run-goal-np-terra-bootstrap.ps1` — the precommitted, post-Approval direct Terra
+  first-producer launcher;
+- `schemas/terra-bootstrap-result-v1.schema.json` — its unchanged closed model-result contract;
+- `experiments/recovery/cross-family-fixture/create_fixture.py` — the cross-platform LF-normalized
+  cross-family candidate-copy and declared-inventory hash boundary;
+- `experiments/recovery/cross-family-fixture/probe.py` — the matching LF-canonical source/sealing
+  boundary and fail-closed fixture/receipt identity check;
+- `tests/experiments/test_cross_family_probe.py` — the LF, CRLF, lone-CR, and identity-drift regression
+  coverage for that sealed inventory; and
+- `tests/distributions/test_path_choke_point.py` — the exact whole-file path-choke exemption for the
+  one-off, fixed-boundary Publication-8 launcher.
+
+The final four files are a bounded repair of failures reproduced at clean Publication-7 HEAD before any
+Publication-8 request claim. The fixture builder normalizes CRLF and lone CR to LF at the candidate
+copy/hash and declared-inventory hash boundaries. A later restarted plan-redline review then found that
+the same unqualified `defect_inventory_sha256` still meant LF-normalized builder bytes, SHA-256
+`98baaa178e41dc23e5de70e3161de78c66b9c91052c4d0d99295ae1a8928ed37`, in one place and raw CRLF
+sealed-probe bytes, SHA-256
+`24c336217fba1a6d1d177b754a34be77275e0c797a50d48ea0a7e5d9401c2752`, in another. Publication 8
+therefore also LF-canonicalizes that inventory at the probe's source/sealing boundary, rejects a
+fixture/canonical-source or fixture/receipt identity mismatch before use, and tests LF, CRLF, and lone-CR
+source variants. The path-choke gate exempts exactly the one-off launcher, whose caller supplies no
+consumer-home mutation target and whose repository, ADMIN, Evidence, and Staging boundaries are fixed
+and independently checked; the written exemption must be removed if that boundary broadens. This does
+not narrow, skip, xfail, or otherwise weaken the DONE gate: the exact bundle must pass the unchanged
+repository-root `python -m pytest` before claim, and the launcher's full-root pytest gate remains
+mandatory.
+Abraham explicitly authorized this bounded baseline-gate repair and Publication-8 revision; that
+revision authority is not Recovery Approval 1 and authorizes no `Preflight`, `Run`, model call,
+implementation, or live mutation.
+
+This root file is only the mutable publication-status and authority pointer. The detailed plan is the
+canonical executable Goal NP plan and owns scope, the 41-step DAG, D01–D10, D08 evaluation roles, two
+native-host qualification, two approval gates, migration, proof, and rollback. The standalone proposal
+is an operator-facing view. Where—and only where—the Terra amendment names an orchestration,
+administrative-executor, or Publication-8 review-attestation surface, the amendment controls.
+
+`documentation/skill-mesh-recovery-plan.md` remains the historical authority for ended Goal A. Goal NP
+does not reinterpret that evidence or revive its stopped experiment.
 
 ## Progress
 
 | Unit | Status | Who or what unlocks it |
 |---|---|---|
-| Decision redline D1-D15 | APPROVED 2026-08-13 | Recorded in the recovery plan |
-| Communication profile D16 | PROPOSED PILOT | Optional Goal P Steps 95-97; Phase 7 records the final choice |
+| Goal NP plan | CLOSED UNAPPROVED (course change 2026-08-16) | Nothing — closed by operator ratification; no further approval is sought |
+| Goal NP implementation | SUPERSEDED — documentation/codex-parity-delivery-plan.md | Nothing — Phase CP owns delivery sequencing from 2026-08-16 |
+| Goal NP live cutover | LOCKED | Approval 2 on the immutable deliverable after disposable rehearsal |
+| Provider expansion | PARKED | A later explicit Abraham decision must resume that track; Goal NP does not unlock it |
 | Goal A execution | STOPPED | Gate A approved terminal action `stop` after the bounded follow-up failed |
-| Provider expansion | PARKED | A later operator decision must explicitly resume it |
-| Phase 0 — preserve work in progress and establish authority | DONE | Steps 72-74 passed |
-| Phase 1 — two architecture experiments | DONE | Step 78 packet and final gate passed |
-| Gate A — select architecture | APPROVED | Terminal action `stop`; no architecture selected |
-| Phase 2 — repair build controls | LOCKED | Gate A did not select `proceed`; Goal B is `no` |
-| Goal P — communication pilot | LOCKED / NOT AUTHORIZED | Its contract requires Gate A `proceed` and a separate opt-in |
-| Gate B — approve exact product steps | LOCKED | Abraham after control acceptance |
-| Phases 3-7 — implement, prove, and rehearse | LOCKED | Gate B approval |
-| Gate D — live cutover | LOCKED | Abraham after user acceptance testing and rehearsal |
-| Board Track U — utility hookups | INDEPENDENT/LOCKED | Re-redline after Phase 2; implement against the release |
-| Later Track L — skill decomposition | NOT NOW | Recovery completion |
+| Historical Gate A | APPROVED | Terminal action `stop`; no architecture selected |
+| Historical Goal B / Phase 2 / Step 4 | LOCKED | Goal NP may adopt the four preserved files only after Approval 1 and its own gates |
+| Historical Goal P | LOCKED / NOT AUTHORIZED | Not part of Goal NP |
 
 ## Current instruction
 
-Goal A ended with Gate A action `stop`. The one authorized bounded follow-up ran once. Claude
-lifecycle `a1` returned `FAIL`, so the contract stopped before Codex lifecycle `a1` and the Claude
-reviewer dispatcher `a0-r1`. Do not run the historical block again. No experiment, retry, correction,
-fallback model, product implementation, Step 4 use, Goal B, Phase 2, live-home write, merge, or live
-cutover is authorized.
+Execute Phase CP per `documentation/codex-parity-delivery-plan.md`. That plan is the current
+delivery authority; this file records status and history.
+
+The Goal NP recovery decision is **closed**. No Publication-8 approval is pending or will be sought.
+Do not run any Publication-8 `Preflight` or `Run`, and do not invoke
+`tools/run-goal-np-terra-bootstrap.ps1` — the launcher is **parked**, committed as historical record
+and never executed. Publications 3, 4, and 5 remain terminal; Publications 6 and 7 remain approved
+preclaim records without a request root or consumed Run lineage. None of those approvals authorizes a
+retry, and none is needed.
+
+Phase CP's own boundaries still hold and are the operative limits: writes are additive only — repo,
+`dist/`, and disposable temp homes — with real consumer-home writes confined to its operator steps M1
+and M4. Destructive legacy retirement, live Claude-home cutover, junction retargeting, and retiring
+the Copilot-managed profile stay out of scope for a future plan carrying its own approval packet.
+
+## Goal NP planning journal
+
+**Status:** CLOSED UNAPPROVED (course change 2026-08-16) — superseded for delivery sequencing by
+`documentation/codex-parity-delivery-plan.md` (Phase CP). Publications 3–5 remain terminal;
+Publications 6–7 remain preflight-blocked with no request claim. Publication 8 was never approved and
+now never will be: it is committed as historical record only. This journal is history, not authority.
+
+**Planning authority:** On 2026-08-14 Abraham approved the full native Claude/Codex parity planning
+direction, placement at the user `.agents/skills` scope, exhaustive per-skill tests, known utility and
+Dev Observatory integration, a one-time migration, and exactly two approval gates: Approval 1 for the
+final plan and Approval 2 for the final deliverable/live cutover. A superseding plan publication or
+terminal bootstrap recovery requires a fresh exact Approval-1 sentence without creating a third gate.
+
+**Publication-3 terminal record:** Abraham supplied the exact Publication-3 Approval-1 sentence on
+2026-08-15 for commit `71a5aea3fd21320d2fbb3cb9228bc52e42cb3215`. Its canonical approval-file
+SHA-256 is `33d3e1756ed2bfd661698da3dfdf85a921380efd87fe3d635b777dafe3c6e04b`, and its normalized
+approval-text SHA-256 is `66df8cd413fddd097e80dc63ccfacab221e96c72c795345d14b72ae1ae3474ef`. The create-new request
+`tba-b7e5898e6389ff19b3ce34738f16b47d0a832dfc4625789fbcf4308352f2b1a0` stopped while attesting the
+live Codex home because `goals_1.sqlite` was locked by the active coordinator session. The durable
+`blocked` state SHA-256 is `ae59a6ac7f512d2e399675fe541b916d1710c209a13b45433642cf019a07df97`.
+Its canonical three-entry whole-root manifest SHA-256 is
+`9b01de1f550019a8bf81c23431925b6f38a173ec1ce22023c765a2a8d290cdcf`. No prompt, model process, test,
+Git mutation, or product mutation occurred. The request and its entire evidence root are immutable and
+terminal: they must not be retried, deleted, altered, renamed, reused, or adopted.
+
+**Publication-4 terminal record:** Abraham supplied the exact Publication-4 Approval-1 sentence on
+2026-08-15 for commit `58223098887468953570ecf153494871c5404605`. Its canonical approval file
+SHA-256 is `2f74ea66ac7bdac38b419fd24b7e6caa9479de007bc178e69acd54f9f8b42857`, and its
+normalized approval-text SHA-256 is `1a7698085d7bc12e74d60874e0d64b4d069b039470ab17701541cfe6c77202fe`.
+The create-new request
+`tba-461c20be4d35c7255a83d05f91f16c5bccbdd5a36af738360bcedc330ab6b1e4` stopped at terminal phase
+`blocked` because Windows PowerShell 5.1 exposed an empty `Process.ExitCode` after the successful
+`implementation-prompt-input` child. The retained stdout is valid prompt-input JSON with SHA-256
+`31757cf1c4ac11f2eb6f63880e92b3a036f82e0f185866edf9ae98619c5e7681`; stderr is the empty file.
+The durable state SHA-256 is `4517ecd2d5ff948bbcf7763e32686797f65b5112ceb14e71c96c8222e6e12e05`,
+and the canonical nine-entry whole-root manifest SHA-256 is
+`893c099e299a5152f26edd912a5bfcdc75bd69e030dfd40653c0365ffe4d5e44`. No `codex exec`, Terra/model
+process, result, test, ADMIN diff, commit, or product mutation occurred; the live Codex home and frozen
+Publication-3 root remained unchanged. The Publication-4 request and its entire evidence root are
+immutable and terminal: they must not be retried, deleted, altered, renamed, reused, or adopted.
+
+**Publication-5 terminal record:** Abraham supplied the exact Publication-5 Approval-1 sentence on
+2026-08-15 for commit `6d292bb37c37944c71ed8b18214fabb23f22869e`. Its canonical approval-file
+SHA-256 is `5ad7472cb113d6965de18204dc1b7f860a0c2982ad1e8152e34547efa714a8e3`, and its normalized
+approval-text SHA-256 is `2d19ad716f3179baf67c67c77d19dfb29697ea5b2e6f2b0a0d1fe87ee03d0f47`.
+Its frozen 13,450-byte external handoff is
+`%LOCALAPPDATA%\SkillMesh\Evidence\GoalNP\Publication5\terra-transition-handoff-6d292bb37c37944c71ed8b18214fabb23f22869e.txt`
+with SHA-256 `ee92b0f882772af327d25d0bec82c9d381ff9e2f309611dd0856d0589c62030e`.
+The create-new request
+`tba-03e474757a5e0c92e8d3f0bd4c5a0731a742397a43c99d5e027016643fced916` passed the fixed exit-code
+canary, claimed its root, and completed one real Codex implementation process requesting
+`gpt-5.6-terra`/`xhigh`; Codex exposed no independent resolved-identity field.
+The retained invocation requested `workspace-write`; `implementation.invocation.json` has SHA-256
+`3752f8ea94fd57bb72d3d495d2ba88e8a6068d80552dc9ef9f0292714887ff36`. Its preceding prompt-input
+proof had nevertheless been hard-coded to `read-only` and has SHA-256
+`a50ad81bae6f73f5d85c369f5ebce0904a903a23ce90c6dced83a890d5b7ea8b`. The requested-Terra process
+returned the schema-valid `BLOCKED` result “Implementation cannot proceed: this session grants
+read-only filesystem access and rejects writes”; `implementation.result.json` has SHA-256
+`2e56256153e3c50de8c981a1d13e53e1e18fb495276f3c34517a1ef8895c295c`. The launcher stored that
+known model result as `UNEXPECTED_FAILURE` with exact error `implementation returned BLOCKED.` The
+model never attempted a filesystem write: all 11 recorded command-execution starts were
+inspection/read commands, with one bundled read declined. P5 therefore observed a model refusal, not
+an operating-system write denial. The
+durable `blocked` state SHA-256 is
+`b0e9355ff3f39c1ccca196ae45ebe7c4f042c9fcd2587d84882c7d9af4724f50`; the canonical 17-entry
+whole-root manifest SHA-256 is
+`11f84ea3e5140a2832586f63fc362c97b92286b1663c91df2c80fb7784d6f700`. The repository remained clean
+at the approved commit, all 15 ADMIN paths remained absent, the disposable Codex home was removed, and
+the live Codex home plus Publication-3/4 roots remained unchanged. No test, ADMIN diff, commit, issue,
+or product mutation occurred. The Publication-5 request and its entire evidence root are immutable and
+terminal: they must not be retried, deleted, altered, renamed, reused, or adopted.
+
+**Publication-6 preclaim record:** Abraham supplied the exact Publication-6 Approval-1 sentence on
+2026-08-15 for commit `d0f83210e3092e18a28ee24db20a1af95887c31b`. Its canonical approval-file
+SHA-256 is `064e50a53d93dc976cb98b87a5a49d0260d91f88aadddb23bcd8bf60d9be2add`, and its normalized
+approval-text SHA-256 is `ad20542c0d5dc9b77fbab14413998f614ab178ca4949a1269f06c08f24b3407e`.
+Its external handoff is
+`%LOCALAPPDATA%\SkillMesh\Evidence\GoalNP\Publication6\terra-transition-handoff-d0f83210e3092e18a28ee24db20a1af95887c31b.txt`
+with length 18,494 bytes and SHA-256
+`ae085575b9441080ece62194cd4a3144df809eaa9d70b2ed2fcd76624d455b47`.
+The derived create-new request would have been
+`tba-cc76394efc1359d75b406ce5a2d2300d5ed41020b5cf7fc972ba3039dc3a6ab0`, but the operator's
+standalone, non-consuming `Preflight` produced operator-reported terminal JSON with `verdict=BLOCKED`,
+`error_code=PERMISSION_ATTESTATION_FAILED`, `error_label=preclaim-permission-attestation`, full error
+`[PERMISSION_ATTESTATION_FAILED] [preclaim-permission-attestation] Permissions text differs from the complete closed permission grammar.`, and
+`evidence_root_absent=true`. That receipt retained no expected/actual permission hashes, line counts, or
+permission text, and the staging scratch was removed by design. The earlier claim that P6 proved only a
+missing writable-root line was therefore an unsupported inference and is withdrawn; P7's later evidence
+does not retroactively establish P6's exact actual text. Preflight created no request/evidence root and
+made no model or `codex exec` call; `Run` was not started, the repository remained clean at the approved
+commit, all 15 ADMIN paths remained absent, and staging scratch, including the exact staging request
+root and complete Publication-6 staging publication root, was removed. The operator-reported failure
+tuple is context, not a durable P6 launcher receipt. This is a preclaim readiness failure, not a claimed
+or consumed Run lineage. The Publication-6 approval and handoff remain immutable exact-publication
+inputs and cannot authorize later bytes; Publication 6 must not be rerun with a modified launcher.
+
+**Publication-7 preclaim record:** Abraham supplied the exact Publication-7 Approval-1 sentence on
+2026-08-15 for commit `40d671d75e1aa6c6b31eab70caa8f4d07ed51383`. Its canonical approval-file
+SHA-256 is `a849c6f49c9557ee7e11bdc4c01f324e17fe260d5abdc648141715d22120f8a5`, and its normalized
+approval-text SHA-256 is `fe5736f56b0edb305ef2e1632d5882a6d85d930c06862d9ec9ce26a28b9a23aa`.
+Its external handoff SHA-256 is
+`c0554be563284c8fe9eb2f4aa2985505c76d39eb17dd1aeb1313dd78f3b43f81`. The derived create-new
+request was `tba-f3b13b6337e230003d8721ad759b398d31536eae9d9b2bdf0860ff8b1d849568`, but the standalone,
+non-consuming `Preflight` returned `verdict=BLOCKED`, `error_code=PERMISSION_ATTESTATION_FAILED`,
+`error_label=preclaim-permission-attestation`, and `evidence_root_absent=true`. The expected normalized
+permission text was the complete five-line canonical `workspace-write` block, SHA-256
+`aa613097ace0f175545df760139a7bbc9c505a0feb207dbc2552438ce70db03d`; the actual normalized text was
+the complete four-line canonical `read-only` block, SHA-256
+`29dad5ed6993c5e717376e0a1c84d54ab60ee593510916ac6cee4295e803315d`. The first differing line was
+line 2, whose expected and actual SHA-256 values were respectively
+`06c4b2fd6aab85ab9ea0e5598cbcdead5142d7cb56e851770163c1b9f480338b` and
+`d9cebe887c2ee11798faa526216e1d4af5d90cd47231862b50eb60cc5ac76464`. Thus P7 disproves the prior
+P6/P7 root-line-only inference: the observed mismatch began with Codex exposing `read-only`, so the
+workspace-write-only writable-root line was not the first discrepancy. No durable request/evidence root
+or state exists;
+the exact transient staging request root and complete Publication-7 staging publication root were
+removed. `Run` was not started, no model or `codex exec` call occurred, and no implementation was
+attempted. This is another preclaim readiness failure, not a claimed or consumed Run lineage. The
+Publication-7 approval and handoff remain immutable exact-publication inputs, while its failure tuple
+remains operator-reported historical context rather than a fabricated receipt. None can authorize
+Publication-8 bytes; Publication 7 must not be rerun with a modified launcher.
+
+**Maintenance direction:** Either controlled production family may propose a core edit; both controlled
+production hosts must veto regressions. `skill-ablation` is included after the common evaluation matrix
+exists. Publication 8 preserves D01–D10 and D08's workload-role bindings without change:
+Fable/Sol for seed planning; Opus/Terra for controlled production, proposal, challenge, and fresh strong
+gates; Sonnet/Luna for parallel advisory judging; and deterministic Pareto code for final acceptance.
+Native skills remain on the invoking session: initial qualification binds Claude config alias
+`opus`/`xhigh` and Codex config exact Sol/`ultra` without changing live settings. The exact native
+`/build-step` and controlled-production stuck scopes may each use one same-family, read-only Fable/Sol
+phone-a-friend diagnosis per authorized parent context; Fable also requires the recorded retention
+policy. Judges and gates cannot invoke it.
+
+**Terra recovery amendment:** Abraham requested the executor change because the Claude quota needed for
+the Publication-2 implementation path is unavailable. Publication 8 carries forward Publication 7's
+replacement of only Goal-NP
+`ADMIN-BOOTSTRAP` and all 39 numbered `Type: code` orchestration slots with the amendment's direct
+Codex `gpt-5.6-terra`/`xhigh` envelope. ADMIN-SYNC itself becomes a committed zero-model deterministic
+operation. Publication 8 retains Publication 7's repaired process recorder, fixed `cmd.exe`
+exit-0/nonzero canary, strict permission parser, and writable-root renderer. P7 requested
+`workspace-write`, but its disposable Codex home supplied no Windows sandbox level; in pinned Codex
+0.147.0, an absent `[windows].sandbox` resolves to `WindowsSandboxLevel::Disabled`, and Windows
+configuration normalization downgrades requested `WorkspaceWrite` to `ReadOnly`. Publication 8's one
+narrow recovery change is a shared closed config containing the exact
+`windows.sandbox="unelevated"` setting for both debug and exec. That setting selects
+`WindowsSandboxLevel::RestrictedToken`, preventing the Disabled-level downgrade while leaving the
+requested sandbox mode and the complete closed permission grammar unchanged. An explicitly authorized,
+disposable pre-publication A/B `codex debug prompt-input` diagnostic against the pinned 0.147.0 binary
+then proved that boundary on this host: the no-override case reproduced exact SHA-256
+`29dad5ed6993c5e717376e0a1c84d54ab60ee593510916ac6cee4295e803315d`, four lines, and effective
+`read-only`; one exact unelevated override produced SHA-256
+`aa613097ace0f175545df760139a7bbc9c505a0feb207dbc2552438ce70db03d`, five lines,
+effective `workspace-write`, and one managed/restricted write path. Both exited zero with empty stderr;
+no model request or `codex exec` occurred, all scratch was removed, and repository, live-auth, prior-root,
+and staging predicates remained unchanged. This diagnostic is pre-publication context, not a Terra
+request, receipt, state, or digest input. The repeatable, non-consuming `Preflight` must prove a
+quiescent standalone
+PowerShell context, complete stable live-home attestation, and the implementation-shaped model-visible
+`workspace-write` permission surface before `Run` may claim a new request root. That non-model proof's
+only content-bearing write surface is the fresh contained
+`%LOCALAPPDATA%\SkillMesh\Staging\GoalNP\Publication8\<request-id>\permission-attestation` subtree.
+That subtree contains the disposable Codex home, output, and `temp` children; both process `TEMP` and
+`TMP` are pinned to that normal `temp` child for the diagnostic and every Terra model process. Preflight
+may create missing normal ancestors on that fixed staging route, records their ownership, and removes
+only launcher-created ancestors after proving them empty. Before PASS, the request root and every such
+ancestor must be absent; Preflight writes no repository, evidence, approval, or live-home path.
+`Run` repeats the proof before claim, retains that exact staging layout through the proof/model sequence,
+copies the proof into the claimed root, and cleans staging in its terminal boundary. The external
+operator block treats a nonzero Run as recheckable only when its exact terminal JSON proves the expected
+request root absent; a present root or unproven absence is terminal and must not be retried. The ADMIN
+implementation and review calls use the approved repository as primary `--cd`, omit the redundant
+repository `--add-dir`, and repeat the matching prompt-input proof immediately before each model call:
+`workspace-write` for implementation and `read-only` for review. A mismatch stops before that model
+call. Debug and exec both consume the shared closed config, including
+`windows.sandbox="unelevated"`, `skills.bundled.enabled=false`, and
+`skills.include_instructions=false`; the proof must show no skills block and zero skill locators, and an
+unsupported or ignored setting fails preclaim. Debug and exec share every supported explicit
+model/config/disable/sandbox/cd flag. Debug does not receive the exec-only authority/output closure;
+`codex exec` adds `--skip-git-repo-check`, `--ephemeral`, `--ignore-user-config`, `--ignore-rules`,
+`--strict-config`, and its schema/JSON/output flags. Pinned 0.147.0 specifically rejects
+`--strict-config` on `codex debug`, while the proof parser rejects any resulting ambient project/rule
+content. The parser also compares the complete normalized permission/environment texts: environment
+siblings are cwd, PowerShell, local `yyyy-MM-dd`, `America/Los_Angeles`, then filesystem; workspace-write
+filesystem entries are read `:root`, write repository, write `:slash_tmp`, write `:tmpdir`, then read
+repository `.git`, `.agents`, and `.codex`, in that order; read-only has only read `:root`. No remainder
+is accepted. Publication 7 corrected the workspace-write permissions renderer: after the approval
+sentence and before `</permissions instructions>`, the strict grammar requires the exact leading-space
+line `` The writable root is `<canonical-owner-root>`.`` The owner root is supplied by the canonical
+workspace-root field. Publication 8 leaves that five-line grammar, normalization, and strict whole-text
+equality unchanged. Independent parser canaries must
+reject a missing annotation and a wrong-root annotation, so the accepted canary cannot reproduce the
+same omission unnoticed. A mismatch reports only deterministic expected/actual whole-text SHA-256
+values, line counts, the one-based first differing line number, booleans saying whether that line exists,
+and nullable hashes for only those two lines—never raw permission text, path-bearing line content, or
+other line-hash arrays—before scratch is removed. The fresh request digest binds exactly 22 LF-joined,
+no-final-LF fields: P8 domain/commit/approval text; P7 commit/request/approval text/approval file/handoff;
+the same five P6 fields; then the P5/P4/P3 request/state/root-manifest triples. P7 and P6 evidence-request,
+staging-request, and staging-publication absences remain live predicates, not digest literals. The new
+Windows proof and diagnostic metadata are launcher readiness/state fields, not additions to the
+unchanged model-result schema. Before and after each ADMIN
+exec, complete scratch manifests must show no
+`codex-home\skills\.system`. After a zero exit, the JSONL transcript must be nonempty and every line
+must be a nonempty, parseable single event object; executable request fields may not reference a
+`.system/.../SKILL.md` path and no native skill event/type is allowed. Model/output text is not an
+executable-request surface. Timeout, start/handle, and nonzero-exit failures preserve their terminal
+process code after the scratch check and do not claim transcript acceptance. A detected transcript
+violation is `MODEL_VERDICT_INVALID`. In those ADMIN calls, every Codex/model/CLI name and behavior is a frozen
+approved input to generic local code/review, not authority to discover or validate current OpenAI/Codex
+product facts. No skill or transitive skill-tree authority is available; if the model says one is
+required, it returns schema-valid `BLOCKED` before mutation and never expands network access. Known
+schema-valid
+non-PASS model verdicts receive stable terminal failure codes rather than
+`UNEXPECTED_FAILURE`, and the external operator block is one fail-stop script scope so a failed action
+cannot fall through to later parsing or inspection commands.
+This does not turn Terra into a
+native-qualification session, change D08's controlled evaluation assignments, remove Claude from
+NP-12/NP-40, add a router/fallback, authorize a live-home write, or create another approval gate.
+
+**Redline feedback:** Abraham accepted D01–D07 and D09–D10 on 2026-08-14, pending Approval 1, and
+requested investigation/revision of D08. The investigation found that publication 1 mixed an
+unstated workload-role mapping with stale Opus 4.8 wording. Publication 2 makes the controlled-role
+basis, native-session boundary, fresh-context grading cascade, and bounded two-scope phone-a-friend
+exception explicit without inferring Claude's effective identity from its `opus` alias.
+This feedback is not Approval 1.
+
+**Review sequence:** Publication 8 must first pass the unchanged repository-root `python -m pytest`,
+then complete plan-review, plan-redline, and plan-wrap with required verdicts PASS, PASS, and READY on
+one stable ten-file bundle. Exact-byte verdicts are retained
+outside the publication; any blocking verdict or hash drift
+returns this status to revision. The standalone proposal maps P01–P10 to Abraham's choices and D01–D10
+to the preserved agent defaults.
+
+**Publication-8 review correction record:** This is a reconstructable chronology of superseded
+planning candidates, not publication evidence:
+
+- **A - initial six-file candidate:** plan-review returned `FAIL` because the launcher would claim a
+  request root before running a baseline gate already known red at clean P7 and because documentation
+  gaps remained. No approval, commit, request, or evidence resulted. Abraham then authorized only the
+  bounded baseline-gate repair and this Publication-8 revision.
+- **B - first eight-file candidate after that authorized repair:** plan-review returned `PASS`; the
+  following plan-redline returned `FAIL` on the legacy review-order contradiction, incomplete operator
+  chain, proposal order and source metadata, and revision grammar. Correcting those findings changed
+  bytes and invalidated the preceding plan-review PASS.
+- **C - corrected eight-file candidate:** plan-review returned `PASS`; the following plan-redline
+  returned `FAIL` because the same unqualified `defect_inventory_sha256` named both LF-normalized
+  builder bytes (`98baaa178e41dc23e5de70e3161de78c66b9c91052c4d0d99295ae1a8928ed37`) and raw CRLF sealed-probe
+  bytes (`24c336217fba1a6d1d177b754a34be77275e0c797a50d48ea0a7e5d9401c2752`). Expanding the bundle to
+  repair that boundary invalidated both verdicts.
+- **D - first ten-file candidate:** its exact-byte tests passed, but fresh plan-review returned `FAIL`
+  because monolithic `Run` bypassed `load_prepared` and post-host inventory-digest enforcement, the
+  negative tamper regression was missing, and this review provenance was incomplete. Plan-redline and
+  plan-wrap did not run. No approval, commit, request, or evidence resulted.
+- **E - corrected ten-file candidate after the direct-Run boundary repair:** fresh plan-review returned
+  `FAIL` because its negative regression called `execute_review` directly and the documents claimed
+  inventory drift produced no report, while production `main()` intentionally publishes bounded
+  `AMBIGUOUS` failure evidence for both `Run` and `InvokeSavedHandoff`. Plan-redline and plan-wrap did
+  not run. No approval or commit resulted. That review is non-evidentiary, non-authorizing, and
+  non-reusable; it created no durable launcher record, receipt, state, request root, or Publication-8
+  evidence root.
+
+The current narrow closure makes `Run` reopen its sealed handoff through `load_prepared`. After the
+host returns and response-contract handling completes, `execute_review` performs one bounded inventory
+read, hashes those bytes against the receipt immediately before inventory JSON parsing and grading, and
+then parses those same bytes. Production-path negative tamper regressions drive both `Run` and
+`InvokeSavedHandoff` through `main()` and prove that inventory drift fails before grading and before
+normal-result reduction or publication. The only final publication is the bounded `AMBIGUOUS` failure
+pair, `report.md` plus `MANIFEST.sha256`: it records the integrity failure, fixes
+`detected_defect_count` at `0`, keeps uncertainty-bearing reviewer and resolution fields `UNCERTAIN` or
+unavailable, and contains no grade or normal/conclusive result. This preserves the established status
+contract: `COMPLETE` means bounded evidence publication completed, while `AMBIGUOUS` means the
+experiment reached no conclusion. Every external reviewer output above is planning/review context only:
+it is non-evidentiary, non-authorizing, non-reusable, and created no durable launcher record, receipt,
+state, request root, or Publication-8 evidence root. The current revised ten-file bytes must restart and
+complete plan-review `PASS` -> plan-redline `PASS` -> plan-wrap `READY` in that order.
+
+**Revision grammar (not an approval):**
+
+```text
+REQUEST ANOTHER REVISION - NOT AN APPROVAL
+D01|D02|D03|D04|D05|D06|D07|D08|D09|D10 -> <replacement choice>
+Terra Windows sandbox-enforcement recovery -> <requested change>
+NP-<NN> -> <requested change>, where <NN> is 01 through 41
+Section <section name> -> <requested change>
+```
+
+**Implementation authority:** none until Abraham approves the exact reviewed Publication-8 bundle with
+the exact recovery sentence. No Publication-8 `Preflight`, `Run`, model call, or implementation step is
+authorized before that fresh approval. Publications 3, 4, and 5 supply terminal historical evidence;
+Publications 6 and 7 supply immutable approved preclaim records without a request root or consumed Run
+lineage.
+
+**Required recovery Approval-1 sentence:**
+`Approve Goal NP plan Publication 8 with D01-D10 and the Terra Windows sandbox-enforcement recovery amendment.`
+*(Never given. Superseded 2026-08-16 — see the course-change entry below. Retained as history.)*
+
+### Course change — 2026-08-16
+
+Goal NP is **closed unapproved**. Four operator ratifications on 2026-08-16 ended the approval
+treadmill and moved delivery to `documentation/codex-parity-delivery-plan.md` (Phase CP), where they
+are recorded as P1–P4 in the Decision Inventory:
+
+| # | Ratification | Consequence here |
+|---|---|---|
+| a | **Terra executor amendment reverted** — implementation is Claude-led | The `gpt-5.6-terra`/`xhigh` envelope above is history; no Codex executor is provisioned |
+| b | **Publication 8 closed unapproved; launcher parked** | Its ten-file bundle is committed as historical record; `tools/run-goal-np-terra-bootstrap.ps1` is never invoked. Do not rename it — a path-choke exemption is keyed to that exact path |
+| c | **The exhaustive 113-cell qualification matrix downgraded from gate to backlog** | Representative smokes plus a running parity delta log are the gates. Real-host evidence (Phase CP M1–M3) replaces the matrix |
+| d | **Additive/destructive track separation** | Additive installs proceed under scoped approvals; destructive legacy retirement and live cutover leave scope entirely for a future plan with its own approval packet |
+
+Why the change: Publications 3–7 consumed five review generations plus an independent boundary audit
+without ever producing an approved, executable bundle. Each cycle re-litigated an approval envelope
+rather than shipping a skill. Phase CP inverts the order — ship a five-skill pilot to a real host,
+measure it, and let recorded deltas rather than a pre-agreed matrix decide what is worth fixing.
+
+What survives from this journal: the format and placement research for Codex skill packages, the
+proven `codex exec` + `--output-schema` cross-family result, and the preserved Step-4 work. What does
+not survive: the two-approval publication gate, the Terra bootstrap execution path, and the exhaustive
+per-skill × per-host matrix.
 
 ## Goal A journal
 
