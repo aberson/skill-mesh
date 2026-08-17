@@ -591,6 +591,10 @@ def _load_sources(source_root: Path) -> dict[str, Path]:
     return sources
 
 
+def _canonical_lf_bytes(content: bytes) -> bytes:
+    return content.replace(b"\r\n", b"\n").replace(b"\r", b"\n")
+
+
 def _render_prompt(template: str, values: Mapping[str, str]) -> str:
     expected = {"RUN_ID", "SEEDED_CANDIDATE_SHA", "PAYLOAD_SHA256", "REQUIREMENTS", "DIFF"}
     found = set(re.findall(r"\{\{([A-Z0-9_]+)\}\}", template))
@@ -658,7 +662,10 @@ def prepare(
     sources = _load_sources(candidate_source_root())
     requirements = sources["requirements"].read_text(encoding="utf-8")
     schema_bytes = sources["schema"].read_bytes()
-    inventory_bytes = sources["inventory"].read_bytes()
+    inventory_bytes = _canonical_lf_bytes(sources["inventory"].read_bytes())
+    inventory_sha = sha256_bytes(inventory_bytes)
+    if fixture.get("defect_inventory_sha256") != inventory_sha:
+        raise ProbeError("fixture defect inventory identity differs from the canonical source")
     policy_bytes = sources["policy"].read_bytes()
     payload = {
         "schema_version": 1,
@@ -706,7 +713,7 @@ def prepare(
         "payload_sha256": payload_sha,
         "prompt_sha256": sha256_bytes(prompt_bytes),
         "response_schema_sha256": sha256_bytes(schema_bytes),
-        "defect_inventory_sha256": sha256_bytes(inventory_bytes),
+        "defect_inventory_sha256": inventory_sha,
         "model_policy_sha256": sha256_bytes(policy_bytes),
         "fixture_json_sha256": artifact_hashes["fixture.json"],
         "fixture_root": str(_canonical(fixture_root)),
@@ -827,6 +834,8 @@ def load_prepared(
     fixture_data = json.loads(read_bounded(evidence_dir / "fixture.json").decode("ascii"))
     if fixture_data.get("candidate_sha") != receipt["seeded_candidate_sha"]:
         raise ProbeError("prepared fixture identity differs from its receipt")
+    if fixture_data.get("defect_inventory_sha256") != receipt.get("defect_inventory_sha256"):
+        raise ProbeError("prepared defect inventory identity differs between fixture and receipt")
     git_path_text = shutil.which("git.exe") or shutil.which("git")
     if not git_path_text:
         raise ProbeError("Git executable was not found while validating the sealed handoff")
@@ -1041,7 +1050,10 @@ def execute_review(
         )
     except review_contract.ReviewContractError as error:
         raise ProbeError(f"review response failed the exact contract: {error}") from error
-    inventory = json.loads(read_bounded(paths["evidence"] / "defect-inventory.json").decode("utf-8"))
+    inventory_bytes = read_bounded(paths["evidence"] / "defect-inventory.json")
+    if sha256_bytes(inventory_bytes) != prepared["receipt"]["defect_inventory_sha256"]:
+        raise ProbeError("defect inventory bytes differ from the prepared receipt")
+    inventory = json.loads(inventory_bytes.decode("utf-8"))
     grade = review_contract.grade_response(response, inventory)
     trustworthy_identity = _model_status_is_trustworthy(
         request["direction"],
@@ -1446,6 +1458,8 @@ def main() -> int:
         if request["action"] in ("Prepare", "Run"):
             prepared = prepare(request, repo, paths)
             evidence_owned = True
+            if request["action"] == "Run":
+                prepared = load_prepared(request, paths)
         else:
             prepared = load_prepared(request, paths)
             evidence_owned = True
