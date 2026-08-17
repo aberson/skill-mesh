@@ -124,7 +124,7 @@ All citations are from producing files, verified 2026-08-16 by read-only survey.
 
 | File | Change Type | Reason | Verified |
 |---|---|---|---|
-| `config/skill-manifest.json` | extend | `providers.codex` entry; per-skill `providers.codex` paths; counts block gains codex tallies | survey read: top-level keys incl. `providers` (2 keys), `counts` (7), 50 skill entries; consumers grep'd: `gen_manifest.py`, `build-distributions.ps1`, `frontmatter_contract.py`, manifest tests |
+| `config/skill-manifest.json` | extend | **Split across two steps (corrected 2026-08-17).** Step 3: per-skill `providers.codex` paths + counts block gains codex tallies. Step 5: the TOP-LEVEL `providers.codex` entry, which must co-land with the discovery-root map — it is the installable-provider vocabulary the migrator/inspector read, not generator input, so declaring it alone makes `New-MigrationPlan` emit `UNKNOWN_PROVIDER_ROOT` and `exit 2`, refusing migrations in every consumer home. This row originally assigned all three to Step 3; that would have shipped the migrator break. | survey read: top-level keys incl. `providers` (2 keys), `counts` (7), 50 skill entries; consumers grep'd: `gen_manifest.py`, `build-distributions.ps1`, `frontmatter_contract.py`, manifest tests. Vocabulary consumers verified at Step 3 build time: `migrate-legacy-install.ps1` (`$script:KnownProviders` → `New-MigrationPlan`), `inspect-host-install.ps1` (`Read-Manifest`), `skill-mesh-discovery.ps1` (`Get-SkillMeshDiscoveryRoots` = claude/gpt only) |
 | `tools/gen_manifest.py` | modify | hermetic regen must emit/validate codex provider paths | named in CLAUDE.md:31–89 as manifest owner; re-grep at build time per key-shape rule |
 | `tools/build-distributions.ps1` | extend | `-Provider codex` in ValidateSet; codex SKILL.md template/emission rules; provider-native skills stay absent from dist/codex | header lines 64–70 param block read; `-Provider claude\|gpt\|both` confirmed current |
 | `tests/package-integrity/frontmatter_contract.py` | extend | add `CODEX_KEYS` (today only `GPT_KEYS={name,description}`, `CLAUDE_KEYS` +`user-invocable/argument`, lines 131–141) | file read at cited lines; no codex key-set exists |
@@ -248,6 +248,17 @@ decision, not a predicate — Steps 11–12 stay unconditional per P9, and a bar
 | 1 | `/build-phase --plan documentation/codex-parity-delivery-plan.md --steps 2,3,4,5` | operator M1 |
 | 2 | `/build-phase --plan documentation/codex-parity-delivery-plan.md --steps 6,7,8` | operator M2 |
 | 3 | `/build-phase --plan documentation/codex-parity-delivery-plan.md --steps 9,10,11,12` | operator M3 + M4 |
+
+**Steps 4 and 5 are gated together at the pass boundary (operator-approved 2026-08-17).** Each
+still gets its own issue trail (#121, #122) and its own `Status: DONE` line, but their
+development runs back-to-back and ONE gate flips both: Step 5's pass-exit repo-root
+`python -m pytest`. This is sound rather than a shortcut — Step 5 `Depends on: 4`, so the two
+are sequential in content anyway, and the full-root run strictly supersets Step 4's
+`focused suites green` clause. Review uses the STRONGER of the two declared lanes
+(`--reviewers deep`, from Step 5) over the combined diff, so Step 4's `--reviewers code` bar is
+raised, never lowered. Rationale: each full gate costs ~90 minutes of wall clock on this repo
+(the release/distribution/smoke suites shell out to PowerShell per test), and Steps 2 and 3
+each already paid it separately.
 
 **Step 1 is not in any pass** — it is `Type: operator`, done by hand before pass 1, and marked
 `Status: DONE` in this file when finished. It also **lands the 4-file Step-4 WIP on `main`
@@ -393,7 +404,12 @@ cohorts depend on — a sequencing constraint, not a conditional one.
 - **Files:** config/skill-manifest.json, tools/gen_manifest.py, tools/build-distributions.ps1,
   tests/package-integrity/frontmatter_contract.py, tests/package-integrity/expected_inventory.json,
   tests/package-integrity/test_manifest_contract.py, tools/release.ps1, skills/inventory.json,
-  tools/gen_skill_tree.py
+  tools/gen_skill_tree.py,
+  <!-- corrected 2026-08-17: these were reached by §9's "existing tests that may break"
+       sentence but omitted from this bullet, which made the actual diff read as off-list -->
+  tests/distributions/test_distributions.py, tests/package-integrity/test_frontmatter_yaml.py,
+  tests/package-integrity/test_skill_tree.py, tests/package-integrity/test_cutover_handoff.py,
+  tools/release_checks.py, tests/package-integrity/test_codex_budgets.py (new)
 - **Produces:** manifest schema v-next + regen support; `-Provider codex` generation; codex
   frontmatter contract + budget tests; a fixture skill generating under dist/codex
 - **Done when:** `powershell -File tools/build-distributions.ps1 -Provider codex` emits a
@@ -440,14 +456,36 @@ cohorts depend on — a sequencing constraint, not a conditional one.
   pilot profile into a disposable home, inspect verifies every file + ledger, uninstall
   removes cleanly, path-guard proves zero writes outside the temp home. No codex invocation
   anywhere in this step.
+
+  **Also lands the top-level `providers.codex` manifest key (moved here from Step 3, 2026-08-17).**
+  Step 3 built the generation rails but deliberately did NOT add the top-level
+  `providers.codex` block to `config/skill-manifest.json`, because that block is the
+  *installable-provider vocabulary*, not generator input:
+  `tools/migrate-legacy-install.ps1` loads it into `$script:KnownProviders`, and
+  `New-MigrationPlan` emits a hard `UNKNOWN_PROVIDER_ROOT` blocker — `exit 2`, refusing the
+  whole migration — for any declared provider that `tools/skill-mesh-discovery.ps1` has no
+  root for. Declaring codex before the discovery-map entry exists would therefore break the
+  legacy migrator in every consumer home rather than add a capability. Verified by reading
+  the producing code (migrate-legacy-install.ps1 `$script:KnownProviders` load +
+  `New-MigrationPlan`; skill-mesh-discovery.ps1 `Get-SkillMeshDiscoveryRoots`), confirmed
+  independently by two review lenses, and explained in a comment at the `providers` block in
+  `tools/gen_manifest.py`. The vocabulary key and the discovery-root entry MUST land in the
+  same commit, and this is that commit. Regenerate the pinned inventories after the schema
+  change and re-grep the vocabulary consumers (`migrate-legacy-install.ps1`,
+  `inspect-host-install.ps1`).
 - **Type:** code
 - **Issue:** #122
 - **Flags:** --reviewers deep
 - **Files:** tools/skill-mesh-discovery.ps1, tools/install-skill-mesh.ps1,
-  tools/inspect-host-install.ps1, tools/probe-codex-skills.ps1, tests/distributions/
+  tools/inspect-host-install.ps1, tools/probe-codex-skills.ps1, tests/distributions/,
+  config/skill-manifest.json, tools/gen_manifest.py,
+  tests/package-integrity/expected_inventory.json
 - **Produces:** codex install/inspect/discovery support; probe script; temp-home round-trip
-  test (the pipeline smoke gate)
+  test (the pipeline smoke gate); the top-level `providers.codex` vocabulary key co-landed
+  with its discovery root
 - **Done when:** round-trip test green; discovery-map consumer grep table in step report;
+  `New-MigrationPlan` produces no `UNKNOWN_PROVIDER_ROOT` blocker for codex (the guard that
+  made Step 3 defer the vocabulary key) — asserted by a test, not by inspection;
   one uninterrupted repo-root `python -m pytest` passes (pass-1 exit gate)
 - **Depends on:** 2, 4
 
