@@ -1125,6 +1125,11 @@ function New-MigrationPlan([string]$distAbs, [string]$backupAbs, [string]$migrat
     $createdDirs = Get-CreatedDirs $installs
     $ledgerJson = New-LedgerJson $installs $providerRoots $createdDirs (Get-PriorCreatedDirs $ledgerAbs)
     $ledgerPostHash = Get-SkillMeshStringSha256 $ledgerJson
+    $providerRootsObj = [PSCustomObject]@{}
+    foreach ($provider in @($providerRoots.Keys | Sort-Object)) {
+        $providerRootsObj | Add-Member -NotePropertyName $provider `
+            -NotePropertyValue ([string]$providerRoots[$provider]) -Force
+    }
 
     # -- Assemble the ordered action set.
     # backup -> preserve -> retire -> install -> ledger. The ledger is
@@ -1196,6 +1201,7 @@ function New-MigrationPlan([string]$distAbs, [string]$backupAbs, [string]$migrat
         source_release = (Get-SourceRelease $distAbs)
         consumer_home  = $script:HomeAbs
         backup_dir     = $backupAbs
+        provider_roots = $providerRootsObj
         created_dirs   = @($createdDirs)
         ledger_json    = $ledgerJson
         actions        = @($actions)
@@ -1252,9 +1258,27 @@ function Get-PriorCreatedDirs([string]$ledgerAbs) {
     foreach ($p in @($installs.PSObject.Properties)) {
         $slug = Resolve-KnownProvider $p.Name
         if ($null -eq $slug) { continue }
-        $dirs = @(Get-SkillMeshTxField $p.Value 'created_dirs' @()) |
-            Where-Object { -not [string]::IsNullOrWhiteSpace([string]$_) }
-        $map[$slug] = @($dirs)
+        $subdir = [string]$DISCOVERY_SUBDIR[$slug]
+        $valid = New-Object 'System.Collections.Generic.HashSet[string]' `
+            ([System.StringComparer]::OrdinalIgnoreCase)
+        foreach ($rawDir in @(Get-SkillMeshTxField $p.Value 'created_dirs' @())) {
+            if (-not ($rawDir -is [string])) { continue }
+            $dir = [string]$rawDir
+            # Historical installer ledgers may contain exact '.' for the home
+            # root. It is retained as an audit sentinel only; neither migrator nor
+            # repaired installer removes directories. Every other retained entry
+            # must be a normalized provider-root ancestor/descendant.
+            if ($dir -ceq '.') {
+                [void]$valid.Add($dir)
+                continue
+            }
+            if (-not (Test-RecoveryRelPath $dir)) { continue }
+            if ((Test-RelAtOrUnderRoot $dir $subdir) -or
+                (Test-RelAtOrUnderRoot $subdir $dir)) {
+                [void]$valid.Add($dir)
+            }
+        }
+        $map[$slug] = @(@($valid) | Sort-Object)
     }
     return $map
 }
@@ -1281,13 +1305,36 @@ function New-LedgerJson($installs, $providerRoots, $createdDirs, $priorCreatedDi
     # blocks live work on the separate installed-hash/current-byte repair across
     # overwrite, stale removal, uninstall, and corrupt-ledger fallback.
     #
+    # Step 4 adds the current-byte authority the installer needs: every owned path
+    # is paired with the exact post_hash of the install action that wrote it. The
+    # key set is deliberately a bijection with owned_files -- missing or extra
+    # entries would make the ledger ambiguous and must never be emitted. Keep the
+    # ledger version at 1 for the additive field; old readers ignore it, while the
+    # repaired installer treats an old/hashless entry as carrying no destructive
+    # authority.
+    #
     # Shape and serialization are byte-compatible with install-skill-mesh.ps1's
-    # writer, so its uninstall path reads this ledger unchanged.
+    # writer, so its uninstall path reads this ledger unchanged. Providers, owned
+    # paths, and hash-map properties are inserted in sorted order so the same plan
+    # produces byte-identical ledger JSON across Apply and Resume.
     $installsObj = [PSCustomObject]@{}
-    foreach ($p in @($providerRoots.Keys)) {
+    foreach ($p in @($providerRoots.Keys | Sort-Object)) {
         $subdir = $providerRoots[$p]
-        $owned = @(@($installs | Where-Object { $_.provider -eq $p } | ForEach-Object { $_.rel_path }) |
+        $providerInstalls = @($installs | Where-Object { $_.provider -eq $p } |
+            Sort-Object -Property rel_path)
+        $owned = @(@($providerInstalls | ForEach-Object { $_.rel_path }) |
             Sort-Object -Unique)
+        $ownedHashes = [PSCustomObject]@{}
+        foreach ($rel in $owned) {
+            $matching = @($providerInstalls | Where-Object { $_.rel_path -ceq $rel })
+            if ($matching.Count -ne 1 -or
+                [string]::IsNullOrWhiteSpace([string]$matching[0].post_hash)) {
+                throw ("migrate-legacy-install: internal error -- owned path '$rel' " +
+                       "does not have exactly one recorded install post_hash.")
+            }
+            $ownedHashes | Add-Member -NotePropertyName $rel `
+                -NotePropertyValue ([string]$matching[0].post_hash) -Force
+        }
         $mine = @($createdDirs | Where-Object {
             $_ -eq $subdir -or $_.StartsWith("$subdir/") -or $subdir.StartsWith("$_/") })
         # UNIONED with the prior entry, exactly as install-skill-mesh.ps1 does, so a
@@ -1304,6 +1351,7 @@ function New-LedgerJson($installs, $providerRoots, $createdDirs, $priorCreatedDi
             provider         = $p
             discovery_subdir = $subdir
             owned_files      = @($owned)
+            owned_file_hashes = $ownedHashes
             created_dirs     = @($dirs)
         }
         $installsObj | Add-Member -NotePropertyName $p -NotePropertyValue $entry -Force
@@ -2600,6 +2648,251 @@ function Convert-RecoveryEntriesToMap($entries, [string]$label,
     return $map
 }
 
+function Convert-RecoveryStringArray($property, [string]$label,
+        [switch]$RequireRelPaths, [switch]$AllowHomeRootSentinel) {
+    # ConvertFrom-Json preserves a JSON array as System.Array. Requiring that
+    # shape prevents a scalar from being silently accepted as a one-element list.
+    $raw = $property.Value
+    if ($null -eq $raw -or -not ($raw -is [System.Array])) {
+        throw "$label is missing or is not an array."
+    }
+    $values = @()
+    $seen = New-Object 'System.Collections.Generic.HashSet[string]' `
+        ([System.StringComparer]::OrdinalIgnoreCase)
+    foreach ($item in @($raw)) {
+        if (-not ($item -is [string]) -or
+            [string]::IsNullOrWhiteSpace([string]$item) -or
+            ($RequireRelPaths -and
+             -not ($AllowHomeRootSentinel -and [string]$item -ceq '.') -and
+             -not (Test-RecoveryRelPath ([string]$item)))) {
+            throw "$label contains an invalid relative path or non-string value."
+        }
+        if (-not $seen.Add([string]$item)) {
+            throw "$label contains a duplicate path '$item'."
+        }
+        $values += [string]$item
+    }
+    $sorted = @($values | Sort-Object -Unique)
+    if (($values -join "`n") -cne ($sorted -join "`n")) {
+        throw "$label is not in deterministic sorted order."
+    }
+    return , @($values)
+}
+
+function Assert-RecoveryLedgerContract($plan, $ledgerAction,
+        $expectedInstallsByProvider) {
+    <#
+      ledger_json is executable recovery input: Resume writes these exact bytes.
+      Binding only its SHA-256 to a ledger action is circular because an operator-
+      writable plan can change both together. Reconstruct its semantic authority
+      from the independently validated install actions before journal history can
+      authorize any mutation.
+    #>
+    $ledgerJson = Get-SkillMeshTxField $plan 'ledger_json'
+    if (-not ($ledgerJson -is [string]) -or
+        [string]::IsNullOrWhiteSpace([string]$ledgerJson) -or
+        (Get-SkillMeshStringSha256 ([string]$ledgerJson)) -cne
+            [string](Get-SkillMeshTxField $ledgerAction 'post_hash')) {
+        throw "plan ledger_json does not match the ledger action post_hash."
+    }
+    try {
+        $ledger = ([string]$ledgerJson | ConvertFrom-Json)
+    } catch {
+        throw "plan ledger_json is not valid JSON."
+    }
+    if (-not ($ledger -is [System.Management.Automation.PSCustomObject])) {
+        throw "plan ledger_json is not an object."
+    }
+    $topFields = @($ledger.PSObject.Properties | ForEach-Object { $_.Name })
+    if (($topFields -join "`n") -cne (@('tool', 'ledger_version', 'installs') -join "`n") -or
+        [string](Get-SkillMeshTxField $ledger 'tool') -cne 'skill-mesh') {
+        throw "plan ledger_json has an invalid top-level contract."
+    }
+    $ledgerVersion = Get-SkillMeshTxField $ledger 'ledger_version'
+    if (-not ($ledgerVersion -is [int]) -or [int]$ledgerVersion -ne $LEDGER_VERSION) {
+        throw "plan ledger_json has an unsupported ledger_version."
+    }
+    $ledgerInstalls = Get-SkillMeshTxField $ledger 'installs'
+    if (-not ($ledgerInstalls -is [System.Management.Automation.PSCustomObject])) {
+        throw "plan ledger_json installs is not an object."
+    }
+
+    # New plans record the complete provider-root set explicitly so a provider
+    # with zero install actions still receives an empty ledger entry. Older plans
+    # did not carry provider_roots; for those, accept only canonical providers
+    # present in the semantically validated ledger itself.
+    $providerRootsRaw = Get-SkillMeshTxField $plan 'provider_roots'
+    $hasProviderRoots = $null -ne $providerRootsRaw
+    if ($hasProviderRoots) {
+        if (-not ($providerRootsRaw -is [System.Management.Automation.PSCustomObject])) {
+            throw "plan provider_roots is not an object."
+        }
+        $providerRootProps = @($providerRootsRaw.PSObject.Properties)
+        $sortedProviderNames = @($providerRootProps.Name | Sort-Object -Unique)
+        if (($providerRootProps.Name -join "`n") -cne
+            ($sortedProviderNames -join "`n")) {
+            throw "plan provider_roots is not in deterministic sorted order."
+        }
+        foreach ($property in $providerRootProps) {
+            $provider = [string]$property.Name
+            $canonical = @($DISCOVERY_SUBDIR.Keys | Where-Object {
+                [string]$_ -ceq $provider
+            })
+            if ($canonical.Count -ne 1 -or
+                -not ($property.Value -is [string]) -or
+                [string]$property.Value -cne [string]$DISCOVERY_SUBDIR[$provider]) {
+                throw "plan provider_roots contains an unknown provider or discovery root."
+            }
+            if (-not $expectedInstallsByProvider.ContainsKey($provider)) {
+                $expectedInstallsByProvider[$provider] = @{}
+            }
+        }
+    } else {
+        foreach ($property in @($ledgerInstalls.PSObject.Properties)) {
+            $provider = [string]$property.Name
+            $canonical = @($DISCOVERY_SUBDIR.Keys | Where-Object {
+                [string]$_ -ceq $provider
+            })
+            if ($canonical.Count -ne 1) {
+                throw "legacy plan ledger_json contains an unknown provider."
+            }
+            if (-not $expectedInstallsByProvider.ContainsKey($provider)) {
+                $expectedInstallsByProvider[$provider] = @{}
+            }
+        }
+    }
+
+    $planCreatedProp = @($plan.PSObject.Properties | Where-Object {
+        $_.Name -ceq 'created_dirs'
+    })
+    if ($planCreatedProp.Count -ne 1) {
+        throw "plan created_dirs is missing or duplicated."
+    }
+    $planCreated = Convert-RecoveryStringArray $planCreatedProp[0] `
+        'plan created_dirs' -RequireRelPaths
+    $allExpectedRelPaths = @()
+    foreach ($provider in @($expectedInstallsByProvider.Keys)) {
+        $allExpectedRelPaths += @($expectedInstallsByProvider[$provider].Keys)
+    }
+    foreach ($dir in $planCreated) {
+        if (@($allExpectedRelPaths | Where-Object {
+                $_.StartsWith("$dir/", [System.StringComparison]::OrdinalIgnoreCase)
+            }).Count -eq 0) {
+            throw "plan created_dirs contains '$dir', which is not an install-path ancestor."
+        }
+    }
+
+    $expectedProviders = @($expectedInstallsByProvider.Keys | Sort-Object)
+    $actualProviderProps = @($ledgerInstalls.PSObject.Properties)
+    if ($actualProviderProps.Count -ne $expectedProviders.Count) {
+        throw "plan ledger_json provider set does not match the install actions."
+    }
+    $hashMode = $null
+    foreach ($property in $actualProviderProps) {
+        $entry = $property.Value
+        if (-not ($entry -is [System.Management.Automation.PSCustomObject])) {
+            throw "plan ledger_json contains a provider entry that is not an object."
+        }
+        $hasHashes = @($entry.PSObject.Properties | Where-Object {
+            $_.Name -ceq 'owned_file_hashes'
+        }).Count -eq 1
+        if ($null -eq $hashMode) {
+            $hashMode = $hasHashes
+        } elseif ([bool]$hashMode -ne [bool]$hasHashes) {
+            throw "plan ledger_json mixes hashed and legacy hashless provider entries."
+        }
+    }
+    if ($hasProviderRoots -and -not $hashMode) {
+        throw "a provider_roots plan cannot downgrade to legacy hashless ledger entries."
+    }
+    for ($providerIndex = 0; $providerIndex -lt $expectedProviders.Count;
+            $providerIndex++) {
+        $provider = [string]$expectedProviders[$providerIndex]
+        $property = $actualProviderProps[$providerIndex]
+        if ([string]$property.Name -cne $provider) {
+            throw "plan ledger_json provider set/order does not match the install actions."
+        }
+        $entry = $property.Value
+        if (-not ($entry -is [System.Management.Automation.PSCustomObject])) {
+            throw "plan ledger_json provider '$provider' entry is not an object."
+        }
+        $entryFields = @($entry.PSObject.Properties | ForEach-Object { $_.Name })
+        $expectedEntryFields = @('provider', 'discovery_subdir', 'owned_files')
+        if ($hashMode) { $expectedEntryFields += 'owned_file_hashes' }
+        $expectedEntryFields += 'created_dirs'
+        if (($entryFields -join "`n") -cne ($expectedEntryFields -join "`n") -or
+            [string](Get-SkillMeshTxField $entry 'provider') -cne $provider -or
+            [string](Get-SkillMeshTxField $entry 'discovery_subdir') -cne
+                [string]$DISCOVERY_SUBDIR[$provider]) {
+            throw "plan ledger_json provider '$provider' metadata is invalid."
+        }
+
+        $ownedProp = @($entry.PSObject.Properties | Where-Object {
+            $_.Name -ceq 'owned_files'
+        })
+        if ($ownedProp.Count -ne 1) {
+            throw "plan ledger_json provider '$provider' owned_files is missing or duplicated."
+        }
+        $owned = Convert-RecoveryStringArray $ownedProp[0] `
+            "plan ledger_json provider '$provider' owned_files" -RequireRelPaths
+        $expectedMap = $expectedInstallsByProvider[$provider]
+        $expectedOwned = @($expectedMap.Keys | Sort-Object -Unique)
+        if (($owned -join "`n") -cne ($expectedOwned -join "`n")) {
+            throw "plan ledger_json provider '$provider' owned_files does not match install actions."
+        }
+
+        if ($hashMode) {
+            $ownedHashes = Get-SkillMeshTxField $entry 'owned_file_hashes'
+            if (-not ($ownedHashes -is [System.Management.Automation.PSCustomObject])) {
+                throw "plan ledger_json provider '$provider' owned_file_hashes is not an object."
+            }
+            $hashProps = @($ownedHashes.PSObject.Properties)
+            if ($hashProps.Count -ne $owned.Count) {
+                throw "plan ledger_json provider '$provider' hash keys do not match owned_files."
+            }
+            for ($hashIndex = 0; $hashIndex -lt $owned.Count; $hashIndex++) {
+                $rel = [string]$owned[$hashIndex]
+                $hashProp = $hashProps[$hashIndex]
+                if ([string]$hashProp.Name -cne $rel -or
+                    -not ($hashProp.Value -is [string]) -or
+                    [string]$hashProp.Value -cne [string]$expectedMap[$rel]) {
+                    throw "plan ledger_json provider '$provider' has an invalid hash for '$rel'."
+                }
+            }
+        }
+
+        $dirsProp = @($entry.PSObject.Properties | Where-Object {
+            $_.Name -ceq 'created_dirs'
+        })
+        if ($dirsProp.Count -ne 1) {
+            throw "plan ledger_json provider '$provider' created_dirs is missing or duplicated."
+        }
+        $dirs = Convert-RecoveryStringArray $dirsProp[0] `
+            "plan ledger_json provider '$provider' created_dirs" `
+            -RequireRelPaths -AllowHomeRootSentinel
+        $providerRoot = [string]$DISCOVERY_SUBDIR[$provider]
+        foreach ($dir in $dirs) {
+            if ($dir -ceq '.') { continue }
+            if (-not (Test-RelAtOrUnderRoot $dir $providerRoot) -and
+                -not (Test-RelAtOrUnderRoot $providerRoot $dir)) {
+                throw "plan ledger_json provider '$provider' created_dirs escapes its discovery root."
+            }
+            if ($expectedMap.ContainsKey($dir)) {
+                throw "plan ledger_json provider '$provider' created_dirs names an installed file."
+            }
+        }
+        $expectedPlanDirs = @($planCreated | Where-Object {
+            $_ -eq $providerRoot -or $_.StartsWith("$providerRoot/") -or
+            $providerRoot.StartsWith("$_/")
+        })
+        foreach ($dir in $expectedPlanDirs) {
+            if (-not (Test-SkillMeshTxMember $dirs $dir)) {
+                throw "plan ledger_json provider '$provider' omits planned created dir '$dir'."
+            }
+        }
+    }
+}
+
 function Assert-RecoveryMetadata($plan, $manifest, [string]$backupAbs,
         [string]$expectedMigrationId = $MigrationId) {
     <#
@@ -2656,6 +2949,7 @@ function Assert-RecoveryMetadata($plan, $manifest, [string]$backupAbs,
     $expectedInstalled = @{}
     $expectedBackups = @{}
     $expectedSeparateBackups = @{}
+    $expectedInstallsByProvider = @{}
     $ledgerAction = $null
     $kindRank = @{ backup = 0; preserve = 1; retire = 2; install = 3; ledger = 4 }
     $lastKindRank = -1
@@ -2741,11 +3035,18 @@ function Assert-RecoveryMetadata($plan, $manifest, [string]$backupAbs,
                     (($null -ne $pre) -ne (-not [string]::IsNullOrEmpty($payload)))) {
                     throw "install action $i has an invalid state transition."
                 }
-                if (-not $DISCOVERY_SUBDIR.ContainsKey($provider) -or
+                $canonicalProvider = @($DISCOVERY_SUBDIR.Keys | Where-Object {
+                    [string]$_ -ceq $provider
+                })
+                if ($canonicalProvider.Count -ne 1 -or
                     -not (Test-RelAtOrUnderRoot $rel $DISCOVERY_SUBDIR[$provider])) {
                     throw "install action $i has an invalid provider or target root."
                 }
                 $expectedInstalled[$rel] = [string]$post
+                if (-not $expectedInstallsByProvider.ContainsKey($provider)) {
+                    $expectedInstallsByProvider[$provider] = @{}
+                }
+                $expectedInstallsByProvider[$provider][$rel] = [string]$post
                 if ($null -ne $pre) {
                     $expectedOriginals[$rel] = [PSCustomObject]@{
                         hash = [string]$pre; payload = $payload
@@ -2768,6 +3069,7 @@ function Assert-RecoveryMetadata($plan, $manifest, [string]$backupAbs,
         $bySeq[$i] = $a
     }
     if ($null -eq $ledgerAction) { throw "plan contains no ledger action." }
+    Assert-RecoveryLedgerContract $plan $ledgerAction $expectedInstallsByProvider
 
     foreach ($rel in @($expectedSeparateBackups.Keys)) {
         if (-not $expectedBackups.ContainsKey($rel) -or

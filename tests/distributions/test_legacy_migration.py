@@ -1616,6 +1616,88 @@ def test_ledger_indexes_only_migration_installed_files(mini_dist, tmp_path):
         "a payload-free distribution indexed a _shared path"
 
 
+def test_ledger_hash_map_is_an_exact_bijection_with_install_post_hashes(
+        shared_dist, tmp_path):
+    """The migrator must mint byte-identity authority, not path hints alone."""
+    home = fx.migration_home(tmp_path / "h")
+    backup = tmp_path / "b"
+    assert _apply(home, backup, shared_dist).returncode == 0
+
+    plan = _plan_of(_only_tx(backup))
+    ledger = json.loads((Path(home) / LEDGER_NAME).read_text(encoding="utf-8"))
+    planned = {}
+    for action in plan["actions"]:
+        if action["action"] == "install":
+            planned.setdefault(action["provider"], {})[action["rel_path"]] = \
+                action["post_hash"]
+
+    assert set(ledger["installs"]) == set(planned)
+    for provider, entry in ledger["installs"].items():
+        hashes = entry["owned_file_hashes"]
+        assert set(entry["owned_files"]) == set(planned[provider])
+        assert list(hashes) == entry["owned_files"], (
+            f"{provider}: hash keys are missing, extra, or serialized out of order")
+        assert hashes == planned[provider]
+        for rel_path, recorded_hash in hashes.items():
+            assert recorded_hash == _sha256(Path(home) / rel_path)
+
+
+def test_ledger_json_is_deterministic_for_the_same_install_plan(shared_dist, tmp_path):
+    home = fx.migration_home(tmp_path / "h")
+    first = _plan(home, tmp_path / "b1", shared_dist)
+    second = _plan(home, tmp_path / "b2", shared_dist)
+
+    assert first["ledger_json"] == second["ledger_json"]
+    first_ledger = next(a for a in first["actions"] if a["action"] == "ledger")
+    second_ledger = next(a for a in second["actions"] if a["action"] == "ledger")
+    assert first_ledger["post_hash"] == second_ledger["post_hash"]
+
+    document = json.loads(first["ledger_json"])
+    assert list(document["installs"]) == sorted(document["installs"])
+    for entry in document["installs"].values():
+        assert list(entry["owned_file_hashes"]) == entry["owned_files"]
+
+
+@pytest.mark.parametrize("recovery_mode", ["resume", "rollback"])
+def test_ledger_crash_recovery_keeps_new_hashes_or_restores_exact_prior_bytes(
+        recovery_mode, shared_dist, tmp_path):
+    """A torn ledger write has one deterministic forward and reverse outcome."""
+    home = fx.migration_home(tmp_path / "h")
+    backup = tmp_path / "b"
+    prior_document = json.loads(fx.ledger(["claude"]))
+    prior_bytes = (json.dumps(prior_document, indent=3) + "  \r\n\r\n").encode("utf-8")
+    (Path(home) / LEDGER_NAME).write_bytes(prior_bytes)
+
+    preview = _plan(home, tmp_path / "preview", shared_dist)
+    ledger_action = next(a for a in preview["actions"] if a["action"] == "ledger")
+    crashed = _apply(
+        home, backup, shared_dist,
+        env={"SKILL_MESH_TX_CRASH_AT": f"{ledger_action['seq']}:after-mutate"},
+    )
+    assert crashed.returncode == 9, f"{crashed.stdout}\n{crashed.stderr}"
+    tx = _only_tx(backup)
+    plan = _plan_of(tx)
+    ledger_path = Path(home) / LEDGER_NAME
+    planned_ledger_bytes = plan["ledger_json"].encode("utf-8")
+    assert ledger_path.read_bytes() == planned_ledger_bytes
+
+    if recovery_mode == "resume":
+        recovered = _resume(home, backup, shared_dist, tx)
+        assert recovered.returncode == 0, f"{recovered.stdout}\n{recovered.stderr}"
+        assert _manifest_of(tx)["status"] == "applied"
+        assert ledger_path.read_bytes() == planned_ledger_bytes
+        ledger = json.loads(plan["ledger_json"])
+        for entry in ledger["installs"].values():
+            assert set(entry["owned_file_hashes"]) == set(entry["owned_files"])
+    else:
+        recovered = _migrate(
+            home, backup, mode="-Rollback", migration_id=tx.name,
+        )
+        assert recovered.returncode == 0, f"{recovered.stdout}\n{recovered.stderr}"
+        assert _manifest_of(tx)["status"] == "rolled_back"
+        assert ledger_path.read_bytes() == prior_bytes
+
+
 def test_uninstall_after_migration_never_deletes_preserved_trees(mini_dist, tmp_path):
     """The ledger the migrator writes is consumed by the PRODUCTION uninstall path
     (install-skill-mesh.ps1 -Uninstall). Anything wrongly indexed would be deleted
@@ -1960,6 +2042,172 @@ def test_recovery_rejects_reordered_plan_action_phases_before_mutation(
     assert "do not preserve backup/preserve/retire/install/ledger order" in rolled_back.stderr
     assert _manifest_of(tx)["status"] == "applied"
     assert _tree_digest(home) == before_recovery
+
+
+@pytest.mark.parametrize("mode", ["resume", "rollback"])
+@pytest.mark.parametrize(
+    "tamper",
+    [
+        "owned-hash", "partial-hash-map", "provider-set",
+        "all-hashless-downgrade", "discovery-subdir", "created-dirs",
+    ],
+)
+def test_recovery_binds_ledger_json_semantics_to_install_actions_before_mutation(
+        mode, tamper, mini_dist, tmp_path):
+    """Changing ledger_json and its action hash together is still not authority."""
+    home = fx.migration_home(tmp_path / "h")
+    backup = tmp_path / "b"
+    preview = _plan(home, tmp_path / "preview", mini_dist)
+    first_install = next(a for a in preview["actions"] if a["action"] == "install")
+    crashed = _apply(
+        home, backup, mini_dist,
+        env={"SKILL_MESH_TX_CRASH_AT": f"{first_install['seq']}:after-begin"},
+    )
+    assert crashed.returncode == 9, f"{crashed.stdout}\n{crashed.stderr}"
+    tx = _only_tx(backup)
+    plan_path = Path(tx) / "plan.json"
+    plan = _plan_of(tx)
+    ledger = json.loads(plan["ledger_json"])
+    provider = next(iter(ledger["installs"]))
+    entry = ledger["installs"][provider]
+
+    if tamper == "owned-hash":
+        rel_path = entry["owned_files"][0]
+        entry["owned_file_hashes"][rel_path] = "0" * 64
+    elif tamper == "partial-hash-map":
+        entry.pop("owned_file_hashes")
+    elif tamper == "all-hashless-downgrade":
+        for provider_entry in ledger["installs"].values():
+            provider_entry.pop("owned_file_hashes")
+    elif tamper == "provider-set":
+        ledger["installs"]["rogue"] = {
+            "provider": "rogue",
+            "discovery_subdir": ".rogue/skills",
+            "owned_files": [],
+            "owned_file_hashes": {},
+            "created_dirs": [],
+        }
+    elif tamper == "discovery-subdir":
+        entry["discovery_subdir"] = ".wrong/skills"
+    else:
+        plan["created_dirs"].append("../outside")
+        entry["created_dirs"].append("../outside")
+
+    tampered_ledger_json = json.dumps(ledger, indent=2)
+    plan["ledger_json"] = tampered_ledger_json
+    ledger_action = next(a for a in plan["actions"] if a["action"] == "ledger")
+    ledger_action["post_hash"] = hashlib.sha256(
+        tampered_ledger_json.encode("utf-8")).hexdigest()
+    _write_json(plan_path, plan)
+
+    before_recovery = _tree_digest(home)
+    if mode == "resume":
+        recovered = _migrate(
+            home, backup, mini_dist, mode="-Resume", migration_id=tx.name,
+        )
+    else:
+        recovered = _migrate(
+            home, backup, mode="-Rollback", migration_id=tx.name,
+        )
+    assert recovered.returncode == 2, (
+        f"{mode} accepted {tamper} ledger tampering:\n"
+        f"{recovered.stdout}\n{recovered.stderr}")
+    assert "INVALID_TRANSACTION" in recovered.stderr
+    assert json.loads(recovered.stdout)["status"] == "blocked"
+    assert _tree_digest(home) == before_recovery
+    assert _manifest_of(tx)["status"] == "applying"
+
+
+@pytest.mark.parametrize("recovery_mode", ["resume", "rollback"])
+def test_zero_file_provider_keeps_an_empty_hashed_entry_through_recovery(
+        recovery_mode, mini_dist, tmp_path):
+    """Provider membership comes from provider_roots, not only install actions."""
+    dist = tmp_path / "d"
+    shutil.copytree(mini_dist, dist)
+    for provider, keep in (("claude", {"context-slim"}), ("gpt", set())):
+        for child in (dist / provider).iterdir():
+            if child.name not in keep:
+                shutil.rmtree(child) if child.is_dir() else child.unlink()
+
+    home = fx.migration_home(tmp_path / "h")
+    backup = tmp_path / "b"
+    preview = _plan(home, tmp_path / "preview", dist)
+    assert set(preview["provider_roots"]) == {"claude", "gpt"}
+    assert not any(a["action"] == "install" and a["provider"] == "gpt"
+                   for a in preview["actions"])
+    ledger_action = next(a for a in preview["actions"] if a["action"] == "ledger")
+    crashed = _apply(
+        home, backup, dist,
+        env={"SKILL_MESH_TX_CRASH_AT": f"{ledger_action['seq']}:after-mutate"},
+    )
+    assert crashed.returncode == 9, f"{crashed.stdout}\n{crashed.stderr}"
+    tx = _only_tx(backup)
+
+    if recovery_mode == "resume":
+        recovered = _resume(home, backup, dist, tx)
+        assert recovered.returncode == 0, f"{recovered.stdout}\n{recovered.stderr}"
+        ledger = json.loads((Path(home) / LEDGER_NAME).read_text(encoding="utf-8"))
+        assert ledger["installs"]["gpt"]["owned_files"] == []
+        assert ledger["installs"]["gpt"]["owned_file_hashes"] == {}
+    else:
+        recovered = _migrate(
+            home, backup, mode="-Rollback", migration_id=tx.name,
+        )
+        assert recovered.returncode == 0, f"{recovered.stdout}\n{recovered.stderr}"
+        assert _manifest_of(tx)["status"] == "rolled_back"
+
+
+@pytest.mark.parametrize("recovery_mode", ["resume", "rollback"])
+def test_all_legacy_hashless_ledger_recovers_and_prior_created_dirs_are_sanitized(
+        recovery_mode, mini_dist, tmp_path):
+    """Old four-field entries recover; unsafe prior audit paths do not propagate."""
+    home = fx.migration_home(tmp_path / "h")
+    backup = tmp_path / "b"
+    prior = json.loads(fx.ledger(["claude"]))
+    prior_dirs = prior["installs"]["claude"]["created_dirs"]
+    prior_dirs.extend([".", "../outside", "unrelated-tree"])
+    prior_bytes = (json.dumps(prior, indent=3) + "  \r\n\r\n").encode("utf-8")
+    (Path(home) / LEDGER_NAME).write_bytes(prior_bytes)
+
+    preview = _plan(home, tmp_path / "preview", mini_dist)
+    planned_ledger = json.loads(preview["ledger_json"])
+    emitted_dirs = planned_ledger["installs"]["claude"]["created_dirs"]
+    assert "." in emitted_dirs
+    assert "../outside" not in emitted_dirs
+    assert "unrelated-tree" not in emitted_dirs
+
+    ledger_action = next(a for a in preview["actions"] if a["action"] == "ledger")
+    crashed = _apply(
+        home, backup, mini_dist,
+        env={"SKILL_MESH_TX_CRASH_AT": f"{ledger_action['seq']}:after-begin"},
+    )
+    assert crashed.returncode == 9, f"{crashed.stdout}\n{crashed.stderr}"
+    tx = _only_tx(backup)
+    plan = _plan_of(tx)
+    plan.pop("provider_roots")
+    legacy_ledger = json.loads(plan["ledger_json"])
+    for provider_entry in legacy_ledger["installs"].values():
+        provider_entry.pop("owned_file_hashes")
+    legacy_json = json.dumps(legacy_ledger, indent=2)
+    plan["ledger_json"] = legacy_json
+    ledger_action = next(a for a in plan["actions"] if a["action"] == "ledger")
+    ledger_action["post_hash"] = hashlib.sha256(legacy_json.encode("utf-8")).hexdigest()
+    _write_json(Path(tx) / "plan.json", plan)
+
+    if recovery_mode == "resume":
+        recovered = _resume(home, backup, mini_dist, tx)
+        assert recovered.returncode == 0, f"{recovered.stdout}\n{recovered.stderr}"
+        recovered_ledger = json.loads(
+            (Path(home) / LEDGER_NAME).read_text(encoding="utf-8"))
+        assert all("owned_file_hashes" not in entry
+                   for entry in recovered_ledger["installs"].values())
+        assert "../outside" not in recovered_ledger["installs"]["claude"]["created_dirs"]
+    else:
+        recovered = _migrate(
+            home, backup, mode="-Rollback", migration_id=tx.name,
+        )
+        assert recovered.returncode == 0, f"{recovered.stdout}\n{recovered.stderr}"
+        assert (Path(home) / LEDGER_NAME).read_bytes() == prior_bytes
 
 
 @pytest.mark.parametrize("invalidity", ["unknown-provider", "wrong-root"])
@@ -3984,7 +4232,8 @@ def test_installer_gains_no_required_backupdir_and_emits_no_migration_id(tmp_pat
     assert "migration_id" not in ledger_text
     ledger = json.loads(ledger_text)
     assert set(ledger["installs"]["claude"]) == {
-        "provider", "discovery_subdir", "owned_files", "created_dirs"}
+        "provider", "discovery_subdir", "owned_files", "owned_file_hashes",
+        "created_dirs"}
     # and no transaction state directory was left in the install home
     assert not any(p.name == "journal.jsonl" for p in home.rglob("*"))
 

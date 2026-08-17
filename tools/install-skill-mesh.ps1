@@ -23,29 +23,20 @@
     GPT profile to .github/skills. The project-relative .copilot/skills target used
     before the Step 43 proof is RETIRED -- Copilot does not discover it.)
 
-    HISTORICAL OWNERSHIP-CANDIDATE GATES = PATH SCOPE PLUS FILE-CONTENT
-    PROVENANCE, NOT THE LEDGER ALONE.
+    DESTRUCTIVE AUTHORITY = PATH SCOPE + MARKER + RECORDED CURRENT-BYTE HASH.
     Every generated file carries the provenance marker from tools/skill-mesh-provenance.ps1
     (Get-SkillMeshMarker). Every destructive op is gated on the TARGET FILE'S content:
-      - Install overwrite: a target may be written only if it does NOT exist OR it
-        already bears the marker (a skill-mesh file). A target that exists WITHOUT the
-        marker is FOREIGN -- refused by default; -Force is the explicit opt-in.
-      - Uninstall delete / stale-removal: a file is deleted only if it bears the marker
-        AND the ledger lists it. The marker is the candidate gate ("generated-looking?"); the
-        ledger is only the SCOPING hint ("which marker file is this provider's"). This
-        covers the shared payload with no carve-out: `<subdir>/_shared/<asset>` is an
-        ordinary ledger-listed generated file. A marker-less or non-ledger-listed
-        consumer file in that same directory survives.
-    These two signals do NOT prove current-byte identity. A consumer customization
-    that retains a valid generated header at a ledger-listed path passes both gates;
-    the mandatory pre-live installed-hash repair recorded in the Step 65 decision
-    must close routine overwrite, stale removal, uninstall, and corrupt-ledger
-    fallback before any live install. Until then, the claims here are deliberately
-    limited to path scope plus marker presence, never "the current bytes are ours."
+      - A routine overwrite, stale removal, or uninstall delete requires an exact
+        match between the current file hash and `owned_file_hashes[rel]`.
+      - A legacy/hashless entry grants no destructive authority. An existing target
+        byte-identical to the incoming distribution is a no-op and may self-seed the
+        hash map; any other mismatch requires explicit backed-up take-ownership.
+      - A corrupt ledger deletes nothing. The marker alone never authorizes deletion.
 
-    The ledger (<Home>/.skill-mesh-install.json) is an index/hint only. It is written
-    atomically (temp file + rename), read StrictMode-safely, and self-heals from a
-    corrupt/old-shape file with a clean diagnostic (never a lockout).
+    The ledger (<Home>/.skill-mesh-install.json) is written atomically (temp file +
+    rename). Ledger version 1 entries carry an exact `owned_files` /
+    `owned_file_hashes` bijection. Missing, malformed, or extra hashes authorize no
+    overwrite or removal.
 
     Containment (runtime/path-guard.ps1 Resolve-SafePath, which follows junctions /
     symlinks) is re-resolved on the target AND its parent immediately BEFORE each
@@ -57,10 +48,8 @@
     failure, a reconciled recovery ledger records only marker-valid candidate files
     that actually exist on disk, so a retry resumes without -Force.
 
-    ONLY-OWN-WHAT-YOU-CREATE (dirs): a directory is recorded in created_dirs only if
-    this install actually created it (it did not pre-exist), unioned with the prior
-    entry so a reinstall's ledger stays byte-identical. Uninstall removes a created dir
-    only when empty, so a pre-existing (operator-owned) empty home/intermediate survives.
+    `created_dirs` remains an audit/back-compat record only. Directory absence at one
+    instant is not durable ownership identity, so uninstall NEVER removes directories.
 
     Source of the generated tree: -DistDir points at a pre-built dist root (containing
     claude/ and/or gpt/). When omitted, the profile is built on the fly into an OS-temp
@@ -83,9 +72,7 @@
     and is NOT the sanctioned way to adopt an existing consumer _shared/ tree -- use
     -ForceShared for that.
 
-    -BackupDir is OPTIONAL here, and WITHOUT it this switch destroys the operator's
-    original bytes irrecoverably (a loud per-path warning is emitted, and that warning
-    is the only protection there is). Pair it with -BackupDir unless you mean that.
+    Every mismatching target adopted through -Force requires -BackupDir.
 
 .PARAMETER ForceShared
     SCOPED take-ownership: overwrite AND take ownership of foreign files ONLY where the
@@ -110,9 +97,7 @@
     Per-run scoping is what lets a two-profile / two-home cutover share ONE -BackupDir
     without the second run erasing the first run's restore record.
 
-    Mandatory with -ForceShared (take-ownership without a restore path is data loss with
-    extra steps); optional with -Force, where supplying it backs up every forced path
-    the same way.
+    Mandatory for every mismatching target adopted by -Force or -ForceShared.
 
 .PARAMETER Uninstall
     Remove a previously-installed provider profile (marker- + ledger-gated).
@@ -184,6 +169,7 @@ $UTF8_NO_BOM = New-Object System.Text.UTF8Encoding($false)
 $DISCOVERY_SUBDIR = Get-SkillMeshDiscoveryRoots
 
 $LEDGER_NAME = '.skill-mesh-install.json'
+$WRITE_AHEAD_NAME = '.skill-mesh-install.write-ahead.json'
 
 # -- Small helpers ------------------------------------------------------------
 
@@ -279,20 +265,44 @@ function Test-UnderPayloadRoot([string]$safeTarget, [string]$payloadRootAbs) {
     return $safeTarget.StartsWith($prefix, [System.StringComparison]::OrdinalIgnoreCase)
 }
 
-function Get-InstallHomeId([string]$homeAbs) {
-    # A STABLE, NON-DISCLOSING identifier for an install home: the leading 16 hex chars
-    # of SHA-256 over its case-folded absolute path. It lets one -BackupDir hold restore
+function Get-InstallHomeId([string]$homeAbs, [switch]$Full) {
+    # A STABLE, NON-DISCLOSING identifier for an install home: SHA-256
+    # over its canonical, case-folded absolute path. It lets one -BackupDir hold restore
     # records for several homes without any of them being mistakable for another, while
     # keeping the manifest free of the operator's absolute path so it can still be
     # pasted into a cutover record or an issue.
-    $norm = $homeAbs.TrimEnd('\', '/').ToLowerInvariant()
+    $norm = (Get-CanonicalRealPath -InputPath $homeAbs).TrimEnd('\', '/').ToLowerInvariant()
     $sha = [System.Security.Cryptography.SHA256]::Create()
     try {
         $hash = $sha.ComputeHash([System.Text.Encoding]::UTF8.GetBytes($norm))
     } finally {
         $sha.Dispose()
     }
-    return ((([System.BitConverter]::ToString($hash)) -replace '-', '').ToLowerInvariant()).Substring(0, 16)
+    $hex = (([System.BitConverter]::ToString($hash)) -replace '-', '').ToLowerInvariant()
+    if ($Full) { return $hex }
+    return $hex.Substring(0, 16)
+}
+
+function Resolve-FreshSharedTarget([string]$rel, [string]$provider, [string]$homeAbs, [string]$payloadRootAbs) {
+    $prefix = ([string]$DISCOVERY_SUBDIR[$provider]).TrimEnd('/') + '/_shared/'
+    if (-not $rel.StartsWith($prefix, [System.StringComparison]::Ordinal)) {
+        throw "install-skill-mesh: SECURITY -- '$rel' is outside lexical _shared scope."
+    }
+    $fresh = Assert-ProviderTargetDomain $rel $provider $homeAbs
+    if (-not (Test-UnderPayloadRoot $fresh $payloadRootAbs)) {
+        throw "install-skill-mesh: SECURITY -- '$rel' resolves outside _shared scope."
+    }
+    return $fresh
+}
+
+function Assert-BackupOutsideHome([string]$backupPath, [string]$homeAbs) {
+    $backupReal = Get-CanonicalRealPath -InputPath $backupPath
+    $homeReal = Get-CanonicalRealPath -InputPath $homeAbs
+    $homePrefix = $homeReal.TrimEnd('\', '/') + [System.IO.Path]::DirectorySeparatorChar
+    if ($backupReal.Equals($homeReal, [System.StringComparison]::OrdinalIgnoreCase) -or
+        $backupReal.StartsWith($homePrefix, [System.StringComparison]::OrdinalIgnoreCase)) {
+        throw "install-skill-mesh: -BackupDir must remain OUTSIDE the install home."
+    }
 }
 
 function Write-ForceBackup($forcePairs, [string]$backupDir, [string]$provider, [string]$homeAbs) {
@@ -323,8 +333,13 @@ function Write-ForceBackup($forcePairs, [string]$backupDir, [string]$provider, [
     $filesRoot = Join-Path $safeRunRoot 'files'
     $records = @()
     foreach ($p in $forcePairs) {
+        Assert-BackupOutsideHome $backupAbs $homeAbs
         $srcAbs = $p[0]
         $rel = $p[1]
+        $expectedPreHash = $p[2]
+        if ((Get-SkillMeshFileSha256 $srcAbs) -cne $expectedPreHash) {
+            throw "install-skill-mesh: SECURITY -- '$rel' changed before its take-ownership backup; nothing was installed."
+        }
         $dest = Join-Path $filesRoot ($rel -replace '/', '\')
         $safeBackupDest = Resolve-SafePath -Path $dest -AllowedRoots @($safeRunRoot)
         $safeBackupDestDir = Split-Path -Parent $safeBackupDest
@@ -332,10 +347,13 @@ function Write-ForceBackup($forcePairs, [string]$backupDir, [string]$provider, [
             New-Item -ItemType Directory -Path $safeBackupDestDir -Force | Out-Null
         }
         Copy-Item -LiteralPath $srcAbs -Destination $safeBackupDest -Force
+        if ((Get-SkillMeshFileSha256 $safeBackupDest) -cne $expectedPreHash) {
+            throw "install-skill-mesh: backup verification failed for '$rel'; nothing was installed."
+        }
         $records += [PSCustomObject]@{
             rel_path   = $rel
-            sha256     = (Get-SkillMeshFileSha256 $srcAbs)
-            size_bytes = (Get-Item -LiteralPath $srcAbs).Length
+            sha256     = $expectedPreHash
+            size_bytes = (Get-Item -LiteralPath $safeBackupDest).Length
             backup_rel = 'files/' + $rel
         }
     }
@@ -355,8 +373,27 @@ function Write-ForceBackup($forcePairs, [string]$backupDir, [string]$provider, [
     }
     $safeManifestPath = Resolve-SafePath -Path (Join-Path $safeRunRoot 'take-ownership-backup.json') `
                                          -AllowedRoots @($safeRunRoot)
+    Assert-BackupOutsideHome $safeRunRoot $homeAbs
     $json = ($manifest | ConvertTo-Json -Depth 6)
     [System.IO.File]::WriteAllText($safeManifestPath, $json, (New-Object System.Text.UTF8Encoding($false)))
+    # Certificate before authority is consumed: re-read the manifest and every backup
+    # payload from the external root. A torn/redirected backup never unlocks overwrite.
+    Assert-BackupOutsideHome $safeRunRoot $homeAbs
+    $cert = ([System.IO.File]::ReadAllText($safeManifestPath, [System.Text.Encoding]::UTF8) |
+        ConvertFrom-Json)
+    if ([string](Get-Field $cert 'provider' '') -cne $provider -or
+        [string](Get-Field $cert 'home_id' '') -cne (Get-InstallHomeId $homeAbs) -or
+        @((Get-Field $cert 'files' @())).Count -ne $records.Count) {
+        throw "install-skill-mesh: take-ownership backup certificate verification failed."
+    }
+    foreach ($row in @($cert.files)) {
+        $certFile = Resolve-SafePath -Path (Join-Path $safeRunRoot `
+            (([string]$row.backup_rel) -replace '/', '\')) -AllowedRoots @($safeRunRoot)
+        if ((Get-SkillMeshFileSha256 $certFile) -cne [string]$row.sha256) {
+            throw "install-skill-mesh: take-ownership backup payload certificate failed."
+        }
+    }
+    $script:ForceBackupCertificateRoot = $safeRunRoot
     Write-Host ("install-skill-mesh: took ownership of $($records.Count) foreign file(s); " +
                 "pre-overwrite bytes + hashes recorded under backup run '$runLeaf'.")
 }
@@ -425,12 +462,20 @@ $script:LedgerStatus = 'ok'
 
 function Read-Ledger([string]$homeAbs) {
     $script:LedgerStatus = 'ok'
-    $path = Get-LedgerPath $homeAbs
+    $lexicalPath = Get-LedgerPath $homeAbs
+    if ((Test-Path -LiteralPath $lexicalPath) -and
+        (((Get-Item -LiteralPath $lexicalPath -Force).Attributes -band
+          [System.IO.FileAttributes]::ReparsePoint) -ne 0)) {
+        throw "install-skill-mesh: REFUSING ledger read -- ledger leaf is a reparse point."
+    }
+    $path = Resolve-Contained $lexicalPath $homeAbs
     if (-not (Test-Path -LiteralPath $path)) {
+        $script:LedgerExpectedHash = $null
         $script:LedgerStatus = 'absent'
         return (New-EmptyLedger)
     }
     try {
+        $script:LedgerExpectedHash = Get-SkillMeshFileSha256 $path
         $raw = [System.IO.File]::ReadAllText($path, [System.Text.Encoding]::UTF8)
         $parsed = $raw | ConvertFrom-Json
     } catch {
@@ -441,6 +486,12 @@ function Read-Ledger([string]$homeAbs) {
         return (New-EmptyLedger)
     }
     $installs = Get-Field $parsed 'installs'
+    if ([string](Get-Field $parsed 'tool' '') -cne 'skill-mesh') {
+        [Console]::Error.WriteLine(
+            "install-skill-mesh: WARNING -- ledger at $path has the wrong tool identity (CORRUPT).")
+        $script:LedgerStatus = 'corrupt'
+        return (New-EmptyLedger)
+    }
     if ($null -eq $installs -or -not ($installs -is [System.Management.Automation.PSCustomObject])) {
         [Console]::Error.WriteLine(
             "install-skill-mesh: WARNING -- ledger at $path is missing a valid 'installs' " +
@@ -460,20 +511,40 @@ function Read-Ledger([string]$homeAbs) {
 }
 
 function Write-Ledger([string]$homeAbs, $ledger) {
-    # Atomic: write a PROCESS-UNIQUE temp file then rename over the target (same-volume
-    # rename), so a crash mid-write can never corrupt the now load-bearing ledger and
-    # two concurrent installs against the same home (claude + gpt in parallel) cannot
-    # lost-update via a shared temp name.
+    # Atomic file publication: write a PROCESS-UNIQUE same-volume temp and rename.
+    # The per-home operation lock, not the temp name, prevents read/modify/write lost
+    # updates between providers.
     # Re-resolved through the path guard immediately before the write, like every
     # other consumer-home mutation here: the ledger is a file in the install home,
     # so a junction planted on the home between scan and commit would otherwise
     # redirect it.
     $safeLedger = Resolve-Contained (Get-LedgerPath $homeAbs) $homeAbs
+    if ((Test-Path -LiteralPath $safeLedger) -and
+        (((Get-Item -LiteralPath $safeLedger -Force).Attributes -band
+          [System.IO.FileAttributes]::ReparsePoint) -ne 0)) {
+        throw "install-skill-mesh: REFUSING ledger write -- ledger leaf became a reparse point."
+    }
+    $currentLedgerHash = Get-SkillMeshFileSha256 $safeLedger
+    if ([string]$currentLedgerHash -cne [string]$script:LedgerExpectedHash) {
+        throw "install-skill-mesh: SECURITY -- ledger changed after read; refusing lost update."
+    }
+    if ((Test-Path -LiteralPath $safeLedger) -and
+        -not (Test-Path -LiteralPath $safeLedger -PathType Leaf)) {
+        throw "install-skill-mesh: REFUSING ledger write -- destination is not a regular file."
+    }
     $safeTmp = "$safeLedger.$PID.$([Guid]::NewGuid().ToString('N')).tmp"
     $json = $ledger | ConvertTo-Json -Depth 8
     try {
+        # Test-only fault seam. It deliberately sits after every payload write in
+        # the final/recovery publication path, so the write-ahead authority record
+        # (published before the first payload mutation) must carry recovery by
+        # itself. It is never documented as an operator switch.
+        if ([Environment]::GetEnvironmentVariable('SKILL_MESH_INSTALL_TEST_FAIL_LEDGER_PUBLISH') -ceq 'always') {
+            throw 'install-skill-mesh: TEST -- injected ledger publication failure.'
+        }
         [System.IO.File]::WriteAllText($safeTmp, $json, $UTF8_NO_BOM)
         Move-Item -LiteralPath $safeTmp -Destination $safeLedger -Force
+        $script:LedgerExpectedHash = Get-SkillMeshFileSha256 $safeLedger
     } finally {
         if (Test-Path -LiteralPath $safeTmp) { Remove-Item -LiteralPath $safeTmp -Force }
     }
@@ -511,34 +582,365 @@ function Select-CleanRels($rels) {
     return , $clean
 }
 
-function New-InstallEntry([string]$provider, [string]$subdir, $ownedRels, $createdDirs) {
-    return [PSCustomObject]@{
-        provider         = $provider
-        discovery_subdir = $subdir
-        owned_files      = Select-CleanRels $ownedRels
-        created_dirs     = Select-CleanRels $createdDirs
+function Assert-ForceBackupCertificate([string]$rel, [string]$expectedHash, [string]$homeAbs) {
+    $root = $script:ForceBackupCertificateRoot
+    if ([string]::IsNullOrWhiteSpace($root)) { throw "install-skill-mesh: SECURITY -- missing force-backup certificate." }
+    Assert-BackupOutsideHome $root $homeAbs
+    $manifest = Resolve-SafePath -Path (Join-Path $root 'take-ownership-backup.json') -AllowedRoots @($root)
+    $cert = ([System.IO.File]::ReadAllText($manifest, [System.Text.Encoding]::UTF8) | ConvertFrom-Json)
+    if ([string](Get-Field $cert 'tool' '') -cne 'install-skill-mesh.ps1' -or
+        [string](Get-Field $cert 'kind' '') -cne 'take-ownership-backup' -or
+        [string](Get-Field $cert 'provider' '') -cne $Provider -or
+        [string](Get-Field $cert 'home_id' '') -cne (Get-InstallHomeId $homeAbs) -or
+        [string](Get-Field $cert 'run_id' '') -cne (Split-Path -Leaf $root)) {
+        throw "install-skill-mesh: SECURITY -- force-backup certificate identity mismatch."
+    }
+    $rows = @($cert.files | Where-Object { [string]$_.rel_path -ceq $rel -and [string]$_.sha256 -ceq $expectedHash })
+    if ($rows.Count -ne 1) { throw "install-skill-mesh: SECURITY -- force-backup certificate mismatch for '$rel'." }
+    $payload = Resolve-SafePath -Path (Join-Path $root (([string]$rows[0].backup_rel) -replace '/', '\')) -AllowedRoots @($root)
+    if ((Get-SkillMeshFileSha256 $payload) -cne $expectedHash) {
+        throw "install-skill-mesh: SECURITY -- force-backup payload changed for '$rel'."
     }
 }
 
-function Resolve-RemovableCreatedDir([string]$rel, [string]$homeAbs) {
-    # THE single directory-removal invariant, shared by every dir-removal path:
-    # return the absolute path eligible for removal, or $null to REFUSE. A directory is
-    # eligible only if (1) $rel is a valid non-empty entry (skill-mesh provably created
-    # it -> it is in created_dirs), (2) it resolves strictly INSIDE the home, and (3) if
-    # it resolves to the home ROOT, only when $rel is the genuine '.' record -- an
-    # empty/null/'..' entry must NEVER map to the home root. Emptiness is checked by the
-    # caller immediately before the actual Remove-Item.
-    if ([string]::IsNullOrWhiteSpace($rel)) { return $null }
-    $abs = Get-ContainedAbs $rel $homeAbs
-    if ($null -eq $abs) { return $null }
-    if ($abs.Equals($homeAbs, [System.StringComparison]::OrdinalIgnoreCase) -and $rel -ne '.') {
-        # Exact-match sentinel (NOT $rel.Trim()): a whitespace-padded or otherwise
-        # non-literal entry (e.g. ' . ') that Windows path-normalization collapses to
-        # the home root must be REFUSED, so a tampered ledger cannot delete the
-        # operator's pre-existing home. Only the literal '.' record maps to the root.
+function Get-WriteAheadPath([string]$homeAbs) {
+    return (Join-Path $homeAbs $WRITE_AHEAD_NAME)
+}
+
+function Get-HashOrNull($value) {
+    if ($null -eq $value) { return $null }
+    $hash = [string]$value
+    if ($hash -cnotmatch '^[0-9a-f]{64}$') { return $null }
+    return $hash
+}
+
+function Get-WriteAheadActions($record, [string]$homeAbs, [string]$provider) {
+    if ($record -isnot [System.Management.Automation.PSCustomObject] -or
+        [string](Get-Field $record 'tool' '') -cne 'skill-mesh' -or
+        [string](Get-Field $record 'write_ahead_version' '') -cne '1' -or
+        [string](Get-Field $record 'provider' '') -cne $provider) {
+        throw 'install-skill-mesh: REFUSING write-ahead recovery -- record identity is invalid.'
+    }
+    $rawActions = Get-Field $record 'actions' $null
+    if ($null -eq $rawActions -or -not ($rawActions -is [System.Array])) {
+        throw 'install-skill-mesh: REFUSING write-ahead recovery -- actions are missing or malformed.'
+    }
+    $seen = New-CIStringSet
+    $actions = @()
+    foreach ($raw in @($rawActions)) {
+        if ($raw -isnot [System.Management.Automation.PSCustomObject]) {
+            throw 'install-skill-mesh: REFUSING write-ahead recovery -- action is not an object.'
+        }
+        $rel = [string](Get-Field $raw 'rel_path' '')
+        $rawPre = Get-Field $raw 'pre_hash' $null
+        $rawPost = Get-Field $raw 'post_hash' $null
+        $rawAuthority = Get-Field $raw 'authority_hash' $null
+        $pre = Get-HashOrNull $rawPre
+        $post = Get-HashOrNull $rawPost
+        $authority = Get-HashOrNull $rawAuthority
+        if ([string]::IsNullOrWhiteSpace($rel) -or -not $seen.Add($rel) -or
+            ($null -ne $rawPre -and $null -eq $pre) -or
+            ($null -ne $rawPost -and $null -eq $post) -or
+            ($null -ne $rawAuthority -and $null -eq $authority) -or
+            ($null -eq $pre -and $null -eq $post)) {
+            throw 'install-skill-mesh: REFUSING write-ahead recovery -- action identity is invalid.'
+        }
+        # This proves both lexical provider scope and real-path containment before
+        # recovery ever hashes a candidate payload.
+        $null = Assert-ProviderTargetDomain $rel $provider $homeAbs
+        $actions += [PSCustomObject]@{
+            rel_path = $rel; pre_hash = $pre; post_hash = $post; authority_hash = $authority
+        }
+    }
+    return , @($actions | Sort-Object -Property rel_path)
+}
+
+function Write-InstallWriteAhead([string]$homeAbs, $record) {
+    # This record is the durable authority between the first payload mutation and
+    # publication of the normal ledger. It has a distinct name from the ledger, so a
+    # CAS/reparse/permission failure at the ledger cannot retroactively remove the
+    # sole recovery authority. It is written atomically before payload work begins.
+    $safeRecord = Resolve-Contained (Get-WriteAheadPath $homeAbs) $homeAbs
+    if (Test-Path -LiteralPath $safeRecord) {
+        $item = Get-Item -LiteralPath $safeRecord -Force
+        if (($item.Attributes -band [System.IO.FileAttributes]::ReparsePoint) -ne 0 -or
+            -not (Test-Path -LiteralPath $safeRecord -PathType Leaf)) {
+            throw 'install-skill-mesh: REFUSING write-ahead publication -- destination is not a regular file.'
+        }
+        throw 'install-skill-mesh: REFUSING write-ahead publication -- an unfinished recovery record already exists.'
+    }
+    $safeTmp = "$safeRecord.$PID.$([Guid]::NewGuid().ToString('N')).tmp"
+    try {
+        [System.IO.File]::WriteAllText($safeTmp, ($record | ConvertTo-Json -Depth 8), $UTF8_NO_BOM)
+        Move-Item -LiteralPath $safeTmp -Destination $safeRecord
+        # Re-read and validate the complete record before it becomes the only
+        # authority for subsequent payload changes.
+        $saved = [System.IO.File]::ReadAllText($safeRecord, [System.Text.Encoding]::UTF8) | ConvertFrom-Json
+        $null = Get-WriteAheadActions $saved $homeAbs $Provider
+    } finally {
+        if (Test-Path -LiteralPath $safeTmp) { Remove-Item -LiteralPath $safeTmp -Force }
+    }
+}
+
+function Remove-InstallWriteAhead([string]$homeAbs) {
+    $safeRecord = Resolve-Contained (Get-WriteAheadPath $homeAbs) $homeAbs
+    if (-not (Test-Path -LiteralPath $safeRecord)) { return }
+    $item = Get-Item -LiteralPath $safeRecord -Force
+    if (($item.Attributes -band [System.IO.FileAttributes]::ReparsePoint) -ne 0 -or
+        -not (Test-Path -LiteralPath $safeRecord -PathType Leaf)) {
+        throw 'install-skill-mesh: REFUSING write-ahead cleanup -- recovery record is not a regular file.'
+    }
+    Remove-Item -LiteralPath $safeRecord -Force
+}
+
+function Test-InstallEntryEquals($left, $right, [string]$provider, [string]$subdir, [string]$homeAbs) {
+    $leftHashes = Get-ValidOwnedHashMap $left $provider $subdir $homeAbs
+    $rightHashes = Get-ValidOwnedHashMap $right $provider $subdir $homeAbs
+    if ($null -eq $leftHashes -or $null -eq $rightHashes) { return $false }
+    $leftOwned = @(Get-Field $left 'owned_files' @()) | Sort-Object
+    $rightOwned = @(Get-Field $right 'owned_files' @()) | Sort-Object
+    if (($leftOwned -join "`n") -cne ($rightOwned -join "`n")) { return $false }
+    foreach ($rel in $leftOwned) {
+        if ([string](Get-OwnedHash $leftHashes $rel) -cne [string](Get-OwnedHash $rightHashes $rel)) {
+            return $false
+        }
+    }
+    return $true
+}
+
+function Invoke-InstallWriteAheadRecovery([string]$homeAbs, $ledger) {
+    $safeRecord = Resolve-Contained (Get-WriteAheadPath $homeAbs) $homeAbs
+    if (-not (Test-Path -LiteralPath $safeRecord)) { return $ledger }
+    $item = Get-Item -LiteralPath $safeRecord -Force
+    if (($item.Attributes -band [System.IO.FileAttributes]::ReparsePoint) -ne 0 -or
+        -not (Test-Path -LiteralPath $safeRecord -PathType Leaf)) {
+        throw 'install-skill-mesh: REFUSING write-ahead recovery -- recovery record is not a regular file.'
+    }
+    try {
+        $record = [System.IO.File]::ReadAllText($safeRecord, [System.Text.Encoding]::UTF8) | ConvertFrom-Json
+    } catch {
+        throw "install-skill-mesh: REFUSING write-ahead recovery -- record is unparseable. $($_.Exception.Message)"
+    }
+    $actions = Get-WriteAheadActions $record $homeAbs $Provider
+    $rawExpectedLedgerHash = Get-Field $record 'expected_ledger_hash' $null
+    $expectedLedgerHash = Get-HashOrNull $rawExpectedLedgerHash
+    if ($null -ne $rawExpectedLedgerHash -and $null -eq $expectedLedgerHash) {
+        throw 'install-skill-mesh: REFUSING write-ahead recovery -- expected ledger hash is malformed.'
+    }
+    $currentLedgerHash = $script:LedgerExpectedHash
+    $createdDirs = @(Get-Field $record 'created_dirs' @())
+    if ($null -eq $createdDirs -or -not ($createdDirs -is [System.Array])) {
+        throw 'install-skill-mesh: REFUSING write-ahead recovery -- created_dirs is malformed.'
+    }
+
+    $recoveredRels = @()
+    $recoveredHashes = @{}
+    $hasPostMutation = $false
+    foreach ($action in $actions) {
+        $rel = [string]$action.rel_path
+        $target = Assert-ProviderTargetDomain $rel $Provider $homeAbs
+        $pre = $action.pre_hash
+        $post = $action.post_hash
+        $authority = $action.authority_hash
+        if (-not (Test-Path -LiteralPath $target)) {
+            if ($null -ne $pre -and $null -ne $post) {
+                throw "install-skill-mesh: REFUSING write-ahead recovery -- '$rel' disappeared outside its recorded transition."
+            }
+            if ($null -ne $pre -and $null -eq $post) { $hasPostMutation = $true }
+            continue
+        }
+        if (-not (Test-Path -LiteralPath $target -PathType Leaf)) {
+            throw "install-skill-mesh: REFUSING write-ahead recovery -- '$rel' is no longer a regular file."
+        }
+        $actual = Get-SkillMeshFileSha256 $target
+        if ($null -ne $post -and $actual -ceq [string]$post) {
+            if (-not (Test-FileHasMarker $target)) {
+                throw "install-skill-mesh: REFUSING write-ahead recovery -- '$rel' post-state lacks provenance."
+            }
+            $recoveredRels += $rel
+            $recoveredHashes[$rel] = [string]$post
+            if ($null -eq $pre -or [string]$pre -cne [string]$post) { $hasPostMutation = $true }
+        } elseif ($null -ne $pre -and $actual -ceq [string]$pre) {
+            # A backed -Force target can remain at its operator-owned preimage
+            # when interruption happened before its replacement. Its observed hash
+            # proves only that it was not changed; `authority_hash` is the old
+            # durable ledger identity, and is deliberately null for a new foreign
+            # adoption so recovery cannot baseline it as ours.
+            if ($null -ne $authority) {
+                $recoveredRels += $rel
+                $recoveredHashes[$rel] = [string]$authority
+            }
+        } else {
+            throw "install-skill-mesh: REFUSING write-ahead recovery -- '$rel' changed outside its recorded transition."
+        }
+    }
+    $subdir = [string]$DISCOVERY_SUBDIR[$Provider]
+    $recoveredEntry = New-InstallEntry $Provider $subdir $recoveredRels $createdDirs $recoveredHashes
+
+    # The process may have stopped after publishing the record but before touching a
+    # payload. In that exact pre-state there is no recovery ledger to publish; drop
+    # the unused record and preserve the original ledger byte-for-byte.
+    if (-not $hasPostMutation) {
+        Remove-InstallWriteAhead $homeAbs
+        return $ledger
+    }
+
+    # If the normal ledger already contains the precise recovered authority (for
+    # example the prior final write succeeded but cleanup was interrupted), the
+    # record is no longer sole authority and may be retired without another ledger
+    # write. Otherwise only the pre-recorded ledger revision may be replaced.
+    if ([string]$currentLedgerHash -cne [string]$expectedLedgerHash) {
+        if ($script:LedgerStatus -eq 'ok' -and
+            (Test-InstallEntryEquals (Get-InstallEntry $ledger $Provider) $recoveredEntry $Provider $subdir $homeAbs)) {
+            Remove-InstallWriteAhead $homeAbs
+            return $ledger
+        }
+        throw 'install-skill-mesh: REFUSING write-ahead recovery -- normal ledger changed outside the recorded operation.'
+    }
+    Set-InstallEntry $ledger $Provider $recoveredEntry
+    Write-Ledger $homeAbs $ledger
+    if (-not (Test-InstallEntryEquals (Get-InstallEntry $ledger $Provider) $recoveredEntry $Provider $subdir $homeAbs)) {
+        throw 'install-skill-mesh: SECURITY -- recovered ledger authority did not verify after publication.'
+    }
+    Remove-InstallWriteAhead $homeAbs
+    return $ledger
+}
+
+function Assert-ProviderTargetDomain([string]$rel, [string]$provider, [string]$homeAbs) {
+    if ($null -ne $script:PinnedHomeReal -and
+        (Get-CanonicalRealPath -InputPath $homeAbs) -cne $script:PinnedHomeReal) {
+        throw "install-skill-mesh: SECURITY -- pinned Home identity changed before mutation."
+    }
+    $subdir = [string]$DISCOVERY_SUBDIR[$provider]
+    $prefix = $subdir.TrimEnd('/') + '/'
+    if ([string]::IsNullOrWhiteSpace($rel) -or $rel.Contains('\') -or
+        -not $rel.StartsWith($prefix, [System.StringComparison]::Ordinal)) {
+        throw "install-skill-mesh: SECURITY -- '$rel' is outside provider '$provider' lexical discovery domain."
+    }
+    $target = Get-ContainedAbs $rel $homeAbs
+    if ($null -eq $target) { throw "install-skill-mesh: SECURITY -- invalid provider target '$rel'." }
+    $domain = Get-CanonicalRealPath -InputPath (Join-Path $homeAbs ($subdir -replace '/', '\'))
+    $domainPrefix = $domain.TrimEnd('\', '/') + [System.IO.Path]::DirectorySeparatorChar
+    if (-not $target.StartsWith($domainPrefix, [System.StringComparison]::OrdinalIgnoreCase)) {
+        throw "install-skill-mesh: SECURITY -- '$rel' resolves outside provider '$provider' discovery domain."
+    }
+    foreach ($other in @($DISCOVERY_SUBDIR.Keys)) {
+        if ([string]$other -ceq $provider) { continue }
+        $otherDomain = Get-CanonicalRealPath -InputPath `
+            (Join-Path $homeAbs ($DISCOVERY_SUBDIR[$other] -replace '/', '\'))
+        $otherPrefix = $otherDomain.TrimEnd('\', '/') + [System.IO.Path]::DirectorySeparatorChar
+        # Reject both direct target reachability and overlapping/aliased provider roots,
+        # even when their leaves do not exist yet (canonicalization resolves ancestors).
+        if ($target.StartsWith($otherPrefix, [System.StringComparison]::OrdinalIgnoreCase) -or
+            $domain.StartsWith($otherPrefix, [System.StringComparison]::OrdinalIgnoreCase) -or
+            $otherDomain.StartsWith($domainPrefix, [System.StringComparison]::OrdinalIgnoreCase) -or
+            $domain.Equals($otherDomain, [System.StringComparison]::OrdinalIgnoreCase)) {
+            throw "install-skill-mesh: SECURITY -- provider discovery domains overlap or alias."
+        }
+        # A child junction under the other provider can make this target reachable
+        # without making the two roots themselves overlap. Walk ordinary directories
+        # only; inspect reparse leaves but never recurse through them (bounded, no loop).
+        if (Test-Path -LiteralPath $otherDomain -PathType Container) {
+            $pending = New-Object System.Collections.Generic.Stack[string]
+            $pending.Push($otherDomain)
+            while ($pending.Count -gt 0) {
+                $dir = $pending.Pop()
+                foreach ($child in @(Get-ChildItem -LiteralPath $dir -Force)) {
+                    if (($child.Attributes -band [System.IO.FileAttributes]::ReparsePoint) -ne 0) {
+                        $resolvedChild = Get-CanonicalRealPath -InputPath $child.FullName
+                        $resolvedPrefix = $resolvedChild.TrimEnd('\', '/') + [System.IO.Path]::DirectorySeparatorChar
+                        if ($target.Equals($resolvedChild, [System.StringComparison]::OrdinalIgnoreCase) -or
+                            $target.StartsWith($resolvedPrefix, [System.StringComparison]::OrdinalIgnoreCase)) {
+                            throw "install-skill-mesh: SECURITY -- target '$rel' is reachable through another provider's child reparse point."
+                        }
+                    } elseif ($child.PSIsContainer) {
+                        $pending.Push($child.FullName)
+                    }
+                }
+            }
+        }
+    }
+    return $target
+}
+
+function Get-ValidOwnedHashMap($entry, [string]$provider = '', [string]$expectedSubdir = '', [string]$homeAbs = '') {
+    # Authority is all-or-nothing: owned_files and owned_file_hashes must be an exact
+    # bijection. A partially useful-looking legacy/tampered map grants no destructive
+    # authority, because selecting only its convenient rows would silently bless an
+    # ambiguous ledger shape.
+    if ($null -eq $entry) { return $null }
+    if (-not [string]::IsNullOrWhiteSpace($provider)) {
+        if ([string](Get-Field $entry 'provider' '') -cne $provider -or
+            [string](Get-Field $entry 'discovery_subdir' '') -cne $expectedSubdir) {
+            return $null
+        }
+    }
+    $owned = Get-Field $entry 'owned_files' $null
+    $map = Get-Field $entry 'owned_file_hashes' $null
+    if ($null -eq $owned -or -not ($owned -is [System.Array]) -or
+        $null -eq $map -or -not ($map -is [System.Management.Automation.PSCustomObject])) {
         return $null
     }
-    return $abs
+    $ownedList = @($owned)
+    $props = @($map.PSObject.Properties)
+    if ($ownedList.Count -ne $props.Count) { return $null }
+    $seen = New-CIStringSet
+    foreach ($relObj in $ownedList) {
+        $rel = [string]$relObj
+        if ([string]::IsNullOrWhiteSpace($rel) -or -not $seen.Add($rel)) { return $null }
+        $prop = $map.PSObject.Properties[$rel]
+        if ($null -eq $prop -or ([string]$prop.Name) -cne $rel) { return $null }
+        $hash = [string]$prop.Value
+        if ($hash -cnotmatch '^[0-9a-f]{64}$') { return $null }
+    }
+    foreach ($prop in $props) {
+        if (-not $seen.Contains([string]$prop.Name)) { return $null }
+    }
+    if (-not [string]::IsNullOrWhiteSpace($homeAbs)) {
+        foreach ($relObj in $ownedList) {
+            try { $null = Assert-ProviderTargetDomain ([string]$relObj) $provider $homeAbs }
+            catch { return $null }
+        }
+    }
+    return $map
+}
+
+function Get-OwnedHash($validMap, [string]$rel) {
+    if ($null -eq $validMap -or [string]::IsNullOrWhiteSpace($rel)) { return $null }
+    $p = $validMap.PSObject.Properties[$rel]
+    if ($null -eq $p -or ([string]$p.Name) -cne $rel) { return $null }
+    return [string]$p.Value
+}
+
+function New-OwnedHashMap($ownedRels, $hashes) {
+    $map = [PSCustomObject]@{}
+    foreach ($rel in $ownedRels) {
+        $hash = $null
+        if ($hashes -is [System.Collections.IDictionary]) {
+            if ($hashes.Contains($rel)) { $hash = [string]$hashes[$rel] }
+        } elseif ($null -ne $hashes) {
+            $p = $hashes.PSObject.Properties[$rel]
+            if ($p) { $hash = [string]$p.Value }
+        }
+        if ($hash -cnotmatch '^[0-9a-f]{64}$') {
+            throw "install-skill-mesh: internal error -- missing/invalid owned hash for '$rel'."
+        }
+        $map | Add-Member -NotePropertyName $rel -NotePropertyValue $hash
+    }
+    return $map
+}
+
+function New-InstallEntry([string]$provider, [string]$subdir, $ownedRels, $createdDirs, $ownedHashes) {
+    $cleanOwned = @(@($ownedRels) |
+        Where-Object { -not [string]::IsNullOrWhiteSpace([string]$_) } |
+        Sort-Object -Unique)
+    return [PSCustomObject]@{
+        provider         = $provider
+        discovery_subdir = $subdir
+        owned_files      = $cleanOwned
+        owned_file_hashes = New-OwnedHashMap $cleanOwned $ownedHashes
+        created_dirs     = Select-CleanRels $createdDirs
+    }
 }
 
 function New-TrackedDir([string]$absDir, [string]$homeAbs, $createdSet) {
@@ -569,57 +971,45 @@ function New-TrackedDir([string]$absDir, [string]$homeAbs, $createdSet) {
     }
 }
 
-function Remove-OwnedFiles([string]$homeAbs, $entry) {
-    # Delete a ledger-listed owned file ONLY if it (a) resolves inside the home
-    # (untrusted-ledger containment) AND (b) bears the skill-mesh marker. A ledger
-    # entry pointing at a foreign/operator (non-marker) file is NEVER deleted.
-    #
-    # THE SHARED PAYLOAD NEEDS NO SPECIAL CASE, and that is a property worth stating
-    # rather than leaving to luck. `<subdir>/_shared/<asset>` is an ordinary install
-    # target: it is written with a marker, it lands in `owned_files` like any other
-    # generated file, and it is removed here on the same two conditions. The
-    # consumer's marker-less or non-ledger-listed files in that same directory are
-    # removed by neither condition. This is only a scoping statement: a consumer edit
-    # that retains a valid header at a ledger-listed path still passes both, so the
-    # Step 65 decision records an installed-hash/current-byte-identity repair as a
-    # mandatory pre-live blocker. The same scoped conditions consume the ledger
-    # migrate-legacy-install.ps1 writes; see its New-LedgerJson contract note.
-    if ($null -eq $entry) { return }
+function Assert-OwnedFilesRemovable([string]$homeAbs, $entry, $removalHashes, $forcedRels, [string]$payloadRootAbs) {
+    if ($null -eq $entry -or $null -eq $removalHashes) {
+        throw "install-skill-mesh: REFUSING uninstall -- owned_file_hashes is missing, malformed, or inconsistent; no files were deleted."
+    }
     foreach ($rel in @(Get-Field $entry 'owned_files' @())) {
-        $abs = Get-ContainedAbs $rel $homeAbs
-        if ($null -eq $abs) { continue }
+        $abs = Assert-ProviderTargetDomain ([string]$rel) $Provider $homeAbs
         if (-not (Test-Path -LiteralPath $abs)) { continue }
-        if (-not (Test-FileHasMarker $abs)) {
-            [Console]::Error.WriteLine(
-                "install-skill-mesh: WARNING -- ledger lists '$rel' as owned but its " +
-                "content does NOT bear the skill-mesh marker (foreign/operator file); NOT deleting.")
-            continue
+        $expected = [string]$removalHashes[[string]$rel]
+        $actual = Get-SkillMeshFileSha256 $abs
+        $forced = $forcedRels.Contains([string]$rel)
+        if ($forced -and $ForceShared -and -not $Force) {
+            $abs = Resolve-FreshSharedTarget ([string]$rel) $Provider $homeAbs $payloadRootAbs
         }
-        $safeTarget = Resolve-Contained $abs $homeAbs
-        Remove-Item -LiteralPath $safeTarget -Force
+        if ((-not $forced -and -not (Test-FileHasMarker $abs)) -or $actual -cne $expected) {
+            throw ("install-skill-mesh: REFUSING uninstall -- '$rel' no longer matches " +
+                   "its recorded installed-byte hash; no files were deleted.")
+        }
     }
 }
 
-function Remove-CreatedDirs([string]$homeAbs, $entry) {
-    # Remove created dirs bottom-up, contained-within-home, and ONLY when empty (so a
-    # pre-existing sentinel or foreign file keeps its directory alive).
-    if ($null -eq $entry) { return }
-    # Deepest-first by path-SEGMENT COUNT (a child always has more segments than its
-    # ancestor), so a parent is only considered after its children are gone.
-    $dirs = @(Get-Field $entry 'created_dirs' @()) |
-        Sort-Object -Property @{ Expression = { ([string]$_ -split '/').Count } } -Descending
-    foreach ($rel in $dirs) {
-        # Single dir-removal invariant: only a provably-created, in-home dir (and the
-        # home root only via a genuine '.' entry).
-        $abs = Resolve-RemovableCreatedDir ([string]$rel) $homeAbs
-        if ($null -eq $abs) { continue }
-        if (Test-Path -LiteralPath $abs) {
-            $remaining = @(Get-ChildItem -LiteralPath $abs -Force)
-            if ($remaining.Count -eq 0) {
-                $safeDir = Resolve-Contained $abs $homeAbs
-                Remove-Item -LiteralPath $safeDir -Force
+function Remove-OwnedFiles([string]$homeAbs, $entry, $removalHashes, $forcedRels, [string]$payloadRootAbs) {
+    foreach ($rel in @(Get-Field $entry 'owned_files' @())) {
+        $abs = Assert-ProviderTargetDomain ([string]$rel) $Provider $homeAbs
+        if (-not (Test-Path -LiteralPath $abs)) { continue }
+        $safeTarget = Resolve-Contained $abs $homeAbs
+        $expected = [string]$removalHashes[[string]$rel]
+        $forced = $forcedRels.Contains([string]$rel)
+        if ($forced) {
+            Assert-ForceBackupCertificate ([string]$rel) $expected $homeAbs
+            if ($ForceShared -and -not $Force) {
+                $safeTarget = Resolve-FreshSharedTarget ([string]$rel) $Provider $homeAbs $payloadRootAbs
             }
         }
+        if ((Get-SkillMeshFileSha256 $safeTarget) -cne $expected -or
+            (-not $forced -and -not (Test-FileHasMarker $safeTarget))) {
+            throw ("install-skill-mesh: SECURITY -- '$rel' changed after uninstall " +
+                   "preflight; stopping before deleting the changed file.")
+        }
+        Remove-Item -LiteralPath $safeTarget -Force
     }
 }
 
@@ -662,43 +1052,18 @@ function Resolve-SourceProfileDir([string]$provider) {
 # -- Uninstall ----------------------------------------------------------------
 
 function Invoke-MarkerFallbackUninstall([string]$homeAbs) {
-    # Ledger tracking is LOST (corrupt/old-shape) but skill-mesh files may still be on
-    # disk. Recover by scanning the provider's discovery subdir and removing ONLY
-    # well-formed marker-bearing FILES (contained-within-home). It must NOT be a silent
-    # clean no-op (warns loudly + reports).
-    #
-    # FILES ONLY -- NEVER remove directories here. Without a created_dirs record the
-    # fallback cannot prove skill-mesh created any directory (the discovery root may be
-    # a shared .claude/skills used by other manually-installed skills, and an
-    # intermediate dir may be operator-owned). The dir-removal invariant requires proof
-    # of creation, which this path structurally lacks -> leave all directories in place.
-    $subdir = $DISCOVERY_SUBDIR[$Provider]
-    $root = Join-Path $homeAbs ($subdir -replace '/', '\')
-    [Console]::Error.WriteLine(
-        "install-skill-mesh: WARNING -- ledger lost track (corrupt/old-shape); falling back " +
-        "to a marker-based scan of $root to remove skill-mesh files (files only; no dirs).")
-    if (-not (Test-Path -LiteralPath $root)) {
-        Write-Host "install-skill-mesh: no discovery dir at $root; nothing to recover for '$Provider'."
-        return
-    }
-    $removed = 0
-    foreach ($f in @(Get-ChildItem -LiteralPath $root -Recurse -File)) {
-        try {
-            $safe = Resolve-SafePath -Path $f.FullName -AllowedRoots @($homeAbs)
-        } catch {
-            continue
-        }
-        if (Test-FileHasMarker $safe) {
-            $safeTarget = Resolve-Contained $safe $homeAbs
-            Remove-Item -LiteralPath $safeTarget -Force
-            $removed++
-        }
-    }
-    Write-Host "install-skill-mesh: marker-based fallback removed $removed skill-mesh file(s) under $root for '$Provider' (directories left in place)."
+    # A marker says only "generated-looking". With no durable installed hash there is
+    # no current-byte identity to compare, so corrupt-ledger uninstall fails closed.
+    throw ("install-skill-mesh: REFUSING uninstall -- ledger tracking is corrupt or " +
+           "old-shape and no trusted owned_file_hashes authority remains. Nothing was deleted.")
 }
 
 function Invoke-Uninstall([string]$homeAbs) {
     $ledger = Read-Ledger $homeAbs
+    # A prior install may have changed payload bytes but been interrupted before
+    # normal-ledger publication. Reconcile its write-ahead authority before any
+    # uninstall decision so stale pre-ledger hashes can never drive deletion.
+    $ledger = Invoke-InstallWriteAheadRecovery $homeAbs $ledger
     $status = $script:LedgerStatus
     $entry = Get-InstallEntry $ledger $Provider
     if ($null -eq $entry) {
@@ -710,48 +1075,125 @@ function Invoke-Uninstall([string]$homeAbs) {
         Write-Host "install-skill-mesh: provider '$Provider' is not installed under $homeAbs (nothing to remove)."
         return
     }
-    $subdir = Get-Field $entry 'discovery_subdir' ''
+    $subdir = $DISCOVERY_SUBDIR[$Provider]
+    $validHashes = Get-ValidOwnedHashMap $entry $Provider $subdir $homeAbs
+    $hadValidHashes = $null -ne $validHashes
+    if ($null -eq $validHashes) {
+        if (-not $Force -and -not $ForceShared) {
+            throw "install-skill-mesh: REFUSING uninstall -- owned_file_hashes is missing, malformed, or inconsistent. Nothing was deleted."
+        }
+        if ([string](Get-Field $entry 'provider' '') -cne $Provider -or
+            [string](Get-Field $entry 'discovery_subdir' '') -cne $subdir -or
+            [string]::IsNullOrWhiteSpace($BackupDir)) {
+            throw "install-skill-mesh: REFUSING forced uninstall -- legacy entry identity and external -BackupDir are required."
+        }
+        $ownedHints = @(Get-Field $entry 'owned_files' @())
+        $hintSeen = New-CIStringSet
+        foreach ($hint in $ownedHints) {
+            if ([string]::IsNullOrWhiteSpace([string]$hint) -or
+                -not $hintSeen.Add([string]$hint)) {
+                throw "install-skill-mesh: REFUSING forced uninstall -- malformed legacy owned_files hints."
+            }
+            $null = Assert-ProviderTargetDomain ([string]$hint) $Provider $homeAbs
+        }
+        $validHashes = [PSCustomObject]@{}
+    }
+    $payloadRootAbs = Join-Path (Get-CanonicalRealPath -InputPath `
+        (Join-Path $homeAbs ($subdir -replace '/', '\'))) '_shared'
+    $forcedRels = New-CIStringSet
+    $removalHashes = @{}
+    $forcePairs = @()
+    foreach ($rel in @(Get-Field $entry 'owned_files' @())) {
+        $rel = [string]$rel
+        $abs = Assert-ProviderTargetDomain $rel $Provider $homeAbs
+        if (-not (Test-Path -LiteralPath $abs)) { continue }
+        $recorded = Get-OwnedHash $validHashes $rel
+        $actual = Get-SkillMeshFileSha256 $abs
+        if ($null -ne $recorded -and (Test-FileHasMarker $abs) -and $actual -ceq $recorded) {
+            $removalHashes[$rel] = $recorded
+            continue
+        }
+        $sharedAllowed = $false
+        if ($ForceShared) {
+            try { $null = Resolve-FreshSharedTarget $rel $Provider $homeAbs $payloadRootAbs; $sharedAllowed = $true }
+            catch { $sharedAllowed = $false }
+        }
+        if (-not $Force -and -not $sharedAllowed) {
+            throw ("install-skill-mesh: REFUSING uninstall -- '$rel' no longer matches " +
+                   "its recorded installed-byte hash; no files were deleted.")
+        }
+        if ([string]::IsNullOrWhiteSpace($BackupDir)) {
+            throw "install-skill-mesh: REFUSING forced uninstall -- -BackupDir is required. Nothing was deleted."
+        }
+        [void]$forcedRels.Add($rel)
+        $removalHashes[$rel] = $actual
+        $forcePairs += , @($abs, $rel, $actual)
+    }
+    if ($forcePairs.Count -gt 0) {
+        Assert-BackupOutsideHome $BackupDir $homeAbs
+        Write-ForceBackup $forcePairs $BackupDir $Provider $homeAbs
+    }
+    # Complete authorization preflight before the first deletion. A mismatch is a
+    # true no-op, including byte-identical ledger preservation.
+    Assert-OwnedFilesRemovable $homeAbs $entry $removalHashes $forcedRels $payloadRootAbs
     try {
-        Remove-OwnedFiles $homeAbs $entry
+        Remove-OwnedFiles $homeAbs $entry $removalHashes $forcedRels $payloadRootAbs
     } catch {
+        if (-not $hadValidHashes) {
+            # Legacy/hashless forced recovery retains the original ledger bytes. Ghost
+            # hints are non-authoritative and safe; a backed retry skips absent paths.
+            throw
+        }
         # Reconcile: rewrite the entry to only the owned files that STILL exist, so a
         # retry resumes cleanly; surface a clean diagnostic rather than a torn state.
         $remaining = @()
         foreach ($rel in @(Get-Field $entry 'owned_files' @())) {
-            $abs = Get-ContainedAbs $rel $homeAbs
+            $abs = Assert-ProviderTargetDomain ([string]$rel) $Provider $homeAbs
             if ($null -ne $abs -and (Test-Path -LiteralPath $abs)) { $remaining += $rel }
         }
-        $reconciled = New-InstallEntry $Provider $subdir $remaining @(Get-Field $entry 'created_dirs' @())
+        $reconciledHashes = @{}
+        foreach ($rel in $remaining) {
+            $reconciledHashes[$rel] = Get-OwnedHash $validHashes ([string]$rel)
+        }
+        $reconciled = New-InstallEntry $Provider $subdir $remaining `
+            @(Get-Field $entry 'created_dirs' @()) $reconciledHashes
         Set-InstallEntry $ledger $Provider $reconciled
         Write-Ledger $homeAbs $ledger
         throw
     }
-    # Update the ledger. Removing the ledger file first lets the home dir become empty
-    # so its created-dir removal (last) can succeed on a full uninstall.
+    # Update the ledger. Directories deliberately remain: created_dirs is audit data,
+    # not durable deletion authority.
     Remove-InstallEntry $ledger $Provider
     if (Test-InstallsEmpty $ledger) {
         $safeLedger = Resolve-Contained (Get-LedgerPath $homeAbs) $homeAbs
         if (Test-Path -LiteralPath $safeLedger) {
+            if ((Get-SkillMeshFileSha256 $safeLedger) -cne $script:LedgerExpectedHash) {
+                throw "install-skill-mesh: SECURITY -- ledger changed before removal; refusing lost update."
+            }
             Remove-Item -LiteralPath $safeLedger -Force
+            $script:LedgerExpectedHash = $null
         }
     } else {
         Write-Ledger $homeAbs $ledger
     }
-    Remove-CreatedDirs $homeAbs $entry
     Write-Host "install-skill-mesh: uninstalled '$Provider' from $homeAbs."
 }
 
 # -- Install (transactional: validate -> commit) ------------------------------
 
 function Invoke-Install([string]$homeAbs) {
+    $script:ForceBackupCertificateRoot = $null
     $ledger = Read-Ledger $homeAbs
+    # Consume a durable predecessor record before deriving normal overwrite/stale
+    # authority. This makes a plain retry converge without -Force after a final
+    # ledger publication failure.
+    $ledger = Invoke-InstallWriteAheadRecovery $homeAbs $ledger
     $prior = Get-InstallEntry $ledger $Provider
-    # Prior-owned rels: used ONLY to scope stale-removal + the recovery set. They are
-    # NOT the overwrite/foreign authority -- the marker in the target file is.
-    $priorOwnedRel = if ($null -ne $prior) { @(Get-Field $prior 'owned_files' @()) } else { @() }
-    $priorDirs = if ($null -ne $prior) { @(Get-Field $prior 'created_dirs' @()) } else { @() }
-
     $subdir = $DISCOVERY_SUBDIR[$Provider]
+    # Prior paths scope candidates. Only a complete valid hash map grants authority.
+    $priorOwnedRel = if ($null -ne $prior) { @(Get-Field $prior 'owned_files' @()) } else { @() }
+    $priorOwnedHashes = Get-ValidOwnedHashMap $prior $Provider $subdir $homeAbs
+    $priorDirs = if ($null -ne $prior) { @(Get-Field $prior 'created_dirs' @()) } else { @() }
 
     $stageDir = ''
     try {
@@ -763,11 +1205,6 @@ function Invoke-Install([string]$homeAbs) {
         $installRoot = Join-Path $homeAbs ($subdir -replace '/', '\')
         $srcFiles = @(Get-ChildItem -LiteralPath $sourceDir -Recurse -File | Sort-Object -Property FullName)
 
-        if ($ForceShared -and [string]::IsNullOrWhiteSpace($BackupDir)) {
-            throw ("install-skill-mesh: -ForceShared requires -BackupDir. Taking " +
-                   "ownership of an operator's existing _shared/ files without first " +
-                   "recording their bytes and hashes is data loss with extra steps.")
-        }
         if (-not [string]::IsNullOrWhiteSpace($BackupDir)) {
             # The backup must survive the thing it is a backup OF. A -BackupDir inside
             # the install home would be an install target's neighbour: subject to the
@@ -797,71 +1234,131 @@ function Invoke-Install([string]$homeAbs) {
         # and hand the flag's authorization to whatever it points at.
         $payloadRootAbs = Join-Path (Get-CanonicalRealPath -InputPath $installRoot) '_shared'
 
-        $pairs = @()          # each: @(srcFull, safeTarget, rel)
+        $pairs = @()          # each: @(srcFull, safeTarget, rel, sourceHash)
         $foreign = @()
         # Home-relative rels this run is permitted to overwrite DESPITE being foreign.
         # Computed once here so the pre-scan refusal and the TOCTOU guard inside the
         # copy loop cannot disagree about what was authorized.
         $forceRels = New-CIStringSet
-        $forcePairs = @()     # each: @(safeTarget, rel) -- the backup set
+        $forcePairs = @()     # each: @(safeTarget, rel, preHash) -- backup set
+        $forcePreHashes = @{}
+        $routinePreHashes = @{}
+        $exactIncomingRels = New-CIStringSet
+        $producedRels = New-CIStringSet
         foreach ($f in $srcFiles) {
+            if (-not (Test-FileHasMarker $f.FullName)) {
+                throw ("install-skill-mesh: REFUSING source profile -- generated source " +
+                       "file '$($f.Name)' lacks valid skill-mesh provenance. Nothing was written.")
+            }
             $relFromSrc = $f.FullName.Substring($sourceDir.Length).TrimStart('\', '/')
-            $target = Join-Path $installRoot $relFromSrc
-            $safeTarget = Resolve-Contained $target $homeAbs
-            $rel = ConvertTo-PosixRel $safeTarget $homeAbs
-            $pairs += , @($f.FullName, $safeTarget, $rel)
-            # FOREIGN = target exists AND its content does NOT bear the marker. The
-            # ledger is NOT consulted here (a poisoned ledger cannot launder a foreign
-            # file into "owned").
-            if ((Test-Path -LiteralPath $safeTarget) -and (-not (Test-FileHasMarker $safeTarget))) {
-                # -Force authorizes every collision; -ForceShared authorizes ONLY the
-                # ones inside the shipped _shared/ payload -- a per-FILE claim derived
-                # from the SOURCE tree's own layout, never a directory-wide one. A file
-                # sitting in the consumer's _shared/ that this profile does not ship is
-                # not a target at all, so it is never seen here and never touched.
-                #
-                # BOTH spellings must agree: the SOURCE-relative path says this file is
-                # part of the shipped payload, and the RESOLVED target says the write
-                # actually lands inside <installRoot>/_shared. Checking only the source
-                # let a junction at the payload root redirect the take-ownership onto an
-                # operator path with no '_shared' segment at all.
+            $normalizedSrcRel = ($relFromSrc -replace '\\', '/').TrimStart('/')
+            $rel = $subdir.TrimEnd('/') + '/' + $normalizedSrcRel
+            $safeTarget = Assert-ProviderTargetDomain $rel $Provider $homeAbs
+            $sourceHash = Get-SkillMeshFileSha256 $f.FullName
+            $pairs += , @($f.FullName, $safeTarget, $rel, $sourceHash)
+            [void]$producedRels.Add($rel)
+            if (-not (Test-Path -LiteralPath $safeTarget)) {
+                continue
+            }
+            if (-not (Test-Path -LiteralPath $safeTarget -PathType Leaf)) {
+                $foreign += $rel
+                continue
+            }
+            $actualHash = Get-SkillMeshFileSha256 $safeTarget
+            if ($actualHash -ceq $sourceHash) {
+                # Exact incoming bytes are a genuine no-op. This is the sole safe
+                # legacy/hashless self-seed path and does not rewrite the target.
+                [void]$exactIncomingRels.Add($rel)
+                continue
+            }
+            $recordedHash = Get-OwnedHash $priorOwnedHashes $rel
+            if ($null -ne $recordedHash -and $actualHash -ceq $recordedHash -and
+                (Test-FileHasMarker $safeTarget)) {
+                $routinePreHashes[$rel] = $recordedHash
+                continue
+            }
+            # Every remaining existing-file mismatch lacks routine authority. Force
+            # is an explicit adoption and always requires a verified external backup.
+            # ForceShared additionally requires both source and resolved target scope.
+            if ($Force -or $ForceShared) {
                 $isSharedPayload = (Test-SharedPayloadRel $relFromSrc) -and
                                    (Test-UnderPayloadRoot $safeTarget $payloadRootAbs)
                 if ($Force -or ($ForceShared -and $isSharedPayload)) {
                     [void]$forceRels.Add($rel)
-                    $forcePairs += , @($safeTarget, $rel)
+                    $forcePairs += , @($safeTarget, $rel, $actualHash)
+                    $forcePreHashes[$rel] = $actualHash
                 } else {
                     $foreign += $rel
                 }
+            } else {
+                $foreign += $rel
             }
         }
 
         if ($foreign.Count -gt 0) {
             $list = ($foreign | Sort-Object) -join "`n  "
             throw ("install-skill-mesh: REFUSING to install -- $($foreign.Count) target " +
-                   "path(s) already exist and are NOT skill-mesh-generated (no provenance " +
-                   "marker); installing would overwrite operator content:`n  $list`n" +
+                   "path(s) lack current-byte overwrite authority; installing would " +
+                   "overwrite operator or changed content:`n  $list`n" +
                    "Pass -Force to overwrite AND take ownership of these paths, or remove " +
                    "them first. (-ForceShared covers only the _shared/ payload and does " +
                    "NOT authorize the paths above.) Nothing was written; prior state is " +
                    "unchanged.")
         }
 
-        # Back up every authorized-overwrite target BEFORE any mutation. Still inside
-        # the VALIDATE phase: if the backup itself fails, nothing in the install home
-        # has been touched and the refusal is a true no-op.
-        if ($forcePairs.Count -gt 0 -and -not [string]::IsNullOrWhiteSpace($BackupDir)) {
+        # Freeze stale-delete authority before any install mutation. Unverifiable
+        # stale paths refuse the whole operation as a true no-op.
+        $stalePreHashes = @{}
+        $staleForcedRels = New-CIStringSet
+        $staleRefusals = @()
+        foreach ($r in $priorOwnedRel) {
+            if ($producedRels.Contains([string]$r)) { continue }
+            $abs = Assert-ProviderTargetDomain ([string]$r) $Provider $homeAbs
+            if (-not (Test-Path -LiteralPath $abs)) { continue }
+            $recorded = Get-OwnedHash $priorOwnedHashes ([string]$r)
+            $actual = Get-SkillMeshFileSha256 $abs
+            if ($null -ne $recorded -and $actual -ceq $recorded -and (Test-FileHasMarker $abs)) {
+                $stalePreHashes[[string]$r] = $recorded
+            } else {
+                $sharedAllowed = $false
+                if ($ForceShared) {
+                    try { $null = Resolve-FreshSharedTarget ([string]$r) $Provider $homeAbs $payloadRootAbs; $sharedAllowed = $true }
+                    catch { $sharedAllowed = $false }
+                }
+                if (($Force -or $sharedAllowed) -and -not [string]::IsNullOrWhiteSpace($BackupDir)) {
+                    [void]$forceRels.Add([string]$r)
+                    [void]$staleForcedRels.Add([string]$r)
+                    $forcePairs += , @($abs, [string]$r, $actual)
+                    $forcePreHashes[[string]$r] = $actual
+                    $stalePreHashes[[string]$r] = $actual
+                } else {
+                    $staleRefusals += [string]$r
+                }
+            }
+        }
+        if ($staleRefusals.Count -gt 0) {
+            $list = ($staleRefusals | Sort-Object) -join "`n  "
+            throw ("install-skill-mesh: REFUSING stale removal -- changed or hashless " +
+                   "stale paths have no default destructive authority:`n  $list`n" +
+                   "Nothing was written; prior state is unchanged.")
+        }
+
+        # Prove the ledger destination is contained and file-shaped before the first
+        # target mutation; recovery must have somewhere safe to publish authority.
+        $ledgerPreflight = Resolve-Contained (Get-LedgerPath $homeAbs) $homeAbs
+        if ((Test-Path -LiteralPath $ledgerPreflight) -and
+            -not (Test-Path -LiteralPath $ledgerPreflight -PathType Leaf)) {
+            throw "install-skill-mesh: REFUSING install -- ledger destination is not a regular file. Nothing was written."
+        }
+
+        # Back up every authorized-overwrite target BEFORE any home mutation.
+        if ($forcePairs.Count -gt 0 -and [string]::IsNullOrWhiteSpace($BackupDir)) {
+            throw ("install-skill-mesh: REFUSING take-ownership -- every mismatching " +
+                   "target adopted by -Force or -ForceShared requires -BackupDir. " +
+                   "Nothing was written.")
+        }
+        if ($forcePairs.Count -gt 0) {
             Write-ForceBackup $forcePairs $BackupDir $Provider $homeAbs
-        } elseif ($forcePairs.Count -gt 0) {
-            # Reachable only via plain -Force, whose -BackupDir is optional. NOT a
-            # refusal: -Force's unscoped contract predates this step and is unchanged.
-            # But documentation is not a control -- an operator who clobbers their own
-            # files must at least be TOLD, per path, on stderr, that the originals were
-            # not recorded anywhere.
-            $lost = (($forcePairs | ForEach-Object { $_[1] }) | Sort-Object) -join "`n  "
-            Write-Warning ("install-skill-mesh: -Force is overwriting $($forcePairs.Count) " +
-                           "operator file(s) with NO backup (-BackupDir was not supplied). " +
-                           "The original bytes are unrecoverable after this run:`n  $lost")
         }
 
         # ================= COMMIT (mutation, recoverable) =======================
@@ -898,6 +1395,7 @@ function Invoke-Install([string]$homeAbs) {
         $txActions = @()
         $txSeq = 0
         foreach ($pair in $pairs) {
+            if ($exactIncomingRels.Contains([string]$pair[2])) { continue }
             $txActions += [PSCustomObject]@{
                 seq       = $txSeq
                 action    = 'install'
@@ -908,11 +1406,62 @@ function Invoke-Install([string]$homeAbs) {
             }
             $txSeq++
         }
+
+        # Durable write-ahead authority closes the only unsafe interval in the
+        # normal ledger protocol. It is fully published and re-validated before the
+        # first payload copy or stale delete, and carries every exact transition the
+        # operation may make. Do not write it for a byte-only ledger self-seed: no
+        # payload mutation follows in that case.
+        $writeAheadPublished = $false
+        if ($txActions.Count -gt 0 -or $stalePreHashes.Count -gt 0) {
+            $writeAheadActions = @()
+            foreach ($pair in $pairs) {
+                $rel = [string]$pair[2]
+                $preHash = $null
+                $authorityHash = $null
+                if ($forcePreHashes.ContainsKey($rel)) {
+                    $preHash = [string]$forcePreHashes[$rel]
+                } elseif ($routinePreHashes.ContainsKey($rel)) {
+                    $preHash = [string]$routinePreHashes[$rel]
+                    $authorityHash = [string]$routinePreHashes[$rel]
+                } elseif ($exactIncomingRels.Contains($rel)) {
+                    $preHash = [string]$pair[3]
+                    $authorityHash = Get-OwnedHash $priorOwnedHashes $rel
+                }
+                $writeAheadActions += [PSCustomObject]@{
+                    rel_path = $rel
+                    pre_hash = $preHash
+                    post_hash = [string]$pair[3]
+                    authority_hash = $authorityHash
+                }
+            }
+            foreach ($rel in @($stalePreHashes.Keys | Sort-Object)) {
+                # produced and stale are disjoint by preflight construction.
+                $writeAheadActions += [PSCustomObject]@{
+                    rel_path = [string]$rel
+                    pre_hash = [string]$stalePreHashes[$rel]
+                    post_hash = $null
+                    authority_hash = (Get-OwnedHash $priorOwnedHashes ([string]$rel))
+                }
+            }
+            $writeAheadRecord = [PSCustomObject]@{
+                tool                 = 'skill-mesh'
+                write_ahead_version  = 1
+                provider             = $Provider
+                expected_ledger_hash = $script:LedgerExpectedHash
+                # Directory records are audit-only. Carrying the prior set is enough
+                # for a retry and never grants directory-deletion authority.
+                created_dirs         = @($createdSet | Sort-Object)
+                actions              = @($writeAheadActions | Sort-Object -Property rel_path)
+            }
+            Write-InstallWriteAhead $homeAbs $writeAheadRecord
+            $writeAheadPublished = $true
+        }
         $txGetHash = {
             param($a)
             # Re-resolve rather than trusting the scan-time path, so the hash is
             # taken from the same real path the mutation will write.
-            Get-SkillMeshFileSha256 (Resolve-Contained $a.target $homeAbs)
+            Get-SkillMeshFileSha256 (Assert-ProviderTargetDomain $a.rel_path $Provider $homeAbs)
         }
         $txMutate = {
             param($a)
@@ -920,29 +1469,83 @@ function Invoke-Install([string]$homeAbs) {
 
             # Re-resolve containment on the PARENT immediately before creating it
             # (junction-on-ancestor TOCTOU).
-            $targetDir = Split-Path -Parent $a.target
+            $safeTarget = Assert-ProviderTargetDomain $rel $Provider $homeAbs
+            $targetDir = Split-Path -Parent $safeTarget
             $safeDir = Resolve-Contained $targetDir $homeAbs
             New-TrackedDir $safeDir $homeAbs $createdSet
 
-            # Re-resolve containment on the TARGET immediately before the copy.
-            $safeTarget = Resolve-Contained $a.target $homeAbs
-
-            # Marker TOCTOU guard: a foreign file may have appeared here AFTER the
-            # scan. Overwrite only a non-existent target or a marker-bearing one --
-            # or one this run explicitly authorized and BACKED UP during VALIDATE.
-            # Keyed off $forceRels, not the raw switches: an unscoped -ForceShared
-            # check here would authorize a path the pre-scan refused.
-            if ((Test-Path -LiteralPath $safeTarget) -and
-                (-not (Test-FileHasMarker $safeTarget)) -and
-                (-not $writtenSet.Contains($rel)) -and
-                (-not $forceRels.Contains($rel))) {
-                throw ("install-skill-mesh: SECURITY -- a foreign (non-marker) file " +
-                       "appeared at '$rel' after the pre-scan; aborting to avoid " +
-                       "clobbering it (pass -Force, or -ForceShared -BackupDir <dir> " +
-                       "when the path is inside the _shared/ payload, to override).")
+            $existsNow = Test-Path -LiteralPath $safeTarget
+            if ($forceRels.Contains($rel)) {
+                if (-not $existsNow -or
+                    (Get-SkillMeshFileSha256 $safeTarget) -cne [string]$forcePreHashes[$rel]) {
+                    throw "install-skill-mesh: SECURITY -- forced target '$rel' changed after backup; refusing overwrite."
+                }
+            } elseif ($routinePreHashes.ContainsKey($rel)) {
+                if (-not $existsNow -or -not (Test-FileHasMarker $safeTarget) -or
+                    (Get-SkillMeshFileSha256 $safeTarget) -cne [string]$routinePreHashes[$rel]) {
+                    throw "install-skill-mesh: SECURITY -- owned target '$rel' changed after preflight; refusing overwrite."
+                }
+            } elseif ($existsNow) {
+                throw "install-skill-mesh: SECURITY -- a target appeared at '$rel' after preflight; refusing overwrite."
             }
 
-            Copy-Item -LiteralPath $a.source -Destination $safeTarget -Force
+            # Source identity is part of the plan too. A dist file replaced after
+            # preflight must not leave markerless/wrong bytes at an owned target.
+            if (-not (Test-Path -LiteralPath $a.source -PathType Leaf) -or
+                -not (Test-FileHasMarker $a.source) -or
+                (Get-SkillMeshFileSha256 $a.source) -cne [string]$a.post_hash) {
+                throw "install-skill-mesh: SECURITY -- source '$rel' changed after preflight; refusing copy."
+            }
+            $tempLeaf = '.skill-mesh-install-' + $PID + '-' + [Guid]::NewGuid().ToString('N') + '.tmp'
+            $safeTemp = Resolve-Contained (Join-Path $safeDir $tempLeaf) $homeAbs
+            try {
+                Copy-Item -LiteralPath $a.source -Destination $safeTemp
+                if (-not (Test-FileHasMarker $safeTemp) -or
+                    (Get-SkillMeshFileSha256 $safeTemp) -cne [string]$a.post_hash) {
+                    throw "install-skill-mesh: staged target verification failed for '$rel'."
+                }
+
+                # Fresh lexical resolution + current-byte authority immediately before
+                # atomic replacement. Never trust the earlier resolved target here.
+                $freshTarget = Assert-ProviderTargetDomain $rel $Provider $homeAbs
+                $freshExists = Test-Path -LiteralPath $freshTarget
+                if ($forceRels.Contains($rel)) {
+                    Assert-ForceBackupCertificate $rel ([string]$forcePreHashes[$rel]) $homeAbs
+                    if ($ForceShared -and -not $Force) {
+                        $freshTarget = Resolve-FreshSharedTarget $rel $Provider $homeAbs $payloadRootAbs
+                    }
+                    if (-not $freshExists -or
+                        (Get-SkillMeshFileSha256 $freshTarget) -cne [string]$forcePreHashes[$rel]) {
+                        throw "install-skill-mesh: SECURITY -- forced target '$rel' changed after backup; refusing replace."
+                    }
+                } elseif ($routinePreHashes.ContainsKey($rel)) {
+                    if (-not $freshExists -or -not (Test-FileHasMarker $freshTarget) -or
+                        (Get-SkillMeshFileSha256 $freshTarget) -cne [string]$routinePreHashes[$rel]) {
+                        throw "install-skill-mesh: SECURITY -- owned target '$rel' changed before replace."
+                    }
+                } elseif ($freshExists) {
+                    throw "install-skill-mesh: SECURITY -- a target appeared at '$rel' before replace."
+                }
+
+                if ($freshExists) {
+                    $replaceBackup = Resolve-Contained `
+                        (Join-Path $safeDir ('.skill-mesh-replaced-' + $PID + '-' + [Guid]::NewGuid().ToString('N') + '.tmp')) `
+                        $homeAbs
+                    try {
+                        [System.IO.File]::Replace($safeTemp, $freshTarget, $replaceBackup)
+                    } finally {
+                        if (Test-Path -LiteralPath $replaceBackup) {
+                            Remove-Item -LiteralPath $replaceBackup -Force
+                        }
+                    }
+                } else {
+                    [System.IO.File]::Move($safeTemp, $freshTarget)
+                }
+            } finally {
+                if (Test-Path -LiteralPath $safeTemp) {
+                    Remove-Item -LiteralPath $safeTemp -Force
+                }
+            }
             $writtenRel.Add($rel)
             [void]$writtenSet.Add($rel)
         }
@@ -961,32 +1564,97 @@ function Invoke-Install([string]$homeAbs) {
                 }
             }
 
-            # Copy fully succeeded -> remove STALE prior-owned files (owned before but
-            # not produced now), marker-gated + contained; then write the FINAL ledger.
-            foreach ($r in $priorOwnedRel) {
-                if (-not $writtenSet.Contains($r)) {
-                    $abs = Get-ContainedAbs $r $homeAbs
-                    if ($null -ne $abs -and (Test-Path -LiteralPath $abs) -and (Test-FileHasMarker $abs)) {
-                        $safeStale = Resolve-Contained $abs $homeAbs
-                        Remove-Item -LiteralPath $safeStale -Force
-                    }
+            # Verify every produced target, including exact-incoming no-op paths,
+            # before stale deletion. A concurrent edit must not let a successful copy
+            # elsewhere unlock removal of old files.
+            foreach ($pair in $pairs) {
+                $rel = [string]$pair[2]
+                $safeProduced = Assert-ProviderTargetDomain $rel $Provider $homeAbs
+                if (-not (Test-FileHasMarker $safeProduced) -or
+                    (Get-SkillMeshFileSha256 $safeProduced) -cne [string]$pair[3]) {
+                    throw "install-skill-mesh: post-install identity verification failed for '$rel'."
                 }
             }
-            $ownedFinal = Get-ExistingOwned $writtenRel $homeAbs
-            $entry = New-InstallEntry $Provider $subdir $ownedFinal $createdSet
+            # Copy fully succeeded -> remove STALE prior-owned files (owned before but
+            # not produced now), marker-gated + contained; then write the FINAL ledger.
+            foreach ($r in @($stalePreHashes.Keys)) {
+                $safeStale = Assert-ProviderTargetDomain ([string]$r) $Provider $homeAbs
+                if (-not (Test-Path -LiteralPath $safeStale)) { continue }
+                $staleForced = $staleForcedRels.Contains([string]$r)
+                if ($staleForced) {
+                    Assert-ForceBackupCertificate ([string]$r) ([string]$stalePreHashes[$r]) $homeAbs
+                    if ($ForceShared -and -not $Force) {
+                        $safeStale = Resolve-FreshSharedTarget ([string]$r) $Provider $homeAbs $payloadRootAbs
+                    }
+                }
+                if ((-not $staleForced -and -not (Test-FileHasMarker $safeStale)) -or
+                    (Get-SkillMeshFileSha256 $safeStale) -cne [string]$stalePreHashes[$r]) {
+                    throw "install-skill-mesh: SECURITY -- stale path '$r' changed after preflight; aborting."
+                }
+                Remove-Item -LiteralPath $safeStale -Force
+            }
+            $ownedFinal = @()
+            $ownedFinalHashes = @{}
+            foreach ($pair in $pairs) {
+                $rel = [string]$pair[2]
+                $safe = Assert-ProviderTargetDomain $rel $Provider $homeAbs
+                if (-not (Test-FileHasMarker $safe) -or
+                    (Get-SkillMeshFileSha256 $safe) -cne [string]$pair[3]) {
+                    throw "install-skill-mesh: post-install identity verification failed for '$rel'."
+                }
+                $ownedFinal += $rel
+                $ownedFinalHashes[$rel] = [string]$pair[3]
+            }
+            $entry = New-InstallEntry $Provider $subdir $ownedFinal $createdSet $ownedFinalHashes
             Set-InstallEntry $ledger $Provider $entry
             Write-Ledger $homeAbs $ledger
+            if ($writeAheadPublished) {
+                if (-not (Test-InstallEntryEquals (Get-InstallEntry $ledger $Provider) $entry `
+                            $Provider $subdir $homeAbs)) {
+                    throw 'install-skill-mesh: SECURITY -- final ledger authority did not verify after publication.'
+                }
+                # Only retire the sole recovery authority after the normal ledger
+                # carries the same exact current-byte map and has been re-read.
+                Remove-InstallWriteAhead $homeAbs
+            }
             Write-Host "install-skill-mesh: installed '$Provider' into $installRoot ($($ownedFinal.Count) files)."
         } catch {
             # Partial copy / TOCTOU abort: persist a RECONCILED recovery ledger listing
             # only marker-valid candidate files that ACTUALLY exist on disk (prior +
             # written). This is recovery scope, not current-byte identity; the Step
             # 65 installed-hash repair must precede live use.
-            $candidate = New-CIStringSet
-            foreach ($r in $priorOwnedRel) { [void]$candidate.Add($r) }
-            foreach ($r in $writtenRel) { [void]$candidate.Add($r) }
-            $recovered = Get-ExistingOwned $candidate $homeAbs
-            $entry = New-InstallEntry $Provider $subdir $recovered $createdSet
+            $recovered = @()
+            $recoveredHashes = @{}
+            foreach ($pair in $pairs) {
+                $rel = [string]$pair[2]
+                $safe = Assert-ProviderTargetDomain $rel $Provider $homeAbs
+                if ($null -eq $safe -or -not (Test-Path -LiteralPath $safe) -or
+                    -not (Test-FileHasMarker $safe)) { continue }
+                $actual = Get-SkillMeshFileSha256 $safe
+                $sourceHash = [string]$pair[3]
+                $priorHash = Get-OwnedHash $priorOwnedHashes $rel
+                if ($actual -ceq $sourceHash) {
+                    $recovered += $rel
+                    $recoveredHashes[$rel] = $sourceHash
+                } elseif ($null -ne $priorHash -and $actual -ceq $priorHash) {
+                    $recovered += $rel
+                    $recoveredHashes[$rel] = $priorHash
+                }
+            }
+            # Any stale path still present keeps its OLD durable hash. Never baseline
+            # commit-time drift or a forced preimage as newly installed authority.
+            foreach ($relObj in $priorOwnedRel) {
+                $rel = [string]$relObj
+                if ($producedRels.Contains($rel)) { continue }
+                $oldHash = Get-OwnedHash $priorOwnedHashes $rel
+                if ($null -eq $oldHash) { continue }
+                $safe = Assert-ProviderTargetDomain $rel $Provider $homeAbs
+                if (Test-Path -LiteralPath $safe) {
+                    $recovered += $rel
+                    $recoveredHashes[$rel] = $oldHash
+                }
+            }
+            $entry = New-InstallEntry $Provider $subdir $recovered $createdSet $recoveredHashes
             Set-InstallEntry $ledger $Provider $entry
             Write-Ledger $homeAbs $ledger
             throw
@@ -1014,9 +1682,34 @@ function Get-ExistingOwned($rels, [string]$homeAbs) {
     return , $out
 }
 
+function Enter-HomeOperationLock([string]$homeAbs) {
+    # Kernel-owned, cross-process and non-replaceable. Full SHA-256 of the canonical
+    # home identity keeps aliases on one mutex without disclosing the path.
+    $name = 'Local\skill-mesh-install-' + (Get-InstallHomeId $homeAbs -Full)
+    $mutex = New-Object System.Threading.Mutex($false, $name)
+    try {
+        try { $acquired = $mutex.WaitOne(0) }
+        catch [System.Threading.AbandonedMutexException] { $acquired = $true }
+        if (-not $acquired) {
+            $mutex.Dispose()
+            throw ("install-skill-mesh: REFUSING concurrent operation -- another " +
+                   "install/uninstall already holds the lock for this Home. Retry after it exits.")
+        }
+        return , @($mutex, (Get-CanonicalRealPath -InputPath $homeAbs))
+    } catch {
+        if ($null -ne $mutex) { $mutex.Dispose() }
+        throw ("install-skill-mesh: REFUSING concurrent operation -- another " +
+               "install/uninstall already holds the lock for this Home. Retry after it exits.")
+    }
+}
+
 # -- Entry point --------------------------------------------------------------
 
-$homeAbs = Resolve-HomeRoot $TargetHome
+$homeLexical = Resolve-HomeRoot $TargetHome
+$pinnedHomeReal = Get-CanonicalRealPath -InputPath $homeLexical
+$homeAbs = $pinnedHomeReal
+$script:PinnedHomeReal = $pinnedHomeReal
+$script:ForceBackupCertificateRoot = $null
 
 # -- #89: normalize -Provider ONCE, at the parameter boundary -----------------
 # PowerShell's [ValidateSet] matches case-insensitively and does NOT normalize, so
@@ -1038,10 +1731,35 @@ if ($null -eq $canonicalProvider) {
 }
 $Provider = $canonicalProvider
 
-if ($Uninstall) {
-    Invoke-Uninstall $homeAbs
-} else {
-    Invoke-Install $homeAbs
+try {
+    $lockResult = Enter-HomeOperationLock $homeAbs
+    $operationLock = $lockResult[0]
+    if ([string]$lockResult[1] -cne $pinnedHomeReal -or
+        (Get-CanonicalRealPath -InputPath $homeLexical) -cne $pinnedHomeReal) {
+        throw "install-skill-mesh: SECURITY -- Home identity changed while acquiring its operation lock."
+    }
+    # Test-only coordination seam for proving cross-process serialization. The value
+    # is bounded so an accidentally inherited variable cannot hang an operation.
+    $holdText = [Environment]::GetEnvironmentVariable('SKILL_MESH_INSTALL_TEST_HOLD_LOCK_MS')
+    if (-not [string]::IsNullOrWhiteSpace($holdText)) {
+        $holdMs = 0
+        if ([int]::TryParse($holdText, [ref]$holdMs) -and $holdMs -gt 0 -and $holdMs -le 15000) {
+            Start-Sleep -Milliseconds $holdMs
+        }
+    }
+    try {
+        if ($Uninstall) {
+            Invoke-Uninstall $homeAbs
+        } else {
+            Invoke-Install $homeAbs
+        }
+    } finally {
+        if ($null -ne $operationLock) {
+            try { $operationLock.ReleaseMutex() } finally { $operationLock.Dispose() }
+        }
+    }
+} catch {
+    throw
 }
 
 exit 0
