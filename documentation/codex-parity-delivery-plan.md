@@ -247,7 +247,11 @@ decision, not a predicate — Steps 11–12 stay unconditional per P9, and a bar
 | 3 | `/build-phase --plan documentation/codex-parity-delivery-plan.md --steps 9,10,11,12` | operator M3 + M4 |
 
 **Step 1 is not in any pass** — it is `Type: operator`, done by hand before pass 1, and marked
-`Status: DONE` in this file when finished.
+`Status: DONE` in this file when finished. It also **lands the 4-file Step-4 WIP on `main`
+as-is (known-red)**, which is what lets Step 2 run as an ordinary isolation-worktree step:
+`/build-step` branches a worktree from committed state, so an uncommitted delta would be
+invisible to it. `main` therefore enters pass 1 carrying exactly one known failing test —
+Step 2's input, and the baseline `/build-phase` measures from.
 
 Cohort steps 6–8/10 read M1's verdict from `documentation/parity-deltas.md`. Their predicates
 are **absence-safe** (`test -f … && grep -qi …`): a bare `grep` against a missing file exits
@@ -293,30 +297,53 @@ cohorts depend on — a sequencing constraint, not a conditional one.
   experiments/recovery/cross-family-fixture/probe.py,
   tests/experiments/test_cross_family_probe.py,
   tests/distributions/test_path_choke_point.py
-- **Produces:** commits on parity + journey branches; merge commit on `main`; patch-file
-  backup outside worktrees; updated `plan.md`
-- **Done when:** `git status --porcelain` is empty in the parity and main worktrees;
-  `main` contains the maintenance fixes and closure record; one uninterrupted repo-root
-  `python -m pytest` (no path argument) passes on merged `main` with the terminal summary
-  saved to `documentation/findings/cp-step1-root-gate.txt`
+- **Produces:** commits on parity + journey branches; merge commits on `main` (parity **and**
+  `docs/goal-np-journey` — the worklog is already committed on that branch and needs merging,
+  not committing); patch-file backup outside worktrees; updated `plan.md`; the Step-4 WIP
+  landed as-is on `main` (see Done when); `documentation/findings/cp-step1-root-gate.txt`
+- **Done when:**
+  1. The full-root gate — one uninterrupted repo-root `python -m pytest` (no path argument) —
+     passes on merged `main` **with the 4-file Step-4 WIP set aside**, terminal summary saved to
+     `documentation/findings/cp-step1-root-gate.txt`. The WIP is unrelated to the P8 closure
+     record and is Step 2's input; measuring this gate with it present would score Step 2's
+     defect against Step 1's merge.
+  2. The Step-4 WIP is then committed as-is on `main`, referencing #116, with its known-red
+     test named in the commit body.
+  3. `git status --porcelain` is empty in the parity worktree **and** the main worktree — which
+     is only reachable once (2) has landed those four files.
+  4. `main` contains the maintenance fixes, the closure record, and the worklog.
+
+  > **Known-red on exit, by design.** After (2), `main` carries exactly one failing test:
+  > `tests/distributions/test_distributions.py::test_every_emitted_skill_md_frontmatter_survives_a_strict_yaml_parse`.
+  > That is #116's subject and Step 2's entire job. Record the post-(2) count as the baseline
+  > `/build-phase` will start pass 1 from.
 - **Depends on:** none
 
 <!-- autofix-applied: 2026-08-16 -->
 ### Step 2: Finish Step-4 installer hardening (#116)
-- **Problem:** The 4-file write-ahead-authority delta (+1,843/−277) sits uncommitted in the
-  main worktree with one unidentified failing test
-  (`step-4-checkpoint-2026-08-13.md:73–102`; hash-verified recovery copies at
-  `%LOCALAPPDATA%\SkillMesh\Recovery\skill-mesh-step-4-20260814T021546Z-73e9e215`). Identify
-  the failing test in `tests/distributions/test_distributions.py`, fix root-cause (not the
-  assertion), and land the delta: `tools/install-skill-mesh.ps1`,
-  `tools/migrate-legacy-install.ps1`, `tests/distributions/test_distributions.py`,
-  `tests/distributions/test_legacy_migration.py`. Closes #116.
+- **Problem:** The 4-file write-ahead-authority delta (+1,843/−277) is **landed on `main` by
+  Step 1** (as-is, known-red), so this step starts from committed state and an ordinary
+  isolation worktree carries it. The delta's one failing test is **identified**:
+  `tests/distributions/test_distributions.py::test_every_emitted_skill_md_frontmatter_survives_a_strict_yaml_parse`
+  — every emitted `SKILL.md` frontmatter must survive a strict YAML parse, and under the
+  hardened installer/migrator it does not. **Fix the root cause, not the assertion.** The
+  failure is either a real defect in what the hardened write-ahead path emits, or a real
+  defect in what the test models; decide which by reading the emitted bytes, and say
+  explicitly which one it was in the step report. A test diff that relaxes the assertion to
+  green the suite is the codifying-regression anti-pattern and will be rejected on review.
+  Context: `step-4-checkpoint-2026-08-13.md:73–102`; hash-verified recovery copies at
+  `%LOCALAPPDATA%\SkillMesh\Recovery\skill-mesh-step-4-20260814T021546Z-73e9e215`.
+  PyYAML is present (the gate needs a real strict parser — a hand-rolled scanner would only
+  be this repo's *model* of YAML), so this is a genuine parse failure, not a missing
+  dependency. Closes #116.
 - **Type:** code
 - **Issue:** #119
 - **Flags:** --reviewers deep
 - **Files:** tools/install-skill-mesh.ps1, tools/migrate-legacy-install.ps1,
   tests/distributions/test_distributions.py, tests/distributions/test_legacy_migration.py
-- **Produces:** committed hardened installer/migrator + their test suites
+- **Produces:** the root-cause fix that turns `main` green again (Step 1 landed the delta
+  itself); a step report naming which side was defective — the emitted frontmatter or the
+  test's model of it
 - **Done when:** `tests/distributions/` fully green including both write-ahead tests;
   one uninterrupted repo-root `python -m pytest` passes; #116 referenced in the commit
 - **Depends on:** 1
