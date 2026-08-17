@@ -184,10 +184,47 @@ function Get-Field($obj, [string]$name, $default = $null) {
     # StrictMode-safe property read: returns $default when the property is absent (or
     # the container is null) -- so a corrupt/old-shape ledger yields a clean
     # diagnostic path, never a PropertyNotFoundException lockout.
+    #
+    # ENUMERATING BY DESIGN. A bare `return $p.Value` hands the value to PowerShell's
+    # output pipeline, which enumerates collections -- which is exactly what the
+    # `foreach ($rel in @(Get-Field $entry 'owned_files' @()))` spelling all over this
+    # file depends on. It is ALSO why this reader can never answer a shape question:
+    # a one-element JSON array arrives as the bare element and an empty one as $null.
+    # Anything asking `-is [System.Array]` must read through Get-FieldShape below.
     if ($null -eq $obj) { return $default }
     $p = $obj.PSObject.Properties[$name]
     if ($p) { return $p.Value }
     return $default
+}
+
+function Get-FieldShape($obj, [string]$name) {
+    # StrictMode-safe property read that PRESERVES the stored JSON shape: an array
+    # stays an array, including the one-element and the empty case. This is the
+    # reader every `-is [System.Array]` check must use.
+    #
+    # Requiring the array shape is what stops a scalar from being silently accepted
+    # as a one-element list. The sibling migrator already learned this and reads
+    # $property.Value DIRECTLY at both of its shape checks, saying so in as many
+    # words: "PowerShell's pipeline ... collapses [] to null and [0] to scalar ... on
+    # Windows PowerShell 5.1; both are valid JSON arrays and must retain their
+    # container identity" (Confirm-TxRollbackComplete) and "ConvertFrom-Json
+    # preserves a JSON array as System.Array. Requiring that shape prevents a scalar
+    # from being silently accepted as a one-element list"
+    # (Convert-RecoveryStringArray). Routed through Get-Field's enumerating return,
+    # this file's equivalent checks instead
+    # rejected exactly the valid shapes they existed to accept: a ledger entry owning
+    # one file -- or zero -- could never be plainly uninstalled or reinstalled, and a
+    # one-file profile's write-ahead record was unreadable, which is the single most
+    # likely record the recovery path exists to consume.
+    #
+    # The `,` wrap defeats the output enumeration by giving it an outer array to
+    # unwrap. CONSUME BY PLAIN ASSIGNMENT ONLY -- `$x = Get-FieldShape ...`.
+    # `@(Get-FieldShape ...)` would collect the whole value as a single element, so
+    # iterate with `foreach ($x in $value)` or `@($value)` after assigning.
+    if ($null -eq $obj) { return ,$null }
+    $p = $obj.PSObject.Properties[$name]
+    if ($null -eq $p) { return ,$null }
+    return ,$p.Value
 }
 
 function Read-FileHead([string]$absPath, [int]$maxBytes = 8192) {
@@ -621,8 +658,14 @@ function Get-WriteAheadActions($record, [string]$homeAbs, [string]$provider) {
         [string](Get-Field $record 'provider' '') -cne $provider) {
         throw 'install-skill-mesh: REFUSING write-ahead recovery -- record identity is invalid.'
     }
-    $rawActions = Get-Field $record 'actions' $null
-    if ($null -eq $rawActions -or -not ($rawActions -is [System.Array])) {
+    # Must be a JSON array, and a non-empty one: the publisher only writes a record
+    # when it has at least one transition to record, so an empty actions list is
+    # either a truncated or a forged record and must never drive a ledger rewrite.
+    # Read through Get-FieldShape -- a one-action record is the ordinary shape for a
+    # one-file profile, and Get-Field would hand back the bare action object.
+    $rawActions = Get-FieldShape $record 'actions'
+    if ($null -eq $rawActions -or -not ($rawActions -is [System.Array]) -or
+        @($rawActions).Count -eq 0) {
         throw 'install-skill-mesh: REFUSING write-ahead recovery -- actions are missing or malformed.'
     }
     $seen = New-CIStringSet
@@ -875,8 +918,13 @@ function Get-ValidOwnedHashMap($entry, [string]$provider = '', [string]$expected
             return $null
         }
     }
-    $owned = Get-Field $entry 'owned_files' $null
-    $map = Get-Field $entry 'owned_file_hashes' $null
+    # Both must still be their JSON shapes: an array and an object. The array half is
+    # a SHAPE question, so it reads through Get-FieldShape -- a one-file and a
+    # zero-file entry are both ordinary, valid ledgers, and Get-Field's enumerating
+    # return would present them as a bare string and as $null respectively, failing
+    # this check and permanently refusing their uninstall and their reinstall.
+    $owned = Get-FieldShape $entry 'owned_files'
+    $map = Get-FieldShape $entry 'owned_file_hashes'
     if ($null -eq $owned -or -not ($owned -is [System.Array]) -or
         $null -eq $map -or -not ($map -is [System.Management.Automation.PSCustomObject])) {
         return $null
@@ -971,6 +1019,48 @@ function New-TrackedDir([string]$absDir, [string]$homeAbs, $createdSet) {
     }
 }
 
+function New-UninstallIdentityRefusal([string]$rel, [bool]$markerOk, [bool]$hashOk) {
+    # ONE wording for the two sites that refuse on installed-file identity, and it
+    # must name the condition that ACTUALLY failed. A byte change and a provenance
+    # failure are different operator problems: reporting "no longer matches its
+    # recorded installed-byte hash" for a file whose bytes match exactly -- an
+    # operator file that merely mentions the marker token, whose hash the ledger
+    # happens to record -- sends the operator hunting for a change that never
+    # happened, and hides the real finding (this path is not skill-mesh's).
+    $why = if (-not $hashOk -and -not $markerOk) {
+        'its current bytes do not match a recorded installed-byte hash, and it ' +
+        'carries no well-formed skill-mesh generated header'
+    } elseif (-not $hashOk) {
+        'its current bytes do not match a recorded installed-byte hash'
+    } else {
+        'it carries no well-formed skill-mesh generated header, so it is not ' +
+        'provably a skill-mesh installed file'
+    }
+    return ("install-skill-mesh: REFUSING uninstall -- '$rel' " + $why +
+            "; no files were deleted.")
+}
+
+function Write-LedgerEntryDomainWarnings($entry, [string]$provider, [string]$homeAbs) {
+    # DIAGNOSTIC ONLY -- never authority, never a decision, and it deletes nothing.
+    #
+    # When a ledger grants no removal authority the refusal message names the
+    # owned_file_hashes shape, which is the right message for a corrupt map and the
+    # WRONG one for a tampered path: an owned_files row that resolves outside this
+    # provider's discovery domain is a security finding, and Get-ValidOwnedHashMap
+    # swallows the reason (it returns $null and cannot report). Name every such row
+    # here, on stderr, immediately before the refusal, so an operator sees the escape
+    # rather than being sent to look for a hash problem.
+    foreach ($relObj in @(Get-Field $entry 'owned_files' @())) {
+        try { $null = Assert-ProviderTargetDomain ([string]$relObj) $provider $homeAbs }
+        catch {
+            [Console]::Error.WriteLine(
+                "install-skill-mesh: WARNING -- ledger entry '$relObj' resolves outside " +
+                "the install home's '$provider' discovery domain ($homeAbs); it is not " +
+                "owned and nothing was touched. $($_.Exception.Message)")
+        }
+    }
+}
+
 function Assert-OwnedFilesRemovable([string]$homeAbs, $entry, $removalHashes, $forcedRels, [string]$payloadRootAbs) {
     if ($null -eq $entry -or $null -eq $removalHashes) {
         throw "install-skill-mesh: REFUSING uninstall -- owned_file_hashes is missing, malformed, or inconsistent; no files were deleted."
@@ -984,9 +1074,10 @@ function Assert-OwnedFilesRemovable([string]$homeAbs, $entry, $removalHashes, $f
         if ($forced -and $ForceShared -and -not $Force) {
             $abs = Resolve-FreshSharedTarget ([string]$rel) $Provider $homeAbs $payloadRootAbs
         }
-        if ((-not $forced -and -not (Test-FileHasMarker $abs)) -or $actual -cne $expected) {
-            throw ("install-skill-mesh: REFUSING uninstall -- '$rel' no longer matches " +
-                   "its recorded installed-byte hash; no files were deleted.")
+        $markerOk = $forced -or (Test-FileHasMarker $abs)
+        $hashOk = ($actual -ceq $expected)
+        if (-not $markerOk -or -not $hashOk) {
+            throw (New-UninstallIdentityRefusal ([string]$rel) $markerOk $hashOk)
         }
     }
 }
@@ -1079,6 +1170,10 @@ function Invoke-Uninstall([string]$homeAbs) {
     $validHashes = Get-ValidOwnedHashMap $entry $Provider $subdir $homeAbs
     $hadValidHashes = $null -ne $validHashes
     if ($null -eq $validHashes) {
+        # The map is not authority. Before refusing, name any owned_files row that
+        # escapes this provider's discovery domain -- that is a tamper signal the
+        # shape-only message would otherwise bury.
+        Write-LedgerEntryDomainWarnings $entry $Provider $homeAbs
         if (-not $Force -and -not $ForceShared) {
             throw "install-skill-mesh: REFUSING uninstall -- owned_file_hashes is missing, malformed, or inconsistent. Nothing was deleted."
         }
@@ -1109,7 +1204,9 @@ function Invoke-Uninstall([string]$homeAbs) {
         if (-not (Test-Path -LiteralPath $abs)) { continue }
         $recorded = Get-OwnedHash $validHashes $rel
         $actual = Get-SkillMeshFileSha256 $abs
-        if ($null -ne $recorded -and (Test-FileHasMarker $abs) -and $actual -ceq $recorded) {
+        $markerOk = Test-FileHasMarker $abs
+        $hashOk = ($null -ne $recorded -and $actual -ceq $recorded)
+        if ($markerOk -and $hashOk) {
             $removalHashes[$rel] = $recorded
             continue
         }
@@ -1119,8 +1216,7 @@ function Invoke-Uninstall([string]$homeAbs) {
             catch { $sharedAllowed = $false }
         }
         if (-not $Force -and -not $sharedAllowed) {
-            throw ("install-skill-mesh: REFUSING uninstall -- '$rel' no longer matches " +
-                   "its recorded installed-byte hash; no files were deleted.")
+            throw (New-UninstallIdentityRefusal ([string]$rel) $markerOk $hashOk)
         }
         if ([string]::IsNullOrWhiteSpace($BackupDir)) {
             throw "install-skill-mesh: REFUSING forced uninstall -- -BackupDir is required. Nothing was deleted."
@@ -1507,20 +1603,24 @@ function Invoke-Install([string]$homeAbs) {
 
                 # Fresh lexical resolution + current-byte authority immediately before
                 # atomic replacement. Never trust the earlier resolved target here.
-                $freshTarget = Assert-ProviderTargetDomain $rel $Provider $homeAbs
-                $freshExists = Test-Path -LiteralPath $freshTarget
+                # NAMED $safe* deliberately: both the replace target and the discarded
+                # replace-backup are mutation targets inside the consumer home, and the
+                # path choke-point convention (tests/distributions/test_path_choke_point.py)
+                # is that any such path is a $safe* name born from an approved resolver.
+                $safeFreshTarget = Assert-ProviderTargetDomain $rel $Provider $homeAbs
+                $freshExists = Test-Path -LiteralPath $safeFreshTarget
                 if ($forceRels.Contains($rel)) {
                     Assert-ForceBackupCertificate $rel ([string]$forcePreHashes[$rel]) $homeAbs
                     if ($ForceShared -and -not $Force) {
-                        $freshTarget = Resolve-FreshSharedTarget $rel $Provider $homeAbs $payloadRootAbs
+                        $safeFreshTarget = Resolve-FreshSharedTarget $rel $Provider $homeAbs $payloadRootAbs
                     }
                     if (-not $freshExists -or
-                        (Get-SkillMeshFileSha256 $freshTarget) -cne [string]$forcePreHashes[$rel]) {
+                        (Get-SkillMeshFileSha256 $safeFreshTarget) -cne [string]$forcePreHashes[$rel]) {
                         throw "install-skill-mesh: SECURITY -- forced target '$rel' changed after backup; refusing replace."
                     }
                 } elseif ($routinePreHashes.ContainsKey($rel)) {
-                    if (-not $freshExists -or -not (Test-FileHasMarker $freshTarget) -or
-                        (Get-SkillMeshFileSha256 $freshTarget) -cne [string]$routinePreHashes[$rel]) {
+                    if (-not $freshExists -or -not (Test-FileHasMarker $safeFreshTarget) -or
+                        (Get-SkillMeshFileSha256 $safeFreshTarget) -cne [string]$routinePreHashes[$rel]) {
                         throw "install-skill-mesh: SECURITY -- owned target '$rel' changed before replace."
                     }
                 } elseif ($freshExists) {
@@ -1528,18 +1628,18 @@ function Invoke-Install([string]$homeAbs) {
                 }
 
                 if ($freshExists) {
-                    $replaceBackup = Resolve-Contained `
+                    $safeReplaceBackup = Resolve-Contained `
                         (Join-Path $safeDir ('.skill-mesh-replaced-' + $PID + '-' + [Guid]::NewGuid().ToString('N') + '.tmp')) `
                         $homeAbs
                     try {
-                        [System.IO.File]::Replace($safeTemp, $freshTarget, $replaceBackup)
+                        [System.IO.File]::Replace($safeTemp, $safeFreshTarget, $safeReplaceBackup)
                     } finally {
-                        if (Test-Path -LiteralPath $replaceBackup) {
-                            Remove-Item -LiteralPath $replaceBackup -Force
+                        if (Test-Path -LiteralPath $safeReplaceBackup) {
+                            Remove-Item -LiteralPath $safeReplaceBackup -Force
                         }
                     }
                 } else {
-                    [System.IO.File]::Move($safeTemp, $freshTarget)
+                    [System.IO.File]::Move($safeTemp, $safeFreshTarget)
                 }
             } finally {
                 if (Test-Path -LiteralPath $safeTemp) {

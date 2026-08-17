@@ -1613,10 +1613,32 @@ def test_build_refuses_traversal_source_path(tmp_path):
     assert not (dist / "claude" / "evilsrc").exists()
 
 
-def test_uninstall_refuses_escaping_ledger_entry(dist_root, tmp_path):
-    """BLOCK 3: the ledger is untrusted at uninstall time. A tampered owned_files
-    entry that resolves OUTSIDE the install home must be skipped, and the outside
-    file must SURVIVE."""
+@pytest.mark.parametrize("forge_hash", [False, True], ids=["unhashed", "hash-forged"])
+def test_uninstall_refuses_escaping_ledger_entry(dist_root, tmp_path, forge_hash):
+    """BLOCK 3: the ledger is untrusted at uninstall time. An owned_files entry that
+    resolves OUTSIDE the install home grants NO removal authority at all: uninstall
+    fails closed, the refusal NAMES the escaping row, and nothing is touched anywhere
+    -- not the outside file, not the installed tree, not the ledger.
+
+    Authority is all-or-nothing, per Get-ValidOwnedHashMap's own contract: "A
+    partially useful-looking legacy/tampered map grants no destructive authority,
+    because selecting only its convenient rows would silently bless an ambiguous
+    ledger shape." Skipping the bad row and deleting the rest IS selecting the
+    convenient rows, so this test asserts refusal rather than a warned partial run.
+
+    Both tamper shapes are covered:
+
+    * ``unhashed`` -- the row is appended to owned_files alone, so the
+      owned_files/owned_file_hashes bijection breaks. (The shape a naive tamperer
+      produces, and the one this test carried before the map became authority.)
+    * ``hash-forged`` -- the row is appended WITH a syntactically valid 64-hex
+      hash, so the bijection survives and the escaping PATH is the only thing left
+      that can reject it. This is the strictly more capable attacker, and it is the
+      shape that isolates the containment check inside Get-ValidOwnedHashMap
+      (Assert-ProviderTargetDomain) as the thing doing the work -- the bijection
+      dimension alone is already covered by
+      test_invalid_owned_hash_maps_never_authorize_uninstall.
+    """
     home = tmp_path / "home"
     sibling = tmp_path / "sibling"
     sibling.mkdir()
@@ -1626,17 +1648,31 @@ def test_uninstall_refuses_escaping_ledger_entry(dist_root, tmp_path):
     r = _install(home, "claude", dist_dir=dist_root)
     assert r.returncode == 0, r.stderr
 
+    disco = home / DISCOVERY_SUBDIR["claude"]
+    before_tree = _tree_snapshot(disco)
     ledger_path = home / ".skill-mesh-install.json"
     led = json.loads(ledger_path.read_text(encoding="utf-8"))
     # Tamper: append an entry that escapes the install home.
-    led["installs"]["claude"]["owned_files"].append("../sibling/canary.txt")
+    escaping = "../sibling/canary.txt"
+    led["installs"]["claude"]["owned_files"].append(escaping)
+    if forge_hash:
+        led["installs"]["claude"]["owned_file_hashes"][escaping] = \
+            hashlib.sha256(canary.read_bytes()).hexdigest()
     ledger_path.write_text(json.dumps(led), encoding="utf-8")
+    before_ledger = ledger_path.read_bytes()
 
     ru = _install(home, "claude", uninstall=True)
-    assert ru.returncode == 0, f"uninstall errored on tampered ledger:\n{ru.stderr}"
-    assert "WARNING" in ru.stderr or "outside" in (ru.stdout + ru.stderr)
-    # The outside file must survive.
+    combined = ru.stdout + ru.stderr
+    assert ru.returncode != 0, f"a tampered ledger authorized deletion:\n{combined}"
+    assert "REFUS" in combined, combined
+    # The escape must be NAMED, not buried under a generic malformed-map message.
+    assert "WARNING" in ru.stderr and "outside" in combined, combined
+    assert escaping in combined, combined
+    # The outside file must survive...
     assert canary.is_file() and canary.read_text(encoding="utf-8") == "CANARY"
+    # ...and so must everything else: a refusal is a true no-op.
+    assert _tree_snapshot(disco) == before_tree
+    assert ledger_path.read_bytes() == before_ledger
 
 
 def test_install_refuses_to_clobber_pre_existing_real_skill_file(dist_root, tmp_path):
@@ -2494,7 +2530,21 @@ def test_markerless_distribution_source_refuses_before_home_mutation(tmp_path):
 def test_marker_false_positive_token_mention_not_owned(dist_root, tmp_path):
     """BLOCK 1: an operator file that merely MENTIONS the marker token (not a
     well-formed generated header) at a colliding path is NOT clobbered on a plain
-    install and NOT deleted on uninstall, even when the ledger lists it as owned."""
+    install and NOT deleted on uninstall, even when the ledger lists it as owned.
+
+    The ledger here is deliberately MAXIMALLY convincing: a complete, bijective
+    owned_file_hashes map whose recorded hash is the operator file's CURRENT bytes.
+    Every other authority the installer has therefore says "yes" -- the path is
+    listed, the entry is well-formed, the recorded hash matches exactly -- and the
+    anchored provenance parser is the single thing standing between the operator's
+    file and deletion. That is the property this test is named for.
+
+    (Handing it a hashless ledger instead, as this test did before owned_file_hashes
+    became authority, no longer reaches the marker at all: an inconsistent map is
+    refused up front by Get-ValidOwnedHashMap -- see
+    test_hashless_legacy_uninstall_requires_and_honors_backed_force -- so the marker
+    parser would never run and this test would prove nothing about it.)
+    """
     home = tmp_path / "home"
     target = home / DISCOVERY_SUBDIR["claude"] / "build-phase" / "SKILL.md"
     target.parent.mkdir(parents=True)
@@ -2502,9 +2552,12 @@ def test_marker_false_positive_token_mention_not_owned(dist_root, tmp_path):
     # Operator's own file that quotes the token in prose (no generated header block).
     operator_text = f"# My hand-authored notes\nThe {marker} token is documented here.\n"
     target.write_text(operator_text, encoding="utf-8")
+    owned_rel = _disco_rel("claude", "build-phase", "SKILL.md")
     _write_ledger(home, "claude",
-                  owned=[_disco_rel("claude", "build-phase", "SKILL.md")],
-                  created=[_disco_rel("claude", "build-phase")])
+                  owned=[owned_rel],
+                  created=[_disco_rel("claude", "build-phase")],
+                  hashes={owned_rel: hashlib.sha256(target.read_bytes()).hexdigest()})
+    ledger_before = (home / ".skill-mesh-install.json").read_bytes()
 
     r = _install(home, "claude", dist_dir=dist_root)
     assert r.returncode != 0 and "REFUS" in (r.stdout + r.stderr), \
@@ -2512,9 +2565,16 @@ def test_marker_false_positive_token_mention_not_owned(dist_root, tmp_path):
     assert target.read_text(encoding="utf-8") == operator_text
 
     ru = _install(home, "claude", uninstall=True)
-    assert ru.returncode == 0, ru.stderr
+    combined = ru.stdout + ru.stderr
+    assert ru.returncode != 0 and "REFUS" in combined, \
+        "a token-mentioning operator file was misclassified as owned and deleted"
+    # The refusal must name PROVENANCE, not a byte change: the recorded hash matches
+    # this file exactly, so "no longer matches its recorded hash" would be false and
+    # would send the operator looking for a change that never happened.
+    assert "generated header" in combined, combined
     assert target.read_text(encoding="utf-8") == operator_text, \
         "a token-mentioning operator file was deleted on uninstall"
+    assert (home / ".skill-mesh-install.json").read_bytes() == ledger_before
 
 
 def test_zero_file_provider_install_completes_cleanly(tmp_path):
@@ -2540,6 +2600,66 @@ def test_zero_file_provider_install_completes_cleanly(tmp_path):
     assert r.returncode == 0, f"zero-file install crashed:\n{r.stdout}\n{r.stderr}"
     led = json.loads((home / ".skill-mesh-install.json").read_text(encoding="utf-8"))
     assert led["installs"]["gpt"]["owned_files"] == []
+
+    # ...and the empty ledger it wrote is authority the NEXT run can still read.
+    ru = _install(home, "gpt", uninstall=True)
+    assert ru.returncode == 0, f"zero-file uninstall refused its own ledger:\n{ru.stderr}"
+    assert not (home / ".skill-mesh-install.json").exists()
+
+
+def _single_file_manifest(path):
+    """A manifest whose claude profile is exactly ONE generated file (a Claude-only
+    provider-native skill: no core, so no shared payload is seeded either)."""
+    return _write_manifest(path, [{
+        "name": "claude-oauth-auth", "status": "provider-native", "core": None,
+        "providers": {"claude": "skills/claude-oauth-auth/providers/claude.md"},
+    }])
+
+
+def test_single_file_profile_reinstalls_and_uninstalls_without_force(tmp_path):
+    """A profile whose ledger owns exactly ONE file is an ordinary install: a plain
+    reinstall over changed bytes and a plain uninstall must both succeed.
+
+    Regression, and a real one -- the size of the profile is load-bearing here.
+    owned_files is read back for Get-ValidOwnedHashMap's `-is [System.Array]` shape
+    check, the check that stops a scalar being accepted as a one-element list. Read
+    through a helper whose `return` ENUMERATES, a one-element JSON array arrives as a
+    bare string and an empty one as $null, so the check rejected the two shapes it
+    existed to accept. A one-file profile therefore lost ALL routine authority: the
+    plain reinstall refused ("lack current-byte overwrite authority") and the plain
+    uninstall refused ("owned_file_hashes is missing, malformed, or inconsistent"),
+    leaving -Force plus an external -BackupDir as the only way to remove a perfectly
+    ordinary install. Every other install test in this file owns several files, which
+    is exactly why nothing saw it.
+    """
+    dist = _build_from_manifest(tmp_path / "d",
+                                _single_file_manifest(tmp_path / "native.json"),
+                                provider="claude")
+    produced = sorted(p for p in (dist / "claude").rglob("*") if p.is_file())
+    assert len(produced) == 1, f"this regression needs a one-file profile, got {produced}"
+    source = produced[0]
+
+    home = tmp_path / "home"
+    assert _install(home, "claude", dist_dir=dist).returncode == 0
+    entry = _ledger(home)["installs"]["claude"]
+    assert len(entry["owned_files"]) == 1, entry["owned_files"]
+    assert set(entry["owned_file_hashes"]) == set(entry["owned_files"])
+    target = home / entry["owned_files"][0]
+
+    # CHANGED bytes, appended after the generated header so provenance survives. An
+    # identical-bytes reinstall is an exact-incoming no-op that never consults the
+    # recorded hash, so it could not stand in for this: only a real overwrite proves
+    # the one-entry hash map is still readable as authority.
+    source.write_bytes(source.read_bytes() + b"\nCHANGED-PAYLOAD\n")
+    again = _install(home, "claude", dist_dir=dist)
+    assert again.returncode == 0, \
+        f"a one-file profile lost routine overwrite authority:\n{again.stdout}\n{again.stderr}"
+    assert target.read_bytes() == source.read_bytes()
+
+    ru = _install(home, "claude", uninstall=True)
+    assert ru.returncode == 0, f"a one-file profile could not be uninstalled:\n{ru.stderr}"
+    assert not target.exists()
+    assert not (home / ".skill-mesh-install.json").exists()
 
 
 def _open_deny_delete(path):

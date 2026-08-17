@@ -1,0 +1,97 @@
+CP Step 2 post-merge full-root DONE gate (2026-08-17) -- GREEN
+Command: python -m pytest   (repo root, NO path argument -- reaches the three root-only
+  test roots _shared/, skill-iterate/scripts/, skill-eval-setup/scripts/ that a `tests/`
+  path argument never collects)
+Tree: main worktree with the Step-2 root-cause fix landed (base 48540b8; issues #119 / #116)
+Result: 1265 collected / 1264 passed / 1 skipped / 0 failed, exit 0, uninterrupted (1:31:49)
+
+Baseline comparison:
+  pre-WIP full root (cp-step1-root-gate.txt): 1227 collected / 1226 passed / 1 skipped
+  this run:                                   1265 collected / 1264 passed / 1 skipped
+  delta: +38 collected, +38 passed, same single skip. Test count is above baseline.
+  The three tests known-red at the Step-1 post-landing baseline
+  (cp-step1-post-landing-baseline.txt: 3 failed / 461 passed in tests/distributions) are green.
+
+Note on a FIRST, DISCARDED attempt at this gate (recorded so the number above is not
+mistaken for a re-run of a real failure): the first full-root run reported 6 failed /
+1258 passed. All six were caused by this evidence file itself, not by the code under test.
+Raw pytest output was teed straight into documentation/findings/, so line 9 carried an
+unsanitized pytest `rootdir:` line naming a real account under C:/Users/<real-account>/ ;
+the leak gate
+(tests/package-integrity/test_manifest_contract.py::test_no_absolute_private_paths_committed)
+enumerates via `git ls-files --cached --others --exclude-standard`, so it swept the file while
+it was still untracked -- working exactly as designed -- and release.ps1 re-runs that same
+integrity check inside its staged tree, cascading into 5 tests/release failures. Zero
+tests/distributions failures in that run. After sanitizing, those 13 tests pass (exit 0),
+and this clean uninterrupted run is the gate of record.
+Lesson: write gate output OUTSIDE the repo, sanitize, then land it -- never tee raw output
+into a tree whose own suite greps it for private paths mid-run.
+---
+============================= test session starts =============================
+platform win32 -- Python 3.14.3, pytest-9.1.1, pluggy-1.6.0
+rootdir: C:\Users\<user>\dev\skill-mesh
+plugins: anyio-4.14.1
+collected 1265 items
+
+_shared\test_build_step_verdict.py ..................................... [  2%]
+..........                                                               [  3%]
+_shared\test_calibrate_judge.py ...........................              [  5%]
+_shared\test_grader_prompt.py ................                           [  7%]
+_shared\test_score_skill.py ...........................                  [  9%]
+_shared\test_score_skill_absolute.py ..........                          [ 10%]
+experiments\recovery\cross-family-fixture\seed\base\test_order_totals.py . [ 10%]
+.                                                                        [ 10%]
+skill-eval-setup\scripts\test_generate_bad_examples.py ................. [ 11%]
+......................................................                   [ 15%]
+skill-iterate\scripts\test_adversarial_calibration.py .................. [ 17%]
+.................                                                        [ 18%]
+skill-iterate\scripts\test_append_result.py .........                    [ 19%]
+skill-iterate\scripts\test_differential_grader.py ...................... [ 21%]
+...                                                                      [ 21%]
+skill-iterate\scripts\test_morning_summary.py ........                   [ 21%]
+skill-iterate\scripts\test_resolve_queue.py ............                 [ 22%]
+skill-iterate\scripts\test_structural_metrics.py ....................... [ 24%]
+...............                                                          [ 25%]
+tests\calibration\test_calibrate.py .................................... [ 28%]
+..                                                                       [ 28%]
+tests\distributions\test_distributions.py .............................. [ 31%]
+.............................................................            [ 36%]
+tests\distributions\test_host_inspect.py ............................... [ 38%]
+........................................................................ [ 44%]
+............................................................             [ 48%]
+tests\distributions\test_legacy_migration.py ........................... [ 51%]
+........................................................................ [ 56%]
+........................................................................ [ 62%]
+................................                                         [ 64%]
+tests\distributions\test_path_choke_point.py ..........                  [ 65%]
+tests\experiments\test_cross_family_probe.py ........................... [ 67%]
+.......................                                                  [ 69%]
+tests\experiments\test_lifecycle_probe.py ............................   [ 71%]
+tests\package-integrity\test_cutover_handoff.py ........................ [ 73%]
+........................                                                 [ 75%]
+tests\package-integrity\test_frontmatter_yaml.py ...................     [ 77%]
+tests\package-integrity\test_host_discovery.py .................         [ 78%]
+tests\package-integrity\test_link_resolution.py ........................ [ 80%]
+....................                                                     [ 82%]
+tests\package-integrity\test_manifest_contract.py ...................... [ 83%]
+..................                                                       [ 85%]
+tests\package-integrity\test_recovery_plan_hygiene.py ...                [ 85%]
+tests\package-integrity\test_release_gates.py .......................... [ 87%]
+........                                                                 [ 88%]
+tests\package-integrity\test_skill_tree.py ............................. [ 90%]
+..                                                                       [ 90%]
+tests\release\test_release_script.py ............                        [ 91%]
+tests\router\test_gpt_transport_precedence.py .....................      [ 93%]
+tests\router\test_no_claude_dependency.py ...                            [ 93%]
+tests\router\test_path_guard.py ....s                                    [ 93%]
+tests\router\test_provider_host_adapters.py ...........                  [ 94%]
+tests\router\test_router_scenarios.py ...............                    [ 95%]
+tests\router\test_shim_parity.py ...                                     [ 96%]
+tests\router\test_spend_ledger_guard.py ....                             [ 96%]
+tests\smoke\test_cross_provider_smoke.py ............................... [ 98%]
+....                                                                     [ 99%]
+tests\smoke\test_release_candidate_report.py .....                       [ 99%]
+tests\telemetry\test_telemetry.py .....                                  [100%]
+
+================ 1264 passed, 1 skipped in 5509.53s (1:31:49) =================
+CLEAN_GATE_EXIT=0

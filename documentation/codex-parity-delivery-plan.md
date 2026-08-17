@@ -368,6 +368,7 @@ cohorts depend on — a sequencing constraint, not a conditional one.
 - **Done when:** `tests/distributions/` fully green including both write-ahead tests;
   one uninterrupted repo-root `python -m pytest` passes; #116 referenced in the commit
 - **Depends on:** 1
+- **Status:** DONE (2026-08-17)
 
 <!-- autofix-applied: 2026-08-16 -->
 ### Step 3: Codex provider generation surface

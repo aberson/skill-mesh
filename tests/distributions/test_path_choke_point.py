@@ -55,9 +55,16 @@ green run as proof of absence:
 7. **Helper-call laundering** -- a raw path passed to a mutating helper whose own
    primitive is ``SITE_EXEMPT`` on an unverified "every caller passes ``$safe*``".
 8. **The hand-maintained ``LEXICAL_HOME`` joiner-name list** -- a renamed or newly
-   added lexical joiner is invisible until someone adds it here. This is the one
-   blind spot that contradicts the doctrine in the paragraph below, and it is called
-   out rather than quietly tolerated.
+   added lexical joiner is invisible until someone adds it here. This is the blind
+   spot that contradicts the doctrine in the paragraph below, and it is called out
+   rather than quietly tolerated. ``APPROVED_RESOLVERS`` is hand-maintained too, but
+   it fails the other way: an unlisted resolver reads as a violation (loud and
+   correct, never silent), and the silent half -- an entry whose function was
+   renamed or deleted out from under it -- is covered by
+   ``test_approved_resolvers_are_live_and_carry_a_reason``. What stays unproven
+   there is *thinness*: that a listed adapter still returns only its inner
+   resolver's output. That check is AST-shaped, so the entries carry a written
+   reason and cite the runtime tests that exercise their refusals.
 9. **Cross-file flow** -- ``$safe*`` assignment tracking is per file, so a resolver
    result returned from a helper in another file is not followed.
 
@@ -136,15 +143,54 @@ SOURCE_ARG = re.compile(r"-LiteralPath\s+(?P<arg>\S+)|-Path\s+(?P<arg2>\S+)")
 SAFE_VAR = re.compile(r"\A\$safe[A-Za-z0-9_]*\Z", re.I)
 
 # A $safe* variable may only be born from one of these.
-APPROVED_RESOLVERS = (
-    "Resolve-HomeTarget",        # migrator: THE consumer-home choke point
-    "Resolve-HomeTargetForRead",
-    "Resolve-TxPath",            # migrator: THE transaction-directory choke point
-    "Resolve-TxPayloadPath",
-    "Assert-SafeActionTarget",   # migrator: thin adapter over Resolve-HomeTarget
-    "Resolve-Contained",         # installer: its own choke point over Resolve-SafePath
-    "Resolve-SafePath",          # runtime/path-guard.ps1, the primitive itself
-)
+#
+# HAND-MAINTAINED, and therefore held to the same discipline as the allowlist below:
+# every name carries a written reason, and test_approved_resolvers_are_live_and_carry
+# _a_reason proves each one is still a real `function` in the tracked tree. This list
+# is a sibling of blind spot 8 -- a resolver the installer/migrator grows and nobody
+# adds here reads as a violation (loud, correct), while a name left here after its
+# function is deleted or weakened would read as a silent hole (the failure mode the
+# liveness test exists to prevent). Adding a name is a security decision: it must be
+# a function whose every returned value is the choke point's own output.
+APPROVED_RESOLVERS = {
+    "Resolve-HomeTarget":
+        "Migrator: THE consumer-home choke point. Re-resolves the real path and "
+        "asserts containment in the home before returning it.",
+    "Resolve-HomeTargetForRead":
+        "Migrator: the read-side spelling of the same choke point, so a pre-image "
+        "read cannot be redirected by an ancestor junction.",
+    "Resolve-TxPath":
+        "Migrator: THE transaction-directory choke point, for paths under the "
+        "operator-supplied -BackupDir rather than the consumer home.",
+    "Resolve-TxPayloadPath":
+        "Migrator: the backup-payload spelling of the transaction-directory choke "
+        "point (Resolve-TxPath with the payload subtree as its root).",
+    "Assert-SafeActionTarget":
+        "Migrator: thin adapter over Resolve-HomeTarget -- it returns that call's "
+        "value and adds an operation-name assertion, never a path of its own.",
+    "Resolve-Contained":
+        "Installer: its own one-line choke point -- `return (Resolve-SafePath -Path "
+        "$path -AllowedRoots @($homeAbs))`, nothing else.",
+    "Resolve-SafePath":
+        "runtime/path-guard.ps1 -- the primitive every other entry bottoms out in. "
+        "It follows reparse points and throws on escape.",
+    "Assert-ProviderTargetDomain":
+        "Installer: thin adapter over Resolve-SafePath via Get-ContainedAbs, whose "
+        "resolved value is its ONLY return (it throws on $null). It is strictly "
+        "STRONGER than the choke point it wraps: on top of containment it asserts "
+        "the rel is lexically inside this provider's discovery subdir, that the "
+        "resolved target lands inside that subdir's real path, and that no other "
+        "provider's root -- or a reparse point beneath it -- can reach the same "
+        "target. Its refusals are proven at runtime by "
+        "test_distributions.py::test_uninstall_refuses_escaping_ledger_entry and "
+        "::test_cross_provider_poison_cannot_authorize_uninstall.",
+    "Resolve-FreshSharedTarget":
+        "Installer: thin adapter over Assert-ProviderTargetDomain (above), whose "
+        "value is its ONLY return. It adds the -ForceShared scope proof -- the rel "
+        "is lexically under <subdir>/_shared/ AND the RESOLVED target is under the "
+        "real payload root -- so it can only ever narrow, never widen, what the "
+        "adapter it wraps already contained.",
+}
 
 # --------------------------------------------------------------------------- #
 # Allowlist
@@ -242,8 +288,15 @@ def strip_ps_comments(text):
     """Drop block and line comments so documentation cannot trip the sweep.
 
     Same idiom as tests/router/test_no_claude_dependency.py. A backtick-escaped `#
-    is not a comment, so it is preserved."""
-    text = re.sub(r"<#.*?#>", "", text, flags=re.S)
+    is not a comment, so it is preserved.
+
+    A block comment is replaced by its OWN newlines rather than by nothing, so the
+    line numbers this module reports stay the line numbers of the real file. Deleting
+    them silently shifted every reported site upward by the number of block-comment
+    lines above it (the three sites in the #116 baseline were reported ~100 lines
+    early), which sends a reader to the wrong code and makes the evidence in an issue
+    or a checkpoint wrong."""
+    text = re.sub(r"<#.*?#>", lambda m: "\n" * m.group(0).count("\n"), text, flags=re.S)
     return "\n".join(re.sub(r"(?<!`)#.*", "", line) for line in text.split("\n"))
 
 
@@ -506,6 +559,32 @@ def test_gate_follows_safe_alias_chains_transitively():
              "$safeB = $safeA\n"
              + "Remove-Item " + "-LiteralPath " + "$safeA -Force")
     assert violations_in("tools/migrate-legacy-install.ps1", cycle), "a cycle is not proof"
+
+
+def test_approved_resolvers_are_live_and_carry_a_reason():
+    """The resolver list is the OTHER half of the convention, and it is hand-
+    maintained too.
+
+    Rule 2 ("a $safe* variable is only ever assigned from an approved resolver") is
+    only as strong as this list is honest. A name left here after its function was
+    renamed or deleted keeps blessing an assignment shape that no longer resolves
+    anything -- a silent hole, the same failure mode test_allowlist_entries_are_live
+    _and_carry_a_reason guards against on the allowlist side. So: every approved
+    resolver must still be a real `function` in a tracked .ps1, and must say why it
+    is one.
+
+    This is a liveness and documentation check, NOT a proof of thinness. Proving
+    that an adapter returns only its inner resolver's value is AST-shaped work
+    (module docstring, deferred D5); the reasons above cite the runtime tests that
+    exercise each adapter's refusals instead.
+    """
+    sources = {rel: (REPO_ROOT / rel).read_text(encoding="utf-8") for rel in tracked_ps1()}
+    for name, reason in APPROVED_RESOLVERS.items():
+        assert len(reason) > 40, f"APPROVED_RESOLVERS[{name}] needs a real reason"
+        pattern = re.compile(r"^function\s+" + re.escape(name) + r"\b", re.M)
+        assert any(pattern.search(text) for text in sources.values()), (
+            f"APPROVED_RESOLVERS names {name}, which is not defined as a function in "
+            "any tracked .ps1 -- a dead entry silently blesses an assignment shape")
 
 
 def test_allowlist_entries_are_live_and_carry_a_reason():
