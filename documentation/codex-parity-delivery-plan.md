@@ -10,8 +10,11 @@
 
 ## 1. What This Feature Does
 
-Proposal: https://claude.ai/code/artifact/a32fd48f-6f3b-4a49-84c8-111898fdac89
-(standalone copy: `documentation/codex-parity-delivery-proposal.html`)
+Proposal: `documentation/codex-parity-delivery-proposal.html` — the standalone copy, committed
+in-repo. The original Claude artifact URL is deliberately omitted: this is a public repository,
+and `test_no_private_leak_in_migrated_tree` rejects any bare UUID, because a harness session id
+carries no drive letter and no username for the other five leak patterns to catch it by. Do not
+paste the artifact link back in.
 
 Deliver every portable skill-mesh skill as a generated, self-contained **Codex-native**
 package discoverable from `$CODEX_EFFECTIVE_HOME\.agents\skills`, from the same authored

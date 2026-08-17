@@ -325,7 +325,8 @@ failures:
   `99f1ee0718106ce7c21e3b30797aa8ee4acaaad60268e87c969fd55c74e0a102` instead of the pinned
   `3783ed5a9ead148f4dc13d8da224a021d5465647cf97788aede6afca8e1d1885`;
 - package-integrity documentation referred to a non-resolving code-span path token,
-  `tests/path/diff`;
+  "tests/path/diff" (deliberately quoted here, not code-spanned: the gate scans code spans
+  only, so writing this token in backticks re-creates the very finding this line records);
 - the recovery-plan hygiene test required the exact status row `Provider expansion | PARKED`;
 - five release tests failed as a cascade because the staged package reran the same two
   package-integrity checks and therefore did not produce checksums.
