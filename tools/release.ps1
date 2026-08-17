@@ -80,8 +80,9 @@
     own git state.
 
 .PARAMETER Provider
-    Passed through to build-distributions.ps1: 'claude', 'gpt', or 'both'
-    (default).
+    Passed through to build-distributions.ps1 verbatim: a single 'claude' | 'gpt' |
+    'codex', or a set -- 'both' (default) = claude + gpt, 'all' = claude + gpt + codex.
+    See the param block for why the default is still 'both'.
 
 .PARAMETER PythonExe
     Interpreter used for the package-integrity gate (phase 3). Default:
@@ -98,7 +99,17 @@ param(
 
     [string]$SourceRoot = '',
 
-    [ValidateSet('claude', 'gpt', 'both')]
+    # Mirrors build-distributions.ps1's set exactly -- this value is forwarded to it
+    # verbatim (Phase 2 below), so a value legal here and illegal there would fail
+    # mid-release with the builder's error rather than at parameter binding.
+    #
+    # The default stays 'both' (claude + gpt) ON PURPOSE now that a third provider
+    # exists: a release artifact is something a consumer INSTALLS, and codex has no
+    # discovery root yet (tools/skill-mesh-discovery.ps1 knows only claude/gpt until
+    # Phase CP Step 5), so defaulting to 'all' would ship and checksum a profile no
+    # install path can consume. Ship codex in a release by asking for it -- '-Provider
+    # all' once Step 5 lands, or '-Provider codex' for a codex-only artifact.
+    [ValidateSet('claude', 'gpt', 'codex', 'both', 'all')]
     [string]$Provider = 'both',
 
     [string]$PythonExe = 'python'

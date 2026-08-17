@@ -28,9 +28,9 @@ pass in a worktree and fail in the main checkout.
 Authoritative structural data (names, status, local_capable, capabilities,
 descriptions, support assets) is encoded here as checked-in constants. Four of those
 sets are NON-DERIVABLE BY DESIGN and each states why at its own definition:
-LOCAL_CAPABLE, SUB_AGENT, VISION, DESCRIPTIONS. PORTABLE and NATIVE are the two sets
-that ARE derivable from the committed tree; they stay spelled out for readability and
-are CHECKED against the tree by `derived_skill_sets()` on every run.
+LOCAL_CAPABLE, SUB_AGENT, VISION, DESCRIPTIONS. PORTABLE, NATIVE and CODEX are the
+three sets that ARE derivable from the committed tree; they stay spelled out for
+readability and are CHECKED against the tree by `derived_skill_sets()` on every run.
 
 Usage:
     python tools/gen_manifest.py
@@ -74,6 +74,26 @@ PORTABLE = [
 ]
 
 NATIVE = ["claude-oauth-auth", "context-slim", "judge-motion"]
+
+# Skills carrying a Codex provider adapter (skills/<name>/providers/codex.md).
+#
+# CODEX IS AN ORTHOGONAL AXIS, NOT A THIRD BUCKET. PORTABLE/NATIVE partition the
+# roster on the GPT axis (`providers/gpt.md` present or absent), and that partition is
+# what `status`, `counts["portable"]`, `counts["provider_native"]` and the README's
+# GPT-capable line all mean. A codex adapter is ADDITIVE on top of a record that is
+# already portable-or-native: it never moves a skill between those two buckets, so
+# EXPECTED_TOTAL / EXPECTED_PORTABLE / EXPECTED_NATIVE stay 50/47/3 and every existing
+# count keeps its exact meaning. Modelling codex as a third status instead would
+# redefine `portable` for all 50 records and invalidate every committed tally.
+#
+# Derivable from the tree exactly like PORTABLE/NATIVE, and CHECKED against it by
+# `derived_skill_sets()` on every run, so the spelled-out copy cannot drift.
+#
+# EMPTY BY DESIGN AT THIS STEP. Phase CP Step 3 builds the generation SURFACE; the
+# pilot five adapters land in Step 4 and the cohorts in Steps 6-8. An empty list is
+# therefore the correct committed state, and `-Provider codex` legitimately emits an
+# empty profile until the first adapter is authored.
+CODEX = []
 
 # local-capable=Y rows of .claude/references/model-mapping.md (authoritative table).
 #
@@ -345,12 +365,14 @@ def skill_support_assets(name: str):
 
 
 def derived_skill_sets(skills_dir: Path = SKILLS_DIR):
-    """Enumerate the COMMITTED skills/ tree -> (portable_names, native_names), sorted.
+    """Enumerate the COMMITTED skills/ tree -> (portable, native, codex), each sorted.
 
     A skill directory carrying providers/gpt.md is portable; one without it is
-    provider-native. These are the only two roster sets the tree can answer for --
-    LOCAL_CAPABLE, SUB_AGENT, VISION and DESCRIPTIONS are non-derivable by design and
-    each says so at its definition.
+    provider-native. A directory carrying providers/codex.md is additionally codex-
+    capable -- an ORTHOGONAL axis that does not move the skill between the first two
+    buckets (see CODEX above). These are the only three roster sets the tree can answer
+    for -- LOCAL_CAPABLE, SUB_AGENT, VISION and DESCRIPTIONS are non-derivable by
+    design and each says so at its definition.
 
     The walk is gated on `p.is_dir()`, so skills/inventory.json (a generated artifact,
     not a skill) is skipped rather than counted as a 51st entry. `_shared` is excluded
@@ -358,11 +380,13 @@ def derived_skill_sets(skills_dir: Path = SKILLS_DIR):
     under skills/ today, and the exclusion is here so the step that eventually creates
     it cannot silently turn it into a provider-native record.
     """
-    portable, native = [], []
+    portable, native, codex = [], [], []
     for p in sorted(skills_dir.iterdir()):
         if not p.is_dir() or p.name == "_shared":
             continue
         (portable if (p / "providers" / "gpt.md").is_file() else native).append(p.name)
+        if (p / "providers" / "codex.md").is_file():
+            codex.append(p.name)
     # `raise`, not `assert`, is deliberate here and in build(): the plan asks for a
     # GUARD, and `python -O` / PYTHONOPTIMIZE strips every assert, which would let a
     # drifted tree regenerate the manifest silently -- the exact failure this guard
@@ -380,7 +404,16 @@ def derived_skill_sets(skills_dir: Path = SKILLS_DIR):
         raise ValueError(
             f"expected {EXPECTED_NATIVE} provider-native skills (no providers/gpt.md), "
             f"found {len(native)}: {native}")
-    return portable, native
+    # A provider-native skill is Claude-only BY DEFINITION -- that is what the status
+    # means, and tools/release_checks.py rejects a gpt adapter on one for the same
+    # reason. A codex.md sitting in a native skill's providers/ dir is therefore a
+    # contradiction in the tree, caught here rather than shipped into a profile.
+    native_codex = sorted(set(codex) & set(native))
+    if native_codex:
+        raise ValueError(
+            "provider-native skills are Claude-only and must not carry "
+            f"providers/codex.md: {native_codex}")
+    return portable, native, codex
 
 
 def build():
@@ -395,11 +428,13 @@ def build():
     # roster edited in one place only, without deleting the readable list or the four
     # non-derivable sets beside it. `raise`, not `assert`, for the -O reason spelled
     # out in derived_skill_sets().
-    derived_portable, derived_native = derived_skill_sets()
+    derived_portable, derived_native, derived_codex = derived_skill_sets()
     if derived_portable != sorted(PORTABLE):
         raise ValueError(f"skills/ tree != PORTABLE: {derived_portable}")
     if derived_native != sorted(NATIVE):
         raise ValueError(f"skills/ tree != NATIVE: {derived_native}")
+    if derived_codex != sorted(CODEX):
+        raise ValueError(f"skills/ tree != CODEX: {derived_codex}")
     skills = []
     for name in sorted(PORTABLE + NATIVE):
         native = name in NATIVE
@@ -423,6 +458,15 @@ def build():
                 "claude": f"skills/{name}/providers/claude.md",
                 "gpt": f"skills/{name}/providers/gpt.md",
             }
+            # Codex is additive and OPTIONAL per skill: the key is present only for
+            # skills whose adapter is authored. Key ORDER is load-bearing for the
+            # committed bytes -- codex sorts after claude/gpt here because json.dumps
+            # preserves insertion order, and the builder reads by name, never by
+            # position. A skill with no codex.md carries no codex key at all rather
+            # than a null, so `Get-Prop $providersObj 'codex'` stays the single
+            # absence test the builder already uses for gpt on a native skill.
+            if name in CODEX:
+                providers["codex"] = f"skills/{name}/providers/codex.md"
             migration = {
                 "legacy_core": f".claude/skills-gpt/{name}/SKILL-core.md",
                 "legacy_claude_launcher": f".claude/skills/{name}/SKILL.md",
@@ -446,6 +490,15 @@ def build():
         "total": len(skills),
         "portable": sum(1 for s in skills if s["status"] == "portable"),
         "provider_native": sum(1 for s in skills if s["status"] == "provider-native"),
+        # Per-provider adapter tallies. `claude` is every skill (all 50 carry one) and
+        # `gpt` equals `portable` TODAY -- both are spelled out anyway so the codex
+        # tally is read on the same axis as its siblings rather than being the one
+        # count with no peer, and so a future divergence between "is portable" and
+        # "has a gpt adapter" shows up as two different numbers instead of hiding
+        # behind a shared one.
+        "claude": sum(1 for s in skills if "claude" in s["providers"]),
+        "gpt": sum(1 for s in skills if "gpt" in s["providers"]),
+        "codex": sum(1 for s in skills if "codex" in s["providers"]),
         "local_capable": sum(1 for s in skills if s["local_capable"]),
         "sub_agent": sum(1 for s in skills if "sub-agent" in s["capabilities"]),
         "vision": sum(1 for s in skills if "vision" in s["capabilities"]),
@@ -534,6 +587,31 @@ def build():
                 "If NEITHER is present -> unset/unsupported: error (exit 2) instructing an explicit -Provider claude|gpt.",
             ],
         },
+        # THE INSTALLABLE-PROVIDER VOCABULARY -- deliberately NOT extended with codex
+        # at Phase CP Step 3. Read this before adding a key.
+        #
+        # This block is not a list of providers the BUILDER can emit; the builder never
+        # reads it (tools/build-distributions.ps1 resolves each skill's adapter from the
+        # per-skill `providers` dict). It is the vocabulary that the INSTALL-side tools
+        # read to decide which discovery roots a home binds:
+        #   * tools/migrate-legacy-install.ps1:562-570 loads it into $script:KnownProviders
+        #     and New-MigrationPlan (:907-915) then requires a discovery root for EVERY
+        #     name in it -- a provider with no root is a hard UNKNOWN_PROVIDER_ROOT block
+        #     that refuses the whole migration.
+        #   * tools/inspect-host-install.ps1:349-356,602 loads the same vocabulary.
+        #
+        # tools/skill-mesh-discovery.ps1 is the sole owner of the provider -> root map
+        # and knows only claude/gpt. Declaring `codex` HERE while that map lacks it
+        # would not add a capability, it would BREAK the migrator for every consumer
+        # home until the map catches up -- so the two must land in the same commit.
+        # That commit is Phase CP Step 5, which owns skill-mesh-discovery.ps1 and the
+        # installer; and Step 5 is the earliest it CAN land, because D-CP6 defers the
+        # `.agents/skills` root policy (that root is currently Copilot's never-install
+        # active alternate) to M1 evidence rather than pre-building it.
+        #
+        # Step 3's own surface -- per-skill `providers.codex` paths, the codex counts
+        # above, `-Provider codex` emission -- needs none of this, so the generation
+        # rails ship now and the install vocabulary follows in Step 5.
         "providers": {
             "claude": {"host": "Claude Code", "transport_default": "host-native"},
             "gpt": {"host": "GitHub Copilot / GPT", "transport_default": "copilot"},
@@ -552,6 +630,9 @@ def build():
         "counts": counts,
         "portable": PORTABLE,
         "provider_native": NATIVE,
+        # The codex roster, on the same footing as the two above. Orthogonal to them:
+        # every name here is ALSO in `portable` (see CODEX / derived_skill_sets).
+        "codex": sorted(CODEX),
         "local_capable": sorted(LOCAL_CAPABLE),
         "sub_agent": sorted(SUB_AGENT),
         "vision": sorted(VISION),

@@ -32,6 +32,7 @@ Run: `python -m pytest tests/package-integrity/test_frontmatter_yaml.py`
 """
 
 import importlib.util
+import json
 import sys
 from pathlib import Path
 
@@ -130,7 +131,7 @@ def test_canonical_gpt_adapters_carry_no_frontmatter_and_are_graded_if_they_grow
         "a canonical GPT adapter now ships its own frontmatter: "
         f"{with_block}. That is not forbidden, but it routes the build through "
         "build-distributions.ps1's pass-through branch instead of "
-        "New-GptFrontmatter -- confirm the emitted profile is still graded before "
+        "New-SynthesizedFrontmatter -- confirm the emitted profile is still graded before "
         "updating this premise.")
 
 
@@ -425,3 +426,86 @@ def test_anchor_a_missing_parser_reds_this_gate_and_leaves_collection_standing()
     # And the real module is untouched by the probe.
     assert fc.YAML_IMPORT_ERROR is None
     assert fc.frontmatter_defects(_GOOD) == []
+
+
+def _codex_adapters():
+    return sorted(SKILLS_ROOT.glob("*/providers/codex.md"))
+
+
+def test_canonical_codex_adapters_carry_no_frontmatter_and_are_graded_if_they_grow_one():
+    """The codex arm of the premise above (Phase CP Step 3, issue #120).
+
+    ARMED, NOT YET LOAD-BEARING -- and stated that way rather than dressed up. Step 3
+    builds the generation rails and authors ZERO codex adapters (the pilot five are Step
+    4, the cohorts Steps 6-8), so the per-file loop below has nothing to iterate today.
+    Its sibling GPT check can assert a vacuity FLOOR (>= 47 adapters); this one cannot,
+    and inventing one would just red the suite.
+
+    What it does instead, so the zero is a CHECKED FACT rather than an accident:
+
+      * The count is cross-checked against the manifest's own `counts["codex"]`. A typo
+        in the glob (`codex.MD`, `provider/`) would silently return 0 forever and this
+        gate would report PASS for the rest of Phase CP -- the exact false-green shape
+        this repository keeps getting bitten by. Tying it to a number produced by a
+        different generator, from a different input, makes a broken glob loud.
+      * The moment Step 4 lands adapters, the loop starts grading them with no edit
+        here -- which is the whole point of arming it now rather than after.
+
+    The premise itself is the same as the GPT one: canonical adapters ship no frontmatter
+    because build-distributions.ps1 synthesizes it from the manifest record
+    (New-SynthesizedFrontmatter, shared by both profiles). If one grows its own block the
+    build silently routes through the pass-through branch instead, so the premise is
+    asserted, and any block that does appear is graded -- under CODEX_KEYS, which is
+    codex's actual contract, not Claude's laxer superset.
+    """
+    adapters = _codex_adapters()
+    manifest = json.loads(
+        (REPO_ROOT / "config" / "skill-manifest.json").read_text(encoding="utf-8"))
+    assert len(adapters) == manifest["counts"]["codex"], (
+        f"{len(adapters)} skills/*/providers/codex.md on disk but the manifest counts "
+        f"{manifest['counts']['codex']} -- either the glob is wrong (this gate would be "
+        "silently vacuous for the rest of Phase CP) or the manifest needs regenerating "
+        "with `python tools/gen_manifest.py`")
+
+    failures = []
+    with_block = []
+    for path in adapters:
+        text = _read(path)
+        if fc.split_frontmatter(text) is None:
+            continue
+        with_block.append(_rel(path))
+        for defect in fc.frontmatter_defects(text, allowed_keys=fc.CODEX_KEYS):
+            failures.append(f"{_rel(path)}: {defect}")
+    assert not failures, (
+        "a canonical codex adapter grew frontmatter that violates the contract:\n  "
+        + "\n  ".join(failures))
+    assert not with_block, (
+        "a canonical codex adapter now ships its own frontmatter: "
+        f"{with_block}. That is not forbidden, but it routes the build through "
+        "build-distributions.ps1's pass-through branch instead of "
+        "New-SynthesizedFrontmatter -- confirm the emitted profile is still graded "
+        "before updating this premise.")
+
+
+def test_no_provider_native_skill_carries_a_codex_adapter():
+    """Provider-native is CLAUDE-ONLY, so codex.md must not appear in one.
+
+    Non-vacuous TODAY, unlike the check above: the three native skills exist now, so
+    this genuinely grades something at Step 3. It is the frontmatter-suite view of a
+    contract also enforced in tools/gen_manifest.py (derived_skill_sets raises),
+    tests/package-integrity/test_manifest_contract.py (manifest records),
+    tests/package-integrity/test_skill_tree.py (tree shape) and tools/release_checks.py
+    (release gate) -- four independent layers, because the builder EXCLUDES these skills
+    from every non-claude profile and a declaration here would promise a package that is
+    never emitted.
+    """
+    offenders = []
+    for path in _claude_adapters():
+        skill_dir = path.parent.parent
+        if (skill_dir / "core.md").exists():
+            continue  # portable: a codex adapter is legitimate here
+        if (skill_dir / "providers" / "codex.md").exists():
+            offenders.append(skill_dir.name)
+    assert not offenders, (
+        "provider-native (Claude-only) skills must not carry providers/codex.md: "
+        f"{sorted(offenders)}")

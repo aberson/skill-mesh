@@ -161,11 +161,28 @@ def manifest_completeness_defects(manifest: dict, repo_root: Path):
                     defects.append(f"{name}: portable skill missing '{prov}' adapter in manifest")
                 elif not _file_exists_within(repo_root, rel):
                     defects.append(f"{name}: declared {prov} adapter '{rel}' does not exist on disk (or escapes the release root)")
+            # Codex (Phase CP Step 3) is OPTIONAL per skill, so absence is not a defect
+            # -- but a DECLARED codex path must still exist on disk, exactly like the
+            # two required ones. Without this the release gate would certify a manifest
+            # whose codex adapter is missing, and build-distributions.ps1 would then
+            # throw "adapter source missing" partway through the staged build, after the
+            # gate had already said the package was releasable.
+            codex_rel = providers.get("codex")
+            if codex_rel and not _file_exists_within(repo_root, codex_rel):
+                defects.append(
+                    f"{name}: declared codex adapter '{codex_rel}' does not exist on "
+                    "disk (or escapes the release root)")
         elif status == "provider-native":
             if core:
                 defects.append(f"{name}: provider-native skill has a non-null core")
             if "gpt" in providers:
                 defects.append(f"{name}: provider-native skill has a gpt adapter")
+            # Provider-native means CLAUDE-ONLY, so a codex adapter is rejected for the
+            # same reason a gpt one is: the builder excludes these skills from every
+            # non-claude profile, so the declaration promises a package that will never
+            # be emitted.
+            if "codex" in providers:
+                defects.append(f"{name}: provider-native skill has a codex adapter")
             rel = providers.get("claude")
             if not rel:
                 defects.append(f"{name}: provider-native skill missing claude adapter")

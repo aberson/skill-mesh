@@ -130,9 +130,25 @@ def require_yaml():
 # same commit that starts using it.
 CLAUDE_KEYS = frozenset({"name", "description", "user-invocable", "argument"})
 
-# What tools/build-distributions.ps1's New-GptFrontmatter synthesizes, and the only
+# What tools/build-distributions.ps1's New-SynthesizedFrontmatter emits, and the only
 # keys a GPT profile SKILL.md may carry.
 GPT_KEYS = frozenset({"name", "description"})
+
+# The Codex contract (Phase CP Step 3). Codex's documented unit is a skill directory
+# whose SKILL.md leads with a YAML frontmatter block
+# (documentation/native-claude-codex-skill-parity-plan.md), and the emitter feeds it
+# through the SAME New-SynthesizedFrontmatter path as the GPT profile, so the permitted
+# key set is the same two keys.
+#
+# SPELLED AS ITS OWN NAME, NOT `CODEX_KEYS = GPT_KEYS`. The two sets are equal today by
+# coincidence of two hosts wanting the same minimum, not because one contract derives
+# from the other: they are different hosts whose accepted vocabularies can diverge
+# independently (Copilot could accept a new key; Codex's is re-verified against the
+# INSTALLED CLI per D-CP7). Aliasing them would make a future one-host change silently
+# widen the other host's gate -- and an over-accepting frontmatter gate is the exact
+# issue-#69 failure mode this module exists to prevent. The equality is asserted as a
+# fact in test_frontmatter_yaml.py rather than encoded as a dependency here.
+CODEX_KEYS = frozenset({"name", "description"})
 
 # Keys whose value must be a string, and keys whose value must be a real bool.
 STRING_KEYS = frozenset({"name", "description", "argument"})

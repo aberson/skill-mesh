@@ -19,6 +19,11 @@
                                      only), so the launcher's reference resolves.
       dist/gpt/<skill>/SKILL.md      GPT/Copilot discovery launcher (providers/gpt.md).
       dist/gpt/<skill>/core.md       The shared canonical core (portable only).
+      dist/codex/<skill>/SKILL.md    Codex discovery launcher (providers/codex.md),
+                                     leading with a synthesized name/description
+                                     frontmatter block exactly like the GPT profile.
+      dist/codex/<skill>/core.md     The shared canonical core, so the launcher's
+                                     co-located core.md reference resolves.
       dist/<p>/_shared/<asset>       The shared support payload (judge-core.md,
                                      score-skill.md, the scoring/grader scripts, the
                                      scoring Workflow), ONE copy per profile at the
@@ -44,8 +49,15 @@
 
     Provider-native skills (manifest status 'provider-native' / core == null) get
     ONLY their truthful supported adapter: they appear in dist/claude/ with no core
-    reference, and are ABSENT from dist/gpt/ -- no misleading stub for the
-    unsupported provider.
+    reference, and are ABSENT from every non-claude profile (dist/gpt/, dist/codex/)
+    -- no misleading stub for an unsupported provider.
+
+    CODEX IS A THIRD PROVIDER ON THESE SAME RAILS (Phase CP D-CP1), not a separate
+    generator: it reads the same manifest, uses the same provenance header, the same
+    determinism guarantees, and the same frontmatter synthesizer as the GPT profile.
+    A skill reaches dist/codex only by declaring `providers.codex` in the manifest, so
+    the profile is legitimately EMPTY until the first codex adapter is authored
+    (Phase CP Step 4 ships the pilot five).
 
     SECURITY: the manifest is treated as untrusted input. Each skill 'name' is
     validated as a safe single path segment before it is joined into an output path,
@@ -63,11 +75,18 @@
 
 .PARAMETER OutputDir
     Staging root the profiles are written under. Default: <repo>/dist. Each
-    per-provider subtree (<OutputDir>/claude, <OutputDir>/gpt) is removed and
-    regenerated from scratch so a rebuild cannot leave stale files behind.
+    per-provider subtree (<OutputDir>/claude, <OutputDir>/gpt, <OutputDir>/codex) is
+    removed and regenerated from scratch so a rebuild cannot leave stale files behind.
+    Only the subtrees this invocation builds are touched.
 
 .PARAMETER Provider
-    Which profile(s) to build: 'claude', 'gpt', or 'both' (default).
+    Which profile(s) to build: a single 'claude' | 'gpt' | 'codex', or a set --
+    'both' (default) = claude + gpt, 'all' = claude + gpt + codex.
+
+    'both' DELIBERATELY still means exactly claude + gpt now that a third provider
+    exists; 'all' is the everything-spelling. See the comment at the $profiles
+    assignment for why widening 'both' would silently change what tools/release.ps1
+    ships and what the distribution suites measure.
 
 .PARAMETER ManifestPath
     Override the manifest consumed. Default: <repo>/config/skill-manifest.json.
@@ -76,13 +95,15 @@
 .EXAMPLE
     powershell -File tools\build-distributions.ps1
     powershell -File tools\build-distributions.ps1 -Provider claude -OutputDir C:\stage\dist
+    powershell -File tools\build-distributions.ps1 -Provider codex
+    powershell -File tools\build-distributions.ps1 -Provider all
 #>
 
 [CmdletBinding()]
 param(
     [string]$OutputDir = '',
 
-    [ValidateSet('claude', 'gpt', 'both')]
+    [ValidateSet('claude', 'gpt', 'codex', 'both', 'all')]
     [string]$Provider = 'both',
 
     [string]$ManifestPath = ''
@@ -105,6 +126,11 @@ $SHARED_DEST = '_shared'
 # ('_shared/x'), or anchored at depth 2 / depth 3 ('../../_shared/x',
 # '../../../_shared/x'). The capture is the leaf, which is all the emitter needs.
 $SHARED_REF_RE = [regex]'(?:\.\./)*_shared/([A-Za-z0-9][A-Za-z0-9._-]*)'
+# Profiles whose canonical adapters ship NO frontmatter of their own, so the emitter
+# synthesizes a `{name, description}` block from the manifest record. Claude is absent
+# on purpose: its canonical claude.md already leads with frontmatter carrying the
+# richer CLAUDE_KEYS vocabulary, which must pass through verbatim.
+$SYNTHESIZE_FRONTMATTER_PROFILES = @('gpt', 'codex')
 $VERDICT_HELPER_SOURCE = Join-Path $SHARED_ROOT 'build_step_verdict.py'
 $PATH_GUARD = Join-Path $REPO_ROOT 'runtime\path-guard.ps1'
 $PROVENANCE = Join-Path $TOOLS_DIR 'skill-mesh-provenance.ps1'
@@ -234,9 +260,16 @@ function ConvertTo-YamlDoubleQuoted([string]$s) {
     return '"' + $e + '"'
 }
 
-function New-GptFrontmatter([string]$name, [string]$description) {
-    # GitHub Copilot CLI requires every native SKILL.md to LEAD with a YAML
-    # frontmatter block carrying at least `name` + `description` (Step 43 proof).
+function New-SynthesizedFrontmatter([string]$name, [string]$description) {
+    # ONE synthesizer for every profile whose canonical adapters ship no frontmatter of
+    # their own -- gpt today, codex from Phase CP Step 3. Both hosts require the same
+    # two keys and nothing else, which is why they share this function and the single
+    # `{name, description}` contract that
+    # tests/package-integrity/frontmatter_contract.py grades as GPT_KEYS / CODEX_KEYS:
+    #   * GitHub Copilot CLI requires every native SKILL.md to LEAD with a YAML
+    #     frontmatter block carrying at least `name` + `description` (Step 43 proof).
+    #   * Codex's documented unit is a skill directory whose SKILL.md leads with a YAML
+    #     frontmatter block (documentation/native-claude-codex-skill-parity-plan.md).
     # `name` and `description` both come from the manifest record (single source of
     # truth); the description is never re-authored per host.
     $descYaml = ConvertTo-YamlDoubleQuoted $description
@@ -434,7 +467,34 @@ $manifest = (Read-SourceText $ManifestPath) | ConvertFrom-Json
 # regardless of manifest array order.
 $skills = @($manifest.skills | Sort-Object -Property name)
 
-$profiles = if ($Provider -eq 'both') { @('claude', 'gpt') } else { @($Provider) }
+# -- Which profiles does this invocation build? -------------------------------
+#
+# 'both' KEEPS ITS EXACT PRE-CODEX MEANING: claude + gpt, and nothing else. It is not
+# redefined to "every declared provider", and 'all' is the new spelling for that.
+#
+# WHY, when 'both' now names 2 of 3 providers. The word is load-bearing in places a
+# rename cannot reach safely:
+#   * tools/release.ps1 defaults to -Provider both and SHA-256s everything under the
+#     generated dist/. Widening 'both' would silently add codex bytes to every release
+#     artifact -- while codex is not yet installable (no discovery root until Step 5),
+#     so the artifact would ship a profile no install path can consume.
+#   * The distribution and link-resolution suites build 'both' and then assert on the
+#     complete dist/ tree shape and per-profile link floors. Widening it changes what
+#     those gates measure without any of them saying so.
+#   * Phase CP Step 3's own Done-when is a BYTE-REGRESSION compare of dist/claude and
+#     dist/gpt against pre-step output. A 'both' that emits a third profile makes the
+#     control arm of that compare a different command than the one that produced the
+#     baseline.
+# So 'both' stays the stable 2-profile contract every existing caller already relies
+# on, 'codex' is the explicit opt-in this step adds, and 'all' is the forward-looking
+# everything-spelling for callers that genuinely want the full set. Callers wanting
+# codex must ask for it by name -- an omission is visible in the command line, whereas
+# a redefined 'both' is not.
+$profiles = switch ($Provider) {
+    'both'  { @('claude', 'gpt') }
+    'all'   { @('claude', 'gpt', 'codex') }
+    default { @($Provider) }
+}
 
 # -- Build --------------------------------------------------------------------
 
@@ -469,8 +529,13 @@ foreach ($profile in $profiles) {
 
         $isNative = ($status -eq 'provider-native') -or ($null -eq (Get-Prop $skill 'core'))
 
-        # GPT profile excludes provider-native skills entirely (no misleading stub).
-        if ($profile -eq 'gpt' -and $isNative) { continue }
+        # Provider-native means CLAUDE-ONLY, so every NON-claude profile excludes these
+        # skills entirely (no misleading stub for a provider that cannot run them).
+        # Spelled as 'not claude' rather than 'is gpt' so a provider added later is
+        # excluded by DEFAULT: the safe direction for this test is to omit a skill from
+        # a new profile, never to ship a Claude-only skill into one. Codex inherits the
+        # rule for free, which is what makes dist/codex free of the 3 native skills.
+        if ($profile -ne 'claude' -and $isNative) { continue }
 
         $providersObj = Get-Prop $skill 'providers'
         $adapterRel = Get-Prop $providersObj $profile
@@ -508,22 +573,25 @@ foreach ($profile in $profiles) {
         # NOT gated on $hasCore: judge-motion is core: null in the manifest and its
         # adapter still carries depth-3 '../../../_shared/' references (D2).
         $adapterBody = Repoint-SharedReference $adapterBody
-        # GPT/Copilot native discovery requires the SKILL.md to LEAD with a YAML
-        # frontmatter block (name + description). The canonical gpt.md adapters carry
-        # no frontmatter, so synthesize it from the manifest record here; the
-        # provenance header is then placed immediately AFTER the closing '---' by
-        # Add-Provenance's frontmatter-first path. Skip synthesis if the adapter body
-        # somehow already leads with frontmatter (defensive: avoid double blocks).
-        # Claude output is untouched -- its canonical claude.md already ships
-        # frontmatter and Add-Provenance already sequences behind it.
-        if ($profile -eq 'gpt' -and -not $adapterBody.StartsWith("---`n")) {
+        # GPT/Copilot AND Codex native discovery both require the SKILL.md to LEAD with
+        # a YAML frontmatter block (name + description). Neither the canonical gpt.md
+        # nor codex.md adapters carry frontmatter, so synthesize it from the manifest
+        # record here; the provenance header is then placed immediately AFTER the
+        # closing '---' by Add-Provenance's frontmatter-first path. Skip synthesis if
+        # the adapter body somehow already leads with frontmatter (defensive: avoid
+        # double blocks). Claude output is untouched -- its canonical claude.md already
+        # ships frontmatter and Add-Provenance already sequences behind it, and its
+        # richer CLAUDE_KEYS vocabulary must pass through verbatim rather than being
+        # replaced by a synthesized two-key block.
+        if ($SYNTHESIZE_FRONTMATTER_PROFILES -contains $profile -and
+            -not $adapterBody.StartsWith("---`n")) {
             $desc = [string](Get-Prop $skill 'description')
             if ([string]::IsNullOrWhiteSpace($desc)) {
                 # Fallback keeps minimal/adversarial manifests (no description field)
                 # producing a valid frontmatter rather than an empty one.
                 $desc = "$name (skill-mesh skill)."
             }
-            $adapterBody = (New-GptFrontmatter $name $desc) + $adapterBody
+            $adapterBody = (New-SynthesizedFrontmatter $name $desc) + $adapterBody
         }
         $launcher = Add-Provenance $adapterBody $adapterRel $profile
         Write-GeneratedFile (Join-Path $skillOutDir 'SKILL.md') $launcher $profileDirAbs

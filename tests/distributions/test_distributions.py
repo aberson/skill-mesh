@@ -322,6 +322,17 @@ def _skill_partition():
     return portable, native
 
 
+def _codex_skills():
+    """Names declaring a `providers.codex` path -- exactly what dist/codex may hold.
+
+    Read from the manifest rather than spelled, because this list GROWS across Phase CP
+    (0 at Step 3, 5 after Step 4's pilot, the portable catalog after the cohorts) and a
+    spelled copy would have to be edited by every one of those steps.
+    """
+    m = _load_manifest()
+    return [s["name"] for s in m["skills"] if "codex" in s.get("providers", {})]
+
+
 def _tree_snapshot(root):
     """Map of posix-relative path -> file bytes for every file under root."""
     snap = {}
@@ -775,7 +786,8 @@ def test_vendored_reference_citations_reach_the_payload(dist_root):
 
 
 def _synthetic_build_repo(tmp_path, shared_files, core_body, adapter_body=None,
-                          gpt_adapter_body=None, description=None):
+                          gpt_adapter_body=None, description=None,
+                          codex_adapter_body=None):
     """A minimal, fully SYNTHETIC repo the real builder can run inside.
 
     The builder resolves `_shared/` and `skills/` from its own `$PSScriptRoot`, so the
@@ -786,8 +798,15 @@ def _synthetic_build_repo(tmp_path, shared_files, core_body, adapter_body=None,
     `gpt_adapter_body` also declares a `gpt` provider, so a caller can build BOTH
     profiles from planted sources -- the only way to reach build-distributions.ps1's
     frontmatter PASS-THROUGH branch (a gpt adapter that already leads with `---`, so
-    New-GptFrontmatter is skipped), which no real canonical source exercises today.
-    `description` populates the manifest record New-GptFrontmatter synthesizes from.
+    New-SynthesizedFrontmatter is skipped), which no real canonical source exercises
+    today. `description` populates the manifest record New-SynthesizedFrontmatter
+    synthesizes from.
+
+    `codex_adapter_body` declares a `codex` provider the same way. This is THE fixture
+    seam for the codex profile: Phase CP Step 3 builds the generation rails but
+    deliberately authors no real `skills/*/providers/codex.md` (that is Step 4's pilot
+    five), so a synthetic repo is the only honest way to prove `-Provider codex` emits
+    a correct, deterministic tree. Nothing is planted in the real checkout.
     """
     repo = tmp_path / "srepo"
     for sub in ("tools", "runtime", "config", "_shared", "skills/demo/providers"):
@@ -814,6 +833,10 @@ def _synthetic_build_repo(tmp_path, shared_files, core_body, adapter_body=None,
         (repo / "skills" / "demo" / "providers" / "gpt.md").write_text(
             gpt_adapter_body, encoding="utf-8")
         entry["providers"]["gpt"] = "skills/demo/providers/gpt.md"
+    if codex_adapter_body is not None:
+        (repo / "skills" / "demo" / "providers" / "codex.md").write_text(
+            codex_adapter_body, encoding="utf-8")
+        entry["providers"]["codex"] = "skills/demo/providers/codex.md"
     if description is not None:
         entry["description"] = description
     _write_manifest(repo / "config" / "skill-manifest.json", [entry])
@@ -1298,6 +1321,13 @@ def test_every_emitted_skill_md_frontmatter_survives_a_strict_yaml_parse(dist_ro
     `user-invocable` a real boolean."""
     fc = _frontmatter_contract()
     portable, native = _skill_partition()
+    # Per-profile expected launcher count, derived from the manifest rather than
+    # spelled: claude carries every skill, gpt carries the portable ones. No `codex`
+    # entry here -- `dist_root` builds -Provider both, which is claude + gpt BY DESIGN
+    # (see the $profiles comment in build-distributions.ps1) and never produces a
+    # dist/codex to grade. The codex profile has its own dedicated coverage below,
+    # built from the synthetic fixture repo; a third dict entry here would be dead code
+    # dressed as codex coverage, since the loop below only ever iterates these two.
     expected = {"claude": len(portable) + len(native), "gpt": len(portable)}
     allowed = {"claude": fc.CLAUDE_KEYS, "gpt": fc.GPT_KEYS}
     failures = []
@@ -1341,7 +1371,7 @@ def test_planted_colon_bearing_pair_round_trips_in_both_profiles(tmp_path):
     reach both emitted profiles byte-intact through a STRICT parse.
 
     The GPT half also covers build-distributions.ps1's frontmatter pass-through branch
-    (an adapter that already leads with `---` skips New-GptFrontmatter), which no
+    (an adapter that already leads with `---` skips New-SynthesizedFrontmatter), which no
     canonical source reaches today and which nothing tested before this step."""
     fc = _frontmatter_contract()
     body = _PLANTED_ADAPTER_BODY
@@ -1376,7 +1406,7 @@ def test_planted_colon_bearing_pair_round_trips_in_both_profiles(tmp_path):
 
 
 def test_gpt_synthesized_frontmatter_survives_a_strict_yaml_parse(tmp_path):
-    """The other GPT path: New-GptFrontmatter synthesizing from a manifest description
+    """The other GPT path: New-SynthesizedFrontmatter synthesizing from a manifest description
     that is FULL of colons. `_parse_leading_frontmatter` cannot prove this -- it would
     accept a block a strict parser rejects. PyYAML can."""
     fc = _frontmatter_contract()
@@ -2871,3 +2901,248 @@ def test_persisted_ledger_never_has_null_or_empty_entries(dist_root, tmp_path):
     led = json.loads((home2 / ".skill-mesh-install.json").read_text(encoding="utf-8"))
     _assert_no_empty_ledger_entries(led)
     assert led["installs"]["gpt"]["owned_files"] == []
+
+
+# --------------------------------------------------------------------------- #
+# Codex profile (Phase CP Step 3, issue #120)
+#
+# Codex is the THIRD provider on the existing rails (D-CP1), so these tests grade it
+# against the SAME contract the other two profiles already satisfy -- provenance on
+# every emitted file, a co-located core.md the launcher can require, LF/UTF-8-no-BOM
+# bytes, and byte-identical reruns -- rather than a codex-specific relaxation.
+#
+# THE FIXTURE-SKILL SEAM. Step 3 builds the generation surface and deliberately authors
+# NO real skills/*/providers/codex.md (the pilot five are Step 4, the cohorts Steps
+# 6-8), so `-Provider codex` against the committed manifest legitimately emits an EMPTY
+# profile. An empty tree cannot prove the rails work, and planting a codex.md in the
+# real checkout would BE Step 4's work done early -- so these tests drive the real
+# builder over a synthetic repo (_synthetic_build_repo) carrying a fixture skill. That
+# is the same seam the shared-closure refusal tests already use, and it plants nothing
+# in this checkout.
+# --------------------------------------------------------------------------- #
+
+# NOTE the citation is NOT followed by a period. $SHARED_REF_RE's leaf class includes
+# '.', so `../../_shared/judge-core.md.` harvests the leaf `judge-core.md.` -- extension
+# '' -- and the builder correctly refuses to ship a file it cannot stamp. Real cores
+# phrase these citations mid-sentence for the same reason; keep it that way here.
+_CODEX_FIXTURE_CORE = (
+    "# demo core\n\nThe portable behavior contract. It cites "
+    "../../_shared/judge-core.md for the shared payload.\n"
+)
+_CODEX_FIXTURE_ADAPTER = (
+    "# demo -- Codex provider entry point\n\n"
+    "Load `../core.md` in full and follow it verbatim. Codex has no Agent tool, so use "
+    "the core's documented single-context fallback.\n"
+)
+_CODEX_FIXTURE_GPT_ADAPTER = (
+    "# demo -- GPT/Copilot provider entry point\n\n"
+    "Load `../core.md` in full and follow it verbatim.\n"
+)
+_CODEX_FIXTURE_DESC = "Demo skill for the codex generation rails."
+
+
+def _codex_fixture_repo(tmp_path):
+    """A synthetic repo whose one skill declares core + claude + gpt + codex.
+
+    Genuinely gpt-eligible (not just codex-eligible): `gpt_adapter_body` is set so the
+    manifest entry carries a real `providers.gpt` path, which is what
+    `test_provider_both_still_means_claude_and_gpt_only` needs to assert gpt is actually
+    emitted under `both`/`all` rather than accidentally passing because no gpt adapter
+    exists to omit.
+    """
+    return _synthetic_build_repo(
+        tmp_path,
+        {"judge-core.md": "# judge core\n\nShared payload.\n"},
+        _CODEX_FIXTURE_CORE,
+        gpt_adapter_body=_CODEX_FIXTURE_GPT_ADAPTER,
+        codex_adapter_body=_CODEX_FIXTURE_ADAPTER,
+        description=_CODEX_FIXTURE_DESC,
+    )
+
+
+def test_codex_profile_emits_launcher_and_colocated_core_for_a_fixture_skill(tmp_path):
+    """The Step 3 Done-when: -Provider codex emits a real tree for a fixture skill.
+
+    Grades every emission rule the step owes at once, because they are only correct
+    together: a launcher whose frontmatter parses but whose core reference still points
+    at `../core.md` is a package Codex can list and cannot run.
+    """
+    repo = _codex_fixture_repo(tmp_path)
+    out = tmp_path / "out"
+    r = _synthetic_build(repo, out, provider="codex")
+    assert r.returncode == 0, f"{r.stdout}\n{r.stderr}"
+
+    skill_dir = out / "codex" / "demo"
+    launcher = skill_dir / "SKILL.md"
+    core = skill_dir / "core.md"
+    assert launcher.is_file(), "no codex launcher emitted"
+    assert core.is_file(), \
+        "codex profile must ship the co-located core.md the launcher requires"
+
+    text = launcher.read_text(encoding="utf-8")
+    # 1. Frontmatter FIRST (a host scans line 1), synthesized from the manifest record.
+    assert text.startswith("---\n"), text[:120]
+    assert "\nname: demo\n" in text
+    assert '\ndescription: "' + _CODEX_FIXTURE_DESC + '"\n' in text
+    # 2. Provenance header, placed AFTER the closing fence so frontmatter stays first.
+    assert _PROV_OPEN in text
+    assert text.index(_PROV_OPEN) > text.index("---\n"), \
+        "provenance must follow the frontmatter block, not precede it"
+    assert "Canonical source: skills/demo/providers/codex.md" in text
+    assert "Profile: codex" in text
+    # 3. The own-core reference is repointed to the co-located sibling.
+    assert "core.md" in text
+    assert "../core.md" not in text
+    # 4. The core itself carries provenance and the repointed shared reference.
+    core_text = core.read_text(encoding="utf-8")
+    assert _PROV_OPEN in core_text
+    assert "../_shared/judge-core.md" in core_text
+    assert "../../_shared/" not in core_text
+
+
+def test_codex_launcher_frontmatter_satisfies_the_codex_keys_contract(tmp_path):
+    """Graded by the ONE owner of the frontmatter contract, under CODEX_KEYS.
+
+    The emitted profile is what a host actually parses, so it is graded by the same
+    module and the same strict parser as the canonical sources -- producer and consumer
+    on one contract, per .claude/rules/code-quality.md.
+    """
+    fc = _frontmatter_contract()
+    repo = _codex_fixture_repo(tmp_path)
+    out = tmp_path / "out"
+    assert _synthetic_build(repo, out, provider="codex").returncode == 0
+    text = (out / "codex" / "demo" / "SKILL.md").read_text(encoding="utf-8")
+    defects = fc.frontmatter_defects(text, allowed_keys=fc.CODEX_KEYS)
+    assert not defects, defects
+    # The parsed values must be the manifest's, not re-authored per host.
+    parsed = fc.parse_frontmatter(text)
+    assert parsed == {"name": "demo", "description": _CODEX_FIXTURE_DESC}
+
+
+def test_codex_keys_permits_exactly_name_and_description():
+    """ANCHOR: the CODEX_KEYS allowlist is closed, and closed at the right two keys.
+
+    Without this, CODEX_KEYS could be widened (or aliased to a laxer set) and every
+    positive test above would still pass -- an over-accepting frontmatter gate is the
+    issue-#69 failure mode. Also asserts the equality with GPT_KEYS is a FACT rather
+    than a dependency: the two are separately spelled on purpose.
+    """
+    fc = _frontmatter_contract()
+    assert fc.CODEX_KEYS == frozenset({"name", "description"})
+    assert fc.CODEX_KEYS == fc.GPT_KEYS
+    planted = "---\nname: demo\ndescription: d\nuser-invocable: true\n---\n\nbody\n"
+    assert any("user-invocable" in d
+               for d in fc.frontmatter_defects(planted, allowed_keys=fc.CODEX_KEYS)), \
+        "CODEX_KEYS accepted a key outside its two-key contract"
+
+
+def test_codex_profile_rerun_is_byte_identical(tmp_path):
+    """Determinism, the property the whole build contract rests on."""
+    repo = _codex_fixture_repo(tmp_path)
+    first, second = tmp_path / "o1", tmp_path / "o2"
+    assert _synthetic_build(repo, first, provider="codex").returncode == 0
+    assert _synthetic_build(repo, second, provider="codex").returncode == 0
+    snap1 = _tree_snapshot(first / "codex")
+    snap2 = _tree_snapshot(second / "codex")
+    assert snap1 == snap2, "codex profile is not byte-reproducible across runs"
+    assert snap1, "codex profile emitted nothing -- determinism would be vacuous"
+    # Rebuilding OVER an existing tree must also land the same bytes (the profile dir is
+    # wiped and regenerated, so a stale file cannot survive).
+    assert _synthetic_build(repo, first, provider="codex").returncode == 0
+    assert _tree_snapshot(first / "codex") == snap1
+
+
+def test_codex_emitted_bytes_are_utf8_no_bom_lf(tmp_path):
+    """Same byte discipline as the other profiles: no BOM, no CRLF."""
+    repo = _codex_fixture_repo(tmp_path)
+    out = tmp_path / "out"
+    assert _synthetic_build(repo, out, provider="codex").returncode == 0
+    files = [p for p in (out / "codex").rglob("*") if p.is_file()]
+    assert files
+    for p in files:
+        raw = p.read_bytes()
+        assert not raw.startswith(b"\xef\xbb\xbf"), f"{p} carries a UTF-8 BOM"
+        assert b"\r\n" not in raw, f"{p} carries CRLF line endings"
+        raw.decode("utf-8")
+
+
+def test_codex_profile_excludes_provider_native_skills(tmp_path):
+    """Provider-native means Claude-only, so these skills are ABSENT from dist/codex.
+
+    Driven over the REAL skills/ tree through the -ManifestPath seam, because the
+    exclusion is a decision about manifest records and must be proven on real ones. The
+    fixture entry points `providers.codex` at the skill's existing gpt.md: no codex.md
+    exists anywhere at Step 3 by design, and this test grades which skills are SELECTED
+    into the profile, not what an adapter says.
+    """
+    portable = "plan-review"
+    native = "context-slim"
+    entry = _real_skill_entry(portable)
+    entry["providers"]["codex"] = f"skills/{portable}/providers/gpt.md"
+    native_entry = {
+        "name": native,
+        "status": "provider-native",
+        "core": None,
+        "providers": {"claude": f"skills/{native}/providers/claude.md"},
+    }
+    manifest = _write_manifest(tmp_path / "m.json", [entry, native_entry])
+    out = _build_from_manifest(tmp_path / "out", manifest, provider="codex")
+    assert (out / "codex" / portable / "SKILL.md").is_file()
+    assert (out / "codex" / portable / "core.md").is_file()
+    assert not (out / "codex" / native).exists(), \
+        "a Claude-only skill was emitted into the codex profile"
+    # And the claude profile DOES carry it -- proving the exclusion is provider-scoped,
+    # not the skill being dropped everywhere.
+    out2 = _build_from_manifest(tmp_path / "out2", manifest, provider="claude")
+    assert (out2 / "claude" / native / "SKILL.md").is_file()
+
+
+def test_provider_both_still_means_claude_and_gpt_only(tmp_path):
+    """The `both`-vs-`all` decision, asserted so it cannot drift silently.
+
+    `both` KEEPS its pre-codex meaning (claude + gpt) and `all` is the new
+    everything-spelling. This matters beyond taste: tools/release.ps1 defaults to
+    `both` and SHA-256s everything under the generated dist/, so a widened `both` would
+    silently add a codex profile to every release artifact while codex still has no
+    discovery root to install into (Phase CP Step 5). A future edit that "fixes" the
+    now-inaccurate word by widening it reds here.
+
+    Both halves of the name are pinned: `both` must still include GPT (not just
+    exclude codex -- a `both` that silently NARROWED to claude-only would stay green
+    without this), and `all` must include every one of the three profiles. The fixture
+    skill carries a real `providers.gpt` path (see `_codex_fixture_repo`), so a missing
+    gpt launcher here is a real failure, not an accidentally-vacuous one.
+    """
+    repo = _codex_fixture_repo(tmp_path)
+    out = tmp_path / "out"
+    assert _synthetic_build(repo, out, provider="both").returncode == 0
+    assert (out / "claude" / "demo" / "SKILL.md").is_file()
+    assert (out / "gpt" / "demo" / "SKILL.md").is_file(), \
+        "-Provider both must still emit the gpt profile"
+    assert not (out / "codex").exists(), \
+        "-Provider both emitted a codex profile; 'both' must stay claude+gpt"
+
+    out_all = tmp_path / "out_all"
+    assert _synthetic_build(repo, out_all, provider="all").returncode == 0
+    assert (out_all / "claude" / "demo" / "SKILL.md").is_file()
+    assert (out_all / "gpt" / "demo" / "SKILL.md").is_file(), \
+        "-Provider all must include the gpt profile"
+    assert (out_all / "codex" / "demo" / "SKILL.md").is_file(), \
+        "-Provider all must include the codex profile"
+
+
+def test_codex_profile_is_empty_for_the_committed_manifest(tmp_path):
+    """The honest Step-3 state, pinned so it is a DECISION rather than an oversight.
+
+    No codex adapter is authored yet, so the real manifest yields an empty profile and
+    the build must SUCCEED rather than throw -- the cohort steps rely on being able to
+    build a partially-populated codex profile. This test flips to "5 skills" at Step 4;
+    an accidental early codex entry in the committed manifest reds it here first.
+    """
+    out = tmp_path / "out"
+    r = _build(out, provider="codex")
+    assert r.returncode == 0, f"{r.stdout}\n{r.stderr}"
+    assert "(0 skills, 0 files)" in r.stdout, r.stdout
+    assert _codex_skills() == [], _codex_skills()
+    emitted = [p for p in (out / "codex").rglob("*") if p.is_file()]
+    assert emitted == [], emitted

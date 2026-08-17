@@ -384,7 +384,9 @@ cohorts depend on — a sequencing constraint, not a conditional one.
 <!-- autofix-applied: 2026-08-16 -->
 ### Step 3: Codex provider generation surface
 - **Problem:** Add `codex` to the generation rails. Extend `config/skill-manifest.json`
-  schema (`providers.codex`, per-skill `providers.codex` path, counts) + `tools/gen_manifest.py`;
+  schema (per-skill `providers.codex` path + codex `counts` tallies — the TOP-LEVEL
+  `providers.codex` vocabulary key is explicitly NOT this step's, see Step 5 and the
+  Impact Analysis row; corrected 2026-08-17) + `tools/gen_manifest.py`;
   extend `tools/build-distributions.ps1` (`-Provider codex` in the ValidateSet; codex
   SKILL.md emission: YAML frontmatter `name` + `description`, generated SKILL.md requires
   co-located `core.md`, provenance header, provider-native skills absent from dist/codex);
@@ -417,6 +419,7 @@ cohorts depend on — a sequencing constraint, not a conditional one.
   dist/gpt are byte-identical to pre-step output (regression compare); focused suites green
   (`python -m pytest tests/`)
 - **Depends on:** 1
+- **Status:** DONE (2026-08-17)
 
 <!-- autofix-applied: 2026-08-16 -->
 ### Step 4: Author pilot providers/codex.md + delta log scaffold

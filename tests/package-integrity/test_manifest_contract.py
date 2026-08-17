@@ -94,6 +94,11 @@ def test_counts_match_fixture_and_array():
         "total": len(skills),
         "portable": sum(1 for s in skills if s["status"] == "portable"),
         "provider_native": sum(1 for s in skills if s["status"] == "provider-native"),
+        # Per-provider adapter tallies (Phase CP Step 3). Derived from the per-skill
+        # `providers` dicts, which is the only place adapter presence is stated.
+        "claude": sum(1 for s in skills if "claude" in s["providers"]),
+        "gpt": sum(1 for s in skills if "gpt" in s["providers"]),
+        "codex": sum(1 for s in skills if "codex" in s["providers"]),
         "local_capable": sum(1 for s in skills if s.get("local_capable")),
         "sub_agent": sum(1 for s in skills if "sub-agent" in s["capabilities"]),
         "vision": sum(1 for s in skills if "vision" in s["capabilities"]),
@@ -105,6 +110,13 @@ def test_counts_match_fixture_and_array():
     assert derived["total"] == 50
     assert derived["portable"] == 47
     assert derived["provider_native"] == 3
+    assert derived["claude"] == 50, "every skill carries a Claude adapter"
+    assert derived["gpt"] == 47, "the gpt adapter set IS the portable set"
+    # 0 at Phase CP Step 3 -- the generation rails ship before any codex adapter is
+    # authored. Step 4 raises this to 5 (pilot), Steps 6-8 to the portable catalog.
+    # A non-zero value here without a matching skills/*/providers/codex.md on disk is
+    # caught by gen_manifest.py's CODEX-vs-tree guard.
+    assert derived["codex"] == 0
     assert derived["local_capable"] == 24
     assert derived["sub_agent"] == 16
     assert derived["vision"] == 2
@@ -175,9 +187,18 @@ def test_portable_skill_truth():
         name = s["name"]
         assert s["core"] == f"skills/{name}/core.md", name
         prov = s["providers"]
-        assert set(prov.keys()) == {"claude", "gpt"}, name
+        # claude + gpt are MANDATORY for a portable skill (that pair is what
+        # "portable" means); codex is OPTIONAL and additive -- present only for the
+        # skills whose adapter has been authored, which grows across Phase CP
+        # (0 at Step 3, the pilot five at Step 4, the catalog after the cohorts).
+        # Asserted as "the required pair, plus at most codex" rather than a widened
+        # exact set, so an unexpected FOURTH provider key is still caught here.
+        assert {"claude", "gpt"} <= set(prov.keys()), name
+        assert set(prov.keys()) <= {"claude", "gpt", "codex"}, name
         assert prov["claude"] == f"skills/{name}/providers/claude.md", name
         assert prov["gpt"] == f"skills/{name}/providers/gpt.md", name
+        if "codex" in prov:
+            assert prov["codex"] == f"skills/{name}/providers/codex.md", name
 
 
 def test_provider_native_skill_truth():
@@ -190,6 +211,12 @@ def test_provider_native_skill_truth():
         assert set(prov.keys()) == {"claude"}, name
         assert prov["claude"] == f"skills/{name}/providers/claude.md", name
         assert "gpt" not in prov, name
+        # Provider-native means CLAUDE-ONLY. A codex adapter on one of these three
+        # skills is a contradiction, not an upgrade -- the same reason a gpt adapter is
+        # rejected on the line above. tools/gen_manifest.py's derived_skill_sets()
+        # raises on the tree-level version of this defect; this is the manifest-level
+        # assertion of the same contract, so a hand-edited manifest cannot slip past.
+        assert "codex" not in prov, name
 
 
 def test_paths_scoped_to_skill_dir():
@@ -659,28 +686,47 @@ def test_judge_ui_calibration_note_is_generated_and_tracked():
 
 
 def test_derived_skill_sets_match_the_spelled_out_rosters():
-    """The 3-line guard inside `build()`, exercised on its own so a roster edited in
+    """The roster guards inside `build()`, exercised on their own so a roster edited in
     one place only is named here rather than surfacing as a generator crash."""
     gm = _load_gen_manifest()
-    portable, native = gm.derived_skill_sets()
+    portable, native, codex = gm.derived_skill_sets()
     assert portable == sorted(gm.PORTABLE)
     assert native == sorted(gm.NATIVE)
+    assert codex == sorted(gm.CODEX)
     assert (len(portable), len(native)) == (47, 3)
+    # 0 at Phase CP Step 3: the rails ship before any adapter is authored.
+    assert len(codex) == 0
+    # Codex is an ORTHOGONAL axis, not a third bucket -- every codex name is also
+    # portable, and the 47/3 partition is unaffected by codex membership. This is the
+    # invariant that lets counts["portable"], the README's GPT-capable line and the
+    # `total == portable + native` arithmetic all keep their existing meanings.
+    assert set(codex) <= set(portable)
+    assert not set(codex) & set(native)
 
 
-def _plant_skill_tree(root, portable=47, native=3, extras=()):
+def _plant_skill_tree(root, portable=47, native=3, extras=(), codex=0,
+                      codex_on_native=0):
     """A synthetic skills/ tree: `portable` dirs with providers/gpt.md, `native`
-    without, plus whatever non-skill entries the caller wants to prove are skipped."""
+    without, plus whatever non-skill entries the caller wants to prove are skipped.
+
+    `codex` plants providers/codex.md on the first N PORTABLE dirs (the legal shape);
+    `codex_on_native` plants it on the first N NATIVE dirs (the illegal shape, since
+    provider-native means Claude-only).
+    """
     root.mkdir(parents=True, exist_ok=True)
     for i in range(portable):
         d = root / f"skill-{i:02d}" / "providers"
         d.mkdir(parents=True)
         (d / "gpt.md").write_text("x", encoding="utf-8")
         (d / "claude.md").write_text("x", encoding="utf-8")
+        if i < codex:
+            (d / "codex.md").write_text("x", encoding="utf-8")
     for i in range(native):
         d = root / f"native-{i}" / "providers"
         d.mkdir(parents=True)
         (d / "claude.md").write_text("x", encoding="utf-8")
+        if i < codex_on_native:
+            (d / "codex.md").write_text("x", encoding="utf-8")
     for name in extras:
         if name.endswith("/"):
             (root / name.rstrip("/")).mkdir()
@@ -701,10 +747,45 @@ def test_enumeration_skips_inventory_json_and_the_shared_namespace(tmp_path):
     root = tmp_path / "skills"
     _plant_skill_tree(root, extras=("inventory.json", "_shared/"))
     (root / "_shared" / "judge-core.md").write_text("x", encoding="utf-8")
-    portable, native = gm.derived_skill_sets(root)
+    portable, native, codex = gm.derived_skill_sets(root)
     assert (len(portable), len(native)) == (47, 3)
+    assert codex == []
     assert "inventory.json" not in portable + native
     assert "_shared" not in portable + native
+
+
+def test_codex_enumeration_is_orthogonal_to_the_portable_native_partition(tmp_path):
+    """A planted codex.md changes the codex roster and NOTHING else.
+
+    This is the load-bearing property of the Phase CP Step 3 shape choice: codex is an
+    additive axis, so planting 5 codex adapters must leave the 47/3 partition -- and
+    therefore every committed count, the README's GPT-capable line, and the
+    `total == portable + native` arithmetic -- byte-for-byte unchanged. If codex were
+    modelled as a third STATUS instead, this test would red.
+    """
+    gm = _load_gen_manifest()
+    root = tmp_path / "skills"
+    _plant_skill_tree(root, codex=5)
+    portable, native, codex = gm.derived_skill_sets(root)
+    assert (len(portable), len(native)) == (47, 3)
+    assert len(codex) == 5
+    assert set(codex) <= set(portable)
+
+
+def test_enumeration_reds_when_a_native_skill_carries_a_codex_adapter(tmp_path):
+    """Red-on-garbage anchor for the native-is-Claude-only guard.
+
+    Provider-native means Claude-only, so providers/codex.md inside a native skill dir
+    is a contradiction. Without this guard the generator would happily emit a
+    `providers.codex` path for a skill the builder deliberately excludes from every
+    non-claude profile -- a manifest promising a profile that dist/codex will never
+    contain. The counts stay valid (47/3), so no count-based guard can catch it.
+    """
+    gm = _load_gen_manifest()
+    root = tmp_path / "skills"
+    _plant_skill_tree(root, codex_on_native=1)
+    with pytest.raises(ValueError, match="Claude-only"):
+        gm.derived_skill_sets(root)
 
 
 def test_enumeration_reds_when_the_tree_disagrees_with_the_counts(tmp_path):

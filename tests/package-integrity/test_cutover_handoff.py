@@ -694,7 +694,12 @@ def test_flag_value_gate_reds_on_a_value_outside_the_scripts_validateset():
     assert declared_value_sets(installer)["provider"] == {"claude", "gpt"}
     assert declared_value_sets(installer)["profile"] == {"claude", "gpt"}, \
         "an alias must inherit its parameter's ValidateSet"
-    assert declared_value_sets(builder)["provider"] == {"claude", "gpt", "both"}
+    # The builder gained 'codex' + 'all' in Phase CP Step 3. 'both' is deliberately
+    # STILL in the set and still means claude+gpt (see build-distributions.ps1's
+    # $profiles comment), which is what keeps the illegal-on-the-installer /
+    # legal-on-the-builder contrast below a real contrast.
+    assert declared_value_sets(builder)["provider"] == {
+        "claude", "gpt", "codex", "both", "all"}
     assert "targethome" not in declared_value_sets(installer), \
         "declared_value_sets is over-collecting -- -Home has no ValidateSet"
 

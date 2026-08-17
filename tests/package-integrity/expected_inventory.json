@@ -4,6 +4,9 @@
     "total": 50,
     "portable": 47,
     "provider_native": 3,
+    "claude": 50,
+    "gpt": 47,
+    "codex": 0,
     "local_capable": 24,
     "sub_agent": 16,
     "vision": 2,
@@ -63,6 +66,7 @@
     "context-slim",
     "judge-motion"
   ],
+  "codex": [],
   "local_capable": [
     "lesson-harvest",
     "memory-distill",
