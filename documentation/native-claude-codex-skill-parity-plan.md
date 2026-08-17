@@ -2,13 +2,13 @@
 
 **Status:** READY FOR OPERATOR — AWAITING APPROVAL 1
 
-**Proposal:** `documentation/native-claude-codex-skill-parity-proposal.html`
-
 **Planning branch:** `plan/native-codex-skill-parity`
 
 **Planning base:** `50fb9a36db0627da9e71c32d53bf81c4b98e7d4a`
 
 ## 1. What This Is
+
+### What I heard
 
 This is a feature plan for a full native Claude Code and Codex skill cutover. It replaces the failed
 Copilot-to-Codex assumption with an implementation that uses each host's real discovery mechanism:
@@ -22,6 +22,12 @@ visibility. This plan does not require a small value pilot before building parit
 The result is one authored behavior core per skill, explicit Claude and Codex adapters, generated
 self-contained packages for both hosts, a one-time migration, an ordinary update workflow, exhaustive
 per-skill qualification, and a reversible live cutover.
+
+**Proposal:** `documentation/native-claude-codex-skill-parity-proposal.html`
+
+This detailed document is the canonical executable Goal NP plan and source of truth. The repository-root
+`plan.md` is its mutable publication-status and authority pointer; the standalone proposal is an
+operator-facing view. Neither may redefine this plan's scope, decisions, DAG, or execution contracts.
 
 ### Problem
 
@@ -250,7 +256,9 @@ That immutable request preallocates the lowercase UUIDv4 receipt ID used by the 
 `%LOCALAPPDATA%\SkillMesh\Evidence\GoalNP\approval1\receipts\<approval1-receipt-id>\approval1-v1.json`.
 The terminal receipt contains schema version 1, decision `approve-goal-np-plan`, exact operator choices `P01` through
 `P10`, exact approved defaults `D01` through `D10` plus any user-authored override text, the approved
-`aberson/skill-mesh` 40-hex commit, plan/proposal paths and SHA-256 values, the canonical workspace
+`aberson/skill-mesh` 40-hex commit, plan/proposal paths and SHA-256 values, the ordered exact-byte
+publication-gate tuple `plan-review=PASS -> plan-redline=PASS -> plan-wrap=READY`, each gate record's
+SHA-256 and identical start/end SHA-256 map for the approved publication bundle, the canonical workspace
 target-inventory SHA-256, the exact reviewed `ADMIN-BOOTSTRAP` commit/tree/diff plus
 test/reviewer/evidence hashes,
 the committed `workspace-roots-v1` schema SHA-256, the create-new
@@ -567,8 +575,9 @@ Each authorized Sync attempt's sealed host request invokes exactly
 `N` is the pinned core's supported one-letter phase token; the wrapper deterministically maps its
 `Phase N Step 1..41` records to `NP-01..NP-41` and rejects any missing, duplicate, or differently
 mapped issue. `--force` does not waive a gate: before the host starts, the outer wrapper rehashes the
-approved proposal's plan-review -> plan-wrap -> plan-redline PASS attestation and matching detailed-
-plan source hash. The flag only bypasses the pinned core's conversation-local evidence lookup, which
+publication's external ordered exact-byte attestation—plan-review `PASS`, then plan-redline `PASS`, then
+plan-wrap `READY`—including each gate record's identical start/end bundle SHA-256 map, and the matching
+detailed-plan source hash. The flag only bypasses the pinned core's conversation-local evidence lookup, which
 cannot see that hash-bound publication evidence inside the isolated session. The request, receipt, and
 ADMIN-SYNC aggregate record the attestation fields, hashes, exact `--force` reason, and mapping proof.
 Prepare and Inspect make no model call. Inspect makes no remote, repository, product, or model
@@ -1228,14 +1237,14 @@ attributed or removed.
 
 | Contract | Required identity and payload |
 |---|---|
-| Approval-1 request | deterministic approved-commit/message-SHA path, lowercase UUIDv4 preallocated receipt ID, approved publication commit and plan/proposal/message hashes/locators, matching proposal plan-review -> plan-wrap -> plan-redline PASS attestation fields/hash, exact D/P choices/overrides, target repository, exact reviewed `ADMIN-BOOTSTRAP` commit/tree/diff/focused-test/root-test/diff-check/reviewer/standalone-report/retained-evidence hashes, schema hashes, frozen 76-row bootstrap-closure count/length/hash, minimal-bootstrap-instruction hash, `np-bootstrap-execution-v1` policy hash, and root/reparse policy, writer/mutex identity, UTC; create-new atomic root for one crash-idempotent administrative lineage after the sole authorized pre-receipt producer commit |
-| Approval 1 | receipt ID/path, request hash, decision, exact D/P selections and overrides, approved commit, plan/proposal/message byte hashes and locators, approved-plan semantic hash with Issue fields canonicalized, publication-gate attestation and exact repo-sync `--force` reason/mapping proof, workspace-target inventory and committed workspace-roots schema hashes, frozen bootstrap-closure/instruction/execution-policy identities, administrative interpreter/lock/test/tooling hashes, versioned create-new `workspace-roots-v1.json` byte length/SHA-256, UTC time |
+| Approval-1 request | deterministic approved-commit/message-SHA path, lowercase UUIDv4 preallocated receipt ID, approved publication commit and plan/proposal/message hashes/locators, ordered exact-byte `plan-review=PASS -> plan-redline=PASS -> plan-wrap=READY` attestation fields plus each gate-record hash and identical start/end publication-bundle SHA-256 map, exact D/P choices/overrides, target repository, exact reviewed `ADMIN-BOOTSTRAP` commit/tree/diff/focused-test/root-test/diff-check/reviewer/standalone-report/retained-evidence hashes, schema hashes, frozen 76-row bootstrap-closure count/length/hash, minimal-bootstrap-instruction hash, `np-bootstrap-execution-v1` policy hash, and root/reparse policy, writer/mutex identity, UTC; create-new atomic root for one crash-idempotent administrative lineage after the sole authorized pre-receipt producer commit |
+| Approval 1 | receipt ID/path, request hash, decision, exact D/P selections and overrides, approved commit, plan/proposal/message byte hashes and locators, approved-plan semantic hash with Issue fields canonicalized, the same ordered `plan-review=PASS -> plan-redline=PASS -> plan-wrap=READY` exact-byte gate attestation and gate-record/bundle hashes, and exact repo-sync `--force` reason/mapping proof, workspace-target inventory and committed workspace-roots schema hashes, frozen bootstrap-closure/instruction/execution-policy identities, administrative interpreter/lock/test/tooling hashes, versioned create-new `workspace-roots-v1.json` byte length/SHA-256, UTC time |
 | GitHub issue mutation journal | receipt/repository IDs, `host_attempt_cap=2`, ordered attempt IDs/statuses, exhaustive pre-snapshot hash, frozen original list argv plus effective paginated endpoint/page/count/response hashes, monotonically ordered create-new action entries with Plan ID, issue identity, allowlisted verb, expected-before and replacement title/body/state hashes, shim/permission-profile hash, result/remote-after hash, wrapper-only reconciliation status, and final exhaustive post-snapshot/no-out-of-scope-change proof; remote text is untrusted data |
 | issue sync | receipt ID, Approval-1 receipt and mutation-journal hashes, `aberson/skill-mesh`, exact invocation/cwd, ordered host attempt IDs/statuses (one primary and at most one exact-request resume), exhaustive pre/post snapshot hashes, Plan-ID-to-issue map, allowed action/result hashes, duplicate/cardinality/no-out-of-scope proof, allowlisted local diff, exits, UTC interval |
 | execution plan/status | generated `documentation/native-claude-codex-skill-parity-execution.md` plus append-only `documentation/native-parity-execution-status.jsonl` on the dedicated controller-status ref/worktree; the Markdown differs from the issue-backfilled approved descendant only in structural Status fields, while the JSONL genesis event carries approved source path/byte/semantic hashes and Approval-1/issue-sync hashes; 41 Plan IDs/issues, one document/program Status and 41 step Status fields have disjoint enums/transitions and a static semantic hash with structural Issue/Status canonicalization; each event records `scope=program|step`, nullable Plan ID, `event_kind`, batch ID/index/count, old/new status, evidence/candidate/receipt/commit hashes, prior-event hash, UTC; genesis/begin/pause/invalidation/completion/block transitions, ordered boundary batches, status-ref CAS, begin/checkpoint receipts, and revocation closure are schema-validated; only the two exact file paths are legal on the status ref |
 | Goal-NP code execution policy | `np-bootstrap-execution-v1`; mode is exactly `bootstrap-installed-closure` for `ADMIN-BOOTSTRAP` and NP-01..NP-11 or `post-substrate-proven-closure` for NP-13..NP-39/NP-41; ADMIN is the exact one-attempt/one-iteration 14-call submode, while a numbered partition has two root/developer iterations, twelve primary reviewer slots plus twelve same-tier retries and a 28-call cap; Claude root/developer slots request alias `opus`/`xhigh`, reviewer slots use the six frozen role/alias requests per iteration with child effort omitted, and only the declared same-tier retry reason is legal; bootstrap mode denies phone-a-friend, while post-substrate mode binds the NP-11 profile/controller/core/schema hashes plus NP-12 PASS and caps at 29 calls with only its one D08 Step-9 Fable friend slot whose exact `parent_profile_id=claude-native-session-v1`; both modes bind per-call and aggregate time/file/record/byte caps, requested/reported identity split, exact allowed-child slots, denied generic escalation/offload/fallback, streaming evidence, and status rules; config/schema hashes are immutable under Approval 1 |
 | NP-01 bootstrap | one request/attempt/terminal-receipt family validated by `bootstrap-np01-v1`; exact Plan ID `NP-01`, ADMIN-SYNC/approval/execution/bootstrap-policy hashes, installed transitive package-closure path/hash inventory, disposable profile and capability-policy hashes, no-friend/no-escalation proof, isolated worktree/base/ref/tree/index/status identities, exact allowed/read-only/scratch paths, review/test evidence, code-only commit, candidate-registry CAS generation/hash, issue result and cleanup; it omits the later status-event/checkpoint identities, staged crash adoption is byte-exact, and no other Plan ID/path is legal |
-| ADMIN-SYNC | receipt ID/path, request/Approval-1/issue-sync/mutation-journal/workspace-roots/execution-genesis hashes, exact `ADMIN-BOOTSTRAP` PASS commit/tree/diff/focused-test/root-test/diff-check/reviewer/standalone-report/retained-evidence hashes, dedicated controller-status ref/worktree/HEAD/tree/index/clean-status identities, publication-gate attestation and exact repo-sync `--phase N --force` reason/mapping proof, frozen bootstrap-closure/instruction/execution-policy hashes, administrative commit and exact schema/config blob hashes, contained interpreter/venv/lock/install/focused-test/cleanup hashes, target repository, host-attempt count/cap and wrapper-only reconciliation proof, 41 Plan-ID mappings plus umbrella, approved/execution semantic-equivalence proof, exhaustive remote snapshot and no-out-of-scope-mutation proof, ancestry/allowlisted-diff proof, status `PASS`, UTC; absent on failure |
+| ADMIN-SYNC | receipt ID/path, request/Approval-1/issue-sync/mutation-journal/workspace-roots/execution-genesis hashes, exact `ADMIN-BOOTSTRAP` PASS commit/tree/diff/focused-test/root-test/diff-check/reviewer/standalone-report/retained-evidence hashes, dedicated controller-status ref/worktree/HEAD/tree/index/clean-status identities, the same ordered `plan-review=PASS -> plan-redline=PASS -> plan-wrap=READY` exact-byte gate attestation and gate-record/bundle hashes, and exact repo-sync `--phase N --force` reason/mapping proof, frozen bootstrap-closure/instruction/execution-policy hashes, administrative commit and exact schema/config blob hashes, contained interpreter/venv/lock/install/focused-test/cleanup hashes, target repository, host-attempt count/cap and wrapper-only reconciliation proof, 41 Plan-ID mappings plus umbrella, approved/execution semantic-equivalence proof, exhaustive remote snapshot and no-out-of-scope-mutation proof, ancestry/allowlisted-diff proof, status `PASS`, UTC; absent on failure |
 | workspace targets / local roots | committed targets carry stable target/root IDs and role, role cardinality, Git owner and path-within-owner, expected remote/default branch, gate profile; the immutable Approval-1 receipt registry adds local canonical path/ref/HEAD/tree/index/status hashes and observation time as genesis evidence; initial cutover writes `%LOCALAPPDATA%\SkillMesh\State\workspace-roots-v1.json` generation 1 with previous-file state, genesis receipt locator/hash, writer transaction ID, and the same sorted target rows; routine review/release/qualification/activation must bind and preserve these bytes, while any successor requires a separately reviewed architecture-plan transaction |
 | candidate registry | `schema_version`, monotonic generation, previous-generation file SHA-256, writer operation UUID, candidate/target/step IDs, `state=active|invalidated|superseded`, nullable `invalidation_id`, immutable invalidation-plan and terminal-receipt IDs/locators/SHA-256 values, invalidation-journal `ready-for-registry` prefix locator/length/SHA-256, revocation-index complete-event prefix locator/length/SHA-256, nullable prior/superseded source-integration receipt locator/SHA-256, reason, `supersedes|superseded_by` IDs, `repair_generation`, nullable `forward_repair_base`, exact predecessor frontier, base/tip commit/tree/ref, ordered commit set, allowed/changed paths, logical cwd plus private canonical isolated-worktree/Git-common-directory/containment/ref/index/status identities, test receipts, WIP inventory, before/after live-state hashes, disposition; writes require the named mutex and expected-generation/hash compare-and-swap; pre-integration frontier selection excludes invalidated/superseded rows and derives only maximal active unaffected ancestors, while post-integration repair uses only the bound prior-integration receipt and journaled current canonical forward-repair base |
 | revocation index | exact append-only `%LOCALAPPDATA%\SkillMesh\State\GoalNP\revocations-v1.jsonl`, each event validated by `schemas/revocation-index-event-v1.schema.json`; monotonically increasing sequence, `invalidation_id`, event kind `planned|complete`, defect receipt ID/locator/hash, invalidation-plan/journal locators and prefix hashes, sorted affected Plan/candidate/request/evidence IDs, nullable prior source-integration receipt locator/hash, per-owner forward-repair bases, prior-event hash, UTC, and canonical event hash with its own member omitted; the controller is sole writer under the invalidation mutex, the complete event binds the terminal invalidation receipt and expected candidate IDs/state transitions but never a future registry digest, the final registry successor binds that complete-event prefix one-way, and repair consumes the exact recorded prefix rather than mutating an old request/evidence tree |
@@ -3350,16 +3359,65 @@ publication.
 ### Proposal feedback grammar
 
 Nine defaults (`D01` through `D07` and `D09` through `D10`) have been accepted in redline feedback,
-but none is approved until Abraham approves the final plan. Revised `D08` remains open in publication
-2. Abraham may approve the complete revised plan or request
-another revision by naming D08 or an exact Plan ID/section:
+but none is approved until Abraham approves the final plan. Revised `D08` from Publication 2 remains
+the current, still-unapproved choice in Publication 8. Decision IDs are append-only: a later decision
+gets the next ID, while a reversal keeps its ID and records `changed <date>` rather than being deleted or
+renumbered. Abraham may approve the complete Publication-8 plan or request another revision by naming
+any existing D-ID or an exact Plan ID/section:
 
 ```text
-Approve Goal NP plan publication 2 with D01-D10.
+Approve Goal NP plan Publication 8 with D01-D10 and the Terra Windows sandbox-enforcement recovery amendment.
 
 REQUEST ANOTHER REVISION — NOT AN APPROVAL
-D08 or <NP-ID/section>: <requested change>
+D01|D02|D03|D04|D05|D06|D07|D08|D09|D10 -> <replacement choice>
+Terra Windows sandbox-enforcement recovery -> <requested change>
+NP-<NN> -> <requested change>, where <NN> is 01 through 41
+Section <section name> -> <requested change>
 ```
+
+Publication-8 review correction note (2026-08-16): this reconstructable chronology records five
+superseded planning candidates and is not publication evidence:
+
+- **A - initial six-file candidate:** plan-review returned `FAIL` because the launcher would claim a
+  request root before running a baseline gate already known red at clean P7 and because documentation
+  gaps remained. No approval, commit, request, or evidence resulted. Abraham then authorized only the
+  bounded baseline-gate repair and Publication-8 revision.
+- **B - first eight-file candidate after that authorized repair:** plan-review returned `PASS`; the
+  following plan-redline returned `FAIL` on the legacy review-order contradiction, incomplete operator
+  chain, proposal order and source metadata, and revision grammar. The corrective edit invalidated the
+  preceding plan-review PASS by changing bytes.
+- **C - corrected eight-file candidate:** plan-review returned `PASS`; the following plan-redline
+  returned `FAIL` because the same unqualified `defect_inventory_sha256` named LF-normalized builder
+  bytes with SHA-256 `98baaa178e41dc23e5de70e3161de78c66b9c91052c4d0d99295ae1a8928ed37` and raw CRLF sealed-probe
+  bytes with SHA-256 `24c336217fba1a6d1d177b754a34be77275e0c797a50d48ea0a7e5d9401c2752`.
+  Expanding the bundle to repair that boundary invalidated both verdicts.
+- **D - first ten-file candidate:** its exact-byte tests passed, but fresh plan-review returned `FAIL`
+  because monolithic `Run` bypassed `load_prepared` and post-host inventory-digest enforcement, the
+  negative tamper regression was missing, and this review provenance was incomplete. Plan-redline and
+  plan-wrap did not run. No approval, commit, request, or evidence resulted.
+- **E - corrected ten-file candidate after the direct-Run boundary repair:** fresh plan-review returned
+  `FAIL` because its negative regression called `execute_review` directly and the documents claimed
+  inventory drift produced no report, while production `main()` intentionally publishes bounded
+  `AMBIGUOUS` failure evidence for both `Run` and `InvokeSavedHandoff`. Plan-redline and plan-wrap did
+  not run. No approval or commit resulted. That review is non-evidentiary, non-authorizing, and
+  non-reusable; it created no durable launcher record, receipt, state, request root, or Publication-8
+  evidence root.
+
+The current narrow closure makes `Run` reopen its sealed handoff through `load_prepared`. After the
+host returns and response-contract handling completes, `execute_review` performs one bounded inventory
+read, hashes those bytes against the receipt immediately before inventory JSON parsing and grading, and
+then parses those same bytes. Production-path negative tamper regressions drive both `Run` and
+`InvokeSavedHandoff` through `main()` and prove that inventory drift fails before grading and before
+normal-result reduction or publication. The only final publication is the bounded `AMBIGUOUS` failure
+pair, `report.md` plus `MANIFEST.sha256`: it records the integrity failure, fixes
+`detected_defect_count` at `0`, keeps uncertainty-bearing reviewer and resolution fields `UNCERTAIN` or
+unavailable, and contains no grade or normal/conclusive result. This preserves the established status
+contract: `COMPLETE` means bounded evidence publication completed, while `AMBIGUOUS` means the
+experiment reached no conclusion. Every external reviewer output above is planning/review context only:
+it is non-evidentiary, non-authorizing, non-reusable, and created no durable launcher record, receipt,
+state, request root, or Publication-8 evidence root. The current revised ten-file bytes must restart and
+complete plan-review `PASS` -> plan-redline `PASS` -> plan-wrap `READY` in that order. The final commit
+binds that tree while the amendment's 22-field request identity remains unchanged.
 
 No implementation or live mutation follows from viewing the proposal. Approval 1 authorizes only its
 one reviewed `ADMIN-BOOTSTRAP` producer, versioned administrative artifacts, and issue synchronization (request/receipts, schemas,

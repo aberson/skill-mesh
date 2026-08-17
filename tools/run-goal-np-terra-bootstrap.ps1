@@ -15,7 +15,7 @@ param(
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version 2.0
 
-$ExpectedApproval = 'Approve Goal NP plan Publication 7 with D01-D10 and the Terra writable-root grammar recovery amendment.'
+$ExpectedApproval = 'Approve Goal NP plan Publication 8 with D01-D10 and the Terra Windows sandbox-enforcement recovery amendment.'
 $ExpectedBranch = 'plan/native-codex-skill-parity'
 $ExpectedCodexVersion = 'codex-cli 0.147.0'
 $ExpectedCodexHash = '935a1911ed2556e4ffcec995f4886ac2ac425863ba26fed264df62e30272ad9d'
@@ -23,6 +23,19 @@ $ExpectedCodexPackageHash = 'bbaf3b9597b54bc1d4cf4aea93870e9035629d79bdaba582340
 $ExpectedPythonVersion = 'Python 3.14.3'
 $ExpectedPythonHash = 'cce21c0e8710e304273e98ac4b2b0f5aceb639acbcd2343cbaa5c4e81619c45b'
 $ExpectedLockHash = 'c197caa7da4306f0b744c9d352ce4c1a858d57514453c1ec1d249c83564cd555'
+$PriorP7RequestId = 'tba-f3b13b6337e230003d8721ad759b398d31536eae9d9b2bdf0860ff8b1d849568'
+$PriorP7ApprovedCommit = '40d671d75e1aa6c6b31eab70caa8f4d07ed51383'
+$PriorP7ExpectedApproval = 'Approve Goal NP plan Publication 7 with D01-D10 and the Terra writable-root grammar recovery amendment.'
+$PriorP7ApprovalMessageHash = 'fe5736f56b0edb305ef2e1632d5882a6d85d930c06862d9ec9ce26a28b9a23aa'
+$PriorP7ApprovalMessageFileHash = 'a849c6f49c9557ee7e11bdc4c01f324e17fe260d5abdc648141715d22120f8a5'
+$PriorP7HandoffHash = 'c0554be563284c8fe9eb2f4aa2985505c76d39eb17dd1aeb1313dd78f3b43f81'
+$PriorP7FailureCode = 'PERMISSION_ATTESTATION_FAILED'
+$PriorP7FailureLabel = 'preclaim-permission-attestation'
+$PriorP7FailureMessage = 'Permissions text differs from the complete closed permission grammar.'
+$PriorP7ExpectedPermissionHash = 'aa613097ace0f175545df760139a7bbc9c505a0feb207dbc2552438ce70db03d'
+$PriorP7ActualPermissionHash = '29dad5ed6993c5e717376e0a1c84d54ab60ee593510916ac6cee4295e803315d'
+$PriorP7ExpectedPermissionLineHash = '06c4b2fd6aab85ab9ea0e5598cbcdead5142d7cb56e851770163c1b9f480338b'
+$PriorP7ActualPermissionLineHash = 'd9cebe887c2ee11798faa526216e1d4af5d90cd47231862b50eb60cc5ac76464'
 $PriorP6RequestId = 'tba-cc76394efc1359d75b406ce5a2d2300d5ed41020b5cf7fc972ba3039dc3a6ab0'
 $PriorP6ApprovedCommit = 'd0f83210e3092e18a28ee24db20a1af95887c31b'
 $PriorP6ExpectedApproval = 'Approve Goal NP plan Publication 6 with D01-D10 and the Terra sandbox-attestation recovery amendment.'
@@ -67,6 +80,7 @@ $FailureCodes = @(
     'MODEL_VERDICT_CHANGES_REQUIRED',
     'MODEL_VERDICT_INVALID',
     'MODEL_PASS_MATERIAL_FINDINGS',
+    'PRIOR_PUBLICATION7_PRECLAIM_MISMATCH',
     'PRIOR_PUBLICATION6_PRECLAIM_MISMATCH',
     'PRIOR_PUBLICATION5_EVIDENCE_MISMATCH',
     'PRIOR_PUBLICATION4_EVIDENCE_MISMATCH',
@@ -93,7 +107,7 @@ function New-P6Failure(
     [System.Exception]$InnerException = $null,
     [string]$CauseCode = $null
 ) {
-    if ($FailureCodes -cnotcontains $Code) { throw "Unknown Publication-7 failure code: $Code" }
+    if ($FailureCodes -cnotcontains $Code) { throw "Unknown Publication-8 failure code: $Code" }
     if ([string]::IsNullOrWhiteSpace($Label)) { $Label = 'launcher' }
     $rendered = "[$Code] [$Label] $Message"
     $exception = if ($InnerException) {
@@ -295,7 +309,7 @@ function Get-NormalizedProcessName([string]$Name) {
 function Get-QuiescenceProof {
     if ($PSVersionTable.PSVersion.Major -ne 5 -or $PSVersionTable.PSVersion.Minor -ne 1 -or
         $PSVersionTable.PSEdition -cne 'Desktop') {
-        throw 'Publication 7 requires Windows PowerShell 5.1 Desktop.'
+        throw 'Publication 8 requires Windows PowerShell 5.1 Desktop.'
     }
     $processes = @(Get-CimInstance -ClassName Win32_Process -Property ProcessId, ParentProcessId, Name, CreationDate -ErrorAction Stop)
     if ($processes.Count -eq 0) { throw 'The process census is empty.' }
@@ -335,7 +349,7 @@ function Get-QuiescenceProof {
         $currentId = $parentId
     }
     if ($ancestry.Count -eq 0 -or $ancestry[0] -cne 'powershell') {
-        throw 'Publication 7 must run in standalone powershell.exe, not an embedded or substituted shell.'
+        throw 'Publication 8 must run in standalone powershell.exe, not an embedded or substituted shell.'
     }
     $ancestryRoot = $ancestry[$ancestry.Count - 1]
     if ($ancestryRoot -notin @('explorer', 'windowsterminal')) {
@@ -343,12 +357,12 @@ function Get-QuiescenceProof {
     }
     $forbiddenAncestors = @($ancestry.ToArray() | Where-Object { $forbiddenNames -ccontains $_ })
     if ($forbiddenAncestors.Count -ne 0) {
-        throw ('Publication 7 must run from independent ordinary PowerShell; forbidden ancestry: ' +
+        throw ('Publication 8 must run from independent ordinary PowerShell; forbidden ancestry: ' +
             (($forbiddenAncestors | Sort-Object -Unique) -join ', '))
     }
     if ($globalForbidden.Count -ne 0) {
         $names = @($globalForbidden | ForEach-Object { Get-NormalizedProcessName $_.Name } | Sort-Object -Unique)
-        throw ('Publication 7 requires all Code, Codex, Claude, ChatGPT, and Cursor processes to be closed: ' +
+        throw ('Publication 8 requires all Code, Codex, Claude, ChatGPT, and Cursor processes to be closed: ' +
             ($names -join ', '))
     }
     return [ordered]@{
@@ -373,6 +387,161 @@ function Assert-LiveCodexHomeUnchanged(
     $actual = Get-CodexHomeManifest $script:LiveCodexHome
     if (-not (Test-ManifestEqual $Expected $actual)) {
         throw "The live CODEX_HOME changed at boundary: $Label"
+    }
+    return $actual
+}
+
+function Get-PriorP7PreclaimProof {
+    try {
+        $priorApprovalPath = Join-Path $env:LOCALAPPDATA `
+            'SkillMesh\Evidence\GoalNP\Publication7\approval1-message.txt'
+        $priorHandoffPath = Join-Path $env:LOCALAPPDATA `
+            ('SkillMesh\Evidence\GoalNP\Publication7\terra-transition-handoff-' +
+                $PriorP7ApprovedCommit + '.txt')
+        $priorEvidenceRoot = Join-Path $env:LOCALAPPDATA `
+            ('SkillMesh\Evidence\GoalNP\TerraBootstrap\' + $PriorP7RequestId)
+        $priorStatePath = Join-Path $priorEvidenceRoot 'state.json'
+        $priorStagingPublicationRoot = Join-Path $env:LOCALAPPDATA `
+            'SkillMesh\Staging\GoalNP\Publication7'
+        $priorStagingRequestRoot = Join-Path $priorStagingPublicationRoot $PriorP7RequestId
+
+        $priorIdentityText = @(
+            'publication-7-writable-root-grammar-recovery-v1',
+            $PriorP7ApprovedCommit,
+            $PriorP7ApprovalMessageHash,
+            $PriorP6ApprovedCommit,
+            $PriorP6RequestId,
+            $PriorP6ApprovalMessageHash,
+            $PriorP6ApprovalMessageFileHash,
+            $PriorP6HandoffHash,
+            $PriorP5RequestId,
+            $PriorP5StateHash,
+            $PriorP5RootManifestHash,
+            $PriorP4RequestId,
+            $PriorP4StateHash,
+            $PriorP4RootManifestHash,
+            $PriorP3RequestId,
+            $PriorP3StateHash,
+            $PriorP3RootManifestHash
+        ) -join "`n"
+        if (('tba-' + (Get-Sha256Text $priorIdentityText)) -cne $PriorP7RequestId) {
+            throw 'The retired Publication-7 request identity does not reproduce.'
+        }
+        if ((Get-Sha256Text $PriorP7ExpectedApproval) -cne $PriorP7ApprovalMessageHash) {
+            throw 'The retired Publication-7 approval-text identity does not reproduce.'
+        }
+
+        $gitCommand = Get-Command git -CommandType Application | Select-Object -First 1
+        if (-not $gitCommand) { throw 'Git is unavailable for Publication-7 lineage proof.' }
+        $originalOptionalLocks = [Environment]::GetEnvironmentVariable('GIT_OPTIONAL_LOCKS', 'Process')
+        try {
+            $env:GIT_OPTIONAL_LOCKS = '0'
+            & $gitCommand.Source -c core.fsmonitor=false -c core.untrackedCache=false `
+                -C $script:RepoRoot merge-base --is-ancestor `
+                $PriorP7ApprovedCommit $ApprovedCommit 2>$null
+            if ($LASTEXITCODE -ne 0) {
+                throw 'The approved Publication-8 commit does not descend from the retired Publication-7 commit.'
+            }
+        }
+        finally {
+            [Environment]::SetEnvironmentVariable(
+                'GIT_OPTIONAL_LOCKS', $originalOptionalLocks, 'Process')
+        }
+
+        if (-not (Test-Path -LiteralPath $priorApprovalPath -PathType Leaf)) {
+            throw 'The retired Publication-7 approval file is absent.'
+        }
+        $approvalItem = Get-Item -LiteralPath $priorApprovalPath -Force -ErrorAction Stop
+        if (($approvalItem.Attributes -band [System.IO.FileAttributes]::ReparsePoint) -ne 0) {
+            throw 'The retired Publication-7 approval file is a reparse point.'
+        }
+        Assert-NoAlternateDataStream $approvalItem.FullName
+        $approvalFileHash = Get-FileSha256 $approvalItem.FullName
+        if ($approvalFileHash -cne $PriorP7ApprovalMessageFileHash) {
+            throw 'The retired Publication-7 approval file hash changed.'
+        }
+        $expectedApprovalBytes = $Utf8NoBom.GetBytes($PriorP7ExpectedApproval + "`n")
+        $actualApprovalBytes = [System.IO.File]::ReadAllBytes($approvalItem.FullName)
+        if ([Convert]::ToBase64String($actualApprovalBytes) -cne
+            [Convert]::ToBase64String($expectedApprovalBytes)) {
+            throw 'The retired Publication-7 approval file bytes changed.'
+        }
+
+        if (-not (Test-Path -LiteralPath $priorHandoffPath -PathType Leaf)) {
+            throw 'The retired Publication-7 handoff is absent.'
+        }
+        $handoffItem = Get-Item -LiteralPath $priorHandoffPath -Force -ErrorAction Stop
+        if (($handoffItem.Attributes -band [System.IO.FileAttributes]::ReparsePoint) -ne 0) {
+            throw 'The retired Publication-7 handoff is a reparse point.'
+        }
+        Assert-NoAlternateDataStream $handoffItem.FullName
+        if ($handoffItem.Length -ne 21345) { throw 'The retired Publication-7 handoff length changed.' }
+        $handoffHash = Get-FileSha256 $handoffItem.FullName
+        if ($handoffHash -cne $PriorP7HandoffHash) {
+            throw 'The retired Publication-7 handoff hash changed.'
+        }
+        if (Test-Path -LiteralPath $priorEvidenceRoot) {
+            throw 'The retired Publication-7 preclaim request unexpectedly has an evidence root.'
+        }
+        if (Test-Path -LiteralPath $priorStatePath) {
+            throw 'The retired Publication-7 preclaim request unexpectedly has state.'
+        }
+        if (Test-Path -LiteralPath $priorStagingRequestRoot) {
+            throw 'The retired Publication-7 permission-staging request subtree reappeared.'
+        }
+        if (Test-Path -LiteralPath $priorStagingPublicationRoot) {
+            throw 'The retired Publication-7 permission-staging publication root reappeared.'
+        }
+
+        return [ordered]@{
+            request_id = $PriorP7RequestId
+            approved_commit = $PriorP7ApprovedCommit
+            approval_message_sha256 = $PriorP7ApprovalMessageHash
+            approval_message_file_sha256 = $approvalFileHash
+            handoff_sha256 = $handoffHash
+            handoff_length = [int64]$handoffItem.Length
+            evidence_root_absent = $true
+            state_absent = $true
+            permission_staging_request_root_absent = $true
+            permission_staging_publication_root_absent = $true
+            operator_reported_preclaim_context = [ordered]@{
+                error_code = $PriorP7FailureCode
+                error_label = $PriorP7FailureLabel
+                message_suffix = $PriorP7FailureMessage
+                permission_expected_sha256 = $PriorP7ExpectedPermissionHash
+                permission_actual_sha256 = $PriorP7ActualPermissionHash
+                permission_expected_line_count = 5
+                permission_actual_line_count = 4
+                permission_first_differing_line_number = 2
+                permission_expected_line_present = $true
+                permission_actual_line_present = $true
+                permission_expected_line_sha256 = $PriorP7ExpectedPermissionLineHash
+                permission_actual_line_sha256 = $PriorP7ActualPermissionLineHash
+            }
+        }
+    }
+    catch {
+        $metadata = Get-P6FailureMetadata $_.Exception
+        if ($metadata.error_code -ceq 'PRIOR_PUBLICATION7_PRECLAIM_MISMATCH') { throw $_.Exception }
+        throw (New-P6Failure 'PRIOR_PUBLICATION7_PRECLAIM_MISMATCH' 'publication-7-preclaim' `
+            $_.Exception.Message $_.Exception)
+    }
+}
+
+function Assert-PriorP7PreclaimUnchanged([System.Collections.IDictionary]$Expected) {
+    $actual = Get-PriorP7PreclaimProof
+    if ($actual.request_id -cne $Expected.request_id -or
+        $actual.approved_commit -cne $Expected.approved_commit -or
+        $actual.approval_message_sha256 -cne $Expected.approval_message_sha256 -or
+        $actual.approval_message_file_sha256 -cne $Expected.approval_message_file_sha256 -or
+        $actual.handoff_sha256 -cne $Expected.handoff_sha256 -or
+        $actual.handoff_length -ne $Expected.handoff_length -or
+        -not $actual.evidence_root_absent -or
+        -not $actual.state_absent -or
+        -not $actual.permission_staging_request_root_absent -or
+        -not $actual.permission_staging_publication_root_absent) {
+        throw (New-P6Failure 'PRIOR_PUBLICATION7_PRECLAIM_MISMATCH' 'publication-7-preclaim' `
+            'Publication-7 retired preclaim proof changed during Publication-8 execution.')
     }
     return $actual
 }
@@ -420,7 +589,7 @@ function Get-PriorP6PreclaimProof {
                 -C $script:RepoRoot merge-base --is-ancestor `
                 $PriorP6ApprovedCommit $ApprovedCommit 2>$null
             if ($LASTEXITCODE -ne 0) {
-                throw 'The approved Publication-7 commit does not descend from the retired Publication-6 commit.'
+                throw 'The approved Publication-8 commit does not descend from the retired Publication-6 commit.'
             }
         }
         finally {
@@ -509,7 +678,7 @@ function Assert-PriorP6PreclaimUnchanged([System.Collections.IDictionary]$Expect
         -not $actual.permission_staging_request_root_absent -or
         -not $actual.permission_staging_publication_root_absent) {
         throw (New-P6Failure 'PRIOR_PUBLICATION6_PRECLAIM_MISMATCH' 'publication-6-preclaim' `
-            'Publication-6 retired preclaim proof changed during Publication-7 execution.')
+            'Publication-6 retired preclaim proof changed during Publication-8 execution.')
     }
     return $actual
 }
@@ -570,7 +739,7 @@ function Assert-PriorP5EvidenceUnchanged([System.Collections.IDictionary]$Expect
         $actual.state_sha256 -cne $Expected.state_sha256 -or
         -not (Test-ManifestEqual $actual.root_manifest $Expected.root_manifest)) {
         throw (New-P6Failure 'PRIOR_PUBLICATION5_EVIDENCE_MISMATCH' 'publication-5-evidence' `
-            'Publication-5 blocked evidence changed during Publication-7 execution.')
+            'Publication-5 blocked evidence changed during Publication-8 execution.')
     }
     return $actual
 }
@@ -631,7 +800,7 @@ function Assert-PriorP4EvidenceUnchanged([System.Collections.IDictionary]$Expect
         $actual.state_sha256 -cne $Expected.state_sha256 -or
         -not (Test-ManifestEqual $actual.root_manifest $Expected.root_manifest)) {
         throw (New-P6Failure 'PRIOR_PUBLICATION4_EVIDENCE_MISMATCH' 'publication-4-evidence' `
-            'Publication-4 blocked evidence changed during Publication-7 execution.')
+            'Publication-4 blocked evidence changed during Publication-8 execution.')
     }
     return $actual
 }
@@ -692,7 +861,7 @@ function Assert-PriorP3EvidenceUnchanged([System.Collections.IDictionary]$Expect
         $actual.state_sha256 -cne $Expected.state_sha256 -or
         -not (Test-ManifestEqual $actual.root_manifest $Expected.root_manifest)) {
         throw (New-P6Failure 'PRIOR_PUBLICATION3_EVIDENCE_MISMATCH' 'publication-3-evidence' `
-            'Publication-3 blocked evidence changed during Publication-7 execution.')
+            'Publication-3 blocked evidence changed during Publication-8 execution.')
     }
     return $actual
 }
@@ -702,6 +871,7 @@ function Get-ClosedConfigArguments {
     foreach ($value in @(
         'model_reasoning_effort=xhigh',
         'approval_policy=never',
+        'windows.sandbox="unelevated"',
         'project_doc_max_bytes=0',
         'project_doc_fallback_filenames=[]',
         'agents.enabled=false',
@@ -1252,7 +1422,7 @@ function New-PermissionStagingLayout {
     $null = Assert-PermissionStagingDirectory $skillMeshRoot
     $stagingRoot = Join-Path $skillMeshRoot 'Staging'
     $goalRoot = Join-Path $stagingRoot 'GoalNP'
-    $publicationRoot = Join-Path $goalRoot 'Publication7'
+    $publicationRoot = Join-Path $goalRoot 'Publication8'
     $requestRoot = Join-Path $publicationRoot $script:RequestId
     $attestationRoot = Join-Path $requestRoot 'permission-attestation'
     $codexHome = Join-Path $attestationRoot 'codex-home'
@@ -1283,7 +1453,7 @@ function New-PermissionStagingLayout {
         }
         if (Test-Path -LiteralPath $requestRoot) {
             throw (New-P6Failure 'PERMISSION_STAGING_COLLISION' 'permission-staging' `
-                'The deterministic Publication-7 permission-staging request path already exists; no cleanup was attempted.')
+                'The deterministic Publication-8 permission-staging request path already exists; no cleanup was attempted.')
         }
         New-Item -ItemType Directory -Path $requestRoot | Out-Null
         $layout.request_root_owned = $true
@@ -1308,13 +1478,13 @@ function Remove-PermissionStagingLayout([System.Collections.IDictionary]$Layout)
     try {
         $localAppData = [System.IO.Path]::GetFullPath($env:LOCALAPPDATA).TrimEnd('\')
         $expectedStagingRoot = Join-Path $localAppData 'SkillMesh\Staging'
-        $expectedRequestRoot = Join-Path $expectedStagingRoot ('GoalNP\Publication7\' + $script:RequestId)
+        $expectedRequestRoot = Join-Path $expectedStagingRoot ('GoalNP\Publication8\' + $script:RequestId)
         $stagingRoot = [System.IO.Path]::GetFullPath([string]$Layout.staging_root).TrimEnd('\')
         $requestRoot = [System.IO.Path]::GetFullPath([string]$Layout.request_root).TrimEnd('\')
         if (-not $stagingRoot.Equals($expectedStagingRoot, [StringComparison]::OrdinalIgnoreCase) -or
             -not $requestRoot.Equals($expectedRequestRoot, [StringComparison]::OrdinalIgnoreCase) -or
             -not $requestRoot.StartsWith($stagingRoot + '\', [StringComparison]::OrdinalIgnoreCase)) {
-            throw 'Refusing to remove a permission-staging path outside the exact Publication-7 request root.'
+            throw 'Refusing to remove a permission-staging path outside the exact Publication-8 request root.'
         }
         $unownedRequestRoot = $false
         if ((Test-Path -LiteralPath $requestRoot) -and [bool]$Layout.request_root_owned) {
@@ -1326,7 +1496,7 @@ function Remove-PermissionStagingLayout([System.Collections.IDictionary]$Layout)
             $unownedRequestRoot = $true
         }
         $allowedParents = @(
-            (Join-Path $expectedStagingRoot 'GoalNP\Publication7'),
+            (Join-Path $expectedStagingRoot 'GoalNP\Publication8'),
             (Join-Path $expectedStagingRoot 'GoalNP'),
             $expectedStagingRoot
         )
@@ -1376,11 +1546,13 @@ function Invoke-PreclaimPermissionAttestation(
         throw (New-P6Failure 'PERMISSION_ATTESTATION_FAILED' 'preclaim-live-home' `
             'The live CODEX_HOME changed before permission attestation.')
     }
+    $priorP7Before = Get-PriorP7PreclaimProof
     $priorP6Before = Get-PriorP6PreclaimProof
     $priorP5Before = Get-PriorP5EvidenceProof
     $priorP4Before = Get-PriorP4EvidenceProof
     $priorP3Before = Get-PriorP3EvidenceProof
     $liveAfter = $null
+    $priorP7After = $null
     $priorP6After = $null
     $priorP5After = $null
     $priorP4After = $null
@@ -1402,7 +1574,7 @@ function Invoke-PreclaimPermissionAttestation(
         $env:TMP = $layout.temp_root
         $arguments = @('--model', 'gpt-5.6-terra') + @(Get-ClosedConfigArguments) + @(
             '--sandbox', 'workspace-write', '--cd', $script:RepoRoot,
-            'debug', 'prompt-input', 'Goal-NP-Publication-7-preclaim-permission-attestation'
+            'debug', 'prompt-input', 'Goal-NP-Publication-8-preclaim-permission-attestation'
         )
         $process = Invoke-RecordedProcess 'preclaim-permission' $CodexExe $arguments $layout.output_root 120000
         if ((Get-Item -LiteralPath $process.stderr_path -Force).Length -ne 0) {
@@ -1410,12 +1582,13 @@ function Invoke-PreclaimPermissionAttestation(
         }
         $jsonText = (Get-Content -LiteralPath $process.stdout_path -Raw).Trim()
         $effective = Assert-PermissionAttestationJson $jsonText 'workspace-write' $script:RepoRoot `
-            'Goal-NP-Publication-7-preclaim-permission-attestation' 'preclaim-permission-attestation'
+            'Goal-NP-Publication-8-preclaim-permission-attestation' 'preclaim-permission-attestation'
         $result = [ordered]@{
             diagnostic = 'codex debug prompt-input'
             diagnostic_status = 'supported'
             debug_strict_config_supported = $false
             requested_sandbox = 'workspace-write'
+            requested_windows_sandbox = 'unelevated'
             requested_cwd = $script:RepoRoot
             requested_additional_writable_directory_count = 0
             requested_temp_root = $layout.temp_root
@@ -1446,6 +1619,7 @@ function Invoke-PreclaimPermissionAttestation(
             if (-not (Test-ManifestEqual $ExpectedLiveCodexHomeManifest $liveAfter)) {
                 throw 'The live CODEX_HOME changed during permission attestation.'
             }
+            $priorP7After = Assert-PriorP7PreclaimUnchanged $priorP7Before
             $priorP6After = Assert-PriorP6PreclaimUnchanged $priorP6Before
             $priorP5After = Assert-PriorP5EvidenceUnchanged $priorP5Before
             $priorP4After = Assert-PriorP4EvidenceUnchanged $priorP4Before
@@ -1454,6 +1628,7 @@ function Invoke-PreclaimPermissionAttestation(
         catch {
             $boundaryMetadata = Get-P6FailureMetadata $_.Exception
             if ($boundaryMetadata.error_code -in @(
+                'PRIOR_PUBLICATION7_PRECLAIM_MISMATCH',
                 'PRIOR_PUBLICATION6_PRECLAIM_MISMATCH',
                 'PRIOR_PUBLICATION5_EVIDENCE_MISMATCH',
                 'PRIOR_PUBLICATION4_EVIDENCE_MISMATCH',
@@ -1476,7 +1651,8 @@ function Invoke-PreclaimPermissionAttestation(
         $metadata = Get-P6FailureMetadata $failure
         if ($metadata.error_code -in @(
             'PERMISSION_ATTESTATION_FAILED', 'PERMISSION_STAGING_COLLISION',
-            'PERMISSION_STAGING_CLEANUP_FAILED', 'PRIOR_PUBLICATION6_PRECLAIM_MISMATCH',
+            'PERMISSION_STAGING_CLEANUP_FAILED', 'PRIOR_PUBLICATION7_PRECLAIM_MISMATCH',
+            'PRIOR_PUBLICATION6_PRECLAIM_MISMATCH',
             'PRIOR_PUBLICATION5_EVIDENCE_MISMATCH', 'PRIOR_PUBLICATION4_EVIDENCE_MISMATCH',
             'PRIOR_PUBLICATION3_EVIDENCE_MISMATCH'
         )) { throw $failure }
@@ -1494,6 +1670,8 @@ function Invoke-PreclaimPermissionAttestation(
     }
     $result['live_codex_home_before'] = $liveBefore
     $result['live_codex_home_after'] = $liveAfter
+    $result['prior_publication7_before'] = $priorP7Before
+    $result['prior_publication7_after'] = $priorP7After
     $result['prior_publication6_before'] = $priorP6Before
     $result['prior_publication6_after'] = $priorP6After
     $result['prior_publication5_before'] = $priorP5Before
@@ -1744,7 +1922,7 @@ function Remove-DisposableCodexHome {
 
 function Get-PromptInputProof([string]$Label, [string]$Sandbox) {
     $quiescenceBefore = Get-QuiescenceProof
-    $diagnosticText = 'Goal-NP-Publication-7-' + $Label + '-prompt-surface-proof'
+    $diagnosticText = 'Goal-NP-Publication-8-' + $Label + '-prompt-surface-proof'
     $arguments = @('--model', 'gpt-5.6-terra') + @(Get-ClosedConfigArguments) + @(
         '--sandbox', $Sandbox, '--cd', $script:RepoRoot,
         'debug', 'prompt-input', $diagnosticText
@@ -1752,6 +1930,7 @@ function Get-PromptInputProof([string]$Label, [string]$Sandbox) {
     $proof = $null
     $liveCodexHomeBefore = Assert-LiveCodexHomeUnchanged $script:LiveCodexHomeBefore `
         ($Label + '-before-prompt-input')
+    $priorP7Before = Assert-PriorP7PreclaimUnchanged $script:PriorP7Before
     $priorP6Before = Assert-PriorP6PreclaimUnchanged $script:PriorP6Before
     $priorP5Before = Assert-PriorP5EvidenceUnchanged $script:PriorP5Before
     $priorP4Before = Assert-PriorP4EvidenceUnchanged $script:PriorP4Before
@@ -1763,6 +1942,7 @@ function Get-PromptInputProof([string]$Label, [string]$Sandbox) {
         $quiescenceAfter = Get-QuiescenceProof
         $liveCodexHomeAfter = Assert-LiveCodexHomeUnchanged $script:LiveCodexHomeBefore `
             ($Label + '-after-prompt-input')
+        $priorP7After = Assert-PriorP7PreclaimUnchanged $script:PriorP7Before
         $priorP6After = Assert-PriorP6PreclaimUnchanged $script:PriorP6Before
         $priorP5After = Assert-PriorP5EvidenceUnchanged $script:PriorP5Before
         $priorP4After = Assert-PriorP4EvidenceUnchanged $script:PriorP4Before
@@ -1778,6 +1958,7 @@ function Get-PromptInputProof([string]$Label, [string]$Sandbox) {
     return [ordered]@{
         process = $proof
         requested_sandbox = $Sandbox
+        requested_windows_sandbox = 'unelevated'
         requested_cwd = $script:RepoRoot
         requested_additional_writable_directory_count = 0
         debug_strict_config_supported = $false
@@ -1788,6 +1969,8 @@ function Get-PromptInputProof([string]$Label, [string]$Sandbox) {
         quiescence_after = $quiescenceAfter
         live_codex_home_before = $liveCodexHomeBefore
         live_codex_home_after = $liveCodexHomeAfter
+        prior_publication7_before = $priorP7Before
+        prior_publication7_after = $priorP7After
         prior_publication6_before = $priorP6Before
         prior_publication6_after = $priorP6After
         prior_publication5_before = $priorP5Before
@@ -2102,6 +2285,7 @@ function Invoke-Terra(
         requested_model = 'gpt-5.6-terra'
         requested_reasoning_effort = 'xhigh'
         sandbox = $Sandbox
+        windows_sandbox = 'unelevated'
         cwd = $script:RepoRoot
         additional_writable_directory_count = 0
         arguments = $arguments
@@ -2118,6 +2302,8 @@ function Invoke-Terra(
         prompt_input_quiescence_after = $promptInputProof.quiescence_after
         live_codex_home_before_prompt_input = $promptInputProof.live_codex_home_before
         live_codex_home_after_prompt_input = $promptInputProof.live_codex_home_after
+        prior_publication7_before_prompt_input = $promptInputProof.prior_publication7_before
+        prior_publication7_after_prompt_input = $promptInputProof.prior_publication7_after
         prior_publication6_before_prompt_input = $promptInputProof.prior_publication6_before
         prior_publication6_after_prompt_input = $promptInputProof.prior_publication6_after
         prior_publication5_before_prompt_input = $promptInputProof.prior_publication5_before
@@ -2152,6 +2338,7 @@ function Invoke-Terra(
     $preCallQuiescence = Get-QuiescenceProof
     $liveCodexHomeBeforeCodex = Assert-LiveCodexHomeUnchanged $script:LiveCodexHomeBefore `
         ($Label + '-before-codex')
+    $priorP7BeforeCodex = Assert-PriorP7PreclaimUnchanged $script:PriorP7Before
     $priorP6BeforeCodex = Assert-PriorP6PreclaimUnchanged $script:PriorP6Before
     $priorP5BeforeCodex = Assert-PriorP5EvidenceUnchanged $script:PriorP5Before
     $priorP4BeforeCodex = Assert-PriorP4EvidenceUnchanged $script:PriorP4Before
@@ -2221,6 +2408,7 @@ function Invoke-Terra(
     $postCallQuiescence = Get-QuiescenceProof
     $liveCodexHomeAfterCodex = Assert-LiveCodexHomeUnchanged $script:LiveCodexHomeBefore `
         ($Label + '-after-codex')
+    $priorP7AfterCodex = Assert-PriorP7PreclaimUnchanged $script:PriorP7Before
     $priorP6AfterCodex = Assert-PriorP6PreclaimUnchanged $script:PriorP6Before
     $priorP5AfterCodex = Assert-PriorP5EvidenceUnchanged $script:PriorP5Before
     $priorP4AfterCodex = Assert-PriorP4EvidenceUnchanged $script:PriorP4Before
@@ -2285,6 +2473,8 @@ function Invoke-Terra(
         post_call_quiescence = $postCallQuiescence
         live_codex_home_before_codex = $liveCodexHomeBeforeCodex
         live_codex_home_after_codex = $liveCodexHomeAfterCodex
+        prior_publication7_before_codex = $priorP7BeforeCodex
+        prior_publication7_after_codex = $priorP7AfterCodex
         prior_publication6_before_codex = $priorP6BeforeCodex
         prior_publication6_after_codex = $priorP6AfterCodex
         prior_publication5_before_codex = $priorP5BeforeCodex
@@ -2296,11 +2486,12 @@ function Invoke-Terra(
     }
 }
 
-function Invoke-P7Preflight([bool]$RetainPermissionStaging) {
+function Invoke-P8Preflight([bool]$RetainPermissionStaging) {
     if (Test-Path -LiteralPath $script:EvidenceRoot) {
-        throw 'This deterministic Publication-7 lineage already exists. Run Inspect; do not create another attempt.'
+        throw 'This deterministic Publication-8 lineage already exists. Run Inspect; do not create another attempt.'
     }
     $quiescenceBefore = Get-QuiescenceProof
+    $priorP7Before = Get-PriorP7PreclaimProof
     $priorP6Before = Get-PriorP6PreclaimProof
     $priorP5Before = Get-PriorP5EvidenceProof
     $priorP4Before = Get-PriorP4EvidenceProof
@@ -2413,18 +2604,19 @@ function Invoke-P7Preflight([bool]$RetainPermissionStaging) {
 
     $liveCodexHomeSecond = Get-CodexHomeManifest $liveCodexHome
     if (-not (Test-ManifestEqual $liveCodexHomeFirst $liveCodexHomeSecond)) {
-        throw 'The live CODEX_HOME changed during Publication-7 preflight.'
+        throw 'The live CODEX_HOME changed during Publication-8 preflight.'
     }
     if ((Get-FileSha256 $liveAuthPath) -cne $liveAuthHash) {
-        throw 'The live Codex authentication bytes changed during Publication-7 preflight.'
+        throw 'The live Codex authentication bytes changed during Publication-8 preflight.'
     }
+    $priorP7After = Assert-PriorP7PreclaimUnchanged $priorP7Before
     $priorP6After = Assert-PriorP6PreclaimUnchanged $priorP6Before
     $priorP5After = Assert-PriorP5EvidenceUnchanged $priorP5Before
     $priorP4After = Assert-PriorP4EvidenceUnchanged $priorP4Before
     $priorP3After = Assert-PriorP3EvidenceUnchanged $priorP3Before
     $quiescenceAfter = Get-QuiescenceProof
     if (Test-Path -LiteralPath $script:EvidenceRoot) {
-        throw 'The Publication-7 evidence root appeared during preflight.'
+        throw 'The Publication-8 evidence root appeared during preflight.'
     }
 
         return [ordered]@{
@@ -2449,6 +2641,7 @@ function Invoke-P7Preflight([bool]$RetainPermissionStaging) {
         bundle_sha256 = $bundleHashes
         codex = [ordered]@{
             requested_version = $ExpectedCodexVersion
+            requested_windows_sandbox = 'unelevated'
             executable = $codexExe
             executable_sha256 = $ExpectedCodexHash
             package_sha256 = $ExpectedCodexPackageHash
@@ -2466,6 +2659,8 @@ function Invoke-P7Preflight([bool]$RetainPermissionStaging) {
         live_codex_home_manifest = $liveCodexHomeSecond
         live_auth_sha256 = $liveAuthHash
         process_exit_canary = $processExitCanary
+        prior_publication7_before = $priorP7Before
+        prior_publication7_after = $priorP7After
         prior_publication6_before = $priorP6Before
         prior_publication6_after = $priorP6After
         prior_publication5_before = $priorP5Before
@@ -2495,8 +2690,12 @@ $RequiredBundle = @(
     'documentation/native-claude-codex-skill-parity-plan.md',
     'documentation/native-claude-codex-skill-parity-terra-amendment.md',
     'documentation/native-claude-codex-skill-parity-proposal.html',
+    'tools/run-goal-np-terra-bootstrap.ps1',
     'schemas/terra-bootstrap-result-v1.schema.json',
-    'tools/run-goal-np-terra-bootstrap.ps1'
+    'experiments/recovery/cross-family-fixture/create_fixture.py',
+    'experiments/recovery/cross-family-fixture/probe.py',
+    'tests/experiments/test_cross_family_probe.py',
+    'tests/distributions/test_path_choke_point.py'
 )
 $AllowedAdminPaths = @(
     'config/workspace-targets.json',
@@ -2517,12 +2716,12 @@ $AllowedAdminPaths = @(
 )
 
 try {
-    $script:CanonicalApprovalMessageFile = Join-Path $env:LOCALAPPDATA 'SkillMesh\Evidence\GoalNP\Publication7\approval1-message.txt'
+    $script:CanonicalApprovalMessageFile = Join-Path $env:LOCALAPPDATA 'SkillMesh\Evidence\GoalNP\Publication8\approval1-message.txt'
     $suppliedApprovalPath = [System.IO.Path]::GetFullPath($ApprovalMessageFile)
     $canonicalApprovalPath = [System.IO.Path]::GetFullPath($script:CanonicalApprovalMessageFile)
     if (-not $suppliedApprovalPath.Equals($canonicalApprovalPath, [StringComparison]::OrdinalIgnoreCase)) {
         throw (New-P6Failure 'UNEXPECTED_FAILURE' 'approval-message' `
-            'ApprovalMessageFile is not the canonical Publication-7 approval path.')
+            'ApprovalMessageFile is not the canonical Publication-8 approval path.')
     }
     if (-not (Test-Path -LiteralPath $canonicalApprovalPath -PathType Leaf)) {
         throw (New-P6Failure 'UNEXPECTED_FAILURE' 'approval-message' 'ApprovalMessageFile does not exist.')
@@ -2536,7 +2735,7 @@ try {
     $actualApprovalBytes = [System.IO.File]::ReadAllBytes($canonicalApprovalPath)
     if ([Convert]::ToBase64String($actualApprovalBytes) -cne [Convert]::ToBase64String($expectedApprovalBytes)) {
         throw (New-P6Failure 'UNEXPECTED_FAILURE' 'approval-message' `
-            'Approval message is not exact UTF-8 without BOM, with one final LF, for Publication 7.')
+            'Approval message is not exact UTF-8 without BOM, with one final LF, for Publication 8.')
     }
 }
 catch {
@@ -2545,9 +2744,14 @@ catch {
 }
 $script:ApprovalMessageHash = Get-Sha256Text $ExpectedApproval
 $identityText = @(
-    'publication-7-writable-root-grammar-recovery-v1',
+    'publication-8-windows-sandbox-enforcement-recovery-v1',
     $ApprovedCommit,
     $script:ApprovalMessageHash,
+    $PriorP7ApprovedCommit,
+    $PriorP7RequestId,
+    $PriorP7ApprovalMessageHash,
+    $PriorP7ApprovalMessageFileHash,
+    $PriorP7HandoffHash,
     $PriorP6ApprovedCommit,
     $PriorP6RequestId,
     $PriorP6ApprovalMessageHash,
@@ -2568,6 +2772,7 @@ $script:EvidenceRoot = Join-Path $env:LOCALAPPDATA ('SkillMesh\Evidence\GoalNP\T
 $script:StatePath = Join-Path $script:EvidenceRoot 'state.json'
 
 if ($Action -eq 'Inspect') {
+    $null = Get-PriorP7PreclaimProof
     $null = Get-PriorP6PreclaimProof
     $null = Get-PriorP5EvidenceProof
     $null = Get-PriorP4EvidenceProof
@@ -2598,7 +2803,7 @@ if ($Action -eq 'Inspect') {
 }
 
 try {
-    $preflight = Invoke-P7Preflight ($Action -ceq 'Run')
+    $preflight = Invoke-P8Preflight ($Action -ceq 'Run')
 }
 catch {
     $preflightException = $_.Exception
@@ -2637,7 +2842,7 @@ try {
             'Run preflight did not retain the exact permission-staging request root.')
     }
     if (Test-Path -LiteralPath $script:EvidenceRoot) {
-        throw 'This deterministic Publication-7 lineage already exists. Run Inspect; do not create another attempt.'
+        throw 'This deterministic Publication-8 lineage already exists. Run Inspect; do not create another attempt.'
     }
     New-Item -ItemType Directory -Path $script:EvidenceRoot | Out-Null
 }
@@ -2661,6 +2866,7 @@ foreach ($name in $EnvironmentNames) {
 $script:DisposableCodexHome = $script:PermissionStagingLayout.codex_home
 $script:LiveCodexHome = $preflight.live_codex_home
 $script:LiveCodexHomeBefore = $preflight.live_codex_home_manifest
+$script:PriorP7Before = $preflight.prior_publication7_after
 $script:PriorP6Before = $preflight.prior_publication6_after
 $script:PriorP5Before = $preflight.prior_publication5_after
 $script:PriorP4Before = $preflight.prior_publication4_after
@@ -2684,6 +2890,7 @@ try {
     if (-not (Test-ManifestEqual $LiveCodexHomeBefore $postAllocationLiveCodexHome)) {
         throw 'The live CODEX_HOME changed after preflight and before execution.'
     }
+    $PriorP7PostAllocation = Assert-PriorP7PreclaimUnchanged $PriorP7Before
     $PriorP6PostAllocation = Assert-PriorP6PreclaimUnchanged $PriorP6Before
     $PriorP5PostAllocation = Assert-PriorP5EvidenceUnchanged $PriorP5Before
     $PriorP4PostAllocation = Assert-PriorP4EvidenceUnchanged $PriorP4Before
@@ -2717,6 +2924,8 @@ try {
         preclaim_permission_stdout_sha256 = Get-FileSha256 $preclaimStdoutPath
         preclaim_permission_stderr_sha256 = Get-FileSha256 $preclaimStderrPath
         preclaim_permission_projection_sha256 = $script:PreclaimPermissionProjectionHash
+        prior_publication7_before = $PriorP7Before
+        prior_publication7_post_allocation = $PriorP7PostAllocation
         prior_publication6_before = $PriorP6Before
         prior_publication6_post_allocation = $PriorP6PostAllocation
         prior_publication5_before = $PriorP5Before
@@ -2730,7 +2939,7 @@ try {
     }
 
     $implementationPrompt = @"
-Implement only ADMIN-BOOTSTRAP for Goal NP Publication 7 at commit $ApprovedCommit.
+Implement only ADMIN-BOOTSTRAP for Goal NP Publication 8 at commit $ApprovedCommit.
 The exact owner worktree is $RepoRoot. Read $RepoRoot\plan.md,
 $RepoRoot\documentation\native-claude-codex-skill-parity-plan.md, and
 $RepoRoot\documentation\native-claude-codex-skill-parity-terra-amendment.md. The amendment controls
@@ -2851,7 +3060,7 @@ gates.
     Write-Utf8NoBom $candidateEvidencePath (($candidateEvidence | ConvertTo-Json -Depth 10) + "`n")
 
     $reviewPrompt = @"
-Independently review the exact uncommitted ADMIN-BOOTSTRAP candidate for Goal NP Publication 7.
+Independently review the exact uncommitted ADMIN-BOOTSTRAP candidate for Goal NP Publication 8.
 The owner worktree is $RepoRoot and the approved commit is $ApprovedCommit. Read the exact plan at
 $RepoRoot\documentation\native-claude-codex-skill-parity-plan.md and controlling amendment at
 $RepoRoot\documentation\native-claude-codex-skill-parity-terra-amendment.md. The candidate evidence
@@ -2888,6 +3097,7 @@ PASS permits no blocker or significant gap.
     Write-State 'review-pass' @{ implementation = $implementation; review = $review; candidate_tree = $candidateTree }
 
     $LiveCodexHomeAfter = Assert-LiveCodexHomeUnchanged $LiveCodexHomeBefore 'before-commit'
+    $PriorP7BeforeCommit = Assert-PriorP7PreclaimUnchanged $PriorP7Before
     $PriorP6BeforeCommit = Assert-PriorP6PreclaimUnchanged $PriorP6Before
     $PriorP5BeforeCommit = Assert-PriorP5EvidenceUnchanged $PriorP5Before
     $PriorP4BeforeCommit = Assert-PriorP4EvidenceUnchanged $PriorP4Before
@@ -2917,6 +3127,7 @@ PASS permits no blocker or significant gap.
     $finalStatus = @(& git status --porcelain=v1 --untracked-files=all)
     if ($finalStatus.Count -ne 0) { throw 'ADMIN commit did not leave a clean worktree.' }
     $LiveCodexHomeTerminal = Assert-LiveCodexHomeUnchanged $LiveCodexHomeBefore 'success'
+    $PriorP7Terminal = Assert-PriorP7PreclaimUnchanged $PriorP7Before
     $PriorP6Terminal = Assert-PriorP6PreclaimUnchanged $PriorP6Before
     $PriorP5Terminal = Assert-PriorP5EvidenceUnchanged $PriorP5Before
     $PriorP4Terminal = Assert-PriorP4EvidenceUnchanged $PriorP4Before
@@ -2935,6 +3146,7 @@ PASS permits no blocker or significant gap.
         codex_executable_sha256 = $ExpectedCodexHash
         requested_model = 'gpt-5.6-terra'
         requested_reasoning_effort = 'xhigh'
+        requested_windows_sandbox = 'unelevated'
         reported_identity_status = 'unavailable'
         base_argv_sha256 = $baseArgvHash
         implementation = $implementation
@@ -2950,6 +3162,9 @@ PASS permits no blocker or significant gap.
         live_codex_home_after = $LiveCodexHomeAfter
         live_codex_home_terminal = $LiveCodexHomeTerminal
         process_exit_canary = $preflight.process_exit_canary
+        prior_publication7_before = $PriorP7Before
+        prior_publication7_before_commit = $PriorP7BeforeCommit
+        prior_publication7_terminal = $PriorP7Terminal
         prior_publication6_before = $PriorP6Before
         prior_publication6_before_commit = $PriorP6BeforeCommit
         prior_publication6_terminal = $PriorP6Terminal
@@ -3020,6 +3235,17 @@ catch {
         }
         catch {
             $blocked['live_codex_home_manifest_error'] = $_.Exception.Message
+        }
+    }
+    if ($PriorP7Before) {
+        try {
+            $blockedPriorP7After = Assert-PriorP7PreclaimUnchanged $PriorP7Before
+            $blocked['prior_publication7_after'] = $blockedPriorP7After
+            $blocked['prior_publication7_unchanged'] = $true
+        }
+        catch {
+            $blocked['prior_publication7_unchanged'] = $false
+            $blocked['prior_publication7_preclaim_error'] = $_.Exception.Message
         }
     }
     if ($PriorP6Before) {
