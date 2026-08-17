@@ -142,7 +142,7 @@ All citations are from producing files, verified 2026-08-16 by read-only survey.
 | `plan.md` (parity branch → main) | modify | Progress rows: `Goal NP plan → CLOSED UNAPPROVED (course change 2026-08-16)`, `Goal NP implementation → SUPERSEDED — see codex-parity-delivery-plan.md`; journal entry | committed structure verified: Progress table at line 61, rows at 63–67 incl. `Provider expansion \| PARKED` at line 66 — **that exact row string is load-bearing** (`tests/package-integrity/test_recovery_plan_hygiene.py:72`) and must be preserved |
 | `experiments/recovery/cross-family-fixture/{create_fixture.py, probe.py}`, `tests/experiments/test_cross_family_probe.py`, `tests/distributions/test_path_choke_point.py` | commit as-is | the 4 maintenance fixes (CRLF/LF canonicalization, sealed-inventory identity, production-route regression, launcher path-choke exemption) — content already reviewed across P8 generations A–E + independent audit | current bytes byte-verified against the 2026-08-16 worklog snapshot (all SHA-256 match) |
 | `tools/run-goal-np-terra-bootstrap.ps1` | commit as-is, park | P8 candidate content becomes historical record; never invoked by this plan | hash-verified; path-choke exemption is keyed to this exact path (`test_path_choke_point.py:169–177`) — do not rename |
-| 4 Step-4 WIP files (`install-skill-mesh.ps1`, `migrate-legacy-install.ps1`, `tests/distributions/test_distributions.py`, `tests/distributions/test_legacy_migration.py`) | finish + commit | write-ahead authority hardening, closes #116; one failing test to identify and fix | hash-verified recovery copies at `Recovery/skill-mesh-step-4-20260814T021546Z-73e9e215` (manifest.json, base 111fc2ba); live diff M on all four in main worktree |
+| 4 Step-4 WIP files (`install-skill-mesh.ps1`, `migrate-legacy-install.ps1`, `tests/distributions/test_distributions.py`, `tests/distributions/test_legacy_migration.py`) | finish + commit | write-ahead authority hardening, closes #116; 3 failing tests measured at the Step-1 post-landing baseline (see Step 2) | hash-verified recovery copies at `Recovery/skill-mesh-step-4-20260814T021546Z-73e9e215` (manifest.json, base 111fc2ba); live diff M on all four in main worktree |
 | `skills/{judge-ui, plan-feature, plan-init, plan-review, repo-update, review-deep, review-gauntlet, review-proof, skill-evolve, skill-iterate, tier-escalate, tier-offload, user-afterparty, user-gateway, user-uat, user-wrap}/core.md` | extend | utility advisory-call blocks per the convention; authoritative hookup map read from the owning docs at Step 11 | working set = the 16 modified installed cores in the dev root (`git status`, dev repo); authoritative sources: `dev/.claude/references/advisory-call-convention.md` (ONE owner) + the utility-hookup owning plan — read at build time |
 | dev repo (read/coordinate only): `.claude/observatory/registry.toml`, `dev-observatory/*` | verify/coordinate | wiring visibility surface for M4; dev-observatory Steps 32–42 dirty + Step 43 planned are owned by ITS plan — this plan coordinates, never rebuilds | cross-repo boundary per working-directory rule; Step 12 reads the observatory producing sources to determine the visibility mechanism |
 
@@ -253,8 +253,9 @@ decision, not a predicate — Steps 11–12 stay unconditional per P9, and a bar
 `Status: DONE` in this file when finished. It also **lands the 4-file Step-4 WIP on `main`
 as-is (known-red)**, which is what lets Step 2 run as an ordinary isolation-worktree step:
 `/build-step` branches a worktree from committed state, so an uncommitted delta would be
-invisible to it. `main` therefore enters pass 1 carrying exactly one known failing test —
-Step 2's input, and the baseline `/build-phase` measures from.
+invisible to it. `main` therefore enters pass 1 carrying three known failing tests (measured
+2026-08-16, `documentation/findings/cp-step1-post-landing-baseline.txt`: 3 failed / 461
+passed) — Step 2's input, and the baseline `/build-phase` measures from.
 
 Cohort steps 6–8/10 read M1's verdict from `documentation/parity-deltas.md`. Their predicates
 are **absence-safe** (`test -f … && grep -qi …`): a bare `grep` against a missing file exits
@@ -316,29 +317,46 @@ cohorts depend on — a sequencing constraint, not a conditional one.
      is only reachable once (2) has landed those four files.
   4. `main` contains the maintenance fixes, the closure record, and the worklog.
 
-  > **Known-red on exit, by design.** After (2), `main` carries exactly one failing test:
-  > `tests/distributions/test_distributions.py::test_every_emitted_skill_md_frontmatter_survives_a_strict_yaml_parse`.
-  > That is #116's subject and Step 2's entire job. Record the post-(2) count as the baseline
-  > `/build-phase` will start pass 1 from.
+  > **Known-red on exit, by design.** After (2), `main` carries exactly three failing tests
+  > (measured 2026-08-16, `documentation/findings/cp-step1-post-landing-baseline.txt`:
+  > 3 failed / 461 passed in 1:15:00):
+  > `tests/distributions/test_distributions.py::test_uninstall_refuses_escaping_ledger_entry`,
+  > `tests/distributions/test_distributions.py::test_marker_false_positive_token_mention_not_owned`,
+  > `tests/distributions/test_path_choke_point.py::test_every_mutating_primitive_resolves_through_the_choke_point`.
+  > That set is #116's subject and Step 2's entire job. The frontmatter test previously named
+  > here (`test_every_emitted_skill_md_frontmatter_survives_a_strict_yaml_parse`) is GREEN at
+  > this baseline — its earlier red was the documented missing-PyYAML environment mode, not
+  > the delta. This baseline is what `/build-phase` starts pass 1 from.
 - **Depends on:** none
+- **Status:** DONE (2026-08-16)
 
 <!-- autofix-applied: 2026-08-16 -->
 ### Step 2: Finish Step-4 installer hardening (#116)
 - **Problem:** The 4-file write-ahead-authority delta (+1,843/−277) is **landed on `main` by
-  Step 1** (as-is, known-red), so this step starts from committed state and an ordinary
-  isolation worktree carries it. The delta's one failing test is **identified**:
-  `tests/distributions/test_distributions.py::test_every_emitted_skill_md_frontmatter_survives_a_strict_yaml_parse`
-  — every emitted `SKILL.md` frontmatter must survive a strict YAML parse, and under the
-  hardened installer/migrator it does not. **Fix the root cause, not the assertion.** The
-  failure is either a real defect in what the hardened write-ahead path emits, or a real
-  defect in what the test models; decide which by reading the emitted bytes, and say
-  explicitly which one it was in the step report. A test diff that relaxes the assertion to
-  green the suite is the codifying-regression anti-pattern and will be rejected on review.
+  Step 1** (as-is, known-red, commit `f4e1332`), so this step starts from committed state and
+  an ordinary isolation worktree carries it. The measured baseline (2026-08-16,
+  `documentation/findings/cp-step1-post-landing-baseline.txt`) is **three failing tests**:
+  (a) `tests/distributions/test_distributions.py::test_uninstall_refuses_escaping_ledger_entry`
+  and (b) `tests/distributions/test_distributions.py::test_marker_false_positive_token_mention_not_owned`
+  — in both, the hardened uninstaller hard-throws
+  `REFUSING uninstall -- owned_file_hashes is missing, malformed, or inconsistent`
+  (`tools/install-skill-mesh.ps1:1083`) where the test requires a zero-exit outcome; and
+  (c) `tests/distributions/test_path_choke_point.py::test_every_mutating_primitive_resolves_through_the_choke_point`
+  — the static choke-point audit flags 3 ungated mutation sites
+  (`install-skill-mesh.ps1:904`, `:1430`, `:1486`). **Fix the root causes, not the
+  assertions.** Each failure is either a real defect in what the hardened installer/migrator
+  does, or a real defect in what the test models; decide which by reading the runtime
+  behavior, and say explicitly which one it was, per failure, in the step report. A test diff
+  that relaxes an assertion to green the suite is the codifying-regression anti-pattern and
+  will be rejected on review.
+  Superseded claim, for the record: this step was previously briefed as exactly one failing
+  test (`test_every_emitted_skill_md_frontmatter_survives_a_strict_yaml_parse`); that test is
+  GREEN at the baseline — its earlier red was the documented missing-PyYAML environment mode
+  (20 red tests across two files), not this delta. PyYAML 6.0.3 is installed and verified in
+  the gate environment.
   Context: `step-4-checkpoint-2026-08-13.md:73–102`; hash-verified recovery copies at
   `%LOCALAPPDATA%\SkillMesh\Recovery\skill-mesh-step-4-20260814T021546Z-73e9e215`.
-  PyYAML is present (the gate needs a real strict parser — a hand-rolled scanner would only
-  be this repo's *model* of YAML), so this is a genuine parse failure, not a missing
-  dependency. Closes #116.
+  Closes #116.
 - **Type:** code
 - **Issue:** #119
 - **Flags:** --reviewers deep

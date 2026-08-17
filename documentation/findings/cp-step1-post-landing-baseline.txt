@@ -1,0 +1,61 @@
+CP Step 1 post-landing baseline (2026-08-16)
+Command: python -m pytest tests/distributions/ -q --no-header --tb=short
+Tree: main with the Step-4 WIP staged (byte-identical to commit f4e1332)
+Env: Python 3.14.3, pytest 9.1.1, PyYAML 6.0.3 (present, verified)
+This is the known-red baseline /build-phase pass 1 starts from (#116 / #119 / #118).
+
+Note: the single failing test previously asserted by the plan and #119
+(test_every_emitted_skill_md_frontmatter_survives_a_strict_yaml_parse) is GREEN at
+this baseline; its earlier red was the documented missing-PyYAML environment mode.
+..............................................F......................... [ 15%]
+.........F.............................................................. [ 31%]
+........................................................................ [ 46%]
+........................................................................ [ 62%]
+........................................................................ [ 77%]
+........................................................................ [ 93%]
+.......................F........                                         [100%]
+================================== FAILURES ===================================
+________________ test_uninstall_refuses_escaping_ledger_entry _________________
+tests\distributions\test_distributions.py:1636: in test_uninstall_refuses_escaping_ledger_entry
+    assert ru.returncode == 0, f"uninstall errored on tampered ledger:\n{ru.stderr}"
+E   AssertionError: uninstall errored on tampered ledger:
+E     install-skill-mesh: REFUSING uninstall -- owned_file_hashes is missing, malformed, or inconsistent. Nothing was 
+E     deleted.
+E     At C:\Users\<user>\dev\skill-mesh\tools\install-skill-mesh.ps1:1083 char:13
+E     +             throw "install-skill-mesh: REFUSING uninstall -- owned_fi ...
+E     +             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+E         + CategoryInfo          : OperationStopped: (install-skill-m...ng was deleted.:String) [], RuntimeException
+E         + FullyQualifiedErrorId : install-skill-mesh: REFUSING uninstall -- owned_file_hashes is missing, malformed, or in 
+E        consistent. Nothing was deleted.
+E      
+E     
+E   assert 1 == 0
+E    +  where 1 = CompletedProcess(args=['C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.EXE', '-NonInteractive', '-File', '...mesh: REFUSING uninstall -- owned_file_hashes is missing, malformed, or in \n   consistent. Nothing was deleted.\n \n').returncode
+_____________ test_marker_false_positive_token_mention_not_owned ______________
+tests\distributions\test_distributions.py:2515: in test_marker_false_positive_token_mention_not_owned
+    assert ru.returncode == 0, ru.stderr
+E   AssertionError: install-skill-mesh: REFUSING uninstall -- owned_file_hashes is missing, malformed, or inconsistent. Nothing was 
+E     deleted.
+E     At C:\Users\<user>\dev\skill-mesh\tools\install-skill-mesh.ps1:1083 char:13
+E     +             throw "install-skill-mesh: REFUSING uninstall -- owned_fi ...
+E     +             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+E         + CategoryInfo          : OperationStopped: (install-skill-m...ng was deleted.:String) [], RuntimeException
+E         + FullyQualifiedErrorId : install-skill-mesh: REFUSING uninstall -- owned_file_hashes is missing, malformed, or in 
+E        consistent. Nothing was deleted.
+E      
+E     
+E   assert 1 == 0
+E    +  where 1 = CompletedProcess(args=['C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.EXE', '-NonInteractive', '-File', '...mesh: REFUSING uninstall -- owned_file_hashes is missing, malformed, or in \n   consistent. Nothing was deleted.\n \n').returncode
+_______ test_every_mutating_primitive_resolves_through_the_choke_point ________
+tests\distributions\test_path_choke_point.py:383: in test_every_mutating_primitive_resolves_through_the_choke_point
+    assert not bad, (
+E   AssertionError: mutating filesystem primitives that do not resolve through the path choke point (see this module's docstring; add an allowlist entry ONLY with a reason that the site cannot touch a consumer home):
+E       tools/install-skill-mesh.ps1:904: $safeTarget is assigned from an ungated expression (Resolve-FreshSharedTarget ([string]$rel) $Provider $homeAbs $payloadRootAbs), so the $safe* name is not proof of anything
+E       tools/install-skill-mesh.ps1:1430: path is not a $safe* value ($replaceBackup): Remove-Item -LiteralPath $replaceBackup -Force
+E       tools/install-skill-mesh.ps1:1486: $safeStale is assigned from an ungated expression (Assert-ProviderTargetDomain ([string]$r) $Provider $homeAbs), so the $safe* name is not proof of anything
+E   assert not ['tools/install-skill-mesh.ps1:904: $safeTarget is assigned from an ungated expression (Resolve-FreshSharedTarget ([st...expression (Assert-ProviderTargetDomain ([string]$r) $Provider $homeAbs), so the $safe* name is not proof of anything']
+=========================== short test summary info ===========================
+FAILED tests/distributions/test_distributions.py::test_uninstall_refuses_escaping_ledger_entry
+FAILED tests/distributions/test_distributions.py::test_marker_false_positive_token_mention_not_owned
+FAILED tests/distributions/test_path_choke_point.py::test_every_mutating_primitive_resolves_through_the_choke_point
+3 failed, 461 passed in 4500.23s (1:15:00)
