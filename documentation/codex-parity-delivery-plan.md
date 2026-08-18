@@ -1,7 +1,7 @@
 # Codex parity delivery plan (Phase CP)
 
 - **Written:** 2026-08-16
-- **Status:** READY — plan-review PASS, plan-redline accepted (P1–P9, D-CP1–D-CP15), plan-wrap READY, all 2026-08-16; next: /repo-sync
+- **Status:** IN FLIGHT (pass 1) — repo-sync done (umbrella #117, steps #118–#133). Steps 1–3 DONE; Steps 4+5 BLOCKED with their work pre-landed on `main` at `b2b2d98`; next: `/build-phase --plan documentation/codex-parity-delivery-plan.md --steps 4,5`, then operator M1. Plan-review PASS / plan-redline accepted (P1–P9, D-CP1–D-CP15) / plan-wrap READY were all 2026-08-16.
 - **Issue phase label:** `Phase CP Step N:` (fresh namespace; the Goal NP parity plan's Steps 1–41 were never repo-synced, so no collisions; next issues mint at #117+)
 - **Supersedes:** the Goal NP two-approval publication path for delivery sequencing. The
   detailed parity plan (`documentation/native-claude-codex-skill-parity-plan.md`, parity branch)
@@ -445,7 +445,7 @@ cohorts depend on — a sequencing constraint, not a conditional one.
 - **Done when:** dist/codex holds exactly the 5 pilot skills with provenance headers;
   frontmatter + budget tests green; focused suites green
 - **Depends on:** 3
-- **Status:** BLOCKED (2026-08-18) - work preserved on branch `build-step-1786993911`; see documentation/cp-pass1-handoff-2026-08-18.md
+- **Status:** BLOCKED (2026-08-18) - work **pre-landed on `main` at `b2b2d98`, minus the migrator delta**; complete it from HEAD, not from a branch. Do NOT re-land the migrator delta preserved at `aa6c873` (branch `build-step-1786993911`, tag `cp-migrator-rounds12`) for #138. See documentation/cp-pass1-handoff-2026-08-18.md
 
 <!-- autofix-applied: 2026-08-16 -->
 ### Step 5: Codex install path + bring-up probe kit
@@ -480,14 +480,41 @@ cohorts depend on — a sequencing constraint, not a conditional one.
 
   **Migrator decoupled (decision 2026-08-18, option 3 — see
   `documentation/cp-pass1-handoff-2026-08-18.md` and #122).** This step ships **zero delta**
-  to `tools/migrate-legacy-install.ps1`: when resuming from branch `build-step-1786993911`,
-  restore that file byte-identical to `main` and drop the pass-1 scoping change that made
-  single-profile dists legal for migration (it created "unbound roots" and a silent-orphaning
-  defect class; hardening moved to #138). The pre-existing dist-completeness rule stands:
-  `New-MigrationPlan` blocks with `MISSING_PROFILE` unless the dist ships every declared
-  provider, so with codex declared, legacy migration requires a `-Provider all` dist. Record
-  this as a behavior note in `documentation/migration.md`. Rounds-1–2 machinery stays
-  preserved on the branch for #138 to cherry-pick; do not re-land any of it in this phase.
+  to `tools/migrate-legacy-install.ps1`. The Steps 4+5 work is **pre-landed on `main` at
+  `b2b2d98`, minus the migrator delta** — complete it from HEAD, not from a branch. That
+  commit already restored the migrator byte-identical to `main` (blob `7adb252f`), dropping the
+  pass-1 scoping change that made single-profile dists legal for migration (it created
+  "unbound roots" and a silent-orphaning defect class; hardening moved to #138). Do NOT re-land
+  any of that machinery: it is preserved at `aa6c873` — branch `build-step-1786993911`,
+  worktree `worktree_build-step-1786993911`, tag `cp-migrator-rounds12` — for #138 to
+  cherry-pick. Because `b2b2d98` is a squash, `git merge build-step-1786993911` is armed and
+  would re-land the +490 delta: never run it; #138 cherry-picks. The pre-existing
+  dist-completeness rule stands: `New-MigrationPlan` blocks with `MISSING_PROFILE` unless the
+  dist ships every declared provider, so with codex declared, legacy migration requires a
+  `-Provider all` dist. Record this as a behavior note in `documentation/migration.md`
+  (0 codex mentions today).
+
+  **Measured known-red inherited from `b2b2d98` — this is Step 5's remaining work, not a
+  regression to revert. All counts measured at that tree:**
+  1. `tests/distributions/test_legacy_migration.py` — 161 failed / 43 passed (the suite was
+     green at `3322701`). Producer-consumer drift, not fallout from the exclusion: the commit
+     declares top-level `providers.codex` and the codex discovery root, while the migrator binds
+     every DECLARED provider (`:3674`, `:906-914`) and fires `MISSING_PROFILE` (`:1009-1015`) for
+     any dist omitting one — and the fixtures still build `-Provider both`. Fix the fixtures
+     to `-Provider all`; do NOT "fix" the migrator.
+  2. `tests/distributions/test_codex_install_path.py` — 17 failed / 22 passed. Those 17 assert
+     the REJECTED rounds-1–2 design (`LEDGER_PROVIDER_NOT_IN_DISTRIBUTION`,
+     `UNBOUND_PROVIDER_ROOT_MANAGED_CONTENT`, `$scanProviderRoots`, single-profile dist
+     legality). **Trap:** making them pass by editing the migrator re-lands exactly what option 3
+     rejected. Rewrite them for option-3 semantics or move them to #138. Likewise
+     `test_legacy_migration.py::test_recovery_rejects_a_payload_path_equal_to_the_payload_directory`
+     needs `Test-RelStrictlyUnderRoot`, which is absent repo-wide and lives only at `aa6c873`
+     — move it to #138.
+  3. `tools/release.ps1:114-115` landed a claim that is FALSE at this tree ("tools/migrate-legacy-install.ps1
+     binds exactly the profiles the dist ships, so a 'both' release stays a complete, migratable
+     artifact"). That describes the excluded machinery. Correct it in this step.
+  4. Install **PyYAML** before the pass-1 exit gate — without it 16+ `tests/package-integrity`
+     tests red as the CLAUDE.md-documented missing-parser mode and pollute the gate's summary.
 - **Type:** code
 - **Issue:** #122
 - **Flags:** --reviewers deep
@@ -505,7 +532,7 @@ cohorts depend on — a sequencing constraint, not a conditional one.
   option-3 decision); behavior note present in `documentation/migration.md`;
   one uninterrupted repo-root `python -m pytest` passes (pass-1 exit gate)
 - **Depends on:** 2, 4
-- **Status:** BLOCKED (2026-08-18) - 3/3 iterations; nested-junction discovery gap in migrate-legacy-install.ps1. Decision recorded (option 3, zero migrator delta; hardening → #138): resume from branch build-step-1786993911. See documentation/cp-pass1-handoff-2026-08-18.md and issue #122.
+- **Status:** BLOCKED (2026-08-18) - 3/3 iterations; nested-junction discovery gap in migrate-legacy-install.ps1. Decision recorded (option 3, zero migrator delta; hardening → #138). Work **pre-landed on `main` at `b2b2d98`, minus the migrator delta** — complete it from HEAD, not from a branch; do NOT re-land the migrator delta preserved at `aa6c873` (branch `build-step-1786993911`, tag `cp-migrator-rounds12`) for #138. See documentation/cp-pass1-handoff-2026-08-18.md and issue #122.
 
 <!-- autofix-applied: 2026-08-16 -->
 ### Step 6: Cohort B — pipeline family
