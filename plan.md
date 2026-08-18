@@ -67,8 +67,8 @@ does not reinterpret that evidence or revive its stopped experiment.
 | Goal NP plan | CLOSED UNAPPROVED (course change 2026-08-16) | Nothing — closed by operator ratification; no further approval is sought |
 | Goal NP implementation | SUPERSEDED — documentation/codex-parity-delivery-plan.md | Nothing — Phase CP owns delivery sequencing from 2026-08-16 |
 | Phase CP pass 1 (Steps 1–5) | COMPLETE (2026-08-18) | Nothing — issues #118–#122 closed at `4bcbef5`; DONE gate green |
-| Phase CP Step M1 (#130) | NEXT — operator | Abraham running pilot bring-up in a real Codex session |
-| Phase CP cohorts (Steps 6/7/8/10) | GATED | A passing M1 verdict recorded in `documentation/parity-deltas.md`; the conditional predicate exits 1 until then |
+| Phase CP Step M1 (#130) | COMPLETE (2026-08-18) — passing verdict | Nothing — check rows, deltas, and verdict recorded in `documentation/parity-deltas.md`; codex-cli 0.147.0, Copilot 1.0.77 |
+| Phase CP cohorts (Steps 6/7/8/10) | RELEASED — pass 2 is next | `/build-phase` over the cohort steps; the conditional predicate now exits 0 (verified 2026-08-18). Land #128/#129 only after M1 evidence, per the plan's sequencing caveat — satisfied |
 | Legacy-migrator hardening (#138) | DEFERRED | Its own issue — Phase CP ships zero migrator delta by the option-3 decision of 2026-08-18 |
 | Goal NP live cutover | LOCKED | Approval 2 on the immutable deliverable after disposable rehearsal |
 | Provider expansion | PARKED | A later explicit Abraham decision must resume that track; Goal NP does not unlock it |
@@ -82,11 +82,13 @@ does not reinterpret that evidence or revive its stopped experiment.
 Execute Phase CP per `documentation/codex-parity-delivery-plan.md`. That plan is the current
 delivery authority; this file records status and history.
 
-**Pass 1 (Steps 1–5) is complete as of 2026-08-18** at commit `4bcbef5`. The next action is
-**operator Step M1 (#130)** — pilot bring-up in a real Codex session. Do not run Steps 6/7/8/10
-by hand: they are `Type: conditional` and correctly stay skipped until M1 records a passing
-verdict in `documentation/parity-deltas.md`. Do not write that verdict token without the
-evidence — it releases four cohort steps.
+**Pass 1 (Steps 1–5) is complete as of 2026-08-18** at commit `4bcbef5`. **Step M1 (#130) is
+complete as of 2026-08-18 with a passing verdict** — evidence, check rows, delta rows (one
+`fix`-dispositioned: plan-review's autofix fix-count line), and the D-CP6 accept decision are
+recorded in `documentation/parity-deltas.md`. The next action is **pass 2**: `/build-phase`
+over the released cohort steps (#123/#124/#125; #127 remains conditional on the same
+predicate). M1's verdict must be committed to `main` before pass 2 — build worktrees branch
+from HEAD and cannot see an uncommitted delta log.
 
 The Goal NP recovery decision is **closed**. No Publication-8 approval is pending or will be sought.
 Do not run any Publication-8 `Preflight` or `Run`, and do not invoke
