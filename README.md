@@ -498,8 +498,17 @@ hosts; 3 are Claude-native (`claude-oauth-auth`, `context-slim`, `judge-motion`)
   round-trip proving zero writes outside the disposable home. The legacy migrator carries **zero**
   Phase CP delta by an explicit decision — a partial-distribution migration fails loud
   (`MISSING_PROFILE`) rather than risking orphaned bytes, and that hardening is tracked separately.
-  Next is operator bring-up in a real Codex session; the remaining cohorts are gated on its verdict.
-  See [documentation/codex-parity-delivery-plan.md](documentation/codex-parity-delivery-plan.md).
+  The remaining cohorts were gated on the operator bring-up verdict — delivered as milestone M1
+  (next bullet). See
+  [documentation/codex-parity-delivery-plan.md](documentation/codex-parity-delivery-plan.md).
+- **Phase CP milestone M1 complete — issues #130 closed.** The pilot's live bring-up on a real
+  host: the installed Codex CLI (0.147.0) discovers all five pilot skills from `.agents/skills`,
+  both exercised skills honored their contracts (plan-review rendering its verdict through the
+  single-context fallback), and the first live consumer-home write touched only the codex root and
+  its ledger. GitHub Copilot CLI 1.0.77 was observed enumerating the shared root's codex packages;
+  the accept decision and its reason are recorded with the rest of the evidence in
+  [documentation/parity-deltas.md](documentation/parity-deltas.md). The conditional cohort steps
+  are released.
 - **Phase 8 is superseded** by Phase CP's additive, cohort-based rollout (course change 2026-08-16).
   Step 47b remains the separately scheduled containment-gate hardening follow-up and is off the
   completed cutover path.
