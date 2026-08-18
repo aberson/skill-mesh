@@ -26,10 +26,12 @@ it exactly backwards.
 
 WHY THIS MEASURES THE PORTABLE CATALOG AND NOT THE CODEX RECORDS
 ---------------------------------------------------------------
-At Step 3 there are ZERO authored codex adapters (the rails ship first; Step 4 adds the
-pilot five, Steps 6-8 the cohorts). Summing over the codex records would therefore
-measure 0 characters against an 8,000 floor and report a comfortable PASS that means
-nothing -- a vacuous gate on the exact axis the plan flags as a live risk
+At Step 3 there are ZERO authored codex adapters, and at Step 4 there are five of a
+projected 47 (the rails ship first; Step 4 adds the pilot five, Steps 6-8 the cohorts).
+Summing over the codex records would therefore measure 0 characters -- and after Step 4
+still only about a tenth of the catalog -- against an 8,000 floor, and report a
+comfortable PASS that means nothing: a vacuous gate on the exact axis the plan flags as
+a live risk
 ("Initial-list budget (8,000 chars) with 47-54 skills | Catalog could truncate in
 Codex's skill list", codex-parity-delivery-plan.md:719).
 
@@ -54,6 +56,7 @@ there, and to keep failing until a description is trimmed.
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 import pytest
@@ -66,17 +69,39 @@ MANIFEST_PATH = REPO_ROOT / "config" / "skill-manifest.json"
 PER_SKILL_CAP = 7_500
 CATALOG_FLOOR = 8_000
 
-# Where a Codex skill package lands in a consumer home, home-relative and POSIX-form
-# (documentation/native-claude-codex-skill-parity-plan.md: `.agents/skills/<name>`).
-#
-# NOT read from tools/skill-mesh-discovery.ps1, which is the sole owner of the
-# provider -> discovery-root map and deliberately does NOT know `codex` yet: declaring
-# it there is Phase CP Step 5's job, and D-CP6 defers the `.agents/skills` policy to M1
-# evidence. This constant is a BUDGET input -- the path shape whose characters count
-# against the catalog floor -- not an install target, and nothing here installs
-# anything. When Step 5 adds the real map entry, this should read from it instead; the
-# test below pins the shape so that swap is a visible one-line change.
-CODEX_SKILL_ROOT = ".agents/skills"
+DISCOVERY_SCRIPT = REPO_ROOT / "tools" / "skill-mesh-discovery.ps1"
+
+
+def _discovery_root(provider):
+    """Read one provider's discovery root from its SOLE owner.
+
+    Phase CP Step 5 added the `codex` entry to
+    tools/skill-mesh-discovery.ps1's `Get-SkillMeshDiscoveryRoots`, so this module no
+    longer spells the path: it derives it, exactly as Step 3's parked comment
+    instructed ("when Step 5 adds the real map entry, this should read from it
+    instead"). A budget measured against a path this module invented would stop being
+    a budget the moment the real root changed.
+
+    Parsed rather than executed on purpose -- this suite is hermetic Python and must
+    not need powershell on PATH to state a number. The map is a literal hashtable, so
+    the parse is exact, and it fails LOUDLY (assert) rather than falling back to a
+    guess, because a silent fallback is how a budget starts measuring nothing.
+    """
+    text = DISCOVERY_SCRIPT.read_text(encoding="utf-8")
+    body = re.search(r"function Get-SkillMeshDiscoveryRoots\b.*?\n}", text, re.S)
+    assert body, "Get-SkillMeshDiscoveryRoots not found in the discovery-root owner"
+    m = re.search(r"^\s*'" + re.escape(provider) + r"'\s*=\s*'([^']+)'\s*$",
+                  body.group(0), re.M)
+    assert m, f"the discovery-root owner declares no root for {provider!r}"
+    return m.group(1)
+
+
+# Where a Codex skill package lands in a consumer home, home-relative and POSIX-form.
+# This is a BUDGET input -- the path shape whose characters count against the catalog
+# floor -- not an install target, and nothing in this module installs anything. It is
+# DERIVED from the map so the two can never disagree about how many characters a codex
+# package path costs.
+CODEX_SKILL_ROOT = _discovery_root("codex")
 
 
 def _load_manifest():
@@ -204,13 +229,29 @@ def test_catalog_estimate_is_measured_over_the_projected_codex_catalog():
     portable = {s["name"] for s in manifest["skills"] if s["status"] == "portable"}
     assert eligible == portable
     assert len(eligible) == manifest["counts"]["portable"] == 47
-    # And the measured basis must be the eligible set, not the authored one, which is
-    # empty at this step.
-    assert manifest["counts"]["codex"] == 0, (
-        "once codex adapters exist this assertion should be RELAXED, not deleted -- the "
-        "basis must stay the projected catalog, which is what keeps the estimate honest "
-        "while adapters are still being authored")
+    # And the measured basis must be the PROJECTED catalog, not the AUTHORED one.
+    #
+    # At Step 3 that was spelled `counts["codex"] == 0`, which was the strongest form
+    # available while no adapter existed. Phase CP Step 4 authored the pilot five, so
+    # this is RELAXED -- as the assertion's own message instructed -- and NOT deleted.
+    # The invariant is unchanged: swapping `_codex_eligible_records` to filter on
+    # `"codex" in providers` must stay VISIBLE. Two things make it so: the authored
+    # roster is a PROPER subset of the eligible one, and the estimate it would produce
+    # is strictly smaller than the one this module reports.
+    authored = [s for s in manifest["skills"] if "codex" in s["providers"]]
+    assert {s["name"] for s in authored} <= eligible
+    assert 0 < len(authored) < len(eligible), (
+        f"{len(authored)} authored codex adapters vs {len(eligible)} eligible. When "
+        "every portable skill carries one the two bases coincide and this guard goes "
+        "vacuous -- at that point pin the basis another way rather than dropping it.")
     total, sizes = _catalog_estimate()
+    authored_total = sum(
+        _utf8_len(_skill_metadata_serialization(s["name"], s["description"]))
+        for s in authored)
+    assert authored_total < total, (
+        "the estimate is being measured over the AUTHORED codex records rather than the "
+        "projected catalog, which under-reports the budget while adapters are still "
+        "being authored")
     assert len(sizes) == 47
     assert total > 0
 
@@ -253,13 +294,22 @@ def test_codex_install_path_shape_is_pinned():
 
     Pinned because path characters are explicitly inside Codex's budget, so a change
     from `.agents/skills` to a longer root silently consumes headroom the catalog test
-    is already close to spending. Phase CP Step 5 owns adding this root to
-    tools/skill-mesh-discovery.ps1; when it does, this constant should be read from
-    there and this test becomes the cross-check between the two.
+    is already close to spending.
+
+    Since Phase CP Step 5 this is the CROSS-CHECK Step 3's comment promised: the
+    constant is derived from tools/skill-mesh-discovery.ps1 (the sole owner), and the
+    spelled value below is the second, independent statement of the same fact. They
+    are allowed to disagree only by someone editing both -- which is exactly the
+    visible, deliberate act a budget change should require.
     """
     assert CODEX_SKILL_ROOT == ".agents/skills"
     assert not CODEX_SKILL_ROOT.startswith("/")
     assert "\\" not in CODEX_SKILL_ROOT, "home-relative POSIX form, per the map's contract"
+    # The derivation is live: the owner really does declare the other two roots too,
+    # so a parser that silently matched nothing would fail here rather than pass by
+    # returning the value this test happens to expect.
+    assert _discovery_root("claude") == ".claude/skills"
+    assert _discovery_root("gpt") == ".github/skills"
 
 
 @pytest.mark.parametrize("name,expected_substrings", [

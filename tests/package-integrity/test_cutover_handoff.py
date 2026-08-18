@@ -691,9 +691,15 @@ def test_flag_value_gate_reds_on_a_value_outside_the_scripts_validateset():
     # so a gate that checks only the name accepts the broken one.
     installer = REPO_ROOT / "tools" / "install-skill-mesh.ps1"
     builder = REPO_ROOT / "tools" / "build-distributions.ps1"
-    assert declared_value_sets(installer)["provider"] == {"claude", "gpt"}
-    assert declared_value_sets(installer)["profile"] == {"claude", "gpt"}, \
+    # The installer gained 'codex' in Phase CP Step 5, when codex became installable
+    # (discovery root + install path + ledger semantics, all in one commit). What it
+    # deliberately did NOT gain is 'both' or 'all': the installer binds exactly ONE
+    # profile per run, which is what keeps the contrast below real.
+    assert declared_value_sets(installer)["provider"] == {"claude", "gpt", "codex"}
+    assert declared_value_sets(installer)["profile"] == {"claude", "gpt", "codex"}, \
         "an alias must inherit its parameter's ValidateSet"
+    assert not ({"both", "all"} & declared_value_sets(installer)["provider"]), \
+        "the installer must never accept a multi-profile value -- it installs one profile"
     # The builder gained 'codex' + 'all' in Phase CP Step 3. 'both' is deliberately
     # STILL in the set and still means claude+gpt (see build-distributions.ps1's
     # $profiles comment), which is what keeps the illegal-on-the-installer /

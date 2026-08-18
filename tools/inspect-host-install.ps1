@@ -11,9 +11,16 @@
     It reports:
       - root instruction files (CLAUDE.md / AGENTS.md) with an evidence class
         (host-convention when present, unknown when absent -- NEVER 'observed',
-        which is reserved for a host that exposes runtime provenance);
-      - the Claude discovery root (.claude/skills) and the GPT discovery root
-        (.github/skills), each with its state, link type/target, and a per-skill
+        which is reserved for a host that exposes runtime provenance). AGENTS.md is
+        the instruction adapter Codex and Copilot read, and its evidence class is
+        the ONLY codex-adjacent claim this tool can honestly make about instruction
+        loading. It is deliberately NOT correlated with the codex discovery root:
+        instruction injection and skill discovery are separate, non-interchangeable
+        mechanisms (documentation/host-discovery.md), so "codex root present but
+        AGENTS.md absent" is not a defect and is not warned about here;
+      - the Claude discovery root (.claude/skills), the GPT discovery root
+        (.github/skills), and the codex discovery root (.agents/skills), each with
+        its state, link type/target, and a per-skill
         eligibility classification cross-referenced against config/skill-manifest.json;
       - the RETIRED project-relative .copilot/skills wrong-target (flagged when
         present -- a leftover from a pre-Step-44 GPT install);
@@ -140,16 +147,25 @@ $MANIFEST_PATH = Join-Path $REPO_ROOT 'config\skill-manifest.json'
 # owner (see tools/skill-mesh-discovery.ps1 for the rationale).
 . $DISCOVERY
 
-# HostInstallReport v2 adds `shared-payload` to the closed eligibility vocabulary
-# and lets a generated-header-candidate `_shared` entry contribute one to `owned_count`. Both
+# HostInstallReport v2 added `shared-payload` to the closed eligibility vocabulary
+# and let a generated-header-candidate `_shared` entry contribute one to `owned_count`. Both
 # are parser-visible semantic changes from the four-value/count behavior shipped
 # in v1, even though the JSON object shape itself is unchanged.
-$SCHEMA_VERSION = 2
+#
+# v3 (Phase CP Step 5) adds the `codex` key to the `profiles` object. That IS an
+# object-shape change -- a parser doing an exhaustive key match on `profiles` sees a
+# third member -- so the version moves rather than the key appearing silently. Every
+# other field, vocabulary, and count semantic is byte-identical to v2.
+$SCHEMA_VERSION = 3
 
 # Discovery roots (home-relative, POSIX form) and the legacy/retired resolution
 # shadows, all read from the shared owner rather than re-spelled.
 $CLAUDE_ROOT_REL = Get-SkillMeshDiscoveryRoot 'claude'
 $GPT_ROOT_REL = Get-SkillMeshDiscoveryRoot 'gpt'
+# `.agents/skills` -- the SAME literal root Get-SkillMeshActiveProjectDiscoveryRoots
+# already listed as a Copilot active alternate. Reporting it under `codex` names the
+# profile skill-mesh installs there; it does not claim Copilot stopped scanning it.
+$CODEX_ROOT_REL = Get-SkillMeshDiscoveryRoot 'codex'
 $LEGACY_SKILLS_GPT_REL = Get-SkillMeshLegacySkillsGptRoot
 $RETIRED_COPILOT_REL = Get-SkillMeshRetiredCopilotRoot
 $LEDGER_NAME = '.skill-mesh-install.json'
@@ -605,6 +621,7 @@ $script:KnownProviders = @($manifest.providers)
 $instructionFiles = Get-InstructionFiles
 $claudeProfile = Get-RootAnalysis $CLAUDE_ROOT_REL
 $gptProfile = Get-RootAnalysis $GPT_ROOT_REL
+$codexProfile = Get-RootAnalysis $CODEX_ROOT_REL
 $legacySkillsGpt = Get-RootAnalysis $LEGACY_SKILLS_GPT_REL
 $ledger = Get-LedgerState
 $router = Get-RouterInfo
@@ -653,6 +670,7 @@ if (Test-Path -LiteralPath (Join-HomePath $LEGACY_SKILLS_GPT_REL)) {
 foreach ($p in @(
     @{ prof = $claudeProfile; root = $CLAUDE_ROOT_REL },
     @{ prof = $gptProfile; root = $GPT_ROOT_REL },
+    @{ prof = $codexProfile; root = $CODEX_ROOT_REL },
     @{ prof = $legacySkillsGpt; root = $LEGACY_SKILLS_GPT_REL })) {
     $unownedManaged = @($p.prof.skills |
         Where-Object { $_.eligibility -eq 'managed' -and $_.has_skill_md -and (-not $_.owned) } |
@@ -665,7 +683,7 @@ foreach ($p in @(
 
 # Consumer-only trees present (legitimate, but surfaced so a preflight is complete).
 $consumerOnly = @()
-foreach ($p in @($claudeProfile, $gptProfile, $legacySkillsGpt)) {
+foreach ($p in @($claudeProfile, $gptProfile, $codexProfile, $legacySkillsGpt)) {
     $consumerOnly += @($p.skills | Where-Object { $_.eligibility -eq 'consumer-only' } | ForEach-Object { $_.name })
 }
 $consumerOnly = @($consumerOnly | Sort-Object -Unique)
@@ -677,7 +695,8 @@ if ($consumerOnly.Count -gt 0) {
 # A discovery root that is a junction (informational -- resolution follows it).
 foreach ($p in @(
     @{ prof = $claudeProfile; root = $CLAUDE_ROOT_REL },
-    @{ prof = $gptProfile; root = $GPT_ROOT_REL })) {
+    @{ prof = $gptProfile; root = $GPT_ROOT_REL },
+    @{ prof = $codexProfile; root = $CODEX_ROOT_REL })) {
     if ($p.prof.link_type -eq 'junction') {
         Add-Warning 'DISCOVERY_ROOT_JUNCTION' "$($p.root) is a Windows junction (resolution follows the link target)."
     }
@@ -686,6 +705,15 @@ foreach ($p in @(
 # Portable managed skills present under .claude/skills but absent from .github/skills.
 # The provider-native (single-profile) carve-out: those legitimately have no GPT
 # profile, so they are NEVER flagged here.
+#
+# NO CODEX COUNTERPART WARNING, deliberately. This check is sound for GPT because
+# `portable` means an adapter exists for BOTH claude and gpt, so a missing GPT tree is
+# a real install gap. Codex adapter coverage is a rollout in progress (Phase CP
+# cohorts B-D), so "portable but no codex counterpart" is the EXPECTED state for most
+# skills and a warning would fire dozens of times on a correct home -- noise that
+# trains the operator to ignore the warning list. Revisit only when the codex roster
+# reaches the portable roster; the manifest already carries the per-skill
+# `providers.codex` data such a check would need.
 $gptManagedNames = @{}
 foreach ($e in @($gptProfile.skills)) {
     if ($e.eligibility -eq 'managed') { $gptManagedNames[$e.name] = $true }
@@ -723,6 +751,7 @@ $report = [PSCustomObject]@{
     profiles          = [PSCustomObject]@{
         claude = $claudeProfile
         gpt    = $gptProfile
+        codex  = $codexProfile
     }
     legacy_skills_gpt = $legacySkillsGpt
     ledger            = $ledger
@@ -774,6 +803,8 @@ function Add-ProfileLines($label, $prof) {
 Add-ProfileLines 'claude profile' $report.profiles.claude
 $lines.Add('')
 Add-ProfileLines 'gpt profile' $report.profiles.gpt
+$lines.Add('')
+Add-ProfileLines 'codex profile' $report.profiles.codex
 $lines.Add('')
 Add-ProfileLines 'legacy .claude/skills-gpt' $report.legacy_skills_gpt
 $lines.Add('')

@@ -112,11 +112,11 @@ def test_counts_match_fixture_and_array():
     assert derived["provider_native"] == 3
     assert derived["claude"] == 50, "every skill carries a Claude adapter"
     assert derived["gpt"] == 47, "the gpt adapter set IS the portable set"
-    # 0 at Phase CP Step 3 -- the generation rails ship before any codex adapter is
-    # authored. Step 4 raises this to 5 (pilot), Steps 6-8 to the portable catalog.
-    # A non-zero value here without a matching skills/*/providers/codex.md on disk is
-    # caught by gen_manifest.py's CODEX-vs-tree guard.
-    assert derived["codex"] == 0
+    # 5 at Phase CP Step 4 -- the pilot cohort. It was 0 at Step 3 (the generation rails
+    # ship before any codex adapter is authored) and Steps 6-8 raise it toward the
+    # portable catalog. A value here without a matching skills/*/providers/codex.md on
+    # disk is caught by gen_manifest.py's CODEX-vs-tree guard.
+    assert derived["codex"] == 5
     assert derived["local_capable"] == 24
     assert derived["sub_agent"] == 16
     assert derived["vision"] == 2
@@ -149,6 +149,23 @@ def test_exact_sub_agent_set():
     fx = load_fixture()
     sub = {s["name"] for s in m["skills"] if "sub-agent" in s["capabilities"]}
     assert sub == set(fx["sub_agent"])
+
+
+def test_exact_codex_set():
+    """The codex roster, pinned against the committed fixture like its siblings.
+
+    Non-vacuous from Phase CP Step 4 onward: the pilot five are the first names in it.
+    A count alone cannot tell "the pilot five" from "any five portable skills", and the
+    cohort steps grow this set deliberately -- so the NAMES are asserted, and against a
+    fixture produced by the same generator run that produced the manifest.
+    """
+    m = load_manifest()
+    fx = load_fixture()
+    codex = {s["name"] for s in m["skills"] if "codex" in s["providers"]}
+    assert codex == set(fx["codex"])
+    # Orthogonal axis: every codex name is also portable (see gen_manifest.CODEX).
+    portable = {s["name"] for s in m["skills"] if s["status"] == "portable"}
+    assert codex <= portable
 
 
 def test_exact_vision_set():
@@ -694,8 +711,10 @@ def test_derived_skill_sets_match_the_spelled_out_rosters():
     assert native == sorted(gm.NATIVE)
     assert codex == sorted(gm.CODEX)
     assert (len(portable), len(native)) == (47, 3)
-    # 0 at Phase CP Step 3: the rails ship before any adapter is authored.
-    assert len(codex) == 0
+    # 5 at Phase CP Step 4: the pilot cohort, authored on rails that shipped empty at
+    # Step 3. Spelled, like its siblings above, so a cohort step must come here and
+    # state the new number rather than letting a glob silently redefine the roster.
+    assert len(codex) == 5
     # Codex is an ORTHOGONAL axis, not a third bucket -- every codex name is also
     # portable, and the 47/3 partition is unaffected by codex membership. This is the
     # invariant that lets counts["portable"], the README's GPT-capable line and the

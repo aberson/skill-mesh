@@ -51,9 +51,12 @@ ALL_SHAPES = SYNTHESIZED + JUNCTION_SHAPES
 FILE_ATTRIBUTE_REPARSE_POINT = 0x400
 
 # HostInstallReport compatibility contract. V1 shipped the four-value eligibility
-# vocabulary below. V2 adds exactly `shared-payload` and changes the corresponding
-# `_shared` entry's owned-count semantics; the object shape otherwise stays stable.
-HOST_INSTALL_SCHEMA_VERSION = 2
+# vocabulary below. V2 added exactly `shared-payload` and changed the corresponding
+# `_shared` entry's owned-count semantics; the object shape otherwise stayed stable.
+# V3 (Phase CP Step 5) adds the `codex` key to the `profiles` object -- an actual
+# object-shape change, which is why the version moved rather than the key appearing
+# silently. No vocabulary, count semantic, or other field changed in v3.
+HOST_INSTALL_SCHEMA_VERSION = 3
 ELIGIBILITY_V1 = {"managed", "consumer-only", "core-holder", "foreign"}
 
 # The closed vocabularies the current report may draw from.
@@ -100,7 +103,8 @@ def _skill(prof, name):
 
 
 def _all_profiles(d):
-    return (d["profiles"]["claude"], d["profiles"]["gpt"], d["legacy_skills_gpt"])
+    return (d["profiles"]["claude"], d["profiles"]["gpt"], d["profiles"]["codex"],
+            d["legacy_skills_gpt"])
 
 
 # --------------------------------------------------------------------------- #
@@ -202,7 +206,12 @@ def test_no_committed_skill_md_under_a_discovery_path():
     covered the moment it is tracked."""
     tracked = subprocess.run(["git", "ls-files"], cwd=REPO_ROOT,
                              capture_output=True, text=True, check=True).stdout.split("\n")
-    roots = (".claude/skills/", ".claude/skills-gpt/", ".github/skills/", ".copilot/skills/")
+    # `.agents/skills/` joined this list at Phase CP Step 5, when it became the codex
+    # install target. It was ALREADY a host discovery path before that (Copilot scans
+    # it -- Get-SkillMeshActiveProjectDiscoveryRoots has listed it since Step 47), so
+    # its absence here was a real gap in the #86 guard, not a new requirement.
+    roots = (".claude/skills/", ".claude/skills-gpt/", ".github/skills/",
+             ".copilot/skills/", ".agents/skills/")
     offenders = [f for f in tracked if f.strip() and any(r in f for r in roots)]
     assert not offenders, (
         "git-tracked files sit at a host skill-discovery path and will be discovered "
@@ -286,7 +295,12 @@ def test_schema_shape_is_stable(tmp_path):
     for key in ("consumer_home", "instruction_files", "profiles", "legacy_skills_gpt",
                 "ledger", "router", "legacy_shadows", "warnings"):
         assert key in d, f"missing top-level key {key}"
-    assert set(d["profiles"].keys()) == {"claude", "gpt"}
+    assert set(d["profiles"].keys()) == {"claude", "gpt", "codex"}
+    # The profiles object is exactly the installable-provider vocabulary the manifest
+    # declares -- derived, not re-spelled, so a provider added without a report
+    # section (or reported without being declared) fails here rather than shipping a
+    # silently partial preflight.
+    assert set(d["profiles"].keys()) == PROVIDER_SLUGS
     for prof in _all_profiles(d):
         for key in ("discovery_root", "state", "link_type", "link_target",
                     "owned_count", "unowned_count", "skills", "adapter_sample"):
