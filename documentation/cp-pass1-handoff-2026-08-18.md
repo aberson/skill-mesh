@@ -1,5 +1,12 @@
 # Phase CP pass 1 — handoff (2026-08-18)
 
+> **RESOLVED 2026-08-18 — this document is now a historical record, not a live handoff.**
+> Steps 4 and 5 shipped at `4bcbef5` under option 3 with zero migrator delta; issues #121 and
+> #122 are closed. Both items under “Owed regardless of the option chosen” are discharged: the
+> uninterrupted repo-root gate ran (**1312 passed / 1 skipped / 0 failed**, 1h50m04s) and
+> `test_codex_install_path.py` was re-measured by the orchestrator (**25 passed**). Migrator
+> hardening is #138. The preserved branch/worktree/tag must still not be pruned or merged.
+
 Written at a deliberate stopping point. `/build-phase --plan documentation/codex-parity-delivery-plan.md --steps 2,3,4,5` ran Steps 2 and 3 to DONE and halted Steps 4+5 BLOCKED at `--max-iter` 3/3. Nothing is half-landed.
 
 ## State
