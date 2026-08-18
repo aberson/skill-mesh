@@ -574,8 +574,10 @@ def build_inventory(manifest: dict) -> dict:
             "providers": {
                 "claude": "claude" in s["providers"],
                 "gpt": "gpt" in s["providers"],
-                # Additive third provider (Phase CP Step 3). False for every skill
-                # until the first providers/codex.md is authored in Step 4.
+                # Additive third provider (Phase CP Step 3). False for every skill until
+                # Step 4 authored the pilot five providers/codex.md files; the cohort
+                # steps grow the set from there. Read off the manifest record, never
+                # off a spelled roster, so this file cannot drift from that one.
                 "codex": "codex" in s["providers"],
             },
         }

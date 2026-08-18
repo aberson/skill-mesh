@@ -82,6 +82,15 @@
     with no known discovery root BLOCKS rather than being silently skipped -- a
     silent skip would be a false-clean migration that half-migrated the home.
 
+    WHICH PROFILES A RUN BINDS is a separate, narrower question, answered by the
+    SUPPLIED DISTRIBUTION: a provider participates only when -DistDir ships a
+    <dist>/<provider>/ directory. A profile the operator did not build is not
+    migrated; a profile they DID build must be complete, and a skill missing from a
+    shipped profile still blocks with MISSING_PROFILE. See New-MigrationPlan for the
+    full rationale -- in short, `-Provider both` deliberately means claude+gpt while
+    codex is opt-in by name, so "declared" and "shipped" stopped being the same set
+    at Phase CP Step 5.
+
 .PARAMETER Home
     Consumer PROJECT workspace root to migrate. Required in every mode. This is
     not the operator's personal home: `~/.copilot/skills` is an active Copilot
@@ -95,8 +104,10 @@
     locates the transaction folder. -Apply without it FAILS before any mutation.
 
 .PARAMETER DistDir
-    Pre-built dist root (containing claude/ and gpt/) from
-    tools/build-distributions.ps1. Required for dry-run, -Apply, and -Resume.
+    Pre-built dist root from tools/build-distributions.ps1, containing one or more
+    provider profile directories (claude/, gpt/, codex/). Required for dry-run,
+    -Apply, and -Resume. The profiles it ships are exactly the profiles the run
+    binds; a dist shipping none of them BLOCKS.
 
 .PARAMETER Apply / -Resume / -Rollback
     Mutually exclusive. Omit all three for the safe preview. -Resume and -Rollback
@@ -627,9 +638,15 @@ function Test-PathHasUnresolvedReparsePoint([string]$absPath) {
     }
 }
 
-function Get-SharedInstallRels($providerRoots, [string]$distAbs) {
+function Get-SharedInstallRels($boundProviderRoots, [string]$distAbs) {
     # The home-relative paths the SHIPPED shared payload will occupy, as one
     # case-insensitive set for the whole plan.
+    #
+    # Takes the BOUND provider set, not the scanned one: this answers "what will this
+    # run WRITE?", and a root no profile of this distribution ships contributes no
+    # install target. Get-RootScan still consults the resulting set for files under an
+    # UNBOUND root's `_shared` directory, where it correctly matches nothing and the
+    # provenance marker becomes the only classifier -- which is the right answer there.
     #
     # Derived from the DISTRIBUTION's own layout (dist/<p>/_shared/<asset>), never a
     # hand-listed asset roster: a roster here would drift from the builder's
@@ -641,13 +658,13 @@ function Get-SharedInstallRels($providerRoots, [string]$distAbs) {
     # yields an empty set, which is exactly the pre-Step-64 behaviour: every
     # `_shared` file in the home stays preserved.
     $set = New-Object 'System.Collections.Generic.HashSet[string]' ([System.StringComparer]::OrdinalIgnoreCase)
-    foreach ($p in @($providerRoots.Keys)) {
+    foreach ($p in @($boundProviderRoots.Keys)) {
         $sharedDir = Join-Path (Join-Path $distAbs $p) $SHARED_DIR_NAME
         if (-not (Test-Path -LiteralPath $sharedDir -PathType Container)) { continue }
         $sharedAbs = [System.IO.Path]::GetFullPath($sharedDir)
         foreach ($f in @(Get-ChildItem -LiteralPath $sharedAbs -Recurse -File)) {
             $leafRel = ($f.FullName.Substring($sharedAbs.Length).TrimStart('\', '/') -replace '\\', '/')
-            [void]$set.Add("$($providerRoots[$p])/$SHARED_DIR_NAME/$leafRel")
+            [void]$set.Add("$($boundProviderRoots[$p])/$SHARED_DIR_NAME/$leafRel")
         }
     }
     return $set
@@ -672,11 +689,34 @@ function Test-RelAtOrUnderRoot([string]$rel, [string]$rootRel) {
     # check would treat `.copilot/skills-old` as if it were under
     # `.copilot/skills`, incorrectly granting the retired root's destructive
     # privilege to a sibling path.
+    #
+    # AT-or-under, and the AT half is deliberate: this is the RESIDENCE predicate, and
+    # "is this path inside zone Z?" is legitimately true for Z itself -- the root
+    # directory is part of its own zone, which is what makes Get-ManagedResidenceZone
+    # total and what a root-shaped argument means at every zone-classification site.
+    # A caller that needs a path STRICTLY below the root -- because the argument names
+    # a FILE and equality with the root would name a directory instead -- must say so
+    # with Test-RelStrictlyUnderRoot below, rather than reading a permissive answer out
+    # of this one.
     if ([string]::IsNullOrWhiteSpace($rel) -or
         [string]::IsNullOrWhiteSpace($rootRel)) { return $false }
     $root = $rootRel.TrimEnd('/')
     return ($rel.Equals($root, [System.StringComparison]::OrdinalIgnoreCase) -or
             $rel.StartsWith("$root/", [System.StringComparison]::OrdinalIgnoreCase))
+}
+
+function Test-RelStrictlyUnderRoot([string]$rel, [string]$rootRel) {
+    # Under the root and NOT the root itself. For untrusted-input fields whose value
+    # must name a file inside a directory: a recovery `backup_payload` equal to the
+    # bare payload directory is not a payload file, and accepting it would hand a
+    # directory path to a restore that expects one file's bytes. Not reachable from
+    # any path this tool WRITES -- every payload it emits carries at least one segment
+    # past the root -- but a recovery-time validator reads a serialized document an
+    # operator or an interrupted run left behind, so it validates rather than assumes.
+    if ([string]::IsNullOrWhiteSpace($rel) -or
+        [string]::IsNullOrWhiteSpace($rootRel)) { return $false }
+    return ($rel.StartsWith("$($rootRel.TrimEnd('/'))/",
+        [System.StringComparison]::OrdinalIgnoreCase))
 }
 
 function Test-AbsAtOrUnderRoot([string]$absPath, [string]$absRoot) {
@@ -895,6 +935,87 @@ function Get-RootScan([string]$rootRel, $sharedInstallRels) {
     return $result
 }
 
+function Add-DiscoveredManaged($table, $rels, [string]$viaRootRel) {
+    # Merge ONE root scan's managed files into the home-wide disposition table.
+    #
+    # The table is keyed by CANONICAL home-relative path, so the same physical file
+    # discovered through two different roots is ONE entry carrying two reach witnesses,
+    # never two accounting entries. That property is what makes an alias into an
+    # already-scanned root impossible to double-count -- the over-fire shape round 2 of
+    # this step had to patch out by hand.
+    #
+    # The value is the set of ROOTS the file was reached THROUGH. It is accounting
+    # provenance only: it never grants install, retire, or delete authority. Residence
+    # decides authority (Get-ManagedResidenceZone); reach only decides which unbound
+    # root a refusal is charged to.
+    foreach ($rel in @($rels)) {
+        if (-not $table.ContainsKey($rel)) {
+            $table[$rel] = New-Object 'System.Collections.Generic.HashSet[string]' `
+                ([System.StringComparer]::OrdinalIgnoreCase)
+        }
+        [void]$table[$rel].Add($viaRootRel)
+    }
+}
+
+function Get-ManagedResidenceZone([string]$rel, $scanProviderRoots, $boundProviderRoots) {
+    # THE authority zone of one discovered managed file, decided by CANONICAL
+    # RESIDENCE against the full known root map. Total by construction: every rel lands
+    # in exactly one of four zones, and the fourth is the one round 2 did not have.
+    #
+    #   bound     resident under a provider root this run BINDS. Ours to write; the
+    #             install and retain lanes own it.
+    #   unbound   resident under a known provider root this run does NOT bind. This run
+    #             will neither rewrite it nor record it in the replacement ledger, so
+    #             it refuses.
+    #   retired   resident under the retired `.copilot/skills` root. Retire-eligible
+    #             only under the active-reachability rule the caller applies.
+    #   unrooted  resident under NO known root, yet reachable through one -- an in-home
+    #             junction under a discovery root pointing at an arbitrary in-home
+    #             location. Get-RootScan classifies such a tree LEXICALLY (by the child
+    #             directory's name under the root it walks) and records it CANONICALLY,
+    #             so this zone is reachable whenever a consumer aliases a
+    #             manifest-named directory out of the root set. It carries no positional
+    #             authority of its own; the caller decides from the reach witnesses.
+    #
+    # The provider roots and the retired root are mutually non-nesting and
+    # Test-RelAtOrUnderRoot applies a segment boundary, so at most one membership test
+    # can succeed.
+    foreach ($p in @($scanProviderRoots.Keys)) {
+        if (-not (Test-RelAtOrUnderRoot $rel $scanProviderRoots[$p])) { continue }
+        if ($boundProviderRoots.Contains([string]$p)) {
+            return @{ kind = 'bound'; provider = [string]$p }
+        }
+        return @{ kind = 'unbound'; provider = [string]$p }
+    }
+    if (Test-RelAtOrUnderRoot $rel $RETIRED_ROOT_REL) {
+        return @{ kind = 'retired'; provider = '' }
+    }
+    return @{ kind = 'unrooted'; provider = '' }
+}
+
+function Get-UnboundReachWitness($reachedVia, $scanProviderRoots, $boundProviderRoots) {
+    # Of the roots an UNROOTED file was reached through, the first UNBOUND provider
+    # root, or '' when every witness is a bound or the retired root.
+    #
+    # This is the discriminator for the unrooted arm, and it is deliberately NOT
+    # symmetric with the bound case. A file reached through a BOUND root sits inside
+    # the write lane: install targets are built from that root's LEXICAL path and
+    # resolve through the very junction that produced this entry, so the shipped bytes
+    # are rewritten and the replacement ledger records them under that lexical path --
+    # uninstall can still find them. No such lane exists for an unbound root, which
+    # produces no installs at all: nothing rewrites those bytes and nothing records
+    # them. That difference, not the aliasing, is what makes one an orphan and the
+    # other not.
+    #
+    # Iteration order is the map's, so the charged provider is deterministic when a
+    # file is reachable through more than one unbound root.
+    foreach ($p in @($scanProviderRoots.Keys)) {
+        if ($boundProviderRoots.Contains([string]$p)) { continue }
+        if ($reachedVia.Contains([string]$scanProviderRoots[$p])) { return [string]$p }
+    }
+    return ''
+}
+
 # -- Plan construction --------------------------------------------------------
 
 function New-MigrationPlan([string]$distAbs, [string]$backupAbs, [string]$migrationId) {
@@ -902,8 +1023,72 @@ function New-MigrationPlan([string]$distAbs, [string]$backupAbs, [string]$migrat
     $preserveRels = @()
     $managedRels = New-Object 'System.Collections.Generic.HashSet[string]' ([System.StringComparer]::OrdinalIgnoreCase)
 
-    # -- Which providers does this migration bind? --
-    $providerRoots = [ordered]@{}
+    # -- Which providers does this migration BIND, and which roots must it SCAN? --
+    #
+    # THREE SEPARATE QUESTIONS, deliberately answered in this order and kept apart.
+    #
+    # (2) and (3) below were ONE variable in this step's first draft, and conflating
+    # them is precisely how a migrator stops refusing: scoping the WRITE side also
+    # scoped the READ side, so a known host root the supplied distribution did not
+    # ship was never scanned at all, and nothing in it -- a foreign directory, an
+    # escaping junction, skill-mesh's own superseded bytes -- could contribute a
+    # blocked finding. A migrator that silently proceeds where it previously refused
+    # is strictly worse than one that fails loudly, so the two questions now carry
+    # two names and every consumer below is assigned to one of them deliberately.
+    #
+    # (1) Does this tool know a discovery root for every provider the MANIFEST
+    #     declares? A vocabulary/map disagreement is a repository defect that would
+    #     leave a declared profile uninstalled, so it BLOCKS -- for every declared
+    #     provider, on every run, independent of what the supplied distribution
+    #     happens to contain. This check must never become input-dependent: that is
+    #     what makes it a guard rather than an accident of the dist someone passed.
+    #
+    # (2) $scanProviderRoots -- which home roots must be SCANNED and accounted for
+    #     before this run is allowed to mutate anything? EVERY provider root this tool
+    #     knows, UNCONDITIONALLY, whatever the supplied distribution happens to
+    #     contain. Input-independent for the same reason (1) is: a root nobody looked
+    #     at can never refuse, and unscanned home content is exactly what the refusal
+    #     exists to catch.
+    #
+    # (3) $boundProviderRoots -- which of those does THIS migration BIND? The ones the
+    #     supplied distribution ships a profile directory for. Only the WRITE side is
+    #     scoped to this answer: the shared-payload set, the install actions, the
+    #     shipped-profile completeness obligation, the rewritten ledger's provider
+    #     entries, and the plan's provider_roots record.
+    #
+    # WHY (3) EXISTS -- Phase CP Step 5. Before codex, no legitimate input omitted a
+    # declared provider: `build-distributions.ps1 -Provider both` emitted every
+    # provider the manifest declared, so "declared" and "shipped" were the same set
+    # and the distinction was invisible. Codex breaks that tie ON PURPOSE -- 'both'
+    # still means claude+gpt and codex must be asked for by name (-Provider codex /
+    # -Provider all), because widening 'both' would push codex bytes into every
+    # release artifact. Without this scoping, adding codex to the vocabulary would
+    # make EVERY migration from a 'both' distribution fail with MISSING_PROFILE for
+    # each codex-declaring skill, and would write an empty codex entry into the
+    # consumer's ledger claiming a binding that never happened.
+    #
+    # WHAT THIS DOES NOT WEAKEN. An INCOMPLETE profile still blocks, unchanged: a
+    # distribution that ships <dist>/<p>/ is held to the full completeness rule for
+    # every skill the manifest gives a <p> adapter, so the corruption case -- a
+    # half-built profile nobody chose -- is caught exactly as before
+    # (test_a_portable_skill_missing_its_gpt_profile_does_block pins it). What no
+    # longer blocks is a profile the operator deliberately did not build, a choice
+    # that is visible in the build command line rather than silent. A distribution
+    # shipping NO recognized profile is not a narrower migration, it is a bad input,
+    # and it blocks below.
+    #
+    # THE ONE DELIBERATE DESIGN CHANGE, stated rather than left implicit. Before this
+    # step a single-profile distribution was an ILLEGAL input: the completeness rule
+    # fired MISSING_PROFILE for every skill declaring an adapter for the omitted
+    # provider, so such a run refused whatever the home held. It is legal now, because
+    # codex must be asked for by name. NOTHING ELSE about the refusal surface moved --
+    # every known root is still scanned unconditionally, and skill-mesh-managed content
+    # under a root this run does not bind still refuses, via
+    # UNBOUND_PROVIDER_ROOT_MANAGED_CONTENT at the home scan below. That blocker is the
+    # filesystem-evidence half of the orphan guard: it covers the first-time migration,
+    # the absent ledger and the corrupt ledger, none of which the ledger-driven
+    # LEDGER_PROVIDER_NOT_IN_DISTRIBUTION can see.
+    $scanProviderRoots = [ordered]@{}
     foreach ($p in $script:KnownProviders) {
         if (-not $DISCOVERY_SUBDIR.ContainsKey($p)) {
             $blocked += New-Block 'UNKNOWN_PROVIDER_ROOT' '' `
@@ -911,46 +1096,258 @@ function New-MigrationPlan([string]$distAbs, [string]$backupAbs, [string]$migrat
                  'migrating would leave that profile uninstalled')
             continue
         }
-        $providerRoots[$p] = $DISCOVERY_SUBDIR[$p]
+        $scanProviderRoots[$p] = $DISCOVERY_SUBDIR[$p]
+    }
+    $boundProviderRoots = [ordered]@{}
+    foreach ($p in @($scanProviderRoots.Keys)) {
+        # Lexical Join-Path against the operator-supplied -DistDir, never the
+        # consumer home: this probes the SOURCE tree, which is outside the home and
+        # outside the choke point's remit. Nothing here is written.
+        if (Test-Path -LiteralPath (Join-Path $distAbs $p) -PathType Container) {
+            $boundProviderRoots[$p] = $scanProviderRoots[$p]
+        }
+    }
+    if ($boundProviderRoots.Count -eq 0) {
+        $blocked += New-Block 'NO_PROFILE_IN_DISTRIBUTION' '' `
+            ('the supplied -DistDir ships no profile directory for any declared provider (' +
+             "expected at least one of: $(@($scanProviderRoots.Keys) -join ', ')); " +
+             'there is nothing to migrate. Rebuild with tools/build-distributions.ps1.')
+    }
+
+    # -- The rewritten ledger must not ORPHAN a provider the home already owns. --
+    #
+    # New-LedgerJson builds the replacement ledger from $boundProviderRoots alone and the
+    # ledger action REPLACES the consumer's file wholesale, so a provider recorded in
+    # the home but absent from the bound set would have its ownership record silently
+    # dropped -- leaving its installed files on disk with nothing that can remove them
+    # (install-skill-mesh -Uninstall would report "not installed" and delete nothing).
+    #
+    # Before Phase CP Step 5 this was impossible BY CONSTRUCTION: the bound set was
+    # every declared provider, so the rewrite always covered whatever the home had.
+    # Scoping the bound set to the shipped profiles made it reachable, so the
+    # invariant is now enforced EXPLICITLY rather than left to construction. Blocking
+    # is pre-mutation and the operator has two clean exits, both named in the message:
+    # supply a distribution that includes that profile, or uninstall it first.
+    #
+    # Only slugs the manifest DECLARES are considered. An unrecognized install key is
+    # already the inspector's LEDGER_UNKNOWN_PROVIDER concern and is not this block's
+    # to adjudicate; the key name is never echoed (it is free-form consumer text).
+    #
+    # This is the LEDGER half of the orphan question and it is deliberately kept, but
+    # it is no longer the only half: it sees nothing when the ledger is absent (a
+    # first-time migration), corrupt (Get-PriorCreatedDirs yields an empty map by its
+    # own documented contract), or simply silent about a provider whose files are on
+    # disk. UNBOUND_PROVIDER_ROOT_MANAGED_CONTENT at the home scan answers the same
+    # question from the FILESYSTEM and covers all three. Both are retained because
+    # they fail in different directions: the ledger can name a provider whose files
+    # were manually deleted, and the filesystem can show files no ledger records.
+    $ledgerProbeAbs = Resolve-HomeTargetForRead $LEDGER_NAME
+    $orphanedProviders = @()
+    foreach ($slug in @((Get-PriorCreatedDirs $ledgerProbeAbs).Keys)) {
+        if (-not $boundProviderRoots.Contains([string]$slug)) { $orphanedProviders += [string]$slug }
+    }
+    $orphanedProviders = @($orphanedProviders | Sort-Object -Unique)
+    if ($orphanedProviders.Count -gt 0) {
+        $blocked += New-Block 'LEDGER_PROVIDER_NOT_IN_DISTRIBUTION' '' `
+            ("the consumer home's install ledger records provider(s) " +
+             "'$($orphanedProviders -join "', '")' that the supplied -DistDir ships no " +
+             'profile for. Migrating would rewrite the ledger without them and orphan ' +
+             'their installed files, which uninstall could then never remove. Rebuild ' +
+             'the distribution to include those profiles, or uninstall them first with ' +
+             'tools/install-skill-mesh.ps1 -Provider <p> -Home <home> -Uninstall.')
     }
 
     # -- What the shared payload will occupy, resolved BEFORE the home scan --
     # The home scan classifies `_shared` per FILE and needs this answer to do it.
-    $sharedInstallRels = Get-SharedInstallRels $providerRoots $distAbs
+    $sharedInstallRels = Get-SharedInstallRels $boundProviderRoots $distAbs
 
-    # -- Scan the consumer home --
-    foreach ($p in @($providerRoots.Keys)) {
-        $scan = Get-RootScan $providerRoots[$p] $sharedInstallRels
+    # -- Scan the consumer home, then disposition EVERY discovered file EXACTLY once --
+    #
+    # THE SCAN SET is $scanProviderRoots plus the retired root, NEVER
+    # $boundProviderRoots. Get-RootScan is where FOREIGN_FILE, UNSAFE_LINK, the
+    # loose-file stop and the root-is-a-file stop come from, so a root omitted from the
+    # scan is a root whose content can never refuse anything. The whole home must be
+    # accounted for before the first mutation, not just the part this distribution
+    # happens to write to.
+    #
+    # THE UNIT OF ACCOUNTING IS THE FILE, NOT THE ROOT. This is the structural repair
+    # for a defect that survived two line-scoped fixes in this step, and the reason the
+    # code below is a table plus ONE exhaustive switch rather than a family of per-root
+    # loops.
+    #
+    # Get-RootScan classifies a tree LEXICALLY -- by the child directory's name under
+    # the root it is walking -- but records every file by its CANONICAL home-relative
+    # path (see the comment at its per-file loop; canonical identity is what governs
+    # destructive authority). An in-home junction therefore SPLITS two properties that
+    # a per-root loop silently conflates:
+    #
+    #     reached THROUGH root R  -- which scan discovered the file, versus
+    #     resident UNDER root R   -- where the bytes actually live.
+    #
+    # Per-root loops whose membership test is "resident under the root I am iterating"
+    # do NOT partition the discovered set. A file reached through a scanned root but
+    # resident under NO known root matches no loop and receives NO disposition at all:
+    # not installed, not preserved, not retired, not advised, and absent from the
+    # replacement ledger -- while the bytes stay on disk and stay host-reachable. That
+    # is exactly the orphaning harm UNBOUND_PROVIDER_ROOT_MANAGED_CONTENT exists to
+    # prevent, reached by a path that guard could not see. Round 1 of this step
+    # narrowed the reach surface and orphaned whatever only the dropped roots could
+    # see; round 2 restored the reach surface and narrowed the membership predicate
+    # instead, orphaning whatever lived outside the root set. One category error,
+    # patched at two enumeration sites.
+    #
+    # So the SHAPE is fixed rather than the site. ONE table keyed by canonical rel
+    # (duplicate discovery through two roots is ONE entry with two reach witnesses,
+    # which is what makes double-counting an alias unrepresentable), then ONE pass that
+    # gives each entry EXACTLY ONE disposition through an exhaustive switch on
+    # canonical residence -- including an explicit arm for "resident nowhere" -- with an
+    # unmatched-zone arm that BLOCKS and a totality check that proves the pass consumed
+    # the whole table. A refusal tool's default case must be a refusal, never a
+    # fall-through.
+    #
+    # CONSUMER-AUTHORED content is not in this table and needs no arm: Get-RootScan
+    # routes it to $preserveRels from every root it scans, bound or not, and a preserve
+    # IS the accounting -- recorded by path and hash, precondition-checked before
+    # mutation and post-install-verified after. Blocking it would refuse homes this run
+    # cannot harm.
+    $discoveredManaged = New-Object 'System.Collections.Generic.Dictionary[string,object]' `
+        ([System.StringComparer]::OrdinalIgnoreCase)
+    foreach ($p in @($scanProviderRoots.Keys)) {
+        $scan = Get-RootScan $scanProviderRoots[$p] $sharedInstallRels
         $blocked += @($scan.blocked)
         $preserveRels += @($scan.preserve)
-        foreach ($r in @($scan.managed_files)) { [void]$managedRels.Add($r) }
+        Add-DiscoveredManaged $discoveredManaged @($scan.managed_files) $scanProviderRoots[$p]
     }
     $retiredScan = Get-RootScan $RETIRED_ROOT_REL $sharedInstallRels
     $blocked += @($retiredScan.blocked)
     $preserveRels += @($retiredScan.preserve)
+    Add-DiscoveredManaged $discoveredManaged @($retiredScan.managed_files) $RETIRED_ROOT_REL
+
+    # THE DISPOSITION PASS. One arm per file, chosen by canonical residence.
+    #
+    #   bound     -> $managedRels: installed over, or retained with a marker-gated
+    #                advisory by loop 2 below. Unchanged.
+    #   retired   -> the active-reachability rule decides retire-vs-retain. Unchanged;
+    #                the residence test that used to open that branch is now the arm
+    #                selector itself.
+    #   unbound   -> charged to that provider and refused below. Unchanged in intent
+    #                from round 2, but now driven by residence rather than by which
+    #                loop happened to find the file.
+    #   unrooted  -> THE ARM ROUND 2 DID NOT HAVE. Reached through an UNBOUND root, the
+    #                bytes are orphaned exactly as if they were resident there -- no
+    #                install lane rewrites them, no ledger entry records them -- so the
+    #                refusal is charged to the root that reaches them. Reached only
+    #                through BOUND or retired roots, the write lane resolves through
+    #                the junction and the ledger records the lexical path, so this keeps
+    #                the pre-Step-5 treatment: $managedRels, advisory only, no
+    #                destructive authority. Get-UnboundReachWitness holds the reason the
+    #                two are not symmetric.
+    #   anything else -> BLOCK. An unmatched zone in a destructive-authority tool is an
+    #                internal invariant failure, and the safe answer is to refuse.
+    #
+    # $dispositioned then proves the partition really was a partition. It is the twin of
+    # the PRESERVE_INSTALL_COLLISION guard below: the control that proves the
+    # construction every run instead of trusting it.
+    $unboundManagedCount = [ordered]@{}
     $retiredManaged = @()
-    # One active-tree walk for the whole plan classification. Never carry this
-    # This planning check is repeated at precondition and mutation boundaries; no
-    # planning observation is carried forward as destructive authority.
-    foreach ($r in @($retiredScan.managed_files)) {
-        # Get-RootScan returns canonical residence. An in-home junction may make a
-        # file discoverable through the retired lexical root while it physically
-        # resides in an active tree. Such a file has no retired-root positional
-        # signal and belongs in loop 2's advisory-only population.
-        $canonical = Resolve-HomeTargetForRead $r
-        if ((Test-RelAtOrUnderRoot $r $RETIRED_ROOT_REL) -and
-            ($null -ne $canonical) -and
-            (-not (Test-ReachableFromActiveDiscovery $canonical))) {
-            $retiredManaged += $r
+    $dispositioned = New-Object 'System.Collections.Generic.HashSet[string]' `
+        ([System.StringComparer]::OrdinalIgnoreCase)
+    foreach ($rel in @($discoveredManaged.Keys | Sort-Object)) {
+        $zone = Get-ManagedResidenceZone $rel $scanProviderRoots $boundProviderRoots
+        $kind = [string]$zone.kind
+        $chargedProvider = ''
+        if ($kind -eq 'bound') {
+            [void]$managedRels.Add($rel)
+        } elseif ($kind -eq 'retired') {
+            # One active-tree walk per file for the whole plan classification. This
+            # planning check is repeated at precondition and mutation boundaries; no
+            # planning observation is ever carried forward as destructive authority.
+            # A retired-resident file an in-home junction still exposes through an
+            # ACTIVE discovery tree has no retire authority and belongs in loop 2's
+            # advisory-only population.
+            $canonical = Resolve-HomeTargetForRead $rel
+            if (($null -ne $canonical) -and
+                (-not (Test-ReachableFromActiveDiscovery $canonical))) {
+                $retiredManaged += $rel
+            } else {
+                [void]$managedRels.Add($rel)
+            }
+        } elseif ($kind -eq 'unbound') {
+            $chargedProvider = [string]$zone.provider
+        } elseif ($kind -eq 'unrooted') {
+            $chargedProvider = Get-UnboundReachWitness $discoveredManaged[$rel] `
+                $scanProviderRoots $boundProviderRoots
+            if ([string]::IsNullOrEmpty($chargedProvider)) { [void]$managedRels.Add($rel) }
         } else {
-            [void]$managedRels.Add($r)
+            $blocked += New-Block 'UNCLASSIFIED_MANAGED_CONTENT' $rel `
+                ('the home scan discovered this skill-mesh-managed file but the ' +
+                 'disposition pass matched no residence zone for it, so nothing in ' +
+                 'this plan would install, preserve, retire, or record it. A migrator ' +
+                 'that cannot say what it will do with a file it can already see must ' +
+                 'not mutate the home. This is an internal invariant of ' +
+                 'New-MigrationPlan, not a consumer-fixable condition -- please report it.')
+            continue
         }
+        if (-not [string]::IsNullOrEmpty($chargedProvider)) {
+            if (-not $unboundManagedCount.Contains($chargedProvider)) {
+                $unboundManagedCount[$chargedProvider] = 0
+            }
+            $unboundManagedCount[$chargedProvider] = [int]$unboundManagedCount[$chargedProvider] + 1
+        }
+        [void]$dispositioned.Add($rel)
+    }
+    if ($dispositioned.Count -ne $discoveredManaged.Count) {
+        $blocked += New-Block 'UNCLASSIFIED_MANAGED_CONTENT' '' `
+            ("the home scan discovered $($discoveredManaged.Count) skill-mesh-managed " +
+             "file(s) and the disposition pass accounted for $($dispositioned.Count). " +
+             'Every discovered file must receive exactly one disposition before this ' +
+             'run may mutate anything, so an unaccounted-for residue refuses the ' +
+             'migration rather than leaving those bytes to chance. Internal invariant ' +
+             'of New-MigrationPlan -- please report it.')
+    }
+    foreach ($p in @($scanProviderRoots.Keys)) {
+        if (-not $unboundManagedCount.Contains([string]$p)) { continue }
+        # rel_path is the MAP's own root string and the provider slug is a closed
+        # manifest vocabulary, so neither is consumer text. A COUNT is the only
+        # cardinality disclosed: the root can hold arbitrarily many consumer-controlled
+        # segments and this message has to stay bounded.
+        #
+        # THE REMEDIES NAMED HERE MUST ACTUALLY WORK IN THE STATES THIS BLOCK CATCHES.
+        # An earlier wording offered `install-skill-mesh.ps1 -Uninstall` as the second
+        # exit. It cannot be one: Invoke-Uninstall keys entirely off the ledger, so with
+        # no ledger, or a ledger silent about this provider, it prints "not installed"
+        # and deletes nothing, and with a corrupt ledger it throws and deletes nothing --
+        # and those are precisely the three states this filesystem-evidence guard exists
+        # to cover. The intact-ledger case belongs to LEDGER_PROVIDER_NOT_IN_DISTRIBUTION,
+        # where that same command DOES work and is still named. There is no -Force bypass
+        # on the no-entry path. So the exits named below are the rebuild, which always
+        # works, and manual removal, stated plainly rather than delegated to a command
+        # that would fail.
+        $blocked += New-Block 'UNBOUND_PROVIDER_ROOT_MANAGED_CONTENT' $scanProviderRoots[$p] `
+            ("the consumer home holds $($unboundManagedCount[$p]) skill-mesh-managed " +
+             "file(s) under the '$p' discovery root, or reachable only through it via " +
+             "an in-home junction, but the supplied -DistDir ships no '$p' profile. " +
+             'This migration would neither rewrite those files nor record them in the ' +
+             'replacement ledger, orphaning bytes that uninstall could then never ' +
+             'remove. TWO EXITS. (1) Rebuild the distribution to include that profile ' +
+             "-- tools/build-distributions.ps1 -Provider $p -- and re-run: the root is " +
+             'then bound and every file under it is accounted for. (2) Remove that ' +
+             'content yourself -- the skill-mesh-generated files under ' +
+             "'$($scanProviderRoots[$p])', plus any junction under that root that " +
+             'points at them elsewhere in the home -- then re-run. NOT AN EXIT: ' +
+             'tools/install-skill-mesh.ps1 -Uninstall removes only what the install ' +
+             'ledger records, so in the states this block exists to catch -- no ledger, ' +
+             "a corrupt ledger, or a ledger silent about '$p' -- it reports " +
+             '"not installed" and deletes nothing, or refuses outright. It has no ' +
+             '-Force bypass on that path.')
     }
 
     # -- Generated install targets --
+    # BOUND set: this loop walks the distribution and produces the actions that WRITE.
+    # A provider the distribution does not ship has no source bytes to install from.
     $installs = @()
     $distSkills = @{}      # "<provider>/<skill>" -> $true
-    foreach ($p in @($providerRoots.Keys)) {
+    foreach ($p in @($boundProviderRoots.Keys)) {
         $profileDir = Join-Path $distAbs $p
         if (-not (Test-Path -LiteralPath $profileDir -PathType Container)) { continue }
         $profileAbs = [System.IO.Path]::GetFullPath($profileDir)
@@ -974,7 +1371,7 @@ function New-MigrationPlan([string]$distAbs, [string]$backupAbs, [string]$migrat
             # Only real skills participate in the both-profile completeness check;
             # the payload has no adapter declaration to be complete against.
             if (-not $isProfileRootAsset) { $distSkills["$p/$skill"] = $true }
-            $targetRel = "$($providerRoots[$p])/$relFromProfile"
+            $targetRel = "$($boundProviderRoots[$p])/$relFromProfile"
             $targetAbs = Resolve-HomeTargetForRead $targetRel
             if ($null -eq $targetAbs) {
                 $blocked += New-Block 'UNSAFE_LINK' $targetRel `
@@ -992,11 +1389,18 @@ function New-MigrationPlan([string]$distAbs, [string]$backupAbs, [string]$migrat
         }
     }
 
-    # -- Both-profile completeness. A skill the manifest gives an adapter for MUST
+    # -- Shipped-profile completeness. A skill the manifest gives an adapter for MUST
     # be present in that provider's profile. A provider-native skill (core: null)
     # declares no gpt adapter, so its absence from the GPT profile can never fire
     # here -- that is the carve-out, expressed as a manifest fact rather than a
     # special case.
+    #
+    # BOUND set, deliberately. This question is about the DISTRIBUTION -- "is the
+    # profile you handed me half-built?" -- and a profile that was never handed to us
+    # cannot be incomplete. It is the one consumer the Step 5 scoping was introduced
+    # for. The HOME-side question ("is there content here nobody is accounting for?")
+    # is answered by the scan loop above, on the scan set, and the two must not be
+    # collapsed back into one loop.
     $seenSkills = @($installs | ForEach-Object { $_.skill } | Sort-Object -Unique)
     foreach ($skill in $seenSkills) {
         # A profile-root asset (`_shared`) is not a manifest record, so it has no
@@ -1006,7 +1410,7 @@ function New-MigrationPlan([string]$distAbs, [string]$backupAbs, [string]$migrat
         # that only became REACHABLE when the first-segment allowlist above stopped
         # `continue`-ing past the payload, which is why it never fired before.
         if (-not $script:ManifestMap.ContainsKey($skill)) { continue }
-        foreach ($p in @($providerRoots.Keys)) {
+        foreach ($p in @($boundProviderRoots.Keys)) {
             if (-not (Test-SkillMeshTxMember @($script:ManifestMap[$skill].adapters) $p)) { continue }
             if (-not $distSkills.ContainsKey("$p/$skill")) {
                 $blocked += New-Block 'MISSING_PROFILE' "$p/$skill" `
@@ -1123,12 +1527,15 @@ function New-MigrationPlan([string]$distAbs, [string]$backupAbs, [string]$migrat
     $ledgerRel = $LEDGER_NAME
     $ledgerAbs = Resolve-HomeTargetForRead $ledgerRel
     $createdDirs = Get-CreatedDirs $installs
-    $ledgerJson = New-LedgerJson $installs $providerRoots $createdDirs (Get-PriorCreatedDirs $ledgerAbs)
+    # BOUND set for both: the ledger records what this run OWNS, and the plan's
+    # provider_roots is the validator's statement of what it bound. A scanned-but-
+    # unbound root belongs in neither -- it is why the block above exists.
+    $ledgerJson = New-LedgerJson $installs $boundProviderRoots $createdDirs (Get-PriorCreatedDirs $ledgerAbs)
     $ledgerPostHash = Get-SkillMeshStringSha256 $ledgerJson
     $providerRootsObj = [PSCustomObject]@{}
-    foreach ($provider in @($providerRoots.Keys | Sort-Object)) {
+    foreach ($provider in @($boundProviderRoots.Keys | Sort-Object)) {
         $providerRootsObj | Add-Member -NotePropertyName $provider `
-            -NotePropertyValue ([string]$providerRoots[$provider]) -Force
+            -NotePropertyValue ([string]$boundProviderRoots[$provider]) -Force
     }
 
     # -- Assemble the ordered action set.
@@ -1283,7 +1690,7 @@ function Get-PriorCreatedDirs([string]$ledgerAbs) {
     return $map
 }
 
-function New-LedgerJson($installs, $providerRoots, $createdDirs, $priorCreatedDirs) {
+function New-LedgerJson($installs, $boundProviderRoots, $createdDirs, $priorCreatedDirs) {
     # The rewritten ownership ledger. It indexes ONLY the files this migration
     # INSTALLED, which scopes the set the installer uninstall examines.
     #
@@ -1317,9 +1724,14 @@ function New-LedgerJson($installs, $providerRoots, $createdDirs, $priorCreatedDi
     # writer, so its uninstall path reads this ledger unchanged. Providers, owned
     # paths, and hash-map properties are inserted in sorted order so the same plan
     # produces byte-identical ledger JSON across Apply and Resume.
+    # The BOUND provider set: this ledger claims ownership, and ownership is exactly
+    # what this run binds. A provider recorded in the home but NOT bound would be
+    # dropped here, which is why New-MigrationPlan refuses that input twice over
+    # (LEDGER_PROVIDER_NOT_IN_DISTRIBUTION from the ledger,
+    # UNBOUND_PROVIDER_ROOT_MANAGED_CONTENT from the filesystem) before reaching here.
     $installsObj = [PSCustomObject]@{}
-    foreach ($p in @($providerRoots.Keys | Sort-Object)) {
-        $subdir = $providerRoots[$p]
+    foreach ($p in @($boundProviderRoots.Keys | Sort-Object)) {
+        $subdir = $boundProviderRoots[$p]
         $providerInstalls = @($installs | Where-Object { $_.provider -eq $p } |
             Sort-Object -Property rel_path)
         $owned = @(@($providerInstalls | ForEach-Object { $_.rel_path }) |
@@ -2639,7 +3051,7 @@ function Convert-RecoveryEntriesToMap($entries, [string]$label,
         if ($withPayload) {
             $payload = [string](Get-SkillMeshTxField $entry 'backup_payload')
             if (-not (Test-RecoveryRelPath $payload) -or
-                -not (Test-RelAtOrUnderRoot $payload $PAYLOAD_DIR)) {
+                -not (Test-RelStrictlyUnderRoot $payload $PAYLOAD_DIR)) {
                 throw "backup manifest $label contains an invalid recovery payload path."
             }
         }
@@ -2987,7 +3399,7 @@ function Assert-RecoveryMetadata($plan, $manifest, [string]$backupAbs,
         $provider = [string](Get-SkillMeshTxField $a 'provider')
         if (-not [string]::IsNullOrEmpty($payload) -and
             (-not (Test-RecoveryRelPath $payload) -or
-             -not (Test-RelAtOrUnderRoot $payload $PAYLOAD_DIR))) {
+             -not (Test-RelStrictlyUnderRoot $payload $PAYLOAD_DIR))) {
             throw "plan action $i contains an invalid recovery payload path."
         }
         switch ($kind) {

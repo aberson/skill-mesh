@@ -60,6 +60,10 @@
     "gpt": {
       "host": "GitHub Copilot / GPT",
       "transport_default": "copilot"
+    },
+    "codex": {
+      "host": "OpenAI Codex CLI",
+      "transport_default": "host-native"
     }
   },
   "counts": {
@@ -68,7 +72,7 @@
     "provider_native": 3,
     "claude": 50,
     "gpt": 47,
-    "codex": 0,
+    "codex": 5,
     "local_capable": 24,
     "sub_agent": 16,
     "vision": 2,
@@ -390,7 +394,8 @@
       "core": "skills/lesson-harvest/core.md",
       "providers": {
         "claude": "skills/lesson-harvest/providers/claude.md",
-        "gpt": "skills/lesson-harvest/providers/gpt.md"
+        "gpt": "skills/lesson-harvest/providers/gpt.md",
+        "codex": "skills/lesson-harvest/providers/codex.md"
       },
       "capabilities": [
         "filesystem"
@@ -601,7 +606,8 @@
       "core": "skills/plan-review/core.md",
       "providers": {
         "claude": "skills/plan-review/providers/claude.md",
-        "gpt": "skills/plan-review/providers/gpt.md"
+        "gpt": "skills/plan-review/providers/gpt.md",
+        "codex": "skills/plan-review/providers/codex.md"
       },
       "capabilities": [
         "filesystem"
@@ -894,7 +900,8 @@
       "core": "skills/session-wrap/core.md",
       "providers": {
         "claude": "skills/session-wrap/providers/claude.md",
-        "gpt": "skills/session-wrap/providers/gpt.md"
+        "gpt": "skills/session-wrap/providers/gpt.md",
+        "codex": "skills/session-wrap/providers/codex.md"
       },
       "capabilities": [
         "filesystem"
@@ -1008,7 +1015,8 @@
       "core": "skills/task-handoff/core.md",
       "providers": {
         "claude": "skills/task-handoff/providers/claude.md",
-        "gpt": "skills/task-handoff/providers/gpt.md"
+        "gpt": "skills/task-handoff/providers/gpt.md",
+        "codex": "skills/task-handoff/providers/codex.md"
       },
       "capabilities": [
         "filesystem"
@@ -1300,7 +1308,8 @@
       "core": "skills/user-orient/core.md",
       "providers": {
         "claude": "skills/user-orient/providers/claude.md",
-        "gpt": "skills/user-orient/providers/gpt.md"
+        "gpt": "skills/user-orient/providers/gpt.md",
+        "codex": "skills/user-orient/providers/codex.md"
       },
       "capabilities": [
         "filesystem"

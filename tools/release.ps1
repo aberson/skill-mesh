@@ -104,11 +104,15 @@ param(
     # mid-release with the builder's error rather than at parameter binding.
     #
     # The default stays 'both' (claude + gpt) ON PURPOSE now that a third provider
-    # exists: a release artifact is something a consumer INSTALLS, and codex has no
-    # discovery root yet (tools/skill-mesh-discovery.ps1 knows only claude/gpt until
-    # Phase CP Step 5), so defaulting to 'all' would ship and checksum a profile no
-    # install path can consume. Ship codex in a release by asking for it -- '-Provider
-    # all' once Step 5 lands, or '-Provider codex' for a codex-only artifact.
+    # exists. Phase CP Step 5 gave codex a discovery root and an install path, so the
+    # original reason ("no install path can consume it") is spent -- but the default
+    # does NOT widen, for a second reason that is not: the codex adapter roster is a
+    # rollout in progress (5 of 47 portable skills at Step 5), so 'all' would ship a
+    # deliberately partial profile as if it were the catalog. Ship codex in a release
+    # by asking for it -- '-Provider all', or '-Provider codex' for a codex-only
+    # artifact. Revisit the default when the codex roster reaches the portable roster.
+    # Note that tools/migrate-legacy-install.ps1 binds exactly the profiles the dist
+    # ships, so a 'both' release stays a complete, migratable artifact.
     [ValidateSet('claude', 'gpt', 'codex', 'both', 'all')]
     [string]$Provider = 'both',
 

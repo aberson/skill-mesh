@@ -6,7 +6,7 @@
     "provider_native": 3,
     "claude": 50,
     "gpt": 47,
-    "codex": 0,
+    "codex": 5,
     "local_capable": 24,
     "sub_agent": 16,
     "vision": 2,
@@ -66,7 +66,13 @@
     "context-slim",
     "judge-motion"
   ],
-  "codex": [],
+  "codex": [
+    "lesson-harvest",
+    "plan-review",
+    "session-wrap",
+    "task-handoff",
+    "user-orient"
+  ],
   "local_capable": [
     "lesson-harvest",
     "memory-distill",

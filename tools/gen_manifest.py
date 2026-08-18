@@ -89,11 +89,15 @@ NATIVE = ["claude-oauth-auth", "context-slim", "judge-motion"]
 # Derivable from the tree exactly like PORTABLE/NATIVE, and CHECKED against it by
 # `derived_skill_sets()` on every run, so the spelled-out copy cannot drift.
 #
-# EMPTY BY DESIGN AT THIS STEP. Phase CP Step 3 builds the generation SURFACE; the
-# pilot five adapters land in Step 4 and the cohorts in Steps 6-8. An empty list is
-# therefore the correct committed state, and `-Provider codex` legitimately emits an
-# empty profile until the first adapter is authored.
-CODEX = []
+# THE PILOT FIVE (Phase CP Step 4). Step 3 built the generation SURFACE with this list
+# empty; Step 4 authors the first five adapters and the cohorts follow in Steps 6-8, so
+# this list GROWS toward -- but is not yet equal to -- PORTABLE. Spelled in the same
+# sorted order the manifest emits, and re-derived from the tree by
+# `derived_skill_sets()` on every run, so a name added here without the matching
+# skills/<name>/providers/codex.md (or the reverse) raises instead of shipping.
+CODEX = [
+    "lesson-harvest", "plan-review", "session-wrap", "task-handoff", "user-orient",
+]
 
 # local-capable=Y rows of .claude/references/model-mapping.md (authoritative table).
 #
@@ -587,34 +591,35 @@ def build():
                 "If NEITHER is present -> unset/unsupported: error (exit 2) instructing an explicit -Provider claude|gpt.",
             ],
         },
-        # THE INSTALLABLE-PROVIDER VOCABULARY -- deliberately NOT extended with codex
-        # at Phase CP Step 3. Read this before adding a key.
+        # THE INSTALLABLE-PROVIDER VOCABULARY. `codex` was added here at Phase CP
+        # Step 5, in the SAME commit as its discovery root. Read this before adding
+        # the next key -- the coupling below is a hard ordering constraint, not a
+        # style note.
         #
         # This block is not a list of providers the BUILDER can emit; the builder never
         # reads it (tools/build-distributions.ps1 resolves each skill's adapter from the
         # per-skill `providers` dict). It is the vocabulary that the INSTALL-side tools
         # read to decide which discovery roots a home binds:
-        #   * tools/migrate-legacy-install.ps1:562-570 loads it into $script:KnownProviders
-        #     and New-MigrationPlan (:907-915) then requires a discovery root for EVERY
+        #   * tools/migrate-legacy-install.ps1 loads it into $script:KnownProviders
+        #     and New-MigrationPlan then requires a discovery root for EVERY
         #     name in it -- a provider with no root is a hard UNKNOWN_PROVIDER_ROOT block
-        #     that refuses the whole migration.
-        #   * tools/inspect-host-install.ps1:349-356,602 loads the same vocabulary.
+        #     that refuses the whole migration (exit 2), in every consumer home.
+        #   * tools/inspect-host-install.ps1 loads the same vocabulary.
         #
-        # tools/skill-mesh-discovery.ps1 is the sole owner of the provider -> root map
-        # and knows only claude/gpt. Declaring `codex` HERE while that map lacks it
-        # would not add a capability, it would BREAK the migrator for every consumer
-        # home until the map catches up -- so the two must land in the same commit.
-        # That commit is Phase CP Step 5, which owns skill-mesh-discovery.ps1 and the
-        # installer; and Step 5 is the earliest it CAN land, because D-CP6 defers the
-        # `.agents/skills` root policy (that root is currently Copilot's never-install
-        # active alternate) to M1 evidence rather than pre-building it.
-        #
-        # Step 3's own surface -- per-skill `providers.codex` paths, the codex counts
-        # above, `-Provider codex` emission -- needs none of this, so the generation
-        # rails ship now and the install vocabulary follows in Step 5.
+        # THE RULE, which Step 3 deferred this key to obey: a name added here MUST land
+        # in the same commit as its entry in tools/skill-mesh-discovery.ps1
+        # (Get-SkillMeshDiscoveryRoots), the sole owner of the provider -> root map.
+        # Declaring a provider whose root that map lacks does not add a capability, it
+        # BREAKS the migrator until the map catches up. The regression guard for that
+        # exact sequencing defect is a TEST, not this comment:
+        # tests/distributions/test_codex_install_path.py ::
+        # test_migration_plan_has_no_unknown_provider_root_blocker_for_codex, with a
+        # red-on-garbage anchor that plants an undeclared provider and proves the
+        # blocker still fires.
         "providers": {
             "claude": {"host": "Claude Code", "transport_default": "host-native"},
             "gpt": {"host": "GitHub Copilot / GPT", "transport_default": "copilot"},
+            "codex": {"host": "OpenAI Codex CLI", "transport_default": "host-native"},
         },
         "counts": counts,
         "global_support_assets": global_assets,

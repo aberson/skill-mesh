@@ -73,6 +73,7 @@ ACTIVE_RETAIN_ADVISORY = "ACTIVE_MANAGED_FILE_RETAINED"
 
 CLAUDE_ROOT = fx.CLAUDE_ROOT
 GPT_ROOT = fx.GPT_ROOT
+CODEX_ROOT = fx.CODEX_ROOT
 COPILOT_ROOT = fx.RETIRED_COPILOT_ROOT
 LEDGER_NAME = fx.LEDGER_NAME
 
@@ -2240,6 +2241,41 @@ def test_recovery_rejects_invalid_install_provider_or_target_root_before_mutatio
     assert _tree_digest(home) == before_recovery
 
 
+def test_recovery_rejects_a_payload_path_equal_to_the_payload_directory(
+        mini_dist, tmp_path):
+    """A `backup_payload` naming the payload DIRECTORY itself is not a payload file.
+
+    The residence predicate the recovery validator used is `Test-RelAtOrUnderRoot`, and
+    the AT half of at-or-under is correct for the ZONE questions it was written for --
+    a root is inside its own zone. It is wrong for a field that must name one file's
+    bytes: `payload` equal to the bare payload root passed validation and would have
+    handed a directory to a restore expecting a file. Nothing this tool WRITES can
+    produce that value (every payload it emits carries a segment past the root), but a
+    recovery validator reads a serialized document an operator or an interrupted run
+    left behind, so it validates instead of assuming. `Test-RelStrictlyUnderRoot` is
+    the narrowed predicate; this is the case that separates the two."""
+    home = fx.migration_home(tmp_path / "h")
+    backup = tmp_path / "b"
+    applied = _apply(home, backup, mini_dist)
+    assert applied.returncode == 0, f"{applied.stdout}\n{applied.stderr}"
+    tx = _only_tx(backup)
+    before_recovery = _tree_digest(home)
+    plan = _plan_of(tx)
+    tampered = next(a for a in plan["actions"]
+                    if a["action"] == "backup" and a["backup_payload"])
+    payload_root = tampered["backup_payload"].split("/")[0]
+    assert payload_root and "/" not in payload_root
+    tampered["backup_payload"] = payload_root
+    _write_json(Path(tx) / "plan.json", plan)
+
+    rolled_back = _migrate(home, backup, mode="-Rollback", migration_id=tx.name)
+    assert rolled_back.returncode == 2, (
+        f"a payload path equal to the payload directory reached rollback:\n"
+        f"{rolled_back.stdout}\n{rolled_back.stderr}")
+    assert "invalid recovery payload path" in rolled_back.stderr
+    assert _tree_digest(home) == before_recovery
+
+
 def test_encoded_recovery_rejects_retire_outside_retired_project_root(
         mini_dist, tmp_path):
     """Only unencoded legacy artifacts may carry restorative active-root retires."""
@@ -3003,10 +3039,9 @@ def test_resume_rejects_a_transaction_from_another_home(mini_dist, tmp_path):
 # --------------------------------------------------------------------------- #
 
 def _make_junction(link: Path, target: Path) -> bool:
-    link.parent.mkdir(parents=True, exist_ok=True)
-    r = subprocess.run(["cmd", "/c", "mklink", "/J", str(link), str(target)],
-                       capture_output=True, text=True)
-    return r.returncode == 0
+    # Delegates to the fixture module, the ONE owner of the mklink invocation, so this
+    # file and test_codex_install_path.py cannot drift on flags or failure handling.
+    return fx.make_junction(link, target)
 
 
 def _junction_or_skip(link: Path, target: Path):
@@ -3025,9 +3060,11 @@ def _blocked_codes(payload):
     "install-target",     # an ancestor of a not-yet-existing install target
 ])
 def test_junction_escape_blocks_with_unsafe_link(site, mini_dist, tmp_path):
-    """UNSAFE_LINK is one of the three blocking codes the plan names, and a wrong
+    """UNSAFE_LINK is one of the plan-level blocking codes, and a wrong
     classification here is what would let the migrator read, write, or back up
-    OUTSIDE the consumer home.
+    OUTSIDE the consumer home. (The count is deliberately not spelled: it was
+    already wrong at "three" before Phase CP Step 5 added two more, and a number in
+    a docstring nobody asserts is a claim that only ever decays.)
 
     Each parameter plants the escape at a different point in the path so a guard
     that only covers one site cannot pass all four."""
@@ -4149,17 +4186,26 @@ def test_the_owner_actually_defines_every_root():
     r = _engine_script(DISCOVERY_SCRIPT,
                        "(Get-SkillMeshDiscoveryRoot 'claude') + '|' + "
                        "(Get-SkillMeshDiscoveryRoot 'gpt') + '|' + "
+                       "(Get-SkillMeshDiscoveryRoot 'codex') + '|' + "
                        "(Get-SkillMeshRetiredCopilotRoot) + '|' + "
                        "(Get-SkillMeshLegacySkillsGptRoot) + '|' + "
                        "[string](Get-SkillMeshDiscoveryRoot 'nope') + '|' + "
                        "((Get-SkillMeshActiveProjectDiscoveryRoots) -join ',')")
     assert r.returncode == 0, r.stderr
-    claude, gpt, retired, legacy, unknown, active = r.stdout.strip().split("|")
+    claude, gpt, codex, retired, legacy, unknown, active = r.stdout.strip().split("|")
     assert (claude, gpt) == (CLAUDE_ROOT, GPT_ROOT)
+    assert codex == CODEX_ROOT
     assert retired == COPILOT_ROOT
     assert legacy == fx.LEGACY_SKILLS_GPT_ROOT
     assert unknown == "", "an unknown provider must resolve to $null, not a guess"
-    assert set(active.split(",")) == {CLAUDE_ROOT, GPT_ROOT, ".agents/skills"}
+    assert set(active.split(",")) == {CLAUDE_ROOT, GPT_ROOT, CODEX_ROOT}
+    # The codex INSTALL root and the Copilot ACTIVE-ALTERNATE root are the same
+    # literal string, deliberately (design decision D-CP6: the collision is real and
+    # its policy is decided on M1 evidence, not pre-built). Pinned so a future edit
+    # that quietly forks them into two different paths has to say so here.
+    assert codex == ".agents/skills"
+    assert codex in set(active.split(",")), \
+        "the codex install root must remain in the active-scan set, not be moved out of it"
 
 
 # --------------------------------------------------------------------------- #

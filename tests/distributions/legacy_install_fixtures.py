@@ -20,6 +20,7 @@ reads it.
 """
 import json
 import re
+import subprocess
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -29,6 +30,12 @@ INSPECT_SCRIPT = REPO_ROOT / "tools" / "inspect-host-install.ps1"
 # Consumer-home-relative locations, mirrored from inspect-host-install.ps1.
 CLAUDE_ROOT = ".claude/skills"
 GPT_ROOT = ".github/skills"
+# The codex install target (Phase CP Step 5) -- the SAME literal path Copilot already
+# scanned as an active alternate. No fixture SHAPE writes here: every shape below
+# predates codex and stays byte-identical, so the codex profile is deliberately
+# absent from them and the migrator's shipped-profile scoping is what keeps those
+# cases green. The constant exists so tests can name the root without re-spelling it.
+CODEX_ROOT = ".agents/skills"
 LEGACY_SKILLS_GPT_ROOT = ".claude/skills-gpt"
 RETIRED_COPILOT_ROOT = ".copilot/skills"
 LEDGER_NAME = ".skill-mesh-install.json"
@@ -639,6 +646,23 @@ _BUILDERS = {
 # 18-junction-external) need a second directory outside the home, so the test
 # module builds them on top of `build()`.
 SHAPES = sorted(_BUILDERS)
+
+
+def make_junction(link, target):
+    """Create a Windows directory junction at `link` pointing at `target`.
+
+    Returns True on success, False when the environment refuses (a locked-down
+    filesystem, a non-Windows runner). Callers turn False into `pytest.skip` rather
+    than a failure -- a junction the OS will not create proves nothing either way.
+
+    ONE owner for the mklink invocation: two test modules plant junction shapes and a
+    private copy in each would let the two drift on flags or on failure handling.
+    """
+    link = Path(link)
+    link.parent.mkdir(parents=True, exist_ok=True)
+    r = subprocess.run(["cmd", "/c", "mklink", "/J", str(link), str(target)],
+                       capture_output=True, text=True)
+    return r.returncode == 0
 
 
 def build(kind, home):

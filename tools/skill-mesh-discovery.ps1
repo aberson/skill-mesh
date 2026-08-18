@@ -11,6 +11,7 @@
       tools/install-skill-mesh.ps1     writes a profile into one of these roots
       tools/inspect-host-install.ps1   reports on all of them
       tools/migrate-legacy-install.ps1 scans, installs into, and retires them
+      tools/probe-codex-skills.ps1     reports on the codex root (read-only)
 
     WHY THIS FILE EXISTS. These path shapes were previously hand-maintained in each
     of those three scripts, each commented as a "mirror" of the others. That is the
@@ -36,10 +37,32 @@
       gpt    -> .github/skills   A real GitHub Copilot CLI project discovery root,
                                  proven live in Step 43 (#58) and confirmed to win
                                  the both-profile collision in Step 45 (#67).
-      active alternate -> .agents/skills
-                                 A Copilot project discovery root that skill-mesh
-                                 does not install into but must still treat as active
-                                 when authorizing a project-relative retirement.
+      codex  -> .agents/skills   Codex's skill-discovery root, resolved against the
+                                 caller's base (for a live Codex install that base is
+                                 $CODEX_EFFECTIVE_HOME; see tools/probe-codex-skills.ps1,
+                                 the ONE resolver for that value). Added Phase CP Step 5.
+
+                                 SAME LITERAL ROOT AS THE COPILOT ACTIVE ALTERNATE.
+                                 Before Step 5 this exact path appeared ONLY in
+                                 Get-SkillMeshActiveProjectDiscoveryRoots below, as a
+                                 Copilot-scanned root skill-mesh never installed into.
+                                 It is not a second, different root: this file has
+                                 exactly ONE base (the caller's -Home), so both names
+                                 denote the same directory whenever the two bases
+                                 coincide. That is the collision design decision D-CP6
+                                 defers to M1 evidence -- it is REAL, not vacuous, and
+                                 no guard is pre-built here. Whether Copilot actually
+                                 loads codex-profile packages is recorded by M1 in
+                                 documentation/parity-deltas.md; the policy (accept vs
+                                 guard) is decided there, not assumed here.
+
+                                 Note the shape this creates: the active-project set
+                                 below was already a SUPERSET of this map's values
+                                 (.claude/skills, .github/skills, + .agents/skills).
+                                 With codex installable the two sets are now EQUAL --
+                                 every root skill-mesh installs into is a root some
+                                 supported host actively scans, which is the
+                                 pre-existing pattern for claude and gpt, not a new one.
     Retired / legacy, recognized but never installed into:
       .copilot/skills            The pre-Step-44 PROJECT-relative GPT target.
                                  Copilot does not discover that project path; any
@@ -63,6 +86,7 @@ function Get-SkillMeshDiscoveryRoots {
     return @{
         'claude' = '.claude/skills'
         'gpt'    = '.github/skills'
+        'codex'  = '.agents/skills'
     }
 }
 
@@ -75,8 +99,18 @@ function Get-SkillMeshActiveProjectDiscoveryRoots {
 
       Claude installs/discovers `.claude/skills`. Copilot discovers that root plus
       `.github/skills` and `.agents/skills`; skill-mesh chooses `.github/skills` as
-      its GPT install target but cannot ignore the alternate active root when
-      authorizing deletion. A FRESH array prevents caller mutation.
+      its GPT install target. A FRESH array prevents caller mutation.
+
+      SCOPE UNCHANGED BY STEP 5 -- read this before "simplifying" the two functions
+      into one. This set answers "could a host SEE bytes here?", which is the
+      question the retirement authorization asks; the map above answers "where does
+      skill-mesh WRITE?". Since Step 5 made `.agents/skills` installable (codex) the
+      two sets happen to hold the same three paths, and that coincidence is exactly
+      why they must stay separate functions: a future host root skill-mesh never
+      installs into belongs here and NOT there, and deriving one from the other
+      would silently drop it. `.agents/skills` was in this set before codex existed
+      and stays here for its ORIGINAL reason (Copilot scans it) independently of
+      the new one.
     #>
     return @('.claude/skills', '.github/skills', '.agents/skills')
 }
@@ -115,7 +149,7 @@ function Resolve-SkillMeshProvider {
            bytes into a report under the guise of a known provider. So the
            comparison is ORDINAL.
         2. It is also case-INSENSITIVE, which we WANT: the installer's
-           [ValidateSet('claude','gpt')] accepts -Provider CLAUDE, so a
+           [ValidateSet('claude','gpt','codex')] accepts -Provider CLAUDE, so a
            case-sensitive match would drop a legitimate install -- a false-clean
            preflight, worse than the leak.
 

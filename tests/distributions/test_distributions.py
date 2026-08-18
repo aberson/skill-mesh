@@ -51,6 +51,11 @@ def _marker_literal():
 DISCOVERY_SUBDIR = {
     "claude": Path(".claude") / "skills",
     "gpt": Path(".github") / "skills",
+    # Phase CP Step 5. The same literal root Copilot also scans as an active
+    # alternate -- see tools/skill-mesh-discovery.ps1, which owns the map this
+    # mirrors; a mirror that omitted a live provider would be the drift this
+    # repository has already paid for once.
+    "codex": Path(".agents") / "skills",
 }
 # The retired project-relative GPT target: a GPT install must NEVER write here.
 RETIRED_GPT_SUBDIR = Path(".copilot") / "skills"
@@ -2911,14 +2916,15 @@ def test_persisted_ledger_never_has_null_or_empty_entries(dist_root, tmp_path):
 # every emitted file, a co-located core.md the launcher can require, LF/UTF-8-no-BOM
 # bytes, and byte-identical reruns -- rather than a codex-specific relaxation.
 #
-# THE FIXTURE-SKILL SEAM. Step 3 builds the generation surface and deliberately authors
-# NO real skills/*/providers/codex.md (the pilot five are Step 4, the cohorts Steps
-# 6-8), so `-Provider codex` against the committed manifest legitimately emits an EMPTY
-# profile. An empty tree cannot prove the rails work, and planting a codex.md in the
-# real checkout would BE Step 4's work done early -- so these tests drive the real
-# builder over a synthetic repo (_synthetic_build_repo) carrying a fixture skill. That
-# is the same seam the shared-closure refusal tests already use, and it plants nothing
-# in this checkout.
+# THE FIXTURE-SKILL SEAM, AND WHY IT SURVIVES STEP 4. Step 3 authored no real
+# skills/*/providers/codex.md, so `-Provider codex` against the committed manifest
+# emitted an EMPTY profile and only a synthetic repo (_synthetic_build_repo) could prove
+# the rails worked. Phase CP Step 4 landed the pilot five, and the committed-manifest
+# tests at the bottom of this block now grade that real cohort -- but the fixture tests
+# are KEPT, not replaced: they exercise shapes the real roster cannot reach on demand (a
+# minimal one-skill manifest, an adversarial provider set, a `both`-vs-`all` comparison
+# that must not depend on which skills happen to be authored this week). Two arms, two
+# jobs.
 # --------------------------------------------------------------------------- #
 
 # NOTE the citation is NOT followed by a period. $SHARED_REF_RE's leaf class includes
@@ -3131,18 +3137,68 @@ def test_provider_both_still_means_claude_and_gpt_only(tmp_path):
         "-Provider all must include the codex profile"
 
 
-def test_codex_profile_is_empty_for_the_committed_manifest(tmp_path):
-    """The honest Step-3 state, pinned so it is a DECISION rather than an oversight.
+# The Phase CP Step 4 pilot cohort, SPELLED. Read from the manifest everywhere else in
+# this file (`_codex_skills`), because the roster grows across the cohort steps -- but
+# the ONE place that says which skills the pilot is has to be a written-down list, or
+# "dist/codex holds exactly the 5 pilot skills" degrades into "dist/codex holds whatever
+# the manifest happens to declare", which no longer grades the step's Done-when.
+PILOT_CODEX_SKILLS = ["lesson-harvest", "plan-review", "session-wrap", "task-handoff",
+                      "user-orient"]
 
-    No codex adapter is authored yet, so the real manifest yields an empty profile and
-    the build must SUCCEED rather than throw -- the cohort steps rely on being able to
-    build a partially-populated codex profile. This test flips to "5 skills" at Step 4;
-    an accidental early codex entry in the committed manifest reds it here first.
+
+def test_codex_profile_holds_exactly_the_pilot_five_for_the_committed_manifest(tmp_path):
+    """The Step-4 Done-when, over the REAL manifest rather than a fixture repo.
+
+    Step 3's version of this test asserted the profile was EMPTY and said in its own
+    docstring that it flips to five here. It grades the whole emission contract for the
+    real cohort at once, because the parts are only correct together: a launcher without
+    its co-located core.md is a package Codex can list and cannot run, and an unstamped
+    file is one the installer cannot own or uninstall.
     """
     out = tmp_path / "out"
     r = _build(out, provider="codex")
     assert r.returncode == 0, f"{r.stdout}\n{r.stderr}"
-    assert "(0 skills, 0 files)" in r.stdout, r.stdout
-    assert _codex_skills() == [], _codex_skills()
-    emitted = [p for p in (out / "codex").rglob("*") if p.is_file()]
-    assert emitted == [], emitted
+    assert "(5 skills," in r.stdout, r.stdout
+    # The manifest declares exactly the pilot roster...
+    assert sorted(_codex_skills()) == PILOT_CODEX_SKILLS, _codex_skills()
+    # ...and the emitted tree IS that roster: no extra skill dir, none missing. The
+    # shared payload is a sibling of the skill dirs, so it is excluded by name here and
+    # graded by the payload tests.
+    emitted_dirs = sorted(p.name for p in (out / "codex").iterdir()
+                          if p.is_dir() and p.name != "_shared")
+    assert emitted_dirs == PILOT_CODEX_SKILLS, emitted_dirs
+    marker = _marker_literal()
+    for name in PILOT_CODEX_SKILLS:
+        launcher = out / "codex" / name / "SKILL.md"
+        core = out / "codex" / name / "core.md"
+        assert launcher.is_file(), f"{name}: no codex launcher emitted"
+        assert core.is_file(), f"{name}: codex profile must ship the co-located core.md"
+        text = launcher.read_text(encoding="utf-8")
+        assert text.startswith("---\nname: " + name + "\n"), text[:120]
+        assert marker in text, f"{name}: launcher carries no provenance marker"
+        assert f"Canonical source: skills/{name}/providers/codex.md" in text
+        assert "Profile: codex" in text
+        # The own-core reference is repointed to the co-located sibling.
+        assert "../core.md" not in text, f"{name}: unrepointed ../core.md in launcher"
+        core_text = core.read_text(encoding="utf-8")
+        assert marker in core_text, f"{name}: core.md carries no provenance marker"
+        assert f"Canonical source: skills/{name}/core.md" in core_text
+
+
+def test_codex_profile_rerun_over_the_committed_manifest_is_byte_identical(tmp_path):
+    """Determinism on the REAL cohort, not only on the fixture skill.
+
+    The fixture-repo determinism test upstream drives one synthetic skill; this one
+    drives the five committed adapters plus the shared payload their cores pull in, which
+    is the tree an operator actually installs at M1.
+    """
+    first, second = tmp_path / "a", tmp_path / "b"
+    assert _build(first, provider="codex").returncode == 0
+    assert _build(second, provider="codex").returncode == 0
+    snap1 = _tree_snapshot(first / "codex")
+    snap2 = _tree_snapshot(second / "codex")
+    assert snap1 == snap2, "codex profile is not byte-reproducible across runs"
+    assert snap1, "codex profile emitted nothing -- determinism would be vacuous"
+    # ...and rebuilding IN PLACE over an existing profile is identical too.
+    assert _build(first, provider="codex").returncode == 0
+    assert _tree_snapshot(first / "codex") == snap1

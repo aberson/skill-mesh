@@ -10,6 +10,7 @@
 
         claude -> <Home>/.claude/skills/<skill>/{SKILL.md, core.md}
         gpt    -> <Home>/.github/skills/<skill>/{SKILL.md, core.md}
+        codex  -> <Home>/.agents/skills/<skill>/{SKILL.md, core.md}
 
     ...plus the shared support payload the builder emits at the PROFILE ROOT, as a
     sibling of the skill dirs, so every generated '../_shared/x' reference resolves
@@ -17,11 +18,23 @@
 
         claude -> <Home>/.claude/skills/_shared/<asset>
         gpt    -> <Home>/.github/skills/_shared/<asset>
+        codex  -> <Home>/.agents/skills/_shared/<asset>
 
     (GitHub Copilot CLI discovers project skills from .github/skills, .agents/skills,
     and .claude/skills, plus the personal ~/.copilot/skills; this installer writes the
     GPT profile to .github/skills. The project-relative .copilot/skills target used
     before the Step 43 proof is RETIRED -- Copilot does not discover it.)
+
+    THE CODEX ROOT IS THE SAME LITERAL PATH COPILOT ALSO SCANS. For a live Codex
+    install the -Home to pass is $CODEX_EFFECTIVE_HOME (resolve it with
+    tools/probe-codex-skills.ps1, never by hand); that tree is nevertheless the same
+    `.agents/skills` name Copilot reads as one of its active alternates, so a home
+    that is BOTH a Codex home and a Copilot workspace exposes one tree to two hosts.
+    This installer deliberately builds NO guard for that: design decision D-CP6 keeps
+    the policy on M1 evidence, recorded in documentation/parity-deltas.md. Nothing
+    below is provider-special-cased -- codex gets byte-identical ledger, refusal,
+    containment, and uninstall semantics to claude and gpt, because all three are
+    derived from $DISCOVERY_SUBDIR rather than spelled per provider.
 
     DESTRUCTIVE AUTHORITY = PATH SCOPE + MARKER + RECORDED CURRENT-BYTE HASH.
     Every generated file carries the provenance marker from tools/skill-mesh-provenance.ps1
@@ -52,11 +65,14 @@
     instant is not durable ownership identity, so uninstall NEVER removes directories.
 
     Source of the generated tree: -DistDir points at a pre-built dist root (containing
-    claude/ and/or gpt/). When omitted, the profile is built on the fly into an OS-temp
-    staging dir via tools/build-distributions.ps1 and cleaned up on every exit path.
+    claude/, gpt/, and/or codex/). When omitted, the profile is built on the fly into an
+    OS-temp staging dir via tools/build-distributions.ps1 and cleaned up on every exit
+    path. NOTE that build-distributions' -Provider 'both' still means claude+gpt; a
+    pre-built -DistDir intended to serve a codex install must be built with
+    -Provider codex or -Provider all.
 
 .PARAMETER Provider
-    'claude' | 'gpt'. Alias: -Profile.
+    'claude' | 'gpt' | 'codex'. Alias: -Profile.
 
 .PARAMETER Home
     Target install root. Alias: -Destination. Backed by $TargetHome ($HOME is a
@@ -105,13 +121,14 @@
 .EXAMPLE
     powershell -File tools\install-skill-mesh.ps1 -Provider claude -Home C:\tmp\home
     powershell -File tools\install-skill-mesh.ps1 -Provider gpt -Home C:\tmp\home -DistDir C:\stage\dist
+    powershell -File tools\install-skill-mesh.ps1 -Provider codex -Home C:\tmp\home -DistDir C:\stage\dist
     powershell -File tools\install-skill-mesh.ps1 -Provider claude -Home C:\tmp\home -Uninstall
 #>
 
 [CmdletBinding()]
 param(
     [Parameter(Mandatory = $true)]
-    [ValidateSet('claude', 'gpt')]
+    [ValidateSet('claude', 'gpt', 'codex')]
     [Alias('Profile')]
     [string]$Provider,
 

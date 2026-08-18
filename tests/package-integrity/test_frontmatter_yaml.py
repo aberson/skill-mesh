@@ -435,21 +435,23 @@ def _codex_adapters():
 def test_canonical_codex_adapters_carry_no_frontmatter_and_are_graded_if_they_grow_one():
     """The codex arm of the premise above (Phase CP Step 3, issue #120).
 
-    ARMED, NOT YET LOAD-BEARING -- and stated that way rather than dressed up. Step 3
-    builds the generation rails and authors ZERO codex adapters (the pilot five are Step
-    4, the cohorts Steps 6-8), so the per-file loop below has nothing to iterate today.
-    Its sibling GPT check can assert a vacuity FLOOR (>= 47 adapters); this one cannot,
-    and inventing one would just red the suite.
+    LIVE SINCE PHASE CP STEP 4, and armed since Step 3. Step 3 built the generation
+    rails and authored ZERO codex adapters, so the per-file loop below had nothing to
+    iterate; Step 4 landed the pilot five and the loop started grading them with no edit
+    here, which is the whole point of having armed it early. Its sibling GPT check can
+    assert a vacuity FLOOR (>= 47 adapters); this one still cannot, because the roster
+    grows across Steps 6-8 and a spelled floor here would have to move every time.
 
-    What it does instead, so the zero is a CHECKED FACT rather than an accident:
+    What it does instead, so the count is a CHECKED FACT rather than an accident:
 
       * The count is cross-checked against the manifest's own `counts["codex"]`. A typo
         in the glob (`codex.MD`, `provider/`) would silently return 0 forever and this
         gate would report PASS for the rest of Phase CP -- the exact false-green shape
         this repository keeps getting bitten by. Tying it to a number produced by a
         different generator, from a different input, makes a broken glob loud.
-      * The moment Step 4 lands adapters, the loop starts grading them with no edit
-        here -- which is the whole point of arming it now rather than after.
+      * The roster's exact membership is pinned elsewhere, by
+        tests/package-integrity/test_manifest_contract.py::test_exact_codex_set, so this
+        gate can stay a pure frontmatter check.
 
     The premise itself is the same as the GPT one: canonical adapters ship no frontmatter
     because build-distributions.ps1 synthesizes it from the manifest record

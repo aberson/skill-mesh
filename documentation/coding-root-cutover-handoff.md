@@ -260,7 +260,7 @@ powershell -File tools/inspect-host-install.ps1 -Home '<consumer-home>' -Format 
 ```
 
 **Expect:** exit `0` and a text report that begins
-`skill-mesh host-install report (schema_version 2)`, followed by `consumer_home:`, the
+`skill-mesh host-install report (schema_version 3)`, followed by `consumer_home:`, the
 `instruction files:` block, one block per discovery root, then `ledger:`, `router:`,
 `legacy_shadows:` and a `warnings (N):` list. Exit `2` means the `-Home` was invalid or
 unreadable, or the manifest could not be parsed — fix that before anything else. The JSON form
@@ -361,7 +361,10 @@ target from a later junction retarget.
 If the last line is `blocked (N):` with findings, exit is `2`, nothing was written, and each
 finding prints as `[CODE] <rel_path> -- <message>`. The codes you may see:
 `MANIFEST_UNREADABLE`, `UNSAFE_LINK`, `FOREIGN_FILE`, `UNKNOWN_PROVIDER_ROOT`,
-`MISSING_PROFILE`, `INCOMPLETE_TRANSACTION`, `PRECONDITION_DRIFT`, `INVALID_MODE`,
+`MISSING_PROFILE`, `NO_PROFILE_IN_DISTRIBUTION`, `LEDGER_PROVIDER_NOT_IN_DISTRIBUTION`,
+`UNBOUND_PROVIDER_ROOT_MANAGED_CONTENT`, `UNCLASSIFIED_MANAGED_CONTENT`,
+`PRESERVE_INSTALL_COLLISION`,
+`INCOMPLETE_TRANSACTION`, `PRECONDITION_DRIFT`, `INVALID_MODE`,
 `INVALID_HOME`, `PERSONAL_HOME_UNSUPPORTED`, `BACKUP_DIR_REQUIRED`,
 `BACKUP_DIR_INSIDE_HOME`, `DIST_DIR_REQUIRED`,
 `INVALID_MIGRATION_ID`, `UNKNOWN_TRANSACTION`, `HOME_MISMATCH`, `RELEASE_MISMATCH`,

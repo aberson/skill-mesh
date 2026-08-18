@@ -7,7 +7,7 @@ Two independent layers:
   providers/codex.md (the additive third provider from Phase CP Step 3 -- 0 authored
   at that step, the pilot five at Step 4); every provider-native dir has ONLY
   providers/claude.md (no core.md, no gpt.md, no codex.md -- provider-native means
-  Claude-only); the counts match the manifest (47 portable, 3 native, 50 total, 0
+  Claude-only); the counts match the manifest (47 portable, 3 native, 50 total, 5
   codex); skills/inventory.json
   agrees with the manifest and the committed expected_inventory.json fixture; and
   no operator-private absolute path leaked into the migrated tree.
@@ -93,8 +93,8 @@ def test_inventory_counts():
     assert derived["total"] == 50
     assert derived["portable"] == 47
     assert derived["provider_native"] == 3
-    # 0 until Phase CP Step 4 authors the pilot five providers/codex.md files.
-    assert derived["codex"] == 0
+    # 5 since Phase CP Step 4 authored the pilot five providers/codex.md files.
+    assert derived["codex"] == 5
 
 
 def test_inventory_matches_manifest():
@@ -194,11 +194,11 @@ def test_file_counts_across_tree():
     assert len(cores) == 47, len(cores)
     assert len(claude) == 50, len(claude)   # 47 portable + 3 native
     assert len(gpt) == 47, len(gpt)
-    # 0 at Phase CP Step 3 -- the generation rails ship before any adapter. This is a
-    # SPELLED count on purpose, exactly like its three siblings: the cohort steps that
-    # author adapters must come here and state the new number, so the catalog size is
-    # never silently redefined by a glob.
-    assert len(codex) == 0, len(codex)
+    # 5 since Phase CP Step 4 -- the pilot cohort, on rails that shipped empty at Step
+    # 3. This is a SPELLED count on purpose, exactly like its three siblings: the cohort
+    # steps that author more adapters must come here and state the new number, so the
+    # catalog size is never silently redefined by a glob.
+    assert len(codex) == 5, len(codex)
 
 
 def test_no_private_absolute_paths_in_migrated_tree():
