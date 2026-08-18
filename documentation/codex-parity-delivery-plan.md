@@ -477,22 +477,35 @@ cohorts depend on — a sequencing constraint, not a conditional one.
   same commit, and this is that commit. Regenerate the pinned inventories after the schema
   change and re-grep the vocabulary consumers (`migrate-legacy-install.ps1`,
   `inspect-host-install.ps1`).
+
+  **Migrator decoupled (decision 2026-08-18, option 3 — see
+  `documentation/cp-pass1-handoff-2026-08-18.md` and #122).** This step ships **zero delta**
+  to `tools/migrate-legacy-install.ps1`: when resuming from branch `build-step-1786993911`,
+  restore that file byte-identical to `main` and drop the pass-1 scoping change that made
+  single-profile dists legal for migration (it created "unbound roots" and a silent-orphaning
+  defect class; hardening moved to #138). The pre-existing dist-completeness rule stands:
+  `New-MigrationPlan` blocks with `MISSING_PROFILE` unless the dist ships every declared
+  provider, so with codex declared, legacy migration requires a `-Provider all` dist. Record
+  this as a behavior note in `documentation/migration.md`. Rounds-1–2 machinery stays
+  preserved on the branch for #138 to cherry-pick; do not re-land any of it in this phase.
 - **Type:** code
 - **Issue:** #122
 - **Flags:** --reviewers deep
 - **Files:** tools/skill-mesh-discovery.ps1, tools/install-skill-mesh.ps1,
   tools/inspect-host-install.ps1, tools/probe-codex-skills.ps1, tests/distributions/,
   config/skill-manifest.json, tools/gen_manifest.py,
-  tests/package-integrity/expected_inventory.json
+  tests/package-integrity/expected_inventory.json, documentation/migration.md
 - **Produces:** codex install/inspect/discovery support; probe script; temp-home round-trip
   test (the pipeline smoke gate); the top-level `providers.codex` vocabulary key co-landed
   with its discovery root
 - **Done when:** round-trip test green; discovery-map consumer grep table in step report;
   `New-MigrationPlan` produces no `UNKNOWN_PROVIDER_ROOT` blocker for codex (the guard that
   made Step 3 defer the vocabulary key) — asserted by a test, not by inspection;
+  `git diff main -- tools/migrate-legacy-install.ps1` is empty (zero migrator delta per the
+  option-3 decision); behavior note present in `documentation/migration.md`;
   one uninterrupted repo-root `python -m pytest` passes (pass-1 exit gate)
 - **Depends on:** 2, 4
-- **Status:** BLOCKED (2026-08-18) - 3/3 iterations; nested-junction discovery gap in migrate-legacy-install.ps1. Operator decision required; see documentation/cp-pass1-handoff-2026-08-18.md and issue #122.
+- **Status:** BLOCKED (2026-08-18) - 3/3 iterations; nested-junction discovery gap in migrate-legacy-install.ps1. Decision recorded (option 3, zero migrator delta; hardening → #138): resume from branch build-step-1786993911. See documentation/cp-pass1-handoff-2026-08-18.md and issue #122.
 
 <!-- autofix-applied: 2026-08-16 -->
 ### Step 6: Cohort B — pipeline family

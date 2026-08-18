@@ -47,9 +47,21 @@ This is the 4th instance of one bug-shape, which is also the workspace stop-and-
 
 1. **Fourth iteration** targeting discovery rather than accounting — make `Get-RootScan` reparse-aware (descend, or refuse on an unscannable target). Exceeds `--max-iter`; 4th attempt at one bug-shape.
 2. **Revert the scoping change.** Restore the pre-existing rule that a dist must ship every declared provider; migration then requires `-Provider all`. Unbound roots cease to exist and the whole defect class becomes unreachable. Fails loud instead of orphaning. Costs operator convenience; needs a documented behavior note.
-3. **Decouple the migrator from Phase CP** — option 2 plus a dedicated hardening issue. *Operator leaning this way as of 2026-08-18, pending review; not yet decided.*
+3. **Decouple the migrator from Phase CP** — option 2 plus a dedicated hardening issue. *Ratified — see Decision below.*
 
 **M1 does not depend on the migrator** — it installs via `install-skill-mesh.ps1`. Options 2 and 3 unblock M1 without shipping the defect.
+
+### Decision (2026-08-18): Option 3, ratified after review
+
+**Zero migrator delta.** Step 5 resumes from branch `build-step-1786993911` with
+`tools/migrate-legacy-install.ps1` restored byte-identical to `main` — nothing in Step 5
+requires touching the migrator once the vocabulary key and discovery root co-land. The
+dist-completeness rule stands (`MISSING_PROFILE`; migration with codex declared requires
+`-Provider all`), recorded as a behavior note in `documentation/migration.md`. Rounds-1–2
+machinery stays preserved on the branch for the dedicated hardening issue **#138**
+(reparse-aware discovery, sibling `-Recurse` audit, `Get-UnboundReachWitness` severity,
+machinery disposition). The 4th-instance stop-and-audit condition is discharged into #138
+rather than a 4th in-phase iteration. Plan amended in the commit that carries this note.
 
 ## Owed regardless of the option chosen
 
