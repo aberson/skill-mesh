@@ -111,8 +111,14 @@ param(
     # deliberately partial profile as if it were the catalog. Ship codex in a release
     # by asking for it -- '-Provider all', or '-Provider codex' for a codex-only
     # artifact. Revisit the default when the codex roster reaches the portable roster.
-    # Note that tools/migrate-legacy-install.ps1 binds exactly the profiles the dist
-    # ships, so a 'both' release stays a complete, migratable artifact.
+    # Note that tools/migrate-legacy-install.ps1 binds every DECLARED provider -- not
+    # the subset a given dist happens to ship -- and blocks with MISSING_PROFILE when a
+    # declared provider has no profile in the artifact. Now that codex is declared, a
+    # 'both' release is therefore NOT consumable by the legacy migrator: legacy
+    # migration requires a '-Provider all' dist. That is a deliberate fail-loud, not a
+    # gap (Phase CP Step 5, option 3) -- scoping the migrator to the shipped subset
+    # instead would create unbound provider roots and a silent-orphaning defect class.
+    # See documentation/migration.md and issue #138.
     [ValidateSet('claude', 'gpt', 'codex', 'both', 'all')]
     [string]$Provider = 'both',
 

@@ -32,9 +32,12 @@ CLAUDE_ROOT = ".claude/skills"
 GPT_ROOT = ".github/skills"
 # The codex install target (Phase CP Step 5) -- the SAME literal path Copilot already
 # scanned as an active alternate. No fixture SHAPE writes here: every shape below
-# predates codex and stays byte-identical, so the codex profile is deliberately
-# absent from them and the migrator's shipped-profile scoping is what keeps those
-# cases green. The constant exists so tests can name the root without re-spelling it.
+# predates codex and stays byte-identical, so a consumer HOME built by these fixtures
+# holds nothing under this root. That is not what makes the cases green, though: the
+# migrator binds every DECLARED provider and refuses a distribution that omits one, so
+# the DIST fixtures in test_legacy_migration.py build `-Provider all` and copy a codex
+# profile. Home shapes stay two-provider; distributions do not. The constant exists so
+# tests can name the root without re-spelling it.
 CODEX_ROOT = ".agents/skills"
 LEGACY_SKILLS_GPT_ROOT = ".claude/skills-gpt"
 RETIRED_COPILOT_ROOT = ".copilot/skills"

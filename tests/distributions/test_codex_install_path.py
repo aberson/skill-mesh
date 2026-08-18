@@ -47,7 +47,6 @@ from pathlib import Path
 
 import pytest
 
-import legacy_install_fixtures as fx
 
 PWSH = shutil.which("powershell")
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -226,8 +225,12 @@ def codex_dist(tmp_path_factory):
 def both_dist(tmp_path_factory):
     """`-Provider both` = claude + gpt, deliberately WITHOUT codex.
 
-    This is the shape every existing consumer home and every default release artifact
-    is built from, so it is the shape the migration-vocabulary guard must be green on.
+    Still `release.ps1`'s default and the shape every existing consumer home was built
+    from -- and, since codex joined the declared provider vocabulary, no longer a legal
+    legacy migration source: the migrator binds every DECLARED provider and refuses an
+    artifact that omits one. That refusal is the design, not a gap (see
+    `documentation/migration.md`), so this fixture is the negative input the
+    completeness cases below are built on.
     """
     return _build(tmp_path_factory.mktemp("bdist"), "both")
 
@@ -236,19 +239,6 @@ def both_dist(tmp_path_factory):
 def all_dist(tmp_path_factory):
     """`-Provider all` = claude + gpt + codex."""
     return _build(tmp_path_factory.mktemp("adist"), "all")
-
-
-@pytest.fixture(scope="module")
-def claude_only_dist(tmp_path_factory):
-    """A SINGLE-profile distribution: claude, deliberately without gpt and codex.
-
-    Only a legal input since Step 5 (see "THE ONE DELIBERATE DESIGN CHANGE" in
-    `New-MigrationPlan`) -- before it, the completeness rule refused any distribution
-    that omitted a declared provider. It is also the shape that made the scan/bind
-    conflation reachable, so it is the input every case in the section below is built
-    on: two of the three known roots are UNBOUND for this dist.
-    """
-    return _build(tmp_path_factory.mktemp("cldist"), "claude")
 
 
 # --------------------------------------------------------------------------- #
@@ -510,21 +500,32 @@ def test_migration_plan_has_no_unknown_provider_root_blocker_for_codex(
     `UNKNOWN_PROVIDER_ROOT` blocker -- exit 2, refusing the WHOLE migration in every
     consumer home -- for any declared provider `tools/skill-mesh-discovery.ps1` has no
     root for. Declaring `providers.codex` without the discovery-map entry would
-    therefore break the legacy migrator everywhere.
+    therefore break the legacy migrator everywhere. This is Step 5's done-when,
+    asserted rather than inspected.
 
-    Asserted for BOTH distribution shapes on purpose: the `both` (claude+gpt) shape is
-    what every existing consumer home and default release artifact is built from, and
-    the `all` shape is the one that actually binds codex. The blocker must be absent
-    either way, and the guard itself must still be live -- see the red anchor below.
+    Asserted for BOTH distribution shapes on purpose, because the guard is about the
+    VOCABULARY and not about what a given artifact ships: `UNKNOWN_PROVIDER_ROOT` must
+    be absent either way. What differs downstream is asserted here too, so the two
+    blockers can never be read as one another -- an `all` dist plans completely clean,
+    while a `both` dist is refused by the pre-existing completeness rule
+    (`MISSING_PROFILE`): a KNOWN root with no shipped profile, never an unknown root.
+    The guard itself must still be live; see the red-on-garbage anchor below.
     """
     dist = request.getfixturevalue(dist_fixture)
     home = tmp_path / "h"
     home.mkdir()
     r = _migrate_plan(home, tmp_path / "b", dist)
-    assert r.returncode == 0, f"dry run blocked ({r.returncode}):\n{r.stdout}\n{r.stderr}"
     plan = json.loads(r.stdout)
     assert _blockers(plan, "UNKNOWN_PROVIDER_ROOT") == [], plan["blocked"]
-    assert plan["blocked"] == [], plan["blocked"]
+    if dist_fixture == "all_dist":
+        assert r.returncode == 0, f"dry run blocked ({r.returncode}):\n{r.stdout}\n{r.stderr}"
+        assert plan["blocked"] == [], plan["blocked"]
+    else:
+        assert r.returncode == 2, (
+            "a `both` dist must be refused while codex is declared -- see "
+            f"documentation/migration.md:\n{r.stdout}\n{r.stderr}")
+        codes = sorted({b["code"] for b in plan["blocked"]})
+        assert codes == ["MISSING_PROFILE"], plan["blocked"]
     # Non-vacuity: codex really is in the vocabulary this run loaded. Without this the
     # test would pass just as happily if the key had never been added.
     manifest = json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))
@@ -566,30 +567,49 @@ def test_migration_plan_unknown_provider_root_blocker_still_fires(both_dist, tmp
     assert "codex" not in hits[0]["message"]
 
 
-def test_migration_binds_exactly_the_profiles_the_distribution_ships(
-        both_dist, all_dist, tmp_path):
-    """Phase CP Step 5's scoping rule, pinned.
+def test_migration_binds_every_declared_provider_not_the_shipped_subset(
+        all_dist, both_dist, tmp_path):
+    """Option 3, pinned: the bound set is the MANIFEST's provider vocabulary.
 
-    `-Provider both` still means claude+gpt and codex must be asked for by name, so
-    "declared provider" and "shipped profile" stopped being the same set. A migration
-    binds the SHIPPED set: otherwise every migration from a `both` distribution would
-    fail MISSING_PROFILE on each codex-declaring skill, and would write an empty codex
-    entry into the consumer's ledger claiming a binding that never happened."""
-    for dist, expected in ((both_dist, {"claude", "gpt"}),
-                           (all_dist, {"claude", "gpt", "codex"})):
-        home = tmp_path / ("h-" + "-".join(sorted(expected)))
-        home.mkdir()
-        r = _migrate_plan(home, tmp_path / ("b-" + str(len(expected))), dist)
-        assert r.returncode == 0, f"{r.stdout}\n{r.stderr}"
-        plan = json.loads(r.stdout)
-        assert set(plan["provider_roots"]) == expected, plan["provider_roots"]
-        assert plan["ledger_json"], "the plan carries no ledger"
-        assert set(json.loads(plan["ledger_json"])["installs"]) == expected
-    # The codex root the plan records is the map's value, not a re-spelling.
-    home = tmp_path / "h-all2"
+    `New-MigrationPlan` builds `$providerRoots` from `$script:KnownProviders` -- every
+    provider the manifest declares -- and the both-profile completeness loop then fires
+    `MISSING_PROFILE` for a declared adapter the supplied distribution has no profile
+    for. So an `all` dist plans clean and binds all three roots, while a `both` dist is
+    REFUSED rather than silently narrowed to claude+gpt.
+
+    The rejected alternative narrowed the bound set to the shipped profiles. That is
+    what made a declared-but-unshipped root "unbound", the state three review rounds
+    found three silent-orphaning defects in. Refusing an incomplete artifact costs the
+    operator one build flag; orphaning costs bytes nobody can find. See
+    `documentation/migration.md` and issue #138.
+    """
+    # (a) Every declared provider is bound, and the codex root is the map's value.
+    home = tmp_path / "h-all"
     home.mkdir()
-    plan = json.loads(_migrate_plan(home, tmp_path / "b-all2", all_dist).stdout)
-    assert plan["provider_roots"]["codex"] == CODEX_ROOT
+    r = _migrate_plan(home, tmp_path / "b-all", all_dist)
+    assert r.returncode == 0, f"{r.stdout}\n{r.stderr}"
+    plan = json.loads(r.stdout)
+    assert plan["blocked"] == [], plan["blocked"]
+    assert set(plan["provider_roots"]) == {"claude", "gpt", "codex"}, plan["provider_roots"]
+    assert plan["provider_roots"][PROVIDER] == CODEX_ROOT
+    assert plan["ledger_json"], "the plan carries no ledger"
+    assert set(json.loads(plan["ledger_json"])["installs"]) == {"claude", "gpt", "codex"}
+
+    # (b) The SAME vocabulary against a dist that omits codex: refused, and the refusal
+    # names the missing profile instead of dropping it from the bound set.
+    home2 = tmp_path / "h-both"
+    home2.mkdir()
+    r2 = _migrate_plan(home2, tmp_path / "b-both", both_dist)
+    assert r2.returncode == 2, (
+        "a `both` dist was accepted while codex was declared -- the bound set was "
+        f"narrowed to the shipped profiles:\n{r2.stdout}\n{r2.stderr}")
+    plan2 = json.loads(r2.stdout)
+    hits = _blockers(plan2, "MISSING_PROFILE")
+    assert hits, plan2["blocked"]
+    assert all(h["rel_path"].startswith(PROVIDER + "/") for h in hits), hits
+    # Non-vacuity: codex is BOUND even though nothing shipped it. That is the entire
+    # difference between this design and the rejected one.
+    assert PROVIDER in plan2["provider_roots"], plan2["provider_roots"]
 
 
 def test_an_incomplete_shipped_profile_still_blocks(all_dist, tmp_path):
@@ -612,43 +632,43 @@ def test_an_incomplete_shipped_profile_still_blocks(all_dist, tmp_path):
     assert any(h["rel_path"] == f"{PROVIDER}/{codex_skills[0]}" for h in hits), plan["blocked"]
 
 
-def test_migration_blocks_rather_than_orphaning_a_ledger_provider_the_dist_omits(
+def test_a_home_with_codex_installed_is_not_silently_narrowed_by_a_both_dist(
         codex_dist, both_dist, tmp_path):
-    """The consequence of scoping the bound set, caught by auditing the WIRE SHAPE of
-    the thing the change feeds: the rewritten ledger.
+    """The wire-shape audit that motivated the rejected guard, re-asked of option 3.
 
-    `New-LedgerJson` builds the replacement ledger from the bound provider set alone,
-    and the `ledger` action REPLACES the consumer's file wholesale. So a home that
-    already has codex installed, migrated from a claude+gpt distribution, would have its
-    codex ownership record silently dropped -- 11 files left on disk that
-    `install-skill-mesh -Uninstall` could then never remove, because it would report
-    codex "not installed".
+    `New-LedgerJson` builds the replacement ledger from the bound provider set, and the
+    `ledger` action REPLACES the consumer's file wholesale. If the bound set were the
+    SHIPPED set, a home with codex already installed, migrated from a claude+gpt
+    distribution, would have its codex ownership record silently dropped -- files left
+    on disk that `install-skill-mesh -Uninstall` could then never remove, because it
+    would report codex "not installed".
 
-    Before Step 5 this was impossible by construction (the bound set was every declared
-    provider). Scoping made it reachable, so it is now an explicit pre-mutation block
-    with two named exits."""
+    Under option 3 that is unreachable without a dedicated guard: codex stays bound, the
+    distribution has no codex profile, and `MISSING_PROFILE` refuses the run BEFORE any
+    mutation. Same protection, one rule instead of two.
+    """
     home = tmp_path / "h"
     home.mkdir()
     assert _install(home, codex_dist).returncode == 0
     root = home / Path(*CODEX_ROOT.split("/"))
     before = _tree_snapshot(root)
-    assert before, "nothing installed -- the block would be vacuous"
+    assert before, "nothing installed -- the assertion below would be vacuous"
 
     r = _migrate_plan(home, tmp_path / "b", both_dist)
-    assert r.returncode == 2, f"the ledger orphan was NOT blocked:\n{r.stdout}\n{r.stderr}"
+    assert r.returncode == 2, f"the narrowing was NOT refused:\n{r.stdout}\n{r.stderr}"
     plan = json.loads(r.stdout)
-    hits = _blockers(plan, "LEDGER_PROVIDER_NOT_IN_DISTRIBUTION")
-    assert len(hits) == 1, plan["blocked"]
-    assert PROVIDER in hits[0]["message"]
-    # Pre-mutation: the block costs the home nothing.
+    assert _blockers(plan, "MISSING_PROFILE"), plan["blocked"]
+    # Pre-mutation: the refusal costs the home nothing, and the ledger still owns codex.
     assert _tree_snapshot(root) == before
     assert _ledger(home) is not None and PROVIDER in _ledger(home)["installs"]
 
 
 def test_the_same_home_migrates_cleanly_from_a_distribution_that_includes_codex(
         codex_dist, all_dist, tmp_path):
-    """The other half of the block above, and what keeps it from being a dead end: the
-    operator's first named exit (supply a distribution that ships the profile) works."""
+    """The other half of the refusal above, and what keeps it from being a dead end: the
+    operator's named exit -- supply a distribution that ships every declared profile --
+    works, and the rewritten ledger still owns the codex files rather than dropping
+    them."""
     home = tmp_path / "h"
     home.mkdir()
     assert _install(home, codex_dist).returncode == 0
@@ -657,33 +677,16 @@ def test_the_same_home_migrates_cleanly_from_a_distribution_that_includes_codex(
     plan = json.loads(r.stdout)
     assert plan["blocked"] == [], plan["blocked"]
     assert set(plan["provider_roots"]) == {"claude", "gpt", "codex"}
-    # ...and the rewritten ledger still owns the codex files rather than dropping them.
     assert set(json.loads(plan["ledger_json"])["installs"]) == {"claude", "gpt", "codex"}
 
 
-def test_a_clean_home_is_unaffected_by_the_orphan_guard(both_dist, tmp_path):
-    """Red-on-garbage complement: the guard must be INERT for the ordinary case, or it
-    would block every migration in the fleet instead of the one that orphans records."""
-    home = tmp_path / "h"
-    home.mkdir()
-    r = _migrate_plan(home, tmp_path / "b", both_dist)
-    assert r.returncode == 0, f"{r.stdout}\n{r.stderr}"
-    assert _blockers(json.loads(r.stdout), "LEDGER_PROVIDER_NOT_IN_DISTRIBUTION") == []
-
-
-def test_a_distribution_shipping_no_profile_blocks(tmp_path):
-    """A dist with no recognized profile directory is a bad input, not a narrower
-    migration: it must refuse rather than silently plan a ledger rewrite with no
-    installs."""
-    empty = tmp_path / "d"
-    (empty / "notes").mkdir(parents=True)
-    (empty / "notes" / "readme.md").write_text("not a profile\n", encoding="utf-8")
-    home = tmp_path / "h"
-    home.mkdir()
-    r = _migrate_plan(home, tmp_path / "b", empty)
-    assert r.returncode == 2, f"an empty distribution did NOT block:\n{r.stdout}"
-    plan = json.loads(r.stdout)
-    assert _blockers(plan, "NO_PROFILE_IN_DISTRIBUTION"), plan["blocked"]
+# `test_a_clean_home_is_unaffected_by_the_orphan_guard` and
+# `test_a_distribution_shipping_no_profile_blocks` were removed together with the
+# rounds-1-2 machinery they anchored: `LEDGER_PROVIDER_NOT_IN_DISTRIBUTION` and
+# `NO_PROFILE_IN_DISTRIBUTION` are not blocker codes this tool emits at this tree. The
+# inert-for-the-ordinary-case direction they covered is now carried by
+# test_migration_plan_has_no_unknown_provider_root_blocker_for_codex[all_dist], which
+# asserts `blocked == []` against a clean home. Both are preserved at `aa6c873` for #138.
 
 
 # --------------------------------------------------------------------------- #
@@ -804,380 +807,35 @@ def test_probe_reports_the_shared_root_without_claiming_which_host_wrote_it():
 
 
 # --------------------------------------------------------------------------- #
-# The home is SCANNED whole, even where this distribution does not WRITE
+# Moved to issue #138 (migrator hardening) -- deliberately NOT rewritten here
 # --------------------------------------------------------------------------- #
 #
-# Step 5 scoped the migration's provider set to the profiles `-DistDir` ships. That is
-# correct for the WRITE side and wrong for the READ side, and the first draft used ONE
-# variable for both -- so a known host root the distribution did not ship was never
-# scanned, and content under it could not block anything. Reproduced live against the
-# real tool: a claude-only distribution plus foreign and legacy-managed-looking content
-# under `.github/skills` exited 0 with `blocked: []`, and the root never appeared in the
-# plan at all. The same input refused outright before the scoping change.
+# Rounds 1-2 of Phase CP Step 5 scoped the migration's bound provider set to the
+# profiles `-DistDir` ships, which made a single-profile distribution a legal migration
+# source and created a new state: an "unbound" known root, declared but not shipped.
+# Three review rounds found three successive silent-orphaning defects in the accounting
+# built on top of it, and the third is OPEN -- `Get-ChildItem -Recurse` does not descend
+# a reparse point, so a NESTED junction never enters the inventory at all, and no amount
+# of accounting over what was discovered can prove discovery was complete.
 #
-# The tool now keeps two named sets:
-#   $scanProviderRoots  -- every known provider root, unconditionally. What must be
-#                          accounted for before the first mutation.
-#   $boundProviderRoots -- the profiles this dist ships. What this run writes and owns.
-# Every case below is paired with its opposite, so neither a guard that never fires nor
-# one that fires on everything can pass.
+# Option 3 was ratified 2026-08-18: Phase CP ships ZERO delta to
+# tools/migrate-legacy-install.ps1, the pre-existing completeness rule stands
+# (`MISSING_PROFILE`; migrating with codex declared needs a `-Provider all` dist), and
+# the unbound-root state is unreachable again.
 #
-# The OVER-fire direction has a third pairing, and it lives in the sibling file because
-# that is where the fixture for it already exists: the block keys on CANONICAL residence,
-# not on reachability. Get-RootScan returns canonical home-relative paths, so a junction
-# planted under an unbound root surfaces files that physically live under a BOUND root or
-# under the retired root -- already accounted for by that root's own scan. Blocking on an
-# alias would refuse an input the tool accepted before this step. Pinned by
-# test_legacy_migration.py::
-# test_active_junction_into_retired_tree_removes_retire_authority[agents-child], which
-# aliases `.agents/skills` into `.copilot/skills` and must still exit 0; it went RED on
-# the first draft of this guard, which is how the over-fire was found.
-
-def _plant_managed_looking(home, root, skill=None):
-    """skill-mesh-managed-LOOKING bytes under `root`: a manifest skill directory holding
-    a SKILL.md with a real provenance header. This is what a previous install of that
-    profile leaves behind, and what the migrator would orphan if it neither rewrote the
-    file nor recorded it in the replacement ledger."""
-    skill = skill or fx.MIGRATION_MANAGED[0]
-    return fx.write(home, root + "/" + skill + "/SKILL.md",
-                    fx.generated_skill_md(skill, "gpt"))
-
-
-def _apply(home, backup, dist):
-    return _run(MIGRATE_SCRIPT, ["-Home", str(home), "-BackupDir", str(backup),
-                                 "-DistDir", str(dist), "-Apply", "-Format", "json"])
-
-
-UNBOUND_MANAGED = "UNBOUND_PROVIDER_ROOT_MANAGED_CONTENT"
-
-
-def test_foreign_content_under_an_unbound_root_still_blocks(claude_only_dist, tmp_path):
-    """The reproduction, half one. `.github/skills` is a known host root that a
-    claude-only distribution does not bind; a foreign directory there must refuse the
-    whole migration exactly as it does under a bound root. Get-RootScan is the only
-    place FOREIGN_FILE comes from, so this passes if and only if the root was scanned."""
-    home = tmp_path / "h"
-    fx.write(home, fx.GPT_ROOT + "/" + fx.FOREIGN_DIR + "/README.md",
-             "# operator notes\n\nNot a skill, not managed.\n")
-    r = _migrate_plan(home, tmp_path / "b", claude_only_dist)
-    assert r.returncode == 2, f"an unbound root was never scanned:\n{r.stdout}\n{r.stderr}"
-    plan = json.loads(r.stdout)
-    hits = _blockers(plan, "FOREIGN_FILE")
-    assert hits, plan["blocked"]
-    assert any(h["rel_path"].startswith(fx.GPT_ROOT + "/") for h in hits), plan["blocked"]
-    # ...and the root really was unbound, or this proves nothing about the scan set.
-    assert set(plan["provider_roots"]) == {"claude"}, plan["provider_roots"]
-
-
-@pytest.mark.parametrize("ledger_state", ["absent", "corrupt", "silent-about-gpt"])
-def test_managed_content_under_an_unbound_root_refuses(claude_only_dist, tmp_path,
-                                                       ledger_state):
-    """The reproduction, half two, in the three ledger states the ledger-driven guard
-    cannot see.
-
-    `LEDGER_PROVIDER_NOT_IN_DISTRIBUTION` reads the home's ledger through
-    `Get-PriorCreatedDirs`, which by its own documented contract yields an EMPTY map for
-    a corrupt or old-shape file. So it covers exactly one case -- an intact ledger that
-    already names the omitted provider -- and none of these three: a first-time
-    migration with no ledger, a corrupt ledger, and an intact ledger that simply does
-    not mention gpt. The filesystem-evidence guard covers all three, which is why both
-    exist."""
-    home = tmp_path / "h"
-    planted = _plant_managed_looking(home, fx.GPT_ROOT)
-    if ledger_state == "corrupt":
-        fx.write(home, LEDGER_NAME, "{ this is not json")
-    elif ledger_state == "silent-about-gpt":
-        fx.write(home, LEDGER_NAME, fx.ledger(["claude"]))
-    before = _tree_snapshot(home)
-
-    r = _migrate_plan(home, tmp_path / "b", claude_only_dist)
-    assert r.returncode == 2, f"managed bytes under an unbound root did NOT refuse:\n{r.stdout}"
-    plan = json.loads(r.stdout)
-    hits = _blockers(plan, UNBOUND_MANAGED)
-    assert len(hits) == 1, plan["blocked"]
-    assert hits[0]["rel_path"] == fx.GPT_ROOT, hits[0]
-    assert "'gpt'" in hits[0]["message"], hits[0]["message"]
-    # The OLD guard is silent here: that is the hole this one fills, and asserting it
-    # keeps a future edit from "passing" this test through the ledger path instead.
-    assert _blockers(plan, "LEDGER_PROVIDER_NOT_IN_DISTRIBUTION") == [], plan["blocked"]
-    # No install action ever targeted the unbound root.
-    assert not [a for a in plan["actions"]
-                if a["action"] == "install" and a["rel_path"].startswith(fx.GPT_ROOT + "/")]
-
-    # Pre-mutation, through -Apply and not just the dry run: the refusal costs the home
-    # nothing, and no transaction directory is created.
-    ra = _apply(home, tmp_path / "b2", claude_only_dist)
-    assert ra.returncode == 2, ra.stdout
-    assert _tree_snapshot(home) == before, "a refused migration mutated the home"
-    assert planted.is_file()
-    assert not (tmp_path / "b2").exists(), "a refused migration created a backup transaction"
-
-
-def test_the_same_home_without_the_plant_migrates(claude_only_dist, tmp_path):
-    """Red-on-garbage pair for the case above: the ONLY difference is the planted
-    directory. A guard that refused every single-profile distribution -- which is what
-    reverting the scoping outright would do -- fails here."""
-    home = tmp_path / "h"
-    home.mkdir()
-    r = _migrate_plan(home, tmp_path / "b", claude_only_dist)
-    assert r.returncode == 0, f"{r.stdout}\n{r.stderr}"
-    plan = json.loads(r.stdout)
-    assert plan["blocked"] == [], plan["blocked"]
-    assert set(plan["provider_roots"]) == {"claude"}
-
-
-def test_the_same_plant_is_installed_over_when_the_distribution_binds_it(both_dist,
-                                                                        tmp_path):
-    """The other red-on-garbage direction: identical bytes at an identical path, and a
-    distribution that DOES ship the profile. The blocker must key on bound-ness, not on
-    the content -- otherwise it would refuse the ordinary two-profile migration that
-    every consumer home in the fleet runs."""
-    home = tmp_path / "h"
-    planted = _plant_managed_looking(home, fx.GPT_ROOT)
-    rel = planted.relative_to(home).as_posix()
-    r = _migrate_plan(home, tmp_path / "b", both_dist)
-    assert r.returncode == 0, f"{r.stdout}\n{r.stderr}"
-    plan = json.loads(r.stdout)
-    assert _blockers(plan, UNBOUND_MANAGED) == [], plan["blocked"]
-    assert rel in [a["rel_path"] for a in plan["actions"] if a["action"] == "install"]
-
-
-def test_consumer_content_under_an_unbound_root_is_preserved_not_blocked(
-        claude_only_dist, tmp_path):
-    """The refusal is targeted, and this is the direct evidence that the unbound root
-    was READ rather than merely not-blocked.
-
-    A consumer's own skill under `.github/skills` is not skill-mesh's to write and not
-    skill-mesh's to orphan. It gets the same accounting a bound root would give it -- a
-    `preserve` action, hashed, precondition-checked before mutation and verified after --
-    and no block. Refusing here would refuse homes this run cannot harm."""
-    home = tmp_path / "h"
-    fx.write(home, fx.GPT_ROOT + "/my-own-skill/SKILL.md", fx.consumer_skill_md("my-own-skill"))
-    r = _migrate_plan(home, tmp_path / "b", claude_only_dist)
-    assert r.returncode == 0, f"{r.stdout}\n{r.stderr}"
-    plan = json.loads(r.stdout)
-    assert plan["blocked"] == [], plan["blocked"]
-    preserved = [a["rel_path"] for a in plan["actions"] if a["action"] == "preserve"]
-    assert fx.GPT_ROOT + "/my-own-skill/SKILL.md" in preserved, plan["actions"]
-    # ...while the root itself stays out of the bound set and the rewritten ledger.
-    assert set(plan["provider_roots"]) == {"claude"}
-    assert set(json.loads(plan["ledger_json"])["installs"]) == {"claude"}
-
-
-def test_managed_content_under_the_unbound_codex_root_refuses(both_dist, all_dist,
-                                                              tmp_path):
-    """The same invariant for the root this step ADDED, and the one the fleet meets
-    first: `-Provider both` is claude+gpt, so `.agents/skills` is unbound for every
-    default release artifact. Managed bytes there refuse rather than being orphaned --
-    with no ledger in the home at all, which is the first-time-migration case."""
-    home = tmp_path / "h"
-    _plant_managed_looking(home, CODEX_ROOT)
-    assert not (home / LEDGER_NAME).exists(), "the ledger-driven guard must be out of play"
-    r = _migrate_plan(home, tmp_path / "b", both_dist)
-    assert r.returncode == 2, f"managed bytes under the codex root did NOT refuse:\n{r.stdout}"
-    plan = json.loads(r.stdout)
-    hits = _blockers(plan, UNBOUND_MANAGED)
-    assert len(hits) == 1, plan["blocked"]
-    assert hits[0]["rel_path"] == CODEX_ROOT, hits[0]
-    assert "'codex'" in hits[0]["message"], hits[0]["message"]
-
-    # The message's first named exit is real: the SAME home migrates from a
-    # distribution that ships the profile, and the file becomes an install target.
-    r2 = _migrate_plan(home, tmp_path / "b2", all_dist)
-    assert r2.returncode == 0, f"{r2.stdout}\n{r2.stderr}"
-    plan2 = json.loads(r2.stdout)
-    assert plan2["blocked"] == [], plan2["blocked"]
-    assert CODEX_ROOT + "/" + fx.MIGRATION_MANAGED[0] + "/SKILL.md" in \
-        [a["rel_path"] for a in plan2["actions"] if a["action"] == "install"]
-
-
-def test_the_scan_set_is_not_the_bound_set_in_the_source(tmp_path):
-    """Structural anchor for the split, so a future edit cannot collapse the two names
-    back into one and leave the behavioral cases above passing by accident.
-
-    Not a substitute for the behavior tests -- it is the thing that makes THEM stable:
-    the home scan must read the scan set, and the ledger writer must read the bound set.
-    """
-    src = MIGRATE_SCRIPT.read_text(encoding="utf-8")
-    assert "$scanProviderRoots" in src and "$boundProviderRoots" in src, \
-        "the migrator no longer separates the scanned roots from the bound roots"
-    assert not re.search(r"\$providerRoots\b", src), \
-        "the conflated $providerRoots variable is back"
-    scan_loop = "foreach ($p in @($scanProviderRoots.Keys)) {\n        $scan = Get-RootScan"
-    assert scan_loop in src, "the home scan no longer iterates the SCAN set"
-    assert "New-LedgerJson $installs $boundProviderRoots" in src, \
-        "the ledger writer no longer takes the BOUND set"
-
-
-# --------------------------------------------------------------------------- #
-# The alias that lives nowhere: reached-through versus resident-under
+# The ten cases that lived here asserted that rejected design -- `$scanProviderRoots` /
+# `$boundProviderRoots`, `UNBOUND_PROVIDER_ROOT_MANAGED_CONTENT`,
+# `UNCLASSIFIED_MANAGED_CONTENT`. None of those symbols exist in the tool at this tree,
+# so the cases cannot pass, and making them pass by editing the migrator would re-land
+# exactly what option 3 rejected. They are not deleted work: implementation and tests
+# are preserved at commit `aa6c873` (branch `build-step-1786993911`, tag
+# `cp-migrator-rounds12`) for #138 to cherry-pick, along with the `Test-RelStrictlyUnderRoot`
+# helper that `test_legacy_migration.py` documents but this tree does not define.
 #
-# Get-RootScan classifies a tree LEXICALLY -- by the child directory's name under the
-# root it is walking -- and records every file CANONICALLY, so an in-home junction
-# SPLITS two properties a per-root loop conflates: which scan reached a file, and which
-# root the bytes reside under. A file reached through a scanned root but resident under
-# NO known root belongs to no root's loop, and until the Step 5 round-3 rewrite it
-# received no disposition at all: not installed, not preserved, not retired, not
-# advised, absent from the replacement ledger, exit 0. Those are exactly the orphaned
-# bytes UNBOUND_PROVIDER_ROOT_MANAGED_CONTENT exists to prevent, reached by a path that
-# guard could not see.
-#
-# The accounting is now per FILE: one table keyed by canonical rel, one exhaustive
-# switch on canonical residence (bound / unbound / retired / resident-nowhere), an
-# unmatched-zone arm that BLOCKS, and a totality check that proves the pass consumed
-# the whole table. The three cases below pin the two live arms and the safety net.
-# --------------------------------------------------------------------------- #
-
-# Deliberately outside every root in the discovery map AND outside the retired root,
-# so the aliased content resides in no zone the tool knows.
-ALIAS_TARGET_REL = "shared-skills/plan-review"
-UNCLASSIFIED = "UNCLASSIFIED_MANAGED_CONTENT"
-
-
-def _plant_alias_to_nowhere(home, root):
-    """A manifest-named directory under `root` that is a JUNCTION to an in-home
-    location outside every known discovery root, holding marker-bearing bytes.
-
-    The target stays INSIDE the home, so no UNSAFE_LINK escape fires and the only
-    question on the table is the one being asked: what disposition does a managed file
-    get when the only root that can reach it is not the root it lives under?"""
-    skill = fx.MIGRATION_MANAGED[0]
-    victim = fx.write(home, ALIAS_TARGET_REL + "/SKILL.md",
-                      fx.generated_skill_md(skill, "gpt"))
-    link = Path(home) / Path(*root.split("/")) / skill
-    if not fx.make_junction(link, Path(home) / Path(*ALIAS_TARGET_REL.split("/"))):
-        pytest.skip("cannot create a Windows junction in this environment")
-    assert (link / "SKILL.md").is_file(), "the junction plant did not expose the payload"
-    return victim
-
-
-def _fake_tool_closure(dest):
-    """A COPY of the tool closure the migrator resolves at runtime, so a mutation for a
-    red-on-garbage anchor never touches a committed file. Mirrors the closure
-    test_migration_plan_unknown_provider_root_blocker_still_fires already copies."""
-    (dest / "tools").mkdir(parents=True)
-    (dest / "runtime").mkdir()
-    (dest / "config").mkdir()
-    for p in (REPO_ROOT / "tools").glob("*.ps1"):
-        shutil.copy2(p, dest / "tools" / p.name)
-    shutil.copy2(REPO_ROOT / "runtime" / "path-guard.ps1", dest / "runtime" / "path-guard.ps1")
-    shutil.copy2(MANIFEST_PATH, dest / "config" / "skill-manifest.json")
-    return dest / "tools" / "migrate-legacy-install.ps1"
-
-
-def test_managed_content_reachable_only_through_an_unbound_root_refuses(
-        claude_only_dist, tmp_path):
-    """THE regression for the hole that survived two line-scoped fix rounds.
-
-    `.github/skills` is scanned and unbound for a claude-only distribution. A junction
-    there named for a manifest skill, pointing at `shared-skills/plan-review`, makes
-    marker-bearing skill-mesh bytes reachable through that root while they reside under
-    no known root at all. Nothing in this run will rewrite them and nothing will record
-    them in the replacement ledger, so the orphaning harm is identical to content that
-    sits under the unbound root directly -- and the refusal must be too.
-
-    The residence filter that closed round 2's over-fire assumed an alias always lands
-    in ANOTHER scanned root, where that root's own scan accounts for it. Aliases are
-    closed under the HOME, not under the four roots, and this is the negation."""
-    home = tmp_path / "h"
-    victim = _plant_alias_to_nowhere(home, fx.GPT_ROOT)
-    assert not (home / LEDGER_NAME).exists(), "the ledger-driven guard must be out of play"
-    before = _tree_snapshot(home)
-
-    r = _migrate_plan(home, tmp_path / "b", claude_only_dist)
-    assert r.returncode == 2, (
-        f"managed bytes reachable only through an unbound root did NOT refuse:\n"
-        f"{r.stdout}\n{r.stderr}")
-    plan = json.loads(r.stdout)
-    hits = _blockers(plan, UNBOUND_MANAGED)
-    assert len(hits) == 1, plan["blocked"]
-    assert hits[0]["rel_path"] == fx.GPT_ROOT, hits[0]
-    assert "'gpt'" in hits[0]["message"], hits[0]["message"]
-    # Filesystem evidence only: the ledger-driven half cannot see a home with no ledger.
-    assert _blockers(plan, "LEDGER_PROVIDER_NOT_IN_DISTRIBUTION") == [], plan["blocked"]
-    # The internal safety net stayed quiet -- a NAMED arm claimed the file, which is
-    # the difference between this fix and a catch-all that blocks on confusion.
-    assert _blockers(plan, UNCLASSIFIED) == [], plan["blocked"]
-
-    # Pre-mutation, through -Apply and not just the dry run.
-    ra = _apply(home, tmp_path / "b2", claude_only_dist)
-    assert ra.returncode == 2, ra.stdout
-    assert _tree_snapshot(home) == before, "a refused migration mutated the home"
-    assert victim.is_file()
-    assert not (tmp_path / "b2").exists(), "a refused migration created a backup transaction"
-
-
-def test_the_same_alias_under_a_bound_root_is_written_through_not_refused(
-        claude_only_dist, tmp_path):
-    """The red-on-garbage pair, and the evidence for why the two are not symmetric.
-
-    Byte-identical plant, identical junction, one difference: the root that reaches it
-    is BOUND. That root has a write lane -- install targets are built from its LEXICAL
-    path and resolve through the very junction -- so the shipped bytes are rewritten and
-    the replacement ledger records them under that lexical path, where uninstall can
-    still find them. There is no orphan to refuse, and a guard that keyed on "aliased"
-    instead of "unaccounted-for" would refuse this ordinary home.
-
-    This is also the empirical anchor for the claim the design comment makes about a
-    BOUND alias destination, which until now only the retired-root case had."""
-    home = tmp_path / "h"
-    victim = _plant_alias_to_nowhere(home, fx.CLAUDE_ROOT)
-    lexical = fx.CLAUDE_ROOT + "/" + fx.MIGRATION_MANAGED[0] + "/SKILL.md"
-
-    r = _migrate_plan(home, tmp_path / "b", claude_only_dist)
-    assert r.returncode == 0, f"{r.stdout}\n{r.stderr}"
-    plan = json.loads(r.stdout)
-    assert plan["blocked"] == [], plan["blocked"]
-    assert lexical in [a["rel_path"] for a in plan["actions"] if a["action"] == "install"], \
-        "the write lane does not reach the aliased path"
-    owned = json.loads(plan["ledger_json"])["installs"]["claude"]["owned_files"]
-    assert lexical in owned, "the rewritten ledger would not record the aliased path"
-    assert victim.is_file()
-
-
-def test_a_broken_disposition_arm_refuses_instead_of_exiting_zero(
-        claude_only_dist, tmp_path):
-    """Red-on-garbage anchor for the totality control itself.
-
-    The two cases above prove the arms behave. They cannot prove the SAFETY NET can
-    fire, and a net nobody has seen fire is not a net -- which is precisely how this
-    defect reached round 3: every earlier version of this code fell through silently
-    when no branch matched.
-
-    So: run a pristine COPY of the tool closure against the orphaning fixture (green
-    baseline), then break exactly one token -- the residence zone name the
-    resident-nowhere arm matches on -- and run the same fixture again. The switch now
-    matches no arm. The tool must REFUSE with the internal-invariant code rather than
-    exit 0 with undispositioned bytes on disk, and the count check must agree that the
-    pass did not consume the whole table."""
-    script = _fake_tool_closure(tmp_path / "repo")
-    home = tmp_path / "h"
-    _plant_alias_to_nowhere(home, fx.GPT_ROOT)
-
-    baseline = _migrate_plan(home, tmp_path / "b", claude_only_dist, script=script)
-    assert baseline.returncode == 2, f"{baseline.stdout}\n{baseline.stderr}"
-    base_plan = json.loads(baseline.stdout)
-    assert _blockers(base_plan, UNBOUND_MANAGED), base_plan["blocked"]
-    assert _blockers(base_plan, UNCLASSIFIED) == [], base_plan["blocked"]
-
-    src = script.read_text(encoding="ascii")
-    marker = "kind = 'unrooted'"
-    assert src.count(marker) == 1, "the resident-nowhere arm is no longer a single token"
-    script.write_bytes(src.replace(marker, "kind = 'unrooted-BROKEN'").encode("ascii"))
-
-    broken = _migrate_plan(home, tmp_path / "b2", claude_only_dist, script=script)
-    assert broken.returncode == 2, (
-        f"a disposition arm that matches nothing exited {broken.returncode} instead of "
-        f"refusing:\n{broken.stdout}\n{broken.stderr}")
-    plan = json.loads(broken.stdout)
-    hits = _blockers(plan, UNCLASSIFIED)
-    assert len(hits) == 2, plan["blocked"]
-    # One per-file finding naming the unmatched zone, one totality finding proving the
-    # pass did not consume the table. Either alone would still refuse; both together
-    # are what make a silent fall-through unrepresentable.
-    assert any("no residence zone" in h["message"] for h in hits), hits
-    assert any("exactly one disposition" in h["message"] for h in hits), hits
-
+# Do not re-add a case here that needs an unbound root. The option-3 property -- a
+# distribution omitting a declared profile is REFUSED, never silently narrowed -- is
+# pinned above by test_migration_binds_every_declared_provider_not_the_shipped_subset
+# and test_an_incomplete_shipped_profile_still_blocks.
 
 # --------------------------------------------------------------------------- #
 # probe: a FILE where the discovery directory belongs

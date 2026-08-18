@@ -76,13 +76,15 @@ consumer on its own dedicated branch with an external backup retained. **Step 48
 DONE.** Step 47b (containment-gate
 hardening) remains pending and deliberately off the completed cutover path.
 
-**Topology correction.** A consumer gets **two** discovery roots, not one, and the legacy GPT
-core tree is neither of them:
+**Topology correction.** A consumer gets **three** discovery roots, not one, and the legacy GPT
+core tree is none of them. It was two through the Step-48 cutover; Phase CP Step 5 made the codex
+root installable, and `tools/skill-mesh-discovery.ps1` is the one owner of the map:
 
 | Tree | Role today |
 |---|---|
 | `<consumer-home>/.claude/skills/` | Claude Code discovery root — the Claude profile's install target |
 | `<consumer-home>/.github/skills/` | GitHub Copilot CLI discovery root — the GPT profile's install target |
+| `<consumer-home>/.agents/skills/` | Codex CLI discovery root — the codex profile's install target (Phase CP Step 5). The same literal path Copilot already scanned as an active alternate, so its presence is not evidence of which host wrote it |
 | `<consumer-home>/.claude/skills-gpt/` | **Legacy** hand-authored GPT core tree. Superseded by the generated `.github/skills` profile; retired entry-by-entry at cutover, never wholesale |
 
 The full authority map — and why a running GPT model is not evidence of an installed GPT
@@ -110,6 +112,36 @@ With Step 50 of the host-native-discovery cutover plan complete, `coding-root/.c
 an independent source: future skill changes are made in `aberson/skill-mesh` and flow out via a
 re-install (`install-skill-mesh.ps1`, idempotent — see `documentation/architecture.md` §8.2),
 never by hand-editing files under the installed `.claude/skills/` tree directly.
+
+## Legacy migration and the `codex` provider
+
+`config/skill-manifest.json` declares three installable providers -- `claude`, `gpt`, and
+`codex`. `tools/migrate-legacy-install.ps1` binds **every declared provider**, not the subset
+a given distribution happens to ship: `New-MigrationPlan` loads the manifest's top-level
+`providers` block into its known-provider vocabulary, resolves a discovery root for each via
+`tools/skill-mesh-discovery.ps1`, and emits a `MISSING_PROFILE` blocker (`exit 2`) when the
+distribution it was handed omits one.
+
+**Consequence, and it is deliberate:** a `both` distribution (claude + gpt -- still
+`release.ps1`'s default) is no longer a complete migration source. **Legacy migration requires
+a `-Provider all` distribution:**
+
+```powershell
+powershell -File tools/build-distributions.ps1 -Provider all
+powershell -File tools/migrate-legacy-install.ps1 -ProjectRoot '<consumer-home>' -DistDir 'dist' -BackupDir '<backup-dir>'
+```
+
+Handing the migrator a `both` dist does not silently skip codex -- it refuses the whole
+migration and names the missing profile. That fail-loud is the point. The considered
+alternative, scoping the migrator's bound roots to whatever the dist ships, was implemented
+and then **rejected** during Phase CP Step 5: it makes a declared-but-unshipped provider root
+*unbound*, and bytes under an unbound root can be left in a consumer home without a ledger
+record -- silent orphaning, where uninstall can never remove what install left behind. Refusing
+an incomplete artifact costs one build flag; orphaning costs bytes nobody can find.
+
+Hardening the migrator so that a partial distribution can be migrated safely is tracked
+separately as issue **#138** (reparse-aware discovery, unbound-root accounting). Until it
+lands, build `-Provider all` before migrating.
 
 ## Authentication guidance correction
 

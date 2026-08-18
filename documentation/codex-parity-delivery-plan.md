@@ -1,7 +1,7 @@
 # Codex parity delivery plan (Phase CP)
 
 - **Written:** 2026-08-16
-- **Status:** IN FLIGHT (pass 1) — repo-sync done (umbrella #117, steps #118–#133). Steps 1–3 DONE; Steps 4+5 BLOCKED with their work pre-landed on `main` at `b2b2d98`; next: `/build-phase --plan documentation/codex-parity-delivery-plan.md --steps 4,5`, then operator M1. Plan-review PASS / plan-redline accepted (P1–P9, D-CP1–D-CP15) / plan-wrap READY were all 2026-08-16.
+- **Status:** IN FLIGHT (pass 1) — repo-sync done (umbrella #117, steps #118–#133). Steps 1–5 DONE (pass 1 complete); the migrator carries zero Phase CP delta by the option-3 decision and its hardening is #138. Next: operator **Step M1** (#130) — pilot bring-up in a real Codex session; Steps 6/7/8/10 stay `SKIPPED (condition false)` until M1 records a passing verdict in `documentation/parity-deltas.md`. Plan-review PASS / plan-redline accepted (P1–P9, D-CP1–D-CP15) / plan-wrap READY were all 2026-08-16.
 - **Issue phase label:** `Phase CP Step N:` (fresh namespace; the Goal NP parity plan's Steps 1–41 were never repo-synced, so no collisions; next issues mint at #117+)
 - **Supersedes:** the Goal NP two-approval publication path for delivery sequencing. The
   detailed parity plan (`documentation/native-claude-codex-skill-parity-plan.md`, parity branch)
@@ -445,7 +445,7 @@ cohorts depend on — a sequencing constraint, not a conditional one.
 - **Done when:** dist/codex holds exactly the 5 pilot skills with provenance headers;
   frontmatter + budget tests green; focused suites green
 - **Depends on:** 3
-- **Status:** BLOCKED (2026-08-18) - work **pre-landed on `main` at `b2b2d98`, minus the migrator delta**; complete it from HEAD, not from a branch. Do NOT re-land the migrator delta preserved at `aa6c873` (branch `build-step-1786993911`, tag `cp-migrator-rounds12`) for #138. See documentation/cp-pass1-handoff-2026-08-18.md
+- **Status:** DONE (2026-08-18)
 
 <!-- autofix-applied: 2026-08-16 -->
 ### Step 5: Codex install path + bring-up probe kit
@@ -532,7 +532,7 @@ cohorts depend on — a sequencing constraint, not a conditional one.
   option-3 decision); behavior note present in `documentation/migration.md`;
   one uninterrupted repo-root `python -m pytest` passes (pass-1 exit gate)
 - **Depends on:** 2, 4
-- **Status:** BLOCKED (2026-08-18) - 3/3 iterations; nested-junction discovery gap in migrate-legacy-install.ps1. Decision recorded (option 3, zero migrator delta; hardening → #138). Work **pre-landed on `main` at `b2b2d98`, minus the migrator delta** — complete it from HEAD, not from a branch; do NOT re-land the migrator delta preserved at `aa6c873` (branch `build-step-1786993911`, tag `cp-migrator-rounds12`) for #138. See documentation/cp-pass1-handoff-2026-08-18.md and issue #122.
+- **Status:** DONE (2026-08-18)
 
 <!-- autofix-applied: 2026-08-16 -->
 ### Step 6: Cohort B — pipeline family

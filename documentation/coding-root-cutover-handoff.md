@@ -187,13 +187,20 @@ stop — a later `git add` would land on the wrong branch.
 
 ```powershell
 python -m pytest tests/package-integrity -q
-powershell -File tools/build-distributions.ps1 -Provider both -OutputDir '<dist-dir>'
+powershell -File tools/build-distributions.ps1 -Provider all -OutputDir '<dist-dir>'
 ```
 
 **Expect:** pytest reports all tests passed with no failures; the build exits `0` and
-`<dist-dir>` then contains a `claude/` subtree of 50 skills and a `gpt/` subtree of 47 (the
+`<dist-dir>` then contains a `claude/` subtree of 50 skills, a `gpt/` subtree of 47 (the
 three provider-native skills — `claude-oauth-auth`, `context-slim`, `judge-motion` — have no
-GPT adapter and are excluded by design, not missing).
+GPT adapter and are excluded by design, not missing), and a `codex/` subtree of the skills
+that currently carry a codex adapter.
+
+`all`, not `both`. `both` means claude+gpt and is still `release.ps1`'s default, but sections
+7 and 8 below hand this same `<dist-dir>` to `tools/migrate-legacy-install.ps1`, which binds
+every provider the manifest DECLARES and refuses an artifact that omits one — a `both` dist
+would exit `2` with `MISSING_PROFILE` for each codex-declaring skill rather than migrating.
+See [`migration.md`](migration.md) § "Legacy migration and the `codex` provider".
 
 `<dist-dir>` is generated output. It is gitignored in this repository and must never be
 committed on either side.
@@ -361,9 +368,7 @@ target from a later junction retarget.
 If the last line is `blocked (N):` with findings, exit is `2`, nothing was written, and each
 finding prints as `[CODE] <rel_path> -- <message>`. The codes you may see:
 `MANIFEST_UNREADABLE`, `UNSAFE_LINK`, `FOREIGN_FILE`, `UNKNOWN_PROVIDER_ROOT`,
-`MISSING_PROFILE`, `NO_PROFILE_IN_DISTRIBUTION`, `LEDGER_PROVIDER_NOT_IN_DISTRIBUTION`,
-`UNBOUND_PROVIDER_ROOT_MANAGED_CONTENT`, `UNCLASSIFIED_MANAGED_CONTENT`,
-`PRESERVE_INSTALL_COLLISION`,
+`MISSING_PROFILE`, `PRESERVE_INSTALL_COLLISION`,
 `INCOMPLETE_TRANSACTION`, `PRECONDITION_DRIFT`, `INVALID_MODE`,
 `INVALID_HOME`, `PERSONAL_HOME_UNSUPPORTED`, `BACKUP_DIR_REQUIRED`,
 `BACKUP_DIR_INSIDE_HOME`, `DIST_DIR_REQUIRED`,

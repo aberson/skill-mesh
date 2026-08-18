@@ -74,6 +74,34 @@ ACTIVE_RETAIN_ADVISORY = "ACTIVE_MANAGED_FILE_RETAINED"
 CLAUDE_ROOT = fx.CLAUDE_ROOT
 GPT_ROOT = fx.GPT_ROOT
 CODEX_ROOT = fx.CODEX_ROOT
+
+# Every provider a migration BINDS, with its consumer-home root. One owner, because the
+# same set answers three different questions in this file -- which profiles a payload was
+# installed into, which profiles an uninstall has to sweep, and which roots a preserved
+# tree must survive -- and three hand-kept copies of it drifted the moment codex was
+# declared. `New-MigrationPlan` binds the manifest's DECLARED vocabulary rather than
+# whatever a dist ships (option 3), so the manifest is the thing to agree with; the guard
+# below is what turns a fourth provider into a red test instead of silent under-coverage.
+MIGRATED_PROVIDERS = (
+    ("claude", CLAUDE_ROOT),
+    ("gpt", GPT_ROOT),
+    ("codex", CODEX_ROOT),
+)
+
+
+def test_migrated_provider_list_matches_the_declared_vocabulary():
+    """Anti-hand-list guard for MIGRATED_PROVIDERS.
+
+    The migrator binds every provider the manifest declares. If a fourth one is declared
+    and this tuple is not extended, the payload and uninstall assertions built on it stop
+    covering the new profile WITHOUT failing -- exactly the false green a hand-maintained
+    gate list produces. Enumerate, then agree."""
+    declared = set(json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))["providers"])
+    assert {p for p, _ in MIGRATED_PROVIDERS} == declared, (
+        "MIGRATED_PROVIDERS drifted from config/skill-manifest.json's declared providers; "
+        "extend it (and its root constant) so the payload/uninstall assertions cover the "
+        "new profile")
+    assert len({r for _, r in MIGRATED_PROVIDERS}) == len(MIGRATED_PROVIDERS),         "two providers share a discovery root -- the per-root assertions would alias"
 COPILOT_ROOT = fx.RETIRED_COPILOT_ROOT
 LEDGER_NAME = fx.LEDGER_NAME
 
@@ -287,9 +315,20 @@ def _tree_digest(root):
 
 @pytest.fixture(scope="module")
 def full_dist(tmp_path_factory):
-    """The real, complete two-profile distribution."""
+    """The real, complete distribution -- EVERY declared provider, hence `all`.
+
+    Not `both`. `both` means claude+gpt and deliberately excludes codex, but
+    `New-MigrationPlan` binds every provider the MANIFEST declares, not the subset a
+    dist happens to ship, and fires `MISSING_PROFILE` for any declared adapter with no
+    profile in the artifact (`tools/migrate-legacy-install.ps1`: `$script:KnownProviders`
+    -> `$providerRoots` -> the both-profile completeness loop). Once codex became a
+    declared provider a `both` dist stopped being a legal migration source, so this
+    fixture asks for `all`. Narrowing the MIGRATOR to the shipped subset instead is the
+    REJECTED design -- it creates unbound provider roots and a silent-orphaning class;
+    see `documentation/migration.md` and issue #138.
+    """
     out = tmp_path_factory.mktemp("fd")
-    r = _run(BUILD_SCRIPT, ["-OutputDir", str(out), "-Provider", "both"])
+    r = _run(BUILD_SCRIPT, ["-OutputDir", str(out), "-Provider", "all"])
     assert r.returncode == 0, f"build failed:\n{r.stdout}\n{r.stderr}"
     return out
 
@@ -305,7 +344,7 @@ def shared_dist(full_dist, mini_dist, tmp_path_factory):
     """
     out = tmp_path_factory.mktemp("sd") / "d"
     shutil.copytree(mini_dist, out)
-    for provider in ("claude", "gpt"):
+    for provider in ("claude", "gpt", "codex"):
         src = full_dist / provider / "_shared"
         assert src.is_dir(), f"the built {provider} profile has no _shared payload"
         shutil.copytree(src, out / provider / "_shared")
@@ -322,7 +361,11 @@ def mini_dist(full_dist, tmp_path_factory):
     end-to-end migration lives in test_full_distribution_migrates_both_profiles.
     """
     out = tmp_path_factory.mktemp("md")
-    for provider in ("claude", "gpt"):
+    # Every DECLARED provider, for the same reason `full_dist` builds `all`: a trimmed
+    # dist that drops a declared profile is an incomplete migration source and blocks.
+    # `plan-review` carries a codex adapter, `repo-init` does not -- the `is_dir()`
+    # guard below expresses that as a fact about the built tree, not a hand-kept list.
+    for provider in ("claude", "gpt", "codex"):
         for skill in fx.MIGRATION_MANAGED:
             src = full_dist / provider / skill
             if src.is_dir():
@@ -1024,8 +1067,8 @@ def _rels(plan, kind):
 
 
 def _payload_pairs(dist, home):
-    """(source, installed target) for every shared-payload file in both profiles."""
-    for provider, root in (("claude", CLAUDE_ROOT), ("gpt", GPT_ROOT)):
+    """(source, installed target) for every shared-payload file in EVERY bound profile."""
+    for provider, root in MIGRATED_PROVIDERS:
         for src in sorted((Path(dist) / provider / "_shared").rglob("*")):
             if src.is_file():
                 leaf = src.relative_to(Path(dist) / provider / "_shared").as_posix()
@@ -1165,7 +1208,7 @@ def test_uninstall_removes_the_migrated_shared_payload_and_spares_consumer_files
     pairs = list(_payload_pairs(shared_dist, home))
     assert all(dst.is_file() for _, dst in pairs), "payload was not installed"
 
-    for provider in ("claude", "gpt"):
+    for provider, _root in MIGRATED_PROVIDERS:
         r = _run(INSTALL_SCRIPT, ["-Home", str(home), "-Provider", provider, "-Uninstall"])
         assert r.returncode == 0, f"uninstall {provider} failed:\n{r.stdout}\n{r.stderr}"
 
@@ -1596,7 +1639,11 @@ def test_ledger_indexes_only_migration_installed_files(mini_dist, tmp_path):
     assert _apply(home, backup, mini_dist).returncode == 0
     ledger = json.loads((Path(home) / LEDGER_NAME).read_text(encoding="utf-8"))
     assert ledger["ledger_version"] == 1
-    assert set(ledger["installs"]) == {"claude", "gpt"}
+    # `New-LedgerJson` writes one entry per BOUND provider, and option 3 binds every
+    # provider the manifest declares -- so codex gets an entry even though `mini_dist`
+    # installs nothing for it beyond plan-review. Pinned zero-file-side by
+    # test_zero_file_provider_keeps_an_empty_hashed_entry_through_recovery.
+    assert set(ledger["installs"]) == {"claude", "gpt", "codex"}
     owned = set()
     for entry in ledger["installs"].values():
         owned.update(entry["owned_files"])
@@ -1712,7 +1759,7 @@ def test_uninstall_after_migration_never_deletes_preserved_trees(mini_dist, tmp_
                         list(fx.MIGRATION_CONSUMER_ONLY) + ["_shared"])}
     assert preserved, "no preserved trees present -- the assertion would be vacuous"
 
-    for provider in ("claude", "gpt"):
+    for provider, _root in MIGRATED_PROVIDERS:
         r = _run(INSTALL_SCRIPT, ["-Home", str(home), "-Provider", provider, "-Uninstall"])
         assert r.returncode == 0, f"uninstall {provider} failed:\n{r.stdout}\n{r.stderr}"
 
@@ -2125,7 +2172,12 @@ def test_zero_file_provider_keeps_an_empty_hashed_entry_through_recovery(
     """Provider membership comes from provider_roots, not only install actions."""
     dist = tmp_path / "d"
     shutil.copytree(mini_dist, dist)
-    for provider, keep in (("claude", {"context-slim"}), ("gpt", set())):
+    # EVERY declared provider is emptied except the one skill under test. codex is not
+    # optional here: `mini_dist` ships `codex/plan-review`, and leaving it while the
+    # claude and gpt copies of plan-review are pruned would make the dist incomplete for
+    # a skill it still ships -- two MISSING_PROFILE blockers and exit 2, which is a
+    # broken fixture rather than the zero-file-provider property this case is about.
+    for provider, keep in (("claude", {"context-slim"}), ("gpt", set()), ("codex", set())):
         for child in (dist / provider).iterdir():
             if child.name not in keep:
                 shutil.rmtree(child) if child.is_dir() else child.unlink()
@@ -2133,7 +2185,9 @@ def test_zero_file_provider_keeps_an_empty_hashed_entry_through_recovery(
     home = fx.migration_home(tmp_path / "h")
     backup = tmp_path / "b"
     preview = _plan(home, tmp_path / "preview", dist)
-    assert set(preview["provider_roots"]) == {"claude", "gpt"}
+    # provider_roots is the DECLARED vocabulary, not the shipped subset -- which is the
+    # very property this case exists to pin, now readable in all three positions.
+    assert set(preview["provider_roots"]) == {"claude", "gpt", "codex"}
     assert not any(a["action"] == "install" and a["provider"] == "gpt"
                    for a in preview["actions"])
     ledger_action = next(a for a in preview["actions"] if a["action"] == "ledger")
@@ -2241,39 +2295,19 @@ def test_recovery_rejects_invalid_install_provider_or_target_root_before_mutatio
     assert _tree_digest(home) == before_recovery
 
 
-def test_recovery_rejects_a_payload_path_equal_to_the_payload_directory(
-        mini_dist, tmp_path):
-    """A `backup_payload` naming the payload DIRECTORY itself is not a payload file.
-
-    The residence predicate the recovery validator used is `Test-RelAtOrUnderRoot`, and
-    the AT half of at-or-under is correct for the ZONE questions it was written for --
-    a root is inside its own zone. It is wrong for a field that must name one file's
-    bytes: `payload` equal to the bare payload root passed validation and would have
-    handed a directory to a restore expecting a file. Nothing this tool WRITES can
-    produce that value (every payload it emits carries a segment past the root), but a
-    recovery validator reads a serialized document an operator or an interrupted run
-    left behind, so it validates instead of assuming. `Test-RelStrictlyUnderRoot` is
-    the narrowed predicate; this is the case that separates the two."""
-    home = fx.migration_home(tmp_path / "h")
-    backup = tmp_path / "b"
-    applied = _apply(home, backup, mini_dist)
-    assert applied.returncode == 0, f"{applied.stdout}\n{applied.stderr}"
-    tx = _only_tx(backup)
-    before_recovery = _tree_digest(home)
-    plan = _plan_of(tx)
-    tampered = next(a for a in plan["actions"]
-                    if a["action"] == "backup" and a["backup_payload"])
-    payload_root = tampered["backup_payload"].split("/")[0]
-    assert payload_root and "/" not in payload_root
-    tampered["backup_payload"] = payload_root
-    _write_json(Path(tx) / "plan.json", plan)
-
-    rolled_back = _migrate(home, backup, mode="-Rollback", migration_id=tx.name)
-    assert rolled_back.returncode == 2, (
-        f"a payload path equal to the payload directory reached rollback:\n"
-        f"{rolled_back.stdout}\n{rolled_back.stderr}")
-    assert "invalid recovery payload path" in rolled_back.stderr
-    assert _tree_digest(home) == before_recovery
+# `test_recovery_rejects_a_payload_path_equal_to_the_payload_directory` moved to issue
+# #138 with the rest of the rounds-1-2 migrator work. It separates `Test-RelAtOrUnderRoot`
+# from `Test-RelStrictlyUnderRoot` -- a `backup_payload` naming the payload DIRECTORY
+# rather than a file inside it -- but `Test-RelStrictlyUnderRoot` does not exist anywhere
+# in this tree: both recovery validators still call `Test-RelAtOrUnderRoot` (see
+# tools/migrate-legacy-install.ps1 :2641 and :2990). Phase CP ships zero migrator delta by
+# the ratified option-3 decision, so the predicate cannot land here, and a test for an
+# absent predicate can only be red. The case and its implementation are preserved at
+# commit `aa6c873` (branch `build-step-1786993911`, tag `cp-migrator-rounds12`).
+#
+# The gap it leaves is narrow and is stated rather than hidden: nothing this tool WRITES
+# can emit that value, so the exposure is a hand-edited or interrupted transaction
+# document. #138 owns closing it.
 
 
 def test_encoded_recovery_rejects_retire_outside_retired_project_root(
