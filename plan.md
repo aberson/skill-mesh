@@ -66,6 +66,10 @@ does not reinterpret that evidence or revive its stopped experiment.
 |---|---|---|
 | Goal NP plan | CLOSED UNAPPROVED (course change 2026-08-16) | Nothing — closed by operator ratification; no further approval is sought |
 | Goal NP implementation | SUPERSEDED — documentation/codex-parity-delivery-plan.md | Nothing — Phase CP owns delivery sequencing from 2026-08-16 |
+| Phase CP pass 1 (Steps 1–5) | COMPLETE (2026-08-18) | Nothing — issues #118–#122 closed at `4bcbef5`; DONE gate green |
+| Phase CP Step M1 (#130) | NEXT — operator | Abraham running pilot bring-up in a real Codex session |
+| Phase CP cohorts (Steps 6/7/8/10) | GATED | A passing M1 verdict recorded in `documentation/parity-deltas.md`; the conditional predicate exits 1 until then |
+| Legacy-migrator hardening (#138) | DEFERRED | Its own issue — Phase CP ships zero migrator delta by the option-3 decision of 2026-08-18 |
 | Goal NP live cutover | LOCKED | Approval 2 on the immutable deliverable after disposable rehearsal |
 | Provider expansion | PARKED | A later explicit Abraham decision must resume that track; Goal NP does not unlock it |
 | Goal A execution | STOPPED | Gate A approved terminal action `stop` after the bounded follow-up failed |
@@ -77,6 +81,12 @@ does not reinterpret that evidence or revive its stopped experiment.
 
 Execute Phase CP per `documentation/codex-parity-delivery-plan.md`. That plan is the current
 delivery authority; this file records status and history.
+
+**Pass 1 (Steps 1–5) is complete as of 2026-08-18** at commit `4bcbef5`. The next action is
+**operator Step M1 (#130)** — pilot bring-up in a real Codex session. Do not run Steps 6/7/8/10
+by hand: they are `Type: conditional` and correctly stay skipped until M1 records a passing
+verdict in `documentation/parity-deltas.md`. Do not write that verdict token without the
+evidence — it releases four cohort steps.
 
 The Goal NP recovery decision is **closed**. No Publication-8 approval is pending or will be sought.
 Do not run any Publication-8 `Preflight` or `Run`, and do not invoke

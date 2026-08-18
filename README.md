@@ -466,8 +466,10 @@ hosts; 3 are Claude-native (`claude-oauth-auth`, `context-slim`, `judge-motion`)
 |---|---|---|
 | Claude | Claude Code | `<install-home>/.claude/skills/<skill>/` |
 | GPT | GitHub Copilot CLI | `<install-home>/.github/skills/<skill>/` |
+| Codex | OpenAI Codex CLI | `<install-home>/.agents/skills/<skill>/` |
 
 - **GPT discovery roots** — GitHub Copilot CLI discovers project skills from `.github/skills/`, `.agents/skills/`, and `.claude/skills/` (personal: `~/.copilot/skills/`); this package installs the GPT profile to `.github/skills/`, and every generated `SKILL.md` leads with a YAML frontmatter block (`name`, `description`). The originally-assumed project-relative `.copilot/skills` target is **retired** — it is not a Copilot discovery root (proven in Step 43).
+- **Codex** — a **five-skill pilot**, not the full catalog: `task-handoff`, `user-orient`, `lesson-harvest`, `plan-review`, `session-wrap` carry a `providers/codex.md` adapter and install to `.agents/skills/`. That is the same literal path Copilot already scans as an active alternate, so the root's presence is not evidence of which host wrote it. `tools/probe-codex-skills.ps1` is a read-only bring-up probe (effective home, root state, ledger). Because a third provider is now *declared*, `-Provider both` (claude+gpt, still the release default) is no longer a complete legacy-migration source — see [documentation/migration.md](documentation/migration.md).
 - **Install** — see [Quick start](#quick-start). Flags: `-Uninstall`, `-Force`, `-Home`/`-Destination`, `-Provider`/`-Profile`.
 - **Auth** (a separate axis from selection) — Claude uses the host's own model (no key); GPT via GitHub Copilot sign-in (`gh auth login`), **no `OPENAI_API_KEY`** needed.
 - **Deep dive** — router auto-detection, the full auth/capability/exclusion matrices, and the selection/transport contract: [documentation/providers/](documentation/providers/README.md), [architecture.md](documentation/architecture.md) §5.
@@ -480,8 +482,9 @@ hosts; 3 are Claude-native (`claude-oauth-auth`, `context-slim`, `judge-motion`)
 - ~50 skills; 47/47 skills are GPT-capable behind the shared Claude/GPT behavior contract; 3 additional skills are Claude-native.
 - Shipped: the canonical `skills/<name>/{core.md,providers/}` source tree, the provider-neutral router,
   and the distribution builder, installer, and release tooling (reproducible SHA-256 checksums over a
-  `git ls-files` stage). The seven pytest suites collect 587 tests; the latest full run passed 584 and
-  skipped 3.
+  `git ls-files` stage). Measured test counts are deliberately NOT restated here — they live in
+  [documentation/phase-75-baseline.md](documentation/phase-75-baseline.md), the one owner of the
+  pytest gate contract, because a count copied into a second document is a count that drifts.
 - **Phase 7 complete — issues #62–#63 closed.** Real Claude Code and GitHub Copilot CLI acceptance
   verified a generated `plan-review` profile from each host-native discovery root; the live
   `coding-root` cutover installed 50 Claude and 47 GPT generated entries, preserved consumer-only
@@ -489,8 +492,17 @@ hosts; 3 are Claude-native (`claude-oauth-auth`, `context-slim`, `judge-motion`)
   generated compatibility shim. **Step 48 is DONE;** its reusable operator handoff remains at
   [documentation/coding-root-cutover-handoff.md](documentation/coding-root-cutover-handoff.md). See
   [documentation/host-native-discovery-cutover-plan.md](documentation/host-native-discovery-cutover-plan.md).
-- **Phase 8 is build-ready.** The Phase 7 cutover prerequisite is satisfied; Step 47b remains the
-  separately scheduled containment-gate hardening follow-up and is off the completed cutover path.
+- **Phase CP pass 1 — Steps 1–5 complete; issues #118–#122 closed.** Codex is a third provider on
+  the generation, install, and inspection rails: a five-skill pilot with its own discovery root
+  (`.agents/skills`), a read-only bring-up probe, and a temp-home install/inspect/uninstall
+  round-trip proving zero writes outside the disposable home. The legacy migrator carries **zero**
+  Phase CP delta by an explicit decision — a partial-distribution migration fails loud
+  (`MISSING_PROFILE`) rather than risking orphaned bytes, and that hardening is tracked separately.
+  Next is operator bring-up in a real Codex session; the remaining cohorts are gated on its verdict.
+  See [documentation/codex-parity-delivery-plan.md](documentation/codex-parity-delivery-plan.md).
+- **Phase 8 is superseded** by Phase CP's additive, cohort-based rollout (course change 2026-08-16).
+  Step 47b remains the separately scheduled containment-gate hardening follow-up and is off the
+  completed cutover path.
 - The original 46 top-level `<skill>/SKILL.md` packages remain as a compatibility surface during a
   deprecation window — not the canonical source, and not updated by this migration; see
   [documentation/migration.md](documentation/migration.md).

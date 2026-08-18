@@ -67,6 +67,25 @@ which is why it was derived rather than re-run.
 The three skips live under `tests/` and are environment-gated, not disabled tests; row 3
 has none.
 
+### Re-measured 2026-08-18 (Phase CP pass 1, Steps 4+5)
+
+The Phase 7.5 rows above are a dated Step-62 record and are left intact. The current
+DONE-gate measurement, taken at commit `4bcbef5`:
+
+| Command | Passed | Failed | Skipped | Provenance |
+|---|---|---|---|---|
+| `python -m pytest` (DONE gate) | 1312 | 0 | 1 | measured directly, 1h50m04s, uninterrupted |
+
+Two things changed since Step 62 and both matter for `count >= baseline` comparisons.
+**The suite grew**: 912 collected then, 1313 now, so the Step-62 numbers are a floor and
+not a target. **The skip count fell from 3 to 1** — treat 1 as the healthy figure; a run
+reporting 25 failures with 1 skip is the documented missing-PyYAML mode
+(`CLAUDE.md` § "Environment requirements"), not a regression.
+
+Wall clock also moved: 1h50m against the 31m48s–44m18s spread recorded above. That is
+suite growth plus the same PowerShell-per-test cost, not a performance regression — the
+variance warning above still applies, and nothing gates on these timings.
+
 Wall clock: three full repo-root runs were timed on the same machine during this step —
 **37m51s** (pre-fix baseline), **44m18s** (post-fix, in the build worktree), and
 **31m48s** (post-merge, in the main checkout). Nearly all of that time is inside `tests/`

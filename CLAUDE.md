@@ -13,7 +13,7 @@ installed skill tree. Installing produces a host-native discovery tree in a cons
 
 | Layer | Choice |
 |---|---|
-| Skill sources | Markdown — `skills/<name>/core.md` + `providers/{claude,gpt}.md` |
+| Skill sources | Markdown — `skills/<name>/core.md` + `providers/{claude,gpt,codex}.md` |
 | Manifest / config | JSON — `config/skill-manifest.json` (authoritative skill inventory) |
 | Build / install / release tooling | Windows PowerShell 5.1 floor (`powershell`) — `tools/*.ps1` |
 | Manifest + release checks | Python 3 — `tools/gen_manifest.py`, `tools/release_checks.py` |
@@ -111,7 +111,8 @@ runtime/                skill-router.ps1, path-guard.ps1, providers/, telemetry/
 tools/                  build-distributions, install-skill-mesh, inspect-host-install, release,
                         release_checks, gen_manifest, gen_skill_tree, gen-router-shim, provenance,
                         migrate-legacy-install + skill-mesh-transaction (the reversible migrator
-                        and its shared journaled engine), skill-mesh-discovery (sole owner of the
+                        and its shared journaled engine), probe-codex-skills (read-only codex
+                        bring-up probe), skill-mesh-discovery (sole owner of the
                         provider-to-discovery-root map)
 tests/                  calibration, distributions, package-integrity, release, router,
                         smoke, telemetry (+ fixtures/)
@@ -121,13 +122,16 @@ tests/                  calibration, distributions, package-integrity, release, 
 
 - **One behavior contract per skill.** `skills/<name>/core.md` is provider-independent; each
   `providers/<host>.md` wrapper loads the core in full and maps host abstractions onto it. A wrapper
-  may never weaken a gate defined in the core. 47 skills are portable (both adapters); 3 are
+  may never weaken a gate defined in the core. 5 skills additionally carry a `providers/codex.md`
+  adapter (the Phase CP pilot: task-handoff, user-orient, lesson-harvest, plan-review,
+  session-wrap) — codex capability is ADDITIVE on a portable record, never a third status, so the
+  portable/native counts below keep their exact meaning. 47 skills are portable (both adapters); 3 are
   provider-native Claude-only (`claude-oauth-auth`, `context-slim`, `judge-motion`) and carry
   `core: null` in the manifest.
 - **Manifest-driven build.** `tools/build-distributions.ps1` reads `config/skill-manifest.json` and
   emits host-native `SKILL.md` discovery trees into `dist/claude` and `dist/gpt`.
 - **Install binds exactly one profile** into a consumer home — Claude at `<home>/.claude/skills/`,
-  GPT at `<home>/.github/skills/` (a real GitHub Copilot CLI discovery root; the project-relative
+  codex at `<home>/.agents/skills/`, GPT at `<home>/.github/skills/` (a real GitHub Copilot CLI discovery root; the project-relative
   `.copilot/skills` target is **retired** per the Step 43 proof, and every generated GPT `SKILL.md`
   leads with a YAML `name`/`description` frontmatter block) — recording an ownership ledger so
   uninstall only removes files it installed, and refusing foreign-file collisions by default.

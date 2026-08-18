@@ -580,9 +580,13 @@ cohorts depend on — a sequencing constraint, not a conditional one.
   user-pm, user-shakedown, user-uat, user-walkthrough — bringing all 47 portable skills to
   a codex provider. Whole-catalog budget test now asserts the full 47-name initial list
   serializes under the 8,000-char floor with no truncation. Update the docs that pin
-  provider counts and commands: README.md Providers & installation section
-  (README.md:459–472, "47 of 50 … both hosts" prose + provider table gains the codex row)
-  and CLAUDE.md Commands (CLAUDE.md:64–72 gains the codex build/install variants).
+  provider counts and commands: README.md's "Providers & installation" section (the
+  "47 of 50 … both hosts" prose, which only becomes wrong once the codex roster reaches the
+  portable roster) and CLAUDE.md's "Key commands" (add the codex build/install variants).
+  **Line numbers are deliberately not pinned** — they drift with every wrap; locate by heading.
+  Two pieces already landed at the 2026-08-18 pass-1 wrap and must NOT be re-added: the codex
+  row in README's provider table, and the codex adapter fact in CLAUDE.md's stack table. What
+  remains for this step is the COUNT prose and the codex command variants.
 - **Type:** conditional
 - **Condition:** test -f documentation/parity-deltas.md && grep -qi "M1: PASS" documentation/parity-deltas.md
 - **Issue:** #125
@@ -692,6 +696,9 @@ cohorts depend on — a sequencing constraint, not a conditional one.
 - **Source step:** Step 5 (pass 1)
 - **Type:** operator
 - **Issue:** #130
+- **Produces:** operator observations only — the check rows plus the `M1:` verdict line
+  recorded in `documentation/parity-deltas.md`, the Codex CLI version in its header, and the
+  D-CP6 shared-root observation. No code artifact; nothing here is a source file.
 - **Commands:**
   ```powershell
   # 1. Probe (read-only): confirm effective home + current root state
@@ -728,6 +735,9 @@ cohorts depend on — a sequencing constraint, not a conditional one.
 - **Source step:** Step 8 (pass 2)
 - **Type:** operator
 - **Issue:** #131
+- **Produces:** operator observations only — delta rows in `documentation/parity-deltas.md`
+  and the findings file `documentation/findings/codex-parity-m2-deltas.md` that Step 9's
+  `Condition:` tests. No code artifact.
 - **Commands:**
   ```powershell
   # Ensure full catalog is installed
@@ -751,6 +761,8 @@ cohorts depend on — a sequencing constraint, not a conditional one.
 - **Source step:** Steps 9–10 (pass 3)
 - **Type:** operator
 - **Issue:** #132
+- **Produces:** operator observations only — delta-log dispositions and the `M3:` verdict
+  line. No code artifact.
 - **Commands:**
   ```powershell
   powershell -File tools\inspect-host-install.ps1 -Provider codex
@@ -768,6 +780,8 @@ cohorts depend on — a sequencing constraint, not a conditional one.
 - **Source step:** Steps 11–12 (pass 3)
 - **Type:** operator
 - **Issue:** #133
+- **Produces:** operator observations only — the `M4:` verdict line plus any cross-plan
+  dependency rows in the delta log. No code artifact.
 - **Commands:**
   ```powershell
   # Reinstall the wired profiles over the live install (the D-CP14 operator-gated write).
