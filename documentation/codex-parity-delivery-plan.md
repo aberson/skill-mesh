@@ -445,6 +445,7 @@ cohorts depend on — a sequencing constraint, not a conditional one.
 - **Done when:** dist/codex holds exactly the 5 pilot skills with provenance headers;
   frontmatter + budget tests green; focused suites green
 - **Depends on:** 3
+- **Status:** BLOCKED (2026-08-18) - work preserved on branch `build-step-1786993911`; see documentation/cp-pass1-handoff-2026-08-18.md
 
 <!-- autofix-applied: 2026-08-16 -->
 ### Step 5: Codex install path + bring-up probe kit
@@ -491,6 +492,7 @@ cohorts depend on — a sequencing constraint, not a conditional one.
   made Step 3 defer the vocabulary key) — asserted by a test, not by inspection;
   one uninterrupted repo-root `python -m pytest` passes (pass-1 exit gate)
 - **Depends on:** 2, 4
+- **Status:** BLOCKED (2026-08-18) - 3/3 iterations; nested-junction discovery gap in migrate-legacy-install.ps1. Operator decision required; see documentation/cp-pass1-handoff-2026-08-18.md and issue #122.
 
 <!-- autofix-applied: 2026-08-16 -->
 ### Step 6: Cohort B — pipeline family
