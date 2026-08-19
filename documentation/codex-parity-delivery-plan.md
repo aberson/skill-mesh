@@ -744,7 +744,10 @@ cohorts depend on — a sequencing constraint, not a conditional one.
 - **Source step:** Step 8 (pass 2)
 - **Type:** operator
 - **Issue:** #131
-- **Status:** NOT STARTED — next action; pass 2 closed 2026-08-19
+- **Status:** DONE (2026-08-19) — PASS. Chain ran end-to-end on codex-cli 0.147.0 against
+  `code-stencil`; 1 `fix` finding filed (autofix-marker granularity), so Step 9's predicate
+  now fires. Evidence: `documentation/parity-deltas.md` § M2 checks; findings file
+  `documentation/findings/codex-parity-m2-deltas.md`. Committed at `ebb2351`.
 - **Produces:** operator observations only — delta rows in `documentation/parity-deltas.md`
   and the findings file `documentation/findings/codex-parity-m2-deltas.md` that Step 9's
   `Condition:` tests. No code artifact.
