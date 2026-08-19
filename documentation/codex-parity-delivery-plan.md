@@ -552,6 +552,7 @@ cohorts depend on — a sequencing constraint, not a conditional one.
 - **Done when:** frontmatter/budget/determinism tests green over the enlarged set; focused
   suites green
 - **Depends on:** 5
+- **Status:** DONE (2026-08-18)
 
 <!-- autofix-applied: 2026-08-16 -->
 ### Step 7: Cohort C — build/review/skill/tier families

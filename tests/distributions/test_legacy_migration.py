@@ -363,8 +363,9 @@ def mini_dist(full_dist, tmp_path_factory):
     out = tmp_path_factory.mktemp("md")
     # Every DECLARED provider, for the same reason `full_dist` builds `all`: a trimmed
     # dist that drops a declared profile is an incomplete migration source and blocks.
-    # `plan-review` carries a codex adapter, `repo-init` does not -- the `is_dir()`
-    # guard below expresses that as a fact about the built tree, not a hand-kept list.
+    # Which skills carry a codex adapter changes as the Phase CP cohorts land (both
+    # MIGRATION_MANAGED skills do since Step 6) -- the `is_dir()` guard below expresses
+    # membership as a fact about the built tree, not a hand-kept list.
     for provider in ("claude", "gpt", "codex"):
         for skill in fx.MIGRATION_MANAGED:
             src = full_dist / provider / skill
@@ -1641,7 +1642,8 @@ def test_ledger_indexes_only_migration_installed_files(mini_dist, tmp_path):
     assert ledger["ledger_version"] == 1
     # `New-LedgerJson` writes one entry per BOUND provider, and option 3 binds every
     # provider the manifest declares -- so codex gets an entry even though `mini_dist`
-    # installs nothing for it beyond plan-review. Pinned zero-file-side by
+    # installs nothing for it beyond the MIGRATION_MANAGED skills that carry a codex
+    # adapter. Pinned zero-file-side by
     # test_zero_file_provider_keeps_an_empty_hashed_entry_through_recovery.
     assert set(ledger["installs"]) == {"claude", "gpt", "codex"}
     owned = set()

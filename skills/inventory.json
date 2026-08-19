@@ -5,7 +5,7 @@
     "total": 50,
     "portable": 47,
     "provider_native": 3,
-    "codex": 5
+    "codex": 17
   },
   "skills": [
     {
@@ -153,7 +153,7 @@
       "providers": {
         "claude": true,
         "gpt": true,
-        "codex": false
+        "codex": true
       }
     },
     {
@@ -163,7 +163,7 @@
       "providers": {
         "claude": true,
         "gpt": true,
-        "codex": false
+        "codex": true
       }
     },
     {
@@ -173,7 +173,7 @@
       "providers": {
         "claude": true,
         "gpt": true,
-        "codex": false
+        "codex": true
       }
     },
     {
@@ -183,7 +183,7 @@
       "providers": {
         "claude": true,
         "gpt": true,
-        "codex": false
+        "codex": true
       }
     },
     {
@@ -193,7 +193,7 @@
       "providers": {
         "claude": true,
         "gpt": true,
-        "codex": false
+        "codex": true
       }
     },
     {
@@ -213,7 +213,7 @@
       "providers": {
         "claude": true,
         "gpt": true,
-        "codex": false
+        "codex": true
       }
     },
     {
@@ -223,7 +223,7 @@
       "providers": {
         "claude": true,
         "gpt": true,
-        "codex": false
+        "codex": true
       }
     },
     {
@@ -233,7 +233,7 @@
       "providers": {
         "claude": true,
         "gpt": true,
-        "codex": false
+        "codex": true
       }
     },
     {
@@ -243,7 +243,7 @@
       "providers": {
         "claude": true,
         "gpt": true,
-        "codex": false
+        "codex": true
       }
     },
     {
@@ -253,7 +253,7 @@
       "providers": {
         "claude": true,
         "gpt": true,
-        "codex": false
+        "codex": true
       }
     },
     {
@@ -483,7 +483,7 @@
       "providers": {
         "claude": true,
         "gpt": true,
-        "codex": false
+        "codex": true
       }
     },
     {
@@ -523,7 +523,7 @@
       "providers": {
         "claude": true,
         "gpt": true,
-        "codex": false
+        "codex": true
       }
     }
   ]

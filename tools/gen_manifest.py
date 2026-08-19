@@ -89,14 +89,19 @@ NATIVE = ["claude-oauth-auth", "context-slim", "judge-motion"]
 # Derivable from the tree exactly like PORTABLE/NATIVE, and CHECKED against it by
 # `derived_skill_sets()` on every run, so the spelled-out copy cannot drift.
 #
-# THE PILOT FIVE (Phase CP Step 4). Step 3 built the generation SURFACE with this list
-# empty; Step 4 authors the first five adapters and the cohorts follow in Steps 6-8, so
-# this list GROWS toward -- but is not yet equal to -- PORTABLE. Spelled in the same
-# sorted order the manifest emits, and re-derived from the tree by
-# `derived_skill_sets()` on every run, so a name added here without the matching
+# THE PILOT FIVE (Phase CP Step 4) PLUS COHORT B (Step 6, issue #123: the pipeline
+# family -- the remaining plan-*, repo-init/sync/update, and the task-handoff
+# adjacents user-wrap and user-project). Step 3 built the generation SURFACE with
+# this list empty; Step 4 authored the first five adapters and the cohorts follow in
+# Steps 6-8, so this list GROWS toward -- but is not yet equal to -- PORTABLE.
+# Spelled in the same sorted order the manifest emits, and re-derived from the tree
+# by `derived_skill_sets()` on every run, so a name added here without the matching
 # skills/<name>/providers/codex.md (or the reverse) raises instead of shipping.
 CODEX = [
-    "lesson-harvest", "plan-review", "session-wrap", "task-handoff", "user-orient",
+    "lesson-harvest", "plan-expedite", "plan-feature", "plan-init", "plan-merge",
+    "plan-redline", "plan-review", "plan-trim", "plan-wrap", "repo-init",
+    "repo-sync", "repo-update", "session-wrap", "task-handoff", "user-orient",
+    "user-project", "user-wrap",
 ]
 
 # local-capable=Y rows of .claude/references/model-mapping.md (authoritative table).

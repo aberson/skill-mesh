@@ -100,6 +100,24 @@ Disposition notes (M1 triage, 2026-08-18):
   against Copilot CLI 1.0.77 (Run environment table) and is re-checked on any
   Copilot upgrade.
 
+## Step 6 authoring deltas (Cohort B - authored by construction, not host-observed)
+
+Recorded while authoring the twelve Cohort B adapters (plan-init, plan-feature,
+plan-expedite, plan-merge, plan-redline, plan-trim, plan-wrap, repo-init, repo-sync,
+repo-update, user-wrap, user-project; issue #123). Like the Pre-M1 construction notes
+below, these are mappings made BY CONSTRUCTION - nothing here has been observed on a
+real host yet; the M2 workflow pass is what confirms or contradicts each row. Same
+columns as the Deltas table so M2 can promote a row unchanged if it re-observes it.
+
+| skill | delta | severity | disposition |
+|---|---|---|---|
+| plan-redline | no Artifact tool: the publication mechanism is the core's own standalone-HTML fallback - a print-faithful HTML file beside the plan, with the repository-relative path as the stable Proposal locator; republish overwrites the same file preserving decision IDs | minor | accept |
+| plan-init | the closing line's proposal locator inherits plan-redline's file-path form (the auto-run redline hook publishes through the codex renderer), so operators get a path, not an artifact URL | minor | accept |
+| plan-expedite | `/goal` and `/clear` are Claude-Code window primitives with no Codex equivalent; the adapter emits the core's continue-command block verbatim for the window that will run the build and never claims a Stop hook is armed - the durable task-state writes (current.md, handoff-prompt.md) are the cross-host handoff | minor | accept |
+| repo-update | core Step 12 publishes the guided tour with the native Artifact tool; on codex the tour is authored as a self-contained HTML FILE in the repository and the final report's `Tour:` line carries that path instead of a private artifact URL; skip semantics unchanged | minor | accept |
+| user-project | session identity comes from the abstract session-I/O layer; with no stable Codex identity the pin write follows the schema fallback (freshest sessions/*.md) and never mints a session file under a fabricated UUID - with no session file at all, the adapter reports the pin unset in one line and writes nothing (the pin is advisory; honoring skills fall back to cwd) | minor | accept |
+| * | no Cohort B skill is in the manifest's `sub-agent` capability set, so the no-Agent-primitive mapping stays the pilot's single-context fallback with no capability loss for any of the twelve | minor | accept |
+
 ## Pre-M1 construction notes
 
 Not deltas - nothing has been observed on a real host yet. These are the two mappings the

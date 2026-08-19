@@ -3137,38 +3137,45 @@ def test_provider_both_still_means_claude_and_gpt_only(tmp_path):
         "-Provider all must include the codex profile"
 
 
-# The Phase CP Step 4 pilot cohort, SPELLED. Read from the manifest everywhere else in
+# The Phase CP codex cohorts, SPELLED. Read from the manifest everywhere else in
 # this file (`_codex_skills`), because the roster grows across the cohort steps -- but
-# the ONE place that says which skills the pilot is has to be a written-down list, or
-# "dist/codex holds exactly the 5 pilot skills" degrades into "dist/codex holds whatever
-# the manifest happens to declare", which no longer grades the step's Done-when.
+# the ONE place that says which skills each cohort added has to be a written-down list,
+# or "dist/codex holds exactly the declared cohorts" degrades into "dist/codex holds
+# whatever the manifest happens to declare", which no longer grades a step's Done-when.
 PILOT_CODEX_SKILLS = ["lesson-harvest", "plan-review", "session-wrap", "task-handoff",
                       "user-orient"]
+# Cohort B, the pipeline family (Phase CP Step 6, issue #123).
+COHORT_B_CODEX_SKILLS = ["plan-expedite", "plan-feature", "plan-init", "plan-merge",
+                         "plan-redline", "plan-trim", "plan-wrap", "repo-init",
+                         "repo-sync", "repo-update", "user-project", "user-wrap"]
+DECLARED_CODEX_SKILLS = sorted(PILOT_CODEX_SKILLS + COHORT_B_CODEX_SKILLS)
 
 
-def test_codex_profile_holds_exactly_the_pilot_five_for_the_committed_manifest(tmp_path):
-    """The Step-4 Done-when, over the REAL manifest rather than a fixture repo.
+def test_codex_profile_holds_exactly_the_declared_cohorts_for_the_committed_manifest(
+        tmp_path):
+    """The cohort Done-when, over the REAL manifest rather than a fixture repo.
 
-    Step 3's version of this test asserted the profile was EMPTY and said in its own
-    docstring that it flips to five here. It grades the whole emission contract for the
-    real cohort at once, because the parts are only correct together: a launcher without
-    its co-located core.md is a package Codex can list and cannot run, and an unstamped
-    file is one the installer cannot own or uninstall.
+    Step 3's version of this test asserted the profile was EMPTY, Step 4's asserted
+    exactly the pilot five, and Step 6 enlarged the roster to seventeen. It grades the
+    whole emission contract for the real cohorts at once, because the parts are only
+    correct together: a launcher without its co-located core.md is a package Codex can
+    list and cannot run, and an unstamped file is one the installer cannot own or
+    uninstall.
     """
     out = tmp_path / "out"
     r = _build(out, provider="codex")
     assert r.returncode == 0, f"{r.stdout}\n{r.stderr}"
-    assert "(5 skills," in r.stdout, r.stdout
-    # The manifest declares exactly the pilot roster...
-    assert sorted(_codex_skills()) == PILOT_CODEX_SKILLS, _codex_skills()
+    assert "(17 skills," in r.stdout, r.stdout
+    # The manifest declares exactly the spelled cohorts...
+    assert sorted(_codex_skills()) == DECLARED_CODEX_SKILLS, _codex_skills()
     # ...and the emitted tree IS that roster: no extra skill dir, none missing. The
     # shared payload is a sibling of the skill dirs, so it is excluded by name here and
     # graded by the payload tests.
     emitted_dirs = sorted(p.name for p in (out / "codex").iterdir()
                           if p.is_dir() and p.name != "_shared")
-    assert emitted_dirs == PILOT_CODEX_SKILLS, emitted_dirs
+    assert emitted_dirs == DECLARED_CODEX_SKILLS, emitted_dirs
     marker = _marker_literal()
-    for name in PILOT_CODEX_SKILLS:
+    for name in DECLARED_CODEX_SKILLS:
         launcher = out / "codex" / name / "SKILL.md"
         core = out / "codex" / name / "core.md"
         assert launcher.is_file(), f"{name}: no codex launcher emitted"
@@ -3189,8 +3196,8 @@ def test_codex_profile_rerun_over_the_committed_manifest_is_byte_identical(tmp_p
     """Determinism on the REAL cohort, not only on the fixture skill.
 
     The fixture-repo determinism test upstream drives one synthetic skill; this one
-    drives the five committed adapters plus the shared payload their cores pull in, which
-    is the tree an operator actually installs at M1.
+    drives the seventeen committed adapters plus the shared payload their cores pull
+    in, which is the tree an operator actually installs at the M-steps.
     """
     first, second = tmp_path / "a", tmp_path / "b"
     assert _build(first, provider="codex").returncode == 0

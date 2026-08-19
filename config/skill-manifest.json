@@ -72,7 +72,7 @@
     "provider_native": 3,
     "claude": 50,
     "gpt": 47,
-    "codex": 5,
+    "codex": 17,
     "local_capable": 24,
     "sub_agent": 16,
     "vision": 2,
@@ -468,7 +468,8 @@
       "core": "skills/plan-expedite/core.md",
       "providers": {
         "claude": "skills/plan-expedite/providers/claude.md",
-        "gpt": "skills/plan-expedite/providers/gpt.md"
+        "gpt": "skills/plan-expedite/providers/gpt.md",
+        "codex": "skills/plan-expedite/providers/codex.md"
       },
       "capabilities": [
         "filesystem"
@@ -498,7 +499,8 @@
       "core": "skills/plan-feature/core.md",
       "providers": {
         "claude": "skills/plan-feature/providers/claude.md",
-        "gpt": "skills/plan-feature/providers/gpt.md"
+        "gpt": "skills/plan-feature/providers/gpt.md",
+        "codex": "skills/plan-feature/providers/codex.md"
       },
       "capabilities": [
         "filesystem"
@@ -524,7 +526,8 @@
       "core": "skills/plan-init/core.md",
       "providers": {
         "claude": "skills/plan-init/providers/claude.md",
-        "gpt": "skills/plan-init/providers/gpt.md"
+        "gpt": "skills/plan-init/providers/gpt.md",
+        "codex": "skills/plan-init/providers/codex.md"
       },
       "capabilities": [
         "filesystem"
@@ -550,7 +553,8 @@
       "core": "skills/plan-merge/core.md",
       "providers": {
         "claude": "skills/plan-merge/providers/claude.md",
-        "gpt": "skills/plan-merge/providers/gpt.md"
+        "gpt": "skills/plan-merge/providers/gpt.md",
+        "codex": "skills/plan-merge/providers/codex.md"
       },
       "capabilities": [
         "filesystem"
@@ -576,7 +580,8 @@
       "core": "skills/plan-redline/core.md",
       "providers": {
         "claude": "skills/plan-redline/providers/claude.md",
-        "gpt": "skills/plan-redline/providers/gpt.md"
+        "gpt": "skills/plan-redline/providers/gpt.md",
+        "codex": "skills/plan-redline/providers/codex.md"
       },
       "capabilities": [
         "filesystem"
@@ -633,7 +638,8 @@
       "core": "skills/plan-trim/core.md",
       "providers": {
         "claude": "skills/plan-trim/providers/claude.md",
-        "gpt": "skills/plan-trim/providers/gpt.md"
+        "gpt": "skills/plan-trim/providers/gpt.md",
+        "codex": "skills/plan-trim/providers/codex.md"
       },
       "capabilities": [
         "filesystem"
@@ -659,7 +665,8 @@
       "core": "skills/plan-wrap/core.md",
       "providers": {
         "claude": "skills/plan-wrap/providers/claude.md",
-        "gpt": "skills/plan-wrap/providers/gpt.md"
+        "gpt": "skills/plan-wrap/providers/gpt.md",
+        "codex": "skills/plan-wrap/providers/codex.md"
       },
       "capabilities": [
         "filesystem"
@@ -685,7 +692,8 @@
       "core": "skills/repo-init/core.md",
       "providers": {
         "claude": "skills/repo-init/providers/claude.md",
-        "gpt": "skills/repo-init/providers/gpt.md"
+        "gpt": "skills/repo-init/providers/gpt.md",
+        "codex": "skills/repo-init/providers/codex.md"
       },
       "capabilities": [
         "filesystem"
@@ -711,7 +719,8 @@
       "core": "skills/repo-sync/core.md",
       "providers": {
         "claude": "skills/repo-sync/providers/claude.md",
-        "gpt": "skills/repo-sync/providers/gpt.md"
+        "gpt": "skills/repo-sync/providers/gpt.md",
+        "codex": "skills/repo-sync/providers/codex.md"
       },
       "capabilities": [
         "filesystem"
@@ -737,7 +746,8 @@
       "core": "skills/repo-update/core.md",
       "providers": {
         "claude": "skills/repo-update/providers/claude.md",
-        "gpt": "skills/repo-update/providers/gpt.md"
+        "gpt": "skills/repo-update/providers/gpt.md",
+        "codex": "skills/repo-update/providers/codex.md"
       },
       "capabilities": [
         "filesystem"
@@ -1361,7 +1371,8 @@
       "core": "skills/user-project/core.md",
       "providers": {
         "claude": "skills/user-project/providers/claude.md",
-        "gpt": "skills/user-project/providers/gpt.md"
+        "gpt": "skills/user-project/providers/gpt.md",
+        "codex": "skills/user-project/providers/codex.md"
       },
       "capabilities": [
         "filesystem"
@@ -1460,7 +1471,8 @@
       "core": "skills/user-wrap/core.md",
       "providers": {
         "claude": "skills/user-wrap/providers/claude.md",
-        "gpt": "skills/user-wrap/providers/gpt.md"
+        "gpt": "skills/user-wrap/providers/gpt.md",
+        "codex": "skills/user-wrap/providers/codex.md"
       },
       "capabilities": [
         "filesystem"

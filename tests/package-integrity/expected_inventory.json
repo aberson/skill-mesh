@@ -6,7 +6,7 @@
     "provider_native": 3,
     "claude": 50,
     "gpt": 47,
-    "codex": 5,
+    "codex": 17,
     "local_capable": 24,
     "sub_agent": 16,
     "vision": 2,
@@ -68,10 +68,22 @@
   ],
   "codex": [
     "lesson-harvest",
+    "plan-expedite",
+    "plan-feature",
+    "plan-init",
+    "plan-merge",
+    "plan-redline",
     "plan-review",
+    "plan-trim",
+    "plan-wrap",
+    "repo-init",
+    "repo-sync",
+    "repo-update",
     "session-wrap",
     "task-handoff",
-    "user-orient"
+    "user-orient",
+    "user-project",
+    "user-wrap"
   ],
   "local_capable": [
     "lesson-harvest",

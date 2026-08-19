@@ -27,7 +27,9 @@ it exactly backwards.
 WHY THIS MEASURES THE PORTABLE CATALOG AND NOT THE CODEX RECORDS
 ---------------------------------------------------------------
 At Step 3 there are ZERO authored codex adapters, and at Step 4 there are five of a
-projected 47 (the rails ship first; Step 4 adds the pilot five, Steps 6-8 the cohorts).
+projected 47 (the rails ship first; Step 4 adds the pilot five, Steps 6-8 the cohorts --
+Step 6's Cohort B raised the authored roster to seventeen, still only about a third of
+the projected catalog).
 Summing over the codex records would therefore measure 0 characters -- and after Step 4
 still only about a tenth of the catalog -- against an 8,000 floor, and report a
 comfortable PASS that means nothing: a vacuous gate on the exact axis the plan flags as
@@ -289,6 +291,45 @@ def test_catalog_floor_reds_when_the_catalog_grows_past_it():
         "trimmed, update this assertion and Phase CP Step 10's expectations together")
 
 
+# Cohort B, the pipeline family (Phase CP Step 6, issue #123). SPELLED here -- like the
+# distributions suite's cohort rosters -- so "the budget holds over the enlarged
+# catalog" grades the step's actual roster rather than whatever the manifest happens to
+# declare.
+STEP6_COHORT_B = [
+    "plan-expedite", "plan-feature", "plan-init", "plan-merge", "plan-redline",
+    "plan-trim", "plan-wrap", "repo-init", "repo-sync", "repo-update",
+    "user-project", "user-wrap",
+]
+
+
+def test_step6_cohort_is_authored_and_every_authored_record_fits_the_per_skill_cap():
+    """Phase CP Step 6 extends the AUTHORED roster; the budget must hold over it.
+
+    The catalog-floor gate above already measures the full ELIGIBLE catalog (all 47
+    portable skills), so enlarging the authored set moves no estimate -- that is the
+    projected-catalog design working as intended. What Step 6 adds is worth pinning
+    separately: the twelve Cohort B adapters are really declared (a codex.md on disk
+    without its manifest entry ships nothing), the authored tally agrees with the
+    manifest's own count, and every AUTHORED record -- the rows a real Codex host will
+    actually serialize today -- fits the per-skill cap individually.
+    """
+    manifest = _load_manifest()
+    authored = {s["name"]: s for s in manifest["skills"] if "codex" in s["providers"]}
+    missing = [n for n in STEP6_COHORT_B if n not in authored]
+    assert not missing, f"Step 6 cohort skills missing a manifest codex entry: {missing}"
+    # 17 = the Step 4 pilot five + Cohort B's twelve. Spelled, so the next cohort step
+    # must come here and state its new number.
+    assert len(authored) == manifest["counts"]["codex"] == 17
+    offenders = []
+    for name, rec in authored.items():
+        size = _utf8_len(_skill_metadata_serialization(name, rec["description"]))
+        if size > PER_SKILL_CAP:
+            offenders.append(f"{name}: {size} > {PER_SKILL_CAP}")
+    assert not offenders, (
+        "an authored codex record exceeds the per-skill metadata cap:\n  "
+        + "\n  ".join(offenders))
+
+
 def test_codex_install_path_shape_is_pinned():
     """The path shape charged against the catalog budget.
 
@@ -314,6 +355,9 @@ def test_codex_install_path_shape_is_pinned():
 
 @pytest.mark.parametrize("name,expected_substrings", [
     ("plan-review", ["plan-review", ".agents/skills/plan-review/SKILL.md"]),
+    # A Cohort B row (Phase CP Step 6), so the serialization contract is exercised
+    # against the enlarged catalog and not only the pilot.
+    ("repo-sync", ["repo-sync", ".agents/skills/repo-sync/SKILL.md"]),
 ])
 def test_serialization_includes_name_description_and_path(name, expected_substrings):
     """The serialization must actually contain all three metered fields.
