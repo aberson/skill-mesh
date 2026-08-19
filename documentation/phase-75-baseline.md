@@ -109,6 +109,12 @@ Wall clock moved again, to 2h10m56s. That is 42 codex adapters' worth of added
 package-integrity and distribution cases paying the same PowerShell-per-test cost, not a
 performance regression; nothing gates on these timings.
 
+**Confirmed at the pass-2 documentation wrap.** The same gate was re-run end to end at commit
+`2a8d2c1` (the `/repo-update` doc payload, docs only) and returned **1318 passed, 1 skipped,
+exit 0** in 2h13m13s — identical counts at a later commit, which is the evidence that the wrap's
+six-file documentation change altered no test outcome. Two independent full-root runs now agree
+on 1318/1; treat that pair, not either run alone, as the current figure.
+
 Wall clock: three full repo-root runs were timed on the same machine during this step —
 **37m51s** (pre-fix baseline), **44m18s** (post-fix, in the build worktree), and
 **31m48s** (post-merge, in the main checkout). Nearly all of that time is inside `tests/`
