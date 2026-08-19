@@ -1,7 +1,7 @@
 # Codex parity delivery plan (Phase CP)
 
 - **Written:** 2026-08-16
-- **Status:** IN FLIGHT (pass 1) — repo-sync done (umbrella #117, steps #118–#133). Steps 1–5 DONE (pass 1 complete); the migrator carries zero Phase CP delta by the option-3 decision and its hardening is #138. Next: operator **Step M1** (#130) — pilot bring-up in a real Codex session; Steps 6/7/8/10 stay `SKIPPED (condition false)` until M1 records a passing verdict in `documentation/parity-deltas.md`. Plan-review PASS / plan-redline accepted (P1–P9, D-CP1–D-CP15) / plan-wrap READY were all 2026-08-16.
+- **Status:** IN FLIGHT (pass 2 complete) — repo-sync done (umbrella #117, steps #118–#133). Steps 1–5 DONE (pass 1); **Step M1 PASSED** 2026-08-18 (#130), which released the M1-conditional cohorts; Steps 6/7/8 DONE 2026-08-18/19 (pass 2, #123/#124/#125), closing the codex adapter catalog at 47/47 portable skills. The migrator carries zero Phase CP delta by the option-3 decision and its hardening is #138. Next: operator **Step M2** (#131) — end-to-end workflow parity pass; its findings file `documentation/findings/codex-parity-m2-deltas.md` is what releases Step 9, and pass 3 (Steps 9/10/11/12) follows. Step 10 is the one cohort-family step still unrun; it is a pass-3 step, not a pass-2 one. Plan-review PASS / plan-redline accepted (P1–P9, D-CP1–D-CP15) / plan-wrap READY were all 2026-08-16.
 - **Issue phase label:** `Phase CP Step N:` (fresh namespace; the Goal NP parity plan's Steps 1–41 were never repo-synced, so no collisions; next issues mint at #117+)
 - **Supersedes:** the Goal NP two-approval publication path for delivery sequencing. The
   detailed parity plan (`documentation/native-claude-codex-skill-parity-plan.md`, parity branch)
@@ -136,7 +136,7 @@ All citations are from producing files, verified 2026-08-16 by read-only survey.
 | `tests/package-integrity/test_manifest_contract.py` | extend | asserts manifest ↔ pinned inventory ↔ documented command contract; learns the codex provider | file read: header lines 4–9 |
 | `skills/inventory.json` + `tools/gen_skill_tree.py` | regenerate / verify | `gen_skill_tree.py:81` owns `skills/inventory.json` enumerating per-skill files; new `providers/codex.md` files change it | grep'd: gen_skill_tree.py:16, :81, :639 |
 | `tools/release.ps1` | extend | `-Provider` defaults `'both'` (release.ps1:102) and forwards to the staged build (:213); must include codex or redefine 'both'→'all' | file grep'd at cited lines |
-| `config/model-mapping.json` (+ `config/model-tier-map.json`) | verify/extend | top-level keys include `providers` + `skills` (dict read); codex provider entry likely needed for tier resolution — confirm at Step 4 | `python -c json.load` structure check; exact need is TBD at build (read producing file in-step) |
+| `config/model-mapping.json` (+ `config/model-tier-map.json`) | **no change (resolved at Step 4)** | top-level keys include `providers` + `skills` (dict read); a codex provider entry was expected to be needed for tier resolution | Resolved: no codex entry is required. The router's provider vocabulary is closed at `claude\|gpt\|local` (`runtime/skill-router.ps1:100-109`), `Get-ModelMapping` reads only the per-skill `claude/gpt/local` keys (:521-554), the `providers` block is diagnostic-only (:556-583), and neither file is read on any codex build/install path. Step 4 deliberately added no speculative entry and M1 confirmed no such need surfaced (`documentation/parity-deltas.md` § Pre-M1 construction notes, item 2); a named Codex peer belongs to the step that adds its first consumer. |
 | `README.md` | modify | Providers & installation section (README.md:459–472) says "47 of 50 skills run on both hosts" + two-row provider table; codex row + counts update | grep'd at cited lines |
 | `CLAUDE.md` | modify | Commands section (CLAUDE.md:64–72) lists build/install commands per provider; codex variants added | grep'd at cited lines |
 | `plan.md` (parity branch → main) | modify | Progress rows: `Goal NP plan → CLOSED UNAPPROVED (course change 2026-08-16)`, `Goal NP implementation → SUPERSEDED — see codex-parity-delivery-plan.md`; journal entry | committed structure verified: Progress table at line 61, rows at 63–67 incl. `Provider expansion \| PARKED` at line 66 — **that exact row string is load-bearing** (`tests/package-integrity/test_recovery_plan_hygiene.py:72`) and must be preserved |
@@ -666,7 +666,7 @@ cohorts depend on — a sequencing constraint, not a conditional one.
 - **Done when:** hookup-presence + fails-open tests green; focused suites green; the
   advisory blocks match the convention's 8 points verbatim where the convention locks
   wording; delta log notes the codex-host behavior (silent skip without utilities root)
-- **Depends on:** 2, 3
+- **Depends on:** 2, 3, 8
 
 <!-- redline-applied: 2026-08-16 -->
 ### Step 12: Make the wiring observatory-visible
@@ -699,6 +699,8 @@ cohorts depend on — a sequencing constraint, not a conditional one.
 - **Source step:** Step 5 (pass 1)
 - **Type:** operator
 - **Issue:** #130
+- **Status:** DONE (2026-08-18) — passing verdict; `M1: PASS` recorded in
+  `documentation/parity-deltas.md`, which is the token the cohort predicates grep for
 - **Produces:** operator observations only — the check rows plus the `M1:` verdict line
   recorded in `documentation/parity-deltas.md`, the Codex CLI version in its header, and the
   D-CP6 shared-root observation. No code artifact; nothing here is a source file.
@@ -742,6 +744,7 @@ cohorts depend on — a sequencing constraint, not a conditional one.
 - **Source step:** Step 8 (pass 2)
 - **Type:** operator
 - **Issue:** #131
+- **Status:** NOT STARTED — next action; pass 2 closed 2026-08-19
 - **Produces:** operator observations only — delta rows in `documentation/parity-deltas.md`
   and the findings file `documentation/findings/codex-parity-m2-deltas.md` that Step 9's
   `Condition:` tests. No code artifact.
@@ -768,6 +771,7 @@ cohorts depend on — a sequencing constraint, not a conditional one.
 - **Source step:** Steps 9–10 (pass 3)
 - **Type:** operator
 - **Issue:** #132
+- **Status:** NOT STARTED — blocked on pass 3
 - **Produces:** operator observations only — delta-log dispositions and the `M3:` verdict
   line. No code artifact.
 - **Commands:**
@@ -787,6 +791,7 @@ cohorts depend on — a sequencing constraint, not a conditional one.
 - **Source step:** Steps 11–12 (pass 3)
 - **Type:** operator
 - **Issue:** #133
+- **Status:** NOT STARTED — blocked on pass 3
 - **Produces:** operator observations only — the `M4:` verdict line plus any cross-plan
   dependency rows in the delta log. No code artifact.
 - **Commands:**

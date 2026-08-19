@@ -166,7 +166,7 @@ removes the current failure mode where a GPT session can discover the Claude
 compatibility launcher before any router runs.
 
 Binding is decided at install time by `tools/install-skill-mesh.ps1 -Provider
-claude|gpt` and recorded in the generated discovery layout. Binding never rewrites
+claude|gpt|codex` and recorded in the generated discovery layout. Binding never rewrites
 canonical files; it emits a generated tree under `dist/<profile>/`.
 
 ### 5.2 Runtime auto-detection (secondary, via the router)
@@ -337,24 +337,28 @@ the pinned interpreter and the legacy source root are supplied by the environmen
 ```powershell
 pwsh -File tools\build-distributions.ps1 -Provider claude
 pwsh -File tools\build-distributions.ps1 -Provider gpt
+pwsh -File tools\build-distributions.ps1 -Provider codex
 ```
 
-Generates `dist\claude\` and `dist\gpt\` from `config\skill-manifest.json`. Output
-is never committed.
+Generates `dist\claude\`, `dist\gpt\`, and `dist\codex\` from
+`config\skill-manifest.json`. Output is never committed.
 
 ### 8.2 Install (host profile)
 
 ```powershell
 pwsh -File tools\install-skill-mesh.ps1 -Provider claude -Home <host-skills-root>
 pwsh -File tools\install-skill-mesh.ps1 -Provider gpt    -Home <host-skills-root>
+pwsh -File tools\install-skill-mesh.ps1 -Provider codex  -Home <host-skills-root>
 ```
 
 Each profile lands in its own host-native discovery root under `-Home`: Claude at
 `<host-skills-root>/.claude/skills/<skill>/`, GPT at
 `<host-skills-root>/.github/skills/<skill>/` — a real GitHub Copilot CLI discovery
-root, whose `SKILL.md` leads with a YAML `name`/`description` frontmatter block.
-The install-target table and the full set of Copilot discovery roots are owned by
-[`host-discovery.md`](host-discovery.md).
+root, whose `SKILL.md` leads with a YAML `name`/`description` frontmatter block —
+and codex at `<host-skills-root>/.agents/skills/<skill>/`, which is also a root
+Copilot scans as an active alternate, so that root's presence is not evidence of
+which host wrote it. The install-target table and the full set of Copilot discovery
+roots are owned by [`host-discovery.md`](host-discovery.md).
 
 ### 8.3 Test
 

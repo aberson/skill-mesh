@@ -69,8 +69,9 @@ has none.
 
 ### Re-measured 2026-08-18 (Phase CP pass 1, Steps 4+5)
 
-The Phase 7.5 rows above are a dated Step-62 record and are left intact. The current
-DONE-gate measurement, taken at commit `4bcbef5`:
+The Phase 7.5 rows above are a dated Step-62 record and are left intact. The pass-1
+DONE-gate measurement, taken at commit `4bcbef5` (superseded as *current* by the pass-2
+section below, retained as the dated pass-1 record):
 
 | Command | Passed | Failed | Skipped | Provenance |
 |---|---|---|---|---|
@@ -85,6 +86,28 @@ reporting 25 failures with 1 skip is the documented missing-PyYAML mode
 Wall clock also moved: 1h50m against the 31m48s–44m18s spread recorded above. That is
 suite growth plus the same PowerShell-per-test cost, not a performance regression — the
 variance warning above still applies, and nothing gates on these timings.
+
+### Re-measured 2026-08-19 (Phase CP pass 2, Steps 6–8) — CURRENT
+
+The current DONE-gate measurement, taken on merged `main` carrying the Step 8 payload:
+
+| Command | Passed | Failed | Skipped | Provenance |
+|---|---|---|---|---|
+| `python -m pytest` (DONE gate) | 1318 | 0 | 1 | measured directly, 2h10m56s, uninterrupted; terminal summary retained at `documentation/findings/cp-step8-pass2-root-gate.txt` |
+
+Trajectory across pass 2, with no regression at any step: **1312** (pass-1 baseline,
+`4bcbef5`) → **1312** (Step 6) → **1314** (Step 7) → **1318** (Step 8). The skip count held
+at 1 throughout, so 1 remains the healthy figure.
+
+Provenance differs by step and the difference is worth naming. The Step 6 and Step 7 gates
+were assembled from more than one process — `pytest tests/` plus the three root-only roots
+invoked separately — which collects the same set but is not literally the command the
+DONE-gate contract names. The pass-exit Step 8 gate **is** that command: one uninterrupted
+repo-root `python -m pytest` with no path argument.
+
+Wall clock moved again, to 2h10m56s. That is 42 codex adapters' worth of added
+package-integrity and distribution cases paying the same PowerShell-per-test cost, not a
+performance regression; nothing gates on these timings.
 
 Wall clock: three full repo-root runs were timed on the same machine during this step —
 **37m51s** (pre-fix baseline), **44m18s** (post-fix, in the build worktree), and

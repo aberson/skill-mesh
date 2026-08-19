@@ -507,8 +507,18 @@ three hosts; 3 are Claude-native (`claude-oauth-auth`, `context-slim`, `judge-mo
   single-context fallback), and the first live consumer-home write touched only the codex root and
   its ledger. GitHub Copilot CLI 1.0.77 was observed enumerating the shared root's codex packages;
   the accept decision and its reason are recorded with the rest of the evidence in
-  [documentation/parity-deltas.md](documentation/parity-deltas.md). The conditional cohort steps
-  are released.
+  [documentation/parity-deltas.md](documentation/parity-deltas.md). That verdict released the
+  conditional cohort steps — delivered in pass 2 (next bullet).
+- **Phase CP pass 2 — Steps 6–8 complete; issues #123–#125 closed.** The codex adapter catalog is
+  closed at **47/47 portable skills**, grown from the five-skill pilot in three reviewed cohorts:
+  the pipeline family (12), the build/review/skill/tier families (16), and the remainder of the
+  catalog (14). Every portable skill now carries `providers/codex.md` beside its Claude and GPT
+  adapters, and the whole-catalog codex adapter budget is asserted as a hard bound rather than a
+  per-file one. Per-skill authoring deltas are recorded in
+  [documentation/parity-deltas.md](documentation/parity-deltas.md) — including the 13 skills whose
+  codex adapter deliberately halts `required_tool_missing` at a dispatch that host cannot satisfy
+  (an isolated sub-agent or vision judge) instead of weakening the gate and grading its own work.
+  Next is operator milestone M2, the end-to-end workflow parity pass.
 - **Phase 8 is superseded** by Phase CP's additive, cohort-based rollout (course change 2026-08-16).
   Step 47b remains the separately scheduled containment-gate hardening follow-up and is off the
   completed cutover path.

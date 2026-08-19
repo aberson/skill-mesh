@@ -4,7 +4,8 @@
 
 skill-mesh is a provider-neutral collection of ~50 agent skills for planning, building, reviewing,
 and shipping software. Each skill is authored once as a shared behavior contract (`core.md`) plus
-thin per-host adapters, so the same skill runs on Claude Code and GitHub Copilot CLI.
+thin per-host adapters, so the same skill runs on Claude Code, GitHub Copilot CLI, and the OpenAI
+Codex CLI.
 
 This repository is the **canonical source and the build/release toolchain** — it is not itself an
 installed skill tree. Installing produces a host-native discovery tree in a consumer home.
@@ -97,7 +98,8 @@ phase — pytest is the only automated gate this repository has.
 ## Directory layout
 
 ```
-skills/<name>/          Canonical source: core.md + providers/{claude,gpt}.md (50 skills)
+skills/<name>/          Canonical source: core.md + providers/{claude,gpt,codex}.md (50 skills;
+                        all 50 have claude.md, the 47 portable ones also have gpt.md + codex.md)
 <skill>/SKILL.md        Legacy top-level packages (46) — compatibility surface during the
                         deprecation window; NOT canonical, not updated by the migration
 _shared/                Shared cores (judge-core, intake-engine), grader/verdict engines,
@@ -175,7 +177,11 @@ the Phase 7.5 status documents, and `documentation/step-4-checkpoint-2026-08-13.
   inside the staged tree, so a release genuinely cannot be certified without the parser. The
   gate does not skip (a skipped gate is a false green on the one machine nobody checked) and
   it does not abort collection (that would erase every other test's verdict): measured at
-  1024 collected, 25 failed, **998 passed, 1 skipped** — the same single skip as a healthy run.
+  Step 68 (2026-08-11, when the suite collected 1024) as 25 failed, **998 passed, 1 skipped**
+  — the same single skip as a healthy run. Read those absolute totals as that dated
+  measurement, not as today's suite; the shape is what generalizes (a bounded ~25-test red
+  band, one skip). Current counts have exactly one owner,
+  `documentation/phase-75-baseline.md`.
 - **git** — release staging is `git ls-files`-driven and fails outside a working tree.
 - **`gh` CLI** for issue/PR work.
 - **GitHub Copilot CLI, signed in via `gh auth login`**, for any GPT-side host acceptance.

@@ -68,7 +68,9 @@ does not reinterpret that evidence or revive its stopped experiment.
 | Goal NP implementation | SUPERSEDED — documentation/codex-parity-delivery-plan.md | Nothing — Phase CP owns delivery sequencing from 2026-08-16 |
 | Phase CP pass 1 (Steps 1–5) | COMPLETE (2026-08-18) | Nothing — issues #118–#122 closed at `4bcbef5`; DONE gate green |
 | Phase CP Step M1 (#130) | COMPLETE (2026-08-18) — passing verdict | Nothing — check rows, deltas, and verdict recorded in `documentation/parity-deltas.md`; codex-cli 0.147.0, Copilot 1.0.77 |
-| Phase CP cohorts (Steps 6/7/8/10) | RELEASED — pass 2 is next | `/build-phase` over the cohort steps; the conditional predicate now exits 0 (verified 2026-08-18). Land #128/#129 only after M1 evidence, per the plan's sequencing caveat — satisfied |
+| Phase CP pass 2 (Steps 6–8) | COMPLETE (2026-08-19) | Nothing — issues #123/#124/#125 closed at `2ae2f69`; the codex adapter catalog is closed at 47/47 portable skills |
+| Phase CP Step M2 (#131) | NEXT — operator | An end-to-end workflow parity pass driven on a real Codex session; it writes `documentation/findings/codex-parity-m2-deltas.md`, which is Step 9's release predicate |
+| Phase CP pass 3 (Steps 9–12) | BLOCKED | Step 9 waits on M2's findings file; Step 10 is released by M1's verdict but is sequenced into pass 3; Steps 11–12 depend on the landed cohort bytes |
 | Legacy-migrator hardening (#138) | DEFERRED | Its own issue — Phase CP ships zero migrator delta by the option-3 decision of 2026-08-18 |
 | Goal NP live cutover | LOCKED | Approval 2 on the immutable deliverable after disposable rehearsal |
 | Provider expansion | PARKED | A later explicit Abraham decision must resume that track; Goal NP does not unlock it |
@@ -85,10 +87,21 @@ delivery authority; this file records status and history.
 **Pass 1 (Steps 1–5) is complete as of 2026-08-18** at commit `4bcbef5`. **Step M1 (#130) is
 complete as of 2026-08-18 with a passing verdict** — evidence, check rows, delta rows (one
 `fix`-dispositioned: plan-review's autofix fix-count line), and the D-CP6 accept decision are
-recorded in `documentation/parity-deltas.md`. The next action is **pass 2**: `/build-phase`
-over the released cohort steps (#123/#124/#125; #127 remains conditional on the same
-predicate). M1's verdict must be committed to `main` before pass 2 — build worktrees branch
-from HEAD and cannot see an uncommitted delta log.
+recorded in `documentation/parity-deltas.md`.
+
+**Pass 2 (Steps 6–8) is complete as of 2026-08-19** at commit `2ae2f69`, issues #123/#124/#125
+closed. The three cohorts carried the codex adapter catalog from the five-skill pilot to all 47
+portable skills — Cohort B the pipeline family (12), Cohort C the build/review/skill/tier
+families (16), Cohort D the remainder (14). Per-skill authoring deltas for each cohort are
+recorded in `documentation/parity-deltas.md`; the pass-exit repo-root gate summary is
+`documentation/findings/cp-step8-pass2-root-gate.txt`.
+
+The next action is **operator Step M2** (#131) — an end-to-end workflow parity pass on a real
+Codex session. M2 writes `documentation/findings/codex-parity-m2-deltas.md`, which is the
+predicate that releases Step 9; **pass 3** (Steps 9/10/11/12) follows it. Step 10 is released by
+M1's verdict but is sequenced into pass 3, not pass 2. Operator observations must be committed to
+`main` before pass 3 — build worktrees branch from HEAD and cannot see an uncommitted findings
+file.
 
 The Goal NP recovery decision is **closed**. No Publication-8 approval is pending or will be sought.
 Do not run any Publication-8 `Preflight` or `Run`, and do not invoke
