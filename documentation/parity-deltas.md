@@ -35,7 +35,7 @@ Verdict values: `PENDING` (not yet run) | `PASS` | `FAIL - <reason>`. One line e
 this exact `M<n>: <verdict>` shape - the cohort predicate greps it case-insensitively.
 
 - M1: PASS
-- M2: PENDING
+- M2: PASS
 - M3: PENDING
 - M4: PENDING
 
@@ -49,7 +49,7 @@ research and is re-verified against whatever is actually installed.
 | M-step | Date (UTC) | Codex CLI version | Copilot CLI present | Notes |
 |---|---|---|---|---|
 | M1 | 2026-08-18 | codex-cli 0.147.0 | yes (1.0.77) | Both versions coincide with the prior research pins (the 0.147.0 format research; the Step 43/45 Copilot proofs), so every format assumption is confirmed on-pin and remains unproven on newer versions. |
-| M2 | | | | |
+| M2 | 2026-08-19 | codex-cli 0.147.0 | yes (**1.0.80**) | Codex holds the 0.147.0 pin, so its format assumptions stay confirmed on-pin. Copilot has moved OFF the 1.0.77 pin the D-CP6 `accept` was evidenced against; per the M1 disposition note that upgrade forces a re-check, which was run — see "M2 D-CP6 re-check" below. **Session mode differs from M1:** M2 was driven through `codex exec` (non-interactive, multi-turn via `codex exec resume`), M1 was interactive. Mode is a live variable between the two runs and any mode-sensitive observation must say so. |
 | M3 | | | | |
 | M4 | | | | |
 
@@ -87,6 +87,9 @@ One row per observed Claude-vs-Codex behavioral difference.
 | * | Codex's listing paraphrases SKILL.md descriptions rather than echoing them; all 5 stayed semantically intact, and Copilot echoes the same descriptions verbatim, proving the installed frontmatter reads back whole | minor | accept |
 | * | Copilot CLI 1.0.77, run with the install home as its project cwd, enumerates all 5 codex packages from .agents/skills; its load-path self-report (model-inferred, not runtime provenance) named the task-handoff SKILL.md under .agents/skills, agreeing with the listing's exact-set match | minor | accept |
 | * | from the same cwd Copilot did not enumerate the junction-backed .claude/skills tree, although documentation/providers/gpt.md records .claude/skills as a Copilot discovery root; stated as an observation - the mechanism (e.g. reparse points) was not established | minor | accept |
+| plan-review + plan-wrap (M2) | the two skills stamp `<!-- autofix-applied: DATE -->` at different granularities against near-identical core language: plan-review stamped 1 marker for 3 applied fixes, plan-wrap stamped 2 markers for 2 applied fixes, leaving 3 identical stacked markers on one step; both fix COUNTS were verified accurate against the real diff, so the defect is granularity, not counting. Contract-vs-observed comparison, so it is not mode-sensitive | major | fix |
+| * (M2) | Codex enumerated 47/47 installed portable skills (plus 6 host built-ins, 53 total) with no truncation; exact set match verified mechanically against the install tree, not by eye | minor | accept |
+| * (M2) | Copilot CLI **1.0.80** (upgraded from the 1.0.77 the decision was evidenced against), run with the install home as cwd, still enumerates all 47 codex packages from the shared `.agents/skills` root (49 total incl. 2 built-ins); exact set match verified mechanically. D-CP6 `accept` re-confirmed on the new version and at 47-skill scale instead of 5 | minor | accept |
 
 Disposition notes (M1 triage, 2026-08-18):
 
@@ -99,6 +102,74 @@ Disposition notes (M1 triage, 2026-08-18):
   verbatim, and no misbehavior was observed. The disposition is evidence-backed
   against Copilot CLI 1.0.77 (Run environment table) and is re-checked on any
   Copilot upgrade.
+
+## M2 checks
+
+Check rows for the Step M2 table in `documentation/codex-parity-delivery-plan.md`, observed
+2026-08-19 on codex-cli 0.147.0 against the `code-stencil` toy project. Each Outcome grades
+one check row only; the step verdict lives solely in the M-step verdicts list above.
+
+| Check | Observed | Outcome |
+|---|---|---|
+| Each pipeline skill invocable | all four of `plan-feature`, `plan-review`, `plan-wrap`, `session-wrap` loaded their cores, walked their phases, and honored their output contracts; every invocation exited 0 | pass |
+| Workflow chains end-to-end | artifacts produced where the cores demand them: `plan-feature` wrote a nine-section `documentation/learning-export-plan.md` with one Step 9 vertical slice and correctly named the downstream pipeline (`repo-init` → `plan-expedite` → `build-phase`, noting expedite chains review+wrap); `plan-review` autofixed and reported severity sections; `plan-wrap` emitted §1-§13 plus a `READY WITH GAPS: 3 gaps` verdict line; `session-wrap` produced the "Pick up here" rollup, git/memory/flags lines, and a handoff file | pass |
+| Deltas | recorded as rows above; the one `fix` row is filed in `documentation/findings/codex-parity-m2-deltas.md` | pass |
+| Catalog enumeration at full scale | Codex listed 47/47 installed portable skills, no truncation; retires the plan's open risk row "Initial-list budget (8,000 chars) with 47-54 skills" on the Codex side at 47 | pass |
+| Install over the pilot ledger | full 47-skill install landed over the 5-entry M1 pilot ledger with exit 0; ledger reconciled to 111 owned files with **0 stale entries and 0 unledgered files**; `inspect-host-install` reports codex root owned=48 unowned=0, ledger valid, unrecognized=0. Rehearsed first against a disposable home cloned byte-for-byte from the real one | pass |
+| Conversational-skill behavior | `plan-feature` and `plan-review` stopped to ask the operator focused questions. Verified against the cores before recording: `plan-feature` core.md:70-76 and :130 make the phases explicitly conversational, so these halts are correct core-following and **not** a parity delta and **not** an autonomy-contract violation | recorded |
+
+### M2 D-CP6 re-check (Copilot 1.0.77 → 1.0.80)
+
+The M1 disposition note binds the shared-root `accept` to Copilot 1.0.77 and requires a
+re-check "on any Copilot upgrade". The installed Copilot is now **1.0.80**, so the re-check
+was run rather than deferred.
+
+Method matched M1's: Copilot invoked non-interactively with the install home as its project
+cwd, asked only to enumerate its available skills, run read-only (no `--allow-all-tools`).
+
+Result: Copilot 1.0.80 enumerates **all 47** codex packages from the shared `.agents/skills`
+root, plus 2 host built-ins (49 total). The enumerated set was diffed mechanically against
+the installed tree — exact match, zero missing, zero extra.
+
+**Disposition: `accept` re-confirmed**, now on stronger evidence than M1 had — the behavior
+holds across a version bump AND at 47-skill scale rather than 5. The reason is unchanged:
+the bound packages are real skill-mesh skills with host-neutral cores, and no misbehavior
+was observed. Still re-check on the next Copilot upgrade.
+
+### M2 disposition of the carried-over M1 `fix` row
+
+The M1 `plan-review` row ("Auto-applied 0 fixes" against a +107/−25 rewrite) was left
+unfiled at M1 to be re-observed at M2. **It did not reproduce.**
+
+Both M2 autofix reports were checked against the real file diff rather than taken at face
+value:
+
+| run | reported | actual substantive diff hunks | verdict |
+|---|---|---|---|
+| `plan-review` on the fresh feature plan | "Auto-applied 3 fixes", all three enumerated | 3 (`Type: code` added; `Files` list added; `--reviewers code` → `deep`) | count accurate |
+| `plan-wrap` on the same plan | "Auto-applied fixes (2)", both enumerated | 2 (schema summary block added; `<ID>` → `<learning_id>`) | count accurate |
+
+**Residual risk, stated rather than papered over.** Both M2 observations are small-N
+(3 and 2 fixes on a 1-step plan); M1's miscount was on an 8-step plan taking a +107/−25
+rewrite. A counter that is correct at N=3 is not proven correct at M1's scale, so this is a
+**non-reproduction, not a refutation**. It is re-dispositioned from `fix` to `accept` on the
+evidence available, and the residual large-rewrite case is the one to watch if it recurs.
+A targeted large-plan reproduction run was started at M2 and is recorded under "M2 open
+threads" below.
+
+### M2 open threads
+
+- **Large-rewrite reproduction run (Run B) — INCOMPLETE.** A second `plan-review` run was
+  launched against a deliberately pre-autofix 43-line / 7-step plan (the `code-stencil`
+  plan restored to commit `40e83b7`, the exact input class that produced the M1 miscount)
+  to test the counter at M1's scale. It had not returned when M2 was written up. The
+  fixture and method are reproducible: clone `code-stencil`, `git checkout 40e83b7 -- plan.md`,
+  run `plan-review` on it, then diff the result against the pre-run copy and compare the
+  hunk count to the reported fix count. If it reproduces the miscount, reopen the row above
+  and add it to the findings file.
+- **`documentation/providers/README.md` capability matrix** still has no Codex column. M2
+  produced per-skill behavior for only the four chain skills, which is not enough to fill
+  it; Step 9 remains the intended source.
 
 ## Step 6 authoring deltas (Cohort B - authored by construction, not host-observed)
 
