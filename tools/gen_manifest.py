@@ -91,17 +91,22 @@ NATIVE = ["claude-oauth-auth", "context-slim", "judge-motion"]
 #
 # THE PILOT FIVE (Phase CP Step 4) PLUS COHORT B (Step 6, issue #123: the pipeline
 # family -- the remaining plan-*, repo-init/sync/update, and the task-handoff
-# adjacents user-wrap and user-project). Step 3 built the generation SURFACE with
-# this list empty; Step 4 authored the first five adapters and the cohorts follow in
-# Steps 6-8, so this list GROWS toward -- but is not yet equal to -- PORTABLE.
+# adjacents user-wrap and user-project) PLUS COHORT C (Step 7, issue #124: the
+# build/review/skill/tier families -- the heaviest host-abstraction consumers).
+# Step 3 built the generation SURFACE with this list empty; Step 4 authored the
+# first five adapters and the cohorts follow in Steps 6-8, so this list GROWS
+# toward -- but is not yet equal to -- PORTABLE (Step 8's Cohort D closes the gap).
 # Spelled in the same sorted order the manifest emits, and re-derived from the tree
 # by `derived_skill_sets()` on every run, so a name added here without the matching
 # skills/<name>/providers/codex.md (or the reverse) raises instead of shipping.
 CODEX = [
-    "lesson-harvest", "plan-expedite", "plan-feature", "plan-init", "plan-merge",
-    "plan-redline", "plan-review", "plan-trim", "plan-wrap", "repo-init",
-    "repo-sync", "repo-update", "session-wrap", "task-handoff", "user-orient",
-    "user-project", "user-wrap",
+    "build-phase", "build-queue", "build-step", "goblin-do", "goblin-suggest",
+    "judge-ui", "lesson-harvest", "plan-expedite", "plan-feature", "plan-init",
+    "plan-merge", "plan-redline", "plan-review", "plan-trim", "plan-wrap",
+    "repo-init", "repo-sync", "repo-update", "review-deep", "review-gauntlet",
+    "review-proof", "review-uat", "session-wrap", "skill-eval-setup",
+    "skill-evolve", "skill-iterate", "task-handoff", "test-prune",
+    "tier-escalate", "tier-offload", "user-orient", "user-project", "user-wrap",
 ]
 
 # local-capable=Y rows of .claude/references/model-mapping.md (authoritative table).

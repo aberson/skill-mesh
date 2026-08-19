@@ -72,7 +72,7 @@
     "provider_native": 3,
     "claude": 50,
     "gpt": 47,
-    "codex": 17,
+    "codex": 33,
     "local_capable": 24,
     "sub_agent": 16,
     "vision": 2,
@@ -123,7 +123,8 @@
       "core": "skills/build-phase/core.md",
       "providers": {
         "claude": "skills/build-phase/providers/claude.md",
-        "gpt": "skills/build-phase/providers/gpt.md"
+        "gpt": "skills/build-phase/providers/gpt.md",
+        "codex": "skills/build-phase/providers/codex.md"
       },
       "capabilities": [
         "filesystem"
@@ -149,7 +150,8 @@
       "core": "skills/build-queue/core.md",
       "providers": {
         "claude": "skills/build-queue/providers/claude.md",
-        "gpt": "skills/build-queue/providers/gpt.md"
+        "gpt": "skills/build-queue/providers/gpt.md",
+        "codex": "skills/build-queue/providers/codex.md"
       },
       "capabilities": [
         "filesystem"
@@ -175,7 +177,8 @@
       "core": "skills/build-step/core.md",
       "providers": {
         "claude": "skills/build-step/providers/claude.md",
-        "gpt": "skills/build-step/providers/gpt.md"
+        "gpt": "skills/build-step/providers/gpt.md",
+        "codex": "skills/build-step/providers/codex.md"
       },
       "capabilities": [
         "filesystem",
@@ -257,7 +260,8 @@
       "core": "skills/goblin-do/core.md",
       "providers": {
         "claude": "skills/goblin-do/providers/claude.md",
-        "gpt": "skills/goblin-do/providers/gpt.md"
+        "gpt": "skills/goblin-do/providers/gpt.md",
+        "codex": "skills/goblin-do/providers/codex.md"
       },
       "capabilities": [
         "filesystem",
@@ -288,7 +292,8 @@
       "core": "skills/goblin-suggest/core.md",
       "providers": {
         "claude": "skills/goblin-suggest/providers/claude.md",
-        "gpt": "skills/goblin-suggest/providers/gpt.md"
+        "gpt": "skills/goblin-suggest/providers/gpt.md",
+        "codex": "skills/goblin-suggest/providers/codex.md"
       },
       "capabilities": [
         "filesystem",
@@ -362,7 +367,8 @@
       "core": "skills/judge-ui/core.md",
       "providers": {
         "claude": "skills/judge-ui/providers/claude.md",
-        "gpt": "skills/judge-ui/providers/gpt.md"
+        "gpt": "skills/judge-ui/providers/gpt.md",
+        "codex": "skills/judge-ui/providers/codex.md"
       },
       "capabilities": [
         "filesystem",
@@ -800,7 +806,8 @@
       "core": "skills/review-deep/core.md",
       "providers": {
         "claude": "skills/review-deep/providers/claude.md",
-        "gpt": "skills/review-deep/providers/gpt.md"
+        "gpt": "skills/review-deep/providers/gpt.md",
+        "codex": "skills/review-deep/providers/codex.md"
       },
       "capabilities": [
         "filesystem",
@@ -831,7 +838,8 @@
       "core": "skills/review-gauntlet/core.md",
       "providers": {
         "claude": "skills/review-gauntlet/providers/claude.md",
-        "gpt": "skills/review-gauntlet/providers/gpt.md"
+        "gpt": "skills/review-gauntlet/providers/gpt.md",
+        "codex": "skills/review-gauntlet/providers/codex.md"
       },
       "capabilities": [
         "filesystem",
@@ -858,7 +866,8 @@
       "core": "skills/review-proof/core.md",
       "providers": {
         "claude": "skills/review-proof/providers/claude.md",
-        "gpt": "skills/review-proof/providers/gpt.md"
+        "gpt": "skills/review-proof/providers/gpt.md",
+        "codex": "skills/review-proof/providers/codex.md"
       },
       "capabilities": [
         "filesystem"
@@ -884,7 +893,8 @@
       "core": "skills/review-uat/core.md",
       "providers": {
         "claude": "skills/review-uat/providers/claude.md",
-        "gpt": "skills/review-uat/providers/gpt.md"
+        "gpt": "skills/review-uat/providers/gpt.md",
+        "codex": "skills/review-uat/providers/codex.md"
       },
       "capabilities": [
         "filesystem"
@@ -937,7 +947,8 @@
       "core": "skills/skill-eval-setup/core.md",
       "providers": {
         "claude": "skills/skill-eval-setup/providers/claude.md",
-        "gpt": "skills/skill-eval-setup/providers/gpt.md"
+        "gpt": "skills/skill-eval-setup/providers/gpt.md",
+        "codex": "skills/skill-eval-setup/providers/codex.md"
       },
       "capabilities": [
         "filesystem"
@@ -967,7 +978,8 @@
       "core": "skills/skill-evolve/core.md",
       "providers": {
         "claude": "skills/skill-evolve/providers/claude.md",
-        "gpt": "skills/skill-evolve/providers/gpt.md"
+        "gpt": "skills/skill-evolve/providers/gpt.md",
+        "codex": "skills/skill-evolve/providers/codex.md"
       },
       "capabilities": [
         "filesystem",
@@ -994,7 +1006,8 @@
       "core": "skills/skill-iterate/core.md",
       "providers": {
         "claude": "skills/skill-iterate/providers/claude.md",
-        "gpt": "skills/skill-iterate/providers/gpt.md"
+        "gpt": "skills/skill-iterate/providers/gpt.md",
+        "codex": "skills/skill-iterate/providers/codex.md"
       },
       "capabilities": [
         "filesystem",
@@ -1047,7 +1060,8 @@
       "core": "skills/test-prune/core.md",
       "providers": {
         "claude": "skills/test-prune/providers/claude.md",
-        "gpt": "skills/test-prune/providers/gpt.md"
+        "gpt": "skills/test-prune/providers/gpt.md",
+        "codex": "skills/test-prune/providers/codex.md"
       },
       "capabilities": [
         "filesystem",
@@ -1074,7 +1088,8 @@
       "core": "skills/tier-escalate/core.md",
       "providers": {
         "claude": "skills/tier-escalate/providers/claude.md",
-        "gpt": "skills/tier-escalate/providers/gpt.md"
+        "gpt": "skills/tier-escalate/providers/gpt.md",
+        "codex": "skills/tier-escalate/providers/codex.md"
       },
       "capabilities": [
         "filesystem",
@@ -1105,7 +1120,8 @@
       "core": "skills/tier-offload/core.md",
       "providers": {
         "claude": "skills/tier-offload/providers/claude.md",
-        "gpt": "skills/tier-offload/providers/gpt.md"
+        "gpt": "skills/tier-offload/providers/gpt.md",
+        "codex": "skills/tier-offload/providers/codex.md"
       },
       "capabilities": [
         "filesystem",

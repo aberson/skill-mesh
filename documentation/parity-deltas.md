@@ -118,6 +118,58 @@ columns as the Deltas table so M2 can promote a row unchanged if it re-observes 
 | user-project | session identity comes from the abstract session-I/O layer; with no stable Codex identity the pin write follows the schema fallback (freshest sessions/*.md) and never mints a session file under a fabricated UUID - with no session file at all, the adapter reports the pin unset in one line and writes nothing (the pin is advisory; honoring skills fall back to cwd) | minor | accept |
 | * | no Cohort B skill is in the manifest's `sub-agent` capability set, so the no-Agent-primitive mapping stays the pilot's single-context fallback with no capability loss for any of the twelve | minor | accept |
 
+## Step 7 authoring deltas (Cohort C - authored by construction, not host-observed)
+
+Recorded while authoring the sixteen Cohort C adapters (build-phase, build-step,
+build-queue, review-deep, review-gauntlet, review-proof, review-uat, skill-iterate,
+skill-evolve, skill-eval-setup, tier-escalate, tier-offload, judge-ui, test-prune,
+goblin-do, goblin-suggest; issue #124). Like the sections above, these are mappings made
+BY CONSTRUCTION - nothing here has been observed on a real host yet; the M-step passes
+confirm or contradict each row. Same columns as the Deltas table so a later pass can
+promote a row unchanged if it re-observes it.
+
+Cohort C is the first cohort where the no-Agent-primitive mapping is NOT the pilot's
+single-context fallback: eleven of the sixteen are in the manifest's `sub-agent`
+capability set, and for nine of those eleven the core documents no single-context
+fallback at all - so per the delivery plan's rule ("halt visibly with
+`required_tool_missing` where core requires an unavailable host tool"), those wrappers
+halt at the isolated dispatch instead of weakening the producer-never-grades-itself
+gate. The two goblin skills ride their cores' documented CLI fallback, and build-phase
+(not itself in the sub-agent set) runs its orchestration natively - same-context
+named-skill dispatch keeps the verdict key in parent private state, satisfying the
+core's guard - and inherits the downstream /build-step halt.
+
+| skill | delta | severity | disposition |
+|---|---|---|---|
+| build-step | no isolated fresh-context agent primitive and the core documents no single-context fallback for its developer/reviewer arms (independence IS context isolation; the producer never grades itself) - the adapter halts `required_tool_missing` at the first isolated dispatch and never runs producer and reviewer in one context; worktree lifecycle, mechanical gates, and Playwright probing remain portable shell | blocker | wontfix |
+| build-phase | orchestration runs natively: same-context named-skill dispatch keeps the parent-local HMAC verdict key in private parent state, satisfying the core's private-parent-state guard (its `required_tool_missing` halt stays armed only for a host that genuinely cannot retain it); every dispatched `/build-step` halts `required_tool_missing` on this host, so a run stops at the first code step's dispatch and the halt is surfaced by the core's own halt handling | major | accept |
+| build-queue | queue orchestration (pre-flight, `.build-queue-state`, kill-switch, park procedure, morning report) runs natively, but every dispatched `/build-phase` halts `required_tool_missing` on this host, so items park rather than build - the park-not-abort contract renders exactly as designed | major | accept |
+| review-deep | the per-lens fresh-context reviewer fan-out is required with no documented single-context fallback (lens independence comes from context isolation); the adapter halts `required_tool_missing` at the lens dispatch; the mechanical pre-pass, diff gathering, lint pre-pass, and auth-gate probe remain runnable shell | blocker | wontfix |
+| review-gauntlet | same isolation requirement as review-deep, whose lens definitions it imports verbatim; the adapter halts `required_tool_missing` at the five-lens dispatch and never feeds the deterministic reducer from in-session opinions | blocker | wontfix |
+| review-proof | no degradation: the whole contract is file reads, greps, and shell through the host's own tools, and a single conversational context is the contract; the secret-file effect-based-check discipline is carried into the wrapper verbatim | minor | accept |
+| review-uat | refinement runs natively; `--exec`/`--ui` delegate to `/user-uat` and `/judge-ui` via named-skill dispatch, and where the downstream skill is unavailable on this host the adapter surfaces `required_tool_missing` naming it rather than executing steps inline or dropping the flag | minor | accept |
+| skill-iterate | the workflow primitive and the fresh-context render/grade split are required ("keeping render and grade as separate agents is non-negotiable") with no documented fallback; the adapter halts `required_tool_missing` at the score-loop dispatch; the deterministic scoring scripts stay portable | blocker | wontfix |
+| skill-evolve | the core's own halt contract governs: workflow unavailable is core halt #2, halting rather than falling back to a single self-grading agent (the defect the skill was rebuilt to avoid); the adapter maps that halt to `required_tool_missing`; brainstorm mode runs natively | blocker | wontfix |
+| skill-eval-setup | authoring runs natively; where the corpus generator script's sub-agent backend is absent the adapter uses the core's documented non-dispatch modes (`--dry-run`, `--verify-only`, hand-crafted examples) and reports which mode ran; the emitted Part 3 loop text keeps the producer/grader invariant verbatim and the script-deterministic verification gate is unchanged | minor | accept |
+| test-prune | Phase 1 requires parallel Explore flagging arms ("never as a serial in-line scan, even for small test suites") and documents no single-context fallback; the adapter halts `required_tool_missing` at the Phase 1 dispatch rather than substituting an in-session scan - documenting such a fallback would be a core change, not a wrapper's call | blocker | wontfix |
+| tier-escalate | the classification constraint requires read-only fresh-context task invocations with batch-uniform rules and documents no single-context fallback; the adapter halts `required_tool_missing` at the Phase 2 fan-out and never classifies the catalog in-session | blocker | wontfix |
+| tier-offload | same read-only fresh-context classification constraint as tier-escalate, same halt; the emitted-config gates (standing `build-step-style: false`, unmet gate-precondition emits `false`) are authoring rules and are unaffected | blocker | wontfix |
+| judge-ui | the driving leg (Playwright capture, adapter or documented inline-flow fallback, mandatory structured read-back, mechanical asserts first) is portable shell, and a mechanical-gate failure still renders its FAIL with no vision call; the verdict leg requires an independent vision-judge sub-agent with no documented single-context fallback, so the adapter halts `required_tool_missing` at the judge dispatch rather than grading its own driving | blocker | wontfix |
+| goblin-do | the Workflow session path is unavailable; the execute rail rides the core's documented CLI fallback (`uv run goblin do <id>`, dispatching `/build-step` to a `claude -p` subprocess where that host's isolation applies); absent the `claude` CLI or its OAuth token the adapter halts `required_tool_missing` rather than degrading to an unreviewed inline edit | minor | accept |
+| goblin-suggest | the Workflow session path is unavailable; the core's documented CLI fallback (`claude -p` subprocesses, a ThreadPoolExecutor per candidate) preserves judge independence and parallelism unchanged; absent the `claude` CLI or its OAuth token the adapter halts `required_tool_missing` rather than generating and judging in one session | minor | accept |
+
+Disposition notes (Step 7 authoring triage):
+
+- The `wontfix` rows are host limitations, not defects to repair in Step 9: the missing
+  capability is the isolated fresh-context primitive itself, and every core involved
+  either documents no fallback or (skill-evolve) explicitly forbids the single-context
+  one. If a later M-step decides a documented single-context mode is wanted for any of
+  them, that is a CORE change with its own review, never a wrapper edit.
+- The `accept` rows lose no gate: build-queue's parks and build-phase's surfaced
+  downstream `/build-step` halts are their cores' designed halt handling, and the
+  goblin CLI fallback, review-uat delegation, and skill-eval-setup non-dispatch modes
+  are all core-documented paths.
+
 ## Pre-M1 construction notes
 
 Not deltas - nothing has been observed on a real host yet. These are the two mappings the

@@ -112,12 +112,13 @@ def test_counts_match_fixture_and_array():
     assert derived["provider_native"] == 3
     assert derived["claude"] == 50, "every skill carries a Claude adapter"
     assert derived["gpt"] == 47, "the gpt adapter set IS the portable set"
-    # 17 at Phase CP Step 6 -- the pilot five plus Cohort B's twelve (issue #123). It
-    # was 0 at Step 3 (the generation rails ship before any codex adapter is authored),
-    # 5 at Step 4, and Steps 7-8 raise it toward the portable catalog. A value here
+    # 33 at Phase CP Step 7 -- the pilot five, Cohort B's twelve (issue #123), and
+    # Cohort C's sixteen build/review/skill/tier adapters (issue #124). It was 0 at
+    # Step 3 (the generation rails ship before any codex adapter is authored), 5 at
+    # Step 4, 17 at Step 6, and Step 8 raises it to the portable catalog. A value here
     # without a matching skills/*/providers/codex.md on disk is caught by
     # gen_manifest.py's CODEX-vs-tree guard.
-    assert derived["codex"] == 17
+    assert derived["codex"] == 33
     assert derived["local_capable"] == 24
     assert derived["sub_agent"] == 16
     assert derived["vision"] == 2
@@ -712,11 +713,11 @@ def test_derived_skill_sets_match_the_spelled_out_rosters():
     assert native == sorted(gm.NATIVE)
     assert codex == sorted(gm.CODEX)
     assert (len(portable), len(native)) == (47, 3)
-    # 17 at Phase CP Step 6: the pilot five plus Cohort B's twelve (issue #123),
-    # authored on rails that shipped empty at Step 3. Spelled, like its siblings above,
-    # so a cohort step must come here and state the new number rather than letting a
-    # glob silently redefine the roster.
-    assert len(codex) == 17
+    # 33 at Phase CP Step 7: the pilot five, Cohort B's twelve (issue #123), and
+    # Cohort C's sixteen (issue #124), authored on rails that shipped empty at Step 3.
+    # Spelled, like its siblings above, so a cohort step must come here and state the
+    # new number rather than letting a glob silently redefine the roster.
+    assert len(codex) == 33
     # Codex is an ORTHOGONAL axis, not a third bucket -- every codex name is also
     # portable, and the 47/3 partition is unaffected by codex membership. This is the
     # invariant that lets counts["portable"], the README's GPT-capable line and the

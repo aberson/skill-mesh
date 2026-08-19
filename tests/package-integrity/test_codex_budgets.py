@@ -28,8 +28,8 @@ WHY THIS MEASURES THE PORTABLE CATALOG AND NOT THE CODEX RECORDS
 ---------------------------------------------------------------
 At Step 3 there are ZERO authored codex adapters, and at Step 4 there are five of a
 projected 47 (the rails ship first; Step 4 adds the pilot five, Steps 6-8 the cohorts --
-Step 6's Cohort B raised the authored roster to seventeen, still only about a third of
-the projected catalog).
+Step 6's Cohort B raised the authored roster to seventeen and Step 7's Cohort C to
+thirty-three, still short of the projected catalog until Step 8's Cohort D closes it).
 Summing over the codex records would therefore measure 0 characters -- and after Step 4
 still only about a tenth of the catalog -- against an 8,000 floor, and report a
 comfortable PASS that means nothing: a vacuous gate on the exact axis the plan flags as
@@ -317,9 +317,49 @@ def test_step6_cohort_is_authored_and_every_authored_record_fits_the_per_skill_c
     authored = {s["name"]: s for s in manifest["skills"] if "codex" in s["providers"]}
     missing = [n for n in STEP6_COHORT_B if n not in authored]
     assert not missing, f"Step 6 cohort skills missing a manifest codex entry: {missing}"
-    # 17 = the Step 4 pilot five + Cohort B's twelve. Spelled, so the next cohort step
-    # must come here and state its new number.
-    assert len(authored) == manifest["counts"]["codex"] == 17
+    # 33 = the Step 4 pilot five + Cohort B's twelve + Cohort C's sixteen (Step 7,
+    # issue #124). Spelled, so the next cohort step must come here and state its new
+    # number.
+    assert len(authored) == manifest["counts"]["codex"] == 33
+    offenders = []
+    for name, rec in authored.items():
+        size = _utf8_len(_skill_metadata_serialization(name, rec["description"]))
+        if size > PER_SKILL_CAP:
+            offenders.append(f"{name}: {size} > {PER_SKILL_CAP}")
+    assert not offenders, (
+        "an authored codex record exceeds the per-skill metadata cap:\n  "
+        + "\n  ".join(offenders))
+
+
+# Cohort C, the build/review/skill/tier families (Phase CP Step 7, issue #124) -- the
+# heaviest host-abstraction consumers. SPELLED for the same reason as Cohort B above:
+# the cohort sweep must grade the step's actual roster, not whatever the manifest
+# happens to declare.
+STEP7_COHORT_C = [
+    "build-phase", "build-queue", "build-step", "goblin-do", "goblin-suggest",
+    "judge-ui", "review-deep", "review-gauntlet", "review-proof", "review-uat",
+    "skill-eval-setup", "skill-evolve", "skill-iterate", "test-prune",
+    "tier-escalate", "tier-offload",
+]
+
+
+def test_step7_cohort_is_authored_and_every_authored_record_fits_the_per_skill_cap():
+    """Phase CP Step 7 extends the AUTHORED roster; the budget must hold over it.
+
+    Same design as the Step 6 sweep above (which also owns the spelled total): the
+    catalog-floor gate already measures the full ELIGIBLE catalog, so what this pins is
+    that the sixteen Cohort C adapters are really DECLARED (a codex.md on disk without
+    its manifest entry ships nothing), that the two cohorts do not overlap, and that
+    every authored record -- the rows a real Codex host will actually serialize today
+    -- fits the per-skill cap individually.
+    """
+    manifest = _load_manifest()
+    authored = {s["name"]: s for s in manifest["skills"] if "codex" in s["providers"]}
+    missing = [n for n in STEP7_COHORT_C if n not in authored]
+    assert not missing, f"Step 7 cohort skills missing a manifest codex entry: {missing}"
+    # The cohorts are disjoint rosters; a name spelled in both would double-count the
+    # step's contribution and hide a dropped adapter behind the shared total.
+    assert not set(STEP7_COHORT_C) & set(STEP6_COHORT_B)
     offenders = []
     for name, rec in authored.items():
         size = _utf8_len(_skill_metadata_serialization(name, rec["description"]))
@@ -358,6 +398,8 @@ def test_codex_install_path_shape_is_pinned():
     # A Cohort B row (Phase CP Step 6), so the serialization contract is exercised
     # against the enlarged catalog and not only the pilot.
     ("repo-sync", ["repo-sync", ".agents/skills/repo-sync/SKILL.md"]),
+    # A Cohort C row (Phase CP Step 7), same rationale one cohort later.
+    ("build-step", ["build-step", ".agents/skills/build-step/SKILL.md"]),
 ])
 def test_serialization_includes_name_description_and_path(name, expected_substrings):
     """The serialization must actually contain all three metered fields.

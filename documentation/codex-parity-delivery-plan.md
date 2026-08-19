@@ -572,6 +572,7 @@ cohorts depend on — a sequencing constraint, not a conditional one.
 - **Produces:** 16 provider files; regenerated dist/codex; delta log rows
 - **Done when:** same test bar as Step 6
 - **Depends on:** 6
+- **Status:** DONE (2026-08-19)
 
 <!-- autofix-applied: 2026-08-16 -->
 ### Step 8: Cohort D — remainder of the portable catalog

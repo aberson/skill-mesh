@@ -93,9 +93,10 @@ def test_inventory_counts():
     assert derived["total"] == 50
     assert derived["portable"] == 47
     assert derived["provider_native"] == 3
-    # 17 since Phase CP Step 6 (issue #123) added Cohort B's twelve pipeline-family
-    # adapters on top of Step 4's pilot five providers/codex.md files.
-    assert derived["codex"] == 17
+    # 33 since Phase CP Step 7 (issue #124) added Cohort C's sixteen build/review/
+    # skill/tier adapters on top of Step 6's Cohort B twelve and Step 4's pilot five
+    # providers/codex.md files.
+    assert derived["codex"] == 33
 
 
 def test_inventory_matches_manifest():
@@ -195,12 +196,12 @@ def test_file_counts_across_tree():
     assert len(cores) == 47, len(cores)
     assert len(claude) == 50, len(claude)   # 47 portable + 3 native
     assert len(gpt) == 47, len(gpt)
-    # 17 since Phase CP Step 6 -- Step 4's pilot five plus Cohort B's twelve
-    # (issue #123), on rails that shipped empty at Step 3. This is a SPELLED count on
-    # purpose, exactly like its three siblings: the cohort steps that author more
-    # adapters must come here and state the new number, so the catalog size is never
-    # silently redefined by a glob.
-    assert len(codex) == 17, len(codex)
+    # 33 since Phase CP Step 7 -- Step 4's pilot five, Cohort B's twelve (issue #123),
+    # and Cohort C's sixteen (issue #124), on rails that shipped empty at Step 3. This
+    # is a SPELLED count on purpose, exactly like its three siblings: the cohort steps
+    # that author more adapters must come here and state the new number, so the
+    # catalog size is never silently redefined by a glob.
+    assert len(codex) == 33, len(codex)
 
 
 def test_no_private_absolute_paths_in_migrated_tree():
