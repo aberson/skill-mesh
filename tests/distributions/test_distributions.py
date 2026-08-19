@@ -3155,8 +3155,15 @@ COHORT_C_CODEX_SKILLS = ["build-phase", "build-queue", "build-step", "goblin-do"
                          "review-gauntlet", "review-proof", "review-uat",
                          "skill-eval-setup", "skill-evolve", "skill-iterate",
                          "test-prune", "tier-escalate", "tier-offload"]
+# Cohort D, the remainder of the portable catalog (Phase CP Step 8, issue #125) --
+# with it the declared roster IS the portable roster, all 47.
+COHORT_D_CODEX_SKILLS = ["memory-distill", "observatory-doctor", "research-prospect",
+                         "user-afterparty", "user-brainstorm", "user-debug",
+                         "user-draft", "user-gateway", "user-lavishify",
+                         "user-learn", "user-pm", "user-shakedown", "user-uat",
+                         "user-walkthrough"]
 DECLARED_CODEX_SKILLS = sorted(PILOT_CODEX_SKILLS + COHORT_B_CODEX_SKILLS
-                               + COHORT_C_CODEX_SKILLS)
+                               + COHORT_C_CODEX_SKILLS + COHORT_D_CODEX_SKILLS)
 
 
 def test_codex_profile_holds_exactly_the_declared_cohorts_for_the_committed_manifest(
@@ -3164,8 +3171,9 @@ def test_codex_profile_holds_exactly_the_declared_cohorts_for_the_committed_mani
     """The cohort Done-when, over the REAL manifest rather than a fixture repo.
 
     Step 3's version of this test asserted the profile was EMPTY, Step 4's asserted
-    exactly the pilot five, Step 6 enlarged the roster to seventeen, and Step 7 to
-    thirty-three. It grades the whole emission contract for the real cohorts at once,
+    exactly the pilot five, Step 6 enlarged the roster to seventeen, Step 7 to
+    thirty-three, and Step 8 closed it at the full portable catalog of forty-seven.
+    It grades the whole emission contract for the real cohorts at once,
     because the parts are only correct together: a launcher without its co-located
     core.md is a package Codex can list and cannot run, and an unstamped file is one
     the installer cannot own or uninstall.
@@ -3173,7 +3181,7 @@ def test_codex_profile_holds_exactly_the_declared_cohorts_for_the_committed_mani
     out = tmp_path / "out"
     r = _build(out, provider="codex")
     assert r.returncode == 0, f"{r.stdout}\n{r.stderr}"
-    assert "(33 skills," in r.stdout, r.stdout
+    assert "(47 skills," in r.stdout, r.stdout
     # The manifest declares exactly the spelled cohorts...
     assert sorted(_codex_skills()) == DECLARED_CODEX_SKILLS, _codex_skills()
     # ...and the emitted tree IS that roster: no extra skill dir, none missing. The
@@ -3204,7 +3212,7 @@ def test_codex_profile_rerun_over_the_committed_manifest_is_byte_identical(tmp_p
     """Determinism on the REAL cohort, not only on the fixture skill.
 
     The fixture-repo determinism test upstream drives one synthetic skill; this one
-    drives the thirty-three committed adapters plus the shared payload their cores
+    drives the forty-seven committed adapters plus the shared payload their cores
     pull in, which is the tree an operator actually installs at the M-steps.
     """
     first, second = tmp_path / "a", tmp_path / "b"

@@ -1,0 +1,12 @@
+Phase CP pass-2 exit gate (Step 8, issue #125)
+Command: python -m pytest        (repo root, no path argument)
+Run: 2026-08-19, detached uninterrupted run on merged main (Step 8 payload landed, pre-checkpoint)
+Tree: baseline 4c3868d + Step 8 payload (child commit 0df0aed landed)
+Interpreter: Python 3.14.3, pytest-9.1.1 (PyYAML 6.0.3 present)
+
+Terminal summary:
+================ 1318 passed, 1 skipped in 7856.69s (2:10:56) =================
+
+Exit code: 0
+The 1 skip is the healthy-run environment-gated skip (documentation/phase-75-baseline.md).
+Trajectory across pass 2: 1312 (Step 6 gate) -> 1314 (Step 7 gate) -> 1318 (this gate); no regression.

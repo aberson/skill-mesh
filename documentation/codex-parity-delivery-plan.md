@@ -600,6 +600,7 @@ cohorts depend on — a sequencing constraint, not a conditional one.
 - **Done when:** 47/47 portable skills in dist/codex; whole-catalog budget test green; one
   uninterrupted repo-root `python -m pytest` passes (pass-2 exit gate)
 - **Depends on:** 7
+- **Status:** DONE (2026-08-19)
 
 <!-- autofix-applied: 2026-08-16 -->
 ### Step 9: Fix worst M2 deltas

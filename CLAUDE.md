@@ -63,6 +63,7 @@ Build host distributions (writes `dist/`, which is gitignored and never committe
 ```
 powershell -File tools/build-distributions.ps1 -Provider claude
 powershell -File tools/build-distributions.ps1 -Provider gpt
+powershell -File tools/build-distributions.ps1 -Provider codex
 ```
 
 Install one host profile into a consumer home:
@@ -70,6 +71,7 @@ Install one host profile into a consumer home:
 ```
 powershell -File tools/install-skill-mesh.ps1 -Provider claude -Home <install-home>
 powershell -File tools/install-skill-mesh.ps1 -Provider gpt    -Home <install-home>
+powershell -File tools/install-skill-mesh.ps1 -Provider codex  -Home <install-home>
 ```
 
 Release — stage from `git ls-files`, build, run the integrity check inside the staged tree, then
@@ -122,9 +124,9 @@ tests/                  calibration, distributions, package-integrity, release, 
 
 - **One behavior contract per skill.** `skills/<name>/core.md` is provider-independent; each
   `providers/<host>.md` wrapper loads the core in full and maps host abstractions onto it. A wrapper
-  may never weaken a gate defined in the core. 5 skills additionally carry a `providers/codex.md`
-  adapter (the Phase CP pilot: task-handoff, user-orient, lesson-harvest, plan-review,
-  session-wrap) — codex capability is ADDITIVE on a portable record, never a third status, so the
+  may never weaken a gate defined in the core. All 47 portable skills additionally carry a
+  `providers/codex.md` adapter (grown from the Phase CP five-skill pilot across cohorts B–D) —
+  codex capability is ADDITIVE on a portable record, never a third status, so the
   portable/native counts below keep their exact meaning. 47 skills are portable (both adapters); 3 are
   provider-native Claude-only (`claude-oauth-auth`, `context-slim`, `judge-motion`) and carry
   `core: null` in the manifest.

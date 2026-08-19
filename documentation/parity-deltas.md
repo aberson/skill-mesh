@@ -170,6 +170,61 @@ Disposition notes (Step 7 authoring triage):
   goblin CLI fallback, review-uat delegation, and skill-eval-setup non-dispatch modes
   are all core-documented paths.
 
+## Step 8 authoring deltas (Cohort D - authored by construction, not host-observed)
+
+Recorded while authoring the fourteen Cohort D adapters (memory-distill,
+observatory-doctor, research-prospect, user-afterparty, user-brainstorm, user-debug,
+user-draft, user-gateway, user-lavishify, user-learn, user-pm, user-shakedown,
+user-uat, user-walkthrough; issue #125) - the remainder of the portable catalog, which
+this cohort closes at 47/47. Like the sections above, these are mappings made BY
+CONSTRUCTION - nothing here has been observed on a real host yet; the M-step passes
+confirm or contradict each row. Same columns as the Deltas table so a later pass can
+promote a row unchanged if it re-observes it.
+
+Three of the fourteen are in the manifest's `sub-agent` capability set
+(research-prospect, user-brainstorm, user-learn) and none of the three cores documents
+a single-context fallback, so per the delivery plan's rule those wrappers halt visibly
+with `required_tool_missing` at the isolated dispatch. A fourth, user-debug, is NOT in
+the `sub-agent` set, but its core's Step 2 independent-reproduction arm ("always") is
+defined by not sharing the parent's suspected root cause - a constraint a single
+context cannot satisfy about itself - so its wrapper halts on the same rule; the
+capability-set question is metadata owned elsewhere and is recorded here, not changed
+here. The remaining ten map natively.
+
+| skill | delta | severity | disposition |
+|---|---|---|---|
+| memory-distill | `<workspace-memory>` resolves through the host's own project-memory convention or an operator-named directory; with no memory directory on disk the adapter reports that in one line and stops - it never invents a memory store or reviews from recollection; the conversational round gates run unchanged | minor | accept |
+| observatory-doctor | no degradation: the skill is a thin relay over the `observatory doctor` CLI through the host shell; the read-only discipline (no auto-fix, no server/demo probes) is carried verbatim, and a machine without the dev-observatory workspace gets a one-line report, never a reimplementation of the checks | minor | accept |
+| research-prospect | Step 2 requires one isolated Explore arm per project dispatched in parallel ("sequential dispatch is a defect") and the core documents no single-context fallback; the adapter halts `required_tool_missing` at the fan-out rather than sweeping projects in-session - Step 1's project-list resolution still runs so the halt names the arms that could not dispatch | blocker | wontfix |
+| user-afterparty | the glue (sequencing, collection, orphan-cleanup, rollup seam) runs natively, but several swept items cannot run on this host: `context-slim` is Claude-native and absent from the codex profile, and `test-prune` plus the `tier-drift` pair halt `required_tool_missing`; each lands in the ONE report as its reason code - unavailable is its own result, never reimplemented inline | major | accept |
+| user-brainstorm | interactive ideation and the meta-file writes run natively; the Step 7 per-file background authoring dispatch has no documented single-context fallback, so the adapter halts `required_tool_missing` there, leaving topics.md/plan.md as the durable record a capable host resumes from | blocker | wontfix |
+| user-debug | Step 1's investigation and Diagnosis Block run natively and remain durable output; the Step 2 independent-reproduction arm must not see the suspected root cause this parent context already holds, so no single-context substitute exists by construction and the adapter halts `required_tool_missing` before any fix design or code change | blocker | wontfix |
+| user-draft | fully native: the task-state checkpoint is ordinary file I/O and the emitted draft is paste-ready text for the window that will run it, reproduced verbatim (including any host-window primitives the target window supplies) - the adapter never claims this host arms or runs them | minor | accept |
+| user-gateway | ledger writes are intake-engine file I/O and run natively; every per-row seed is paste-ready text emitted verbatim in its rail's spelled shape - including the investigate rail's pinned `Workflow({name: "deep-research-pinned"})` charter line - and the gateway dispatches nothing | minor | accept |
+| user-lavishify | the `lavish-axi` CLI runs through the host shell; the Claude scratchpad maps to a durable host-local temp `.lavish/` directory reported by path, the long-poll runs via the host's background facility or the core's own re-run-in-bounded-stints rule, and the security gates (telemetry off, loopback only, never `share`) are carried verbatim | minor | accept |
+| user-learn | interactive setup runs natively; the Step 4 per-file authoring waves (notebook agents author AND execute their own notebook) have no documented single-context fallback, so the adapter halts `required_tool_missing` at the dispatch rather than authoring the ramp serially in-session | blocker | wontfix |
+| user-pm | no degradation: a read-only project-axis overview through the host's shell and file tools; the dev-observatory hook stays additive (consulted only where the registry exists, one-line note where absent) | minor | accept |
+| user-shakedown | the autonomous closure loop, quick fixes with the narrowest test, and the zero-open termination check run natively; the recommended `/goal` arming is a Claude-window primitive reproduced as operator text - on this host the loop simply keeps driving in-session until the engine's check returns 0 | minor | accept |
+| user-uat | classification, the side-effect gate, and the mechanical tier run natively with background readiness probes; `--deep` is the core's own in-session labeled assessment; `--ui` delegation surfaces `required_tool_missing` where the judge is unavailable (`judge-motion` is Claude-native; `/judge-ui` halts at its vision-judge dispatch on this host) and the step lands in `Needs you` - never a self-viewed visual verdict | minor | accept |
+| user-walkthrough | no degradation: the operator-driven loop, primary-source answers with `file:line`, and the shared shakedown-engine ledger are conversational, shell, and file work that run unchanged | minor | accept |
+
+Disposition notes (Step 8 authoring triage):
+
+- The `wontfix` rows are host limitations, not defects to repair in Step 9: the missing
+  capability is the isolated fresh-context primitive itself, and each core involved
+  either documents no fallback or (user-debug) states an independence constraint a
+  single context cannot satisfy about itself. If a later M-step decides a documented
+  single-context mode is wanted for any of them, that is a CORE change with its own
+  review, never a wrapper edit.
+- The `accept` rows lose no gate: the afterparty sweep reports unavailable items as
+  results (its core's SEQUENCE-DON'T-REIMPLEMENT posture), user-uat's `--ui`
+  degradation is the core's own escalate-to-Human shape with the reason code named,
+  and every conversational gate runs verbatim.
+- With this cohort the authored roster equals the portable catalog (47/47); the
+  whole-catalog initial-list budget gate in
+  tests/package-integrity/test_codex_budgets.py now measures the real catalog a Codex
+  host serializes, and passes with the full 47-name list.
+
 ## Pre-M1 construction notes
 
 Not deltas - nothing has been observed on a real host yet. These are the two mappings the

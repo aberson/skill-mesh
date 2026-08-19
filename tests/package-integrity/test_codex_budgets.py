@@ -28,20 +28,22 @@ WHY THIS MEASURES THE PORTABLE CATALOG AND NOT THE CODEX RECORDS
 ---------------------------------------------------------------
 At Step 3 there are ZERO authored codex adapters, and at Step 4 there are five of a
 projected 47 (the rails ship first; Step 4 adds the pilot five, Steps 6-8 the cohorts --
-Step 6's Cohort B raised the authored roster to seventeen and Step 7's Cohort C to
-thirty-three, still short of the projected catalog until Step 8's Cohort D closes it).
-Summing over the codex records would therefore measure 0 characters -- and after Step 4
-still only about a tenth of the catalog -- against an 8,000 floor, and report a
-comfortable PASS that means nothing: a vacuous gate on the exact axis the plan flags as
-a live risk
+Step 6's Cohort B raised the authored roster to seventeen, Step 7's Cohort C to
+thirty-three, and Step 8's Cohort D closed it at the full 47). Summing over the codex
+records would therefore have measured 0 characters -- and after Step 4 still only about
+a tenth of the catalog -- against an 8,000 floor, and report a comfortable PASS that
+means nothing: a vacuous gate on the exact axis the plan flags as a live risk
 ("Initial-list budget (8,000 chars) with 47-54 skills | Catalog could truncate in
 Codex's skill list", codex-parity-delivery-plan.md:719).
 
 So the estimate is taken over the CODEX-ELIGIBLE catalog: the portable skills, which is
-precisely the set the cohort steps will author codex adapters for. That makes the gate
+precisely the set the cohort steps authored codex adapters for. That made the gate
 meaningful from Step 3 onward -- the plan's own words, "budget tests from Step 3 onward
 estimate serialization" -- and it makes the number MOVE when a description is edited,
-which is what turns it into an early warning rather than a formality.
+which is what turns it into an early warning rather than a formality. Since Step 8 the
+eligible and authored rosters COINCIDE at 47, so the same sum is now also a measurement
+of the real catalog a Codex host serializes; the basis stays eligibility-by-status
+regardless (see test_catalog_estimate_basis_is_eligibility_not_the_authored_roster).
 
 WHAT THIS GATE CANNOT DECIDE
 ----------------------------
@@ -110,14 +112,23 @@ def _load_manifest():
     return json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))
 
 
-def _codex_eligible_records():
-    """The skill records that will carry a codex adapter: the portable ones.
+def _codex_eligible_records(manifest=None):
+    """The skill records that carry a codex adapter: the portable ones.
 
     Provider-native skills are Claude-only and are excluded from dist/codex by the
     builder, so they never appear in a Codex catalog and must not be charged against
     its budget.
+
+    The membership predicate is ELIGIBILITY (`status == "portable"`), deliberately NOT
+    `"codex" in providers`. Since Step 8 the two select the same 47 records from the
+    committed manifest, so no assertion over real records can tell them apart any more
+    -- which is exactly why `manifest` is a parameter: the basis-pinning test feeds a
+    synthetic manifest where the two predicates disagree and proves this function
+    follows eligibility.
     """
-    return [s for s in _load_manifest()["skills"] if s["status"] == "portable"]
+    if manifest is None:
+        manifest = _load_manifest()
+    return [s for s in manifest["skills"] if s["status"] == "portable"]
 
 
 def _skill_metadata_serialization(name, description):
@@ -207,6 +218,15 @@ def test_whole_catalog_initial_list_estimate_is_under_the_unknown_context_floor(
     """
     total, sizes = _catalog_estimate()
     assert sizes, "no codex-eligible skills found -- this gate would be vacuous"
+    # Since Step 8 (Cohort D) the initial list IS the whole portable catalog: the full
+    # 47-name roster, every name backed by an authored codex adapter, serializes under
+    # the floor with no name dropped. Both halves are asserted -- the count AND the
+    # exact name set against the manifest's own portable roster -- so a record silently
+    # falling out of the estimate can never make the floor easier to fit.
+    portable_names = {s["name"] for s in _load_manifest()["skills"]
+                      if s["status"] == "portable"}
+    assert len(sizes) == 47
+    assert set(sizes) == portable_names
     assert _fits_under_floor(total), (
         f"Codex initial-list estimate {total} chars over {len(sizes)} skills exceeds "
         f"the {CATALOG_FLOOR}-char unknown-context floor by {total - CATALOG_FLOOR}. "
@@ -218,42 +238,46 @@ def test_whole_catalog_initial_list_estimate_is_under_the_unknown_context_floor(
                     sorted(sizes.items(), key=lambda kv: -kv[1])[:5]))
 
 
-def test_catalog_estimate_is_measured_over_the_projected_codex_catalog():
-    """The anti-vacuity guard, and the reason this suite is worth running at Step 3.
+def test_catalog_estimate_basis_is_eligibility_not_the_authored_roster():
+    """The anti-vacuity guard, re-pinned for the post-Step-8 catalog.
 
-    Summing over the AUTHORED codex records would be 0 chars today and would keep
-    reporting PASS while the real catalog grew underneath it. Pin the basis to the
-    portable roster so that substitution cannot happen silently: if someone rewrites
-    `_codex_eligible_records` to filter on `"codex" in providers`, this test reds.
+    Through Step 7 this test proved the basis was ELIGIBILITY by arithmetic on the real
+    manifest: the authored roster was a proper subset of the eligible one, so measuring
+    the wrong basis under-reported the estimate visibly. Step 8's Cohort D made the two
+    rosters coincide at 47, which is the situation the old assertion's own message
+    anticipated ("at that point pin the basis another way rather than dropping it") --
+    no arithmetic over real records can separate the predicates any more.
+
+    So the basis is pinned on a SYNTHETIC manifest where the predicates disagree: one
+    portable record with no authored codex adapter (legal: portability precedes
+    authoring for any future skill) and one provider-native record carrying neither.
+    Eligibility must include the not-yet-authored portable record -- a rewrite of
+    `_codex_eligible_records` to filter on `"codex" in providers` drops it and reds
+    here -- and must still exclude the native record, whose absence from dist/codex is
+    the builder's contract.
     """
     manifest = _load_manifest()
     eligible = {s["name"] for s in _codex_eligible_records()}
     portable = {s["name"] for s in manifest["skills"] if s["status"] == "portable"}
     assert eligible == portable
     assert len(eligible) == manifest["counts"]["portable"] == 47
-    # And the measured basis must be the PROJECTED catalog, not the AUTHORED one.
-    #
-    # At Step 3 that was spelled `counts["codex"] == 0`, which was the strongest form
-    # available while no adapter existed. Phase CP Step 4 authored the pilot five, so
-    # this is RELAXED -- as the assertion's own message instructed -- and NOT deleted.
-    # The invariant is unchanged: swapping `_codex_eligible_records` to filter on
-    # `"codex" in providers` must stay VISIBLE. Two things make it so: the authored
-    # roster is a PROPER subset of the eligible one, and the estimate it would produce
-    # is strictly smaller than the one this module reports.
-    authored = [s for s in manifest["skills"] if "codex" in s["providers"]]
-    assert {s["name"] for s in authored} <= eligible
-    assert 0 < len(authored) < len(eligible), (
-        f"{len(authored)} authored codex adapters vs {len(eligible)} eligible. When "
-        "every portable skill carries one the two bases coincide and this guard goes "
-        "vacuous -- at that point pin the basis another way rather than dropping it.")
+    # Since Step 8 every eligible record is also authored -- the pass-2 exit fact --
+    # and the coincidence is asserted so a dropped adapter cannot hide behind it.
+    authored = {s["name"] for s in manifest["skills"] if "codex" in s["providers"]}
+    assert authored == eligible
+    assert len(authored) == manifest["counts"]["codex"] == 47
+    # The synthetic-manifest pin: predicates disagree, eligibility must win.
+    synthetic = {"skills": [
+        {"name": "future-portable", "status": "portable", "description": "d",
+         "providers": {"claude": "x", "gpt": "y"}},
+        {"name": "native-only", "status": "provider-native", "description": "d",
+         "providers": {"claude": "x"}},
+    ]}
+    basis = {s["name"] for s in _codex_eligible_records(synthetic)}
+    assert basis == {"future-portable"}, (
+        "the estimate's membership predicate drifted off eligibility "
+        f"(status == portable): got {sorted(basis)}")
     total, sizes = _catalog_estimate()
-    authored_total = sum(
-        _utf8_len(_skill_metadata_serialization(s["name"], s["description"]))
-        for s in authored)
-    assert authored_total < total, (
-        "the estimate is being measured over the AUTHORED codex records rather than the "
-        "projected catalog, which under-reports the budget while adapters are still "
-        "being authored")
     assert len(sizes) == 47
     assert total > 0
 
@@ -317,10 +341,11 @@ def test_step6_cohort_is_authored_and_every_authored_record_fits_the_per_skill_c
     authored = {s["name"]: s for s in manifest["skills"] if "codex" in s["providers"]}
     missing = [n for n in STEP6_COHORT_B if n not in authored]
     assert not missing, f"Step 6 cohort skills missing a manifest codex entry: {missing}"
-    # 33 = the Step 4 pilot five + Cohort B's twelve + Cohort C's sixteen (Step 7,
-    # issue #124). Spelled, so the next cohort step must come here and state its new
-    # number.
-    assert len(authored) == manifest["counts"]["codex"] == 33
+    # 47 = the Step 4 pilot five + Cohort B's twelve + Cohort C's sixteen (Step 7,
+    # issue #124) + Cohort D's fourteen (Step 8, issue #125) -- the full portable
+    # catalog. Spelled, so any step that grows the roster must come here and state
+    # its new number.
+    assert len(authored) == manifest["counts"]["codex"] == 47
     offenders = []
     for name, rec in authored.items():
         size = _utf8_len(_skill_metadata_serialization(name, rec["description"]))
@@ -370,6 +395,51 @@ def test_step7_cohort_is_authored_and_every_authored_record_fits_the_per_skill_c
         + "\n  ".join(offenders))
 
 
+# Cohort D, the remainder of the portable catalog (Phase CP Step 8, issue #125) --
+# memory-distill, observatory-doctor, research-prospect, and the user-* conversational
+# family. SPELLED for the same reason as the two cohorts above: the sweep must grade
+# the step's actual roster, not whatever the manifest happens to declare.
+STEP8_COHORT_D = [
+    "memory-distill", "observatory-doctor", "research-prospect",
+    "user-afterparty", "user-brainstorm", "user-debug", "user-draft",
+    "user-gateway", "user-lavishify", "user-learn", "user-pm",
+    "user-shakedown", "user-uat", "user-walkthrough",
+]
+
+
+def test_step8_cohort_is_authored_and_the_catalog_is_closed():
+    """Phase CP Step 8 closes the authored roster at the portable catalog.
+
+    Same design as the two cohort sweeps above (the Step 6 sweep owns the spelled
+    total): the fourteen Cohort D adapters are really DECLARED (a codex.md on disk
+    without its manifest entry ships nothing), the three cohort rosters plus the pilot
+    are pairwise disjoint and together ARE the authored set exactly -- no stray
+    fifteenth adapter rode in with the cohort -- and every authored record fits the
+    per-skill cap individually.
+    """
+    manifest = _load_manifest()
+    authored = {s["name"]: s for s in manifest["skills"] if "codex" in s["providers"]}
+    missing = [n for n in STEP8_COHORT_D if n not in authored]
+    assert not missing, f"Step 8 cohort skills missing a manifest codex entry: {missing}"
+    assert not set(STEP8_COHORT_D) & set(STEP6_COHORT_B)
+    assert not set(STEP8_COHORT_D) & set(STEP7_COHORT_C)
+    # The pilot five are the only authored names no cohort list spells; naming them
+    # here makes the partition exact instead of merely disjoint.
+    pilot = {"lesson-harvest", "plan-review", "session-wrap", "task-handoff",
+             "user-orient"}
+    assert not pilot & set(STEP6_COHORT_B + STEP7_COHORT_C + STEP8_COHORT_D)
+    assert set(authored) == pilot | set(STEP6_COHORT_B) | set(STEP7_COHORT_C) \
+        | set(STEP8_COHORT_D)
+    offenders = []
+    for name, rec in authored.items():
+        size = _utf8_len(_skill_metadata_serialization(name, rec["description"]))
+        if size > PER_SKILL_CAP:
+            offenders.append(f"{name}: {size} > {PER_SKILL_CAP}")
+    assert not offenders, (
+        "an authored codex record exceeds the per-skill metadata cap:\n  "
+        + "\n  ".join(offenders))
+
+
 def test_codex_install_path_shape_is_pinned():
     """The path shape charged against the catalog budget.
 
@@ -400,6 +470,8 @@ def test_codex_install_path_shape_is_pinned():
     ("repo-sync", ["repo-sync", ".agents/skills/repo-sync/SKILL.md"]),
     # A Cohort C row (Phase CP Step 7), same rationale one cohort later.
     ("build-step", ["build-step", ".agents/skills/build-step/SKILL.md"]),
+    # A Cohort D row (Phase CP Step 8), closing the catalog at all 47.
+    ("user-debug", ["user-debug", ".agents/skills/user-debug/SKILL.md"]),
 ])
 def test_serialization_includes_name_description_and_path(name, expected_substrings):
     """The serialization must actually contain all three metered fields.

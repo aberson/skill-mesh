@@ -459,8 +459,8 @@ way round, since `pwsh` is absent on a 5.1-only machine. Also: an authenticated 
 ## Providers & installation
 
 Each skill has one provider-neutral behavior contract (`skills/<name>/core.md`) plus a thin per-host
-adapter; installing binds one adapter into that host's discovery layout. 47 of 50 skills run on both
-hosts; 3 are Claude-native (`claude-oauth-auth`, `context-slim`, `judge-motion`).
+adapter; installing binds one adapter into that host's discovery layout. 47 of 50 skills run on all
+three hosts; 3 are Claude-native (`claude-oauth-auth`, `context-slim`, `judge-motion`).
 
 | Provider | Host | Install target |
 |---|---|---|
@@ -469,7 +469,7 @@ hosts; 3 are Claude-native (`claude-oauth-auth`, `context-slim`, `judge-motion`)
 | Codex | OpenAI Codex CLI | `<install-home>/.agents/skills/<skill>/` |
 
 - **GPT discovery roots** — GitHub Copilot CLI discovers project skills from `.github/skills/`, `.agents/skills/`, and `.claude/skills/` (personal: `~/.copilot/skills/`); this package installs the GPT profile to `.github/skills/`, and every generated `SKILL.md` leads with a YAML frontmatter block (`name`, `description`). The originally-assumed project-relative `.copilot/skills` target is **retired** — it is not a Copilot discovery root (proven in Step 43).
-- **Codex** — a **five-skill pilot**, not the full catalog: `task-handoff`, `user-orient`, `lesson-harvest`, `plan-review`, `session-wrap` carry a `providers/codex.md` adapter and install to `.agents/skills/`. That is the same literal path Copilot already scans as an active alternate, so the root's presence is not evidence of which host wrote it. `tools/probe-codex-skills.ps1` is a read-only bring-up probe (effective home, root state, ledger). Because a third provider is now *declared*, `-Provider both` (claude+gpt, still the release default) is no longer a complete legacy-migration source — see [documentation/migration.md](documentation/migration.md).
+- **Codex** — the **full portable catalog**: all 47 portable skills carry a `providers/codex.md` adapter (grown from the five-skill pilot across the Phase CP cohorts) and install to `.agents/skills/`. That is the same literal path Copilot already scans as an active alternate, so the root's presence is not evidence of which host wrote it. `tools/probe-codex-skills.ps1` is a read-only bring-up probe (effective home, root state, ledger). Because a third provider is now *declared*, `-Provider both` (claude+gpt, still the release default) is no longer a complete legacy-migration source — see [documentation/migration.md](documentation/migration.md).
 - **Install** — see [Quick start](#quick-start). Flags: `-Uninstall`, `-Force`, `-Home`/`-Destination`, `-Provider`/`-Profile`.
 - **Auth** (a separate axis from selection) — Claude uses the host's own model (no key); GPT via GitHub Copilot sign-in (`gh auth login`), **no `OPENAI_API_KEY`** needed.
 - **Deep dive** — router auto-detection, the full auth/capability/exclusion matrices, and the selection/transport contract: [documentation/providers/](documentation/providers/README.md), [architecture.md](documentation/architecture.md) §5.

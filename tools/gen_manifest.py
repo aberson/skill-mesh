@@ -89,24 +89,32 @@ NATIVE = ["claude-oauth-auth", "context-slim", "judge-motion"]
 # Derivable from the tree exactly like PORTABLE/NATIVE, and CHECKED against it by
 # `derived_skill_sets()` on every run, so the spelled-out copy cannot drift.
 #
-# THE PILOT FIVE (Phase CP Step 4) PLUS COHORT B (Step 6, issue #123: the pipeline
-# family -- the remaining plan-*, repo-init/sync/update, and the task-handoff
-# adjacents user-wrap and user-project) PLUS COHORT C (Step 7, issue #124: the
-# build/review/skill/tier families -- the heaviest host-abstraction consumers).
-# Step 3 built the generation SURFACE with this list empty; Step 4 authored the
-# first five adapters and the cohorts follow in Steps 6-8, so this list GROWS
-# toward -- but is not yet equal to -- PORTABLE (Step 8's Cohort D closes the gap).
-# Spelled in the same sorted order the manifest emits, and re-derived from the tree
-# by `derived_skill_sets()` on every run, so a name added here without the matching
-# skills/<name>/providers/codex.md (or the reverse) raises instead of shipping.
+# THE FULL PORTABLE CATALOG since Phase CP Step 8. Step 3 built the generation
+# SURFACE with this list empty; Step 4 authored the pilot five, Step 6's Cohort B
+# (issue #123, the pipeline family) and Step 7's Cohort C (issue #124, the
+# build/review/skill/tier families) grew it to 33, and Step 8's Cohort D
+# (issue #125, the remaining 14: memory-distill, observatory-doctor,
+# research-prospect, and the user-* conversational family) closed the gap: every
+# portable skill now carries a codex adapter, so this list EQUALS PORTABLE by
+# value. It stays a SEPARATE spelled list anyway -- equality is a fact about
+# today's tree, not a definition (a future skill could land portable before its
+# codex adapter is authored), and collapsing the two would erase the axis the
+# comment above defines. Spelled in the same sorted order the manifest emits, and
+# re-derived from the tree by `derived_skill_sets()` on every run, so a name added
+# here without the matching skills/<name>/providers/codex.md (or the reverse)
+# raises instead of shipping.
 CODEX = [
     "build-phase", "build-queue", "build-step", "goblin-do", "goblin-suggest",
-    "judge-ui", "lesson-harvest", "plan-expedite", "plan-feature", "plan-init",
-    "plan-merge", "plan-redline", "plan-review", "plan-trim", "plan-wrap",
-    "repo-init", "repo-sync", "repo-update", "review-deep", "review-gauntlet",
+    "judge-ui", "lesson-harvest", "memory-distill", "observatory-doctor",
+    "plan-expedite", "plan-feature", "plan-init", "plan-merge", "plan-redline",
+    "plan-review", "plan-trim", "plan-wrap", "repo-init", "repo-sync",
+    "repo-update", "research-prospect", "review-deep", "review-gauntlet",
     "review-proof", "review-uat", "session-wrap", "skill-eval-setup",
     "skill-evolve", "skill-iterate", "task-handoff", "test-prune",
-    "tier-escalate", "tier-offload", "user-orient", "user-project", "user-wrap",
+    "tier-escalate", "tier-offload", "user-afterparty", "user-brainstorm",
+    "user-debug", "user-draft", "user-gateway", "user-lavishify", "user-learn",
+    "user-orient", "user-pm", "user-project", "user-shakedown", "user-uat",
+    "user-walkthrough", "user-wrap",
 ]
 
 # local-capable=Y rows of .claude/references/model-mapping.md (authoritative table).

@@ -72,7 +72,7 @@
     "provider_native": 3,
     "claude": 50,
     "gpt": 47,
-    "codex": 33,
+    "codex": 47,
     "local_capable": 24,
     "sub_agent": 16,
     "vision": 2,
@@ -427,7 +427,8 @@
       "core": "skills/memory-distill/core.md",
       "providers": {
         "claude": "skills/memory-distill/providers/claude.md",
-        "gpt": "skills/memory-distill/providers/gpt.md"
+        "gpt": "skills/memory-distill/providers/gpt.md",
+        "codex": "skills/memory-distill/providers/codex.md"
       },
       "capabilities": [
         "filesystem"
@@ -453,7 +454,8 @@
       "core": "skills/observatory-doctor/core.md",
       "providers": {
         "claude": "skills/observatory-doctor/providers/claude.md",
-        "gpt": "skills/observatory-doctor/providers/gpt.md"
+        "gpt": "skills/observatory-doctor/providers/gpt.md",
+        "codex": "skills/observatory-doctor/providers/codex.md"
       },
       "capabilities": [
         "filesystem"
@@ -779,7 +781,8 @@
       "core": "skills/research-prospect/core.md",
       "providers": {
         "claude": "skills/research-prospect/providers/claude.md",
-        "gpt": "skills/research-prospect/providers/gpt.md"
+        "gpt": "skills/research-prospect/providers/gpt.md",
+        "codex": "skills/research-prospect/providers/codex.md"
       },
       "capabilities": [
         "filesystem",
@@ -1160,7 +1163,8 @@
       "core": "skills/user-afterparty/core.md",
       "providers": {
         "claude": "skills/user-afterparty/providers/claude.md",
-        "gpt": "skills/user-afterparty/providers/gpt.md"
+        "gpt": "skills/user-afterparty/providers/gpt.md",
+        "codex": "skills/user-afterparty/providers/codex.md"
       },
       "capabilities": [
         "filesystem"
@@ -1181,7 +1185,8 @@
       "core": "skills/user-brainstorm/core.md",
       "providers": {
         "claude": "skills/user-brainstorm/providers/claude.md",
-        "gpt": "skills/user-brainstorm/providers/gpt.md"
+        "gpt": "skills/user-brainstorm/providers/gpt.md",
+        "codex": "skills/user-brainstorm/providers/codex.md"
       },
       "capabilities": [
         "filesystem",
@@ -1208,7 +1213,8 @@
       "core": "skills/user-debug/core.md",
       "providers": {
         "claude": "skills/user-debug/providers/claude.md",
-        "gpt": "skills/user-debug/providers/gpt.md"
+        "gpt": "skills/user-debug/providers/gpt.md",
+        "codex": "skills/user-debug/providers/codex.md"
       },
       "capabilities": [
         "filesystem"
@@ -1234,7 +1240,8 @@
       "core": "skills/user-draft/core.md",
       "providers": {
         "claude": "skills/user-draft/providers/claude.md",
-        "gpt": "skills/user-draft/providers/gpt.md"
+        "gpt": "skills/user-draft/providers/gpt.md",
+        "codex": "skills/user-draft/providers/codex.md"
       },
       "capabilities": [
         "filesystem"
@@ -1260,7 +1267,8 @@
       "core": "skills/user-gateway/core.md",
       "providers": {
         "claude": "skills/user-gateway/providers/claude.md",
-        "gpt": "skills/user-gateway/providers/gpt.md"
+        "gpt": "skills/user-gateway/providers/gpt.md",
+        "codex": "skills/user-gateway/providers/codex.md"
       },
       "capabilities": [
         "filesystem"
@@ -1286,7 +1294,8 @@
       "core": "skills/user-lavishify/core.md",
       "providers": {
         "claude": "skills/user-lavishify/providers/claude.md",
-        "gpt": "skills/user-lavishify/providers/gpt.md"
+        "gpt": "skills/user-lavishify/providers/gpt.md",
+        "codex": "skills/user-lavishify/providers/codex.md"
       },
       "capabilities": [
         "filesystem"
@@ -1307,7 +1316,8 @@
       "core": "skills/user-learn/core.md",
       "providers": {
         "claude": "skills/user-learn/providers/claude.md",
-        "gpt": "skills/user-learn/providers/gpt.md"
+        "gpt": "skills/user-learn/providers/gpt.md",
+        "codex": "skills/user-learn/providers/codex.md"
       },
       "capabilities": [
         "filesystem",
@@ -1361,7 +1371,8 @@
       "core": "skills/user-pm/core.md",
       "providers": {
         "claude": "skills/user-pm/providers/claude.md",
-        "gpt": "skills/user-pm/providers/gpt.md"
+        "gpt": "skills/user-pm/providers/gpt.md",
+        "codex": "skills/user-pm/providers/codex.md"
       },
       "capabilities": [
         "filesystem"
@@ -1409,7 +1420,8 @@
       "core": "skills/user-shakedown/core.md",
       "providers": {
         "claude": "skills/user-shakedown/providers/claude.md",
-        "gpt": "skills/user-shakedown/providers/gpt.md"
+        "gpt": "skills/user-shakedown/providers/gpt.md",
+        "codex": "skills/user-shakedown/providers/codex.md"
       },
       "capabilities": [
         "filesystem"
@@ -1435,7 +1447,8 @@
       "core": "skills/user-uat/core.md",
       "providers": {
         "claude": "skills/user-uat/providers/claude.md",
-        "gpt": "skills/user-uat/providers/gpt.md"
+        "gpt": "skills/user-uat/providers/gpt.md",
+        "codex": "skills/user-uat/providers/codex.md"
       },
       "capabilities": [
         "filesystem"
@@ -1461,7 +1474,8 @@
       "core": "skills/user-walkthrough/core.md",
       "providers": {
         "claude": "skills/user-walkthrough/providers/claude.md",
-        "gpt": "skills/user-walkthrough/providers/gpt.md"
+        "gpt": "skills/user-walkthrough/providers/gpt.md",
+        "codex": "skills/user-walkthrough/providers/codex.md"
       },
       "capabilities": [
         "filesystem"
