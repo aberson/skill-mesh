@@ -669,6 +669,15 @@ cohorts depend on — a sequencing constraint, not a conditional one.
   advisory blocks match the convention's 8 points verbatim where the convention locks
   wording; delta log notes the codex-host behavior (silent skip without utilities root)
 - **Depends on:** 2, 3, 8
+- **Status:** BLOCKED (2026-08-20) — invalid premise, not buildable as written. The "16
+  modified `.github/skills/*/core.md`" this step ports from carry ZERO advisory-call
+  content: that diff is commit `af7a867`, 38 lines of `_shared/` relative-link repoints
+  (the Step 66 emit-time repoint), and 0 of all 47 installed cores mention
+  `DEV_UTILITIES_ROOT`. Utility-hookup Steps 1-3 (the DONE ones) touched no skill file.
+  The convention explicitly disclaims owning a hookup map (§5: "This doc owns only the
+  shared shape; the map owns the moments"); the real map is
+  `docs/investigations/utility-hookup/README.md` §3 and ratifies a DIFFERENT 11 skills,
+  overlapping this step's 16 by only 3. Evidence + 5 scope options: issue #128.
 
 <!-- redline-applied: 2026-08-16 -->
 ### Step 12: Make the wiring observatory-visible
@@ -693,6 +702,14 @@ cohorts depend on — a sequencing constraint, not a conditional one.
   against the canonical cores), OR a named cross-plan dependency on dev-observatory Step 43
   is recorded with exactly what M4 will and won't be able to see
 - **Depends on:** 11
+- **Status:** BLOCKED (2026-08-20) — blocked by its declared dependency on Step 11. Step
+  12's first Done-when branch ("the wiring for the 16 skills is resolvable through an
+  observatory surface") is unsatisfiable by construction while no wiring exists. Its
+  second branch (record a named cross-plan dependency) stays satisfiable read-only, but
+  what M4 "will and won't be able to see" depends on which Step 11 option the operator
+  picks, so completing it now would record a conclusion the operator has not chosen. The
+  cross-plan dependency discovered while investigating Step 11 is recorded in
+  `documentation/parity-deltas.md` § Phase CP pass-3 blocker.
 
 ### Manual Steps
 (These run after the corresponding /build-phase pass completes. Operator drives.)

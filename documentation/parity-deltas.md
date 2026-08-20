@@ -439,3 +439,46 @@ contradict them rather than rediscover them.
    consequence, and the accept-vs-guard policy was decided on that evidence:
    accept, with the reason and the upgrade re-check trigger recorded in the
    Deltas rows above.
+
+---
+
+## Phase CP pass-3 blocker — Step 11 invalid premise, and the cross-plan dependency it exposed
+
+**Recorded 2026-08-20 during `/build-phase --resume 10` (Steps 9 and 10 both DONE and green).**
+Step 11 (#128) and Step 12 (#129) are `Status: BLOCKED`. This section is the delta-log record
+of why, and of the cross-plan dependency the investigation surfaced. It records facts only —
+the scope decision is the operator's and is offered as options on #128.
+
+### What is actually true about the utility advisory-call wiring
+
+| Claim in Step 11's problem statement | Evidence | Verdict |
+|---|---|---|
+| "Steps 1-3 DONE wired advisory calls into 16 installed `.github/skills/*/core.md`" | That diff is commit `af7a867`: 38 content lines, **all** `_shared/` relative-link repoints (`../../_shared/x` -> `../_shared/x`, the Step 66 emit-time repoint). Zero mention `DEV_UTILITIES_ROOT` or any of the 7 utilities. | **FALSE** |
+| Those installed copies drifted and a reinstall would overwrite the wiring | `git status --porcelain -- .github/skills` is clean, and the files already equal what the canonical sources emit. There is no drift to reconcile. | **FALSE** |
+| The advisory-call convention is the owner of "the authoritative hookup map" | The convention disclaims it at §5: *"This doc owns only the shared shape; the map owns the moments."* It owns the 8-point shape and §2's 7-row CLI call-shape table, nothing more. | **FALSE** |
+| The 16-skill working set | 13 of the 16 appear **zero** times in both owner documents. The ratified set is a different 11 skills; overlap is 3 (plan-feature, plan-review, repo-update). | **UNRATIFIED** |
+| Done-when: "advisory blocks match the convention's 8 points verbatim" | The convention requires each core to carry **a one-line citation, never a copy** of the convention text. Only §2's CLI token/option order is verbatim-locked. A block-presence test would gate the wrong artifact. | **MIS-STATED** |
+
+Current wiring state, verified: **0** of 47 installed `core.md` and **0** canonical
+`skills/*/core.md` contain `DEV_UTILITIES_ROOT`. A prior dev-session task-state record
+independently reached the same conclusion ("wired into ZERO skill cores — verified").
+
+### Cross-plan dependency (the Step 12 record, as far as it can honestly go)
+
+- The real hookup map is `dev/docs/investigations/utility-hookup/README.md` §3. Its anchors
+  still point at the legacy `.claude/skills-gpt/<skill>/SKILL-core.md` layout and must be
+  re-resolved onto `skill-mesh/skills/<name>/core.md` before any wiring step can execute.
+- `dev/documentation/utility-hookup-plan.md` decision **D12** already assigns these exact
+  edits to `skill-mesh/skills/<name>/core.md`. Its Steps 6-23 and Phase CP Step 11 are
+  therefore **the same work, currently double-owned across two plans.** One owner must be
+  chosen before either executes.
+- Execution on either plan is gated behind utility-hookup **Step 5** (`Type: wait`), which
+  persists `DEV_UTILITIES_ROOT` and has never run. Measured 2026-08-20:
+  `DEV_UTILITIES_ROOT` is unset at Process, User **and** Machine scope.
+- **Consequence for M4.** With the variable unset, only the fails-open half is testable:
+  absent utilities root -> zero behavior change. The advisory-line half — M4's row *"one
+  wired skill run with `DEV_UTILITIES_ROOT` set shows its advisory line"* — is **unrunnable
+  in this phase** regardless of which scope option is chosen, until Step 5 runs.
+- Step 12's observatory-visibility question is untouched by this: with no wiring in any core,
+  there is nothing for a registry entry or a scrape to surface. Its first Done-when branch is
+  unsatisfiable by construction, not merely unbuilt.
