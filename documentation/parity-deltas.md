@@ -75,11 +75,16 @@ solely in the M-step verdicts list above.
 One row per observed Claude-vs-Codex behavioral difference.
 
 - **skill** - the skill the difference was observed in, or `*` for a catalog-wide one.
-- **delta** - what Codex did differently, stated as an observation rather than a theory.
+- **delta** - what Codex did differently, stated as an observation rather than a theory;
+  quotations and line anchors are as-observed at triage.
 - **severity** - `blocker` (the skill cannot do its job on Codex) | `major` (a gate or an
   output contract is affected) | `minor` (cosmetic or ergonomic).
 - **disposition** - `accept` (documented difference, no work) | `fix` (repair in Step 9,
   which reads the `fix` rows from M2) | `wontfix` (host limitation, recorded and left).
+  Cells are frozen as observed at triage and stay bare tokens; when a `fix` row is later
+  resolved or re-dispositioned, the cell keeps its token and the resolution of record
+  lives in a `###` section below (see "M2 disposition of the carried-over M1 `fix` row"
+  and "Step 9 resolution of the F1 `fix` row").
 
 | skill | delta | severity | disposition |
 |---|---|---|---|
@@ -162,10 +167,12 @@ phantom working-tree diff could confound the review.
 Run B's accuracy is proven exactly rather than by hunk-counting: stripping the 21 added
 fields and 21 markers from the result yields a file byte-identical to the pre-run original.
 
-The row is re-dispositioned `fix` -> `accept`. This is now a non-reproduction across BOTH
-small-N and M1-scale inputs, materially stronger than the small-N-only evidence the first M2
-write-up had. What Run B DID surface is a separate, narrower defect - intermittent marker
-under-stamping - filed as F1 in the findings file.
+The row's disposition of record is now `accept` (the table cell above stays frozen at its
+as-observed `fix` token per the Deltas legend; this section carries the re-disposition).
+This is now a non-reproduction across BOTH small-N and M1-scale inputs, materially
+stronger than the small-N-only evidence the first M2 write-up had. What Run B DID surface
+is a separate, narrower defect - intermittent marker under-stamping - filed as F1 in the
+findings file.
 
 ### M2 open threads
 
@@ -178,6 +185,64 @@ under-stamping - filed as F1 in the findings file.
 - **`documentation/providers/README.md` capability matrix** still has no Codex column. M2
   produced per-skill behavior for only the four chain skills, which is not enough to fill
   it; Step 9 remains the intended source.
+
+### Step 9 resolution of the F1 `fix` row (2026-08-19)
+
+The one `fix`-severity M2 row (F1, filed in
+`documentation/findings/codex-parity-m2-deltas.md`; issue #126) is resolved as a
+root-cause core change, not a restatement of the rule that was already being violated:
+
+- **Chosen resolution: option 1 - one marker per step touched.** The per-fix rule was
+  itself the compliance hazard: N identical stacked `<!-- autofix-applied: YYYY-MM-DD -->`
+  lines are indistinguishable from one another and carry no per-fix information, so a
+  writer naturally dedupes them - Run A's "3 fixes, 1 marker" is exactly the shape the old
+  rule invites. One-marker-per-step is trivially idempotent (skip the stamp when the
+  heading already carries one) and leaves the byte format unchanged, so every committed
+  date-only marker in this repository remains valid to every reader.
+- **Single owner.** `skills/plan-review/core.md` § "Autofix marker" now owns format,
+  granularity, and idempotency; `skills/plan-wrap/core.md` cites it instead of restating.
+  Both cores' "per-finding-class, not per-step" re-run sentences were reconciled: fix
+  idempotency stays keyed to the plan's actual state, and markers still never exempt a
+  step from any check.
+- **`/plan-expedite` reader re-checked - two prose lines amended.** Its core carries no
+  literal marker regex, and the literal regex
+  `<!-- autofix-applied: \d{4}-\d{2}-\d{2} -->` the writer cores pin is byte-identical
+  before and after. Its resume detection never reads the markers at all - it reads the
+  `.plan-expedite-state` JSON file - so no marker-reading mechanism needed re-verifying;
+  the owner section now states that no in-tree reader greps the markers to decide
+  anything today (the halt template only reports what they say). The two
+  prose consumers of the old per-fix semantics were amended to the new granularity: the
+  "When to use" bullet no longer attributes sub-skill idempotency to the markers
+  (idempotency is keyed to the plan's actual state), and the halt template's Plan-state
+  line now cites which STEPS autofix touched per the markers, sourcing the per-fix
+  enumeration from the sub-skill's "Auto-applied N fixes" report block.
+- **Deliberate three-provider output change.** The three amended cores (plan-review,
+  plan-wrap, plan-expedite) regenerate into all three providers' distributions -
+  dist/claude, dist/gpt, and dist/codex carry the new wording at the next build. This is
+  intended: per the F1 attribution check, marker granularity is core-owned and identical
+  for every host, so the fix lands once in the cores and nowhere in the adapters. No
+  `providers/*.md` file was edited. This bullet is the F1 row's "delta log says
+  otherwise" record for Step 9's byte-identical constraint (the cell stays frozen per
+  the Deltas legend).
+- **Legacy top-level packages deliberately unchanged.** `plan-review/SKILL.md`,
+  `plan-wrap/SKILL.md`, and `plan-expedite/SKILL.md` retain the pre-2026-08-19 per-fix
+  marker language (and the superseded marker-keyed skip-all re-run rule) per the
+  deprecation-window policy in `CLAUDE.md` - the legacy tree is not canonical, not a
+  build input, and never installed, so no consumer tree receives that wording. Recorded
+  so a later diff of the two trees reads the divergence as policy, not as an incomplete
+  fix.
+- **Mechanical single-owner guard added.**
+  `tests/package-integrity/test_autofix_marker_single_owner.py` sweeps every markdown
+  file under `skills/` (cores and provider adapters alike) and `_shared/` and asserts
+  the literal marker regex lives in exactly one of them - `skills/plan-review/core.md`,
+  inside its `### Autofix marker` section, alongside the Format bullet - and that
+  `skills/plan-wrap/core.md` still cites the owner by relative path and section name
+  while carrying neither the literal regex nor the retired per-fix phrasings (the cite
+  site's bounded minimum - date shape, placement, one-new-marker rule - is deliberate
+  and stays; the guard polices the regex and those canary phrases, not paraphrase).
+  Silent re-duplication into any core, adapter, or `_shared/` doc, the definition
+  leaving the cited section, or a dropped citation now fails CI. The legacy top-level
+  `*/SKILL.md` packages stay out of the sweep per the deprecation-window policy above.
 
 ## Step 6 authoring deltas (Cohort B - authored by construction, not host-observed)
 

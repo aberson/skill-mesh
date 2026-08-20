@@ -35,7 +35,7 @@ This skill's whole reason to exist is that the operator does not want to type `/
 
 - After `/plan-init` or `/plan-feature` produces a plan.md, before `/build-phase` runs.
 - When you want one command instead of remembering plan-review -> plan-wrap -> repo-sync -> session-wrap in order.
-- Re-running is safe: each sub-skill is idempotent on already-applied state (per autofix-applied markers from Steps 7-8) and `/plan-expedite` skips already-completed sub-skills (per `.plan-expedite-state` resume detection).
+- Re-running is safe: each sub-skill is idempotent on the plan's actual state (the autofix-applied markers from Steps 7-8 record which steps autofix touched; they never exempt a step from a check — per [`../plan-review/core.md`](../plan-review/core.md) § "Autofix marker") and `/plan-expedite` skips already-completed sub-skills (per `.plan-expedite-state` resume detection).
 
 ## When NOT to use
 
@@ -229,7 +229,7 @@ Write the following template verbatim on any sub-skill non-success exit:
 ```text
 /plan-expedite halted at: <sub-skill name>
 Reason: <captured stderr / verdict line>
-Plan state: <unchanged | partially autofixed (cite which fixes applied per the autofix-applied markers in plan.md)>
+Plan state: <unchanged | partially autofixed (cite which steps autofix touched per the autofix-applied markers in plan.md; the per-fix enumeration is the sub-skill's "Auto-applied N fixes" report block)>
 GitHub state: <unchanged | issues created/updated (cite count if repo-sync ran)>
 To resume: fix the cited issue, then re-run /plan-expedite --plan <path>
            (already-completed sub-skills are skipped via state inference from .plan-expedite-state)

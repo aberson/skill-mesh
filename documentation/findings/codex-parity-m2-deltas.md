@@ -36,7 +36,21 @@ taken from the report. For Run B the proof is exact: stripping the 21 added fiel
 
 ## F1 — `plan-review` intermittently stamps fewer `autofix-applied` markers than the fixes it reports
 
-**Severity:** major (an output contract is affected) · **Disposition:** fix
+**Severity:** major (an output contract is affected) · **Disposition:** fix — RESOLVED 2026-08-19 (see banner below)
+
+> **RESOLVED 2026-08-19 (Step 9, issue #126).** Chosen resolution: option 1 — one marker
+> per step touched, byte format unchanged. The normative marker contract (format,
+> granularity, idempotency) is now single-owned by `skills/plan-review/core.md`
+> § "Autofix marker"; `plan-wrap`'s core cites it, restating only a bounded cite-site
+> minimum and never the literal regex, and
+> `/plan-expedite` pins no literal regex (the regex the writer cores pin is
+> byte-identical) — its two prose references to the old per-fix semantics were amended to
+> the new granularity. Disposition and rationale recorded in
+> `documentation/parity-deltas.md` § "Step 9 resolution of the F1 `fix` row (2026-08-19)".
+> This file stays intact as the audit record; line references, quotations, and mechanism
+> claims below are as-observed against the pre-fix cores at `979aff5` and are
+> deliberately not updated (the "Why it matters" premise that `/plan-expedite` greps the
+> markers was disproved at Step 9 — see the delta log).
 
 **What the core says.** [`skills/plan-review/core.md:513`](../../skills/plan-review/core.md#L513)
 — "**Each fix applied** adds an HTML comment `<!-- autofix-applied: YYYY-MM-DD -->`

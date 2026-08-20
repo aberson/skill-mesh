@@ -510,9 +510,14 @@ followed by "None."
 
 **Present-but-vague Done-when (surfaced Significant Gap — NOT autofixed).** Extends the missing-Done-when check above: a `Done when:` that is present but non-falsifiable / vague (e.g. `"it works"`, `"done"`) or not mapped to the step's `Problem:` is a **Significant Gap** surfaced for operator judgment — never auto-rewritten (the wording is theirs). EXEMPT the deferred sentinels in `<repo>/_shared/step-authoring.md` §3 (they mean "not yet filled in", not "vague") — those stay silent in both modes.
 
-Each fix applied adds an HTML comment `<!-- autofix-applied: YYYY-MM-DD -->` immediately above the modified step heading in plan.md. `/plan-expedite` uses these markers for resume detection; the marker records prior autofix activity but does not exempt the step from later checks.
+### Autofix marker
 
-The `YYYY-MM-DD` portion is strict ISO 8601 calendar-date format (no time, no timezone, no whitespace, e.g., `2026-05-18`). Both `/plan-review --autofix` (when writing) and `/plan-expedite` (when grepping for resume detection) must match the literal regex `<!-- autofix-applied: \d{4}-\d{2}-\d{2} -->`.
+**This section is the ONE owner of the autofix-marker contract** — format, granularity, and idempotency. [`../plan-wrap/core.md`](../plan-wrap/core.md) applies the same contract by citation and deliberately does not restate it; a change here is a change for both writers and for any reader of the markers.
+
+- **Format:** the HTML comment `<!-- autofix-applied: YYYY-MM-DD -->`. The `YYYY-MM-DD` portion is strict ISO 8601 calendar-date format (no time, no timezone, no whitespace, e.g., `2026-05-18`). Both writers (`/plan-review --autofix`, `/plan-wrap --autofix`) and any reader that greps for prior autofix activity must match the literal regex `<!-- autofix-applied: \d{4}-\d{2}-\d{2} -->`. (No in-tree reader greps the markers to DECIDE anything today: `/plan-expedite`'s resume detection reads its `.plan-expedite-state` file; its halt template is the only in-tree consumer, and it only reports what the markers say.)
+- **Granularity:** one marker per step touched, never one per fix. A run that applies any number of fixes to a step leaves exactly one marker immediately above that step's heading in plan.md, and never adds a second — see **Idempotency** for markers a prior run already wrote. Never stack duplicate markers: N identical adjacent copies are indistinguishable from one another and carry no per-fix information. The per-fix count and enumeration live solely in the report's "Auto-applied N fixes" block, which is the single source for how much autofix did.
+- **Idempotency:** before stamping, check immediately above the step heading; if a marker (any date) is already there, add nothing. The date is therefore the day the step was FIRST marked — later runs never refresh it. Markers written by earlier runs — including stacked per-fix markers on plans autofixed before 2026-08-19, when the rule was one marker per applied fix — are left untouched and remain valid to every reader.
+- **What it means:** the marker records that autofix has touched the step — which steps were touched, never which fixes applied (that enumeration lives in the report block, per **Granularity**). The marker carries no fix-class identity and does not exempt the step from later checks (see **Re-run behavior**).
 
 ### `--no-autofix` opt-out
 
@@ -545,7 +550,7 @@ plan-review's next-steps here (`/plan-wrap`, `/repo-sync`) are readiness pointer
 
 ### Re-run behavior
 
-`/plan-review --autofix` is **idempotent** on already-applied fixes. Autofix markers are per-finding-class, not per-step. A step with a generic `autofixed` marker is NOT exempt from new finding classes on subsequent runs. Plan-review must re-examine all steps regardless of prior autofix markers. For each finding class, skip its write only when that specific defect is already resolved; continue running every other check and applying any newly relevant fix class.
+`/plan-review --autofix` is **idempotent** on already-applied fixes. Idempotency is keyed to the plan's actual state, never to markers: a step carrying an `autofix-applied` marker (see **Autofix marker**) is NOT exempt from any finding class on subsequent runs. Plan-review must re-examine all steps regardless of prior autofix markers. For each finding class, skip its write only when that specific defect is already resolved; continue running every other check and applying any newly relevant fix class.
 
 Re-running on a plan with no new defects emits "Auto-applied 0 fixes. Plan is ready for `/plan-wrap` and `/repo-sync`." (the N=0/M=0 trailing line).
 
