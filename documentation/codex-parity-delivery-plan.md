@@ -1,7 +1,7 @@
 # Codex parity delivery plan (Phase CP)
 
 - **Written:** 2026-08-16
-- **Status:** IN FLIGHT (pass 2 complete) — repo-sync done (umbrella #117, steps #118–#133). Steps 1–5 DONE (pass 1); **Step M1 PASSED** 2026-08-18 (#130), which released the M1-conditional cohorts; Steps 6/7/8 DONE 2026-08-18/19 (pass 2, #123/#124/#125), closing the codex adapter catalog at 47/47 portable skills. The migrator carries zero Phase CP delta by the option-3 decision and its hardening is #138. Next: operator **Step M2** (#131) — end-to-end workflow parity pass; its findings file `documentation/findings/codex-parity-m2-deltas.md` is what releases Step 9, and pass 3 (Steps 9/10/11/12) follows. Step 10 is the one cohort-family step still unrun; it is a pass-3 step, not a pass-2 one. Plan-review PASS / plan-redline accepted (P1–P9, D-CP1–D-CP15) / plan-wrap READY were all 2026-08-16.
+- **Status:** IN FLIGHT (all automated build steps complete) — repo-sync done (umbrella #117, steps #118–#133). Steps 1–5 DONE (pass 1); **Step M1 PASSED** 2026-08-18 (#130); Steps 6/7/8 DONE 2026-08-18/19 (pass 2, #123/#124/#125), closing the codex adapter catalog at 47/47 portable skills; **Step M2 DONE — PASS** 2026-08-19 (#131); **Steps 9 and 10 DONE** 2026-08-19/20 (pass 3, #126/#127), taking the catalog to 57 skills / 54 portable. **Step 11 is DROPPED** (2026-08-20, operator decision) — its premise was disproven and the work is re-owned by `dev/documentation/utility-hookup-plan.md` Steps 6–23 per that plan's D12 (#128); **Step 12's** disposition follows from it (#129). Pass 3 therefore ran as `--steps 9,10`. The migrator carries zero Phase CP delta by the option-3 decision and its hardening is #138. **Next: operator Steps M3 and M4.** Plan-review PASS / plan-redline accepted (P1–P9, D-CP1–D-CP15) / plan-wrap READY were all 2026-08-16; D-CP13 and D-CP14 had their factual rationale corrected 2026-08-20 (the decisions themselves stand).
 - **Issue phase label:** `Phase CP Step N:` (fresh namespace; the Goal NP parity plan's Steps 1–41 were never repo-synced, so no collisions; next issues mint at #117+)
 - **Supersedes:** the Goal NP two-approval publication path for delivery sequencing. The
   detailed parity plan (`documentation/native-claude-codex-skill-parity-plan.md`, parity branch)
@@ -223,14 +223,31 @@ calls land in `skills/<skill>/core.md` (so all three providers generate them), f
 8-point convention owned by `dev/.claude/references/advisory-call-convention.md`: advisory,
 fails open, NEVER blocks; tools root from `DEV_UTILITIES_ROOT`; absent → silent skip. On a
 Codex host without the utilities the calls vanish harmlessly — no host-specific forks.
-Alternative rejected: keeping the wiring as hand-edits to installed copies (generated-file
-headers say those are overwritten on every reinstall; the drift is exactly what Step 11
-reconciles upstream).
+Alternative rejected: keeping the wiring as hand-edits to installed copies — generated-file
+headers say those are overwritten on every reinstall.
 
-**D-CP14 — Live-home reinstall is operator-gated (M4), consistent with D-CP2.** Rolling the
-wired cores out over the existing live install overwrites the drifted installed copies —
-correct once Step 11 has adopted the drift upstream, but it is a real consumer-home write,
-so it happens in M4 by your hand, on the Step-2-hardened installer, ledger-verified.
+> **Correction (2026-08-20).** The rejected-alternative clause originally read "the drift is
+> exactly what Step 11 reconciles upstream." **No such drift ever existed.** The 16 modified
+> `.github/skills/*/core.md` files it referred to are commit `af7a867` — 38 content lines,
+> every one a `_shared/` relative-link repoint — and an exhaustive coding-root search finds
+> `DEV_UTILITIES_ROOT` in 10 files, all of them planning or convention documents and none a
+> skill core. The design decision above stands on its own merits and is unchanged; only its
+> factual rationale was wrong. Per operator decision 2026-08-20, the wiring is owned by
+> `dev/documentation/utility-hookup-plan.md` (its D12), not by this plan. Evidence:
+> `documentation/parity-deltas.md` § Phase CP pass-3 blocker; issue #128.
+
+**D-CP14 — Live-home reinstall is operator-gated (M4), consistent with D-CP2.** Rolling
+canonical cores out over the existing live install is a real consumer-home write, so it
+happens in M4 by your hand, on the Step-2-hardened installer, ledger-verified.
+
+> **Correction (2026-08-20).** This decision originally justified the gate as "overwrites the
+> drifted installed copies — correct once Step 11 has adopted the drift upstream." That
+> rationale is void: there are no drifted installed copies (see the D-CP13 correction above;
+> `git status --porcelain -- .github/skills` is clean and those files already equal what the
+> canonical sources emit). **The operator gate itself stands** — it is warranted by D-CP2
+> alone, because any write into a live consumer home is the operator's call. What changes is
+> that the reinstall is no longer sequenced behind Step 11, and no longer risks destroying
+> anything.
 
 **D-CP15 — Observatory visibility is UAT evidence, not new machinery.** M4's check is that
 the wiring is visible through dev-observatory's existing/planned surfaces (mesh-lens,
@@ -247,7 +264,15 @@ decision, not a predicate — Steps 11–12 stay unconditional per P9, and a bar
 |---|---|---|
 | 1 | `/build-phase --plan documentation/codex-parity-delivery-plan.md --steps 2,3,4,5` | operator M1 |
 | 2 | `/build-phase --plan documentation/codex-parity-delivery-plan.md --steps 6,7,8` | operator M2 |
-| 3 | `/build-phase --plan documentation/codex-parity-delivery-plan.md --steps 9,10,11,12` | operator M3 + M4 |
+| 3 | `/build-phase --plan documentation/codex-parity-delivery-plan.md --steps 9,10` | operator M3 + M4 |
+
+> **Pass 3 narrowed to `--steps 9,10` on 2026-08-20 (operator decision).** Step 11 is
+> `DROPPED` — re-owned by `dev/documentation/utility-hookup-plan.md` Steps 6–23, whose D12
+> already assigned those exact edits, after its premise was disproven (issue #128). Step 12's
+> disposition follows from Step 11 and is recorded on its own block. Both were BLOCKED, not
+> built; nothing was invented to close them. The paragraph above about Steps 11–12 staying
+> unconditional per P9 is retained as the historical rationale for why they carried no
+> `Condition:` — it no longer describes a runnable pass.
 
 **Steps 4 and 5 are gated together at the pass boundary (operator-approved 2026-08-17).** Each
 still gets its own issue trail (#121, #122) and its own `Status: DONE` line, but their
@@ -669,15 +694,21 @@ cohorts depend on — a sequencing constraint, not a conditional one.
   advisory blocks match the convention's 8 points verbatim where the convention locks
   wording; delta log notes the codex-host behavior (silent skip without utilities root)
 - **Depends on:** 2, 3, 8
-- **Status:** BLOCKED (2026-08-20) — invalid premise, not buildable as written. The "16
-  modified `.github/skills/*/core.md`" this step ports from carry ZERO advisory-call
-  content: that diff is commit `af7a867`, 38 lines of `_shared/` relative-link repoints
-  (the Step 66 emit-time repoint), and 0 of all 47 installed cores mention
-  `DEV_UTILITIES_ROOT`. Utility-hookup Steps 1-3 (the DONE ones) touched no skill file.
-  The convention explicitly disclaims owning a hookup map (§5: "This doc owns only the
-  shared shape; the map owns the moments"); the real map is
-  `docs/investigations/utility-hookup/README.md` §3 and ratifies a DIFFERENT 11 skills,
-  overlapping this step's 16 by only 3. Evidence + 5 scope options: issue #128.
+- **Status:** DROPPED (2026-08-20) — re-owned by `dev/documentation/utility-hookup-plan.md`
+  Steps 6–23 per operator decision. **Not deferred and not failed: removed from this plan's
+  scope, because this plan never had authority over it.** Two reasons. (1) The step's premise
+  was false — the "16 modified `.github/skills/*/core.md`" it ports from carry ZERO
+  advisory-call content (that diff is commit `af7a867`, 38 lines of `_shared/` relative-link
+  repoints), and an exhaustive coding-root search finds `DEV_UTILITIES_ROOT` in 10 files, all
+  planning or convention documents, none a skill core. (2) utility-hookup decision **D12
+  already assigns these exact edits** to `skill-mesh/skills/<name>/core.md`, so this step and
+  that plan's Steps 6–23 were the same work double-owned; one owner now holds it. Utility
+  hookup is also not codex-parity work. Evidence: `documentation/parity-deltas.md` § Phase CP
+  pass-3 blocker; issue #128. Prerequisite for whoever executes it there: the real map is
+  `dev/docs/investigations/utility-hookup/README.md` §3 (a DIFFERENT 11 skills, overlapping
+  this step's 16 by only 3), its anchors need re-resolving onto the live cores, and execution
+  stays gated behind utility-hookup Step 5 (`Type: wait`), which persists `DEV_UTILITIES_ROOT`
+  and has not run — the operator deliberately deferred it on 2026-08-20.
 
 <!-- redline-applied: 2026-08-16 -->
 ### Step 12: Make the wiring observatory-visible
@@ -702,14 +733,23 @@ cohorts depend on — a sequencing constraint, not a conditional one.
   against the canonical cores), OR a named cross-plan dependency on dev-observatory Step 43
   is recorded with exactly what M4 will and won't be able to see
 - **Depends on:** 11
-- **Status:** BLOCKED (2026-08-20) — blocked by its declared dependency on Step 11. Step
-  12's first Done-when branch ("the wiring for the 16 skills is resolvable through an
-  observatory surface") is unsatisfiable by construction while no wiring exists. Its
-  second branch (record a named cross-plan dependency) stays satisfiable read-only, but
-  what M4 "will and won't be able to see" depends on which Step 11 option the operator
-  picks, so completing it now would record a conclusion the operator has not chosen. The
-  cross-plan dependency discovered while investigating Step 11 is recorded in
-  `documentation/parity-deltas.md` § Phase CP pass-3 blocker.
+- **Status:** DONE (2026-08-20) — satisfied via the **second** Done-when branch (named
+  cross-plan dependency recorded), read-only; no observatory features were built. The first
+  branch is unsatisfiable by construction: no wiring exists in any core. Record:
+  `documentation/parity-deltas.md` § *Step 12 record*.
+  Three corrections this step produced, none of which it was expected to find:
+  (1) **the dependency is dev-observatory Step 37, not Step 43** — Step 43 is that plan's
+  unrelated On Brand explorer step; Step 37 already carries this step's deliverable verbatim
+  ("the seven hookup locators resolve `wired`");
+  (2) **the direction is reversed** — Step 37 is `BLOCKED ON UTILITY-HOOKUP STEP 4`, so the
+  observatory waits on the hookup work and never the reverse; this step was written as though
+  skill-mesh had to build visibility, and it does not;
+  (3) **the mechanism already exists and is built** — registry-declared `WiringLocator` rows
+  matched literally by `resolve_wiring_evidence` into `wired`/`referenced`/`unwired`, not
+  scrape-derivation, with dev-observatory Steps 32–34/36 DONE and all seven utilities already
+  declared. Two live defects were found and are recorded for whoever executes the hookup:
+  three of the seven locator patterns cannot match the ratified call shapes, and every locator
+  path targets the installed tree rather than canonical cores.
 
 ### Manual Steps
 (These run after the corresponding /build-phase pass completes. Operator drives.)
@@ -790,7 +830,7 @@ cohorts depend on — a sequencing constraint, not a conditional one.
   (this file's non-emptiness triggers Step 9) and add `M2: PASS/FAIL` to the delta log.
 
 ### Step M3: Acceptance + delta triage
-- **Source step:** Steps 9–10 (pass 3)
+- **Source step:** Steps 9–10 (pass 3) — both DONE 2026-08-19/20, so this step is RELEASED
 - **Type:** operator
 - **Issue:** #132
 - **Status:** NOT STARTED — blocked on pass 3
@@ -810,7 +850,9 @@ cohorts depend on — a sequencing constraint, not a conditional one.
   | Plan completion | operator declares Phase CP complete; /repo-update runs |
 
 ### Step M4: Wired-profile rollout + observatory wiring UAT
-- **Source step:** Steps 11–12 (pass 3)
+- **Source step:** Steps 11–12 (pass 3) — **Step 11 DROPPED, Step 12 DONE (record-only)**, so
+  this step is RELEASED but its subject changed: there is no wiring to roll out or observe.
+  Its check rows were rewritten 2026-08-20 to match reality; read them before running.
 - **Type:** operator
 - **Issue:** #133
 - **Status:** NOT STARTED — blocked on pass 3
@@ -828,10 +870,15 @@ cohorts depend on — a sequencing constraint, not a conditional one.
   > adoption requires `-Force`, which makes `-BackupDir` mandatory (`:91`).
 
   ```powershell
-  # Reinstall the wired profiles (the D-CP14 operator-gated write). Run ONLY after Step 11
-  # has adopted the 16 drifted cores upstream into canonical — before that, this destroys
-  # the only copy of the wiring. Rehearse against a disposable -Home first; M1 did, and
-  # dropping that habit is what let this block drift unnoticed.
+  # Reinstall the profiles (the D-CP14 operator-gated write). Rehearse against a disposable
+  # -Home first; M1 did, and dropping that habit is what let this block drift unnoticed.
+  #
+  # CORRECTED 2026-08-20: this comment previously read "Run ONLY after Step 11 has adopted
+  # the 16 drifted cores upstream into canonical - before that, this destroys the only copy
+  # of the wiring." There is no wiring and never was (see the D-CP13 correction), so there
+  # is nothing here to destroy and no Step 11 ordering constraint. The -Force + -BackupDir
+  # requirements below are unchanged and still apply: they come from the dev-root ledger
+  # lacking owned_file_hashes, not from any wiring concern.
   powershell -File tools\install-skill-mesh.ps1 -Provider claude -Home "$env:USERPROFILE\dev" -Force -BackupDir "$env:TEMP\skill-mesh-m4-backup"
   powershell -File tools\install-skill-mesh.ps1 -Provider gpt    -Home "$env:USERPROFILE\dev" -Force -BackupDir "$env:TEMP\skill-mesh-m4-backup"
   powershell -File tools\install-skill-mesh.ps1 -Provider codex  -Home "$env:USERPROFILE"
@@ -851,10 +898,10 @@ cohorts depend on — a sequencing constraint, not a conditional one.
 - **What to look for:**
   | Check | Expected outcome |
   |---|---|
-  | Reinstall clean | ledger-verified; drifted cores adopted, not stranded; no foreign files touched |
-  | Wiring visible in observatory | the 16 wired skills' utility hookups resolvable in the UI, per Step 12's mechanism |
-  | Advisory behavior live | one wired skill run with `DEV_UTILITIES_ROOT` set shows its advisory line; unset shows zero behavior change |
-  | Cross-plan gaps | anything M4 can't see is already a named dependency row from Step 12, not a surprise |
+  | Reinstall clean | ledger-verified; no foreign files touched. (Rows 2–3 below were rewritten 2026-08-20; "drifted cores adopted, not stranded" is struck — there are no drifted cores.) |
+  | Observatory surface reachable | The transparency page renders and all **seven** utilities appear as declared locator rows, honestly reading **`unwired`**. That is the correct state, not a defect. Do **not** expect any locator to read `wired`: no advisory-call wiring exists in any core on any host (#128) |
+  | Advisory behavior live | **NOT RUNNABLE this phase — expected, not a failure.** `DEV_UTILITIES_ROOT` is unset at Process, User and Machine scope and the operator deferred persisting it on 2026-08-20. Verify only the fails-open half: absent root → zero behavior change |
+  | Cross-plan gaps | Already named by Step 12, not surprises: the dependency is dev-observatory **Step 37** (not 43), and it waits on the hookup work rather than the reverse; 3 of 7 locator patterns cannot match the ratified call shapes; every locator path targets the installed tree, so `wired` flips only after an install. See `documentation/parity-deltas.md` § Step 12 record |
 
   Record `M4: PASS/FAIL` + rows in the delta log. M4 and M3 together close the plan.
 
@@ -871,9 +918,9 @@ cohorts depend on — a sequencing constraint, not a conditional one.
 | Step 1 merge disturbs frozen evidence expectations | P3–P7 evidence/absence predicates live outside git and must stay untouched | Step 1 touches only git worktrees; no Evidence/ or Staging/ paths; launcher parked not invoked |
 | `plan.md` edits redden hygiene tests | `test_recovery_plan_hygiene.py` asserts exact strings (e.g. `Provider expansion \| PARKED`) | Impact table names the constraint; Step 1's Done-when includes the full-root gate that runs those tests |
 | Two sessions editing shared worktrees | Parallel-session sweeps could disturb Step 1's choreography | Step 1 runs single-session, path-scoped adds only, verifies hashes immediately before committing |
-| Dev-root drifted cores as wiring source | The 16 modified installed cores are uncommitted working-tree state in another repo; a sweep or reinstall before Step 11 could lose the utility-hookup Steps 1–3 output | Step 11 reads them early in pass 3 and ports to canonical; M4's overwriting reinstall happens only AFTER Step 11 adopted the drift |
+| ~~Dev-root drifted cores as wiring source~~ **VOID (2026-08-20)** | The risk assumed 16 modified installed cores held uncommitted wiring a sweep could lose. **Both halves are false:** those files are committed (`af7a867`) and contain only `_shared/` link repoints, and no core anywhere has ever held advisory-call wiring. There was never anything to lose | None needed. The reinstall-ordering mitigation was removed from M4's command block, which had warned it would "destroy the only copy of the wiring" |
 | Advisory call regresses into a blocker | A wired call that halts a pipeline skill violates the convention's safety-critical rule | Step 11's fails-open tests (absent root → zero change; malformed config → one advisory line); --reviewers deep on the wiring diff |
-| Observatory can't show the wiring yet | dev-observatory Step 43 is planned/unbuilt; Steps 32–42 are dirty in its own plan | Step 12 either verifies an existing surface or records a named cross-plan dependency stating exactly what M4 can and cannot see — no silent gap |
+| Observatory can't show the wiring yet | **RESOLVED 2026-08-20 by Step 12, and the premise was wrong in both directions.** The surface is not unbuilt: dev-observatory Steps 32–34/36 are DONE and all seven utilities are already declared as locators. The blocking step is **37, not 43**, and it is `BLOCKED ON UTILITY-HOOKUP STEP 4` — the observatory waits on the hookup, never the reverse | Step 12 recorded the dependency and exactly what M4 can and cannot see (`documentation/parity-deltas.md` § Step 12 record). Residual, now named rather than silent: 3 of 7 locator patterns cannot match the ratified call shapes, and all locator paths target the installed tree, so `wired` flips only after an install |
 
 ## 9. Testing Strategy
 
@@ -923,6 +970,6 @@ IDs are stable and append-only; reversals keep their ID with `changed <date>`.
 | D-CP11 | D | Issue label `Phase CP Step N:`; steps 1–10 + M1–M3; issues mint at #117+ | accepted 2026-08-16 |
 | D-CP12 | D | Pilot five = task-handoff, user-orient, lesson-harvest, plan-review, session-wrap | accepted 2026-08-16 |
 | P9 | P | Utility wiring + observatory-visible UAT are in scope (redline feedback) | accepted 2026-08-16 |
-| D-CP13 | D | Advisory calls live in canonical cores; fail open on every host | accepted 2026-08-16 |
-| D-CP14 | D | Live-home reinstall of wired profiles is operator-gated (M4) | accepted 2026-08-16 |
+| D-CP13 | D | Advisory calls live in canonical cores; fail open on every host | accepted 2026-08-16; **rationale corrected 2026-08-20** (no installed-copy drift ever existed); wiring re-owned by utility-hookup-plan D12 |
+| D-CP14 | D | Live-home reinstall is operator-gated (M4) | accepted 2026-08-16; **rationale corrected 2026-08-20** (gate stands on D-CP2 alone; no drift, no Step 11 ordering) |
 | D-CP15 | D | Observatory visibility = UAT evidence; dev-observatory features stay in its plan | accepted 2026-08-16 |

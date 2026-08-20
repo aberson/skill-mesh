@@ -508,3 +508,74 @@ not the Copilot install tree.
 the sources Step 12 names, but it is the only observatory-side plan that mentions the
 utilities root. Read it before deciding Step 12's visibility mechanism — it may already own
 the "surface the utility projects" question that Step 12 was going to answer from scratch.
+
+## Step 12 record — the cross-plan dependency, and exactly what M4 can and cannot see
+
+**Recorded 2026-08-20.** Step 12's Done-when offers two branches. The first ("the wiring for
+the 16 skills is resolvable through an observatory surface") is unsatisfiable by construction —
+no wiring exists in any core. This section satisfies the **second** branch: a named cross-plan
+dependency stating exactly what M4 will and will not be able to see. No observatory features
+were built; this is a read-only finding.
+
+### The dependency is dev-observatory Step 37 — not Step 43
+
+Step 12's brief guessed the dependency was dev-observatory **Step 43**. That is wrong, and the
+correction matters:
+
+- **Step 43 is unrelated.** It is that plan's own On Brand explorer step, status `READY`.
+- **The real dependency is dev-observatory Step 37**, which already carries Step 12's
+  deliverable verbatim: *"the seven hookup locators resolve `wired`."*
+- **The direction is the reverse of what this plan assumed.** Step 37 is
+  `BLOCKED ON UTILITY-HOOKUP STEP 4`. **The observatory waits on the hookup work; the hookup
+  never waits on the observatory.** Phase CP Step 12 was written as though skill-mesh had to
+  make the wiring visible. It does not — the surface already exists and is waiting to be fed.
+
+### The mechanism already exists and is built
+
+Visibility is **not** scrape-derivation. It is registry-declared `WiringLocator` rows
+(`id` / `role` / `label` / `path` / `pattern`) that `resolve_wiring_evidence` matches as a
+**literal substring at scan time**, classifying each into `wired` / `referenced` / `unwired`
+on a transparency page. Specified at that plan's §5 and **built** — its Steps 32–34 and 36 are
+all DONE across `model.py`, `registry.py`, `view_sources.py`, `snapshot.py`, `templates.py`.
+All seven portfolio utilities already have a "Planned …" locator declared in the coding-root
+registry today.
+
+### What M4 WILL be able to see
+
+- The transparency page itself, and all seven utilities present as declared locator rows.
+- Their current honest state: **`unwired`** — which is the correct reading of reality, not a
+  defect in the surface.
+
+### What M4 will NOT be able to see, and why
+
+1. **No locator resolving `wired`** — because no advisory-call wiring exists in any core, on
+   any host. This is the whole of the Step 11 blocker, and it is not an observatory gap.
+2. **Three of the seven would stay `unwired` even after wiring lands.** The declared patterns
+   for `paper-trail --root`, `changed-check plan --root` and `find-again --root` **cannot
+   match** the call shapes ratified in the convention's §4 under literal single-line matching.
+   This is a live defect in the coding-root registry's locator patterns and belongs to
+   dev-observatory, not here. Whoever executes the hookup must fix these patterns or the
+   surface will under-report a correct wiring.
+3. **`wired` flips only after an install propagates.** Every locator `path` points at the
+   **installed** `.claude/skills/<name>/core.md` tree, not skill-mesh's canonical
+   `skills/<name>/core.md`. Editing a canonical core changes nothing on the page until a
+   reinstall lands it in a discovery root — which is M4's own operator-gated write (D-CP14).
+4. **The advisory line cannot be demonstrated at all this phase.** `DEV_UTILITIES_ROOT` is
+   unset at Process, User and Machine scope, and the operator deliberately deferred persisting
+   it on 2026-08-20. Only the fails-open half (absent root → zero behavior change) is testable.
+
+### Re-resolved hookup map (for whoever executes the work in utility-hookup-plan)
+
+The real map ratifies **11 skills**, not this plan's 16, and the overlap is 3:
+`plan-expedite`, `build-phase`, `build-step`, `session-wrap`, `repo-update`, `plan-redline`,
+`plan-feature`, `plan-review`, `user-debug`, `lesson-harvest`, `memory-distill`. (Counting
+second-wave moments adds `repo-sync` for 12; `repo-sync` has no first-wave moment.)
+
+**All 11 have a live canonical core. 9 of 11 have an unambiguous live anchor.** The two that
+do not are both `find-again` moments with no live equivalent: `plan-review` (it reviews an
+already-drafted plan; no pre-draft moment exists in its 27-check structure) and
+`memory-distill` (it reviews existing memories; no add-a-new-entry moment). Two softer spots
+need a plan decision rather than a mechanical re-anchor: `changed-check` m3 on `session-wrap`
+(route body vs the Git-verb router's Step C), and `same-page` m2's "touched-repo loop"
+sub-anchor. Sizing flag: `plan-redline` was rewritten down to 35 lines, so its S-effort
+estimate was measured against prose that no longer exists.

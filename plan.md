@@ -69,8 +69,10 @@ does not reinterpret that evidence or revive its stopped experiment.
 | Phase CP pass 1 (Steps 1–5) | COMPLETE (2026-08-18) | Nothing — issues #118–#122 closed at `4bcbef5`; DONE gate green |
 | Phase CP Step M1 (#130) | COMPLETE (2026-08-18) — passing verdict | Nothing — check rows, deltas, and verdict recorded in `documentation/parity-deltas.md`; codex-cli 0.147.0, Copilot 1.0.77 |
 | Phase CP pass 2 (Steps 6–8) | COMPLETE (2026-08-19) | Nothing — issues #123/#124/#125 closed at `2ae2f69`; the codex adapter catalog is closed at 47/47 portable skills |
-| Phase CP Step M2 (#131) | NEXT — operator | An end-to-end workflow parity pass driven on a real Codex session; it writes `documentation/findings/codex-parity-m2-deltas.md`, which is Step 9's release predicate |
-| Phase CP pass 3 (Steps 9–12) | BLOCKED | Step 9 waits on M2's findings file; Step 10 is released by M1's verdict but is sequenced into pass 3; Steps 11–12 depend on the landed cohort bytes |
+| Phase CP Step M2 (#131) | COMPLETE (2026-08-19) — PASS | Nothing — verdict and delta rows in `documentation/parity-deltas.md`; its findings file released Step 9 |
+| Phase CP pass 3 (Steps 9–10) | COMPLETE (2026-08-20) | Nothing — issues #126/#127 closed at `c4a850c`; catalog now 57 skills / 54 portable. Ran as `--steps 9,10`, not 9–12 |
+| Phase CP Step 11 (#128) | DROPPED (2026-08-20) — operator decision | Re-owned by `dev/documentation/utility-hookup-plan.md` Steps 6–23 (its D12 already assigned these edits). Premise disproven: no advisory-call wiring has ever existed in any skill core. Evidence: `documentation/parity-deltas.md` § Phase CP pass-3 blocker |
+| Phase CP Step 12 (#129) | disposition follows Step 11 | See its block in the delivery plan; the observatory-visibility question is being resolved against `dev-observatory/plans/utility-project-surfaces-plan.md` |
 | Legacy-migrator hardening (#138) | DEFERRED | Its own issue — Phase CP ships zero migrator delta by the option-3 decision of 2026-08-18 |
 | Goal NP live cutover | LOCKED | Approval 2 on the immutable deliverable after disposable rehearsal |
 | Provider expansion | PARKED | A later explicit Abraham decision must resume that track; Goal NP does not unlock it |
@@ -96,12 +98,26 @@ families (16), Cohort D the remainder (14). Per-skill authoring deltas for each 
 recorded in `documentation/parity-deltas.md`; the pass-exit repo-root gate summary is
 `documentation/findings/cp-step8-pass2-root-gate.txt`.
 
-The next action is **operator Step M2** (#131) — an end-to-end workflow parity pass on a real
-Codex session. M2 writes `documentation/findings/codex-parity-m2-deltas.md`, which is the
-predicate that releases Step 9; **pass 3** (Steps 9/10/11/12) follows it. Step 10 is released by
-M1's verdict but is sequenced into pass 3, not pass 2. Operator observations must be committed to
-`main` before pass 3 — build worktrees branch from HEAD and cannot see an uncommitted findings
-file.
+**Step M2 (#131) passed on 2026-08-19**, and its findings file released Step 9.
+
+**Pass 3 is complete as of 2026-08-20**, and it ran as `--steps 9,10` rather than 9–12.
+Step 9 (#126) closed at `b7b6fb5` with a full repo-root gate of **1320 passed / 1 skipped**;
+Step 10 (#127) closed at `c4a850c` with **1322 passed / 1 skipped**, promoting the 7
+workspace-custom skills and taking the catalog to **57 skills / 54 portable / 3
+provider-native**.
+
+**Steps 11 and 12 were not built.** Step 11's premise was disproven — the "16 modified
+installed cores" it was to port advisory-call wiring from contain none, and an exhaustive
+coding-root search finds `DEV_UTILITIES_ROOT` only in planning and convention documents,
+never in a skill core. On 2026-08-20 the operator re-owned that work to
+`dev/documentation/utility-hookup-plan.md` Steps 6–23, whose D12 had already assigned the
+same edits, making it double-owned. Step 12's disposition follows from Step 11. Full evidence
+and the cross-plan dependency: `documentation/parity-deltas.md` § *Phase CP pass-3 blocker*;
+issues #128 and #129.
+
+**The next action is operator Steps M3 and M4.** Before M4, note that its command block was
+corrected on 2026-08-20: it previously warned that reinstalling before Step 11 would "destroy
+the only copy of the wiring," which was never true and no longer gates the reinstall.
 
 The Goal NP recovery decision is **closed**. No Publication-8 approval is pending or will be sought.
 Do not run any Publication-8 `Preflight` or `Run`, and do not invoke
