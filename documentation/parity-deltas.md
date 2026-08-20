@@ -87,7 +87,7 @@ One row per observed Claude-vs-Codex behavioral difference.
 | * | Codex's listing paraphrases SKILL.md descriptions rather than echoing them; all 5 stayed semantically intact, and Copilot echoes the same descriptions verbatim, proving the installed frontmatter reads back whole | minor | accept |
 | * | Copilot CLI 1.0.77, run with the install home as its project cwd, enumerates all 5 codex packages from .agents/skills; its load-path self-report (model-inferred, not runtime provenance) named the task-handoff SKILL.md under .agents/skills, agreeing with the listing's exact-set match | minor | accept |
 | * | from the same cwd Copilot did not enumerate the junction-backed .claude/skills tree, although documentation/providers/gpt.md records .claude/skills as a Copilot discovery root; stated as an observation - the mechanism (e.g. reparse points) was not established | minor | accept |
-| plan-review + plan-wrap (M2) | the two skills stamp `<!-- autofix-applied: DATE -->` at different granularities against near-identical core language: plan-review stamped 1 marker for 3 applied fixes, plan-wrap stamped 2 markers for 2 applied fixes, leaving 3 identical stacked markers on one step; both fix COUNTS were verified accurate against the real diff, so the defect is granularity, not counting. Contract-vs-observed comparison, so it is not mode-sensitive | major | fix |
+| plan-review (M2) | intermittently stamps fewer `<!-- autofix-applied: DATE -->` markers than the fixes it reports: Run A applied 3 fixes to one step and stamped 1 marker (core.md:513 requires one per applied fix), while Run B applied 21 fixes across 7 steps and stamped all 21 correctly - same host, same session mode, same day. plan-wrap was observed once (2 fixes, 2 markers) and was correct. All three fix COUNTS were verified against the real file diff, so the defect is marker stamping, not counting. Attribution checked: the codex/claude/gpt adapters carry no marker language, so this is core-level | major | fix |
 | * (M2) | Codex enumerated 47/47 installed portable skills (plus 6 host built-ins, 53 total) with no truncation; exact set match verified mechanically against the install tree, not by eye | minor | accept |
 | * (M2) | Copilot CLI **1.0.80** (upgraded from the 1.0.77 the decision was evidenced against), run with the install home as cwd, still enumerates all 47 codex packages from the shared `.agents/skills` root (49 total incl. 2 built-ins); exact set match verified mechanically. D-CP6 `accept` re-confirmed on the new version and at 47-skill scale instead of 5 | minor | accept |
 
@@ -149,24 +149,32 @@ value:
 | `plan-review` on the fresh feature plan | "Auto-applied 3 fixes", all three enumerated | 3 (`Type: code` added; `Files` list added; `--reviewers code` → `deep`) | count accurate |
 | `plan-wrap` on the same plan | "Auto-applied fixes (2)", both enumerated | 2 (schema summary block added; `<ID>` → `<learning_id>`) | count accurate |
 
-**Residual risk, stated rather than papered over.** Both M2 observations are small-N
-(3 and 2 fixes on a 1-step plan); M1's miscount was on an 8-step plan taking a +107/−25
-rewrite. A counter that is correct at N=3 is not proven correct at M1's scale, so this is a
-**non-reproduction, not a refutation**. It is re-dispositioned from `fix` to `accept` on the
-evidence available, and the residual large-rewrite case is the one to watch if it recurs.
-A targeted large-plan reproduction run was started at M2 and is recorded under "M2 open
-threads" below.
+**Retested at M1 scale and still did not reproduce.** The first two observations were
+small-N (3 and 2 fixes on a 1-step plan), so a targeted Run B was built against the input
+class that produced the M1 miscount: the `code-stencil` plan restored to its pre-autofix
+`40e83b7` state (7 steps, 43 lines, 0 markers), committed as the fixture's HEAD so no
+phantom working-tree diff could confound the review.
+
+| run | plan reviewed | reported | actual applied | verdict |
+|---|---|---|---|---|
+| B | pre-autofix `plan.md`, 7 steps | "Auto-applied 21 fixes", all 21 enumerated | 21 (3 classes x 7 steps) | count accurate |
+
+Run B's accuracy is proven exactly rather than by hunk-counting: stripping the 21 added
+fields and 21 markers from the result yields a file byte-identical to the pre-run original.
+
+The row is re-dispositioned `fix` -> `accept`. This is now a non-reproduction across BOTH
+small-N and M1-scale inputs, materially stronger than the small-N-only evidence the first M2
+write-up had. What Run B DID surface is a separate, narrower defect - intermittent marker
+under-stamping - filed as F1 in the findings file.
 
 ### M2 open threads
 
-- **Large-rewrite reproduction run (Run B) — INCOMPLETE.** A second `plan-review` run was
-  launched against a deliberately pre-autofix 43-line / 7-step plan (the `code-stencil`
-  plan restored to commit `40e83b7`, the exact input class that produced the M1 miscount)
-  to test the counter at M1's scale. It had not returned when M2 was written up. The
-  fixture and method are reproducible: clone `code-stencil`, `git checkout 40e83b7 -- plan.md`,
-  run `plan-review` on it, then diff the result against the pre-run copy and compare the
-  hunk count to the reported fix count. If it reproduces the miscount, reopen the row above
-  and add it to the findings file.
+- **Large-rewrite reproduction run (Run B) - DONE, exit 0.** Completed after the first M2
+  write-up. It did NOT reproduce the miscount (21 reported, 21 applied, verified exactly),
+  and it produced the counterexample that narrowed F1 from "plan-review stamps one marker per
+  step" to "plan-review intermittently under-stamps". Both the delta row above and the
+  findings file were corrected accordingly; the findings file carries an explicit correction
+  notice naming what was withdrawn.
 - **`documentation/providers/README.md` capability matrix** still has no Codex column. M2
   produced per-skill behavior for only the four chain skills, which is not enough to fill
   it; Step 9 remains the intended source.

@@ -12,84 +12,123 @@ repair step.
 
 - Host: codex-cli 0.147.0, catalog installed at `~/.agents/skills` (47/47 portable skills).
 - Toy project: `code-stencil` (the M1 pilot project).
-- Chain exercised: `plan-feature` → `plan-review` → `plan-wrap` → `session-wrap`.
+- Chain exercised: `plan-feature` → `plan-review` → `plan-wrap` → `session-wrap` (Run A),
+  plus a targeted large-plan `plan-review` reproduction (Run B).
 - **Session mode caveat:** M2 was driven through `codex exec` (non-interactive, multi-turn
-  via `codex exec resume`), whereas M1 was an interactive session. Mode is therefore a
-  live variable between M1 and M2 and is recorded in the Run environment table. The
-  finding below is *not* mode-sensitive: it is a comparison of observed writes against the
-  skill's own core text, which is host- and mode-independent.
+  via `codex exec resume`), whereas M1 was an interactive session. Mode is therefore a live
+  variable between M1 and M2 and is recorded in the Run environment table. The finding below
+  is *not* mode-sensitive: it compares observed writes against the skill's own core text,
+  and it is a self-inconsistency within one host and one mode.
+
+### The three observations this finding rests on
+
+| run | plan reviewed | skill | fixes reported | markers stamped |
+|---|---|---|---|---|
+| A | `learning-export-plan.md`, 1 step, 145 lines | `plan-review` | 3 (enumerated) | **1** |
+| A | same plan, after review | `plan-wrap` | 2 (enumerated) | **2** |
+| B | pre-autofix `plan.md`, 7 steps, 43 lines | `plan-review` | 21 (enumerated) | **21** (3/step) |
+
+Every fix **count** in all three observations was verified against the real file diff, not
+taken from the report. For Run B the proof is exact: stripping the 21 added fields and the
+21 markers from the result yields a file byte-identical to the pre-run original.
 
 ---
 
-## F1 — `plan-review` and `plan-wrap` stamp `autofix-applied` markers at different granularities
+## F1 — `plan-review` intermittently stamps fewer `autofix-applied` markers than the fixes it reports
 
 **Severity:** major (an output contract is affected) · **Disposition:** fix
 
-**What the cores say.** Both skills specify a marker *per applied fix*:
+**What the core says.** [`skills/plan-review/core.md:513`](../../skills/plan-review/core.md#L513)
+— "**Each fix applied** adds an HTML comment `<!-- autofix-applied: YYYY-MM-DD -->`
+immediately above the modified step heading in plan.md." `plan-wrap`'s core says the same at
+[`core.md:300`](../../skills/plan-wrap/core.md#L300) ("for each applied fix") and reinforces
+it at [`core.md:304`](../../skills/plan-wrap/core.md#L304) ("Autofix markers are
+per-finding-class, not per-step").
 
-- [`skills/plan-review/core.md:513`](../../skills/plan-review/core.md#L513) — "**Each fix
-  applied** adds an HTML comment `<!-- autofix-applied: YYYY-MM-DD -->` immediately above
-  the modified step heading in plan.md."
-- [`skills/plan-wrap/core.md:300`](../../skills/plan-wrap/core.md#L300) — "Add an HTML
-  comment ... immediately above the modified step heading in plan.md **for each applied
-  fix**." Reinforced at [`core.md:304`](../../skills/plan-wrap/core.md#L304): "Autofix
-  markers are **per-finding-class, not per-step**."
+**The defect.** `plan-review` honored that rule in one run and violated it in another — same
+host, same session mode, same day:
 
-**What was observed**, in one session, on one plan, against one step (`Step 9` of
-`documentation/learning-export-plan.md`):
+- **Run B (correct):** 21 fixes across 7 steps — 3 finding classes per step (`Default Type:
+  code`, `Missing Files list`, `Missing Done-when`) — with exactly 3 markers above each of
+  the 7 step headings. 21 reported, 21 applied, 21 stamped.
+- **Run A (incorrect):** 3 fixes on a single step (`Default Type: code`, `Missing Files
+  list`, `Stakes-aware reviewer escalation`) and only **1** marker stamped. Per
+  `core.md:513` there should have been 3.
 
-| skill | fixes it reported + applied | markers it stamped | matches its own core? |
-|---|---|---|---|
-| `plan-review` | 3 (`Default Type: code`, `Missing Files list`, `Stakes-aware reviewer escalation`) | **1** | no — under-stamps |
-| `plan-wrap` | 2 (`Missing schema summary`, `Bare <id> placeholder`) | **2** | yes |
+`plan-wrap` was observed once (2 fixes → 2 markers) and was correct.
 
-Net result: the step carries **3 identical, indistinguishable
-`<!-- autofix-applied: 2026-08-19 -->` lines stacked above one heading**, contributed at
-two different rates by two skills that share the same marker contract.
+**So the defect is intermittent under-stamping in `plan-review` — not a stable wrong rule,
+and not a `plan-review`-vs-`plan-wrap` contract divergence.** A Step 9 fix that merely
+restates the rule in the core will not help: `plan-review` already carries the rule and
+already followed it correctly once.
 
-Both fix *counts* were independently verified accurate against the real file diff (3 fixes
-= 3 substantive hunks; 2 fixes = 2 substantive hunks). The defect is the marker
-granularity, not the count.
+**Why it matters.** The marker is load-bearing beyond bookkeeping: `/plan-expedite` greps it
+for resume detection. Resume detection is not *broken* by this — the regex needs only one
+match and ≥1 is always present — which is why this is `major`, not `blocker`. The damage is
+that the marker count is untrustworthy as a measure of how much autofix touched a step,
+because the same skill produces different ratios on different runs.
 
-**Corroboration from M1.** `plan-review`'s under-stamping is not a one-off: the M1 run left
-`code-stencil/plan.md` with exactly **8 markers across 8 steps** (1 per step) from a
-+107/−25 rewrite that necessarily applied more than one fix class to at least some steps.
-`plan-review` appears to stamp one marker per *step touched*; `plan-wrap` stamps one per
-*fix applied*.
+**Root-cause candidates for Step 9.** The marker carries only a date and no finding-class
+identity, so N identical stacked copies are indistinguishable from one another. That makes
+the per-fix rule both hard to comply with reliably and impossible to verify idempotently — a
+re-run cannot tell which classes are already marked. Step 9 should pick ONE resolution and
+apply it to both cores plus `/plan-expedite`'s reader:
 
-**Why it matters.** The marker is load-bearing beyond bookkeeping: `/plan-expedite` greps
-it for resume detection. Resume detection itself is not broken by this (the regex needs
-only one match, and ≥1 is always present), which is why this is `major` and not `blocker`.
-The contract damage is that the marker cannot mean two different things at once — a reader
-or tool that counts markers to learn how much autofix touched a step gets a number that
-depends on which skill wrote it.
-
-**Root-cause candidate for Step 9.** The marker carries only a date, no finding-class
-identity, so N identical stacked copies convey nothing that one copy does not. That makes
-"one marker per fix" arguably the wrong contract rather than `plan-review` being simply
-wrong. Step 9 should pick ONE resolution and apply it to both cores plus
-`/plan-expedite`'s reader:
-
-1. **One marker per step touched** (matches `plan-review`'s observed behavior; make
-   `plan-wrap`'s core say so and drop `core.md:304`'s per-finding-class sentence), or
+1. **One marker per step touched.** Simplest, trivially idempotent, and it removes the
+   indistinguishable-stack problem entirely. Requires dropping `plan-wrap/core.md:304`'s
+   per-finding-class sentence and amending both cores' "for each applied fix" wording.
 2. **One marker per finding class, made distinguishable** — e.g.
-   `<!-- autofix-applied: YYYY-MM-DD class -->` — so stacking is meaningful and idempotent
-   re-runs can skip an already-present class. Note this changes the literal regex both
-   skills and `/plan-expedite` are pinned to, so it is the more invasive option.
+   `<!-- autofix-applied: YYYY-MM-DD class-slug -->` — so stacking carries information and a
+   re-run can skip an already-marked class. This changes the literal regex both skills and
+   `/plan-expedite` are pinned to, so it is the more invasive option.
 
-Whichever is chosen, the two cores must end up with identical marker language, and the
+Whichever is chosen, both cores must end up with identical marker language and the
 `/plan-expedite` resume-detection regex must be re-checked against it. Per the workspace
-one-source-of-truth discipline, the marker format should have a single owner that both
-cores cite rather than two near-identical restatements that already drifted once.
+one-source-of-truth discipline, the marker format should have a single owner both cores
+cite, rather than two near-identical restatements.
+
+**Attribution verified: core-level, not adapter-induced.** Checked rather than assumed,
+because an adapter-caused delta would call for a very different Step 9 fix:
+
+- Neither `skills/plan-review/providers/codex.md` nor `skills/plan-wrap/providers/codex.md`
+  contains any marker-granularity instruction. Each mentions autofix exactly twice, and only
+  to bind itself to the core — "the autofix scope stay[s] exactly as the core states [it]"
+  (`plan-review/providers/codex.md:7`) and "exactly per the core's autofix scope"
+  (`plan-wrap/providers/codex.md:11`).
+- The `claude.md` and `gpt.md` adapters for both skills mention autofix zero times, so they
+  neither add nor contradict marker language.
+
+Marker granularity is therefore governed solely by the cores, identically for every host.
+Step 9 should fix the cores; no adapter change is implied. The intermittency is consistent
+with a compliance-reliability problem in a rule that is hard to follow, rather than a host
+behavior.
 
 ---
 
 ## Not filed here (deliberate)
 
-- **The M1 `plan-review` "Auto-applied 0 fixes" miscount did NOT reproduce.** Carried into
-  M2 per the M1 disposition note. On both M2 runs the reported count was verified accurate
-  against the real diff. It is re-dispositioned in `documentation/parity-deltas.md` rather
-  than filed as a Step 9 repair. See that file for the evidence and the residual-risk note.
+- **The M1 `plan-review` "Auto-applied 0 fixes" miscount did NOT reproduce — including at M1
+  scale.** Carried into M2 per the M1 disposition note. Run B was built specifically to retry
+  it against the input class that produced it (the `code-stencil` plan restored to its
+  pre-autofix `40e83b7` state: 7 steps, 43 lines, 0 markers). It reported 21 fixes,
+  enumerated all 21, and applied exactly 21. Re-dispositioned `fix` → `accept` in
+  `documentation/parity-deltas.md`, where the evidence lives.
 - All `accept`-disposition observations (catalog enumeration, Copilot shared-root
-  visibility) — they belong in `documentation/parity-deltas.md`, and putting them here
-  would falsely trigger Step 9.
+  visibility) — they belong in `documentation/parity-deltas.md`, and putting them here would
+  falsely trigger Step 9.
+
+## Correction notice
+
+An earlier draft of this file (committed at `ebb2351`, before Run B returned) claimed
+`plan-review` stamps "one marker per step touched" as a stable rule, and cited M1's 8 markers
+across 8 steps as corroboration. **Both claims are withdrawn.**
+
+Run B shows `plan-review` stamping 3 markers per step when it applies 3 fixes per step, so
+there is no stable per-step rule. And the M1 citation was inference, not evidence: M1
+reported "0 fixes" and enumerated none, so the fixes-per-step figure behind its 8 markers is
+unknowable — 8 markers across 8 steps is equally consistent with one fix class per step,
+which would be correct behavior.
+
+The finding is narrower and better-evidenced now: intermittent under-stamping in
+`plan-review`, with Run A as the confirmed instance and Run B as the confirmed correct
+counterexample.
