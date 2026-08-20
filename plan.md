@@ -73,6 +73,8 @@ does not reinterpret that evidence or revive its stopped experiment.
 | Phase CP pass 3 (Steps 9–10) | COMPLETE (2026-08-20) | Nothing — issues #126/#127 closed at `c4a850c`; catalog now 57 skills / 54 portable. Ran as `--steps 9,10`, not 9–12 |
 | Phase CP Step 11 (#128) | DROPPED (2026-08-20) — operator decision | Re-owned by `dev/documentation/utility-hookup-plan.md` Steps 6–23 (its D12 already assigned these edits). Premise disproven: no advisory-call wiring has ever existed in any skill core. Evidence: `documentation/parity-deltas.md` § Phase CP pass-3 blocker |
 | Phase CP Step 12 (#129) | disposition follows Step 11 | See its block in the delivery plan; the observatory-visibility question is being resolved against `dev-observatory/plans/utility-project-surfaces-plan.md` |
+| Phase CP Step M3 (#132) | PENDING (2026-08-20) — daily-use row only | The operator: a few genuine Codex-hosted sessions. Delta triage is DONE — 43 rows across 4 tables, 0 undisposed, 0 `fix-later` owed; the providers-doc gap was filed as #142. Evidence: `documentation/parity-deltas.md` § M3 checks |
+| Phase CP Step M4 (#133) | COMPLETE (2026-08-20) — PASS | Nothing — codex arm reinstalled clean (125 files; 0 stale, 0 unledgered) and all seven observatory locators verified `unwired` on the rendered surface, before and after. The claude and gpt `-Force` arms were deliberately not run. Evidence: `documentation/parity-deltas.md` § M4 checks and § Scope of the M4 PASS |
 | Legacy-migrator hardening (#138) | DEFERRED | Its own issue — Phase CP ships zero migrator delta by the option-3 decision of 2026-08-18 |
 | Goal NP live cutover | LOCKED | Approval 2 on the immutable deliverable after disposable rehearsal |
 | Provider expansion | PARKED | A later explicit Abraham decision must resume that track; Goal NP does not unlock it |
@@ -115,9 +117,17 @@ same edits, making it double-owned. Step 12's disposition follows from Step 11. 
 and the cross-plan dependency: `documentation/parity-deltas.md` § *Phase CP pass-3 blocker*;
 issues #128 and #129.
 
-**The next action is operator Steps M3 and M4.** Before M4, note that its command block was
-corrected on 2026-08-20: it previously warned that reinstalling before Step 11 would "destroy
-the only copy of the wiring," which was never true and no longer gates the reinstall.
+**The next action is operator Step M3 (#132) alone.** M4 (#133) is PASS as of 2026-08-20:
+the codex profile reinstalls cleanly and all seven observatory locators render their true
+`unwired` state. Its claude and gpt `-Force` arms were deliberately not run — that check row
+is unsatisfiable as written (it requires "no foreign files touched" while the block mandates
+`-Force`, whose documented purpose is taking ownership of foreign files), and their payoff is
+provably zero while no wiring exists in any core on either side of the propagation.
+
+M3 is `PENDING` on exactly one row — daily-use quality — which needs a few genuine
+Codex-hosted sessions and cannot be satisfied by re-reading the M1/M2 milestone runs it exists
+to backstop. Everything else M3 required is recorded and durable. Phase CP closes when that one
+row is graded; then `/repo-update` runs and #132, #133 (and the stale-open #131) close.
 
 The Goal NP recovery decision is **closed**. No Publication-8 approval is pending or will be sought.
 Do not run any Publication-8 `Preflight` or `Run`, and do not invoke

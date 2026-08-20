@@ -833,7 +833,10 @@ cohorts depend on — a sequencing constraint, not a conditional one.
 - **Source step:** Steps 9–10 (pass 3) — both DONE 2026-08-19/20, so this step is RELEASED
 - **Type:** operator
 - **Issue:** #132
-- **Status:** NOT STARTED — blocked on pass 3
+- **Status:** PENDING (2026-08-20) — delta triage DONE and recorded; the daily-use row is
+  unsatisfied and is the ONLY thing between M3 and a passing verdict. 43 delta rows across 4
+  tables, 0 undisposed, 0 `fix-later` owed; the one open non-row thread went to #142. Evidence:
+  `documentation/parity-deltas.md` § M3 checks. Committed at `d646ed9`
 - **Produces:** operator observations only — delta-log dispositions and the `M3:` verdict
   line. No code artifact.
 - **Commands:**
@@ -855,7 +858,14 @@ cohorts depend on — a sequencing constraint, not a conditional one.
   Its check rows were rewritten 2026-08-20 to match reality; read them before running.
 - **Type:** operator
 - **Issue:** #133
-- **Status:** NOT STARTED — blocked on pass 3
+- **Status:** DONE (2026-08-20) — PASS. Codex arm reinstalled after a disposable-home
+  rehearsal (125 files, exit 0; owned=55 unowned=0; 125 disk = 125 owned_files = 125
+  owned_file_hashes, 0 stale / 0 unledgered; the claude root measured identically before and
+  after, so no foreign file was touched). All seven observatory locators verified `unwired` on
+  the RENDERED surface, before and after the install. The claude and gpt `-Force` arms were
+  deliberately NOT run — see `documentation/parity-deltas.md` § "Scope of the M4 PASS", which
+  also records that this block's row 1 and its `-Force` requirement contradict each other.
+  Committed at `d646ed9`
 - **Produces:** operator observations only — the `M4:` verdict line plus any cross-plan
   dependency rows in the delta log. No code artifact.
 - **Commands:**
