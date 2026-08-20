@@ -519,7 +519,8 @@ three hosts; 3 are Claude-native (`claude-oauth-auth`, `context-slim`, `judge-mo
   [documentation/parity-deltas.md](documentation/parity-deltas.md) — including the 13 skills whose
   codex adapter deliberately halts `required_tool_missing` at a dispatch that host cannot satisfy
   (an isolated sub-agent or vision judge) instead of weakening the gate and grading its own work.
-  Next is operator milestone M2, the end-to-end workflow parity pass.
+  Operator milestone M2, the end-to-end workflow parity pass, followed and passed on
+  2026-08-19.
 - **Phase CP Step 10 — the seven workspace-custom promotions; issue #127.**
   [build-observer](skills/build-observer/core.md), the four `citation-*` skills,
   [goblin-sweep](skills/goblin-sweep/core.md), and [repo-wrap](skills/repo-wrap/core.md) moved from
@@ -529,6 +530,20 @@ three hosts; 3 are Claude-native (`claude-oauth-auth`, `context-slim`, `judge-mo
   inside Codex's 8,000-character initial-list budget required trimming the manifest descriptions
   catalog-wide (mean serialized row 163 → 137 characters); the budget gate now brackets the
   remaining headroom from both sides instead of only naming its ceiling.
+- **Phase CP pass 3 complete — Steps 9–10 shipped; issues #126–#129 closed. 1,322 tests
+  passing** (pytest is deliberately the only automated gate here — there is no lint or
+  typecheck step to report). Step 9 resolved the workflow-parity deltas M2 found, making
+  `plan-review`'s `Autofix marker` section the single owner of the marker format and locking
+  it with a guard test that sweeps all 203 skill and shared documents by glob rather than a
+  hand-maintained list. Step 10 landed the seven promotions above. **Steps 11–12 shipped no
+  code, deliberately:** Step 11 was to port utility advisory-call wiring from sixteen
+  already-modified installed cores, and that wiring turned out never to have existed — the
+  cited commit is a set of relative-link repoints, and an exhaustive search finds the
+  utilities root named only in planning documents, never in a skill core. The work is
+  re-owned by the plan that already had authority over it; Step 12 recorded the cross-plan
+  dependency and, in the process, found that the observatory surface meant to display this
+  wiring is already built and has been waiting on the wiring rather than the reverse.
+  Evidence: [documentation/parity-deltas.md](documentation/parity-deltas.md).
 - **Phase 8 is superseded** by Phase CP's additive, cohort-based rollout (course change 2026-08-16).
   Step 47b remains the separately scheduled containment-gate hardening follow-up and is off the
   completed cutover path.

@@ -87,9 +87,13 @@ Wall clock also moved: 1h50m against the 31m48s–44m18s spread recorded above. 
 suite growth plus the same PowerShell-per-test cost, not a performance regression — the
 variance warning above still applies, and nothing gates on these timings.
 
-### Re-measured 2026-08-19 (Phase CP pass 2, Steps 6–8) — CURRENT
+### Re-measured 2026-08-19 (Phase CP pass 2, Steps 6–8) — SUPERSEDED by pass 3 below
 
-The current DONE-gate measurement, taken on merged `main` carrying the Step 8 payload:
+> **Superseded 2026-08-20.** The current figure is **1322 passed / 1 skipped** — see
+> *Re-measured 2026-08-20 (Phase CP pass 3)* at the end of this section. The pass-2 numbers
+> below are retained as the dated measurement they were, not as today's suite.
+
+The pass-2 DONE-gate measurement, taken on merged `main` carrying the Step 8 payload:
 
 | Command | Passed | Failed | Skipped | Provenance |
 |---|---|---|---|---|
@@ -112,8 +116,33 @@ performance regression; nothing gates on these timings.
 **Confirmed at the pass-2 documentation wrap.** The same gate was re-run end to end at commit
 `2a8d2c1` (the `/repo-update` doc payload, docs only) and returned **1318 passed, 1 skipped,
 exit 0** in 2h13m13s — identical counts at a later commit, which is the evidence that the wrap's
-six-file documentation change altered no test outcome. Two independent full-root runs now agree
-on 1318/1; treat that pair, not either run alone, as the current figure.
+six-file documentation change altered no test outcome. Two independent full-root runs agreed
+on 1318/1, and that pair was the current figure until pass 3 superseded it.
+
+### Re-measured 2026-08-20 (Phase CP pass 3, Steps 9–10) — CURRENT
+
+| Command | Passed | Failed | Skipped | Provenance |
+|---|---|---|---|---|
+| `python -m pytest` (DONE gate) | 1320 | 0 | 1 | Step 9 post-merge gate at `abf3522`; 1:58:39, detached and uninterrupted; summary retained at `documentation/findings/cp-step9-root-gate.txt` |
+| `python -m pytest` (DONE gate) | **1322** | 0 | **1** | **CURRENT** — Step 10 post-merge gate at the merged Step 10 payload; 2:06:17, detached and uninterrupted; summary quoted in commit `c4a850c` |
+
+Trajectory across pass 3, no regression at any step: **1318** (pass-2 exit) → **1320**
+(Step 9, +2 = the two `test_autofix_marker_single_owner.py` cases) → **1322** (Step 10, +2).
+The skip count held at **1** throughout, so 1 remains the healthy figure.
+
+Both pass-3 gates are the literal DONE-gate command: one uninterrupted repo-root
+`python -m pytest` with no path argument, each run detached with an exit-code sentinel
+because the ~2h wall clock exceeds the orchestrator's per-call tool timeout.
+
+**Collection reaches eight suites, not seven.** Verified against the Step 9 gate log:
+`tests/` holds `calibration`, `distributions`, `experiments`, `package-integrity`,
+`release`, `router`, `smoke` and `telemetry` — `experiments` (78 tests) was omitted from
+this document and from `CLAUDE.md` until 2026-08-20. The three root-only roots (`_shared/`,
+`skill-iterate/scripts/`, `skill-eval-setup/scripts/`) are unchanged, so the repo-root
+invocation collects **eleven** roots in total.
+
+Wall clock moved from 2h10m56s to 1:58:39 and 2:06:17 — inside the run-to-run variance this
+document already documents, not a performance change. Nothing gates on these timings.
 
 Wall clock: three full repo-root runs were timed on the same machine during this step —
 **37m51s** (pre-fix baseline), **44m18s** (post-fix, in the build worktree), and
