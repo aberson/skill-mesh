@@ -1,0 +1,27 @@
+Phase CP Step 9 post-merge gate (issue #126)
+Command: python -m pytest        (repo root, no path argument)
+Run: 2026-08-19, detached uninterrupted run on main at abf3522 (Step 9 payload already landed)
+Tree: abf3522 "checkpoint: step 9 payload landed, reviewed PASS 3/3 - post-merge gate pending (#126)"
+Interpreter: Python 3.14.3, pytest-9.1.1 (PyYAML 6.0.3 present)
+
+Terminal summary:
+================ 1320 passed, 1 skipped in 7119.54s (1:58:39) =================
+
+Exit code: 0
+Collected 1321 items = 1320 passed + 1 skipped.
+The 1 skip is the healthy-run environment-gated skip (documentation/phase-75-baseline.md).
+
+Why the repo-root form rather than Step 9's declared focused gate:
+Step 9's "Done when" names focused suites, and the suspension comment on #126 named
+`python -m pytest tests/`. documentation/phase-75-baseline.md measures the repo-root
+invocation at about 18 seconds more than the tests/-only one, because the three root-only
+test roots (_shared/, skill-iterate/scripts/, skill-eval-setup/scripts/) are pure Python.
+The repo-root form therefore supersets the declared gate at negligible cost and also
+satisfies the workspace rule that the gate flipping a step DONE runs the full suite rather
+than a subset. Step 9 is NOT a pass-exit step (those are 1, 2, 5, 8, 10), so this evidence
+file is kept as insurance rather than by convention: the declared focused gate recorded in
+abf3522's commit message had been interrupted at roughly 9%.
+
+Trajectory: 1318 (Step 8 pass-2 exit gate) -> 1320 (this gate). The +2 are the two tests in
+tests/package-integrity/test_autofix_marker_single_owner.py added by the Step 9 payload.
+No regression; the skip count held at 1.

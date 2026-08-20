@@ -619,6 +619,7 @@ cohorts depend on — a sequencing constraint, not a conditional one.
 - **Done when:** every `fix` row from M2 resolved or re-dispositioned with rationale;
   focused suites green
 - **Depends on:** 8
+- **Status:** DONE (2026-08-19)
 
 <!-- autofix-applied: 2026-08-16 -->
 ### Step 10: Promote the 7 workspace custom skills
