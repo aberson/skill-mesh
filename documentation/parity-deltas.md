@@ -482,3 +482,29 @@ independently reached the same conclusion ("wired into ZERO skill cores — veri
 - Step 12's observatory-visibility question is untouched by this: with no wiring in any core,
   there is nothing for a registry entry or a scrape to surface. Its first Done-when branch is
   unsatisfiable by construction, not merely unbuilt.
+
+### Exhaustive confirmation (added 2026-08-20, after the scoped searches above)
+
+A full-tree search of the coding root (excluding `skill-mesh/` and `node_modules`) finds
+`DEV_UTILITIES_ROOT` in exactly **10 files. Every one is a planning or convention document.
+Not one is a skill core.**
+
+- `.claude/references/advisory-call-convention.md` (the convention)
+- `.claude/rules/advisory-calls.md` (the rule stub) — and `citation-needed/breakdowns/…` , a
+  derived breakdown of that same rules file
+- `.claude/task-state/sessions/6174bae3-…md` (the prior session's verified record)
+- `documentation/utility-hookup-plan.md` (the owning plan)
+- `documentation/coding-root-closeout-plan.md`
+- `dev-observatory/plans/utility-project-surfaces-plan.md`
+- three copies inside stale `worktree_*` checkouts (`host-parity-repair-plan.md`,
+  `codex-parity-delivery-plan.md`)
+
+This upgrades the finding from a scoped negative to an exhaustive one: **the advisory-call
+wiring exists only as specification, and has never been rendered into any executable skill
+core anywhere on this machine** — not the canonical `skills/`, not the Claude install tree,
+not the Copilot install tree.
+
+**Lead for Step 12.** `dev-observatory/plans/utility-project-surfaces-plan.md` was not among
+the sources Step 12 names, but it is the only observatory-side plan that mentions the
+utilities root. Read it before deciding Step 12's visibility mechanism — it may already own
+the "surface the utility projects" question that Step 12 was going to answer from scratch.
