@@ -9,8 +9,8 @@ Code and GitHub Copilot from one behavior contract.**
 - **Independent, calibrated review** — verdicts come from fresh-context reviewers that must cite
   `file:line`, aggregated deterministically; the judges themselves are calibrated against gold
   fixtures, not trusted on faith.
-- **Real & provider-neutral** — ~50 skills actually used day to day, extracted from a personal
-  workspace; one behavior contract runs on Claude Code and GitHub Copilot (47 portable; 3 Claude-native).
+- **Real & provider-neutral** — ~57 skills actually used day to day, extracted from a personal
+  workspace; one behavior contract runs on Claude Code and GitHub Copilot (54 portable; 3 Claude-native).
 
 Swap the placeholders (`<workspace>`, `<project>`, `<your-org>`) before use — see
 [Adapt before use](#adapt-before-use).
@@ -89,7 +89,7 @@ The graphic shows where each rail *goes*; the table shows what a fragment *sound
 ## What's inside
 
 <details>
-<summary><strong>50 skills across planning, building, review, shipping, and skill/workspace maintenance</strong></summary>
+<summary><strong>57 skills across planning, building, review, shipping, and skill/workspace maintenance</strong></summary>
 
 **Core pipeline** — plan → build → review → ship:
 
@@ -98,7 +98,7 @@ The graphic shows where each rail *goes*; the table shows what a fragment *sound
 | **Planning** | [plan-init](skills/plan-init/core.md) · [plan-feature](skills/plan-feature/core.md) · [plan-review](skills/plan-review/core.md) · [plan-redline](skills/plan-redline/core.md) · [plan-wrap](skills/plan-wrap/core.md) · [plan-merge](skills/plan-merge/core.md) · [plan-trim](skills/plan-trim/core.md) · [plan-expedite](skills/plan-expedite/core.md) |
 | **Building** | [build-step](skills/build-step/core.md) · [build-phase](skills/build-phase/core.md) · [build-queue](skills/build-queue/core.md) |
 | **Review** | [review-deep](skills/review-deep/core.md) · [review-gauntlet](skills/review-gauntlet/core.md) · [review-proof](skills/review-proof/core.md) · [review-uat](skills/review-uat/core.md) · [judge-ui](skills/judge-ui/core.md) · [judge-motion](skills/judge-motion/providers/claude.md) |
-| **Repo & docs** | [repo-init](skills/repo-init/core.md) · [repo-sync](skills/repo-sync/core.md) · [repo-update](skills/repo-update/core.md) |
+| **Repo & docs** | [repo-init](skills/repo-init/core.md) · [repo-sync](skills/repo-sync/core.md) · [repo-update](skills/repo-update/core.md) · [repo-wrap](skills/repo-wrap/core.md) |
 
 **Supporting**:
 
@@ -106,8 +106,9 @@ The graphic shows where each rail *goes*; the table shows what a fragment *sound
 |------|--------|
 | **User & session** | [user-brainstorm](skills/user-brainstorm/core.md) · [user-debug](skills/user-debug/core.md) · [user-draft](skills/user-draft/core.md) · [user-gateway](skills/user-gateway/core.md) · [user-learn](skills/user-learn/core.md) · [user-orient](skills/user-orient/core.md) · [user-pm](skills/user-pm/core.md) · [user-project](skills/user-project/core.md) · [user-shakedown](skills/user-shakedown/core.md) · [user-uat](skills/user-uat/core.md) · [user-walkthrough](skills/user-walkthrough/core.md) · [user-wrap](skills/user-wrap/core.md) · [user-lavishify](skills/user-lavishify/core.md) · [session-wrap](skills/session-wrap/core.md) · [task-handoff](skills/task-handoff/core.md) · [research-prospect](skills/research-prospect/core.md) |
 | **Skill tooling** | [skill-eval-setup](skills/skill-eval-setup/core.md) · [skill-evolve](skills/skill-evolve/core.md) · [skill-iterate](skills/skill-iterate/core.md) · [tier-offload](skills/tier-offload/core.md) · [tier-escalate](skills/tier-escalate/core.md) |
-| **Maintenance & hygiene** | [test-prune](skills/test-prune/core.md) · [lesson-harvest](skills/lesson-harvest/core.md) · [memory-distill](skills/memory-distill/core.md) · [context-slim](skills/context-slim/providers/claude.md) · [user-afterparty](skills/user-afterparty/core.md) · [observatory-doctor](skills/observatory-doctor/core.md) |
-| **Project improvement** | [goblin-suggest](skills/goblin-suggest/core.md) · [goblin-do](skills/goblin-do/core.md) — *reference only; needs a private second-brain store + the `goblin` CLI, see [_shared/goblin-second-brain.md](_shared/goblin-second-brain.md)* |
+| **Maintenance & hygiene** | [test-prune](skills/test-prune/core.md) · [lesson-harvest](skills/lesson-harvest/core.md) · [memory-distill](skills/memory-distill/core.md) · [context-slim](skills/context-slim/providers/claude.md) · [user-afterparty](skills/user-afterparty/core.md) · [observatory-doctor](skills/observatory-doctor/core.md) · [build-observer](skills/build-observer/core.md) |
+| **Project improvement** | [goblin-suggest](skills/goblin-suggest/core.md) · [goblin-do](skills/goblin-do/core.md) · [goblin-sweep](skills/goblin-sweep/core.md) — *reference only; needs a private second-brain store + the `goblin` CLI, see [_shared/goblin-second-brain.md](_shared/goblin-second-brain.md)* |
+| **Evidence & citations** | [citation-review](skills/citation-review/core.md) · [citation-distill](skills/citation-distill/core.md) · [citation-triage](skills/citation-triage/core.md) · [citation-sweep](skills/citation-sweep/core.md) — *reference only; the calibrated review/scoring pipeline lives behind a separate `cite` CLI these skills drive but do not ship* |
 | **Reference** | [claude-oauth-auth](skills/claude-oauth-auth/providers/claude.md) |
 
 `_shared/` holds resources referenced by several skills — the judging doctrine
@@ -459,7 +460,7 @@ way round, since `pwsh` is absent on a 5.1-only machine. Also: an authenticated 
 ## Providers & installation
 
 Each skill has one provider-neutral behavior contract (`skills/<name>/core.md`) plus a thin per-host
-adapter; installing binds one adapter into that host's discovery layout. 47 of 50 skills run on all
+adapter; installing binds one adapter into that host's discovery layout. 54 of 57 skills run on all
 three hosts; 3 are Claude-native (`claude-oauth-auth`, `context-slim`, `judge-motion`).
 
 | Provider | Host | Install target |
@@ -469,7 +470,7 @@ three hosts; 3 are Claude-native (`claude-oauth-auth`, `context-slim`, `judge-mo
 | Codex | OpenAI Codex CLI | `<install-home>/.agents/skills/<skill>/` |
 
 - **GPT discovery roots** — GitHub Copilot CLI discovers project skills from `.github/skills/`, `.agents/skills/`, and `.claude/skills/` (personal: `~/.copilot/skills/`); this package installs the GPT profile to `.github/skills/`, and every generated `SKILL.md` leads with a YAML frontmatter block (`name`, `description`). The originally-assumed project-relative `.copilot/skills` target is **retired** — it is not a Copilot discovery root (proven in Step 43).
-- **Codex** — the **full portable catalog**: all 47 portable skills carry a `providers/codex.md` adapter (grown from the five-skill pilot across the Phase CP cohorts) and install to `.agents/skills/`. That is the same literal path Copilot already scans as an active alternate, so the root's presence is not evidence of which host wrote it. `tools/probe-codex-skills.ps1` is a read-only bring-up probe (effective home, root state, ledger). Because a third provider is now *declared*, `-Provider both` (claude+gpt, still the release default) is no longer a complete legacy-migration source — see [documentation/migration.md](documentation/migration.md).
+- **Codex** — the **full portable catalog**: all 54 portable skills carry a `providers/codex.md` adapter (grown from the five-skill pilot across the Phase CP cohorts, then with the Step 10 promotions) and install to `.agents/skills/`. That is the same literal path Copilot already scans as an active alternate, so the root's presence is not evidence of which host wrote it. `tools/probe-codex-skills.ps1` is a read-only bring-up probe (effective home, root state, ledger). Because a third provider is now *declared*, `-Provider both` (claude+gpt, still the release default) is no longer a complete legacy-migration source — see [documentation/migration.md](documentation/migration.md).
 - **Install** — see [Quick start](#quick-start). Flags: `-Uninstall`, `-Force`, `-Home`/`-Destination`, `-Provider`/`-Profile`.
 - **Auth** (a separate axis from selection) — Claude uses the host's own model (no key); GPT via GitHub Copilot sign-in (`gh auth login`), **no `OPENAI_API_KEY`** needed.
 - **Deep dive** — router auto-detection, the full auth/capability/exclusion matrices, and the selection/transport contract: [documentation/providers/](documentation/providers/README.md), [architecture.md](documentation/architecture.md) §5.
@@ -479,7 +480,7 @@ three hosts; 3 are Claude-native (`claude-oauth-auth`, `context-slim`, `judge-mo
 <details>
 <summary><strong>Current status</strong></summary>
 
-- ~50 skills; 47/47 skills are GPT-capable behind the shared Claude/GPT behavior contract; 3 additional skills are Claude-native.
+- ~57 skills; 54/54 skills are GPT-capable behind the shared Claude/GPT behavior contract; 3 additional skills are Claude-native.
 - Shipped: the canonical `skills/<name>/{core.md,providers/}` source tree, the provider-neutral router,
   and the distribution builder, installer, and release tooling (reproducible SHA-256 checksums over a
   `git ls-files` stage). Measured test counts are deliberately NOT restated here — they live in
@@ -519,6 +520,15 @@ three hosts; 3 are Claude-native (`claude-oauth-auth`, `context-slim`, `judge-mo
   codex adapter deliberately halts `required_tool_missing` at a dispatch that host cannot satisfy
   (an isolated sub-agent or vision judge) instead of weakening the gate and grading its own work.
   Next is operator milestone M2, the end-to-end workflow parity pass.
+- **Phase CP Step 10 — the seven workspace-custom promotions; issue #127.**
+  [build-observer](skills/build-observer/core.md), the four `citation-*` skills,
+  [goblin-sweep](skills/goblin-sweep/core.md), and [repo-wrap](skills/repo-wrap/core.md) moved from
+  workspace-custom into the canonical catalog, each authored as a `core.md` plus Claude, GPT, and
+  Codex adapters in the same commit — so the catalog is now **54 portable + 3 Claude-native**, and
+  the codex roster grew with it rather than lagging a cohort behind. Paying for the seven new rows
+  inside Codex's 8,000-character initial-list budget required trimming the manifest descriptions
+  catalog-wide (mean serialized row 163 → 137 characters); the budget gate now brackets the
+  remaining headroom from both sides instead of only naming its ceiling.
 - **Phase 8 is superseded** by Phase CP's additive, cohort-based rollout (course change 2026-08-16).
   Step 47b remains the separately scheduled containment-gate hardening follow-up and is off the
   completed cutover path.
@@ -542,9 +552,10 @@ three hosts; 3 are Claude-native (`claude-oauth-auth`, `context-slim`, `judge-mo
   [_shared/goblin-second-brain.md](_shared/goblin-second-brain.md); `tier-offload` emits a config
   for a local-model router and `tier-escalate` a model-tiering escalation map (adapt to your own
   models, or skip if you run neither); `judge-ui` needs a per-project browser adapter (server
-  bring-up, auth, test IDs); `observatory-doctor` assumes a "dev-observatory" control-plane
-  convention from the source workspace; and `user-lavishify` drives an annotatable-HTML rendering
-  step. A handful of workspace reference files stay unpublished (`shakedown-engine.md`,
+  bring-up, auth, test IDs); `observatory-doctor` and `build-observer` assume a "dev-observatory"
+  control-plane convention from the source workspace (`build-observer` additionally drives a
+  `scaffold_portfolio.py` asset that stays with that workspace); and `user-lavishify` drives an
+  annotatable-HTML rendering step. A handful of workspace reference files stay unpublished (`shakedown-engine.md`,
   `task-state-schema.md`, the `docs/investigations/` corpus); published skills may point at them —
   treat those as adaptation points, not missing files.
 - No secrets or credentials are included.

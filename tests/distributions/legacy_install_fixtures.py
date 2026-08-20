@@ -5,8 +5,7 @@ fixture ``SKILL.md`` there sat at a real discovery path (``.claude/skills/<name>
 ``.github/skills/<name>/``) with valid YAML frontmatter, and Claude Code discovers
 skills from nested ``.claude/skills/`` directories anywhere in a tree -- so merely
 working in this repository surfaced phantom ``build-phase``, ``build-step``,
-``context-slim``, ``build-observer``, and ``goblin-sweep`` skills whose body was a
-stub (#86). There is no path-based discovery exclude: ``skillOverrides`` hides by
+``context-slim``, and the consumer-only names' skills whose body was a stub (#86). There is no path-based discovery exclude: ``skillOverrides`` hides by
 NAME after discovery, which would hide the real skill too. The only fix is to stop
 committing files at those paths.
 
@@ -280,12 +279,12 @@ def _prior_wrong_target(home):
 
 
 def _consumer_only(home):
-    write(home, CLAUDE_ROOT + "/build-observer/SKILL.md", consumer_skill_md("build-observer"))
+    write(home, CLAUDE_ROOT + "/meeting-sheet/SKILL.md", consumer_skill_md("meeting-sheet"))
 
 
 def _both_trees_consumer_only(home):
-    write(home, CLAUDE_ROOT + "/goblin-sweep/SKILL.md", consumer_skill_md("goblin-sweep"))
-    write(home, LEGACY_SKILLS_GPT_ROOT + "/goblin-sweep/SKILL.md", consumer_skill_md("goblin-sweep"))
+    write(home, CLAUDE_ROOT + "/local-notes/SKILL.md", consumer_skill_md("local-notes"))
+    write(home, LEGACY_SKILLS_GPT_ROOT + "/local-notes/SKILL.md", consumer_skill_md("local-notes"))
 
 
 def _core_holder(home):
@@ -449,7 +448,17 @@ MIGRATION_MANAGED = ("plan-review", "repo-init")
 # the GPT profile must NEVER be read as an incomplete distribution.
 MIGRATION_NATIVE = "context-slim"
 # Unmanifested consumer skills that must survive a migration byte-for-byte.
-MIGRATION_CONSUMER_ONLY = ("build-observer", "goblin-sweep")
+#
+# These names must be skills the CONSUMER authored that the catalog does not claim --
+# that is the whole property the positive fixture proves, and
+# test_migration_fixture_names_match_the_manifest asserts it on every run. They read
+# ("build-observer", "goblin-sweep") until Phase CP Step 10 promoted both into the
+# manifest, which flipped this fixture from a positive case into a silent negative
+# one; that gate caught it and named it, which is what it is for. `meeting-sheet` is
+# a real still-unmanifested workspace skill and `local-notes` is deliberately
+# consumer-scoped -- neither is a catalog candidate. A future promotion that claims
+# either name must come here and re-point the fixture, not relax the gate.
+MIGRATION_CONSUMER_ONLY = ("meeting-sheet", "local-notes")
 
 # The two populations a consumer `_shared/` holds once the builder ships a payload
 # there, and the reason Step 65 classifies that directory per FILE.

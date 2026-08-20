@@ -18,7 +18,7 @@ the numbers recorded here.
 python -m pytest
 ```
 
-Collection reaches the seven suites under `tests/` **and** three test roots that a
+Collection reaches the eight suites under `tests/` **and** three test roots that a
 `tests/`-scoped run never touches:
 
 | Root-only test root | What it covers |

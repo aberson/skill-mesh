@@ -2,7 +2,7 @@
 
 ## Project overview
 
-skill-mesh is a provider-neutral collection of ~50 agent skills for planning, building, reviewing,
+skill-mesh is a provider-neutral collection of ~57 agent skills for planning, building, reviewing,
 and shipping software. Each skill is authored once as a shared behavior contract (`core.md`) plus
 thin per-host adapters, so the same skill runs on Claude Code, GitHub Copilot CLI, and the OpenAI
 Codex CLI.
@@ -18,7 +18,7 @@ installed skill tree. Installing produces a host-native discovery tree in a cons
 | Manifest / config | JSON — `config/skill-manifest.json` (authoritative skill inventory) |
 | Build / install / release tooling | Windows PowerShell 5.1 floor (`powershell`) — `tools/*.ps1` |
 | Manifest + release checks | Python 3 — `tools/gen_manifest.py`, `tools/release_checks.py` |
-| Tests | pytest — 7 suites under `tests/` plus 3 root-only test roots; the DONE gate is the repo-root `python -m pytest` (see Key commands) |
+| Tests | pytest — 8 suites under `tests/` plus 3 root-only test roots; the DONE gate is the repo-root `python -m pytest` (see Key commands) |
 | Lint / typecheck | **Not configured** (deliberate — see Key commands) |
 
 ## Key commands
@@ -38,7 +38,7 @@ root, and report its real summary line:
 python -m pytest
 ```
 
-A path argument narrows collection. `python -m pytest tests/` reaches only the seven suites
+A path argument narrows collection. `python -m pytest tests/` reaches only the eight suites
 under `tests/`; it never collects the three root-only test roots — `_shared/`,
 `skill-iterate/scripts/`, and `skill-eval-setup/scripts/` — so it cannot see a regression
 there. Those roots are real production code (the shared verdict engine and the two
@@ -98,8 +98,8 @@ phase — pytest is the only automated gate this repository has.
 ## Directory layout
 
 ```
-skills/<name>/          Canonical source: core.md + providers/{claude,gpt,codex}.md (50 skills;
-                        all 50 have claude.md, the 47 portable ones also have gpt.md + codex.md)
+skills/<name>/          Canonical source: core.md + providers/{claude,gpt,codex}.md (57 skills;
+                        all 57 have claude.md, the 54 portable ones also have gpt.md + codex.md)
 <skill>/SKILL.md        Legacy top-level packages (46) — compatibility surface during the
                         deprecation window; NOT canonical, not updated by the migration
 _shared/                Shared cores (judge-core, intake-engine), grader/verdict engines,
@@ -118,18 +118,19 @@ tools/                  build-distributions, install-skill-mesh, inspect-host-in
                         and its shared journaled engine), probe-codex-skills (read-only codex
                         bring-up probe), skill-mesh-discovery (sole owner of the
                         provider-to-discovery-root map)
-tests/                  calibration, distributions, package-integrity, release, router,
-                        smoke, telemetry (+ fixtures/)
+tests/                  calibration, distributions, experiments, package-integrity, release,
+                        router, smoke, telemetry (+ fixtures/)
 ```
 
 ## Architecture summary
 
 - **One behavior contract per skill.** `skills/<name>/core.md` is provider-independent; each
   `providers/<host>.md` wrapper loads the core in full and maps host abstractions onto it. A wrapper
-  may never weaken a gate defined in the core. All 47 portable skills additionally carry a
-  `providers/codex.md` adapter (grown from the Phase CP five-skill pilot across cohorts B–D) —
-  codex capability is ADDITIVE on a portable record, never a third status, so the
-  portable/native counts below keep their exact meaning. 47 skills are portable (both adapters); 3 are
+  may never weaken a gate defined in the core. All 54 portable skills additionally carry a
+  `providers/codex.md` adapter (grown from the Phase CP five-skill pilot across cohorts B–D, then
+  with Step 10's seven workspace-custom promotions) — codex capability is ADDITIVE on a portable
+  record, never a third status, so the portable/native counts below keep their exact meaning.
+  54 skills are portable (both adapters); 3 are
   provider-native Claude-only (`claude-oauth-auth`, `context-slim`, `judge-motion`) and carry
   `core: null` in the manifest.
 - **Manifest-driven build.** `tools/build-distributions.ps1` reads `config/skill-manifest.json` and

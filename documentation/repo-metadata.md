@@ -29,6 +29,13 @@ Claude-native exclusions), and Claude is one of two first-class providers, not t
 - **Topics:** `agentic-workflows`, `claude`, `claude-code`, `developer-tools`, `llm`, `python`
   (kept) plus `ai-agents`, `github-copilot`, `gpt`, `provider-neutral` (added) — 10 live topics.
 
+> **Count drift, 2026-08-19 (Phase CP Step 10).** The catalog has since grown to **54 portable
+> / 3 Claude-native / 57 total**. The block above is a record of what was APPLIED to the live
+> GitHub description, so it is deliberately NOT rewritten here — editing it would claim a
+> refresh that has not happened. The live description still says 47/3; refresh it at the next
+> `/repo-update`, then update this record in the same pass. Nothing gates this file, which is
+> exactly why the drift is written down rather than assumed to be noticed.
+
 ## Rationale
 
 - Neither provider should read as "the default" in the first thing a visitor sees — the

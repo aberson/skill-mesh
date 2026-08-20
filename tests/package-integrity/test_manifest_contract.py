@@ -107,22 +107,27 @@ def test_counts_match_fixture_and_array():
     assert m["counts"] == derived, (m["counts"], derived)
     assert fx["counts"] == derived, (fx["counts"], derived)
     # spelled-out expectations
-    assert derived["total"] == 50
-    assert derived["portable"] == 47
+    assert derived["total"] == 57
+    assert derived["portable"] == 54
     assert derived["provider_native"] == 3
-    assert derived["claude"] == 50, "every skill carries a Claude adapter"
-    assert derived["gpt"] == 47, "the gpt adapter set IS the portable set"
-    # 47 at Phase CP Step 8 -- the pilot five, Cohort B's twelve (issue #123), Cohort
-    # C's sixteen (issue #124), and Cohort D's fourteen (issue #125). It was 0 at
-    # Step 3 (the generation rails ship before any codex adapter is authored), 5 at
-    # Step 4, 17 at Step 6, 33 at Step 7, and Step 8 closed it at the portable
-    # catalog. A value here without a matching skills/*/providers/codex.md on disk is
-    # caught by gen_manifest.py's CODEX-vs-tree guard.
-    assert derived["codex"] == 47
+    assert derived["claude"] == 57, "every skill carries a Claude adapter"
+    assert derived["gpt"] == 54, "the gpt adapter set IS the portable set"
+    # 54 at Phase CP Step 10. It was 0 at Step 3 (the generation rails ship before
+    # any codex adapter is authored), 5 at Step 4, 17 at Step 6, 33 at Step 7, and
+    # Step 8 closed it at the then-portable catalog of 47. Step 10 (issue #127)
+    # promoted seven workspace-custom skills, each authored portable AND codex in
+    # one commit, so this grew WITH `portable` rather than apart from it. A value
+    # here without a matching skills/*/providers/codex.md on disk is caught by
+    # gen_manifest.py's CODEX-vs-tree guard.
+    assert derived["codex"] == 54
+    # local_capable is UNCHANGED at 24: none of the seven Step 10 promotions has a
+    # local-capable row in the legacy model-mapping table, so none was declared (see
+    # gen_manifest.py's LOCAL_CAPABLE note). sub_agent gains exactly one --
+    # citation-sweep, whose core dispatches one isolated per-artifact review worker.
     assert derived["local_capable"] == 24
-    assert derived["sub_agent"] == 16
+    assert derived["sub_agent"] == 17
     assert derived["vision"] == 2
-    assert derived["filesystem"] == 50
+    assert derived["filesystem"] == 57
 
 
 def test_exact_skill_names_and_statuses():
@@ -712,22 +717,22 @@ def test_derived_skill_sets_match_the_spelled_out_rosters():
     assert portable == sorted(gm.PORTABLE)
     assert native == sorted(gm.NATIVE)
     assert codex == sorted(gm.CODEX)
-    assert (len(portable), len(native)) == (47, 3)
-    # 47 at Phase CP Step 8: the pilot five, Cohort B's twelve (issue #123), Cohort
-    # C's sixteen (issue #124), and Cohort D's fourteen (issue #125), authored on
-    # rails that shipped empty at Step 3. Spelled, like its siblings above, so any
-    # step that grows the roster must come here and state the new number rather than
-    # letting a glob silently redefine it.
-    assert len(codex) == 47
+    assert (len(portable), len(native)) == (54, 3)
+    # 54 at Phase CP Step 10: the Step 8 catalog of 47 plus the seven promoted
+    # workspace-custom skills (issue #127), each landing portable and codex in the
+    # same commit. Spelled, like its siblings above, so any step that grows the
+    # roster must come here and state the new number rather than letting a glob
+    # silently redefine it.
+    assert len(codex) == 54
     # Codex is an ORTHOGONAL axis, not a third bucket -- every codex name is also
-    # portable, and the 47/3 partition is unaffected by codex membership. This is the
+    # portable, and the 54/3 partition is unaffected by codex membership. This is the
     # invariant that lets counts["portable"], the README's GPT-capable line and the
     # `total == portable + native` arithmetic all keep their existing meanings.
     assert set(codex) <= set(portable)
     assert not set(codex) & set(native)
 
 
-def _plant_skill_tree(root, portable=47, native=3, extras=(), codex=0,
+def _plant_skill_tree(root, portable=54, native=3, extras=(), codex=0,
                       codex_on_native=0):
     """A synthetic skills/ tree: `portable` dirs with providers/gpt.md, `native`
     without, plus whatever non-skill entries the caller wants to prove are skipped.
@@ -760,7 +765,7 @@ def _plant_skill_tree(root, portable=47, native=3, extras=(), codex=0,
 def test_enumeration_skips_inventory_json_and_the_shared_namespace(tmp_path):
     """The two gates the enumeration must apply, proven on a synthetic tree.
 
-    `p.is_dir()` keeps the generated skills/inventory.json from counting as a 51st
+    `p.is_dir()` keeps the generated skills/inventory.json from counting as a 58th
     skill, and `_shared` is excluded because it is the cross-skill payload namespace,
     not a skill. `_shared` does not exist under skills/ today, so only a planted tree
     can exercise that branch at all -- without this the exclusion would be untested
@@ -771,7 +776,7 @@ def test_enumeration_skips_inventory_json_and_the_shared_namespace(tmp_path):
     _plant_skill_tree(root, extras=("inventory.json", "_shared/"))
     (root / "_shared" / "judge-core.md").write_text("x", encoding="utf-8")
     portable, native, codex = gm.derived_skill_sets(root)
-    assert (len(portable), len(native)) == (47, 3)
+    assert (len(portable), len(native)) == (54, 3)
     assert codex == []
     assert "inventory.json" not in portable + native
     assert "_shared" not in portable + native
@@ -781,7 +786,7 @@ def test_codex_enumeration_is_orthogonal_to_the_portable_native_partition(tmp_pa
     """A planted codex.md changes the codex roster and NOTHING else.
 
     This is the load-bearing property of the Phase CP Step 3 shape choice: codex is an
-    additive axis, so planting 5 codex adapters must leave the 47/3 partition -- and
+    additive axis, so planting 5 codex adapters must leave the 54/3 partition -- and
     therefore every committed count, the README's GPT-capable line, and the
     `total == portable + native` arithmetic -- byte-for-byte unchanged. If codex were
     modelled as a third STATUS instead, this test would red.
@@ -790,7 +795,7 @@ def test_codex_enumeration_is_orthogonal_to_the_portable_native_partition(tmp_pa
     root = tmp_path / "skills"
     _plant_skill_tree(root, codex=5)
     portable, native, codex = gm.derived_skill_sets(root)
-    assert (len(portable), len(native)) == (47, 3)
+    assert (len(portable), len(native)) == (54, 3)
     assert len(codex) == 5
     assert set(codex) <= set(portable)
 
@@ -802,7 +807,7 @@ def test_enumeration_reds_when_a_native_skill_carries_a_codex_adapter(tmp_path):
     is a contradiction. Without this guard the generator would happily emit a
     `providers.codex` path for a skill the builder deliberately excludes from every
     non-claude profile -- a manifest promising a profile that dist/codex will never
-    contain. The counts stay valid (47/3), so no count-based guard can catch it.
+    contain. The counts stay valid (54/3), so no count-based guard can catch it.
     """
     gm = _load_gen_manifest()
     root = tmp_path / "skills"
@@ -816,12 +821,12 @@ def test_enumeration_reds_when_the_tree_disagrees_with_the_counts(tmp_path):
 
     Every planted tree here must be REJECTED, so deleting the whole guard block reds
     this test. Beyond that, no ONE guard can carry the block alone -- for each single
-    guard, at least one planted case slips past it: keep only the total guard and 48/2
-    slips (it sums to 50); keep only the portable guard and 47/4 slips; keep only the
-    native guard and BOTH 48/3 and 46/3 slip. Before the 48/2 case existed the other
-    three all broke the total too (51/51/49), so a total-only block passed this
-    anchor -- that is the hole 48/2 closes. The four cases do NOT each have a distinct
-    catching subset, and this docstring does not claim they do: 48/3 and 46/3 are both
+    guard, at least one planted case slips past it: keep only the total guard and 55/2
+    slips (it sums to 57); keep only the portable guard and 54/4 slips; keep only the
+    native guard and BOTH 55/3 and 53/3 slip. Before the 55/2 case existed the other
+    three all broke the total too (58/58/56), so a total-only block passed this
+    anchor -- that is the hole 55/2 closes. The four cases do NOT each have a distinct
+    catching subset, and this docstring does not claim they do: 55/3 and 53/3 are both
     caught by exactly {total, portable}.
 
     What it CANNOT decide, and does not claim: deleting exactly one guard is invisible
@@ -833,8 +838,8 @@ def test_enumeration_reds_when_the_tree_disagrees_with_the_counts(tmp_path):
     strip them; catching ValueError here keeps that property under test.
     """
     gm = _load_gen_manifest()
-    for kwargs in ({"portable": 48}, {"native": 4}, {"portable": 46},
-                   {"portable": 48, "native": 2}):
+    for kwargs in ({"portable": 55}, {"native": 4}, {"portable": 53},
+                   {"portable": 55, "native": 2}):
         root = tmp_path / ("skills-" + "-".join(f"{k}{v}" for k, v in sorted(kwargs.items())))
         _plant_skill_tree(root, **kwargs)
         try:

@@ -17,14 +17,14 @@ pipeline is identical; only host-specific exceptions differ.
 
 ## Capability & exclusion matrix
 
-Derived from `config/skill-manifest.json`. 47 skills are portable (Claude + GPT
+Derived from `config/skill-manifest.json`. 54 skills are portable (Claude + GPT
 adapters); 3 are Claude-native exclusions with no GPT adapter.
 
 | Capability class | Claude | GPT/Copilot | Local (`code-30b`) |
 |---|---|---|---|
-| Portable skills (47) | yes | yes | 24 of 47 (`local_capable`) |
+| Portable skills (54) | yes | yes | 24 of 54 (`local_capable`) |
 | Vision skills (2: judge-ui, judge-motion) | yes | judge-ui only (judge-motion is a native exclusion) | no |
-| `sub-agent` fan-out skills (16) | yes | yes, parent-owned actions (14 GPT-portable; context-slim + judge-motion are native exclusions) | no |
+| `sub-agent` fan-out skills (17) | yes | yes, parent-owned actions (15 GPT-portable; context-slim + judge-motion are native exclusions) | no |
 | Claude-native exclusions (3) | yes | **no adapter** | no |
 
 ### Claude-native exclusions

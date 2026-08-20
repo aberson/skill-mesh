@@ -64,7 +64,7 @@ repository's tooling targets.
 
 Why `powershell` is the spelling here: Windows PowerShell 5.1 is the floor every tool in this
 repository is written for (ASCII-only, no BOM, because 5.1 reads a no-BOM `.ps1` as
-ANSI/cp1252), and it is the executable all seven test suites shell out to.
+ANSI/cp1252), and it is the executable all eight test suites shell out to.
 `documentation/architecture.md` §8's command contract spells the same commands with the
 PowerShell 7 executable name and `\` separators; that is the same command in the other
 spelling with the other path separator. PowerShell accepts either separator, and — per the table above — either executable
@@ -191,7 +191,7 @@ powershell -File tools/build-distributions.ps1 -Provider all -OutputDir '<dist-d
 ```
 
 **Expect:** pytest reports all tests passed with no failures; the build exits `0` and
-`<dist-dir>` then contains a `claude/` subtree of 50 skills, a `gpt/` subtree of 47 (the
+`<dist-dir>` then contains a `claude/` subtree of 57 skills, a `gpt/` subtree of 54 (the
 three provider-native skills — `claude-oauth-auth`, `context-slim`, `judge-motion` — have no
 GPT adapter and are excluded by design, not missing), and a `codex/` subtree of the skills
 that currently carry a codex adapter.
@@ -809,11 +809,19 @@ $keepFiles | Get-FileHash -Algorithm SHA256 | Export-Csv -NoTypeInformation -Lit
 "preserved rows: $(@(Import-Csv -LiteralPath '<work-dir>/preserved-legacy-gpt.csv').Count) of $($keepFiles.Count)"
 ```
 
-**Expect:** on the reference consumer, `managed (retire): 47`,
-`preserved (keep in place): 1 -- goblin-sweep`, and `preserved rows: N of N` with **the two
+**Expect:** on the reference consumer, `managed (retire): 54`,
+`preserved (keep in place): 1 -- meeting-sheet`, and `preserved rows: N of N` with **the two
 numbers equal and both non-zero**. Your counts may differ; what must hold is that every name in
 the preserved line is a skill the consumer authored, no name in it appears in
-`config/skill-manifest.json`, and the row count matches the file count. A `preserved rows: 0 of
+`config/skill-manifest.json`, and the row count matches the file count.
+
+> The named example moves as the catalog grows, and that is the point of the rule rather than
+> an exception to it. This line read `goblin-sweep` until Phase CP Step 10 promoted that skill
+> into the catalog — at which point the example stopped satisfying its own "no name in it
+> appears in `config/skill-manifest.json`" test, so it was re-pointed at a name that still
+> does. Read the RULE, not the name: a promoted skill becomes managed, never preserved.
+
+A `preserved rows: 0 of
 N` (or any mismatch) means the CSV is not the audit record it claims to be — **stop**, because a
 later step treats it as one. `<work-dir>/preserved-legacy-gpt.csv` records **path and hash only,
 never a copy of the payload**; keep it with the backup and do not commit it.

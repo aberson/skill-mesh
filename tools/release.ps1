@@ -107,10 +107,12 @@ param(
     # exists. Phase CP Step 5 gave codex a discovery root and an install path, so the
     # original reason ("no install path can consume it") is spent -- but the default
     # does NOT widen, for a second reason that is not: the codex adapter roster is a
-    # rollout in progress (5 of 47 portable skills at Step 5), so 'all' would ship a
-    # deliberately partial profile as if it were the catalog. Ship codex in a release
-    # by asking for it -- '-Provider all', or '-Provider codex' for a codex-only
-    # artifact. Revisit the default when the codex roster reaches the portable roster.
+    # rollout that began partial (5 of 47 portable skills at Step 5) and has since
+    # closed: Steps 6-8 completed the roster and Step 10's promotions kept it equal
+    # to the portable catalog at 54 of 54. The default still does NOT widen, because
+    # widening it is a release-contract change an operator should make deliberately,
+    # not a side effect of the roster catching up. Ship codex in a release by asking
+    # for it -- '-Provider all', or '-Provider codex' for a codex-only artifact.
     # Note that tools/migrate-legacy-install.ps1 binds every DECLARED provider -- not
     # the subset a given dist happens to ship -- and blocks with MISSING_PROFILE when a
     # declared provider has no profile in the artifact. Now that codex is declared, a

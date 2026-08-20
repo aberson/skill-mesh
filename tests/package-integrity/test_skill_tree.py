@@ -5,10 +5,10 @@ Two independent layers:
 - STRUCTURAL (mandatory, needs NO private/legacy source): every portable skill
   dir has core.md + providers/claude.md + providers/gpt.md, and OPTIONALLY
   providers/codex.md (the additive third provider from Phase CP Step 3 -- 0 authored
-  at that step, the pilot five at Step 4); every provider-native dir has ONLY
-  providers/claude.md (no core.md, no gpt.md, no codex.md -- provider-native means
-  Claude-only); the counts match the manifest (47 portable, 3 native, 50 total, 5
-  codex); skills/inventory.json
+  at that step, the pilot five at Step 4, the whole portable roster since Step 8);
+  every provider-native dir has ONLY providers/claude.md (no core.md, no gpt.md,
+  no codex.md -- provider-native means Claude-only); the counts match the manifest
+  (54 portable, 3 native, 57 total, 54 codex); skills/inventory.json
   agrees with the manifest and the committed expected_inventory.json fixture; and
   no operator-private absolute path leaked into the migrated tree.
 
@@ -90,13 +90,13 @@ def test_inventory_counts():
         "codex": sum(1 for s in skills if s["providers"]["codex"]),
     }
     assert inv["counts"] == derived, (inv["counts"], derived)
-    assert derived["total"] == 50
-    assert derived["portable"] == 47
+    assert derived["total"] == 57
+    assert derived["portable"] == 54
     assert derived["provider_native"] == 3
-    # 47 since Phase CP Step 8 (issue #125) added Cohort D's fourteen remaining
-    # adapters on top of Cohort C's sixteen, Cohort B's twelve, and the pilot five --
-    # every portable skill now carries a providers/codex.md.
-    assert derived["codex"] == 47
+    # 54 since Phase CP Step 10 (issue #127) promoted the seven workspace-custom
+    # skills on top of the Step 8 catalog of 47. Every portable skill carries a
+    # providers/codex.md, and each promotion landed portable and codex together.
+    assert derived["codex"] == 54
 
 
 def test_inventory_matches_manifest():
@@ -193,15 +193,14 @@ def test_file_counts_across_tree():
     claude = list(SKILLS_DIR.glob("*/providers/claude.md"))
     gpt = list(SKILLS_DIR.glob("*/providers/gpt.md"))
     codex = list(SKILLS_DIR.glob("*/providers/codex.md"))
-    assert len(cores) == 47, len(cores)
-    assert len(claude) == 50, len(claude)   # 47 portable + 3 native
-    assert len(gpt) == 47, len(gpt)
-    # 47 since Phase CP Step 8 -- Step 4's pilot five, Cohort B's twelve (issue #123),
-    # Cohort C's sixteen (issue #124), and Cohort D's fourteen (issue #125), on rails
-    # that shipped empty at Step 3. This is a SPELLED count on purpose, exactly like
-    # its three siblings: any step that authors more adapters must come here and state
-    # the new number, so the catalog size is never silently redefined by a glob.
-    assert len(codex) == 47, len(codex)
+    assert len(cores) == 54, len(cores)
+    assert len(claude) == 57, len(claude)   # 54 portable + 3 native
+    assert len(gpt) == 54, len(gpt)
+    # 54 since Phase CP Step 10 (issue #127) promoted seven workspace-custom skills
+    # on top of the Step 8 catalog of 47. This is a SPELLED count on purpose, exactly
+    # like its three siblings: any step that authors more adapters must come here and
+    # state the new number, so the catalog size is never silently redefined by a glob.
+    assert len(codex) == 54, len(codex)
 
 
 def test_no_private_absolute_paths_in_migrated_tree():

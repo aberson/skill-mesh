@@ -21,7 +21,7 @@ hosts receive *generated* compatibility layouts built from this source.
 | **shim** | Thin backward-compatible launcher that delegates to a canonical file. |
 | **transport** | Authenticated API or host-native channel used to execute a provider model. |
 | **calibration** | Existing deterministic/rubric comparison that checks adapter parity. |
-| **portable skill** | Skill with a neutral core plus Claude and GPT adapters. 47 total. |
+| **portable skill** | Skill with a neutral core plus Claude and GPT adapters. 54 total. |
 | **provider-native skill** | Skill supported on exactly one host; no neutral core. 3 total. |
 
 `<name>` and `<skill>` in every path template mean the same stable kebab-case
@@ -128,12 +128,14 @@ each skill's legacy contract, not inferred from a single shared wrapper line.
 
 | Capability | Count | Skills |
 |---|---|---|
-| `filesystem` | 50 | all skills |
-| `sub-agent` | 16 | build-step, context-slim, goblin-do, goblin-suggest, judge-motion, judge-ui, research-prospect, review-deep, review-gauntlet, skill-evolve, skill-iterate, test-prune, tier-escalate, tier-offload, user-brainstorm, user-learn |
+| `filesystem` | 57 | all skills |
+| `sub-agent` | 17 | build-step, citation-sweep, context-slim, goblin-do, goblin-suggest, judge-motion, judge-ui, research-prospect, review-deep, review-gauntlet, skill-evolve, skill-iterate, test-prune, tier-escalate, tier-offload, user-brainstorm, user-learn |
 | `vision` | 2 | judge-ui, judge-motion |
 
-The `sub-agent` set is derived by auditing all 50 legacy contracts for explicit
-isolated-agent dispatch. Representative evidence (legacy `SKILL-core.md` /
+The `sub-agent` set is derived by auditing every skill's contract for explicit
+isolated-agent dispatch (all 50 legacy contracts at Step 33, plus each skill promoted
+since -- citation-sweep, whose core dispatches one isolated per-artifact review
+worker, joined at Phase CP Step 10). Representative evidence (legacy `SKILL-core.md` /
 `SKILL.md`): build-step "Spawn a sub-agent" + "Step 6 — Spawn reviewer agents";
 context-slim "Spawn three parallel subagents using the Agent tool"; goblin-do runs
 `/build-step` via a Workflow `agent()` call; goblin-suggest "fan out `--n-judges`
@@ -239,8 +241,8 @@ those steps must satisfy.
 
 Every skill has a machine-readable migration entry in `config/skill-manifest.json`
 (the `migration` + `support_assets` blocks per skill, plus top-level
-`global_support_assets`), covering **all 47 portable skills plus the 3
-Claude-native exclusions (50 total)**.
+`global_support_assets`), covering **all 54 portable skills plus the 3
+Claude-native exclusions (57 total)**.
 
 **Migration root.** All `source` / `legacy_*` paths are relative to **coding-root**
 (`aberson/coding-root` — the operator's `dev` checkout), READ-ONLY during Steps
@@ -367,7 +369,7 @@ or substitute the pinned interpreter path via your own environment — do not ha
 a private absolute path).
 
 **The DONE gate is the repo-root invocation.** Run from the repository root with no
-path argument, so collection reaches the seven suites under `tests` *and* the three
+path argument, so collection reaches the eight suites under `tests` *and* the three
 test roots a `tests`-scoped run never touches — `_shared`, `skill-iterate/scripts`,
 and `skill-eval-setup/scripts`, all of which hold production modules this project
 edits:
@@ -405,11 +407,11 @@ python -m pytest tests\calibration
 ### 8.4 Lint / typecheck
 
 **Not configured.** The repository has no lint command and no typecheck command.
-Do not invent one. pytest is the only automated gate: the seven suites under `tests`
+Do not invent one. pytest is the only automated gate: the eight suites under `tests`
 (`tests/router`, `tests/calibration`, `tests/package-integrity`, `tests/distributions`,
-`tests/release`, `tests/telemetry`, `tests/smoke`) plus the three root-only test roots
-described in section 8.3, all collected by the repo-root `python -m pytest`. Per-suite
-and total counts are NOT restated here -- they live in
+`tests/release`, `tests/telemetry`, `tests/smoke`, `tests/experiments`) plus the three
+root-only test roots described in section 8.3, all collected by the repo-root
+`python -m pytest`. Per-suite and total counts are NOT restated here -- they live in
 [`phase-75-baseline.md`](phase-75-baseline.md), which is the one owner of the measured
 numbers. An earlier revision of this paragraph attributed a path-scoped total to the
 repo-root command; that is the drift the single-owner rule exists to stop.
@@ -486,7 +488,7 @@ seam (defaults to this repository) that must be a git working tree.
 
 `tests/package-integrity/test_manifest_contract.py` fails on any of:
 
-- Skill count != 50, portable != 47, provider-native != 3, sub-agent != 16,
+- Skill count != 57, portable != 54, provider-native != 3, sub-agent != 17,
   vision != 2 (each set checked exactly against the committed
   `tests/package-integrity/expected_inventory.json` fixture — the package tests
   need no private source).

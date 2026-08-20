@@ -76,6 +76,7 @@ Runnable via pytest (`python -m pytest tests/package-integrity`) or standalone
 (`python tests/package-integrity/test_cutover_handoff.py`).
 """
 
+import json
 import re
 import sys
 from pathlib import Path
@@ -87,6 +88,7 @@ MIGRATION = DOC_DIR / "migration.md"
 NEUTRAL_PLAN = DOC_DIR / "provider-neutral-skill-mesh-plan.md"
 CUTOVER_PLAN = DOC_DIR / "host-native-discovery-cutover-plan.md"
 README = REPO_ROOT / "README.md"
+MANIFEST = REPO_ROOT / "config" / "skill-manifest.json"
 CLAUDE_MD = REPO_ROOT / "CLAUDE.md"
 
 sys.path.insert(0, str(REPO_ROOT / "tools"))
@@ -991,11 +993,32 @@ def test_handoff_backs_up_before_the_untracked_legacy_deletion():
 
 
 def test_handoff_retires_on_a_managed_allowlist_and_preserves_consumer_only():
-    low = re.sub(r"\s+", " ", _read(HANDOFF)).lower()
+    """The handoff must name a concrete preserved entry, and that name must still be
+    consumer-only.
+
+    DERIVED, not hand-listed. This gate used to spell `goblin-sweep`, which held until
+    Phase CP Step 10 promoted that skill into the catalog -- at which point the handoff's
+    own stated rule ("no name in the preserved line appears in
+    config/skill-manifest.json") was false of the very example illustrating it, and a
+    hand-listed assertion could only report that the string had moved, never that the
+    example had gone wrong. So the name is now READ OUT of the handoff and checked
+    against the manifest: the next promotion of whatever name sits there fails here with
+    the reason, not with a missing substring.
+    """
+    text = _read(HANDOFF)
+    low = re.sub(r"\s+", " ", text).lower()
     assert "allowlist" in low, \
         "retirement must be a positive allowlist, not a denylist"
-    assert "goblin-sweep" in low, \
-        "handoff must name the concrete consumer-only entry that is preserved"
+    m = re.search(r"preserved \(keep in place\): \d+ -- ([a-z0-9][a-z0-9-]*)", text)
+    assert m, "handoff must name the concrete consumer-only entry that is preserved"
+    preserved = m.group(1)
+    manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
+    manifested = {s["name"] for s in manifest["skills"]}
+    assert preserved not in manifested, (
+        f"the handoff's preserved-entry example {preserved!r} is now a manifest skill, "
+        "so it is MANAGED rather than preserved and contradicts the rule the same "
+        "paragraph states. Re-point the example at a name the consumer authored that "
+        "the catalog does not claim.")
     assert "never payload-copied" in low, \
         "handoff must state preserved entries are recorded by path and hash only"
     assert LEGACY_GPT_ROOT in _read(HANDOFF), \

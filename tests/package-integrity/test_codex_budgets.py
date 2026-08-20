@@ -20,7 +20,7 @@ carried forward as documentation/codex-parity-delivery-plan.md:60-62:
      exist, and no test of the emitted bytes would notice.
 
 The two are not comparable per-skill: 7,500 is a cap on ONE skill while 8,000 caps the
-SUM over ~47-54 of them, so the catalog budget is the binding constraint by roughly two
+SUM over all of them (54 since Phase CP Step 10), so the catalog budget is the binding constraint by roughly two
 orders of magnitude. A reader who assumes the per-skill cap implies catalog headroom has
 it exactly backwards.
 
@@ -29,7 +29,8 @@ WHY THIS MEASURES THE PORTABLE CATALOG AND NOT THE CODEX RECORDS
 At Step 3 there are ZERO authored codex adapters, and at Step 4 there are five of a
 projected 47 (the rails ship first; Step 4 adds the pilot five, Steps 6-8 the cohorts --
 Step 6's Cohort B raised the authored roster to seventeen, Step 7's Cohort C to
-thirty-three, and Step 8's Cohort D closed it at the full 47). Summing over the codex
+thirty-three, Step 8's Cohort D closed it at the then-full 47, and Step 10's seven
+promotions grew catalog and roster together to 54). Summing over the codex
 records would therefore have measured 0 characters -- and after Step 4 still only about
 a tenth of the catalog -- against an 8,000 floor, and report a comfortable PASS that
 means nothing: a vacuous gate on the exact axis the plan flags as a live risk
@@ -41,8 +42,8 @@ precisely the set the cohort steps authored codex adapters for. That made the ga
 meaningful from Step 3 onward -- the plan's own words, "budget tests from Step 3 onward
 estimate serialization" -- and it makes the number MOVE when a description is edited,
 which is what turns it into an early warning rather than a formality. Since Step 8 the
-eligible and authored rosters COINCIDE at 47, so the same sum is now also a measurement
-of the real catalog a Codex host serializes; the basis stays eligibility-by-status
+eligible and authored rosters COINCIDE (at 47 then, at 54 since Step 10), so the same
+sum is now also a measurement of the real catalog a Codex host serializes; the basis stays eligibility-by-status
 regardless (see test_catalog_estimate_basis_is_eligibility_not_the_authored_roster).
 
 WHAT THIS GATE CANNOT DECIDE
@@ -120,8 +121,9 @@ def _codex_eligible_records(manifest=None):
     its budget.
 
     The membership predicate is ELIGIBILITY (`status == "portable"`), deliberately NOT
-    `"codex" in providers`. Since Step 8 the two select the same 47 records from the
-    committed manifest, so no assertion over real records can tell them apart any more
+    `"codex" in providers`. Since Step 8 the two select the same records from the
+    committed manifest (47 then, 54 since Step 10), so no assertion over real records
+    can tell them apart any more
     -- which is exactly why `manifest` is a parameter: the basis-pinning test feeds a
     synthetic manifest where the two predicates disagree and proves this function
     follows eligibility.
@@ -218,14 +220,18 @@ def test_whole_catalog_initial_list_estimate_is_under_the_unknown_context_floor(
     """
     total, sizes = _catalog_estimate()
     assert sizes, "no codex-eligible skills found -- this gate would be vacuous"
-    # Since Step 8 (Cohort D) the initial list IS the whole portable catalog: the full
-    # 47-name roster, every name backed by an authored codex adapter, serializes under
-    # the floor with no name dropped. Both halves are asserted -- the count AND the
-    # exact name set against the manifest's own portable roster -- so a record silently
-    # falling out of the estimate can never make the floor easier to fit.
+    # Since Step 8 (Cohort D) the initial list IS the whole portable catalog, and Step
+    # 10 (issue #127) grew it to the full 54-name roster: every name backed by an
+    # authored codex adapter, serializing under the floor with no name dropped. Step 10
+    # is also the step that PAID for those seven rows -- the seven names cost ~400 chars
+    # of name+path before a single description character, more than the 316 chars of
+    # headroom the 47-skill catalog had left -- so it trimmed DESCRIPTIONS catalog-wide
+    # (mean row 163 -> 137). Both halves are asserted -- the count AND the exact name
+    # set against the manifest's own portable roster -- so a record silently falling
+    # out of the estimate can never make the floor easier to fit.
     portable_names = {s["name"] for s in _load_manifest()["skills"]
                       if s["status"] == "portable"}
-    assert len(sizes) == 47
+    assert len(sizes) == 54
     assert set(sizes) == portable_names
     assert _fits_under_floor(total), (
         f"Codex initial-list estimate {total} chars over {len(sizes)} skills exceeds "
@@ -244,8 +250,9 @@ def test_catalog_estimate_basis_is_eligibility_not_the_authored_roster():
     Through Step 7 this test proved the basis was ELIGIBILITY by arithmetic on the real
     manifest: the authored roster was a proper subset of the eligible one, so measuring
     the wrong basis under-reported the estimate visibly. Step 8's Cohort D made the two
-    rosters coincide at 47, which is the situation the old assertion's own message
-    anticipated ("at that point pin the basis another way rather than dropping it") --
+    rosters coincide (at 47 then, at 54 since Step 10's promotions, which authored each
+    new skill portable and codex in one commit), which is the situation the old
+    assertion's own message anticipated ("at that point pin the basis another way rather than dropping it") --
     no arithmetic over real records can separate the predicates any more.
 
     So the basis is pinned on a SYNTHETIC manifest where the predicates disagree: one
@@ -260,12 +267,12 @@ def test_catalog_estimate_basis_is_eligibility_not_the_authored_roster():
     eligible = {s["name"] for s in _codex_eligible_records()}
     portable = {s["name"] for s in manifest["skills"] if s["status"] == "portable"}
     assert eligible == portable
-    assert len(eligible) == manifest["counts"]["portable"] == 47
+    assert len(eligible) == manifest["counts"]["portable"] == 54
     # Since Step 8 every eligible record is also authored -- the pass-2 exit fact --
     # and the coincidence is asserted so a dropped adapter cannot hide behind it.
     authored = {s["name"] for s in manifest["skills"] if "codex" in s["providers"]}
     assert authored == eligible
-    assert len(authored) == manifest["counts"]["codex"] == 47
+    assert len(authored) == manifest["counts"]["codex"] == 54
     # The synthetic-manifest pin: predicates disagree, eligibility must win.
     synthetic = {"skills": [
         {"name": "future-portable", "status": "portable", "description": "d",
@@ -278,7 +285,7 @@ def test_catalog_estimate_basis_is_eligibility_not_the_authored_roster():
         "the estimate's membership predicate drifted off eligibility "
         f"(status == portable): got {sorted(basis)}")
     total, sizes = _catalog_estimate()
-    assert len(sizes) == 47
+    assert len(sizes) == 54
     assert total > 0
 
 
@@ -286,10 +293,19 @@ def test_catalog_floor_reds_when_the_catalog_grows_past_it():
     """Red-on-garbage anchor for the catalog floor, and a documented early warning.
 
     The headroom is genuinely thin, so this anchor does double duty: it proves the
-    comparison can fail, and it records WHY the promoted-skill step has to re-measure.
-    Phase CP Step 10 promotes 7 more skills into the catalog; scaling the current
-    estimate to 54 skills is what shows that step it will need description trims rather
-    than discovering it on a real host.
+    comparison can fail, and it records how much room the NEXT promotion step has
+    before it must trim again -- as arithmetic on the real catalog rather than as a
+    comment that rots.
+
+    Phase CP Step 10 (issue #127) is the step this warning was originally written for.
+    It promoted 7 workspace-custom skills, and the warning was right: the seven names
+    cost ~400 chars of name-plus-path before any description text, against 316 chars of
+    headroom, so the step trimmed DESCRIPTIONS catalog-wide (mean row 163 -> 137, total
+    7,684 over 47 -> 7,401 over 54). The warning below is that warning RE-PINNED at the
+    post-trim catalog and stated in CHARACTERS OF HEADROOM against the real total --
+    the unit the budget is actually spent in -- so that neither a silent description
+    bloat nor a silently generous floor can go unnoticed, and so that neither bound
+    sits a rounding error away from today's catalog.
 
     The anchor calls the SAME `_fits_under_floor` helper the real gate
     (`test_whole_catalog_initial_list_estimate_is_under_the_unknown_context_floor`)
@@ -300,19 +316,43 @@ def test_catalog_floor_reds_when_the_catalog_grows_past_it():
     exists to catch.
     """
     total, sizes = _catalog_estimate()
-    per_skill_mean = total / len(sizes)
+    headroom = CATALOG_FLOOR - total
     # The anchor: the measured catalog fits, and one deliberately two floors past the
     # cap does not. Same predicate as the real gate, both directions.
     assert _fits_under_floor(total) is True
     assert _fits_under_floor(total + CATALOG_FLOOR * 2) is False
-    # The early warning, asserted as arithmetic rather than left in a comment so it
-    # cannot rot: at the post-Step-10 catalog size of 54, today's mean row size
-    # exceeds the floor. This is a FACT about the current descriptions, not a
-    # prediction, and Step 10 owns the trim.
-    projected_54 = per_skill_mean * 54
-    assert projected_54 > CATALOG_FLOOR, (
-        "the 54-skill projection now FITS under the floor -- if descriptions were "
-        "trimmed, update this assertion and Phase CP Step 10's expectations together")
+    # The early warning, stated as HEADROOM IN CHARACTERS against the real total rather
+    # than as a projected skill count. A projection ("still fits at 58 skills, busts at
+    # 59") reads as a fact about the catalog but is really a two-sided bracket on the
+    # MEAN row -- and at 54 rows one character of mean is 54 characters of total. That
+    # pair held only for totals in [7322, 7448]: about 47 characters of slack above
+    # today's 7,401, against the real gate's 599. It would have reded CI on any
+    # ~+48-character description edit anywhere in the catalog -- roughly 12x sooner than
+    # the budget it claims to warn about -- and told the next engineer to re-pin two
+    # magic constants. Both bounds below are deliberately loose against the real gate.
+    #
+    # Which bound catches what:
+    #   * headroom > 400 is the BLOAT guard. Descriptions growing back toward the
+    #     pre-trim 163-char mean shrink the headroom, and this reds while ~400 chars of
+    #     real budget remain. This is the early warning proper.
+    #   * headroom < 900 is what keeps that warning honest, and is the bound that
+    #     catches a silently INFLATED CATALOG_FLOOR: buying room by raising the floor
+    #     instead of trimming opens the headroom and reds here. (It also reds on an
+    #     over-trim that leaves the warning describing a catalog that no longer
+    #     exists.) It is the old `not _fits_under_floor(per_skill_mean * 59)` check
+    #     restated in characters -- algebraically that form was `headroom <= 678`, tight
+    #     enough to red on a trim smaller than the -283 Step 10 itself made.
+    assert headroom > 400, (
+        f"catalog headroom is down to {headroom} chars ({total} over {len(sizes)} rows, "
+        f"floor {CATALOG_FLOOR}) -- descriptions have grown since the Phase CP Step 10 "
+        "trim. Trim DESCRIPTIONS in tools/gen_manifest.py. Do NOT raise CATALOG_FLOOR "
+        "and do NOT relax this bound to buy room.")
+    assert headroom < 900, (
+        f"catalog headroom has opened to {headroom} chars ({total} over {len(sizes)} "
+        f"rows, floor {CATALOG_FLOOR}) -- either CATALOG_FLOOR was raised instead of the "
+        "catalog being trimmed, or a trim landed that this warning no longer describes. "
+        "Confirm the floor is still the real unknown-context limit, then re-measure and "
+        "re-state both bounds here in one edit.")
 
 
 # Cohort B, the pipeline family (Phase CP Step 6, issue #123). SPELLED here -- like the
@@ -329,7 +369,7 @@ STEP6_COHORT_B = [
 def test_step6_cohort_is_authored_and_every_authored_record_fits_the_per_skill_cap():
     """Phase CP Step 6 extends the AUTHORED roster; the budget must hold over it.
 
-    The catalog-floor gate above already measures the full ELIGIBLE catalog (all 47
+    The catalog-floor gate above already measures the full ELIGIBLE catalog (all 54
     portable skills), so enlarging the authored set moves no estimate -- that is the
     projected-catalog design working as intended. What Step 6 adds is worth pinning
     separately: the twelve Cohort B adapters are really declared (a codex.md on disk
@@ -341,11 +381,11 @@ def test_step6_cohort_is_authored_and_every_authored_record_fits_the_per_skill_c
     authored = {s["name"]: s for s in manifest["skills"] if "codex" in s["providers"]}
     missing = [n for n in STEP6_COHORT_B if n not in authored]
     assert not missing, f"Step 6 cohort skills missing a manifest codex entry: {missing}"
-    # 47 = the Step 4 pilot five + Cohort B's twelve + Cohort C's sixteen (Step 7,
-    # issue #124) + Cohort D's fourteen (Step 8, issue #125) -- the full portable
-    # catalog. Spelled, so any step that grows the roster must come here and state
-    # its new number.
-    assert len(authored) == manifest["counts"]["codex"] == 47
+    # 54 = the Step 4 pilot five + Cohort B's twelve + Cohort C's sixteen (Step 7,
+    # issue #124) + Cohort D's fourteen (Step 8, issue #125) + Step 10's seven
+    # promotions (issue #127) -- the full portable catalog. Spelled, so any step that
+    # grows the roster must come here and state its new number.
+    assert len(authored) == manifest["counts"]["codex"] == 54
     offenders = []
     for name, rec in authored.items():
         size = _utf8_len(_skill_metadata_serialization(name, rec["description"]))
@@ -406,16 +446,78 @@ STEP8_COHORT_D = [
     "user-shakedown", "user-uat", "user-walkthrough",
 ]
 
+# The seven workspace-custom skills promoted into the canonical catalog at Phase CP
+# Step 10 (issue #127). Unlike Cohorts B-D these are not codex adapters authored for
+# skills the catalog already held: each of the seven is a NEW catalog member, authored
+# core-plus-three-adapters in one commit, so this roster grows `portable` and `codex`
+# together. SPELLED for the same reason as the cohorts above -- the sweep must grade
+# the step's actual roster, not whatever the manifest happens to declare.
+STEP10_PROMOTIONS = [
+    "build-observer", "citation-distill", "citation-review", "citation-sweep",
+    "citation-triage", "goblin-sweep", "repo-wrap",
+]
+
+
+def test_step10_promotions_are_authored_and_paid_for_within_the_floor():
+    """Phase CP Step 10 grows the catalog itself, so it must pay the budget it grows.
+
+    The cohort sweeps above pin adapters authored for skills the catalog ALREADY held,
+    which moves no catalog estimate. Step 10 is different in kind: seven new names
+    enter the eligible catalog, and every one of them costs name-plus-path characters
+    against the 8,000-char initial-list floor before it has said anything about itself.
+
+    So this sweep pins three things the cohort sweeps cannot: the seven are really
+    DECLARED with a codex adapter (a portable skill without one would silently shrink
+    the Codex catalog relative to the GPT one), they are genuinely NEW rather than
+    renames of existing members, and the fixed cost they added is stated as arithmetic
+    -- roughly 400 characters of name and path, which is why the step had to trim
+    descriptions catalog-wide rather than simply appending seven rows.
+    """
+    manifest = _load_manifest()
+    authored = {s["name"]: s for s in manifest["skills"] if "codex" in s["providers"]}
+    missing = [n for n in STEP10_PROMOTIONS if n not in authored]
+    assert not missing, f"Step 10 promotions missing a manifest codex entry: {missing}"
+    # New members, not renames: disjoint from every previously-authored roster.
+    for prior in (STEP6_COHORT_B, STEP7_COHORT_C, STEP8_COHORT_D):
+        assert not set(STEP10_PROMOTIONS) & set(prior)
+    # Each promotion is portable too -- codex is additive on a portable record, never a
+    # status of its own, so a codex entry on a non-portable skill would be a defect.
+    eligible = {s["name"] for s in _codex_eligible_records(manifest)}
+    assert set(STEP10_PROMOTIONS) <= eligible
+    # The fixed cost these seven added, before a single description character. Stated
+    # as arithmetic so the "why did Step 10 have to trim?" answer cannot rot: the name
+    # is charged twice (once as `name`, once inside the install path).
+    fixed = sum(_utf8_len(_skill_metadata_serialization(n, ""))
+                for n in STEP10_PROMOTIONS)
+    assert fixed > 350, fixed
+    # And the enlarged catalog still fits, which is the whole point of the trim.
+    total, sizes = _catalog_estimate()
+    assert set(STEP10_PROMOTIONS) <= set(sizes)
+    assert _fits_under_floor(total), (
+        f"the Step 10 catalog of {len(sizes)} skills does not fit: {total} chars")
+    offenders = [f"{n}: {sz} > {PER_SKILL_CAP}"
+                 for n, sz in sizes.items() if sz > PER_SKILL_CAP]
+    assert not offenders, (
+        "an authored codex record exceeds the per-skill metadata cap:\n  "
+        + "\n  ".join(offenders))
+
 
 def test_step8_cohort_is_authored_and_the_catalog_is_closed():
     """Phase CP Step 8 closes the authored roster at the portable catalog.
 
     Same design as the two cohort sweeps above (the Step 6 sweep owns the spelled
     total): the fourteen Cohort D adapters are really DECLARED (a codex.md on disk
-    without its manifest entry ships nothing), the three cohort rosters plus the pilot
-    are pairwise disjoint and together ARE the authored set exactly -- no stray
-    fifteenth adapter rode in with the cohort -- and every authored record fits the
-    per-skill cap individually.
+    without its manifest entry ships nothing), the cohort rosters plus the pilot are
+    pairwise disjoint and together ARE the authored set exactly -- no stray fifteenth
+    adapter rode in with the cohort -- and every authored record fits the per-skill cap
+    individually.
+
+    "Closed" here means closed at the catalog, not frozen at 47. Step 10's seven
+    promotions joined the union below because each one landed portable AND codex in the
+    same commit, so the authored set still EQUALS the eligible one. That is the property
+    this exact-partition assertion protects: a promotion that shipped a portable skill
+    without its codex adapter would break the equality here rather than silently
+    shrinking the Codex catalog.
     """
     manifest = _load_manifest()
     authored = {s["name"]: s for s in manifest["skills"] if "codex" in s["providers"]}
@@ -427,9 +529,10 @@ def test_step8_cohort_is_authored_and_the_catalog_is_closed():
     # here makes the partition exact instead of merely disjoint.
     pilot = {"lesson-harvest", "plan-review", "session-wrap", "task-handoff",
              "user-orient"}
-    assert not pilot & set(STEP6_COHORT_B + STEP7_COHORT_C + STEP8_COHORT_D)
+    assert not pilot & set(STEP6_COHORT_B + STEP7_COHORT_C + STEP8_COHORT_D
+                           + STEP10_PROMOTIONS)
     assert set(authored) == pilot | set(STEP6_COHORT_B) | set(STEP7_COHORT_C) \
-        | set(STEP8_COHORT_D)
+        | set(STEP8_COHORT_D) | set(STEP10_PROMOTIONS)
     offenders = []
     for name, rec in authored.items():
         size = _utf8_len(_skill_metadata_serialization(name, rec["description"]))
@@ -470,15 +573,17 @@ def test_codex_install_path_shape_is_pinned():
     ("repo-sync", ["repo-sync", ".agents/skills/repo-sync/SKILL.md"]),
     # A Cohort C row (Phase CP Step 7), same rationale one cohort later.
     ("build-step", ["build-step", ".agents/skills/build-step/SKILL.md"]),
-    # A Cohort D row (Phase CP Step 8), closing the catalog at all 47.
+    # A Cohort D row (Phase CP Step 8), which closed the catalog at 47.
     ("user-debug", ["user-debug", ".agents/skills/user-debug/SKILL.md"]),
+    # A Step 10 promotion (issue #127), the newest catalog members.
+    ("repo-wrap", ["repo-wrap", ".agents/skills/repo-wrap/SKILL.md"]),
 ])
 def test_serialization_includes_name_description_and_path(name, expected_substrings):
     """The serialization must actually contain all three metered fields.
 
     A model that quietly dropped the path would under-report the catalog estimate by
-    ~1,700 chars across 47 skills -- more than the entire remaining headroom -- and
-    would turn a red gate green without anyone editing a description.
+    ~2,000 chars across 54 skills -- more than three times the remaining headroom --
+    and would turn a red gate green without anyone editing a description.
     """
     rec = next(s for s in _codex_eligible_records() if s["name"] == name)
     serialized = _skill_metadata_serialization(rec["name"], rec["description"])

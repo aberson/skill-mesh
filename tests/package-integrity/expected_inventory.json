@@ -1,23 +1,29 @@
 {
   "note": "Authoritative expected inventory for package-integrity tests. Committed so the public package tests need no private/legacy source. Regenerate with tools/gen_manifest.py.",
   "counts": {
-    "total": 50,
-    "portable": 47,
+    "total": 57,
+    "portable": 54,
     "provider_native": 3,
-    "claude": 50,
-    "gpt": 47,
-    "codex": 47,
+    "claude": 57,
+    "gpt": 54,
+    "codex": 54,
     "local_capable": 24,
-    "sub_agent": 16,
+    "sub_agent": 17,
     "vision": 2,
-    "filesystem": 50
+    "filesystem": 57
   },
   "portable": [
+    "build-observer",
     "build-phase",
     "build-queue",
     "build-step",
+    "citation-distill",
+    "citation-review",
+    "citation-sweep",
+    "citation-triage",
     "goblin-do",
     "goblin-suggest",
+    "goblin-sweep",
     "judge-ui",
     "lesson-harvest",
     "memory-distill",
@@ -33,6 +39,7 @@
     "repo-init",
     "repo-sync",
     "repo-update",
+    "repo-wrap",
     "research-prospect",
     "review-deep",
     "review-gauntlet",
@@ -67,11 +74,17 @@
     "judge-motion"
   ],
   "codex": [
+    "build-observer",
     "build-phase",
     "build-queue",
     "build-step",
+    "citation-distill",
+    "citation-review",
+    "citation-sweep",
+    "citation-triage",
     "goblin-do",
     "goblin-suggest",
+    "goblin-sweep",
     "judge-ui",
     "lesson-harvest",
     "memory-distill",
@@ -87,6 +100,7 @@
     "repo-init",
     "repo-sync",
     "repo-update",
+    "repo-wrap",
     "research-prospect",
     "review-deep",
     "review-gauntlet",
@@ -143,6 +157,7 @@
   ],
   "sub_agent": [
     "build-step",
+    "citation-sweep",
     "context-slim",
     "goblin-do",
     "goblin-suggest",
@@ -164,6 +179,34 @@
     "judge-ui"
   ],
   "skills": [
+    {
+      "name": "build-observer",
+      "status": "portable",
+      "local_capable": false,
+      "capabilities": [
+        "filesystem"
+      ],
+      "migration": {
+        "legacy_core": ".claude/skills-gpt/build-observer/SKILL-core.md",
+        "legacy_claude_launcher": ".claude/skills/build-observer/SKILL.md",
+        "legacy_claude_adapter": ".claude/skills/build-observer/SKILL-claude.md",
+        "legacy_gpt": ".claude/skills-gpt/build-observer/SKILL-gpt.md"
+      },
+      "support_assets": [
+        {
+          "source": ".claude/skills/build-observer/sample-dry-run.md",
+          "dest": "skills/build-observer/sample-dry-run.md"
+        },
+        {
+          "source": ".claude/skills/build-observer/scaffold_portfolio.py",
+          "dest": "skills/build-observer/scaffold_portfolio.py"
+        },
+        {
+          "source": ".claude/skills/build-observer/test_scaffold_portfolio.py",
+          "dest": "skills/build-observer/test_scaffold_portfolio.py"
+        }
+      ]
+    },
     {
       "name": "build-phase",
       "status": "portable",
@@ -228,6 +271,67 @@
           "dest": "skills/build-step/scripts/"
         }
       ]
+    },
+    {
+      "name": "citation-distill",
+      "status": "portable",
+      "local_capable": false,
+      "capabilities": [
+        "filesystem"
+      ],
+      "migration": {
+        "legacy_core": ".claude/skills-gpt/citation-distill/SKILL-core.md",
+        "legacy_claude_launcher": ".claude/skills/citation-distill/SKILL.md",
+        "legacy_claude_adapter": ".claude/skills/citation-distill/SKILL-claude.md",
+        "legacy_gpt": ".claude/skills-gpt/citation-distill/SKILL-gpt.md"
+      },
+      "support_assets": []
+    },
+    {
+      "name": "citation-review",
+      "status": "portable",
+      "local_capable": false,
+      "capabilities": [
+        "filesystem"
+      ],
+      "migration": {
+        "legacy_core": ".claude/skills-gpt/citation-review/SKILL-core.md",
+        "legacy_claude_launcher": ".claude/skills/citation-review/SKILL.md",
+        "legacy_claude_adapter": ".claude/skills/citation-review/SKILL-claude.md",
+        "legacy_gpt": ".claude/skills-gpt/citation-review/SKILL-gpt.md"
+      },
+      "support_assets": []
+    },
+    {
+      "name": "citation-sweep",
+      "status": "portable",
+      "local_capable": false,
+      "capabilities": [
+        "filesystem",
+        "sub-agent"
+      ],
+      "migration": {
+        "legacy_core": ".claude/skills-gpt/citation-sweep/SKILL-core.md",
+        "legacy_claude_launcher": ".claude/skills/citation-sweep/SKILL.md",
+        "legacy_claude_adapter": ".claude/skills/citation-sweep/SKILL-claude.md",
+        "legacy_gpt": ".claude/skills-gpt/citation-sweep/SKILL-gpt.md"
+      },
+      "support_assets": []
+    },
+    {
+      "name": "citation-triage",
+      "status": "portable",
+      "local_capable": false,
+      "capabilities": [
+        "filesystem"
+      ],
+      "migration": {
+        "legacy_core": ".claude/skills-gpt/citation-triage/SKILL-core.md",
+        "legacy_claude_launcher": ".claude/skills/citation-triage/SKILL.md",
+        "legacy_claude_adapter": ".claude/skills/citation-triage/SKILL-claude.md",
+        "legacy_gpt": ".claude/skills-gpt/citation-triage/SKILL-gpt.md"
+      },
+      "support_assets": []
     },
     {
       "name": "claude-oauth-auth",
@@ -317,6 +421,26 @@
         {
           "source": ".claude/skills/goblin-suggest/goblin_suggest.workflow.js",
           "dest": "skills/goblin-suggest/goblin_suggest.workflow.js"
+        }
+      ]
+    },
+    {
+      "name": "goblin-sweep",
+      "status": "portable",
+      "local_capable": false,
+      "capabilities": [
+        "filesystem"
+      ],
+      "migration": {
+        "legacy_core": ".claude/skills-gpt/goblin-sweep/SKILL-core.md",
+        "legacy_claude_launcher": ".claude/skills/goblin-sweep/SKILL.md",
+        "legacy_claude_adapter": ".claude/skills/goblin-sweep/SKILL-claude.md",
+        "legacy_gpt": ".claude/skills-gpt/goblin-sweep/SKILL-gpt.md"
+      },
+      "support_assets": [
+        {
+          "source": ".claude/skills/goblin-sweep/evals/",
+          "dest": "skills/goblin-sweep/evals/"
         }
       ]
     },
@@ -666,6 +790,21 @@
           "dest": "skills/repo-update/evals/"
         }
       ]
+    },
+    {
+      "name": "repo-wrap",
+      "status": "portable",
+      "local_capable": false,
+      "capabilities": [
+        "filesystem"
+      ],
+      "migration": {
+        "legacy_core": ".claude/skills-gpt/repo-wrap/SKILL-core.md",
+        "legacy_claude_launcher": ".claude/skills/repo-wrap/SKILL.md",
+        "legacy_claude_adapter": ".claude/skills/repo-wrap/SKILL-claude.md",
+        "legacy_gpt": ".claude/skills-gpt/repo-wrap/SKILL-gpt.md"
+      },
+      "support_assets": []
     },
     {
       "name": "research-prospect",

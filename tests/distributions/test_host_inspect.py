@@ -9,7 +9,7 @@ The shapes are SYNTHESIZED at test time, not committed. A committed fixture
 `SKILL.md` sitting at `.claude/skills/<name>/` is a real, host-discoverable skill --
 Claude Code discovers skills from nested `.claude/skills/` directories anywhere in a
 tree -- so the previous committed tree published phantom `build-phase`,
-`build-step`, `context-slim`, `build-observer`, and `goblin-sweep` skills to anyone
+`build-step`, `context-slim`, `meeting-sheet`, and `local-notes` skills to anyone
 working in this repository (#86).
 
 Guarantees proven here:
@@ -455,7 +455,7 @@ def test_prior_wrong_target_copilot(tmp_path):
 def test_consumer_only_not_managed(tmp_path):
     home = _materialize("08-consumer-only", tmp_path / "home")
     d = _inspect_json(home)
-    s = _skill(d["profiles"]["claude"], "build-observer")
+    s = _skill(d["profiles"]["claude"], "meeting-sheet")
     assert s["eligibility"] == "consumer-only"
     assert s["manifest_status"] is None
     codes = _codes(d)
@@ -468,8 +468,8 @@ def test_consumer_only_not_managed(tmp_path):
 def test_both_trees_consumer_only_in_each_root(tmp_path):
     home = _materialize("09-both-trees-consumer-only", tmp_path / "home")
     d = _inspect_json(home)
-    a = _skill(d["profiles"]["claude"], "goblin-sweep")
-    b = _skill(d["legacy_skills_gpt"], "goblin-sweep")
+    a = _skill(d["profiles"]["claude"], "local-notes")
+    b = _skill(d["legacy_skills_gpt"], "local-notes")
     assert a is not None and b is not None
     # consumer-only in EACH root; managed in NEITHER
     assert a["eligibility"] == "consumer-only"

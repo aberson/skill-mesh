@@ -640,6 +640,7 @@ cohorts depend on — a sequencing constraint, not a conditional one.
   budget tests green at 54 codex names; one uninterrupted repo-root `python -m pytest`
   passes (pass-3 exit gate)
 - **Depends on:** 8
+- **Status:** DONE (2026-08-20)
 
 <!-- redline-applied: 2026-08-16 -->
 ### Step 11: Wire the 7 utility advisory calls into canonical cores
