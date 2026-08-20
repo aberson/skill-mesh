@@ -9,7 +9,7 @@ A Claude Code installation binds the `claude` adapter of every skill into Claude
 discovery layout:
 
 ```powershell
-pwsh -File tools\install-skill-mesh.ps1 -Provider claude -Home <install-home>
+powershell -File tools\install-skill-mesh.ps1 -Provider claude -Home <install-home>
 ```
 
 Each installed skill resolves `skills/<name>/providers/claude.md`, which references
@@ -26,9 +26,9 @@ files.
 
 The generated Claude discovery tree is written to
 `<install-home>/.claude/skills/<skill>/` — Claude Code's native skill-discovery
-root. A Claude install populates only `.claude/skills`, never a GPT root. This
-discovered path is what proves a Claude profile is installed; the running model
-does not select the tree.
+root. A Claude install populates only `.claude/skills`, never another provider's
+root. This discovered path is what proves a Claude profile is installed; the
+running model does not select the tree.
 
 Claude Code may also load a root `CLAUDE.md` workspace instruction file, but that
 file is an **instruction adapter, not a skill registry**: it does not contain or
@@ -55,7 +55,7 @@ Claude adapter.
 ### Claude-native skills
 
 `claude-oauth-auth`, `context-slim`, and `judge-motion` are Claude-only. They have
-no neutral core and no GPT adapter; their `claude` adapter is self-contained.
+no neutral core and no GPT or Codex adapter; their `claude` adapter is self-contained.
 
 ## Host-metadata detection
 
@@ -68,11 +68,12 @@ no neutral core and no GPT adapter; their `claude` adapter is self-contained.
 To force Claude from any host via the router:
 
 ```powershell
-pwsh -File runtime\skill-router.ps1 -Provider claude -Skill <skill>
+powershell -File runtime\skill-router.ps1 -Provider claude -Skill <skill>
 ```
 
 ## See also
 
 [`README.md`](../../README.md) for the installation/authentication matrices;
-[`gpt.md`](gpt.md) for the GPT/Copilot counterpart; [`../migration.md`](../migration.md) for the
-pre-migration → provider-neutral transition.
+[`gpt.md`](gpt.md) and [`codex.md`](codex.md) for the GPT/Copilot and OpenAI Codex
+CLI counterparts; [`../migration.md`](../migration.md) for the pre-migration →
+provider-neutral transition.

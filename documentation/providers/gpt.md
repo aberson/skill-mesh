@@ -9,7 +9,7 @@ A GPT/Copilot installation binds the `gpt` adapter of every portable skill into 
 host's discovery layout:
 
 ```powershell
-pwsh -File tools\install-skill-mesh.ps1 -Provider gpt -Home <install-home>
+powershell -File tools\install-skill-mesh.ps1 -Provider gpt -Home <install-home>
 ```
 
 Each installed skill resolves `skills/<name>/providers/gpt.md`, which references the
@@ -29,11 +29,41 @@ This discovered path is what proves a GPT profile is installed.
 GitHub Copilot CLI discovers project skills from three roots — `.github/skills/`,
 `.agents/skills/`, and `.claude/skills/` — plus the personal root
 `~/.copilot/skills/`. This package installs the GPT profile to the conventional
-project root `.github/skills/`. Because `.claude/skills/` is **also** a Copilot
-discovery root, a consumer with both profiles installed is doubly exposed; Step 45 (#67) resolved
-that collision against a live Copilot CLI v1.0.77 — Copilot dedups by name and scans
-`.github/skills` before `.claude/skills`, so the GPT profile stably wins and is never shadowed.
-Installing both profiles is safe.
+project root `.github/skills/`. The other two project roots Copilot scans are
+**also** skill-mesh install targets, so a Copilot session can enumerate packages
+this package installed for a different provider:
+
+- `.claude/skills/` is the Claude install target. Step 45 (#67) resolved that
+  collision against a live Copilot CLI v1.0.77 — Copilot dedups by name and
+  scans `.github/skills` before `.claude/skills`, so the GPT profile stably wins
+  and is never shadowed.
+- `.agents/skills/` is the **codex install target** — not merely a root Copilot
+  happens to scan. `tools/skill-mesh-discovery.ps1` maps the `codex` provider to
+  that exact literal path, and `tools/install-skill-mesh.ps1` run with
+  `-Provider codex` writes a codex package for each of the 54 portable skills
+  there, so a consumer who installed the codex profile **will** see those
+  packages enumerated by Copilot whenever the codex home is also the directory
+  Copilot treats as its project — `.agents/skills/` is one of Copilot's
+  *project* roots, and the codex-leg measurement below was taken with the
+  install home as Copilot's project cwd. The shared literal is deliberate —
+  design decision D-CP6 builds no collision guard on purpose — and
+  `tests/distributions/test_legacy_migration.py` pins it, so that enumeration
+  is expected behavior, not a collision defect.
+
+Installing the claude and gpt profiles into one home is proven safe — the
+`.github`-before-`.claude` scan order was measured live in Step 45 (#67). A home
+holding the gpt and codex profiles together has **not been measured at all**:
+every codex measurement ran against a home with no GPT profile (the M3 consumer
+home is recorded as `gpt root absent`). For the codex leg only the enumeration
+outcome of a codex-only home is measured: Copilot CLI 1.0.80, run with that
+install home as its project cwd, enumerated all 47 codex packages then installed
+under `.agents/skills` — exact-set match, no misbehavior — see
+[`../parity-deltas.md`](../parity-deltas.md), "M2 D-CP6 re-check" and its M3
+install-state row. No scan-order guarantee for `.agents/skills` has been
+established, so a skill name present in **both** the GPT and codex profiles has
+no proven winner. Both results are stamped with the Copilot version they were
+measured against; the codex-leg disposition is explicitly re-checked on the
+next Copilot upgrade.
 
 **Every generated GPT `SKILL.md` must lead with a YAML frontmatter block** containing
 at least `name` and `description`; Copilot rejects a `SKILL.md` without it. The
@@ -104,7 +134,7 @@ invocation time.
 To force GPT from any host via the router:
 
 ```powershell
-pwsh -File runtime\skill-router.ps1 -Provider gpt -Skill <skill>
+powershell -File runtime\skill-router.ps1 -Provider gpt -Skill <skill>
 ```
 
 `-Model gpt` remains a deprecated compatibility alias during the migration.
@@ -112,6 +142,7 @@ pwsh -File runtime\skill-router.ps1 -Provider gpt -Skill <skill>
 ## See also
 
 [`README.md`](../../README.md) for the installation/authentication matrices (including why
-`OPENAI_API_KEY` is never universally required); [`claude.md`](claude.md) for the Claude
-counterpart; [`../migration.md`](../migration.md) for the pre-migration → provider-neutral
+`OPENAI_API_KEY` is never universally required); [`claude.md`](claude.md) and
+[`codex.md`](codex.md) for the Claude and Codex counterparts;
+[`../migration.md`](../migration.md) for the pre-migration → provider-neutral
 transition.

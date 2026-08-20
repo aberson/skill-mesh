@@ -1,7 +1,7 @@
 # Coding-root cutover handoff
 
 The copy-pasteable operator sequence that moves a private consumer workspace off its
-hand-authored legacy skill trees and onto the two generated host profiles this package
+hand-authored legacy skill trees and onto the generated host profiles this package
 builds — reversibly, with an external backup, and without ever deleting a skill the
 consumer owns.
 
@@ -12,9 +12,9 @@ temporary home) and 50 (the live consumer) — both operator steps, both produci
 this document cannot produce and this repository's tests must never claim.
 
 Read [`host-discovery.md`](host-discovery.md) first if you have not. It is the authority on
-the three host-loading mechanisms and the two discovery roots, and nothing below overrides it.
-In particular: **a model answering correctly is not evidence of an installed profile.** Only a
-captured `SKILL.md` path is.
+the three host-loading mechanisms and the three provider install targets, and nothing below
+overrides it. In particular: **a model answering correctly is not evidence of an installed
+profile.** Only a captured `SKILL.md` path is.
 
 ---
 
@@ -219,13 +219,14 @@ public repository. Only the shape is prescribed here:
 - `<consumer-home>/<shared-instructions>` — the one private document holding the workspace
   contract. Its content is the consumer's; this package never ships it.
 - `<consumer-home>/CLAUDE.md` — a thin Claude Code adapter that loads the shared source.
-- `<consumer-home>/AGENTS.md` — a thin GitHub Copilot CLI adapter that loads the same source.
+- `<consumer-home>/AGENTS.md` — a thin adapter that loads the same source, for the hosts
+  that read `AGENTS.md` (GitHub Copilot CLI and the OpenAI Codex CLI).
 
 Each adapter is a few lines: a title naming its host, one sentence pointing at
 `<shared-instructions>`, and an instruction to load it in full. **Neither adapter enumerates or
-embeds skills** — skills live only in the two discovery roots, and an instruction file is not a
-skill registry. A host that injects `CLAUDE.md` and exposes skills from it is doing host
-integration; that is never evidence of an installed profile.
+embeds skills** — skills live only in the provider discovery roots, and an instruction file
+is not a skill registry. A host that injects `CLAUDE.md` and exposes skills from it is doing
+host integration; that is never evidence of an installed profile.
 
 **Run in:** `<consumer-home>` (the consumer repository)
 
@@ -1089,13 +1090,13 @@ Two caveats on the `cipher /w:` pass, both of which decide *when* and *whether* 
 
 ## See also
 
-- [`host-discovery.md`](host-discovery.md) — the three host-loading mechanisms and the two
-  discovery roots. The authority; nothing here overrides it.
+- [`host-discovery.md`](host-discovery.md) — the three host-loading mechanisms and the three
+  provider install targets. The authority; nothing here overrides it.
 - [`host-native-discovery-cutover-plan.md`](host-native-discovery-cutover-plan.md) — the design
   authority, and the home of Steps 49 and 50.
 - [`migration.md`](migration.md) — what changed in the repackaging and what a pre-migration
   link, clone, or install should point at now.
 - [`architecture.md`](architecture.md) §5, §8 — host-native binding versus router dispatch, and
   the command contract this document's spellings follow.
-- [`providers/claude.md`](providers/claude.md), [`providers/gpt.md`](providers/gpt.md) — per-host
-  binding and capabilities.
+- [`providers/claude.md`](providers/claude.md), [`providers/gpt.md`](providers/gpt.md),
+  [`providers/codex.md`](providers/codex.md) — per-host binding and capabilities.

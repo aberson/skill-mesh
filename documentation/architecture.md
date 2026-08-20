@@ -8,20 +8,20 @@ distinguishes host-native binding from runtime auto-detection; carries a migrati
 entry for every skill; and records the exact build/install/test commands.
 
 Nothing here depends on a host or provider being present. The public
-`aberson/skill-mesh` repository is the single canonical source; Claude and GPT
-hosts receive *generated* compatibility layouts built from this source.
+`aberson/skill-mesh` repository is the single canonical source; Claude, GPT, and
+Codex hosts receive *generated* compatibility layouts built from this source.
 
 ## 1. Vocabulary
 
 | Term | Meaning |
 |---|---|
 | **core** | Provider-independent workflow behavior for one skill. One per portable skill. |
-| **adapter** | Thin mapping of a core to one host's tool surface (`providers/claude.md`, `providers/gpt.md`). |
+| **adapter** | Thin mapping of a core to one host's tool surface (`providers/claude.md`, `providers/gpt.md`, `providers/codex.md`). |
 | **discovery layout** | Host-specific directory/filename shape a host scans to find a skill (generated, not committed). |
 | **shim** | Thin backward-compatible launcher that delegates to a canonical file. |
 | **transport** | Authenticated API or host-native channel used to execute a provider model. |
 | **calibration** | Existing deterministic/rubric comparison that checks adapter parity. |
-| **portable skill** | Skill with a neutral core plus Claude and GPT adapters. 54 total. |
+| **portable skill** | Skill with a neutral core plus Claude and GPT adapters, all 54 of which additionally carry a Codex adapter — codex capability is ADDITIVE on a portable record, never a third status. 54 total. |
 | **provider-native skill** | Skill supported on exactly one host; no neutral core. 3 total. |
 
 `<name>` and `<skill>` in every path template mean the same stable kebab-case
@@ -40,6 +40,7 @@ deprecation window (see `migration.md`), not canonical sources.
 | Skill core (portable) | `skills/<name>/core.md` | One per portable skill; `null` in the manifest for provider-native skills. |
 | Claude adapter | `skills/<name>/providers/claude.md` | Thin host adapter. Self-contained for provider-native skills. |
 | GPT adapter | `skills/<name>/providers/gpt.md` | Thin host adapter; absent for provider-native skills. |
+| Codex adapter | `skills/<name>/providers/codex.md` | Thin host adapter; absent for provider-native skills. One per portable skill (54). |
 | Shared prose assets | `_shared/` (repo root) | Cross-skill cores/prose referenced by multiple skills. The manifest declares `skills/_shared/` as the eventual canonical home; that directory does not exist yet, so today's references resolve to the repo-root tree. The divergence is deliberate and locked by `tests/package-integrity/test_skill_tree.py::test_shared_dest_divergence_is_intentional`. |
 | Skill manifest | `config/skill-manifest.json` | Single source for distribution, install, integrity, and README counts. |
 | Model capability mapping | `config/model-mapping.json` | Per-skill provider/local capability booleans (Step 34). |
@@ -47,11 +48,11 @@ deprecation window (see `migration.md`), not canonical sources.
 | Runtime router | `runtime/skill-router.ps1` | Provider-neutral CLI router (Step 34). |
 | Provider transport adapters | `runtime/providers/` | Host-metadata and transport selection (Step 37). |
 | Telemetry | `runtime/telemetry/` | Neutral telemetry writer/summary (Step 34). |
-| Distribution builder | `tools/build-distributions.ps1` | Generates `dist/claude/`, `dist/gpt/` (Step 36). |
+| Distribution builder | `tools/build-distributions.ps1` | Generates `dist/claude/`, `dist/gpt/`, `dist/codex/` (Step 36; `-Provider both` -- the default -- emits the first two). |
 | Installer | `tools/install-skill-mesh.ps1` | Installs a host profile without making canonical files host-owned (Step 36). |
 | Host-install inspector | `tools/inspect-host-install.ps1` | Read-only `HostInstallReport` (text or JSON, current `schema_version` 3): workspace instruction files, the Claude/GPT/codex discovery roots, provenance ownership, link type, ledger state, router version, and legacy shadowing. Step 46 shipped schema v1 with four `skills[].eligibility` values. Step 65's completed v2 contract adds `shared-payload`: a `SKILL.md`-less `_shared` entry is `owned=true` when a recursive per-file scan finds at least one valid generated marker; a marker-free `_shared` remains `core-holder`. The directory contributes at most one to `owned_count`, and its consumer-authored neighbours do not contribute to `unowned_count`. Phase CP Step 5's v3 adds the `codex` key to the `profiles` object when codex became installable at `.agents/skills`; that is an object-shape change, which is why the version moved rather than the key appearing silently. No vocabulary, count semantic, or other field changed in v3. |
 | Release/export command | `tools/release.ps1` | Reproducible release staging + checksums (Step 38). |
-| Package-integrity tests | `tests/package-integrity/` | Manifest/link/drift/claim gates: `test_manifest_contract.py`, `test_release_gates.py`, `test_host_discovery.py`, `test_skill_tree.py` (99 tests). |
+| Package-integrity tests | `tests/package-integrity/` | Manifest/link/drift/claim gates: `test_manifest_contract.py`, `test_release_gates.py`, `test_host_discovery.py`, `test_skill_tree.py`. Test counts are owned by [`phase-75-baseline.md`](phase-75-baseline.md) and deliberately not restated here (section 8). |
 | Router tests | `tests/router/` | Provider-selection and transport tests (Step 34/37). |
 | Calibration tests | `tests/calibration/` | Neutral home for the existing pytest calibration suite (Step 34). |
 | Telemetry tests | `tests/telemetry/` | Neutral telemetry tests (Step 34). |
@@ -65,6 +66,7 @@ deprecation window (see `migration.md`), not canonical sources.
 | Troubleshooting | `documentation/troubleshooting.md` | Provider/transport diagnostics (Step 37). |
 | Generated Claude layout | `dist/claude/` | Build artifact only; never committed. |
 | Generated GPT layout | `dist/gpt/` | Build artifact only; never committed. |
+| Generated Codex layout | `dist/codex/` | Build artifact only; never committed. Emitted by `-Provider codex` or `-Provider all`. |
 | Path guard | `runtime/path-guard.ps1` | Canonical real-path resolution shared by the router and release tooling. |
 | Manifest generator | `tools/gen_manifest.py` | Generates `config/skill-manifest.json` + `tests/package-integrity/expected_inventory.json`. |
 | Skill-tree generator | `tools/gen_skill_tree.py` | Generates the migrated `skills/` tree and its inventory. |
@@ -528,7 +530,7 @@ package rather than how it is built:
 | Document | Covers |
 |---|---|
 | [`../README.md`](../README.md) | Skill catalog, installation matrix, authentication matrix, capability/exclusion table, workflows |
-| [`providers/README.md`](providers/README.md), [`providers/claude.md`](providers/claude.md), [`providers/gpt.md`](providers/gpt.md) | Per-provider host binding, transport precedence, capabilities |
+| [`providers/README.md`](providers/README.md), [`providers/claude.md`](providers/claude.md), [`providers/gpt.md`](providers/gpt.md), [`providers/codex.md`](providers/codex.md) | Per-provider host binding, transport precedence, capabilities |
 | [`troubleshooting.md`](troubleshooting.md) | Provider-selection and transport-authentication failure modes |
 | [`migration.md`](migration.md) | What changed from the pre-migration layout, where things live now, and the top-level `<skill>/SKILL.md` deprecation window |
 | [`repo-metadata.md`](repo-metadata.md) | GitHub repository title/description/topic text, applied to `aberson/skill-mesh` |

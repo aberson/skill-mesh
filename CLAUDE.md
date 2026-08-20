@@ -134,7 +134,7 @@ tests/                  calibration, distributions, experiments, package-integri
   provider-native Claude-only (`claude-oauth-auth`, `context-slim`, `judge-motion`) and carry
   `core: null` in the manifest.
 - **Manifest-driven build.** `tools/build-distributions.ps1` reads `config/skill-manifest.json` and
-  emits host-native `SKILL.md` discovery trees into `dist/claude` and `dist/gpt`.
+  emits host-native `SKILL.md` discovery trees into `dist/claude`, `dist/gpt`, and `dist/codex`.
 - **Install binds exactly one profile** into a consumer home — Claude at `<home>/.claude/skills/`,
   codex at `<home>/.agents/skills/`, GPT at `<home>/.github/skills/` (a real GitHub Copilot CLI discovery root; the project-relative
   `.copilot/skills` target is **retired** per the Step 43 proof, and every generated GPT `SKILL.md`
@@ -142,7 +142,7 @@ tests/                  calibration, distributions, experiments, package-integri
   uninstall only removes files it installed, and refusing foreign-file collisions by default.
 - **Three host-loading mechanisms are distinct and non-interchangeable**
   (`documentation/host-discovery.md`): workspace instruction injection (`CLAUDE.md` / `AGENTS.md`
-  are instruction adapters, never skill registries), host-native skill discovery (the two roots
+  are instruction adapters, never skill registries), host-native skill discovery (the three roots
   above), and explicit router dispatch. **Model choice does not select a skill tree** — a running
   GPT model is not proof of an installed GPT profile.
 - **Releases are reproducible.** Staging enumerates git-tracked files only, so an untracked scratch
