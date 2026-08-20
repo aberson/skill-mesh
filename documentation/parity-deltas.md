@@ -37,7 +37,7 @@ this exact `M<n>: <verdict>` shape - the cohort predicate greps it case-insensit
 - M1: PASS
 - M2: PASS
 - M3: PENDING
-- M4: PENDING
+- M4: PASS
 
 ## Run environment
 
@@ -50,8 +50,8 @@ research and is re-verified against whatever is actually installed.
 |---|---|---|---|---|
 | M1 | 2026-08-18 | codex-cli 0.147.0 | yes (1.0.77) | Both versions coincide with the prior research pins (the 0.147.0 format research; the Step 43/45 Copilot proofs), so every format assumption is confirmed on-pin and remains unproven on newer versions. |
 | M2 | 2026-08-19 | codex-cli 0.147.0 | yes (**1.0.80**) | Codex holds the 0.147.0 pin, so its format assumptions stay confirmed on-pin. Copilot has moved OFF the 1.0.77 pin the D-CP6 `accept` was evidenced against; per the M1 disposition note that upgrade forces a re-check, which was run — see "M2 D-CP6 re-check" below. **Session mode differs from M1:** M2 was driven through `codex exec` (non-interactive, multi-turn via `codex exec resume`), M1 was interactive. Mode is a live variable between the two runs and any mode-sensitive observation must say so. |
-| M3 | | | | |
-| M4 | | | | |
+| M3 | 2026-08-20 | codex-cli 0.147.0 | yes (1.0.80) | **Both versions are unchanged from M2**, measured this run: `codex --version` -> codex-cli 0.147.0, `copilot --version` -> 1.0.80. So the Codex format assumptions stay confirmed on the same pin, and the D-CP6 re-check-on-Copilot-upgrade trigger did **not** fire - M2's re-confirmed `accept` stands with no new work. **No Codex session was run for this record**: M3's daily-use check is unsatisfied (see M3 checks), and the only command executed was the read-only inspector. |
+| M4 | 2026-08-20 | codex-cli 0.147.0 | yes (1.0.80) | Same versions as M3, measured that run. The codex profile was reinstalled into the consumer home (125 files, exit 0) after a disposable-home rehearsal; the claude and gpt arms of the block were deliberately not run - see "Scope of the M4 PASS". **No Codex session was run for this record either**: M4's subject is install state and the observatory surface, neither of which needs one, and the observatory evidence came from a rendered `observatory export` rather than a served page. |
 
 ## M1 checks
 
@@ -243,6 +243,146 @@ root-cause core change, not a restatement of the rule that was already being vio
   Silent re-duplication into any core, adapter, or `_shared/` doc, the definition
   leaving the cited section, or a dropped citation now fails CI. The legacy top-level
   `*/SKILL.md` packages stay out of the sweep per the deprecation-window policy above.
+
+## M3 checks
+
+Check rows for the Step M3 table in `documentation/codex-parity-delivery-plan.md`, recorded
+2026-08-20. Each Outcome grades one check row only; the step verdict lives solely in the
+M-step verdicts list above, and it remains `PENDING` - see "Why the verdict is still PENDING".
+
+Outcome vocabulary is M1/M2's, plus two this step needs: `not satisfied` (the check was
+attempted and its evidence does not exist yet) and `deferred` (the check cannot be graded
+until another gate clears).
+
+| Check | Observed | Outcome |
+|---|---|---|
+| Daily-use quality | **No real Codex-hosted sessions have occurred.** M2 closed 2026-08-19 and this record is 2026-08-20; the only Codex runs in existence are M1's five-skill interactive pilot and M2's four-skill `codex exec` chain, both of which are the scripted milestone runs this check was written to be independent of. Its issue is explicit that the method is "a few sessions" of real use and "is deliberately **not** a single sitting". Nothing was graded against the M1/M2 runs, because grading a daily-use check against the milestone runs it exists to backstop would restate their evidence under a new name | not satisfied |
+| Delta log | **43 delta rows across 4 tables, 0 undisposed** - 28 `accept`, 13 `wontfix`, 2 `fix`. Counted by enumerating every table in this file and reading each row's disposition cell, not by eye: the 4 tables are Deltas (7), Step 6 authoring (6), Step 7 authoring (16), Step 8 authoring (14). The remaining tables in this file carry no disposition column because they are check/evidence tables, not delta rows. Both `fix` rows already hold a resolution of record - the M1 autofix-miscount row re-dispositioned to `accept` after non-reproduction at both small-N and M1 scale, and F1 resolved as a root-cause core change under #126. **Zero `fix-later` rows, therefore zero issues owed** by the Done-when's "every fix-later row has a filed GitHub issue" clause | pass |
+| Plan completion | Not declared. Gated on the daily-use row above and, independently, on M4 (#133) - #132 states both must land before Phase CP is complete. `/repo-update` has not been run | deferred |
+| Install state at M3 | The inspector ran clean against the real consumer home: codex root `owned=48 unowned=0`, ledger `state=valid providers=[codex] unrecognized=0`, `legacy_shadows=[]`, gpt root absent, legacy skills-gpt absent. All 4 warnings describe the operator's own pre-existing hand-maintained `.claude/skills` junction tree (1 consumer-only skill, the junction itself, 7 managed-name foreign SKILL.md files, 54 portable skills with no GPT counterpart) and are untouched by any codex install - the same class of warning M1 recorded | pass |
+| D-CP6 re-check trigger | Did not fire. The disposition is bound to a Copilot version and re-checked on upgrade; Copilot measured 1.0.80 this run, the same version M2's re-confirmation was evidenced against. No re-check was owed and none was run | recorded |
+
+### M3 triage dispositions
+
+The delta ROWS were already fully disposed, so M3's triage work landed on the items that
+were not rows. Three, all recorded here rather than as Deltas rows - none of the three is a
+Claude-vs-Codex behavioral difference, which is what that table's legend admits.
+
+1. **The `documentation/providers/README.md` Codex-column thread -> `fix-later`, issue #142.**
+   M2's open-threads list left this to Step 9 as "the intended source"; Step 9 (#126) closed
+   without filling it, so M3 is where it gets disposed. Triage found the gap is larger than a
+   column and that a **green test certifies the stale state**:
+   - `documentation/host-discovery.md`, `documentation/providers/README.md` and
+     `documentation/troubleshooting.md` each mention codex **zero** times, and
+     `documentation/providers/codex.md` does not exist although `claude.md` and `gpt.md` do.
+     (The other zero-codex files under `documentation/` are frozen historical plans and
+     decision records - correctly untouched, and out of scope.)
+   - `.agents/skills` *is* present in the authority map, but **attributed to the wrong host**:
+     only as "a Copilot project discovery root", never as the codex install target that
+     `tools/skill-mesh-discovery.ps1:89` owns. That makes it actively misleading rather than
+     merely incomplete, because Copilot really does enumerate the codex packages from that
+     shared root (M1/M2), so the half-truth matches the symptom a reader is debugging.
+   - `tests/package-integrity/test_host_discovery.py:231-234` asserts install targets for
+     exactly two providers, hand-listed. The third is never asserted, so the doc reads green
+     while misdescribing a third of the product - the hand-maintained-gate-list false green.
+   - **Not covered by ratification (c)**, which makes the exhaustive per-skill x per-host
+     qualification matrix backlog and which M3 must not reconstruct. This is class-level
+     provider coverage in the authority docs plus a provider-blind test: smaller, and
+     load-bearing in a way (c) is not.
+
+2. **A 6th drifted operator command, and the first in an issue body - corrected in place.**
+   Issue #132's own command block read `inspect-host-install.ps1 -Provider codex`. That cannot
+   run: the script has no `-Provider` parameter and `-Home` is required or it exits 2
+   (`tools/inspect-host-install.ps1:116-128` - `TargetHome` aliased `Home`/`Destination`,
+   `Format`, `AbsolutePaths`). The delivery plan's form was correct and is what M1 and M2 ran.
+   The 2026-08-19 pass-2 audit that found 5 drifted operator commands swept the **plan**; it
+   did not sweep the **issues**. #132's body was corrected 2026-08-20 with the correction
+   recorded inline rather than silently rewritten. The other three M-step issue bodies have
+   not been swept for the same class - not done here, and named so it is not mistaken for done.
+
+3. **#131 (M2) is still OPEN although M2 is DONE.** Observed while checking issue state for
+   this triage. Recorded as an input to M3's Plan-completion check rather than acted on: the
+   close-out sweep belongs to the phase declaration, not to delta triage.
+
+### Why the verdict is still PENDING
+
+Two of M3's three plan checks are satisfiable today and are graded above; the third is not,
+and it is the substantive one. M3 exists for "the failure class that only shows up after a few
+sessions, which no smoke test reaches" - a bar that cannot be met by re-reading the milestone
+runs, and cannot be met faster by narrowing it, since narrowing it re-creates precisely the
+blind spot the step was written to cover.
+
+`PENDING` is therefore the honest verdict, not a stalled one. The triage work above is
+complete and durable; closing M3 later requires grading exactly one row.
+
+**To close M3:** use Codex-hosted skills in normal daily work across a few genuine sessions,
+record any behavioral difference as a Deltas row with a disposition (a difference noticed and
+recorded is a success; one hit and not recorded is the failure - D-CP4), then grade the
+daily-use row and set the verdict. If those sessions surface a `fix-later` row, it needs a
+filed issue before the verdict flips.
+
+## M4 checks
+
+Check rows for the Step M4 table in `documentation/codex-parity-delivery-plan.md`, observed
+2026-08-20. That table was rewritten the same day because Step 11 was DROPPED and the wiring
+M4 was written to roll out and observe does not exist; these rows grade the rewritten table.
+Each Outcome grades one check row only; the step verdict lives solely in the M-step verdicts
+list above.
+
+| Check | Observed | Outcome |
+|---|---|---|
+| Reinstall clean | **Codex arm only** (see "Scope of the M4 PASS"). Rehearsed against a disposable home first per the block's own instruction - exit 0, 125 files - then the real install into the consumer home: exit 0, 125 files. Post-install inspect: codex root `owned=55 unowned=0` (was 48/0 at M2; the +7 are Step 10's promotions reaching this host for the first time), ledger `state=valid providers=[codex] unrecognized=0`, `legacy_shadows=[]`. Reconciled at FILE level, not just directory: 125 files on disk = 125 `owned_files` = 125 `owned_file_hashes`, **0 stale entries and 0 unledgered files**. **No foreign file was touched**: the codex root had `unowned=0` going in, so there was no collision to force, and the claude root measured `owned=50 unowned=8` **identically before and after** | pass |
+| Observatory surface reachable | **All seven utilities render, and every one honestly reads `unwired`** - the correct state, not a defect. Verified on the RENDERED artifact rather than the registry source alone: `observatory export` was written to a scratch directory (read-only w.r.t. every repository; the verb is `export`, a sibling of the block's `serve`, and it renders the same transparency pages without standing up a server). For each of tripwire, paper-trail, changed-check, heads-up, find-again, same-page and mesh-lens, `project/<slug>/view/transparency.html` exists, carries that utility's declared locator label row, and contains exactly one verdict span, reading `unwired`. Independently corroborated at the source by resolving each declared `(path, pattern)` pair directly - **before and after the install, unchanged**. No locator reads `wired`, as the rewritten row predicts | pass |
+| Advisory behavior live | **Not runnable this phase - expected, not a failure**, exactly as the rewritten row states. `DEV_UTILITIES_ROOT` re-measured this run and is unset at Process, User **and** Machine scope, matching the pass-3 measurement; the operator deferred persisting it on 2026-08-20. Only the fails-open half was in scope, and it holds - but **it holds vacuously, and must not be read as validating the fail-open design**: there is no advisory call in any core on any host to fail open, so nothing exercised the mechanism. "Absent root -> zero behavior change" is true here because there is no behavior to change, which is a weaker fact than the row's wording invites | not runnable |
+| Cross-plan gaps | Step 12's four items were re-confirmed rather than rediscovered, and item 3 is sharpened. (1) The dependency is dev-observatory **Step 37**, not 43, and the observatory waits on the hookup work rather than the reverse. (2) Three of the seven declared patterns cannot match the convention's ratified call shapes under literal matching - a live coding-root registry defect, not a skill-mesh one. (3) **Sharpened:** every locator `path` targets `.claude/skills/<name>/core.md` - the **claude** tree specifically - so no codex install can ever move a locator, and the claude arm is the only one with even theoretical reach. It has none either: the seven patterns are absent from skill-mesh's canonical `skills/<name>/core.md` as well, and 0 canonical cores contain `DEV_UTILITIES_ROOT`. Both sides of the propagation were checked. (4) The advisory line cannot be demonstrated at all this phase | recorded |
+
+### Scope of the M4 PASS
+
+The verdict is `PASS` on what M4 could honestly verify, and this section is the boundary of
+that claim. Three limits, all deliberate:
+
+1. **The claude and gpt arms of the command block were deliberately NOT run** (operator
+   decision, 2026-08-20). Two independent reasons, either sufficient:
+   - **The command block contradicts its own check row.** Row 1 requires "no foreign files
+     touched", while the block mandates `-Force`, which `tools/install-skill-mesh.ps1:86-91`
+     documents as "Overwrite AND take ownership of a pre-existing non-marker (foreign) file at
+     ANY colliding target path (explicit opt-in, UNSCOPED) ... the blunt instrument". `-Force`
+     exists precisely to touch foreign files, so for those two arms row 1 is unsatisfiable as
+     written. The codex arm needs no `-Force` and satisfies the row exactly.
+   - **The payoff is provably zero.** The seven patterns are absent from the installed cores
+     AND from the canonical cores, so a reinstall copies pattern-less cores over pattern-less
+     cores and every locator stays `unwired`. Verified by resolving all seven both before and
+     after the codex install: unchanged.
+
+   What the arms would have cost is concrete rather than theoretical: `<dev-root>/.claude/skills`
+   is the junction target of the operator's live `~/.claude/skills`, and seven manifest-named
+   skills there read foreign today (`build-observer`, `citation-distill`, `citation-review`,
+   `citation-sweep`, `citation-triage`, `goblin-sweep`, `repo-wrap` - the Step 10 promotions,
+   still present as the operator's own authored versions). `-Force` would have taken ownership
+   of all seven, replacing live hand-maintained skills with generated ones; `-BackupDir` makes
+   that recoverable, not free. `meeting-sheet` is not in the manifest and was never at risk.
+   Noted for symmetry: those same seven skills entered the **codex** root in this install as
+   pure additions with zero collisions. Same skills, opposite risk profile, because that root
+   had no prior copy to overwrite.
+
+2. **The advisory-behavior row is satisfied vacuously, not validated.** See its row above. A
+   later reader must not cite this record as evidence that the convention's fail-open path
+   works; it is evidence that nothing exercised it.
+
+3. **This is not a wiring rollout, because there is nothing to roll out.** M4's original
+   subject died with Step 11. What this record certifies is narrower and worth stating plainly:
+   the codex profile reinstalls cleanly and ledger-completely, the observatory's seven locator
+   rows render and report their true state, and the reasons no locator can read `wired` are
+   established on both sides of the propagation rather than assumed.
+
+### M4 disposition note - the plan's M4 command block is now partly superseded
+
+The block's claude and gpt lines survive in the plan describing a rollout that cannot happen.
+Their `-Force` / `-BackupDir` requirements are correctly documented and remain true **if** they
+are ever run, so nothing there is factually wrong - but running them serves no M4 purpose, and
+row 1 cannot be satisfied by them. Recorded here rather than edited into the plan, so this
+record grades the plan as it stood at execution. Whoever next touches that block should strike
+the two arms and reconcile row 1's "no foreign files touched" with the `-Force` it mandates.
 
 ## Step 6 authoring deltas (Cohort B - authored by construction, not host-observed)
 
