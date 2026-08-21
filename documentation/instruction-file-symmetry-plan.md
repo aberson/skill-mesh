@@ -1,17 +1,21 @@
 # Phase IS — instruction-file symmetry
 
 **Phase label:** `Phase IS` (instruction-file symmetry). Steps 100–109.
-**Status:** WRAPPED (round 2) — not sync'd. No issues minted; all ten `**Issue:**` fields blank.
+**Status:** REDLINE ACCEPTED (Publication 2, 2026-08-20) — issues synced 2026-08-21 under
+umbrella #143; all ten `**Issue:**` fields populated.
 **Created:** 2026-08-20 against `main` @ `1f410fc`. **Revised twice** — after plan-review
 round 1 (22 Blockers) and plan-wrap round 2 (9 Blockers). Revision log: § 12.
 
-**Reading aid.** `D<n>` = design decision *n* in § 6. `A` = the project's `AGENTS.md`,
-`C` = its `CLAUDE.md`. Angle brackets inside a citation spelling like
+**Reading aid.** `P<n>` = operator-picked decision *n* and `D<n>` = agent-defaulted decision
+*n* in § 6. `A` = the project's `AGENTS.md`, `C` = its `CLAUDE.md`. Angle brackets inside a citation spelling like
 `<repo>/_shared/<leaf>` are **literal source bytes**, not a substitution — see D6.
 
 ---
 
 ## 1. What This Is
+
+Proposal: `documentation/instruction-file-symmetry-proposal.html` — Publication 2, accepted as
+written on 2026-08-20. This plan remains the source of truth.
 
 Make the skill catalog's lifecycle skills **instruction-file symmetric**: a project may keep
 its content in `AGENTS.md` with `CLAUDE.md` reduced to a one-line `@AGENTS.md` import, and no
@@ -192,11 +196,11 @@ already used at `plan-merge:232` and `plan-review:229`. D11 makes it the gate's 
 
 ## 6. Design Decisions
 
-**D1 — `plan-init` emits the inverted shape when it authors an instruction file.** *(operator,
+**P1 — `plan-init` emits the inverted shape when it authors an instruction file.** *(operator,
 2026-08-20.)* Scoped by D10: it applies to D10 row 1 (both files ABSENT) only. It **never
 overwrites an existing SUBSTANTIVE `CLAUDE.md`**. *Rejected:* detect-then-follow; an opt-in flag.
 
-**D2 — `repo-update` reports drift as an always-print advisory that never blocks.** *(operator,
+**P2 — `repo-update` reports drift as an always-print advisory that never blocks.** *(operator,
 2026-08-20.)* Matches `.claude/rules/advisory-calls.md`; keeps the `/build-phase` halt allowlist
 closed. Load-bearing because `/repo-update` also runs **unattended** inside phase wraps and via
 `/repo-wrap` Rail A — its registered-owned-project rail, which delegates verbatim to
@@ -233,7 +237,7 @@ Policy-frozen; deprecation-window record in `documentation/parity-deltas.md`.
 
 **D8 — Instruction-file states are THREE-VALUED and defined for BOTH filenames.** *(Promoted
 from an open question; corrected in round 2, which proved a two-valued definition made an
-absent file read as substantive and killed D1.)*
+absent file read as substantive and killed P1.)*
 
 For either `AGENTS.md` or `CLAUDE.md`:
 
@@ -276,7 +280,7 @@ this. POINTER-`A` is treated as ABSENT (an inert pointer is not content).
 | ABSENT / POINTER | SUBSTANTIVE | **Touch neither.** Report the project is non-inverted | **Refresh `C` in place, exactly as today.** Never create `A` |
 | SUBSTANTIVE | POINTER *(inverted)* | Refresh `A`; leave `C` untouched | Refresh `A`; leave `C` untouched |
 | SUBSTANTIVE | ABSENT | Refresh `A`; write `C` as the D8 pointer | Refresh `A`; write `C` as the D8 pointer |
-| SUBSTANTIVE | SUBSTANTIVE *(drift)* | Do not write. Report drift | Refresh **neither**; emit the D2 advisory naming both paths; continue |
+| SUBSTANTIVE | SUBSTANTIVE *(drift)* | Do not write. Report drift | Refresh **neither**; emit the P2 advisory naming both paths; continue |
 
 Row 2 is the dominant case — roughly 32 projects — and is what makes this plan non-migrating.
 **The only path that creates an `AGENTS.md` is row 1 (both ABSENT).** Rows 3 and 4 are fixed
@@ -310,7 +314,7 @@ mechanism `test_autofix_marker_single_owner.py` uses.
 **Classification statements required by the planning contract**
 
 - **Autonomous-behavior trigger does NOT fire.** No daemon, scheduled job, soak or watcher.
-  Precision D2 depends on: `/repo-update` is not purely operator-invoked — it runs unattended
+  Precision P2 depends on: `/repo-update` is not purely operator-invoked — it runs unattended
   inside phase wraps — which is why its drift path must never block.
 - **Data-pipeline trigger DOES fire and is handled by a prose-analogue smoke gate.** The
   contract is a shared definition multiple cores must agree on. A runtime smoke gate cannot
@@ -327,7 +331,7 @@ mechanism `test_autofix_marker_single_owner.py` uses.
 ### Step 100: Define the instruction-file contract in one owning core
 - **Problem:** D8, D10 and D11 exist nowhere in the catalog. Add a named `## Instruction-file contract` section to `skills/plan-init/core.md` as the ONE owner, holding D8's three states and worked example, D8's exact pointer bytes, D10's five-row matrix, and D11's guarded/unguarded rule plus its two designated probe literals and the bounded cite-site minimum. Do **not** create a `_shared/` file (D6). Do **not** move or merge the seven-section bodies (§ 3). Add the bounded citation to `skills/repo-update/core.md`.
 - **Type:** code
-- **Issue:** #
+- **Issue:** #144
 - **Files:** skills/plan-init/core.md, skills/repo-update/core.md
 - **Flags:** --reviewers code
 - **Produces:** the owner section; a bounded citation in repo-update's core
@@ -338,7 +342,7 @@ mechanism `test_autofix_marker_single_owner.py` uses.
 ### Step 101: plan-init authors AGENTS.md-primary, without overwriting anyone
 - **Problem:** `skills/plan-init/core.md:439-475` bootstraps `CLAUDE.md` as the content file. Implement D10's `plan-init` column, walking all five rows explicitly. Author `AGENTS.md` and write `CLAUDE.md` as D8's exact pointer bytes **only on row 1**; on row 2 touch neither and report the project non-inverted. Repair the `:443` skip guard, which keys on `CLAUDE.md` existence — a POINTER satisfies it, so plan-init writes nothing on an inverted project. Update the report string at `:462`, the scrapability constraint at `:475` (it is the dev-observatory scrape contract — see § 8's resolved row for what it must say on an inverted project), and the post-save handoff at `:481`. Update `skills/plan-init/providers/codex.md:11`; the adapter carries only D11's bounded cite phrase and neither probe literal.
 - **Type:** code
-- **Issue:** #
+- **Issue:** #145
 - **Files:** skills/plan-init/core.md, skills/plan-init/providers/codex.md
 - **Flags:** --reviewers deep
 - **Produces:** modified plan-init core and codex adapter; the new report string quoted verbatim in the step's checkpoint entry
@@ -347,9 +351,9 @@ mechanism `test_autofix_marker_single_owner.py` uses.
 - **Status:** NOT STARTED
 
 ### Step 102: repo-update refreshes the content file and advises on drift
-- **Problem:** `skills/repo-update/core.md` Step 7 (`:52`, `:236-250`, `:400`) verifies and creates `CLAUDE.md`. Implement D10's `repo-update` column, walking all five rows. **The only creation path for `AGENTS.md` is D10 row 1 (both files ABSENT); in a project that already has a SUBSTANTIVE `CLAUDE.md` it must never create one** — row 2 refreshes `CLAUDE.md` in place exactly as today, and that write stays legal under D11 by carrying the canonical marker. On row 3 refresh `AGENTS.md` and leave the pointer alone. On row 5 refresh neither and emit the D2 advisory naming both paths, non-blocking. Repoint `:164`, the stale-reference grep hardcoded to `README.md CLAUDE.md documentation/*.md`. Update the report line at `:400`; preserve `:438`.
+- **Problem:** `skills/repo-update/core.md` Step 7 (`:52`, `:236-250`, `:400`) verifies and creates `CLAUDE.md`. Implement D10's `repo-update` column, walking all five rows. **The only creation path for `AGENTS.md` is D10 row 1 (both files ABSENT); in a project that already has a SUBSTANTIVE `CLAUDE.md` it must never create one** — row 2 refreshes `CLAUDE.md` in place exactly as today, and that write stays legal under D11 by carrying the canonical marker. On row 3 refresh `AGENTS.md` and leave the pointer alone. On row 5 refresh neither and emit the P2 advisory naming both paths, non-blocking. Repoint `:164`, the stale-reference grep hardcoded to `README.md CLAUDE.md documentation/*.md`. Update the report line at `:400`; preserve `:438`.
 - **Type:** code
-- **Issue:** #
+- **Issue:** #146
 - **Files:** skills/repo-update/core.md
 - **Flags:** --reviewers deep
 - **Produces:** modified repo-update core; the new report string quoted verbatim in the step's checkpoint entry
@@ -360,7 +364,7 @@ mechanism `test_autofix_marker_single_owner.py` uses.
 ### Step 103: Re-derive the full classification and record it
 - **Problem:** Round 1 proved the § 4 table unreliable and round 2 named three more candidates. Produce the authoritative classification, changing no behavior. Enumerate both arms — `grep -l 'CLAUDE\.md' skills/*/core.md` (24) and `grep -l 'CLAUDE\.md' skills/*/providers/*.md` (3) — and classify every hit WRITE / READ / REFERENCE by § 4's rules, distinguishing a **project** instruction file from a **workspace** one. Adjudicate the round-2 candidates explicitly: `repo-sync:51,:521`, `observatory-doctor:78`, `build-phase:31,:198,:229`. Record the result as a table in this plan. Do not edit any core in this step.
 - **Type:** code
-- **Issue:** #
+- **Issue:** #147
 - **Files:** documentation/instruction-file-symmetry-plan.md
 - **Flags:** --reviewers code
 - **Produces:** the authoritative WRITE/READ/REFERENCE table recorded in § 4, derived by the two enumeration commands
@@ -371,7 +375,7 @@ mechanism `test_autofix_marker_single_owner.py` uses.
 ### Step 104: Repoint every reader Step 103 proved broken
 - **Problem:** Repoint each core Step 103 classified as a READ of a **project** instruction file to the canonical phrasing `CLAUDE.md or AGENTS.md`. Known members: `build-observer:57`, `research-prospect:61`, `user-brainstorm:154`, `user-learn:161`, `citation-review:12`, plus whatever Step 103 added. `goblin-suggest:33` additionally needs its grounding **precondition** repaired: it currently treats existence as sufficient, so a POINTER passes and the documented loud failure never fires.
 - **Type:** code
-- **Issue:** #
+- **Issue:** #148
 - **Files:** skills/goblin-suggest/core.md, skills/build-observer/core.md, skills/research-prospect/core.md, skills/user-brainstorm/core.md, skills/user-learn/core.md, skills/citation-review/core.md
 - **Flags:** --reviewers code
 - **Produces:** modified cores for every reader Step 103 proved broken
@@ -382,7 +386,7 @@ mechanism `test_autofix_marker_single_owner.py` uses.
 ### Step 105: Make context-slim inversion-aware
 - **Problem:** `skills/context-slim/providers/claude.md` walks the `CLAUDE.md` ancestor chain (`:21, :23-24`), classifies sections (`:59-61`), and **writes** under `--apply` (`:166`). Provider-native, no `core.md`. On an inverted project it audits a pointer file and reports near-zero context cost — a false green. Per D9 **keep the CLAUDE.md-anchored ancestor walk** and change only what is read and appended to. The file names `CLAUDE.md` at **16 sites**, including `:3` (its emitted `description:` frontmatter) and `:5` (the `--project` default) — enumerate all of them, do not work from the four cited here. As an adapter it may not cite `<repo>/_shared/`; it carries D11's bounded cite phrase.
 - **Type:** code
-- **Issue:** #
+- **Issue:** #149
 - **Files:** skills/context-slim/providers/claude.md
 - **Flags:** --reviewers code
 - **Produces:** modified context-slim adapter
@@ -393,7 +397,7 @@ mechanism `test_autofix_marker_single_owner.py` uses.
 ### Step 106: The two gates
 - **Problem:** Nothing asserts instruction-file handling anywhere. **(a) Write-surface gate** (`test_instruction_file_contract.py`): enumerate `skills/*/core.md` AND `skills/*/providers/*.md`, asserting no surface carries an **unguarded** `CLAUDE.md` write per D11 — a write verb in a section with no `CLAUDE.md or AGENTS.md` marker. Per-arm non-empty floors re-derived at test time (§ 2's 54 and 165), never hard-coded. Report the measured false-positive count against Step 103's enumerated REFERENCE bucket rather than asserting zero. **(b) Single-owner gate** (`test_instruction_contract_single_owner.py`): modeled on `test_autofix_marker_single_owner.py` — the owner section exists and carries both D11 probe literals; each declared citer carries the bounded cite phrase; **no other file under `skills/**/*.md`, `_shared/**/*.md` or `documentation/**/*.md` carries either probe literal** (the sweep must include `_shared/`, which is also the only mechanical enforcement of Step 100's "no `_shared/` file was created"). Neither gate may red on this repository's own root files (D5), and neither may be worded as a restatement of `documentation/host-discovery.md:158-160`, which is the installer axis.
 - **Type:** code
-- **Issue:** #
+- **Issue:** #150
 - **Files:** tests/package-integrity/test_instruction_file_contract.py, tests/package-integrity/test_instruction_contract_single_owner.py
 - **Flags:** --reviewers deep
 - **Produces:** both gate files
@@ -404,7 +408,7 @@ mechanism `test_autofix_marker_single_owner.py` uses.
 ### Step 107: Vendor the measurement, document the shape, update the count owner
 - **Problem:** Create `documentation/codex-instruction-delivery.md` holding § 1's measurement table, the `codex-cli 0.147.0` pin, and the `codex debug prompt-input` reproduction recipe, so nothing load-bearing depends on an out-of-tree file. Document the inverted shape in `documentation/host-discovery.md` (the host-loading authority) and the adapter view in `documentation/architecture.md` (the contract). Record D7's accepted legacy drift citing `documentation/parity-deltas.md`. Then **measure the repo-root run first, compare against the count recorded in `documentation/phase-75-baseline.md` BEFORE this step, and only then write the new count into that owner** — in that order, so the comparison is not circular.
 - **Type:** code
-- **Issue:** #
+- **Issue:** #151
 - **Files:** documentation/codex-instruction-delivery.md, documentation/host-discovery.md, documentation/architecture.md, documentation/phase-75-baseline.md
 - **Flags:** --reviewers code
 - **Produces:** the vendored measurement file; the inverted shape documented in the authority map and the contract; updated count owner
@@ -415,7 +419,7 @@ mechanism `test_autofix_marker_single_owner.py` uses.
 ### Step 108: Build and install into a scratch home
 - **Problem:** Editing a core changes nothing invokable — this repository is the canonical source, not an installed tree, and the installed `<dev-root>/.claude/skills/plan-init/core.md` is a separate 26,477-byte copy against the canonical 26,657. Without this step, Step 109 would exercise the OLD behavior and report PASS. Build all three profiles and install the claude profile into a **disposable scratch home** (never the operator's real home), then verify the emitted core actually carries the new contract.
 - **Type:** code
-- **Issue:** #
+- **Issue:** #152
 - **Files:** documentation/findings/instruction-file-symmetry-uat.md
 - **Flags:** --reviewers code
 - **Produces:** a scratch install home plus the verification transcript appended to the findings file
@@ -426,7 +430,7 @@ mechanism `test_autofix_marker_single_owner.py` uses.
 ### Step 109: Operator confirmation of all five D10 rows
 - **Problem:** These cores are prose read by an agent; a test asserts what the prose instructs, never what an agent does. Using the Step 108 scratch home and a **disposable scratch project**, exercise every D10 row: run `/plan-init` from nothing (row 1) and verify `AGENTS.md` plus a `CLAUDE.md` matching D8's exact pointer bytes; run it beside a SUBSTANTIVE `CLAUDE.md` (row 2) and verify it writes nothing; run `/repo-update` on the inverted project (row 3) and verify it refreshes `AGENTS.md`, leaves the pointer, and is a no-op on a second pass; manufacture row 5 and verify the advisory prints without blocking. Then verify delivery on both hosts: `codex debug prompt-input` in the scratch project must show the section headings, and the Claude-side `@AGENTS.md` import must resolve.
 - **Type:** operator
-- **Issue:** #
+- **Issue:** #153
 - **Files:** documentation/findings/instruction-file-symmetry-uat.md
 - **Flags:** --reviewers code
 - **Produces:** `documentation/findings/instruction-file-symmetry-uat.md` — operator observations only, no code artifacts
@@ -448,8 +452,8 @@ which are deleted rather than reverted.
 | The gate's predicate over prose | An unguarded-write predicate could still false-red the REFERENCE bucket | D11 gives the marker; Step 106 must **report a measured false-positive count** against Step 103's enumerated bucket, not assert zero |
 | Enumeration set | A cores-only sweep misses `context-slim` — the #142 shape | D3's dual enumeration with per-arm floors; D6 removes the third surface; Step 106b's sweep includes `_shared/` |
 | Backward compatibility | ~32 non-inverted projects must keep working | D10 row 2; every writer step's Done-when carries it; Step 109 exercises it |
-| Destructive overwrite | A naive D1 would replace a user's `CLAUDE.md` with a pointer | D1 is scoped to D10 row 1; Step 101's Done-when requires the no-write case be provable |
-| `repo-update` runs unattended | It executes inside phase wraps and `/repo-wrap` Rail A | D2's never-block/never-halt is load-bearing and stated |
+| Destructive overwrite | A naive P1 implementation would replace a user's `CLAUDE.md` with a pointer | P1 is scoped to D10 row 1; Step 101's Done-when requires the no-write case be provable |
+| `repo-update` runs unattended | It executes inside phase wraps and `/repo-wrap` Rail A | P2's never-block/never-halt is load-bearing and stated |
 | Report strings | `:462` and `:400` change | Verified: no test and no code consumes either. Steps 101/102 quote the new strings verbatim in their checkpoints so both writers agree |
 | skill-mesh's own root files | An edit reds `test_recovery_plan_hygiene.py:41-60` | D5 scopes them out; D8's worked example fixes their classification as row 2; Step 106's Done-when re-asserts the test passes |
 | **Resolved — dev-observatory scrape** | Does the descriptor scrape follow content to `AGENTS.md`? | **Yes.** `descriptor.py:31-33` — the scrape checks every descriptor file present and **unions** commands and ports, reporting the highest-precedence present file only as the `source` label; `AGENTS.md` is at PRECEDENCE index 1. An inverted project keeps its verbs and ports; only the attributed label changes. Step 101 must therefore keep `:475`'s scrapability constraint but apply it to whichever file is SUBSTANTIVE. *(Round 2 also retracted an incorrect caveat: `descriptor.py:246`'s `except OSError, UnicodeDecodeError:` is PEP 758 syntax, legal on the installed Python 3.14.3 — not Python 2, not broken.)* |
@@ -505,7 +509,7 @@ Round 2 identified these as real but out of scope here; recorded so they are not
 |---|---|---|
 | 1 | `/plan-review` | 22 Blockers, 38 significant gaps — all addressed in § 12 |
 | 2 | `/plan-wrap` | 9 Blockers — all addressed in § 12 |
-| — | `/plan-redline` | **Not run.** Operator P/D feedback still owed before `/repo-sync` |
+| 3 | `/plan-redline` | Publication 2 accepted as written — ready for `/repo-sync` |
 
 ---
 
@@ -527,7 +531,7 @@ Step 100 unaided. Material changes:
   with guarded-vs-unguarded and names the marker the gate keys on.
 - **D8 made three-valued and typed to both filenames.** Two-valued + "exhaustive" made an
   ABSENT file read as SUBSTANTIVE, routing greenfield into row 2's "touch neither" and killing
-  D1. It also left `AGENTS.md` unclassified, which made **this repository's own root pair**
+  P1. It also left `AGENTS.md` unclassified, which made **this repository's own root pair**
   classify as row-4 drift. D8 now carries that pair as its worked example, and the exact
   pointer bytes are specified.
 - **D10 restated in three-valued terms**, gaining the missing `SUBSTANTIVE`/`ABSENT` row.
@@ -550,9 +554,18 @@ Step 100 unaided. Material changes:
   (`observer.py:50` tests exact membership), and the measurement vendored inline.
 - **Resolved the dev-observatory open row** and retracted its incorrect Python-2 caveat.
 - Minor: `repo-update:240-248` citation corrected (it had excluded section 7); `<repo>`/`<leaf>`
-  noted as literal bytes; `D<n>` legend added; Rail A glossed; Step 107's count update ordered
+  noted as literal bytes; decision-ID legend added; Rail A glossed; Step 107's count update ordered
   non-circularly; `judge-motion/providers/claude.md:146` named alongside `tier-escalate`;
   context-slim's 16 sites flagged against the 4 cited.
+
+**Round 3 (plan-redline)** — Publication 1 rendered beside this plan; the stable proposal
+locator and append-only Decision Inventory were added. The two choices already marked
+`operator, 2026-08-20` became P1–P2; the remaining design decisions remain D3–D11 as agent
+defaults pending feedback. No implementation behavior changed.
+
+**Round 4 (plan-redline feedback)** — the operator accepted Publication 1 as written on
+2026-08-20. D3–D11 retain their stable IDs and are marked accepted; the same proposal locator
+was refreshed as Publication 2. No decision or implementation behavior changed.
 
 ---
 
@@ -562,3 +575,28 @@ Phase 2 of the portfolio proposal at `<dev-root>/docs/agents-md-host-symmetry-pl
 2, a document outside this repository. That reference is **provenance only** — § 1 vendors the
 decisive measurement and Step 107 lands it in `documentation/`, so nothing load-bearing depends
 on an out-of-tree file.
+
+---
+
+## Appendix
+
+### Decision Inventory
+
+`P` records explicit operator choices already present in this plan. `D` records agent defaults,
+accepted as written on 2026-08-20. IDs are stable and append-only: later decisions take the next
+ID, while a reversal keeps its ID and records `changed <date>` rather than being removed or
+renumbered.
+
+| ID | P/D | Choice | Status |
+|---|---|---|---|
+| P1 | P | `plan-init` authors the inverted `AGENTS.md`-primary shape only when both instruction files are absent and never overwrites a substantive `CLAUDE.md` | operator-picked 2026-08-20 |
+| P2 | P | `repo-update` reports dual-substantive drift as an always-print advisory that never blocks or halts | operator-picked 2026-08-20 |
+| D3 | D | Enumerate both core and provider write surfaces with separate non-empty floors derived at test time | accepted 2026-08-20 |
+| D4 | D | Let the complete Step 103 enumeration determine the repair set instead of freezing a file list | accepted 2026-08-20 |
+| D5 | D | Leave this repository's own root instruction files unchanged and accept its temporary Codex content gap | accepted 2026-08-20 |
+| D6 | D | Keep the instruction-file contract in one owning core and create no `_shared/` file | accepted 2026-08-20 |
+| D7 | D | Leave legacy top-level skill packages stale as recorded, accepted drift | accepted 2026-08-20 |
+| D8 | D | Classify both instruction filenames as ABSENT, POINTER, or SUBSTANTIVE using the stated content rules | accepted 2026-08-20 |
+| D9 | D | Preserve context-slim's `CLAUDE.md`-anchored ancestor walk and change only the content file it reads or appends to | accepted 2026-08-20 |
+| D10 | D | Apply the five-row instruction-file behavior matrix exactly across `plan-init` and `repo-update` | accepted 2026-08-20 |
+| D11 | D | Permit only guarded `CLAUDE.md` writes and enforce one owner through marker, probe-literal, and bounded-citation gates | accepted 2026-08-20 |

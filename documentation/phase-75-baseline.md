@@ -124,7 +124,8 @@ on 1318/1, and that pair was the current figure until pass 3 superseded it.
 | Command | Passed | Failed | Skipped | Provenance |
 |---|---|---|---|---|
 | `python -m pytest` (DONE gate) | 1320 | 0 | 1 | Step 9 post-merge gate at `abf3522`; 1:58:39, detached and uninterrupted; summary retained at `documentation/findings/cp-step9-root-gate.txt` |
-| `python -m pytest` (DONE gate) | **1322** | 0 | **1** | **CURRENT** — Step 10 post-merge gate at the merged Step 10 payload; 2:06:17, detached and uninterrupted; summary quoted in commit `c4a850c` |
+| `python -m pytest` (DONE gate) | 1322 | 0 | 1 | Step 10 post-merge gate at the merged Step 10 payload; 2:06:17, detached and uninterrupted; summary quoted in commit `c4a850c` — superseded by the #142 row below |
+| `python -m pytest` (DONE gate) | **1335** | 0 | **1** | **CURRENT** — post-merge gate at `2462afd` (#142, the codex provider-doc + derived host-discovery gate); 2:27:03, detached with an exit-code sentinel, uninterrupted. The +13 against 1322 is exactly the 13 cases `test_host_discovery.py` gained (17 → 30). The skip count held at **1** |
 
 Trajectory across pass 3, no regression at any step: **1318** (pass-2 exit) → **1320**
 (Step 9, +2 = the two `test_autofix_marker_single_owner.py` cases) → **1322** (Step 10, +2).

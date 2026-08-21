@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="auto">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Phase IS — Instruction-file symmetry · Publication 2</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #f4f7f6;
+      --surface: #ffffff;
+      --surface-2: #eef4f2;
+      --ink: #17211f;
+      --muted: #586864;
+      --line: #cfdad7;
+      --accent: #087f72;
+      --accent-strong: #075f57;
+      --accent-soft: #dff4ef;
+      --warm: #9a6400;
+      --warm-soft: #fff2cf;
+      --danger: #a33a34;
+      --danger-soft: #fde9e7;
+      --code: #edf2f1;
+      --shadow: 0 16px 45px rgba(26, 54, 48, 0.10);
+      --radius: 18px;
+      --max: 1120px;
+      --sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --mono: "Cascadia Code", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+    }
+
+    html[data-theme="dark"] {
+      --bg: #101716;
+      --surface: #17211f;
+      --surface-2: #1d2b28;
+      --ink: #edf6f3;
+      --muted: #a7b9b4;
+      --line: #344640;
+      --accent: #68d9c5;
+      --accent-strong: #9ceada;
+      --accent-soft: #173f38;
+      --warm: #efc46a;
+      --warm-soft: #42351c;
+      --danger: #ff9d96;
+      --danger-soft: #472824;
+      --code: #21302d;
+      --shadow: 0 20px 55px rgba(0, 0, 0, 0.34);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      html[data-theme="auto"] {
+        --bg: #101716;
+        --surface: #17211f;
+        --surface-2: #1d2b28;
+        --ink: #edf6f3;
+        --muted: #a7b9b4;
+        --line: #344640;
+        --accent: #68d9c5;
+        --accent-strong: #9ceada;
+        --accent-soft: #173f38;
+        --warm: #efc46a;
+        --warm-soft: #42351c;
+        --danger: #ff9d96;
+        --danger-soft: #472824;
+        --code: #21302d;
+        --shadow: 0 20px 55px rgba(0, 0, 0, 0.34);
+      }
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      background:
+        radial-gradient(circle at 8% 0%, color-mix(in srgb, var(--accent) 13%, transparent), transparent 34rem),
+        var(--bg);
+      color: var(--ink);
+      font-family: var(--sans);
+      line-height: 1.58;
+    }
+    a { color: var(--accent-strong); text-underline-offset: 0.18em; }
+    button, a { -webkit-tap-highlight-color: transparent; }
+    :focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+    code, pre { font-family: var(--mono); }
+    code {
+      padding: 0.08rem 0.34rem;
+      border: 1px solid var(--line);
+      border-radius: 0.35rem;
+      background: var(--code);
+      font-size: 0.9em;
+    }
+    pre {
+      overflow-x: auto;
+      margin: 0;
+      padding: 1rem 1.1rem;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: var(--code);
+      color: var(--ink);
+      line-height: 1.65;
+    }
+    pre code { padding: 0; border: 0; background: transparent; }
+
+    .page { width: min(calc(100% - 2rem), var(--max)); margin: 0 auto; padding: 1.1rem 0 4rem; }
+    .toolbar { display: flex; justify-content: flex-end; margin-bottom: 0.7rem; }
+    .theme-toggle {
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 0.5rem 0.8rem;
+      background: var(--surface);
+      color: var(--ink);
+      font: 650 0.82rem/1 var(--sans);
+      cursor: pointer;
+    }
+    .hero {
+      position: relative;
+      overflow: hidden;
+      padding: clamp(1.6rem, 4vw, 3.2rem);
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      background: linear-gradient(135deg, var(--surface), var(--surface-2));
+      box-shadow: var(--shadow);
+    }
+    .hero::after {
+      content: "IS";
+      position: absolute;
+      right: clamp(1rem, 4vw, 3rem);
+      top: -1.4rem;
+      color: color-mix(in srgb, var(--accent) 11%, transparent);
+      font: 900 clamp(7rem, 22vw, 15rem)/1 var(--sans);
+      letter-spacing: -0.1em;
+      pointer-events: none;
+    }
+    .eyebrow {
+      position: relative;
+      z-index: 1;
+      margin: 0 0 0.55rem;
+      color: var(--accent-strong);
+      font: 780 0.78rem/1.3 var(--mono);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+    h1 {
+      position: relative;
+      z-index: 1;
+      max-width: 820px;
+      margin: 0;
+      font-size: clamp(2.2rem, 7vw, 5.15rem);
+      line-height: 0.98;
+      letter-spacing: -0.055em;
+    }
+    .lede {
+      position: relative;
+      z-index: 1;
+      max-width: 770px;
+      margin: 1.25rem 0 0;
+      color: var(--muted);
+      font-size: clamp(1rem, 2vw, 1.22rem);
+    }
+    .chips { position: relative; z-index: 1; display: flex; flex-wrap: wrap; gap: 0.55rem; margin-top: 1.4rem; }
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      min-height: 2rem;
+      padding: 0.35rem 0.68rem;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: var(--surface);
+      color: var(--muted);
+      font: 700 0.78rem/1.1 var(--sans);
+    }
+    .chip.pending { border-color: color-mix(in srgb, var(--warm) 45%, var(--line)); background: var(--warm-soft); color: var(--warm); }
+    .chip.accepted { border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); background: var(--accent-soft); color: var(--accent-strong); }
+    .authority {
+      position: relative;
+      z-index: 1;
+      margin-top: 1.35rem;
+      padding: 0.9rem 1rem;
+      border-left: 4px solid var(--accent);
+      border-radius: 0 12px 12px 0;
+      background: var(--accent-soft);
+      font-size: 0.93rem;
+    }
+
+    main { display: grid; gap: 1.15rem; margin-top: 1.15rem; }
+    section {
+      padding: clamp(1.25rem, 3vw, 2rem);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--surface);
+      box-shadow: 0 8px 26px rgba(26, 54, 48, 0.055);
+    }
+    h2 { margin: 0 0 0.45rem; font-size: clamp(1.45rem, 3vw, 2.05rem); letter-spacing: -0.025em; }
+    h3 { margin: 0; font-size: 1.02rem; }
+    .section-intro { max-width: 780px; margin: 0 0 1.2rem; color: var(--muted); }
+    .kicker { color: var(--accent-strong); font: 760 0.74rem/1.2 var(--mono); letter-spacing: 0.09em; text-transform: uppercase; }
+
+    .heard-grid, .choice-grid, .scope-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.8rem; }
+    .heard-card, .choice-card, .scope-card {
+      padding: 1rem;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: var(--surface-2);
+    }
+    .heard-card p, .choice-card p, .scope-card p { margin: 0.35rem 0 0; color: var(--muted); }
+    .number {
+      display: inline-grid;
+      place-items: center;
+      width: 1.8rem;
+      height: 1.8rem;
+      margin-right: 0.5rem;
+      border-radius: 50%;
+      background: var(--accent-soft);
+      color: var(--accent-strong);
+      font: 800 0.78rem/1 var(--mono);
+    }
+
+    .logic-flow { display: grid; grid-template-columns: 1fr auto 1fr auto 1fr; align-items: stretch; gap: 0.6rem; margin-top: 1rem; }
+    .logic-node { padding: 1rem; border: 1px solid var(--line); border-radius: 14px; background: var(--surface-2); }
+    .logic-node b { display: block; margin-bottom: 0.25rem; }
+    .logic-node span { color: var(--muted); font-size: 0.93rem; }
+    .arrow { align-self: center; color: var(--accent); font-size: 1.5rem; font-weight: 900; }
+
+    .timeline { display: grid; gap: 0.8rem; counter-reset: stage; }
+    .stage {
+      display: grid;
+      grid-template-columns: 3.2rem 1fr;
+      gap: 0.8rem;
+      padding: 1rem;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: var(--surface-2);
+      counter-increment: stage;
+    }
+    .stage::before {
+      content: counter(stage, decimal-leading-zero);
+      display: grid;
+      place-items: center;
+      width: 3rem;
+      height: 3rem;
+      border-radius: 12px;
+      background: var(--accent-soft);
+      color: var(--accent-strong);
+      font: 850 0.9rem/1 var(--mono);
+    }
+    .stage p { margin: 0.25rem 0 0; color: var(--muted); }
+    .afterwards { margin-top: 0.65rem; color: var(--accent-strong); font-size: 0.9rem; font-weight: 700; }
+
+    .decision-id {
+      display: inline-block;
+      min-width: 2.7rem;
+      margin-bottom: 0.55rem;
+      padding: 0.28rem 0.48rem;
+      border-radius: 8px;
+      background: var(--accent-soft);
+      color: var(--accent-strong);
+      font: 850 0.8rem/1 var(--mono);
+    }
+    .choice-card { border-top: 4px solid var(--accent); background: var(--surface); }
+    .choice-card .status { margin-top: 0.75rem; color: var(--accent-strong); font: 750 0.78rem/1.2 var(--mono); }
+
+    .table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 14px; }
+    table { width: 100%; border-collapse: collapse; min-width: 820px; }
+    caption { padding: 0.8rem 1rem; text-align: left; color: var(--muted); font-size: 0.87rem; }
+    th, td { padding: 0.85rem 0.9rem; border-bottom: 1px solid var(--line); vertical-align: top; text-align: left; }
+    th { background: var(--surface-2); color: var(--muted); font: 780 0.75rem/1.2 var(--sans); letter-spacing: 0.06em; text-transform: uppercase; }
+    tbody tr:last-child td { border-bottom: 0; }
+    tbody tr.priority { background: color-mix(in srgb, var(--warm-soft) 70%, transparent); }
+    td.id { width: 4.3rem; color: var(--warm); font: 850 0.86rem/1.4 var(--mono); white-space: nowrap; }
+    td.tweak { font-family: var(--mono); font-size: 0.82rem; }
+    .review-first { display: block; margin-top: 0.28rem; color: var(--warm); font: 750 0.68rem/1.2 var(--sans); letter-spacing: 0.05em; text-transform: uppercase; }
+
+    .risk-list { display: grid; gap: 0.75rem; }
+    .risk {
+      display: grid;
+      grid-template-columns: minmax(11rem, 0.72fr) 1.5fr;
+      gap: 1rem;
+      padding: 0.9rem 0;
+      border-bottom: 1px solid var(--line);
+    }
+    .risk:last-child { border-bottom: 0; }
+    .risk b { color: var(--danger); }
+    .risk span { color: var(--muted); }
+
+    .feedback-grid { display: grid; grid-template-columns: 1.15fr 0.85fr; gap: 1rem; align-items: start; }
+    .source { margin: 0; }
+    .source div { padding: 0.75rem 0; border-bottom: 1px solid var(--line); }
+    .source div:last-child { border-bottom: 0; }
+    .source dt { color: var(--muted); font-size: 0.75rem; font-weight: 760; letter-spacing: 0.07em; text-transform: uppercase; }
+    .source dd { margin: 0.2rem 0 0; overflow-wrap: anywhere; font-family: var(--mono); font-size: 0.85rem; }
+    .silence { margin: 0.85rem 0 0; color: var(--muted); font-size: 0.9rem; }
+    footer { padding: 1.4rem 0 0; color: var(--muted); text-align: center; font-size: 0.82rem; }
+
+    @media (max-width: 760px) {
+      .heard-grid, .choice-grid, .scope-grid, .feedback-grid { grid-template-columns: 1fr; }
+      .logic-flow { grid-template-columns: 1fr; }
+      .arrow { transform: rotate(90deg); justify-self: center; }
+      .risk { grid-template-columns: 1fr; gap: 0.25rem; }
+      .hero::after { display: none; }
+    }
+
+    @media print {
+      :root, html[data-theme="dark"], html[data-theme="auto"] {
+        --bg: #ffffff;
+        --surface: #ffffff;
+        --surface-2: #f2f5f4;
+        --ink: #111111;
+        --muted: #454545;
+        --line: #b8b8b8;
+        --accent: #086f65;
+        --accent-strong: #075a52;
+        --accent-soft: #e4f2ef;
+        --warm: #765000;
+        --warm-soft: #fff3d2;
+        --danger: #8e2f2a;
+        --code: #f0f0f0;
+        --shadow: none;
+      }
+      body { background: #fff; font-size: 10.5pt; }
+      .page { width: 100%; padding: 0; }
+      .toolbar { display: none; }
+      .hero, section { box-shadow: none; break-inside: avoid; }
+      section { padding: 1rem; }
+      .table-wrap { overflow: visible; }
+      table { min-width: 0; font-size: 8.5pt; }
+      th, td { padding: 0.45rem; }
+      a { color: inherit; text-decoration: none; }
+      pre { white-space: pre-wrap; }
+    }
+  </style>
+  <script>
+    (function () {
+      try {
+        var saved = localStorage.getItem("phase-is-proposal-theme");
+        if (saved === "light" || saved === "dark") document.documentElement.dataset.theme = saved;
+      } catch (_) {}
+    }());
+  </script>
+</head>
+<body>
+  <div class="page">
+    <div class="toolbar">
+      <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle light and dark theme">Theme: auto</button>
+    </div>
+
+    <header class="hero">
+      <p class="eyebrow">Plan redline · Publication 2 · 2026-08-20</p>
+      <h1>Instruction-file symmetry</h1>
+      <p class="lede">Make <code>AGENTS.md</code> the shared content file, keep <code>CLAUDE.md</code> as the Claude-compatible import, and stop lifecycle skills from silently recreating two competing instruction files.</p>
+      <div class="chips" aria-label="Proposal status">
+        <span class="chip accepted">Accepted as written · 2026-08-20</span>
+        <span class="chip">Phase IS</span>
+        <span class="chip">Steps 100–109</span>
+        <span class="chip">2 operator choices · 9 accepted defaults</span>
+      </div>
+      <div class="authority"><strong>Authority boundary:</strong> the Markdown plan is the source of truth. This standalone proposal is a review view; it authorizes no implementation and migrates no consumer project.</div>
+    </header>
+
+    <main>
+      <section aria-labelledby="heard-title">
+        <span class="kicker">01 · What I heard</span>
+        <h2 id="heard-title">One content copy, safe on both hosts</h2>
+        <p class="section-intro">Phase IS fixes the catalog before the wider portfolio begins flipping project instruction files.</p>
+        <div class="heard-grid">
+          <article class="heard-card"><h3><span class="number">1</span>Invert only when safe</h3><p>On a greenfield project, author the seven sections in <code>AGENTS.md</code> and emit exact <code>@AGENTS.md</code> pointer bytes in <code>CLAUDE.md</code>.</p></article>
+          <article class="heard-card"><h3><span class="number">2</span>Preserve existing projects</h3><p>A substantive legacy <code>CLAUDE.md</code> keeps working as it does today. No migration happens under this plan.</p></article>
+          <article class="heard-card"><h3><span class="number">3</span>Repair the whole catalog</h3><p>Re-enumerate cores and provider adapters, then repoint every project-instruction reader or writer the evidence proves unsafe.</p></article>
+          <article class="heard-card"><h3><span class="number">4</span>Prove delivery, not just prose</h3><p>Add package-integrity gates, build generated profiles, install to a scratch home, and exercise the five behavior rows on real hosts.</p></article>
+        </div>
+      </section>
+
+      <section aria-labelledby="shape-title">
+        <span class="kicker">02 · Why this shape</span>
+        <h2 id="shape-title">The hosts resolve project instructions differently</h2>
+        <p class="section-intro">The plan's dated measurement against <code>codex-cli 0.147.0</code> found that Claude expands an <code>@AGENTS.md</code> import while Codex expands no imports. Therefore the file Codex reads must contain the content itself.</p>
+        <div class="logic-flow" role="group" aria-label="Instruction delivery reasoning">
+          <div class="logic-node"><b>Codex reads <code>AGENTS.md</code></b><span>No import expansion means the content must live there.</span></div>
+          <div class="arrow" aria-hidden="true">→</div>
+          <div class="logic-node"><b>Claude sees <code>CLAUDE.md</code></b><span>The exact <code>@AGENTS.md</code> line imports the same content.</span></div>
+          <div class="arrow" aria-hidden="true">→</div>
+          <div class="logic-node"><b>One maintained body</b><span>Lifecycle skills refresh the substantive file without restoring duplication.</span></div>
+        </div>
+      </section>
+
+      <section aria-labelledby="timeline-title">
+        <span class="kicker">03 · Delivery sequence</span>
+        <h2 id="timeline-title">Ten steps, four bounded stages</h2>
+        <p class="section-intro">Each stage unlocks the next. Scratch installs and projects remain disposable; consumer repositories stay untouched.</p>
+        <div class="timeline">
+          <article class="stage"><div><h3>Contract and lifecycle writers · Steps 100–102</h3><p>Put the three-state contract and five-row matrix in one owning core; make <code>plan-init</code> and <code>repo-update</code> implement it.</p><div class="afterwards">Afterwards: run Step 103's full classification before choosing any remaining reader edits.</div></div></article>
+          <article class="stage"><div><h3>Catalog audit and repair · Steps 103–105</h3><p>Classify every relevant core and provider hit, repair proven project readers, and make <code>context-slim</code> inversion-aware without changing its ancestor anchor.</p><div class="afterwards">Afterwards: run Step 106 to enforce both the write surface and single-owner contract.</div></div></article>
+          <article class="stage"><div><h3>Mechanical gates and documentation · Steps 106–107</h3><p>Land the two package-integrity gates, prove six planted defects red, vendor the host measurement, and update the suite-count owner only after measuring.</p><div class="afterwards">Afterwards: <code>powershell -File tools/build-distributions.ps1 -Provider all</code>.</div></div></article>
+          <article class="stage"><div><h3>Scratch delivery and operator proof · Steps 108–109</h3><p>Install the Claude profile into a disposable home, exercise the behavior matrix in a disposable project, and verify Codex input plus Claude import resolution.</p><div class="afterwards">Afterwards: record operator feedback and only then proceed to <code>/repo-sync</code>.</div></div></article>
+        </div>
+      </section>
+
+      <section aria-labelledby="operator-title">
+        <span class="kicker">04 · Operator choices</span>
+        <h2 id="operator-title">Already picked</h2>
+        <p class="section-intro">These are explicit choices recorded in the source plan on 2026-08-20. Revisit them only if you want to reverse the product behavior.</p>
+        <div class="choice-grid">
+          <article class="choice-card"><span class="decision-id">P1</span><h3><code>plan-init</code> authors the inverted shape only from nothing</h3><p>When both files are absent, create substantive <code>AGENTS.md</code> plus the exact pointer. Never overwrite an existing substantive <code>CLAUDE.md</code>.</p><div class="status">OPERATOR-PICKED · 2026-08-20</div></article>
+          <article class="choice-card"><span class="decision-id">P2</span><h3>Dual-substantive drift is advisory, never blocking</h3><p><code>repo-update</code> names both paths, refreshes neither, prints the warning, and continues—important because phase wraps invoke it unattended.</p><div class="status">OPERATOR-PICKED · 2026-08-20</div></article>
+        </div>
+      </section>
+
+      <section aria-labelledby="defaults-title">
+        <span class="kicker">05 · Agent defaults</span>
+        <h2 id="defaults-title">Accepted as written</h2>
+        <p class="section-intro">All nine defaults were accepted on 2026-08-20. Each retains what it does, why it was selected, and its smallest useful tweak axis for any later revision. The amber rows are the three highest-leverage decisions.</p>
+        <div class="table-wrap">
+          <table>
+            <caption>D3–D11 were accepted on 2026-08-20. The IDs remain append-only; a later reversal keeps its ID and records the change date.</caption>
+            <thead><tr><th scope="col">ID</th><th scope="col">What</th><th scope="col">Why</th><th scope="col">Tweak axis</th></tr></thead>
+            <tbody>
+              <tr><td class="id">D3</td><td>Gate core and provider surfaces separately, with independently derived non-empty floors.</td><td>Prevents another #142-style blind spot where one product arm silently drops out.</td><td class="tweak"><code>D3 -&gt; add &lt;surface&gt;</code></td></tr>
+              <tr><td class="id">D4</td><td>Let Step 103 evidence determine the repair set instead of freezing today's list.</td><td>Two earlier audits missed real readers; cited classification is safer than memory.</td><td class="tweak"><code>D4 -&gt; classify &lt;path:line&gt; as &lt;kind&gt;</code></td></tr>
+              <tr><td class="id">D5</td><td>Leave skill-mesh's own root pair unchanged and accept its temporary Codex content gap.</td><td>The root pair is frozen by a hygiene test and inversion belongs to another portfolio phase.</td><td class="tweak"><code>D5 -&gt; include root inversion</code></td></tr>
+              <tr class="priority"><td class="id">D6<span class="review-first">Key default</span></td><td>Own the contract in <code>plan-init/core.md</code>; create no shared contract file.</td><td>Adapters cannot legally cite the proposed shared path, links are shrink-only, and emitted payloads are citation-seeded.</td><td class="tweak"><code>D6 -&gt; owner &lt;legal existing surface&gt;</code></td></tr>
+              <tr><td class="id">D7</td><td>Leave legacy top-level skill packages stale as recorded, accepted drift.</td><td>They are policy-frozen during the deprecation window and are not canonical sources.</td><td class="tweak"><code>D7 -&gt; unfreeze legacy packages</code></td></tr>
+              <tr class="priority"><td class="id">D8<span class="review-first">Key default</span></td><td>Classify each filename as ABSENT, POINTER, or SUBSTANTIVE; emit exact <code>@AGENTS.md\n</code> pointer bytes.</td><td>A shared state model prevents greenfield, legacy, and inverted projects from taking the wrong branch.</td><td class="tweak"><code>D8 -&gt; tighten POINTER rule to &lt;grammar&gt;</code></td></tr>
+              <tr><td class="id">D9</td><td>Keep context-slim's <code>CLAUDE.md</code>-anchored ancestor walk; redirect only reads and appends.</td><td>Preserves the project-resolution parity that <code>user-afterparty</code> relies on.</td><td class="tweak"><code>D9 -&gt; change both resolution contracts</code></td></tr>
+              <tr><td class="id">D10</td><td>Apply the five-row state matrix exactly across the two lifecycle writers.</td><td>It preserves existing projects, prevents overwrites, handles drift, and makes inverted rows converge.</td><td class="tweak"><code>D10 -&gt; row &lt;n&gt;: &lt;replacement&gt;</code></td></tr>
+              <tr class="priority"><td class="id">D11<span class="review-first">Key default</span></td><td>Allow guarded <code>CLAUDE.md</code> writes; enforce one owner with a marker, canaries, and bounded citations.</td><td>A blanket write ban would reject the valid legacy refresh path; mechanical canaries catch blind writes and duplication.</td><td class="tweak"><code>D11 -&gt; predicate &lt;testable rule&gt;</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section aria-labelledby="scope-title">
+        <span class="kicker">06 · Not in this phase</span>
+        <h2 id="scope-title">The boundary stays narrow</h2>
+        <div class="scope-grid">
+          <article class="scope-card"><h3>No consumer migration</h3><p>Phase IS changes canonical skill behavior and disposable proof environments only.</p></article>
+          <article class="scope-card"><h3>No root-file flip</h3><p>This repository's own <code>AGENTS.md</code>/<code>CLAUDE.md</code> pair remains unchanged.</p></article>
+          <article class="scope-card"><h3>No shared contract payload</h3><p>No new <code>_shared/</code> file and no relocation or merge of the two seven-section bodies.</p></article>
+          <article class="scope-card"><h3>No legacy refresh</h3><p>The 46 top-level compatibility packages remain frozen; workspace-level references remain separate.</p></article>
+          <article class="scope-card"><h3>No wider portfolio phases</h3><p>Phases 0, 1, 3, 4, and 5 stay outside this plan.</p></article>
+          <article class="scope-card"><h3>No production-home install</h3><p>Build and UAT use a disposable scratch home and scratch project, never the operator's real home.</p></article>
+        </div>
+      </section>
+
+      <section aria-labelledby="risks-title">
+        <span class="kicker">07 · Risks</span>
+        <h2 id="risks-title">Where the plan earns its gates</h2>
+        <div class="risk-list">
+          <div class="risk"><b>Prose is not execution</b><span>Pytest can enforce what a core says, not what an agent does. Steps 108–109 therefore build, install, and exercise the behavior.</span></div>
+          <div class="risk"><b>Backward compatibility</b><span>Roughly 32 non-inverted projects must remain unchanged. D10 row 2 and operator UAT carry that proof.</span></div>
+          <div class="risk"><b>Destructive overwrite</b><span>P1 is limited to the both-absent row; all existing-substantive paths are explicit no-overwrite cases.</span></div>
+          <div class="risk"><b>Enumeration blind spots</b><span>D3 gates both core and provider arms; D4 requires an evidence-backed reclassification before repair.</span></div>
+          <div class="risk"><b>Prose-predicate false positives</b><span>D11 supplies a canonical guard marker; Step 106 measures its result against the fully enumerated REFERENCE bucket.</span></div>
+          <div class="risk"><b>Temporary local context gap</b><span>D5 deliberately leaves this repository's inert root pointer untouched until the wider portfolio's Phase 1.</span></div>
+        </div>
+      </section>
+
+      <section aria-labelledby="feedback-title">
+        <span class="kicker">08 · Feedback and sources</span>
+        <h2 id="feedback-title">Reply by stable decision ID</h2>
+        <p class="section-intro">Acceptance is recorded. For any later revision, use one line per change; ask about an ID with <code>?</code> and reverse an operator choice the same way you change a default.</p>
+        <div class="feedback-grid">
+          <div>
+            <pre><code># Acceptance recorded 2026-08-20
+ACCEPT AS WRITTEN
+
+D8 -&gt; POINTER means exact @-import only
+D10 -&gt; row 5: refresh AGENTS.md, keep advisory
+P2 -&gt; block and require operator resolution
+D6 ?</code></pre>
+            <p class="silence">Silence leaves the accepted plan standing. Later edits update the Markdown plan first, retain the same IDs, and republish this same HTML path with an incremented publication label.</p>
+          </div>
+          <dl class="source">
+            <div><dt>Canonical plan</dt><dd>documentation/instruction-file-symmetry-plan.md</dd></div>
+            <div><dt>Stable proposal</dt><dd>documentation/instruction-file-symmetry-proposal.html</dd></div>
+            <div><dt>Planning base</dt><dd>main @ 1f410fc · recorded 2026-08-20</dd></div>
+            <div><dt>Execution authority</dt><dd>plan.md · Phase CP remains current</dd></div>
+            <div><dt>Next planning action</dt><dd>/repo-sync</dd></div>
+          </dl>
+        </div>
+      </section>
+    </main>
+
+    <footer>Phase IS proposal · Publication 2 · Accepted as written 2026-08-20 · The Markdown plan is authoritative; this file is a stable review surface.</footer>
+  </div>
+
+  <script>
+    (function () {
+      var button = document.getElementById("theme-toggle");
+      var root = document.documentElement;
+      function label() { button.textContent = "Theme: " + root.dataset.theme; }
+      label();
+      button.addEventListener("click", function () {
+        var current = root.dataset.theme;
+        var next = current === "auto" ? "dark" : current === "dark" ? "light" : "auto";
+        root.dataset.theme = next;
+        try {
+          if (next === "auto") localStorage.removeItem("phase-is-proposal-theme");
+          else localStorage.setItem("phase-is-proposal-theme", next);
+        } catch (_) {}
+        label();
+      });
+    }());
+  </script>
+</body>
+</html>
