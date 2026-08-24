@@ -237,6 +237,8 @@ Apply plan doc fixes first (5a findings), then wiki fixes (5b findings). For gap
 
 A project's `CLAUDE.md` is what every future session reads first. After shipping a phase, verify it still matches reality.
 
+Which instruction file this step may write, and which it must leave alone, is decided by the project's instruction-file state — see the Instruction-file contract in plan-init/core.md ([`../plan-init/core.md`](../plan-init/core.md)), the ONE owner of that contract. This core applies it by citation and deliberately does not restate it.
+
 Create `CLAUDE.md` at project root if absent (pull values from `$PLAN_PATH`, `$README_PATH`, `pyproject.toml`/`package.json`). All seven sections:
 
 1. **Project overview** — one or two sentences (from plan or README).

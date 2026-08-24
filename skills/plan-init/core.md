@@ -436,6 +436,113 @@ Run `/plan-wrap` on the draft before saving if any of the above is uncertain.
 
 ---
 
+## Instruction-file contract
+
+<!-- instruction-file-contract: owner -->
+
+**This section is the ONE owner of the instruction-file contract** — the normative state
+definition, the behavior matrix each lifecycle writer must implement, and the guarded-write rule
+the package-integrity gates must key on. It is the definition, not the enforcement: the writers
+that must implement the matrix and the gates that must enforce the rule are separate surfaces,
+each carried by its own step of this phase, so do not read this section as evidence that any
+writer or reader in the catalog already honors it — check that surface itself. At the commit that
+introduced this section, none of them did yet. [`../repo-update/core.md`](../repo-update/core.md)
+cites this section and deliberately does not restate it; a change here is a change for both
+writers and for every reader that opens a project's instruction file. There is deliberately **no
+shared file** for this contract: a shared file would be a third instruction-authoring surface that
+the write-surface gate's two enumeration globs would not open, and provider adapters — which have
+no core — are forbidden the `<repo>/_shared/<leaf>` spelling cores must use, so an adapter could
+not cite it in any legal spelling.
+
+Throughout this section `A` is the project's `AGENTS.md` and `C` is its `CLAUDE.md`, and both are
+**project** instruction files. A skill that names the operator's *workspace* `CLAUDE.md` —
+model-tier policy, workspace rules — is outside this contract entirely.
+
+**Why the inverted shape exists.** A prose pointer ("Load and follow X in full") is inert on both
+Claude Code and the OpenAI Codex CLI — the target's content never reaches the model. An `@`-import
+expands on Claude Code and is inert on Codex, which expands no imports at all. So the file Codex
+reads must *be* the content, and a `CLAUDE.md` carrying the `@AGENTS.md` import is the only shape
+that serves both hosts from one copy.
+
+**Instruction-file states are three-valued**, and the three states are defined for BOTH filenames.
+For either `AGENTS.md` or `CLAUDE.md`:
+
+- **ABSENT** — the path does not exist.
+- **POINTER** — the file exists but its whole body defers to the other file: it contains an
+  `@AGENTS.md` import line, **or** a prose sentence directing the reader to the sibling file, and it
+  carries **no `##` section heading**. A pointer may legally carry a comment line. Byte-size
+  thresholds are rejected — never classify by length.
+- **SUBSTANTIVE** — the file exists and is not a POINTER. Carrying at least one `##` section
+  heading is the TYPICAL shape, never a necessary condition: a file that exists and does not defer
+  to its sibling is SUBSTANTIVE even with no `##` heading anywhere in it.
+
+The three are exhaustive and mutually exclusive, and they are total BY CONSTRUCTION — SUBSTANTIVE
+is the complement of POINTER over the files that exist, so nothing can fall between them. That
+complement is the fail-safe direction and is why it is written this way: content no rule recognizes
+classifies as SUBSTANTIVE, and no row below authors a SUBSTANTIVE file from scratch or replaces it
+with the pointer bytes, so a hand-written `AGENTS.md` holding real content under a single `#`
+heading is never overwritten. "Stub" is a synonym for POINTER and is not used normatively.
+
+**Worked example — the skill-mesh repository's own root pair.** Its `AGENTS.md` is 6 lines, "Load
+and follow `CLAUDE.md` in full", with no `##` heading → **POINTER**. Its `CLAUDE.md` carries many
+`##` headings → **SUBSTANTIVE**. That is **row 2** of the matrix below — neither row 4 nor the
+row-5 drift case — so `/repo-update` must keep refreshing that `CLAUDE.md` exactly as today, and
+no drift advisory is to fire. Any implementation that classifies this pair as row 4, or as drift
+because it read the pointer as content, is wrong.
+
+**The emitted `CLAUDE.md` pointer is exactly these bytes**, and nothing else — a single line plus a
+trailing newline:
+
+```text
+@AGENTS.md
+```
+
+**The behavior matrix.** Every writer step must implement exactly this. A POINTER `A` must be
+treated as ABSENT — an inert pointer is not content.
+
+| `A` | `C` | `plan-init` | `repo-update` |
+|---|---|---|---|
+| ABSENT | ABSENT | Author `A` (seven sections); write `C` as the pointer bytes above | Same — this is its create-if-absent path |
+| ABSENT / POINTER | SUBSTANTIVE | **Touch neither.** Report the project is non-inverted | **Refresh `C` in place, exactly as today.** Never create `A` |
+| SUBSTANTIVE | POINTER *(inverted)* | Refresh `A`; leave `C` untouched | Refresh `A`; leave `C` untouched |
+| SUBSTANTIVE | ABSENT | Refresh `A`; write `C` as the pointer bytes above | Refresh `A`; write `C` as the pointer bytes above |
+| SUBSTANTIVE | SUBSTANTIVE *(drift)* | Do not write. Report drift | Refresh **neither**; emit the drift advisory naming both paths; continue |
+
+Row 2 is the dominant case, and it carries the backward-compatibility obligation: a writer
+implementing it must leave every already-existing project working unchanged, which is why adopting
+this contract migrates nothing. **The only path permitted to create an `AGENTS.md` is row 1, both
+files ABSENT.** Rows 3 and 4 must be fixed points: once a writer implements them, re-running it
+converges, so a second pass adds no new file. The row-5 drift report must be an always-print
+advisory that **never blocks and never halts** — `/repo-update` also runs unattended inside phase
+wraps and via `/repo-wrap`'s registered-owned-project rail.
+
+**A guarded `CLAUDE.md` write is legal; an unguarded one is not.** Row 2 obliges `/repo-update` to
+keep writing `CLAUDE.md` on most existing projects, so "no surface writes `CLAUDE.md`" would be the
+wrong rule — it would red on correct output. The distinction:
+
+- **Legal (guarded)** — the write sits inside a section that also carries the canonical marker
+  `CLAUDE.md or AGENTS.md`, i.e. the prose demonstrably considered both files.
+- **Illegal (unguarded)** — a `CLAUDE.md` write verb (`write` / `save` / `create` / `bootstrap` /
+  `refresh`) with no such marker anywhere in its section.
+
+`CLAUDE.md or AGENTS.md` is the one canonical spelling of that marker. Do not invent a variant: a
+variant is invisible to a gate keying on the marker, so the write will read as unguarded.
+
+**Designated probe literals.** Two exact strings live in this section and nowhere else under
+`skills/`: the sentinel HTML comment immediately below this section's heading, and the bolded
+sentence that introduces the three-state definition — the one running from `Instruction-file` to
+`three-valued`, sitting immediately above the ABSENT / POINTER / SUBSTANTIVE bullets, and NOT this
+section's own opening sentence. They exist so that a gate can tell a legal citation from a silent
+re-duplication of the contract, so never copy either string into another file; cite this section
+instead.
+
+**Bounded cite-site minimum.** A citing core or adapter must carry **only** the phrase "see the
+Instruction-file contract in plan-init/core.md" plus, where it must act on the contract, the
+canonical marker `CLAUDE.md or AGENTS.md`. It must carry neither probe literal, and must restate
+no part of the matrix.
+
+---
+
 ## After plan.md exists — bootstrap CLAUDE.md
 
 A fresh project also needs a `CLAUDE.md` so any future session opens with the
