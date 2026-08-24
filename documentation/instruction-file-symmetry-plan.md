@@ -337,7 +337,7 @@ mechanism `test_autofix_marker_single_owner.py` uses.
 - **Produces:** the owner section; a bounded citation in repo-update's core
 - **Done when:** the owner section carries D8, D10, D11, both probe literals and the exact pointer bytes; repo-update carries only the bounded cite phrase and neither probe literal; **no `_shared/` file was created**; no new dangling reference; the repo-root `python -m pytest` (no path argument) is green at or above the count recorded in `documentation/phase-75-baseline.md`, skip count unchanged
 - **Depends on:** none
-- **Status:** NOT STARTED
+- **Status:** DONE (2026-08-24)
 
 ### Step 101: plan-init authors AGENTS.md-primary, without overwriting anyone
 - **Problem:** `skills/plan-init/core.md:439-475` bootstraps `CLAUDE.md` as the content file. Implement D10's `plan-init` column, walking all five rows explicitly. Author `AGENTS.md` and write `CLAUDE.md` as D8's exact pointer bytes **only on row 1**; on row 2 touch neither and report the project non-inverted. Repair the `:443` skip guard, which keys on `CLAUDE.md` existence — a POINTER satisfies it, so plan-init writes nothing on an inverted project. Update the report string at `:462`, the scrapability constraint at `:475` (it is the dev-observatory scrape contract — see § 8's resolved row for what it must say on an inverted project), and the post-save handoff at `:481`. Update `skills/plan-init/providers/codex.md:11`; the adapter carries only D11's bounded cite phrase and neither probe literal.
