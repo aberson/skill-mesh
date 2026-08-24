@@ -2161,7 +2161,12 @@ def test_competing_home_operation_refuses_and_sequential_retry_succeeds(dist_roo
             blocked.stdout + blocked.stderr)
         assert not home.exists()
     finally:
-        out, err = holder.communicate(timeout=120)
+        # The installer caps SKILL_MESH_INSTALL_TEST_HOLD_LOCK_MS at 15s, so the holder
+        # is bounded by construction; this budget only has to cover the hold plus one
+        # install. It is generous because a loaded machine (the full-suite gate runs
+        # this alongside everything else) has overrun 120s here and reddened a clean
+        # tree. Keep it bounded -- a hang must still fail, not wedge the suite.
+        out, err = holder.communicate(timeout=600)
         assert holder.returncode == 0, f"{out}\n{err}"
 
     retry = _install(home, "claude", dist_dir=dist_root)
