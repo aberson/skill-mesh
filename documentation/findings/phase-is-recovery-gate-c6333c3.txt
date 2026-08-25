@@ -1,0 +1,59 @@
+Phase IS recovery gate -- certification of c6333c3 (issues #155, #156)
+Command: python -m pytest        (repo root, no path argument)
+Run: 2026-08-24, detached uninterrupted run on main at c6333c3, on a freshly rebooted machine
+Tree: c6333c3 "test(distributions): raise the concurrency-holder wait past a loaded-machine overrun"
+Interpreter: Python 3.14.3, pytest-9.1.1 (PyYAML 6.0.3 present)
+Machine: booted 2026-08-24 21:41; 7590 MB available at launch, 7887 MB mid-run
+
+Terminal summary:
+================ 1335 passed, 1 skipped in 7470.58s (2:04:30) =================
+
+Exit code: 0  (.build-step/done-gate-c6333c3.exitcode, written after the run completed)
+Process wall clock: 21:44:05.577 -> 23:48:38.443 local (2:04:32.9)
+Collected 1336 items = 1335 passed + 1 skipped.
+The 1 skip is the healthy-run environment-gated skip, at tests/router/test_path_guard.py.
+Zero FAILED and zero ERROR lines in the log.
+
+Why this run exists:
+c6333c3 fixes one of the two flakes seen in the Phase IS Step 100 post-merge gate, and its
+own commit message records that the full repo-root DONE gate had NOT been re-run against it.
+Two attempts to certify it on 2026-08-24 came back red, on a machine that had been up since
+2026-08-19:
+
+  run 1  07:31:52 -> 10:32:02  exit 1  2 failed, 1333 passed, 1 skipped in 3:00:00
+         tests/distributions/test_legacy_migration.py::
+           test_resume_refuses_changed_ledger_or_retire_preimage[retire-marker-bearing]
+         tests/distributions/test_legacy_migration.py::
+           test_rollback_restores_the_adopted_shared_collision_byte_for_byte
+  run 2  12:08:33 -> 15:21:44  exit 1  1 failed, 1334 passed, 1 skipped in 3:13:08
+         tests/distributions/test_legacy_migration.py::
+           test_resume_of_an_applied_transaction_is_a_no_op
+
+Every one of those tests passed in isolation, and the two runs disagreed about WHICH test
+failed. #156 diagnosed machine memory starvation rather than the tree: about 410-430 MB
+available of 15.5 GB, sustained hard-fault paging, pagefile peak 24.1 GB, load accumulated
+since the 2026-08-19 reboot. This run is the discriminating test of that diagnosis: same
+commit, same interpreter, same command, one changed variable -- a reboot.
+
+What this run clears, in one uninterrupted process:
+  - both tests that reddened the Step 100 gate:
+      test_competing_home_operation_refuses_and_sequential_retry_succeeds (fixed in c6333c3)
+      test_codex_uninstall_refuses_when_installed_bytes_changed  (#155, deliberately NOT
+        patched -- it is fail-closed installer security logic)
+  - all three tests that reddened runs 1 and 2 above
+
+Nothing was weakened, retry-wrapped, xfailed, or skipped to get here. The only tree change
+since the Step 100 certification at b713ea6 is c6333c3's wait budget (120s -> 600s, still
+bounded, so a genuine hang still fails).
+
+Wall clock, as corroboration and not proof: 2:04:30 here against 3:00:00 and 3:13:08 for the
+two red runs on the same commit -- a 31% drop -- and against 2:27:03 for the same 1335/1
+count at 2462afd. Consistent with #156's page-fault-stall reading. Timings in this repository
+remain too noisy to gate on (documentation/phase-75-baseline.md).
+
+Trajectory: 1335 (#142 gate at 2462afd, 2:27:03) -> 1335 (Step 100 confirmatory gate at
+b713ea6, 3:39:06) -> 1335 (this gate at c6333c3, 2:04:30). Count and skip both held.
+
+#155 and #156 stay OPEN. This run certifies the tree; it does not explain either underlying
+mechanism, and a machine-state diagnosis that predicts green on a quiesced machine has now
+been confirmed once, not closed.

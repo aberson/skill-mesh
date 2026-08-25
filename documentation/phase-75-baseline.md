@@ -89,8 +89,8 @@ variance warning above still applies, and nothing gates on these timings.
 
 ### Re-measured 2026-08-19 (Phase CP pass 2, Steps 6–8) — SUPERSEDED by pass 3 below
 
-> **Superseded 2026-08-20.** The current figure is **1322 passed / 1 skipped** — see
-> *Re-measured 2026-08-20 (Phase CP pass 3)* at the end of this section. The pass-2 numbers
+> **Superseded 2026-08-20.** The current figure is **1335 passed / 1 skipped** — see
+> *Re-measured 2026-08-24 (Phase IS recovery gate)* below. The pass-2 numbers
 > below are retained as the dated measurement they were, not as today's suite.
 
 The pass-2 DONE-gate measurement, taken on merged `main` carrying the Step 8 payload:
@@ -119,13 +119,17 @@ exit 0** in 2h13m13s — identical counts at a later commit, which is the eviden
 six-file documentation change altered no test outcome. Two independent full-root runs agreed
 on 1318/1, and that pair was the current figure until pass 3 superseded it.
 
-### Re-measured 2026-08-20 (Phase CP pass 3, Steps 9–10) — CURRENT
+### Re-measured 2026-08-20 (Phase CP pass 3, Steps 9–10) — SUPERSEDED by the 2026-08-24 recovery gate below
+
+> **Superseded 2026-08-24.** The current figure is **1335 passed / 1 skipped**, now measured
+> at `c6333c3` — see *Re-measured 2026-08-24 (Phase IS recovery gate)* below. The pass-3
+> numbers below are retained as the dated measurements they were, not as today's suite.
 
 | Command | Passed | Failed | Skipped | Provenance |
 |---|---|---|---|---|
 | `python -m pytest` (DONE gate) | 1320 | 0 | 1 | Step 9 post-merge gate at `abf3522`; 1:58:39, detached and uninterrupted; summary retained at `documentation/findings/cp-step9-root-gate.txt` |
 | `python -m pytest` (DONE gate) | 1322 | 0 | 1 | Step 10 post-merge gate at the merged Step 10 payload; 2:06:17, detached and uninterrupted; summary quoted in commit `c4a850c` — superseded by the #142 row below |
-| `python -m pytest` (DONE gate) | **1335** | 0 | **1** | **CURRENT** — post-merge gate at `2462afd` (#142, the codex provider-doc + derived host-discovery gate); 2:27:03, detached with an exit-code sentinel, uninterrupted. The +13 against 1322 is exactly the 13 cases `test_host_discovery.py` gained (17 → 30). The skip count held at **1** |
+| `python -m pytest` (DONE gate) | **1335** | 0 | **1** | superseded by the 2026-08-24 recovery gate below — post-merge gate at `2462afd` (#142, the codex provider-doc + derived host-discovery gate); 2:27:03, detached with an exit-code sentinel, uninterrupted. The +13 against 1322 is exactly the 13 cases `test_host_discovery.py` gained (17 → 30). The skip count held at **1** |
 
 Trajectory across pass 3, no regression at any step: **1318** (pass-2 exit) → **1320**
 (Step 9, +2 = the two `test_autofix_marker_single_owner.py` cases) → **1322** (Step 10, +2).
@@ -158,6 +162,51 @@ not seconds*: the same 912 tests spanned 31m48s to 44m18s, a 39% spread, on one 
 in one afternoon. Budget for the high end, and do not treat any single figure here as a
 benchmark or use these timings to detect a performance regression — they are too noisy
 for that, and nothing in this phase depends on them.
+
+### Re-measured 2026-08-24 (Phase IS recovery gate, at `c6333c3`) — CURRENT
+
+| Command | Passed | Failed | Skipped | Provenance |
+|---|---|---|---|---|
+| `python -m pytest` (DONE gate) | **1335** | 0 | **1** | **CURRENT** — recovery gate at `c6333c3`; 2:04:30, detached with an exit-code sentinel, fresh boot, uninterrupted; summary retained at `documentation/findings/phase-is-recovery-gate-c6333c3.txt` |
+
+Collection was **1336 items**, unchanged. The count is the same **1335 / 1** as the
+`2462afd` row it supersedes, now measured two commits later — through `b713ea6`
+(Phase IS Step 100, #144: a `plan-init` core section plus a regenerated
+release-candidate report) and `c6333c3` (a wait-budget constant inside an existing test).
+Neither payload adds a test, so neither should move the count, and neither did. The skip
+count held at **1**, and this run names it for the first time:
+`tests/router/test_path_guard.py`.
+
+**This section records two red runs as well, because here the arc is the evidence.**
+Certifying `c6333c3` took three attempts, and the first two came back red on a machine
+that had been up since 2026-08-19:
+
+| Run | Window (local) | Exit | Summary | Red test(s), all in `tests/distributions/test_legacy_migration.py` |
+|---|---|---|---|---|
+| 1 | 07:31:52 → 10:32:02 | 1 | `2 failed, 1333 passed, 1 skipped in 3:00:00` | `test_resume_refuses_changed_ledger_or_retire_preimage[retire-marker-bearing]`, `test_rollback_restores_the_adopted_shared_collision_byte_for_byte` |
+| 2 | 12:08:33 → 15:21:44 | 1 | `1 failed, 1334 passed, 1 skipped in 3:13:08` | `test_resume_of_an_applied_transaction_is_a_no_op` |
+| 3 | 21:44:05 → 23:48:38 | **0** | `1335 passed, 1 skipped in 2:04:30` | — (fresh boot) |
+
+Every red passed in isolation, and **the two red runs disagreed about which test failed**
+— the shape of a machine fault, not a tree fault. #156 diagnosed memory starvation:
+~410–430 MB available of 15.5 GB, sustained hard-fault paging, pagefile peak
+24.1 GB. Run 3 changed exactly one variable — a reboot, 7590 MB available at
+launch — and cleared, in a single uninterrupted process, both Step-100 flakes
+(including the #155 ledger-SECURITY one, which was deliberately never patched) *and* all
+three of runs 1–2's reds. Nothing was weakened, retry-wrapped, xfailed, or
+skipped to get there.
+
+**Two cautions this arc adds to the ones above.** First, **a red full gate is evidence
+about the machine before it is evidence about the tree**: check available memory before
+trusting a gate verdict, and treat under 2 GB free as a do-not-trust condition (#156's
+operational guidance). Second, run 2's red — `test_resume_of_an_applied_transaction_is_a_no_op` — is **not** one of the
+four tests in #156's family table; it is a fifth member, so read that table as a dated
+snapshot rather than a closed enumeration.
+
+Wall clock, as corroboration and not proof: 2:04:30 here against 3:00:00 and 3:13:08 for
+the two reds on the same commit, and against 2:27:03 for the identical 1335/1 count at
+`2462afd`. That is consistent with #156's page-fault-stall reading. The variance warning
+above still stands, and nothing gates on these timings.
 
 ### The three failures this baseline is clean of
 
