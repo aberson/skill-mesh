@@ -530,8 +530,9 @@ three hosts; 3 are Claude-native (`claude-oauth-auth`, `context-slim`, `judge-mo
   inside Codex's 8,000-character initial-list budget required trimming the manifest descriptions
   catalog-wide (mean serialized row 163 → 137 characters); the budget gate now brackets the
   remaining headroom from both sides instead of only naming its ceiling.
-- **Phase CP pass 3 complete — Steps 9–10 shipped; issues #126–#129 closed. 1,322 tests
-  passing** (pytest is deliberately the only automated gate here — there is no lint or
+- **Phase CP pass 3 complete — Steps 9–10 shipped; issues #126–#129 closed** — the suite's measured counts live in
+  [`documentation/phase-75-baseline.md`](documentation/phase-75-baseline.md), their single owner
+  (pytest is deliberately the only automated gate here — there is no lint or
   typecheck step to report). Step 9 resolved the workflow-parity deltas M2 found, making
   `plan-review`'s `Autofix marker` section the single owner of the marker format and locking
   it with a guard test that sweeps all 203 skill and shared documents by glob rather than a

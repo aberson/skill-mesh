@@ -91,6 +91,19 @@ constants in `tools/gen_manifest.py` changes:
 python tools/gen_manifest.py
 ```
 
+**Editing any `skills/<name>/core.md` invalidates `documentation/release-candidate-report.md`.**
+That report records a SHA-256 per *emitted* artifact, and an emitted provider artifact embeds its
+core in full — so a one-line core edit moves the recorded hashes for that skill's
+`providers/*.md` rows. `tests/smoke/test_release_candidate_report.py` regenerates the report and
+diffs it, so a stale report is a hard red. It lives in the **smoke** suite, which a
+`tests/package-integrity` iteration gate never collects — meaning the failure surfaces only in the
+two-hour repo-root gate, hours after the edit that caused it. Regenerate in the same change as any
+core edit, before the gate, not after (Phase IS Steps 100 and 101 each paid for this):
+
+```
+python tests/smoke/gen_release_candidate_report.py
+```
+
 **There is no lint command and no typecheck command, by design** (`documentation/architecture.md`
 §8.4). Do not invent one, and do not report "0 lint violations / 0 type errors" when wrapping a
 phase — pytest is the only automated gate this repository has.
