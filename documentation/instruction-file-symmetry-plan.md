@@ -370,7 +370,7 @@ mechanism `test_autofix_marker_single_owner.py` uses.
 - **Produces:** the authoritative WRITE/READ/REFERENCE table recorded in § 4, derived by the two enumeration commands
 - **Done when:** all 24 cores and all 3 provider files are classified with a `path:line` citation each; every round-2 candidate has an explicit verdict; the REFERENCE bucket is fully enumerated by name so Step 106 can prove no false positive against it; no core was modified
 - **Depends on:** 100
-- **Status:** NOT STARTED
+- **Status:** BLOCKED (2026-08-25) -- parked work on branch build-step-1787690719 @ 73fdf4a; see issue #147
 
 ### Step 104: Repoint every reader Step 103 proved broken
 - **Problem:** Repoint each core Step 103 classified as a READ of a **project** instruction file to the canonical phrasing `CLAUDE.md or AGENTS.md`. Known members: `build-observer:57`, `research-prospect:61`, `user-brainstorm:154`, `user-learn:161`, `citation-review:12`, plus whatever Step 103 added. `goblin-suggest:33` additionally needs its grounding **precondition** repaired: it currently treats existence as sufficient, so a POINTER passes and the documented loud failure never fires.
