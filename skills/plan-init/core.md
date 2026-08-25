@@ -543,14 +543,60 @@ no part of the matrix.
 
 ---
 
-## After plan.md exists — bootstrap CLAUDE.md
+## After plan.md exists — bootstrap the project instruction file (CLAUDE.md or AGENTS.md)
 
-A fresh project also needs a `CLAUDE.md` so any future session opens with the
-right context without having to re-derive stack, layout, and commands from
-scratch. Write one immediately after saving `plan.md` (skip if a `CLAUDE.md`
-already exists — the user already owns the file).
+A fresh project also needs a project instruction file so any future session opens with the
+right context without having to re-derive stack, layout, and commands from scratch. Do this
+immediately after saving `plan.md` — which file it is, and whether this run writes one at all, the
+rows below decide.
 
-Include all seven sections. Pull values directly from the plan conversation — every field below has an answer from phases 1–7.
+**Which file — and whether to write at all — is decided before anything is written.** Classify BOTH
+root paths, `AGENTS.md` and `CLAUDE.md`, against the Instruction-file contract above, then execute
+the one row of that contract's `plan-init` column the classification selects. **Existence is never
+the test.** A `CLAUDE.md` that is only the `@AGENTS.md` pointer exists and carries no content, so
+"the project already has a `CLAUDE.md`" is not a reason to skip — and neither is "the project
+already has an `AGENTS.md`" when that file is the pointer. The superseded existence-only skip guard
+was exactly that defect: on an already-inverted project it suppressed the write, and plan-init left
+the project with no instruction content at all.
+
+**Walk the five rows in order and stop at the first match. Exactly one applies — except for the one
+pair no row lists literally, which "The one pair the matrix does not list" below resolves; if no row
+matches, read that paragraph rather than halting.**
+
+1. **Row 1 — `AGENTS.md` ABSENT (or a POINTER, which the contract treats as ABSENT) and `CLAUDE.md`
+   ABSENT.** The greenfield case. Author `AGENTS.md` at the project root carrying all seven sections
+   below, then write `CLAUDE.md` as the contract's exact pointer bytes and nothing else. **Row 1 is
+   the ONLY path permitted to create an `AGENTS.md`.**
+2. **Row 2 — `AGENTS.md` ABSENT or a POINTER, `CLAUDE.md` SUBSTANTIVE.** The dominant
+   existing-project case. **Touch neither file: write nothing, create nothing, refresh nothing** —
+   not `CLAUDE.md`, not `AGENTS.md`, not a pointer. Zero bytes change on disk and no file is
+   created. The project is non-inverted and its `CLAUDE.md` is already the content file, so skip
+   the seven-section authoring entirely, report the project non-inverted (report string below), and
+   continue to the next section. This row is the whole backward-compatibility guarantee: adopting
+   this contract migrates nothing and leaves every already-working project exactly as it was.
+3. **Row 3 — `AGENTS.md` SUBSTANTIVE, `CLAUDE.md` a POINTER.** The project is already inverted.
+   Refresh `AGENTS.md` in place against the plan just written — update its seven sections, never
+   replace the file wholesale — and leave `CLAUDE.md` untouched, because it already classifies as a
+   POINTER; the classification is the test, never its exact bytes. Re-running plan-init converges
+   here: a second pass creates no file.
+4. **Row 4 — `AGENTS.md` SUBSTANTIVE, `CLAUDE.md` ABSENT.** Refresh `AGENTS.md` in place as in row
+   3, then write `CLAUDE.md` as the contract's exact pointer bytes. Re-running converges.
+5. **Row 5 — both SUBSTANTIVE (drift).** **Write neither file.** Report the drift as an
+   always-print advisory naming both paths; it never blocks and never halts plan-init's completion.
+   Which file should win is the operator's call, not this skill's.
+
+**The one pair the matrix does not list — derived, not legislated.** `AGENTS.md` ABSENT or a
+POINTER while `CLAUDE.md` is a POINTER does not appear in the matrix, and it needs no row of its
+own; every clause here follows from the contract above. The contract says a POINTER `AGENTS.md`
+must be treated as ABSENT, so the `AGENTS.md` side of this pair is row 1's. It also says an inert
+pointer is not content, so a POINTER `CLAUDE.md` holds none either, and row 1 — the row where
+neither name carries content — is the row this pair reduces to. Run row 1 exactly as written above:
+its `CLAUDE.md` write can overwrite no content, because on this pair there is none to overwrite,
+and the bytes it lands are the ones the contract fixes. **This paragraph adds no rule of its own
+and introduces no sixth row.**
+
+Include all seven sections in the content file (rows 1, 3 and 4 — rows 2 and 5 author nothing).
+Pull values directly from the plan conversation — every field below has an answer from phases 1–7.
 
 1. **Project overview** — one or two sentences from Phase 1 (purpose + scope).
 2. **Stack summary** — table from the plan's "Stack" section (Phase 4).
@@ -564,10 +610,27 @@ Include all seven sections. Pull values directly from the plan conversation — 
    specific Python/Node versions, API keys). Anything that would block a fresh
    clone from running the project.
 
-Save to `CLAUDE.md` at the project root.
+**Where the seven sections go.** Into the CONTENT file: `AGENTS.md` at the project root on rows 1,
+3 and 4. On row 2 the existing `CLAUDE.md` already holds them and is not rewritten; on row 5
+nothing is written at all. The pointer file never carries a section — it is exactly the bytes the
+contract fixes, and nothing else.
 
-Report at the end of plan-init: "plan.md written (N sections) · CLAUDE.md bootstrapped (7 sections) · proposal published (<artifact URL>)".
+Report at the end of plan-init:
 
+```text
+plan.md written (N sections) · <instruction-file outcome> · proposal published (<artifact URL>)
+```
+
+`<instruction-file outcome>` is exactly the phrase the row that ran assigns — no other spelling,
+because the outcome is the only place the report says which file now carries the content:
+
+| Row | `<instruction-file outcome>` |
+|---|---|
+| 1 | `AGENTS.md bootstrapped (7 sections) · CLAUDE.md pointer written` |
+| 2 | `instruction files untouched (project non-inverted — CLAUDE.md is the content file)` |
+| 3 | `AGENTS.md refreshed (7 sections) · CLAUDE.md pointer left untouched` |
+| 4 | `AGENTS.md refreshed (7 sections) · CLAUDE.md pointer written` |
+| 5 | `instruction files untouched (drift — AGENTS.md and CLAUDE.md both carry content)` |
 
 ---
 
@@ -579,13 +642,26 @@ On creating a new **owned** project, register it with the control plane so its o
 uv run --project dev-observatory observatory register <slug> --owned --path <rel-path>
 ```
 
-Keep the new `CLAUDE.md`'s `## Commands`/`## Stack`/port mentions scrapable and the plan's objective clearly labeled (a `## 1. What This Is` section) so dev-observatory's verb + goal-vs-reality scrape works.
+Keep the content instruction file scrapable — whichever of CLAUDE.md or AGENTS.md the row above
+left carrying the content. That is what this phase's plan § 8 resolved dev-observatory row
+requires: keep this constraint, and apply it to whichever file or files are SUBSTANTIVE. Its
+`## Commands`/`## Stack`/port mentions must stay in that file, and the plan's objective clearly
+labeled (a `## 1. What This Is` section), so dev-observatory's verb + goal-vs-reality scrape works.
+**Inversion costs a project no verbs and no ports.** The descriptor scrape reads every instruction
+file present and UNIONS their commands and ports, so every command and every port still registers
+when the content sits under `AGENTS.md`. What inversion does not move is the attributed `source`
+label: that label is the highest-precedence PRESENT filename, and `CLAUDE.md` leads that precedence
+order, so on an inverted project the label still reads `CLAUDE.md` — the pointer — while the content
+it labels lives in the sibling. That is a labeling difference only, with no verb and no port lost,
+and it is dev-observatory's own attribution rule, not something this skill sets or works around.
+The pointer file carries none of that content and needs none of it.
 
 ---
 
 ## plan-redline hook (auto-run)
 
-After `plan.md` + `CLAUDE.md` are saved and the observatory registration ran,
+After `plan.md` is saved, the instruction-file row above has run (CLAUDE.md or AGENTS.md written,
+or neither on the two rows that write nothing), and the observatory registration ran,
 invoke the `plan-redline` skill (host skill-invocation adapter) with the plan path — it
 publishes the operator-facing proposal through its provider renderer and owns that contract
 end-to-end ([`../plan-redline/core.md`](../plan-redline/core.md); do

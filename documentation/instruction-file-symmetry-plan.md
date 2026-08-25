@@ -348,7 +348,7 @@ mechanism `test_autofix_marker_single_owner.py` uses.
 - **Produces:** modified plan-init core and codex adapter; the new report string quoted verbatim in the step's checkpoint entry
 - **Done when:** all five D10 rows are walked explicitly in the prose; **row 2 provably writes nothing**; the skip guard no longer suppresses on a POINTER; every `CLAUDE.md` write in the file carries D11's canonical marker in its section; the adapter carries neither probe literal; the repo-root `python -m pytest` green at or above the recorded count, skip unchanged
 - **Depends on:** 100
-- **Status:** NOT STARTED
+- **Status:** DONE (2026-08-25)
 
 ### Step 102: repo-update refreshes the content file and advises on drift
 - **Problem:** `skills/repo-update/core.md` Step 7 (`:52`, `:236-250`, `:400`) verifies and creates `CLAUDE.md`. Implement D10's `repo-update` column, walking all five rows. **The only creation path for `AGENTS.md` is D10 row 1 (both files ABSENT); in a project that already has a SUBSTANTIVE `CLAUDE.md` it must never create one** — row 2 refreshes `CLAUDE.md` in place exactly as today, and that write stays legal under D11 by carrying the canonical marker. On row 3 refresh `AGENTS.md` and leave the pointer alone. On row 5 refresh neither and emit the P2 advisory naming both paths, non-blocking. Repoint `:164`, the stale-reference grep hardcoded to `README.md CLAUDE.md documentation/*.md`. Update the report line at `:400`; preserve `:438`.
