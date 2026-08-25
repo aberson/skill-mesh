@@ -359,7 +359,7 @@ mechanism `test_autofix_marker_single_owner.py` uses.
 - **Produces:** modified repo-update core; the new report string quoted verbatim in the step's checkpoint entry
 - **Done when:** all five D10 rows walked; **row 2 creates no `AGENTS.md`**; row 5 never blocks and never halts; `:164` scans the content file; every `CLAUDE.md` write carries D11's canonical marker in its section; the prose states that rows 3–4 write only `AGENTS.md`, so a second pass is a textual no-op (the *executed* fixed-point check belongs to Step 109); the repo-root `python -m pytest` green at or above the recorded count, skip unchanged
 - **Depends on:** 100
-- **Status:** NOT STARTED
+- **Status:** DONE (2026-08-25)
 
 ### Step 103: Re-derive the full classification and record it
 - **Problem:** Round 1 proved the § 4 table unreliable and round 2 named three more candidates. Produce the authoritative classification, changing no behavior. Enumerate both arms — `grep -l 'CLAUDE\.md' skills/*/core.md` (24) and `grep -l 'CLAUDE\.md' skills/*/providers/*.md` (3) — and classify every hit WRITE / READ / REFERENCE by § 4's rules, distinguishing a **project** instruction file from a **workspace** one. Adjudicate the round-2 candidates explicitly: `repo-sync:51,:521`, `observatory-doctor:78`, `build-phase:31,:198,:229`. Record the result as a table in this plan. Do not edit any core in this step.
