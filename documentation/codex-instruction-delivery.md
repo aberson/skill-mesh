@@ -67,11 +67,11 @@ version actually installed.
 
 ## Reproduction
 
-**Read-only with respect to your project.** It starts no model session, writes nothing in the
-project directory, and changes no file you author — including the Codex config. It is not
-side-effect-free, and should not be described that way: it refreshes Codex's own caches under the
-Codex home (model catalog, app-server info) and reaches the backend to do so. Measured over one
-run in a scratch project: zero project files touched, three files under the Codex home re-stamped.
+**Project-read-only.** It starts no model session. Across both controlled protocols, it wrote
+nothing in the project directory on any run; the one-invocation `-c` override itself leaves
+nothing on disk. It is not side-effect-free: it reaches the backend, and zero-invocation
+controls showed that the Codex home churns without this command. No stable per-invocation
+Codex-home write count can therefore be attributed or published.
 
 ```powershell
 cd <project-dir>

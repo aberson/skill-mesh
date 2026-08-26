@@ -535,7 +535,7 @@ package rather than how it is built:
 | [`migration.md`](migration.md) | What changed from the pre-migration layout, where things live now, and the top-level `<skill>/SKILL.md` deprecation window |
 | [`repo-metadata.md`](repo-metadata.md) | GitHub repository title/description/topic text, applied to `aberson/skill-mesh` |
 | [`host-discovery.md`](host-discovery.md) | Host-loading authority map: instruction injection vs. native discovery vs. router dispatch |
-| [`codex-instruction-delivery.md`](codex-instruction-delivery.md) | The vendored per-host instruction-delivery measurement, the version pin it was taken against, and its read-only reproduction; the core/adapter view is section 11 of this document |
+| [`codex-instruction-delivery.md`](codex-instruction-delivery.md) | The vendored per-host instruction-delivery measurement, the version pin it was taken against, and its project-read-only reproduction; the core/adapter view is section 11 of this document |
 
 `tests/package-integrity/test_release_gates.py` (checker logic in
 `tools/release_checks.py`, Step 38) additionally fails on any of:
@@ -600,7 +600,7 @@ than a migration.
 
 A project may hold its content in `AGENTS.md` and reduce `CLAUDE.md` to a single line,
 `@AGENTS.md`. The measurement that forces that arrangement — which delivery form is
-inert on which host, the version it was pinned against, and the read-only reproduction —
+inert on which host, the version it was pinned against, and the project-read-only reproduction —
 is owned by [`codex-instruction-delivery.md`](codex-instruction-delivery.md) and is not
 restated here. [`host-discovery.md`](host-discovery.md) places the same shape on the
 host-loading map, where it belongs to workspace instruction injection and not to skill
@@ -622,17 +622,19 @@ discovery.
   either state means, and how a reader must treat it, is the owner's to define — the
   architectural point is only that guessing wrong raises no error, so the behavior has
   to be settled by contract rather than left to each core.
-- **A core that WRITES one is governed by the owner's guarded-write rule**, and the
-  architectural consequence here is only where that write surface sits: it is the core,
-  never the adapter, for every portable skill. The pair's canonical spelling, which the
-  package-integrity gate keys on, is `CLAUDE.md or AGENTS.md`.
+- **A surface that WRITES one is governed by the owner's guarded-write rule.** Portable
+  behavior normally lives in the core, while a provider adapter may still need bounded
+  instruction-file prose for its host binding — the
+  [`plan-init` Codex adapter](../skills/plan-init/providers/codex.md) is one such required
+  citer, enumerated by the
+  [single-owner gate](../tests/package-integrity/test_instruction_contract_single_owner.py).
+  The pair's canonical spelling, which that gate keys on, is `CLAUDE.md or AGENTS.md`.
 - **Adapters inherit, and never narrow.** A provider adapter loads its core in full and
   may never weaken a gate the core defines — the rule's home is the repository root
-  [`../CLAUDE.md`](../CLAUDE.md), "Architecture summary" — so a portable skill's three
-  adapters need no instruction-file prose of their own. The exception is
-  structural: a provider-native skill has no core (`core: null`, section 3), so where
-  such a skill reads or writes a project instruction file, its adapter is the surface
-  that must carry the contract citation itself.
+  [`../CLAUDE.md`](../CLAUDE.md), "Architecture summary". That inheritance does not make
+  provider-specific prose redundant: an adapter can carry a bounded contract citation or
+  host mapping without restating or weakening the core. A provider-native skill has no core
+  (`core: null`, section 3), so its adapter carries any instruction-file behavior it owns.
 
 **One owner, cited by path.** The normative contract — what a file already on disk
 means, which file each lifecycle writer may touch, and the guarded-write rule — lives in

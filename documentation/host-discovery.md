@@ -186,7 +186,7 @@ Which delivery form actually carries content on which host — and therefore why
 content sits in `AGENTS.md` rather than behind a pointer — is the measurement, not this
 map's to state. It is owned by
 [`codex-instruction-delivery.md`](codex-instruction-delivery.md), together with the
-version pin it was taken against and the read-only `codex debug prompt-input`
+version pin it was taken against and the project-read-only `codex debug prompt-input`
 reproduction, and is deliberately not restated here: a second carrier of those verdicts
 would silently keep the old answer the day a host changes.
 
@@ -254,7 +254,7 @@ installation contract (cutover plan §6, "Host binding is the normal path").
 | Which model produced the text? | the running model | the discovery root, the instruction file, or the router |
 | Which skill tree was discovered? | the captured `SKILL.md` path (`.claude/skills` for Claude, `.github/skills` for GPT, `.agents/skills` for Codex) | the model's output |
 | Which host wrote a discovered tree? | the generated file's provenance marker and the installer's ownership ledger (`inspect-host-install.ps1`) | the root's name — `.agents/skills` is the codex install target **and** a Copilot discovery root |
-| Are workspace instructions loaded? | the host's instruction-file convention (`CLAUDE.md` / `AGENTS.md`) | the presence of a skill implementation |
+| Which workspace instruction file does the host select? | the host's instruction-file convention (`CLAUDE.md` / `AGENTS.md`) | the presence of a skill implementation |
 | Did the project's instruction content actually reach the model? | the host's prompt payload (on Codex, `codex debug prompt-input`) — the row above says which file is read, only the payload says what arrived | a plausible model answer, or the file merely existing on disk |
 | Was a skill run cross-provider / headless? | an explicit `runtime/skill-router.ps1` invocation | native host discovery |
 
@@ -271,6 +271,6 @@ correctly installed profile.
 - [`providers/claude.md`](providers/claude.md), [`providers/gpt.md`](providers/gpt.md),
   [`providers/codex.md`](providers/codex.md),
   [`providers/README.md`](providers/README.md) — per-host binding, discovery root, capabilities.
-- [`codex-instruction-delivery.md`](codex-instruction-delivery.md) — the vendored measurement behind the inverted instruction-file shape: the per-host delivery table, the version pin it was taken against, and the read-only reproduction.
+- [`codex-instruction-delivery.md`](codex-instruction-delivery.md) — the vendored measurement behind the inverted instruction-file shape: the per-host delivery table, the version pin it was taken against, and the project-read-only reproduction.
 - [`host-native-discovery-cutover-plan.md`](host-native-discovery-cutover-plan.md) §2, §6, §8 — the design authority for this map.
 - [`../config/skill-manifest.json`](../config/skill-manifest.json) — the single source of truth for which skills are published and each skill's frontmatter `description`.
