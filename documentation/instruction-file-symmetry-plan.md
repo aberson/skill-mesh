@@ -789,7 +789,7 @@ mechanism `test_autofix_marker_single_owner.py` uses.
 - **Produces:** a scratch install home plus the verification transcript appended to the findings file
 - **Done when:** `powershell -File tools/build-distributions.ps1 -Provider all` exits 0; `powershell -File tools/install-skill-mesh.ps1 -Provider claude -Home <scratch-home>` exits 0; `powershell -File tools/inspect-host-install.ps1 -Home <scratch-home>` reports the profile installed; and the emitted `plan-init/core.md` under the scratch home is confirmed to contain the `## Instruction-file contract` section — i.e. the new behavior is what a host would load
 - **Depends on:** 107
-- **Status:** NOT STARTED
+- **Status:** BLOCKED (2026-08-26) — install VERIFIED correct; the transcript's § 2 operator half is not. Work preserved unmerged on branch `build-step-s108-1787768088` @ `ea5eff8`. See § 12 Round 8 and issue #152.
 
 ### Step 109: Operator confirmation of all five D10 rows
 - **Problem:** These cores are prose read by an agent; a test asserts what the prose instructs, never what an agent does. Using the Step 108 scratch home and a **disposable scratch project**, exercise every D10 row: run `/plan-init` from nothing (row 1) and verify `AGENTS.md` plus a `CLAUDE.md` matching D8's exact pointer bytes; run it beside a SUBSTANTIVE `CLAUDE.md` (row 2) and verify it writes nothing; run `/repo-update` on the inverted project (row 3) and verify it refreshes `AGENTS.md`, leaves the pointer, and is a no-op on a second pass; manufacture row 5 and verify the advisory prints without blocking. Then verify delivery on both hosts: `codex debug prompt-input` in the scratch project must show the section headings, and the Claude-side `@AGENTS.md` import must resolve.
@@ -1039,6 +1039,99 @@ recorded because the plan did not predict them:
   measured** before being declined: two immediate false reds, zero true positives, because that
   gate's marker arm models a write surface and the owner scopes the cite-site minimum to "a citing
   core or adapter." Recorded so a later reviewer does not re-propose it.
+
+**Round 8 (build outcome, 2026-08-26)** — Step 107 landed at `d4c88ee`; **Step 108 BLOCKED**
+after 3/3 iterations. Recorded because four things generalize beyond these steps:
+
+- **Step 107 PASSED 5/5 at iteration 3, re-scoped rather than patched.** Iterations 1 and 2 each
+  fixed every finding put to them, but three of iteration 2's five new findings sat *inside the
+  hunk that fixed iteration 1's HIGH*. Iteration 3 applied one invariant instead: `architecture.md`,
+  `host-discovery.md` and `codex-instruction-delivery.md` are **citers** of the instruction-file
+  contract, not its owner, so any clause whose ground truth lives elsewhere is a resolvable
+  citation, never a local paraphrase — the single-owner gate probes designated *literals*, not
+  meaning, so a paraphrase carries no mechanical guard. Eight sites cut, fourteen compliant ones
+  left. The risk was already realized: `architecture.md` claimed reading a pointer gives "simply an
+  empty read" while this repository's own vendored measurement records the import line as
+  *delivered verbatim* — a drift that survived five reviewer passes across two rounds.
+
+- **Three of Step 107's findings originated in § 1 of this plan** (corrected in `d4c88ee`): a false
+  "writes nothing", an override spelling that **exits 1** in Windows PowerShell 5.1, and `§ N`
+  spacing against the repository's `§N`. A fourth originated in the orchestrator's own instruction
+  (`Step 101 (#146)`; the plan maps 101→#145, 102→#146). **A step that transcribes an upstream
+  artifact inherits that artifact's errors** — Round 6 recorded this for § 6 D8; there are now four
+  instances across two rounds.
+
+- **Step 108's install is verified; its transcript's operator half is not.** `-Provider all` exit 0,
+  install exit 0, inspector `state=present owned=58 unowned=0`, and whole-profile `diff -r` against a
+  fresh build at HEAD = **zero differences across all 57 skills**. What blocked it: § 2 was never
+  executed by a host. Three separate false-green classes were measured — concatenated fixture +
+  instrument blocks exit 0 while Instrument B throws and prints `False`; Instrument A embeds a manual
+  host action mid-block so a whole-block paste silently passes rows 2–4; and two "Observed output"
+  blocks cannot have been emitted by the command above them.
+
+- **The HIGH is a false admission with a better answer already in the repository.** § 2.0 claims this
+  repository does not document how an arbitrary directory becomes a running host's discovery home.
+  `documentation/host-native-discovery-cutover-plan.md:99` § "Step 49-50 host-trace amendment"
+  documents it for both hosts — `claude --setting-sources project` from the consumer home, verified by
+  session-JSONL `cwd` and the host-supplied `Base directory for this skill:` line, and
+  `copilot -C <home> skill list --json` — and Steps 49/50 are **DONE (2026-08-09)**. That instrument
+  grades the **binding**; § 2.0's probe grades only a tree the operator names. Two measured
+  consequences for Step 109: a stale `plan-init` (26,477 bytes, **0** `AGENTS.md`) is live in the
+  personal `~/.claude/skills` root, which Claude Code discovers regardless of cwd — so **row 2 can
+  report PASS against it**; and that root symlinks into the coding-root repo's **1,235 git-tracked
+  files** with an install ledger already present, making § 2.0's option-2 install a routine *owned*
+  overwrite (no `-Force`, no prompt, measured). Following the documented mechanism removes the need
+  for option 2 entirely.
+
+**Round 8 addendum — a concurrent session, and four defects live on `main`.** A second
+`/build-phase --resume 107` ran at the same time and authored Step 107 independently; `d4c88ee`
+won the race, and commit `d5afe97` plus branch `build-step-1787765607` @ `8af9e36` are that
+session's. Its review (ten reviewer passes, two adversarial workflows) is preserved at
+`documentation/findings/step-107-parallel-review-evidence.md`. **Four of its findings were
+re-confirmed by direct enumeration against the landed files and are live on `main`** — they are
+NOT fixed here and need their own step:
+
+1. `architecture.md:627,632` — "the write surface is the core, never the adapter, for every
+   portable skill" and adapters "need no instruction-file prose of their own". **False**, and
+   load-bearing: `skills/plan-init/providers/codex.md:11` is a *portable* skill's adapter carrying
+   exactly that prose (mandated by Step 101), and `test_instruction_contract_single_owner.py`
+   counts it in `CITER_FLOOR = 4` — a maintainer who follows the prose and deletes it **reds the
+   suite**. Verified at wrap time.
+2. `host-discovery.md:257` — a pre-existing row answers "Are workspace instructions loaded?" with
+   "the host's instruction-file convention"; this repository follows that convention exactly and
+   Codex receives none of the content.
+3. `architecture.md:538,:603` and `host-discovery.md:189,:274` — four unqualified "read-only"
+   descriptions of the reproduction, contradicted by `codex-instruction-delivery.md:72`, which the
+   same change landed and which says in bold it is "not side-effect-free".
+4. `codex-instruction-delivery.md:73-74` — "three files under the Codex home re-stamped" is a
+   per-invocation count from one uncontrolled sample.
+
+**The measurement correction, which supersedes this plan's § 1 and the Round 7 record.** Two
+independently designed re-measurements, each bracketed by **zero-invocation control intervals**,
+refuted the "two files rewritten per invocation" figure: attributable changes ranged from none to
+three, the two protocols disagreed, and **a control interval with the command never run reproduced
+the exact same signature**. The Codex home churns with no invocation at all. What survives is only
+the project-scoped claim: `codex debug prompt-input` writes nothing in the project directory, and
+`config.toml`/`auth.json`/session/skill/plugin files were unchanged in every manifest, so a `-c`
+override leaves nothing on disk. **No per-invocation file count should be published.** The original
+figure was carried forward from task state as "verified" and re-confirmed by an equally
+uncontrolled measurement in this session — `measurement-validity.md`'s known-good/known-garbage
+anchor is exactly what neither had.
+
+**Transferable method, worth more than the findings.** The parallel session enumerated every claim
+in its prose quantifying over a set ("every", "only", "never", "no …") and ran one falsifying
+enumeration per claim: of 10, **3 TRUE, 4 FALSE, 3 NEEDS-SCOPING**. Three false universals had
+already survived review, each refuted by a *single* live counter-example nobody had looked for.
+**A universal claim is cleared only by enumerating the set it quantifies over** — reading never
+catches these. That audit should be re-run against the landed prose; its verdicts were computed
+against the parallel branch's wording and its line numbers do not map onto `d4c88ee`.
+
+**Separate defect, in the contract owner itself** (out of scope for any documentation step):
+`skills/plan-init/core.md:452-455` says an adapter "could not cite it in any legal spelling". The
+premise is true, the conclusion false — `skills/judge-motion/providers/claude.md:10` is
+provider-native and cites `_shared/judge-core.md` via the relative spelling today, and
+`tests/distributions/test_distributions.py:769-777` forbids only the repo-rooted spelling. A sweep
+found exactly two instances and no third, so stop-and-audit was not reached.
 
 ---
 
