@@ -75,7 +75,7 @@ does not reinterpret that evidence or revive its stopped experiment.
 | Phase CP Step 12 (#129) | disposition follows Step 11 | See its block in the delivery plan; the observatory-visibility question is being resolved against `dev-observatory/plans/utility-project-surfaces-plan.md` |
 | Phase CP Step M3 (#132) | PENDING (2026-08-20) — daily-use row only | The operator: a few genuine Codex-hosted sessions. Delta triage is DONE — 43 rows across 4 tables, 0 undisposed, 0 `fix-later` owed; the providers-doc gap was filed as #142 and is now CLOSED at `2462afd` (codex given first-class doc coverage; the host-discovery gate derives its provider set from `Get-SkillMeshDiscoveryRoots` instead of hand-listing two). Evidence: `documentation/parity-deltas.md` § M3 checks |
 | Phase CP Step M4 (#133) | COMPLETE (2026-08-20) — PASS | Nothing — codex arm reinstalled clean (125 files; 0 stale, 0 unledgered) and all seven observatory locators verified `unwired` on the rendered surface, before and after. The claude and gpt `-Force` arms were deliberately not run. Evidence: `documentation/parity-deltas.md` § M4 checks and § Scope of the M4 PASS |
-| Phase IS (#143) | BUILDING (2026-08-26) — 7 of 10 steps built (Step 106 / #150 at `dc21c9e`; 104–106 flipped DONE on one shared repo-root gate, `1341 passed / 1 skipped`) | The build, which must run on Claude Code: `/build-step` is a recorded `blocker`/`wontfix` on Codex (no isolated fresh-context primitive), so a Codex `/build-phase` halts at Step 100. Planned, reviewed (22 Blockers), wrapped (9 Blockers), redlined and synced; steps 100–109 are #144–#153. Authority: `documentation/instruction-file-symmetry-plan.md` |
+| Phase IS (#143) | BUILDING (2026-08-26) — 8 of 10 landed, 1 BLOCKED. Step 107 (#151) landed at `d4c88ee`, 5/5 reviewers APPROVE, **DONE pending the repo-root gate still in flight**. Step 108 (#152) **BLOCKED** at 3/3 iterations — its install is verified correct, its transcript's operator half is not; preserved unmerged on `build-step-s108-1787768088` @ `ea5eff8`. Step 109 (#153) parked for the operator. Four defects from a concurrent session are **live on `main`** — see `documentation/findings/step-107-parallel-review-evidence.md` | The build, which must run on Claude Code: `/build-step` is a recorded `blocker`/`wontfix` on Codex (no isolated fresh-context primitive), so a Codex `/build-phase` halts at Step 100. Planned, reviewed (22 Blockers), wrapped (9 Blockers), redlined and synced; steps 100–109 are #144–#153. Authority: `documentation/instruction-file-symmetry-plan.md` |
 | Legacy-migrator hardening (#138) | DEFERRED | Its own issue — Phase CP ships zero migrator delta by the option-3 decision of 2026-08-18 |
 | Goal NP live cutover | LOCKED | Approval 2 on the immutable deliverable after disposable rehearsal |
 | Provider expansion | PARKED | A later explicit Abraham decision must resume that track; Goal NP does not unlock it |
@@ -137,8 +137,18 @@ wider proposal's Phase 3 inverts instruction files across up to 32 repositories,
 catalog *write* those files — run one against an already-inverted project and it silently recreates
 the duplication the inversion exists to remove. Nothing may migrate until Phase IS lands.
 
-**Phase IS is 7 of 10 steps built as of 2026-08-26** at `dc21c9e`. Steps 100–106 are DONE and their
-issues (#144–#150) closed; steps 107–109 (#151–#153) are not started. Step 103 records the
+**Phase IS is 8 of 10 landed as of 2026-08-26** at `ba28b74`. Steps 100–106 are DONE and their
+issues (#144–#150) closed. Step 107 (#151) landed at `d4c88ee` and is **DONE pending the repo-root
+gate**, which is still running: its `Done when` requires that measurement be compared against the
+**1335** recorded in `documentation/phase-75-baseline.md` *before* that owner is rewritten, so the
+count is deliberately unchanged and #151 stays open. Step 108 (#152) is **BLOCKED** after 3/3
+iterations — the install itself is verified (whole-profile `diff -r` against a fresh build at HEAD
+is zero differences across all 57 skills) but its transcript's § 2 operator half was never executed
+by a host; the work is preserved unmerged on `build-step-s108-1787768088` @ `ea5eff8`. Step 109
+(#153) is the operator UAT and is parked. A **concurrent** `/build-phase --resume 107` also ran
+(commit `d5afe97`, branch `build-step-1787765607`); `d4c88ee` won the race, and four of that
+session's findings are **live on `main`**, recorded in
+`documentation/findings/step-107-parallel-review-evidence.md`. Step 103 records the
 authoritative WRITE/READ/REFERENCE classification in § 4 of the phase plan — `WRITE=5 READ=9
 REFERENCE=13` over the 27 files under `skills/**` that name `CLAUDE.md`, against denominators of 54
 cores and 165 provider files.
@@ -193,8 +203,11 @@ Round 5 in § 12 of the phase plan:
    Step 107 is well-placed to run next on its own merits: its `Done when` requires measuring the
    repo-root suite, comparing it against the count recorded *before* the step, and only then writing
    the new figure into `documentation/phase-75-baseline.md` — in that order, so the comparison is not
-   circular. The shared gate above supplies that measurement (`1341 passed / 1 skipped` against a
-   recorded 1335/1), so Step 107 inherits it rather than paying another 2h16m.
+   circular. **Superseded 2026-08-26:** Step 107 did NOT inherit the 104–106 gate. That gate was
+   measured at `dc21c9e`, before Step 107's own `documentation/**` edits — and Step 107 edits files
+   the single-owner gate sweeps, so an inherited figure would not have covered the change it is
+   meant to gate. A fresh repo-root run was started detached at `d4c88ee` and is still in flight at
+   wrap time; the count owner therefore still reads **1335** and #151 stays open until it returns.
 
 The Goal NP recovery decision is **closed**. No Publication-8 approval is pending or will be sought.
 Do not run any Publication-8 `Preflight` or `Run`, and do not invoke
