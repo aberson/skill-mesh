@@ -1,6 +1,6 @@
 ---
 name: context-slim
-description: Audit all auto-loaded Claude Code context files (CLAUDE.md chain, .claude/rules/*.md, MEMORY.md) for a project and produce a prioritized progressive-disclosure improvement report — what to stub, extract, or prune to reduce per-turn token cost. Run bare for a report only; add --apply to implement high-confidence changes (rules stubbing, stale memory pruning) autonomously.
+description: Audit all auto-loaded Claude Code context files (the CLAUDE.md or AGENTS.md chain, .claude/rules/*.md, MEMORY.md) for a project and produce a prioritized progressive-disclosure improvement report — what to stub, extract, or prune to reduce per-turn token cost. Run bare for a report only; add --apply to implement high-confidence changes (rules stubbing, stale memory pruning) autonomously.
 user-invocable: true
 argument: "Optional flags: --project <name-or-path> (default: innermost project with a CLAUDE.md); --apply (implement high-confidence changes after the report)"
 ---
@@ -12,7 +12,7 @@ Measures every file that auto-loads on every Claude Code conversation turn for a
 ## When to use
 
 - Sessions are burning 30-50%+ of the context window before substantive work begins.
-- After a multi-phase project has accumulated months of CLAUDE.md narrative and stale memory blocks.
+- After a multi-phase project has accumulated months of CLAUDE.md or AGENTS.md narrative and stale memory blocks.
 - Before starting a new build phase to ensure context overhead is lean.
 - Periodic maintenance (monthly, or after any major phase ships).
 
@@ -21,13 +21,15 @@ Measures every file that auto-loads on every Claude Code conversation turn for a
 Parse args. Resolve `--project` to an absolute path: if it's a bare name (e.g. `void_furnace`), look for `<dev-root>/<name>/CLAUDE.md`; if it's a relative or absolute path, resolve directly. Default to the innermost ancestor directory of cwd that contains a `CLAUDE.md`.
 
 Walk from the resolved project directory up to the `dev/` root (stop at the first directory whose parent has no `CLAUDE.md`). Collect:
-- Every `CLAUDE.md` in the walk (project-level, then each parent up to dev/)
+- The content instruction file at each level of the walk — CLAUDE.md or AGENTS.md, whichever carries the content there (project-level, then each parent up to dev/). Collect the content file, not the pointer beside it.
 - Every `.claude/rules/*.md` at each level of the walk
 - The project's memory index: glob `<workspace-memory>/MEMORY.md` and take the first match; if none, try the encoded form (`_` → `-`, `\` → `-`, `:\` → `--`, all lowercase).
 
+**The walk's anchor is not the file it reads.** Keep the resolution above anchored on `CLAUDE.md` — an inverted project still has one, and `/user-afterparty` pins its own "current project" to this same resolution, so re-anchoring it would silently break that parity. What changes once a directory resolves is only which file is opened there: the content instruction file, CLAUDE.md or AGENTS.md. On a normal project that is `CLAUDE.md` and nothing here behaves differently. On an inverted project the `CLAUDE.md` defers to `AGENTS.md` and its `@AGENTS.md` import expands to the sibling, so the bytes that actually load every turn are `AGENTS.md`'s — collect, measure and classify that file, and never bill the deferring file itself as that level's context cost. If BOTH names carry content at a level — the drift state — the content file is `CLAUDE.md`, because that is the one this host auto-loads; carry the drift as a non-blocking advisory printed beside whatever this run reports or applies at that level — never in a skipped or not-changed list, and never as a reason to stop. For the state definitions that decide which name is the content file, see the Instruction-file contract in plan-init/core.md; this adapter applies it by citation and restates no part of it.
+
 For each collected file, record its **line count** (use the Read tool or PowerShell `(Get-Content <path>).Count`).
 
-Also scan each collected CLAUDE.md for `.claude/rules/<filename>.md` link references (grep for `rules/.*\.md`). Verify each target file exists. Record any missing targets in the discovery table as `rules/<name>.md  (MISSING — referenced but not found)`.
+Also scan each collected content file — CLAUDE.md or AGENTS.md — for `.claude/rules/<filename>.md` link references (grep for `rules/.*\.md`). Verify each target file exists. Record any missing targets in the discovery table as `rules/<name>.md  (MISSING — referenced but not found)`.
 
 Print the discovery table before any analysis:
 
@@ -38,7 +40,7 @@ Auto-loaded files:
   File                                   Lines
   ─────────────────────────────────────────────
   CLAUDE.md  (dev/)                        100
-  CLAUDE.md  (void_furnace/)                72
+  AGENTS.md  (void_furnace/)                72
   rules/code-quality.md (dev)               78
   rules/plan-and-issue-flow.md (dev)       115
   rules/windows-shell.md (dev)              58
@@ -48,6 +50,8 @@ Auto-loaded files:
   TOTAL                                   ~N lines  (~X est. tokens)
 ```
 
+Each row names the file actually collected at that level — CLAUDE.md or AGENTS.md — so an inverted project's row reads `AGENTS.md`, as `void_furnace/` does above.
+
 Estimated tokens = lines × 15 (rough average for dense prose/markdown).
 
 ## Phase 2 — Parallel analysis
@@ -56,9 +60,9 @@ Spawn three parallel subagents using the Agent tool, each with explicit `model: 
 
 **Optional local-classifier offload (switchboard, INERT BY DEFAULT).** This three-way file-classifier fan-out is the one role this skill may route to a local model (tier-offload task_class `context-slim-classifier`; Switchboard Decision 9 — a cheap, low-stakes parallel classification array). It is **off unless switchboard offload is enabled for this slice**. When offload is enabled, route each classifier's per-section judgment through the switchboard judge entrypoint (`python -m switchboard judge --site context-slim-classifier --prompt-file <section-prompt-file>`, prints one JSON object, always exits 0): use a **verdict** as the local classifier's advisory call, and on a **defer** (`{"defer": true, ...}`) fall back to the normal Claude classification subagent. When offload is OFF (the default), the entrypoint returns a defer immediately with NO network call, so this skill spawns the three Claude classifier subagents **exactly as before**. The KEEP/EXTRACT/COMPRESS classification is advisory only — Phase 3 synthesis and any `--apply` change stays on Claude.
 
-### Agent A — CLAUDE.md chain
+### Agent A — the instruction-file chain (CLAUDE.md or AGENTS.md)
 
-For each CLAUDE.md in the chain, classify every section:
+For each content file in the chain — CLAUDE.md or AGENTS.md, whichever Phase 1 collected — classify every section:
 
 - **KEEP** — structural facts, critical safety rules, always-needed orientation (stack, commands, core gotchas, governance invariants).
 - **EXTRACT** — status narrative, phase history, large reference tables, content only needed for specific task types. For each EXTRACT, name the destination file (e.g. `.claude/phase-status.md`) and write the 1-3 line pointer that replaces it.
@@ -73,7 +77,7 @@ For each rules file, classify:
 
 - **KEEP AS-IS** — always-relevant safety or quality rules; small enough to justify full auto-load (under ~40 lines). Do not stub `code-quality.md` or `security.md` regardless of size.
 - **STUB** — relevant on some turns but over-detailed; replace the rules file with a 3-8 line summary stub, move the full content to `.claude/references/<filename>`. Write the exact stub text.
-- **MOVE OUT** — only needed on rare task types; remove from rules/ entirely, add a one-line pointer in the nearest CLAUDE.md. State the exact pointer line.
+- **MOVE OUT** — only needed on rare task types; remove from rules/ entirely, add a pointer line in the nearest content instruction file — CLAUDE.md or AGENTS.md, never a pointer file. State the exact pointer line.
 
 Produce a per-file table: File → Verdict → Lines → Est. tokens → Post-change est. tokens.
 Include the full stub text for every STUB recommendation.
@@ -136,7 +140,7 @@ Entries whose rule is now directly in a stub. Surfaced for operator confirmation
 <bulleted list — STUBs, stale-status MEMORY deletes, COMPRESS blocks>
 
 ### Needs operator review (--apply skips these)
-<bulleted list — CLAUDE.md splits; missing rules files (need correct content, not placeholder); stub-redundant MEMORY index-line deletions (each orphans a topic file's long-form — confirm first)>
+<bulleted list — CLAUDE.md or AGENTS.md splits; missing rules files (need correct content, not placeholder); stub-redundant MEMORY index-line deletions (each orphans a topic file's long-form — confirm first)>
 
 ### Projected savings
 Before: N lines / ~X tokens per turn
@@ -162,9 +166,12 @@ Implement only the high-confidence changes. These are mechanical and fully rever
 4. Verify: stub is under 10 lines; references copy matches the original line count.
 
 **For each MOVE OUT recommendation:**
-1. Copy the file to `.claude/references/<filename>`.
-2. Read the target CLAUDE.md; append a `## Topic-specific guidance` section (or add to an existing one) with the one-line pointer Agent B specified.
-3. Delete the original from `.claude/rules/` (PowerShell: `Remove-Item <path>`).
+1. Identify the content instruction file at that level — CLAUDE.md or AGENTS.md, whichever Phase 1 collected.
+2. If no content file resolves there, skip this MOVE OUT entirely — copy nothing, delete nothing — and report under Needs-review.
+3. If both names carry content (drift), the target is `CLAUDE.md`; note the drift beside this change in the H3 applied list.
+4. Copy the file to `.claude/references/<filename>`.
+5. Append the `## Topic-specific guidance` section to the target file, never to a pointer, with Agent B's pointer line (or add to an existing one).
+6. Delete the original from `.claude/rules/` (PowerShell: `Remove-Item <path>`) — only if step 5 appended; if not, report under Needs-review.
 
 ### H2 — Memory pruning
 
@@ -196,11 +203,11 @@ Applied changes:
   Total auto-load reduction: N lines / ~X tokens per turn  (was Y, now Z — A% smaller)
 
 Files NOT changed (need operator review):
-  CLAUDE.md (void_furnace/) — Phase OMR extract proposed; see report above
+  AGENTS.md (void_furnace/) — Phase OMR extract proposed; see report above
   ...
 ```
 
-For each line: format is `rules/<file> → stubbed (N → M lines); full content at .claude/references/<file>`. If the references file already existed (conflict), add `(existing — not overwritten)` after the path.
+For each line: format is `rules/<file> → stubbed (N → M lines); full content at .claude/references/<file>`. If the references file already existed (conflict), add `(existing — not overwritten)` after the path. A `Files NOT changed` entry names the content instruction file the change would have touched — CLAUDE.md or AGENTS.md, whichever Phase 1 collected at that level.
 
 ## Limitations
 
@@ -210,9 +217,10 @@ For each line: format is `rules/<file> → stubbed (N → M lines); full content
 ## Constraints
 
 - Never stub or modify `code-quality.md` or `security.md` — these are always-load safety files regardless of size.
-- Never auto-apply CLAUDE.md splits — those always go in Needs-review.
+- Never auto-apply CLAUDE.md or AGENTS.md splits — those always go in Needs-review.
 - Never delete MEMORY.md INDEX LINES or ACTIVE STATUS blocks. Stub-redundant index lines (rules now directly carried by a stub) are surfaced in Needs-review for operator confirmation, never auto-deleted — the index line is the recall path to its topic file's long-form.
 - Never overwrite a `.claude/references/` file that already exists — report the conflict and skip.
-- Missing rules files (referenced in CLAUDE.md but not found on disk) always go in Needs-review — creating them requires correct content, not a placeholder stub.
+- Never append to a pointer instruction file. Every append lands in the content file — CLAUDE.md or AGENTS.md, whichever carries the content at that level, and `CLAUDE.md` when both do; a `## Topic-specific guidance` section written into a pointer would leave a malformed hybrid that is neither.
+- Missing rules files (referenced in CLAUDE.md or AGENTS.md but not found on disk) always go in Needs-review — creating them requires correct content, not a placeholder stub.
 - If any Write or Edit fails, report the failure and continue with remaining changes; do not abort the whole apply run.
 - Do not commit. Leave the changes in the working tree for operator review before committing.
