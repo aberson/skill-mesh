@@ -169,6 +169,38 @@ private `CLAUDE.md` or a personalized `AGENTS.md` (cutover plan §6, "Public pac
 owns mechanics; consumer owns private instructions"). No private workspace paths or
 policies belong in this document.
 
+### The inverted shape — content in `AGENTS.md`, `CLAUDE.md` as a one-line import
+
+A project may keep its instruction content in `AGENTS.md` and reduce `CLAUDE.md` to
+exactly one line, `@AGENTS.md`. This is a rearrangement **within** workspace
+instruction injection and nothing more: both files stay instruction adapters, neither
+gains a skill implementation or an enumeration of one, and no discovery root is
+affected. A project in the inverted shape is discovered exactly as before — the shape
+decides which file carries the prose, never which tree a host scans.
+
+Which delivery form actually carries content on which host, which file each measured
+host opens, which hosts the measurement covers at all, the version pin it was taken
+against, and the `codex debug prompt-input` reproduction are all owned by
+[`codex-instruction-delivery.md`](codex-instruction-delivery.md) and are deliberately
+not restated here: a second carrier of those verdicts would silently keep the old answer
+the day a host changes.
+
+Whether a given project may be *put* into the shape, and which of the two files a
+lifecycle skill is permitted to write, is a separate normative contract with its own
+single owner:
+see the Instruction-file contract in plan-init/core.md
+([`../skills/plan-init/core.md`](../skills/plan-init/core.md)).
+
+Two axes stay apart across the whole arrangement, in the exact sense the top of this
+document sets out:
+
+- **A skill is still never found through an instruction file.** An inverted `AGENTS.md`
+  is a longer instruction adapter, not a registry; the discovery roots above remain the
+  only places a `SKILL.md` is found.
+- **Neither kind of evidence substitutes for the other.** A host that loaded the content
+  may have no profile installed, and an installed profile says nothing about whether the
+  content was delivered. The evidence table below keeps the two apart row by row.
+
 ## Router dispatch — explicit, not implicit
 
 **The router is explicit, not implicit.** `runtime/skill-router.ps1`
@@ -208,6 +240,7 @@ installation contract (cutover plan §6, "Host binding is the normal path").
 | Which skill tree was discovered? | the captured `SKILL.md` path (`.claude/skills` for Claude, `.github/skills` for GPT, `.agents/skills` for Codex) | the model's output |
 | Which host wrote a discovered tree? | the generated file's provenance marker and the installer's ownership ledger (`inspect-host-install.ps1`) | the root's name — `.agents/skills` is the codex install target **and** a Copilot discovery root |
 | Are workspace instructions loaded? | the host's instruction-file convention (`CLAUDE.md` / `AGENTS.md`) | the presence of a skill implementation |
+| Did a project's instruction content reach the model on Codex? | the JSON payload from `codex debug prompt-input`, searched for a heading that content carries | a plausible model answer, or the instruction file merely existing on disk |
 | Was a skill run cross-provider / headless? | an explicit `runtime/skill-router.ps1` invocation | native host discovery |
 
 A correct GPT model answer proves only the first row. A correctly installed GPT
@@ -223,5 +256,8 @@ correctly installed profile.
 - [`providers/claude.md`](providers/claude.md), [`providers/gpt.md`](providers/gpt.md),
   [`providers/codex.md`](providers/codex.md),
   [`providers/README.md`](providers/README.md) — per-host binding, discovery root, capabilities.
+- [`codex-instruction-delivery.md`](codex-instruction-delivery.md) — the vendored
+  measurement behind the inverted instruction-file shape: the per-host delivery table, the
+  version pin it was taken against, and the reproduction.
 - [`host-native-discovery-cutover-plan.md`](host-native-discovery-cutover-plan.md) §2, §6, §8 — the design authority for this map.
 - [`../config/skill-manifest.json`](../config/skill-manifest.json) — the single source of truth for which skills are published and each skill's frontmatter `description`.

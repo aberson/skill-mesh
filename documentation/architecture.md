@@ -535,6 +535,7 @@ package rather than how it is built:
 | [`migration.md`](migration.md) | What changed from the pre-migration layout, where things live now, and the top-level `<skill>/SKILL.md` deprecation window |
 | [`repo-metadata.md`](repo-metadata.md) | GitHub repository title/description/topic text, applied to `aberson/skill-mesh` |
 | [`host-discovery.md`](host-discovery.md) | Host-loading authority map: instruction injection vs. native discovery vs. router dispatch |
+| [`codex-instruction-delivery.md`](codex-instruction-delivery.md) | The vendored per-host instruction-delivery measurement, its version pin, and its reproduction |
 
 `tests/package-integrity/test_release_gates.py` (checker logic in
 `tools/release_checks.py`, Step 38) additionally fails on any of:
@@ -575,3 +576,71 @@ release with no `CHECKSUMS.txt` written; and `-StageDir` equal to, a
 trailing-separator variant of, or an ancestor of `-SourceRoot` — or a
 pre-existing non-empty foreign `-StageDir` — is refused without deleting
 anything.
+
+## 11. Project instruction files
+
+A project instruction file is the `CLAUDE.md` or `AGENTS.md` in a project that a skill
+reads or writes while it runs. It is not one of this repository's *packaged*
+artifacts — section 2's canonical-location table therefore gains no row, and no
+instruction file is a build input, an install target, or a distribution output.
+
+A project may hold its content in `AGENTS.md` and reduce `CLAUDE.md` to a single line,
+`@AGENTS.md`. The measurement that forces that arrangement — which delivery form is
+inert on which host, which hosts it covers, the version it was pinned against, and its
+reproduction — is owned by
+[`codex-instruction-delivery.md`](codex-instruction-delivery.md) and is not restated
+here. [`host-discovery.md`](host-discovery.md) places the same shape on the host-loading
+map, where it belongs to workspace instruction injection and not to skill discovery.
+
+This repository's own root pair is itself a project instruction-file pair, and the
+contract governs it: the owner's worked example classifies that pair by name and its
+matrix row governs the behavior, which nothing in this phase changes. What the phase
+holds fixed is narrower than the category — the decision not to *invert* this
+repository, recorded as D5 in
+[`instruction-file-symmetry-plan.md`](instruction-file-symmetry-plan.md) §6 and frozen
+by `test_root_adapters_are_thin_and_point_to_stable_authority` in
+`tests/package-integrity/test_recovery_plan_hygiene.py`, which pins the root `AGENTS.md`
+to a thin adapter naming `CLAUDE.md`; read that assertion for the bound it enforces. The
+catalog therefore emits a shape it does not itself adopt, which is what makes the change
+backward-compatible rather than a migration.
+
+**What this changes in the package: nothing mechanical, everything behavioral.**
+
+- **The toolchain is untouched.** `config/skill-manifest.json`,
+  `tools/build-distributions.ps1`, `tools/install-skill-mesh.ps1`, the discovery roots,
+  and the release gates are all unaffected — the installer writes neither instruction
+  file, and never did ([`host-discovery.md`](host-discovery.md), "Workspace instruction
+  injection"; section 8.2 for what the installer does write). What changes is what a
+  *core instructs an agent to do* in a consumer project.
+- **Behavior therefore ships on the ordinary path, and only on it.** A core edit is
+  inert until the distribution is rebuilt (section 8.1) and a profile is installed
+  (section 8.2). An instruction-file behavior verified in this checkout has not been
+  verified on any host until that build-and-install has run.
+- **A core that READS a project instruction file may not assume `CLAUDE.md` holds the
+  content.** In the inverted shape that file is a one-line import and the content lives
+  in `AGENTS.md`. Reading the pointer as if it were content fails silently — no error,
+  simply an empty read — which is why it is a behavioral contract rather than a detail
+  left to each core.
+- **A core that WRITES one is governed by the owner's guarded-write rule**, and the
+  architectural consequence here is only where that write surface sits: it is the core,
+  never the adapter, for every portable skill. The one canonical spelling such a write
+  must use when it names both files is fixed by the owner section and keyed on by
+  `tests/package-integrity/test_instruction_contract_single_owner.py`.
+- **Adapters inherit, and never narrow.** A provider adapter loads its core in full and
+  may never weaken a gate the core defines — the rule's home is the repository root
+  [`../CLAUDE.md`](../CLAUDE.md), "Architecture summary" — so a portable skill's three
+  adapters need no instruction-file prose of their own. The exception is structural: a
+  provider-native skill has no core (`core: null`, section 3), so where such a skill
+  reads or writes a project instruction file, its adapter is the surface that must carry
+  the contract citation itself.
+
+**One owner, cited by path.** The normative contract — what a file already on disk
+means, which file each lifecycle writer may touch, and the guarded-write rule — lives
+in exactly one core section, and every other surface cites it for the normative
+definition rather than restating the file states or the writer matrix:
+see the Instruction-file contract in plan-init/core.md
+([`../skills/plan-init/core.md`](../skills/plan-init/core.md)). That section also
+records why the contract has no `_shared/` home, and this document does not restate
+the reason.
+`tests/package-integrity/test_instruction_contract_single_owner.py` is the mechanical
+guard on that single-owner arrangement (section 9's discipline, applied to prose).
