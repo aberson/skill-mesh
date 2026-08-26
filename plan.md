@@ -75,7 +75,7 @@ does not reinterpret that evidence or revive its stopped experiment.
 | Phase CP Step 12 (#129) | disposition follows Step 11 | See its block in the delivery plan; the observatory-visibility question is being resolved against `dev-observatory/plans/utility-project-surfaces-plan.md` |
 | Phase CP Step M3 (#132) | PENDING (2026-08-20) — daily-use row only | The operator: a few genuine Codex-hosted sessions. Delta triage is DONE — 43 rows across 4 tables, 0 undisposed, 0 `fix-later` owed; the providers-doc gap was filed as #142 and is now CLOSED at `2462afd` (codex given first-class doc coverage; the host-discovery gate derives its provider set from `Get-SkillMeshDiscoveryRoots` instead of hand-listing two). Evidence: `documentation/parity-deltas.md` § M3 checks |
 | Phase CP Step M4 (#133) | COMPLETE (2026-08-20) — PASS | Nothing — codex arm reinstalled clean (125 files; 0 stale, 0 unledgered) and all seven observatory locators verified `unwired` on the rendered surface, before and after. The claude and gpt `-Force` arms were deliberately not run. Evidence: `documentation/parity-deltas.md` § M4 checks and § Scope of the M4 PASS |
-| Phase IS (#143) | BUILDING (2026-08-26) — 8 of 10 landed, 1 BLOCKED. Step 107 (#151) landed at `d4c88ee`, 5/5 reviewers APPROVE, **DONE pending the repo-root gate still in flight**. Step 108 (#152) **BLOCKED** at 3/3 iterations — its install is verified correct, its transcript's operator half is not; preserved unmerged on `build-step-s108-1787768088` @ `ea5eff8`. Step 109 (#153) parked for the operator. Four defects from a concurrent session are **live on `main`** — see `documentation/findings/step-107-parallel-review-evidence.md` | The build, which must run on Claude Code: `/build-step` is a recorded `blocker`/`wontfix` on Codex (no isolated fresh-context primitive), so a Codex `/build-phase` halts at Step 100. Planned, reviewed (22 Blockers), wrapped (9 Blockers), redlined and synced; steps 100–109 are #144–#153. Authority: `documentation/instruction-file-symmetry-plan.md` |
+| Phase IS (#143) | BUILDING (2026-08-26) — 9 of 10 landed. Step 107 (#151) is DONE: sentinel `0`, repo-root gate `1341 passed, 1 skipped`, baseline updated at `719e622`; its four concurrent-review documentation defects are fixed at `52d44c9`. Step 108 (#152) is DONE and merged at `600af9e`; build/install PASS and the repaired transcript has no high/medium finding. Step 109 (#153) is **BLOCKED BEFORE GRADING**: neither named skill exposes a safe instruction-only UAT mode, so all behavioral cells remain blank. | The operator must choose on #153 between a new core-supported UAT mode (then rebuild/reinstall/reverify) and a deliberate plan amendment accepting narrower named-skill subsection overrides. Do not start a host session until that choice is recorded. Authority: `documentation/instruction-file-symmetry-plan.md` and `documentation/findings/instruction-file-symmetry-uat.md` § 2. |
 | Legacy-migrator hardening (#138) | DEFERRED | Its own issue — Phase CP ships zero migrator delta by the option-3 decision of 2026-08-18 |
 | Goal NP live cutover | LOCKED | Approval 2 on the immutable deliverable after disposable rehearsal |
 | Provider expansion | PARKED | A later explicit Abraham decision must resume that track; Goal NP does not unlock it |
@@ -137,18 +137,17 @@ wider proposal's Phase 3 inverts instruction files across up to 32 repositories,
 catalog *write* those files — run one against an already-inverted project and it silently recreates
 the duplication the inversion exists to remove. Nothing may migrate until Phase IS lands.
 
-**Phase IS is 8 of 10 landed as of 2026-08-26** at `ba28b74`. Steps 100–106 are DONE and their
-issues (#144–#150) closed. Step 107 (#151) landed at `d4c88ee` and is **DONE pending the repo-root
-gate**, which is still running: its `Done when` requires that measurement be compared against the
-**1335** recorded in `documentation/phase-75-baseline.md` *before* that owner is rewritten, so the
-count is deliberately unchanged and #151 stays open. Step 108 (#152) is **BLOCKED** after 3/3
-iterations — the install itself is verified (whole-profile `diff -r` against a fresh build at HEAD
-is zero differences across all 57 skills) but its transcript's § 2 operator half was never executed
-by a host; the work is preserved unmerged on `build-step-s108-1787768088` @ `ea5eff8`. Step 109
-(#153) is the operator UAT and is parked. A **concurrent** `/build-phase --resume 107` also ran
-(commit `d5afe97`, branch `build-step-1787765607`); `d4c88ee` won the race, and four of that
-session's findings are **live on `main`**, recorded in
-`documentation/findings/step-107-parallel-review-evidence.md`. Step 103 records the
+**Phase IS is 9 of 10 landed as of 2026-08-26** at `600af9e`. Steps 100–106 are DONE and their
+issues (#144–#150) closed. Step 107 (#151) is DONE: its named sentinel was `0`, the repo-root gate
+reported `1341 passed, 1 skipped`, the baseline owner was updated only after comparison at
+`719e622`, and #151 is closed. The four live documentation defects found by its concurrent session
+are fixed at `52d44c9`. Step 108 (#152) is DONE: all-profile build, scratch Claude install,
+inspector and whole-profile equality passed, and its repaired transcript merged at `600af9e` with
+no high or medium review finding. Step 109 (#153) is **BLOCKED BEFORE GRADING** because neither
+named skill has a safe instruction-only UAT mode and normal `repo-update` cannot safely reach Step
+7 in the outside-git fixture. The operator must choose a core-supported mode or deliberately amend
+the acceptance to narrower named-skill subsection overrides; no behavioral row or delivery probe
+has run. Step 103 records the
 authoritative WRITE/READ/REFERENCE classification in § 4 of the phase plan — `WRITE=5 READ=9
 REFERENCE=13` over the 27 files under `skills/**` that name `CLAUDE.md`, against denominators of 54
 cores and 165 provider files.

@@ -789,7 +789,7 @@ mechanism `test_autofix_marker_single_owner.py` uses.
 - **Produces:** a scratch install home plus the verification transcript appended to the findings file
 - **Done when:** `powershell -File tools/build-distributions.ps1 -Provider all` exits 0; `powershell -File tools/install-skill-mesh.ps1 -Provider claude -Home <scratch-home>` exits 0; `powershell -File tools/inspect-host-install.ps1 -Home <scratch-home>` reports the profile installed; and the emitted `plan-init/core.md` under the scratch home is confirmed to contain the `## Instruction-file contract` section — i.e. the new behavior is what a host would load
 - **Depends on:** 107
-- **Status:** BLOCKED (2026-08-26) — install VERIFIED correct; the transcript's § 2 operator half is not. Work preserved unmerged on branch `build-step-s108-1787768088` @ `ea5eff8`. See § 12 Round 8 and issue #152.
+- **Status:** DONE (2026-08-26) — build/install acceptance PASS; the repaired transcript merged at `600af9e`. Its downstream operator section honestly leaves every behavioral cell blank and records Step 109's separate pre-grading blocker. See § 12 Rounds 8–9 and issue #152.
 
 ### Step 109: Operator confirmation of all five D10 rows
 - **Problem:** These cores are prose read by an agent; a test asserts what the prose instructs, never what an agent does. Using the Step 108 scratch home and a **disposable scratch project**, exercise every D10 row: run `/plan-init` from nothing (row 1) and verify `AGENTS.md` plus a `CLAUDE.md` matching D8's exact pointer bytes; run it beside a SUBSTANTIVE `CLAUDE.md` (row 2) and verify it writes nothing; run `/repo-update` on the inverted project (row 3) and verify it refreshes `AGENTS.md`, leaves the pointer, and is a no-op on a second pass; manufacture row 5 and verify the advisory prints without blocking. Then verify delivery on both hosts: `codex debug prompt-input` in the scratch project must show the section headings, and the Claude-side `@AGENTS.md` import must resolve.
@@ -800,11 +800,15 @@ mechanism `test_autofix_marker_single_owner.py` uses.
 - **Produces:** `documentation/findings/instruction-file-symmetry-uat.md` — operator observations only, no code artifacts
 - **Done when:** all five D10 rows confirmed on disk; the second `/repo-update` pass is observed to be a no-op; `codex debug prompt-input` shows the content; the Claude `@` import resolves; the row-5 advisory prints without blocking; every behavioral difference recorded
 - **Depends on:** 108
-- **Status:** NOT STARTED
+- **Status:** BLOCKED BEFORE GRADING (2026-08-26) — the accepted step requires real named-skill behavior, but neither current core exposes a safe instruction-file-only UAT mode and normal `repo-update` cannot safely reach Step 7 in the deliberately outside-git fixture. Issue #153 must choose either a new core-supported UAT mode (with rebuild/reinstall/reverification) or a deliberate plan amendment accepting narrower operator-scoped named-skill subsection overrides. No row or host-delivery check has run.
 
-**Rollback.** Every step is `git revert`-able in this repository alone; no step writes into any
-consumer project. Steps 108–109 write only into a disposable scratch home and scratch project,
-which are deleted rather than reverted.
+**Rollback.** Every repository change is `git revert`-able here; no step writes into a consumer
+project. Step 108's install artifacts and Step 109's project artifacts live only in a disposable
+scratch home/project, which is deleted rather than reverted. Attended Step 109 host sessions also
+create routine native session records and may refresh host-owned caches outside that scratch root;
+that bounded observational transport state is explicitly permitted before any host session runs,
+but it authorizes no installer, skill-tree, source-tree or consumer-project write outside scratch.
+Use tested isolated host state instead if that bounded native state is unacceptable.
 
 ---
 
@@ -1132,6 +1136,28 @@ premise is true, the conclusion false — `skills/judge-motion/providers/claude.
 provider-native and cites `_shared/judge-core.md` via the relative spelling today, and
 `tests/distributions/test_distributions.py:769-777` forbids only the repo-rooted spelling. A sweep
 found exactly two instances and no third, so stop-and-audit was not reached.
+
+**Round 9 (Codex handoff closeout, 2026-08-26)** — Steps 107–108 are DONE; Step 109 is
+blocked before grading. Four outcomes supersede Round 8's parked state:
+
+- **Step 107's gate passed from its sentinel, not its log tail.** The named scratch sentinel was
+  `0`; only after that was read did the UTF-16 log supply `1341 passed, 1 skipped in 8843.47s`.
+  Against the unmodified 1335/1 owner this is +6 with no skip regression. Commit `719e622` updates
+  the baseline and closes #151.
+- **The four live documentation defects from Round 8's concurrent review are fixed.** Commit
+  `52d44c9` corrects portable-adapter ownership, workspace-delivery wording, project-scoped
+  read-only claims and the unsupported per-invocation Codex-home file count. The package-integrity
+  iteration gate passed `278` tests after those changes.
+- **Step 108's own acceptance was always independent of downstream UAT.** Its all-profile build,
+  scratch Claude install, inspector result, current owner section and whole-profile equality are
+  verified in `documentation/findings/instruction-file-symmetry-uat.md`; the repaired transcript
+  merged at `600af9e` after current-byte review found no high or medium defect. Issue #152 can close.
+- **Step 109 has a newly exposed design blocker, not a D10 failure.** The plan requires real named
+  skills, but `plan-init` and `repo-update` expose no instruction-only UAT mode; a normal
+  `repo-update` cannot safely reach Step 7 in the outside-git fixture. Every behavioral cell stays
+  blank. Issue #153 must choose a core-supported mode or deliberately amend the acceptance to
+  named-skill subsection overrides. The Rollback clause now records the bounded native host
+  session/cache state inherent in either attended route.
 
 ---
 
