@@ -16,10 +16,12 @@
 # Instruction-file symmetry — build, install and UAT transcript
 
 **Status: § 1 (Step 108) is COMPLETE and verified — every command in it has been run in the
-shell it is attributed to, and its result recorded. § 2 (Step 109) is an UNEXECUTED operator
-skeleton — no command in it has been run, and no verdict in it may be pre-filled.** Do not
-redo § 1; do not read § 2's blank cells as results. § 2's `Expected` column and its commands
-*are* authored in advance, deliberately — those are the instruments, not the findings.
+shell it is attributed to, and its result recorded. § 2 (Step 109) is BLOCKED BEFORE GRADING:
+selected fixture and filesystem-only instrument components were mechanically validation-run,
+but no skill was invoked, no host-delivery command ran and no D10 row was graded. The engineering
+blocker is recorded in § 2.5; no behavioral observation or row verdict may be pre-filled.** Do not
+redo § 1; do not read § 2's blank cells as results. Its expected results and commands are
+instruments, not findings.
 
 The verification record for Phase IS **Step 108** (build + install into a scratch home, issue
 #152) and **Step 109** (operator confirmation of all five D10 rows, issue #153) of
@@ -34,10 +36,10 @@ reporting PASS against the old one. Step 108's transcript is therefore the preco
 evidence for Step 109's.
 
 **That purpose is not self-executing, and § 2 is built around the gap.** Step 108 produced a
-current tree; it did **not** prove any host loads from it, and it could not — that is a host
-behavior outside this repository. § 2.0 therefore opens with a mandatory pre-flight that
-settles it empirically before any row is graded, because without it D10 row 2 would report
-PASS against the stale tree. See § 2.0 for the measurement behind that claim.
+current tree; it did **not** prove any host loads from it because no host session ran. § 2.0
+therefore applies this repository's accepted host-trace mechanism before any row is graded,
+because without it D10 row 2 could report PASS against the stale tree. See § 2.0 for the
+measurement behind that claim.
 
 ---
 
@@ -117,7 +119,7 @@ recorded in § 1.6 — one expected warning and one cosmetic prose artifact.
 
 ## 1.2 Criterion 1 — build all three host distributions
 
-Run in: the `skill-mesh` worktree · Windows PowerShell 5.1.
+**Run in:** the `skill-mesh` worktree · Windows PowerShell 5.1.
 
 ```
 powershell -File tools/build-distributions.ps1 -Provider all
@@ -138,7 +140,7 @@ provider-native skills are correctly absent from both non-claude profiles).
 
 ## 1.3 Criterion 2 — install the claude profile into the scratch home
 
-Run in: the `skill-mesh` worktree · Windows PowerShell 5.1.
+**Run in:** the `skill-mesh` worktree · Windows PowerShell 5.1.
 
 ```
 powershell -File tools/install-skill-mesh.ps1 -Provider claude -Home <scratch-home>
@@ -162,7 +164,7 @@ paths and hashes, which would add 128 rows of noise and no evidence.
 
 ## 1.4 Criterion 3 — the inspector reports the profile installed
 
-Run in: the `skill-mesh` worktree · Windows PowerShell 5.1.
+**Run in:** the `skill-mesh` worktree · Windows PowerShell 5.1.
 
 ```
 powershell -File tools/inspect-host-install.ps1 -Home <scratch-home>
@@ -221,7 +223,7 @@ question, and § 2.0 owns it.)
 
 ### The primary evidence — the whole installed profile equals a fresh build at HEAD
 
-Run in: the `skill-mesh` worktree · Windows PowerShell 5.1. Two steps: rebuild the claude
+**Run in:** the `skill-mesh` worktree · Windows PowerShell 5.1. Two steps: rebuild the claude
 profile from canonical source into a throwaway directory, then compare the two trees by
 content hash.
 
@@ -248,7 +250,8 @@ $delta = Compare-Object (Get-TreeManifest $Fresh) (Get-TreeManifest $Installed)
 if (-not $delta) { 'IDENTICAL' } else { 'DIFFERENT'; $delta }
 ```
 
-Observed output:
+Observed result, with the counts and `RESULT:` label emitted by the separately run reporting
+wrapper around the pipeline above:
 
 ```
 fresh files=128  installed files=128  differences=0
@@ -277,7 +280,7 @@ unified-diff output rows.
 
 ### `plan-init/core.md` in detail
 
-Run in: the `skill-mesh` worktree · Windows PowerShell 5.1.
+**Run in:** the `skill-mesh` worktree · Windows PowerShell 5.1.
 
 ```
 Select-String -Path '<scratch-home>\.claude\skills\plan-init\core.md' `
@@ -404,7 +407,7 @@ repair is to reword the canonical sentence so it spells neither literal.
 
 ## 1.7 Gate
 
-Run in: the `skill-mesh` worktree · Windows PowerShell 5.1.
+**Run in:** the `skill-mesh` worktree · Windows PowerShell 5.1.
 
 ```
 python -m pytest tests/package-integrity
@@ -461,18 +464,21 @@ scratchpad lives under a temp directory, and temp directories get cleaned; this 
 outlive it. Recreation is cheap and fully specified above. All four steps are Windows
 PowerShell 5.1:
 
-1. From a `skill-mesh` checkout at or after `d4c88ee`, run § 1.2's build command.
+1. From a `skill-mesh` checkout whose four writer hashes match § 2.0's recorded values, run
+   § 1.2's build command. If issue #153 instead adds a UAT mode, use that approved commit and
+   follow the rebuild/reverification/hash-refresh branch at the top of § 2.
 2. Create an empty directory to serve as `<scratch-home>` — **never** the real home, never
    `$HOME`, never `C:/Users/<user>`. Any disposable empty directory will do; the name
    `step108-home` is a convention, not a requirement.
 3. Run § 1.3's install command against it.
 4. Confirm with § 1.4's inspector command and § 1.5's `Select-String` probe.
 
-**What must hold at any commit, versus what is pinned to `d4c88ee`.** The exact figures above
-— `owned=58`, 128 files, the heading at line `446` — are `d4c88ee`'s and may legitimately move
-at a later commit. What must hold at *any* commit is commit-independent: the inspector reports
-`state=present` and `ledger: state=valid providers=[claude]`, and the `Select-String` probe
-*finds* the heading. Grade a recreated home on those.
+**What must hold at an unchanged-writer commit, versus what is pinned to `d4c88ee`.** The exact
+figures above — `owned=58`, 128 files, the heading at line `446` — are `d4c88ee`'s and may
+legitimately move at a later commit. What must hold in the selected checkout is commit-independent:
+`state=present` and `ledger: state=valid providers=[claude]`, the `Select-String` probe *finds*
+the heading, and § 2.0's exact writer hashes match. A changed writer requires the full
+reverification branch, not an "at or after" assumption.
 
 A recreated home is equivalent to the original: § 1.5 established that the installed profile
 is byte-identical to a fresh build at the same commit, so the same commands produce the same
@@ -496,19 +502,43 @@ it to a running host is § 2.0's job, and it is not optional.
 
 # 2. Step 109 — operator confirmation of all five D10 rows
 
-> **THIS SECTION IS UNEXECUTED.** It is filled in by the **operator** during Step 109 (issue
-> #153) and by nobody else. Do not pre-fill any verdict below; an unfilled `Observed` or
-> `Verdict` means "not yet run", which is exactly what it should mean until the operator runs
-> it. The `Expected` column and the commands *are* authored in advance on purpose — they are
-> the instruments.
+> **STEP 109 IS BLOCKED BEFORE GRADING.** Its behavioral observations and row verdicts are filled
+> in by the **operator** during Step 109 (issue #153) and by nobody else; a pre-execution engineering
+> blocker may be recorded during closeout. Selected fixture and filesystem-only components were
+> validation-run during Step 108, but no skill was invoked, no host-delivery command ran and no
+> D10 row was graded. Do not pre-fill any behavioral observation or row verdict below; § 2.5
+> records only the pre-execution engineering blocker. Expected results and commands are
+> instruments, not findings.
+>
+> The accepted plan says to run the real named skills. It does not authorize a subsection-only
+> mode, and neither installed core exposes one: `plan-init` requires its greenfield conversation,
+> save and hooks; `repo-update` requires ordered Steps 1–12 and explicitly forbids required-step
+> skips. A bespoke "apply only this subsection" prompt would prove compliance with that override,
+> not normal named-skill behavior. **Run no skill or host-delivery command in this section until
+> issue #153 records one of two deliberate resolutions:**
+>
+> 1. Add a core-supported, safety-gated UAT mode. This is a new code step: rebuild all profiles,
+>    reinstall the Claude profile, rerun § 1.2–1.7, regenerate
+>    `documentation/release-candidate-report.md`, and
+>    replace § 2.0's four expected hashes from the newly verified
+>    install before grading anything.
+> 2. Deliberately amend Step 109 to accept **operator-scoped named-skill subsection overrides** and
+>    their narrower evidence. This keeps the existing installed bytes and still requires the
+>    native Skill/Base/Profile/attribution proof below. A manual core-file read or non-skill probe
+>    is not this option and needs a different plan and proof design.
+>
+> In either case, the plan must authorize bounded routine host session/cache records or provide
+> tested isolated host state before **any host session or host-delivery command in § 2** runs. The
+> remaining skeleton defines the containment and measurements every permitted resolution must
+> preserve.
 
 **The procedure of record is `documentation/instruction-file-symmetry-plan.md` § 7 Step 109.**
 This section records *observations* and supplies the instruments; where the two disagree, the
 plan wins and the disagreement is itself worth recording in § 2.4.
 
 **Preconditions.** A scratch home carrying the claude profile — see § 1.8 for where it is and,
-if it has been cleaned up, how to recreate it in four steps. Plus a **disposable scratch
-project**: a throwaway directory, created fresh, never a real project.
+if it has been cleaned up, how to recreate it in four steps. That same disposable directory is
+`<scratch-project>` during Step 109; it is never a real project or the real home.
 
 **Redaction still applies.** Everything recorded below lands in a public file. Replace
 absolute paths with `<scratch-home>` / `<scratch-project>` before saving, per the note at the
@@ -537,119 +567,239 @@ case (~32 projects). That is precisely the failure Step 108 exists to prevent, s
 Step 109. Rows 1, 3, 4 and 5 all grade behavior the stale core does not have and would red
 against it, so the exposure is bounded to row 2 — but row 2 is the one that matters most.
 
-**The binding mechanism.** Claude Code discovers skills at
-`<install-home>/.claude/skills/<skill>/SKILL.md` (`documentation/host-discovery.md` § "Host-native
-skill discovery"). The installed profile is at `<scratch-home>/.claude/skills`, so the scratch
-home must *be* the home (or the project root) the Step 109 session reads. Two options, in
-preference order:
+**The binding mechanism is documented and already accepted.**
+`documentation/host-native-discovery-cutover-plan.md` § "Step 49-50 host-trace amendment
+(2026-08-09)" requires a fresh `claude --setting-sources project` session from the consumer
+home. The host's native records — not a model claim and not a path the operator merely names —
+must show the session `cwd`, a Skill invocation, the tool-supplied `Base directory for this
+skill:`, the generated wrapper's `Profile: claude`, and `attributionSkill=<skill>`.
 
-1. **Use `<scratch-home>` itself as `<scratch-project>`** — start the Step 109 session with its
-   working directory set to `step108-home`. The profile is already at
-   `step108-home/.claude/skills`, and § 1.4 recorded that both `CLAUDE.md` and `AGENTS.md` are
-   ABSENT there, so the directory is *already* a clean D10 row 1 fixture.
-2. **Install into whatever home the host actually reads**, by re-running § 1.3's install
-   command with `-Home` set to that directory — still never the operator's real home.
+First validate the exact scratch target in both the observer PowerShell window and the separate
+host terminal. This prevents a substituted real project from becoming the serial fixture:
 
-**This repository does not document how an arbitrary directory becomes a running host's
-discovery home, and Step 108 did not execute a host session to find out.** That is an honest
-gap, not an oversight: it is host behavior outside this repository. The probe below is what
-settles it empirically, and it is why the pre-flight is blocking rather than advisory.
-
-**Run in:** `<scratch-project>` · Windows PowerShell 5.1, before starting the host session.
-
+```powershell
+$Proj = (Resolve-Path -LiteralPath '<scratch-project>').Path.TrimEnd('\')
+$ScratchHome = (Resolve-Path -LiteralPath '<scratch-home>').Path.TrimEnd('\')
+$RealHome = (Resolve-Path -LiteralPath `
+  ([Environment]::GetFolderPath('UserProfile'))).Path.TrimEnd('\')
+if (-not $Proj.Equals($ScratchHome, [StringComparison]::OrdinalIgnoreCase)) {
+  throw 'Scratch project must be the verified scratch install home.'
+}
+if ($Proj.Equals($RealHome, [StringComparison]::OrdinalIgnoreCase)) {
+  throw 'Refusing the real home as a scratch root.'
+}
+$Cursor = Get-Item -LiteralPath $Proj -Force
+while ($null -ne $Cursor) {
+  if (($Cursor.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) {
+    throw "Refusing a scratch path with a reparse-point component: $($Cursor.FullName)"
+  }
+  $Cursor = $Cursor.Parent
+}
+Get-Command git -ErrorAction Stop | Out-Null
+$PriorErrorActionPreference = $ErrorActionPreference
+try {
+  $ErrorActionPreference = 'Continue' # PS 5.1 can surface native stderr as NativeCommandError
+  & git -C $Proj rev-parse --show-toplevel *> $null
+  $GitProbeExit = $LASTEXITCODE
+} finally {
+  $ErrorActionPreference = $PriorErrorActionPreference
+}
+if ($GitProbeExit -eq 0) { throw 'Scratch project must be outside every git worktree.' }
+$Ledger = Get-Content -LiteralPath (Join-Path $Proj '.skill-mesh-install.json') `
+                      -Raw | ConvertFrom-Json
+if ($Ledger.tool -cne 'skill-mesh' -or $null -eq $Ledger.installs.claude) {
+  throw 'Verified claude scratch-install ledger is absent.'
+}
+$WriterFiles = @(
+  '.claude\skills\plan-init\SKILL.md', '.claude\skills\plan-init\core.md',
+  '.claude\skills\repo-update\SKILL.md', '.claude\skills\repo-update\core.md'
+)
+foreach ($relative in $WriterFiles) {
+  $CurrentPath = (Get-Item -LiteralPath (Join-Path $Proj $relative) -Force).FullName
+  while ($CurrentPath.Equals($Proj, [StringComparison]::OrdinalIgnoreCase) -or
+         $CurrentPath.StartsWith($Proj + '\', [StringComparison]::OrdinalIgnoreCase)) {
+    $Node = Get-Item -LiteralPath $CurrentPath -Force
+    if (($Node.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) {
+      throw "Refusing a writer path with a reparse-point component: $($Node.FullName)"
+    }
+    if ($CurrentPath.Equals($Proj, [StringComparison]::OrdinalIgnoreCase)) { break }
+    $CurrentPath = [IO.Path]::GetDirectoryName($CurrentPath)
+  }
+}
 ```
-# Set this to the .claude\skills directory the Step 109 session actually loads from.
-$LoadedSkills = '<scratch-home>\.claude\skills'
 
-Select-String -LiteralPath (Join-Path $LoadedSkills 'plan-init\core.md') `
+Keep the observer window open. Capture the two writers' installed bytes before the first row:
+
+```powershell
+$ObservedSkillFiles = @(
+  'plan-init\SKILL.md', 'plan-init\core.md',
+  'repo-update\SKILL.md', 'repo-update\core.md'
+)
+function Get-ObservedSkillHashes {
+  $ObservedSkillFiles | ForEach-Object {
+    '{0} {1}' -f $_, (Get-FileHash -LiteralPath `
+      (Join-Path $Proj ('.claude\skills\' + $_)) -Algorithm SHA256).Hash
+  }
+}
+$ExpectedSkillHashes = @(
+  'plan-init\SKILL.md A1739A4E3D6764AE708404C3B40B74AE34183869C4B62C30AA8FCDA0696EAD9D',
+  'plan-init\core.md 054DE3D99002DBA86A9A64C7CC65183B261593E2971F73F9301FF441B0196920',
+  'repo-update\SKILL.md 3D101E75745F9E0D8965AE71BDC1B83F726CE7D6A8E4DCC2344740A1CC67597D',
+  'repo-update\core.md B56A59F8373263A4F70CE77E23DB61310A9DC81BE8202881DA83CBB0A2F1AAA4'
+)
+$SkillHashesBefore = @(Get-ObservedSkillHashes)
+$CurrencyDifference = @(Compare-Object $ExpectedSkillHashes $SkillHashesBefore)
+if ($CurrencyDifference.Count -ne 0) {
+  $CurrencyDifference
+  throw 'Installed writer bytes differ from the Step 108 verified build.'
+}
+```
+
+Those four expected hashes were taken from the same installed files whose full 128-file profile
+matched the fresh Step 108 build at HEAD in § 1.5. Unlike an `AGENTS.md` substring probe, this
+rejects an intermediate core that knew the filename but did not yet implement the matrix.
+
+After issue #153 is unblocked, close the preceding session before each row, manufacture that row
+at the root, then start a fresh session from the same validated root. **Run this launch in the
+separate host terminal, not the observer window** retained for hashes and fixtures:
+
+```powershell
+Set-Location -LiteralPath $Proj
+claude --setting-sources project
+```
+
+Stale same-named `plan-init` and `repo-update` skills are live in the personal
+`~/.claude/skills` root, which Claude discovers regardless of cwd. Leave them untouched. Never
+install this profile into the real home to make it win: on this host that skills root is a
+Windows junction into a repository with 1,235 tracked files, and the existing ownership ledger
+lets a reinstall overwrite owned files silently without `-Force`, backup, or prompt.
+
+For **each** writer invocation, capture that row's own native record. Set
+`$HostSuppliedBase` from the tool-supplied record, never from the intended directory:
+
+```powershell
+$HostSuppliedBase = '<host-supplied-base>'
+if (-not [IO.Path]::IsPathRooted($HostSuppliedBase)) {
+  throw 'Host-supplied skill base must be absolute.'
+}
+$ExpectedSkillBase = (Resolve-Path -LiteralPath `
+  (Join-Path $Proj '.claude\skills\plan-init')).Path.TrimEnd('\')
+$LoadedSkillBase = [IO.Path]::GetFullPath($HostSuppliedBase).TrimEnd('\')
+$LoadedSkillBase.Equals($ExpectedSkillBase, [StringComparison]::OrdinalIgnoreCase)
+Select-String -LiteralPath (Join-Path $LoadedSkillBase 'core.md') `
               -SimpleMatch 'AGENTS.md' -Quiet
 ```
 
-**Expect:** `True`. This block was **extracted verbatim from this file and run** in Windows
-PowerShell 5.1 against both trees: `True` against the current installed tree, `False` against
-the live stale copy, exit 0. So the probe discriminates rather than merely confirming — a
-check that could only ever return `True` would be no pre-flight at all.
+**Expect:** `True`, `True` — exact base, then current bytes. The currency probe was
+mechanically run against both real trees: `True` on the current install, `False` on the stale
+copy. Substitute `repo-update` for its rows. No row may borrow another fresh session's record.
 
-- Which directory the Step 109 session actually loaded skills from: *(operator)*
-- Probe result (`True` / `False`): *(operator)*
-- **If `False`, or if the loaded directory cannot be determined: STOP.** Do not grade any row;
-  record the outcome in § 2.4 and treat Step 109 as blocked on the binding, not failed on
-  behavior.
+After the last row:
+
+```powershell
+$SkillHashesAfter = @(Get-ObservedSkillHashes)
+Compare-Object $SkillHashesBefore $SkillHashesAfter
+```
+
+**Expect:** no output. Any binding mismatch or changed installed byte blocks Step 109 rather
+than failing a D10 behavior.
+
+- Per-row session `cwd`, Skill/Base/Profile/attribution records: *(operator)*
+- Per-row currency results (`True` / `False`): *(operator)*
+- Post-observation installed-byte comparison: *(operator)*
 
 ## 2.1 The five D10 rows
 
-> **Every row runs in `<scratch-project>`.** `/plan-init` and `/repo-update` both **write**
-> `AGENTS.md` / `CLAUDE.md` into whatever project they resolve — via cwd or a `/user-project`
-> pin. Confirm the pin *and* the cwd before each row. Running row 3 in whatever window happens
-> to be open would rewrite a real project's instruction files, and row 5 explicitly expects the
-> skill to continue without blocking.
+> **Every row runs serially at the validated `<scratch-project>` root.** Close the preceding
+> host session, reset only the two root instruction files, and start a fresh session from that
+> same root before each row. Do not use child row directories or a project pin: host discovery
+> and the writer target must coincide.
 
-Scope, stated so it is not mistaken for a gap: the skeleton exercises **one writer per row**,
-i.e. 5 of canonical D10's 10 cells. That is exactly the plan's Step 109 Problem statement and
-Done-when.
+Once unblocked, the skeleton exercises **one writer contract surface per row**, i.e. 5 of
+canonical D10's 10 cells. Rows 1–2 target `plan-init`'s `## After plan.md exists`; rows 3–5 and
+the fixed-point check target `repo-update` Step 7. Use the same deterministic facts for every
+authorized action: documentation-only UAT fixture; Markdown stack; no production commands; root
+instruction files are the only instruction outputs; no application architecture; UAT-only
+current state; Windows PowerShell 5.1 environment.
 
-| Row | `AGENTS.md` | `CLAUDE.md` | Skill exercised | Expected | Observed | Verdict |
+**There is intentionally no invocation text here while Step 109 is blocked.** The selected
+resolution must supply a copy-ready, contract-valid literal for every action and state whether it
+tests a core-supported UAT mode or a deliberately narrower named-skill subsection override. A bare
+`/repo-update`, or a prompt that silently contradicts the current core's required steps, is not a
+substitute. Any action outside the row allowlist is blocking evidence, not a D10 failure.
+
+| Row | `AGENTS.md` | `CLAUDE.md` | Contract surface | Expected | Observed | Verdict |
 |---|---|---|---|---|---|---|
-| 1 | ABSENT | ABSENT | `/plan-init` | Author `AGENTS.md` (the seven sections named in `plan-init/core.md`'s own `## Instruction-file contract` section); write `CLAUDE.md` as D8's exact pointer bytes | *(operator)* | *(operator)* |
-| 2 | ABSENT / POINTER | SUBSTANTIVE | `/plan-init` | **Touch neither.** Report the project non-inverted | *(operator)* | *(operator)* |
-| 3 | SUBSTANTIVE | POINTER *(inverted)* | `/repo-update` | Refresh `AGENTS.md`; leave `CLAUDE.md` untouched | *(operator)* | *(operator)* |
-| 4 | SUBSTANTIVE | ABSENT | either writer — D10 gives this row an identical cell for both, and the plan assigns it to neither | Refresh `AGENTS.md`; write `CLAUDE.md` as the D8 pointer | *(operator)* | *(operator)* |
-| 5 | SUBSTANTIVE | SUBSTANTIVE *(drift)* | `/repo-update` | Refresh **neither**; emit the P2 advisory naming both paths; **continue without blocking** | *(operator)* | *(operator)* |
+| 1 | ABSENT | ABSENT | `plan-init` | Author `AGENTS.md` (the seven sections listed under `plan-init/core.md`'s `## After plan.md exists` section); write `CLAUDE.md` as D8's exact pointer bytes | *(operator)* | *(operator)* |
+| 2 | ABSENT / POINTER | SUBSTANTIVE | `plan-init` | **Touch neither.** Report the project non-inverted | *(operator)* | *(operator)* |
+| 3 | SUBSTANTIVE | POINTER *(inverted)* | `repo-update` | Refresh `AGENTS.md`; leave `CLAUDE.md` untouched | *(operator)* | *(operator)* |
+| 4 | SUBSTANTIVE | ABSENT | `repo-update` *(chosen here; D10 gives both writers an identical cell)* | Refresh `AGENTS.md`; write `CLAUDE.md` as the D8 pointer | *(operator)* | *(operator)* |
+| 5 | SUBSTANTIVE | SUBSTANTIVE *(drift)* | `repo-update` | Refresh **neither**; emit the P2 advisory naming both paths; **continue without blocking** | *(operator)* | *(operator)* |
 
 ### Fixtures — how to manufacture each row's starting state
 
-**Run in:** `<scratch-project>` · Windows PowerShell 5.1. Give **each row its own fresh
-directory** under `<scratch-project>` rather than mutating one directory between rows — a
-leftover file from the previous row is the easiest way to grade the wrong D10 state, and a
-fresh directory is already row 1's fixture.
+**Run in:** `<scratch-project>` · the observer Windows PowerShell 5.1 window retained from
+§ 2.0. Run one row at a time; record its observations and close its host session before
+resetting the root for the next row.
 
 ```
 $Sub  = "# Scratch`n`n## Stack`n`nNothing.`n"   # any '##' heading makes a file SUBSTANTIVE
-$Proj = '<scratch-project>'
 
-foreach ($r in 'row1','row2','row3','row4','row5') {
-  New-Item -ItemType Directory -Force -Path (Join-Path $Proj $r) | Out-Null
+function Clear-InstructionFixture {
+  if (-not $Proj.Equals((Resolve-Path -LiteralPath '<scratch-home>').Path.TrimEnd('\'),
+                        [StringComparison]::OrdinalIgnoreCase)) {
+    throw 'Scratch target changed; refusing fixture reset.'
+  }
+  foreach ($name in 'AGENTS.md','CLAUDE.md') {
+    $path = Join-Path $Proj $name
+    if (Test-Path -LiteralPath $path) {
+      $item = Get-Item -LiteralPath $path -Force
+      if (-not (Test-Path -LiteralPath $path -PathType Leaf) -or
+          (($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0)) {
+        throw "Refusing to remove non-file fixture path: $name"
+      }
+      Remove-Item -LiteralPath $path -Force
+    }
+  }
 }
 
-# row 1 - both ABSENT: the freshly created directory already IS this state, write nothing
+function Set-RowFixture([ValidateSet(1,2,3,4,5)][int]$Row) {
+  Clear-InstructionFixture
+  switch ($Row) {
+    1 { } # both ABSENT
+    2 { [IO.File]::WriteAllText((Join-Path $Proj 'CLAUDE.md'), $Sub) }
+    3 {
+      [IO.File]::WriteAllText((Join-Path $Proj 'AGENTS.md'), $Sub)
+      [IO.File]::WriteAllText((Join-Path $Proj 'CLAUDE.md'), "@AGENTS.md`n")
+    }
+    4 { [IO.File]::WriteAllText((Join-Path $Proj 'AGENTS.md'), $Sub) }
+    5 {
+      [IO.File]::WriteAllText((Join-Path $Proj 'AGENTS.md'), $Sub)
+      [IO.File]::WriteAllText((Join-Path $Proj 'CLAUDE.md'),
+        "# Scratch`n`n## Stack`n`nAlso nothing.`n")
+    }
+  }
+}
 
-# row 2 - CLAUDE.md SUBSTANTIVE, AGENTS.md ABSENT
-[System.IO.File]::WriteAllText((Join-Path $Proj 'row2\CLAUDE.md'), $Sub)
-
-# row 3 - AGENTS.md SUBSTANTIVE, CLAUDE.md a POINTER (inverted)
-[System.IO.File]::WriteAllText((Join-Path $Proj 'row3\AGENTS.md'), $Sub)
-[System.IO.File]::WriteAllText((Join-Path $Proj 'row3\CLAUDE.md'), "@AGENTS.md`n")
-
-# row 4 - AGENTS.md SUBSTANTIVE, CLAUDE.md ABSENT
-[System.IO.File]::WriteAllText((Join-Path $Proj 'row4\AGENTS.md'), $Sub)
-
-# row 5 - BOTH SUBSTANTIVE (drift)
-[System.IO.File]::WriteAllText((Join-Path $Proj 'row5\AGENTS.md'), $Sub)
-[System.IO.File]::WriteAllText((Join-Path $Proj 'row5\CLAUDE.md'), "# Scratch`n`n## Stack`n`nAlso nothing.`n")
+$RowNumber = 1  # change only this argument immediately before each later row
+Set-RowFixture $RowNumber
 ```
 
-**Expect:** each directory holds exactly the state its row's first two columns name. D8's
-definitions are the authority: ABSENT = the path does not exist; POINTER = exists, defers to
-the sibling, carries **no** `##` heading; SUBSTANTIVE = exists and carries at least one `##`
-heading. Verify a fixture with
-`Select-String -LiteralPath <file> -Pattern '^## ' -Quiet` (`True` = SUBSTANTIVE).
+**Expect, before the corresponding fresh host session:** `ABSENT/ABSENT`,
+`ABSENT/SUBSTANTIVE`, `SUBSTANTIVE/POINTER`, `SUBSTANTIVE/ABSENT`, then
+`SUBSTANTIVE/SUBSTANTIVE`.
 
-**These blocks were executed, not merely written.** The fixture block above and both
-instruments below were **extracted verbatim from this file**, had `<scratch-project>`
-substituted for a throwaway directory, and were run as a script under Windows PowerShell 5.1
-during Step 108. Exit code **0**, producing exactly the five intended states — row 1: 0
-instruction files; row 2: 1; row 3: 2; row 4: 1; row 5: 2 — with each file's D8 classification
-checked as recorded above. Extracting from the document rather than retyping is deliberate:
-it is the difference between testing what was *meant* and testing what is *written*, and an
-earlier draft of this very block shipped a broken path because those two diverged.
-
-That run exercised only the fixtures and the instruments. **No skill was invoked and no D10
-row was graded** — that is entirely Step 109's work.
+**The filesystem mechanics were validation-run, not merely written.** The serial fixture logic
+produced those five state pairs in Windows PowerShell 5.1. Instrument A's two halves were run
+separately against unchanged and changed states. Instrument B was self-tested separately
+against the five manufactured post-skill pointer states listed below; it was not concatenated
+after the empty row-1 fixture. No skill was invoked and no D10 row was graded.
 
 ### Instrument A — did the skill touch a file it must not touch?
 
-Rows 2, 3 and 4 assert "touch neither" or "leave `CLAUDE.md` untouched". An eyeball cannot
-grade that; a hash before and after can.
+Rows 2–5 assert "touch neither", "leave `CLAUDE.md` untouched", or "refresh neither" for at
+least one path. Instruction-file hashes grade content, a protected-root manifest catches other
+filesystem changes, and the native action trace catches a forbidden byte-identical rewrite.
 
 **Run in:** `<scratch-project>` · Windows PowerShell 5.1.
 
@@ -661,26 +811,79 @@ function Get-InstructionSnapshot($Dir) {
     Sort-Object
 }
 
-$Row    = Join-Path '<scratch-project>' 'row2'      # the row being graded
-$before = Get-InstructionSnapshot $Row
-# ... run the row's skill against $Row now ...
-$after  = Get-InstructionSnapshot $Row
+function Get-ProtectedRootSnapshot($Dir, [string[]]$ExcludedRelativePaths) {
+  $Root = (Resolve-Path -LiteralPath $Dir).Path.TrimEnd('\')
+  $Pending = New-Object 'System.Collections.Generic.Stack[string]'
+  $Pending.Push($Root)
+  $Snapshot = @()
+  while ($Pending.Count -gt 0) {
+    $Current = $Pending.Pop()
+    foreach ($Child in Get-ChildItem -LiteralPath $Current -Force -ErrorAction Stop) {
+      if (($Child.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) {
+        throw "Refusing a reparse-point child in the protected root: $($Child.FullName)"
+      }
+      $Relative = $Child.FullName.Substring($Root.Length).TrimStart('\')
+      if ($Child.PSIsContainer) {
+        if ($ExcludedRelativePaths -contains $Relative) {
+          throw "An allowed file path became a directory: $Relative"
+        }
+        $Snapshot += "D $Relative"
+        $Pending.Push($Child.FullName)
+      } elseif ($ExcludedRelativePaths -notcontains $Relative) {
+        $Snapshot += "F $Relative $($Child.Length) $((Get-FileHash -LiteralPath $Child.FullName -Algorithm SHA256).Hash)"
+      }
+    }
+  }
+  $Snapshot | Sort-Object
+}
+
+$AllowedWrites = switch ($RowNumber) {
+  1 { @('AGENTS.md', 'CLAUDE.md') }
+  2 { @() }
+  3 { @('AGENTS.md') }
+  4 { @('AGENTS.md', 'CLAUDE.md') }
+  5 { @('uat-memory.md') }
+}
+$AllowedWritePaths = @($AllowedWrites | ForEach-Object {
+  [IO.Path]::GetFullPath((Join-Path $Proj $_))
+})
+$Row             = $Proj                           # validated root being graded
+$before          = @(Get-InstructionSnapshot $Row)
+$protectedBefore = @(Get-ProtectedRootSnapshot $Row $AllowedWrites)
+```
+
+For row 5, create the absolute memory target in its subsection below **before** taking this
+pre-action snapshot. Once issue #153 supplies an authorized action, run it in the separate host
+session. Keep the observer window open, then run the post-action half separately:
+
+```
+$after          = @(Get-InstructionSnapshot $Row)
+$protectedAfter = @(Get-ProtectedRootSnapshot $Row $AllowedWrites)
+Compare-Object $protectedBefore $protectedAfter
 Compare-Object $before $after
 ```
 
-**Expect:** for an untouched file, `Compare-Object` prints **nothing**. Any output names the
-file that changed. Capture `$before` for every row, not only the ones asserting "untouched" —
-§ 2.2's fixed-point check needs row 3's post-first-pass snapshot to compare against.
+**Expect:** the protected-root comparison prints nothing on every row. The instruction comparison
+shows row 1 adding both files; rows 2 and 5 print nothing; row 3 changes only `AGENTS.md`; row 4
+changes `AGENTS.md` and adds `CLAUDE.md`. Capture both preimages for every row; § 2.2 separately
+takes row 3's post-first-pass snapshot.
+
+Also audit that invocation's native tool-action trace. Normalize every Write/Edit target with
+`[IO.Path]::GetFullPath()` and require exact case-insensitive membership in
+`$AllowedWritePaths`; any shell/process tool action or a write outside that list blocks the row.
+Rows 2 and the fixed-point pass allow no write action at all. This trace requirement is what
+catches an otherwise invisible byte-identical rewrite or a write-then-restore sequence.
 
 ### Instrument B — is `CLAUDE.md` D8's *exact* pointer bytes?
 
 Rows 1 and 4 assert the pointer is written as **exactly** one line plus a trailing newline.
-A length check alone is not enough, so this compares content.
+A length check alone is not enough, so this compares content. Run it **after** the row's skill
+has written `CLAUDE.md`; the starting row-1 and row-4 fixtures intentionally lack that file.
 
 **Run in:** `<scratch-project>` · Windows PowerShell 5.1.
 
 ```
-$Row = Join-Path '<scratch-project>' 'row1'         # the row being graded
+$Row = $Proj                                        # validated post-skill root
 $s   = [System.IO.File]::ReadAllText((Join-Path $Row 'CLAUDE.md'))
 ($s -eq "@AGENTS.md`n") -or ($s -eq "@AGENTS.md`r`n")
 ```
@@ -691,16 +894,66 @@ here: it returns `True` for the pointer with an LF ending (11 bytes) and with a 
 bytes) and any extra content. Note the trailing-blank-line case is also 12 bytes — so a
 byte-count check would have accepted it, which is why the comparison is on content.
 
+After rows 1, 3 and 4, also list `AGENTS.md`'s `##` headings. A hash delta alone is not proof
+of the required seven-section walk:
+
+```powershell
+Select-String -LiteralPath (Join-Path $Proj 'AGENTS.md') -Pattern '^## ' |
+  ForEach-Object Line
+```
+
+**Expect:** headings covering project overview, stack, commands, directory layout,
+architecture, current state and environment requirements.
+
 ### Row 5 has two independent claims
 
-The plan's Done-when lists the second on its own, so record them separately rather than
-folding both into one cell:
+After `Set-RowFixture 5` and before Instrument A's pre-action snapshot, create one scratch-only
+Step 8 target and record its preimage:
+
+```powershell
+$Row5Memory = [IO.Path]::GetFullPath((Join-Path $Proj 'uat-memory.md'))
+$Row5MemoryParent = [IO.Path]::GetDirectoryName($Row5Memory)
+if (-not $Row5MemoryParent.Equals($Proj, [StringComparison]::OrdinalIgnoreCase)) {
+  throw 'Row-5 MEMORY_FILE must be directly under the validated scratch root.'
+}
+if (Test-Path -LiteralPath $Row5Memory) {
+  $MemoryItem = Get-Item -LiteralPath $Row5Memory -Force
+  if (-not (Test-Path -LiteralPath $Row5Memory -PathType Leaf) -or
+      (($MemoryItem.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0)) {
+    throw 'Refusing non-file or reparse-point uat-memory.md.'
+  }
+}
+[IO.File]::WriteAllText($Row5Memory,
+  "# UAT memory`n`n## Status`n`nBefore row-5 continuation.`n")
+$Row5MemoryBefore = (Get-FileHash -LiteralPath $Row5Memory -Algorithm SHA256).Hash
+```
+
+Once Step 109 is unblocked, the selected resolution must provide an authorized slice that begins
+at Step 7 and whose safe boundary ends immediately before Step 9. Supply the **absolute**
+`$Row5Memory` as `MEMORY_FILE`, phase text `Phase IS Step 109 row 5 continuation observed`, issue
+#153, final test count unknown, no discrepancies and overall UAT pending. Do not tell the agent to
+"continue" or state that Step 8 must happen: the core's natural Step-7-to-Step-8 transition is the
+property under test. Step 8 is allowed to write only `$Row5Memory`. Afterward:
+
+```powershell
+$Row5MemoryAfter = (Get-FileHash -LiteralPath $Row5Memory -Algorithm SHA256).Hash
+(-not $Row5MemoryAfter.Equals($Row5MemoryBefore,
+                              [StringComparison]::OrdinalIgnoreCase))
+Select-String -LiteralPath $Row5Memory `
+              -SimpleMatch 'Phase IS Step 109 row 5 continuation observed' -Quiet
+```
+
+**Expect:** `True`, `True`. Record the two contract claims separately:
 
 - The P2 advisory **printed**, and named both paths — record the two *filenames*, redacting
   any leading path to `<scratch-project>`: *(operator)*
-- The run **continued** — the advisory did not block, halt, or prompt: *(operator)*
+- The run **continued** — the native action trace shows the advisory before the Step 8 memory
+  write with no intervening halt or prompt, then stops at the UAT boundary: *(operator)*
 
-### Row 2 has two claims too, and only one of them discriminates
+Do not inject an echo token as proof; a model can print one whether or not the core's advisory
+would have blocked its natural transition.
+
+### Row 2 has two behavioral claims; neither proves host binding
 
 This is the row § 2.0 exists for. Record the two halves separately:
 
@@ -708,83 +961,134 @@ This is the row § 2.0 exists for. Record the two halves separately:
   *Non-discriminating on its own: the stale core also writes nothing here.*
 - **In the report — stated the project is non-inverted**, in terms that name `AGENTS.md`:
   *(operator)*
-  *This is the discriminating half. The stale core contains **zero** occurrences of the string
-  `AGENTS.md` anywhere in its 26,477 bytes, so it cannot produce this report at all.*
+  *Record this as behavior, not delivery evidence. A model can produce plausible words without
+  the intended core; row 2 is gradable only because § 2.0's native host record already proved
+  the exact scratch-tree binding for this invocation.*
 
-## 2.2 Fixed-point check (rows 3 and 4)
+## 2.2 Fixed-point check (representative row 3)
 
-The plan calls rows 3 and 4 fixed points, so a second pass must be an observable no-op.
+The plan calls rows 3 and 4 fixed points and requires one second `/repo-update` pass, so row 3
+is the representative. Do not grade the second pass unless the first row-3 pass already changed
+`AGENTS.md`, left `CLAUDE.md` byte-identical, and passed its binding record; two runs that both
+did nothing are not a fixed point.
 
-**Run in:** `<scratch-project>` · the host session, immediately after the row-3 pass.
+**Run in:** the same fresh row-3 host session, immediately after the first pass and before any
+fixture reset. In the observer window, take a new post-first-pass baseline:
 
+```powershell
+$Row = $Proj
+$before = @(Get-InstructionSnapshot $Row)
+$fixedRootBefore = @(Get-ProtectedRootSnapshot $Row -ExcludedRelativePaths @())
 ```
-/repo-update
+
+Do **not** use a bare `/repo-update`; that starts the current full lifecycle. After issue #153
+records its resolution, paste the exact same authorized row-3 invocation literal a second time in
+the host session. Until that literal exists, this check remains blocked.
+
+Finally, in the observer window:
+
+```powershell
+$after = @(Get-InstructionSnapshot $Row)
+$fixedRootAfter = @(Get-ProtectedRootSnapshot $Row -ExcludedRelativePaths @())
+Compare-Object $fixedRootBefore $fixedRootAfter
+Compare-Object $before $after
 ```
 
-**Expect:** Instrument A, run with `$before` set to the snapshot taken *after* the first pass,
-prints nothing for both `AGENTS.md` and `CLAUDE.md`.
+**Expect:** no output from either comparison, and no Write/Edit or shell/process action in the
+second invocation's native trace. Capture that invocation's own native binding record before
+assigning the verdict.
 
 - Second-pass `Compare-Object` output: *(operator)*
 - No-op confirmed: *(operator)*
 
 ## 2.3 Delivery on both hosts
 
-The contract is only real if the bytes reach the model. Both checks run in `<scratch-project>`.
+The contract is only real if the bytes reach the model. Once Step 109 is unblocked, run both
+checks on the completed and fixed-point-graded row-3 state at the validated root before resetting
+it for row 4. First add a delivery-only random canary, after all row-3 behavior measurements:
+
+```powershell
+$DeliveryCanary = 'skill-mesh-step109-delivery-' + [Guid]::NewGuid().ToString('N')
+$PriorCanaryHit = @(Get-ChildItem -LiteralPath $Proj -File -Force -Recurse |
+  Select-String -SimpleMatch $DeliveryCanary)
+if ($PriorCanaryHit.Count -ne 0) { throw 'Random delivery canary already exists.' }
+$AgentsPath = Join-Path $Proj 'AGENTS.md'
+$AgentsItem = Get-Item -LiteralPath $AgentsPath -Force
+if (($AgentsItem.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) {
+  throw 'Refusing a reparse-point AGENTS.md delivery target.'
+}
+[IO.File]::AppendAllText($AgentsPath, "`n<!-- $DeliveryCanary -->`n")
+$CanaryFiles = @(Get-ChildItem -LiteralPath $Proj -File -Force -Recurse |
+  Select-String -SimpleMatch $DeliveryCanary | Select-Object -ExpandProperty Path -Unique)
+if ($CanaryFiles.Count -ne 1 -or
+    -not $CanaryFiles[0].Equals($AgentsPath, [StringComparison]::OrdinalIgnoreCase)) {
+  throw 'Delivery canary is not unique to root AGENTS.md.'
+}
+$VerifiedHeading = (Select-String -LiteralPath $AgentsPath -Pattern '^## ' |
+  Select-Object -First 1).Line
+if ([String]::IsNullOrWhiteSpace($VerifiedHeading)) {
+  throw 'Completed row-3 AGENTS.md has no section heading to verify.'
+}
+```
 
 ### Codex — decisive, and documented
 
 **Run in:** `<scratch-project>` · Windows PowerShell 5.1.
 
 ```
-codex debug prompt-input | Select-String -SimpleMatch '## Stack' -Quiet
+Set-Location -LiteralPath $Proj
+$PromptCanaryFound = $false
+$PromptHeadingFound = $false
+codex debug prompt-input | ForEach-Object {
+  $PromptLine = [string]$_
+  if ($PromptLine.Contains($DeliveryCanary)) { $PromptCanaryFound = $true }
+  if ($PromptLine.Contains($VerifiedHeading)) { $PromptHeadingFound = $true }
+}
+$PromptCanaryFound
+$PromptHeadingFound
 ```
 
-**Expect:** `True`. This is the probe form this repository already documents at
+**Expect:** `True`, `True` — the collision-proof canary and one real row-3 section heading. This
+is the probe form this repository already documents at
 `documentation/codex-instruction-delivery.md`, and it is decisive because it tests the bytes
-actually delivered rather than the model's answer. Substitute any `##` heading the scratch
-project's `AGENTS.md` genuinely carries.
+actually delivered rather than the model's answer. The random token was proved absent before it
+was added and unique to this project's `AGENTS.md`, so a base, global or ancestor instruction file
+cannot satisfy the search accidentally.
 
-**What Step 108 did and did not verify here.** The `Select-String -SimpleMatch … -Quiet` half
-was exercised in Windows PowerShell 5.1 and discriminates (`True` on input containing the
-heading, empty on input without it), and `codex` resolves on `PATH`. The full command was
-**deliberately not run** by Step 108: it is Step 109's action, it reaches the Codex backend,
-and per the delivery doc it re-stamps three files under the Codex home — a side effect this
-step has no reason to cause.
+**What Step 108 did and did not verify here.** The two-boolean stream predicate was exercised in
+Windows PowerShell 5.1 against controlled input and requires both strings independently, and
+`codex` resolves on `PATH`. The full command was **deliberately not run** by Step 108: it is Step
+109's action, it reaches the Codex backend, and Codex-home background churn makes individual
+cache changes unattributable. Controlled reproductions observed no project-directory write and
+no persisted `-c` override; no per-invocation Codex-home file count is published.
 
-**Record the boolean and the heading list only — never the full prompt-input dump.** That
+**Record both booleans, the exact heading and the canary — never the full prompt-input dump.** That
 payload also carries Codex's base instructions and any global instruction content under the
 Codex home, so publishing it verbatim publishes more than the project. Redact any path to
 `<scratch-home>` / `<scratch-project>`.
 
 - Observed: *(operator)*
 
-### Claude — the weaker check, and it is labeled as such
+### Claude — fresh-session import check
 
 The `@AGENTS.md` import inside the `CLAUDE.md` pointer must resolve and expand. This is the
-harder half to instrument honestly, and this repository documents no probe for it. Two
-instruments, strongest first:
-
-1. **Payload-level (preferred).** Use the session's own context inspection (`/context`) to
-   confirm `AGENTS.md` appears in the loaded set. This is the analogue of the Codex probe:
-   it grades what was delivered, not what the model said.
-2. **Nonce canary (fallback, weaker).** Put a random token in `AGENTS.md` that appears nowhere
-   else in the loaded chain, then ask the session to repeat it verbatim. A model cannot guess a
-   random nonce, so reproducing it is real evidence of delivery — but absence is *not* proof of
-   non-delivery, so this instrument can confirm and cannot refute.
+harder half to instrument honestly. Close the row-3 writer session and start a new
+delivery-only `claude --setting-sources project` session from the validated root. Before
+invoking a skill or opening either instruction file through a tool, use `/context` to confirm
+the host reports `AGENTS.md` in the loaded project-instruction set and, if it exposes source
+content, the same `$DeliveryCanary` inside that source.
 
 **Do not grade this row by asking the model a question about the project and judging the
 answer.** This repository's own delivery doc rules that out: "a model can answer plausibly
 with no instruction file delivered at all, so the answer is not evidence and the prompt
 payload is."
 
-**Honest limitation, recorded rather than papered over:** neither instrument above was
-executed by Step 108, and the document's own hazard statement applies — an import that fails
-to expand looks identical to success in the pointer file itself. If neither instrument is
-available in the operator's session, mark this check **NOT MECHANICALLY VERIFIED** rather than
-PASS, and say so in § 2.4.
+**Honest limitation, recorded rather than papered over:** this instrument was not executed by
+Step 108, and an import that fails to expand looks identical in the pointer file itself. If
+payload inspection is unavailable, mark this check **NOT MECHANICALLY VERIFIED**, not PASS.
 
-- Instrument used: *(operator)*
-- Observed: *(operator)*
+- Fresh-session `cwd`: *(operator)*
+- `/context` source/canary observation: *(operator)*
 
 ## 2.4 Behavioral differences and operator notes
 
@@ -802,4 +1106,12 @@ gap against the plan.
 
 ## 2.5 Step 109 verdict
 
-*(operator)*
+**BLOCKED BEFORE GRADING (Step 108 closeout).** The accepted Step 109 asks for real named-skill
+behavior, but neither current core supplies a safe instruction-file-only UAT mode and a normal
+`repo-update` cannot safely reach Step 7 in this outside-git fixture. Issue #153 must record either
+a core-supported mode or a deliberate plan amendment accepting operator-scoped named-skill
+subsection overrides. Until then every Observed/Verdict cell stays blank, no host command in § 2
+runs, and this is not a D10 failure.
+
+- Resolution selected: *(operator)*
+- Operator UAT verdict after resolution: *(operator)*
