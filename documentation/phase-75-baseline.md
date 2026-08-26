@@ -89,8 +89,8 @@ variance warning above still applies, and nothing gates on these timings.
 
 ### Re-measured 2026-08-19 (Phase CP pass 2, Steps 6–8) — SUPERSEDED by pass 3 below
 
-> **Superseded 2026-08-20.** The current figure is **1335 passed / 1 skipped** — see
-> *Re-measured 2026-08-24 (Phase IS recovery gate)* below. The pass-2 numbers
+> **Superseded 2026-08-26.** The current figure is owned by
+> *Re-measured 2026-08-26 (Phase IS Step 107 gate)* below. The pass-2 numbers
 > below are retained as the dated measurement they were, not as today's suite.
 
 The pass-2 DONE-gate measurement, taken on merged `main` carrying the Step 8 payload:
@@ -121,8 +121,8 @@ on 1318/1, and that pair was the current figure until pass 3 superseded it.
 
 ### Re-measured 2026-08-20 (Phase CP pass 3, Steps 9–10) — SUPERSEDED by the 2026-08-24 recovery gate below
 
-> **Superseded 2026-08-24.** The current figure is **1335 passed / 1 skipped**, now measured
-> at `c6333c3` — see *Re-measured 2026-08-24 (Phase IS recovery gate)* below. The pass-3
+> **Superseded 2026-08-26.** The current figure is owned by
+> *Re-measured 2026-08-26 (Phase IS Step 107 gate)* below. The pass-3
 > numbers below are retained as the dated measurements they were, not as today's suite.
 
 | Command | Passed | Failed | Skipped | Provenance |
@@ -163,11 +163,11 @@ in one afternoon. Budget for the high end, and do not treat any single figure he
 benchmark or use these timings to detect a performance regression — they are too noisy
 for that, and nothing in this phase depends on them.
 
-### Re-measured 2026-08-24 (Phase IS recovery gate, at `c6333c3`) — CURRENT
+### Re-measured 2026-08-24 (Phase IS recovery gate, at `c6333c3`)
 
 | Command | Passed | Failed | Skipped | Provenance |
 |---|---|---|---|---|
-| `python -m pytest` (DONE gate) | **1335** | 0 | **1** | **CURRENT** — recovery gate at `c6333c3`; 2:04:30, detached with an exit-code sentinel, fresh boot, uninterrupted; summary retained at `documentation/findings/phase-is-recovery-gate-c6333c3.txt` |
+| `python -m pytest` (DONE gate) | **1335** | 0 | **1** | superseded as current by the 2026-08-26 Step 107 gate below — recovery gate at `c6333c3`; 2:04:30, detached with an exit-code sentinel, fresh boot, uninterrupted; summary retained at `documentation/findings/phase-is-recovery-gate-c6333c3.txt` |
 
 Collection was **1336 items**, unchanged. The count is the same **1335 / 1** as the
 `2462afd` row it supersedes, now measured two commits later — through `b713ea6`
@@ -207,6 +207,17 @@ Wall clock, as corroboration and not proof: 2:04:30 here against 3:00:00 and 3:1
 the two reds on the same commit, and against 2:27:03 for the identical 1335/1 count at
 `2462afd`. That is consistent with #156's page-fault-stall reading. The variance warning
 above still stands, and nothing gates on these timings.
+
+### Re-measured 2026-08-26 (Phase IS Step 107 gate, at `d4c88ee`) — CURRENT
+
+| Command | Passed | Failed | Skipped | Provenance |
+|---|---|---|---|---|
+| `python -m pytest` (DONE gate) | **1341** | 0 | **1** | **CURRENT** — Step 107 gate at `d4c88ee`; 2:27:23, detached with an exit-code sentinel, uninterrupted; summary retained at `documentation/findings/phase-is-gate-d4c88ee.txt` |
+
+Collection was **1342 items**. This is **+6 passed** against the pre-Step-107 owner figure
+of 1335 passed / 1 skipped, so it clears the non-regression comparison before this owner
+is updated. It also matches the earlier Steps 104–106 shared gate at `dc21c9e`: Step 107's
+documentation-only payload moved neither the pass count nor the one known skip.
 
 ### The three failures this baseline is clean of
 

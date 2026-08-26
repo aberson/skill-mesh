@@ -778,7 +778,7 @@ mechanism `test_autofix_marker_single_owner.py` uses.
 - **Produces:** the vendored measurement file; the inverted shape documented in the authority map and the contract; updated count owner
 - **Done when:** the measurement and recipe are verifiable from inside this repository with no out-of-tree link; the authority map and the contract both describe the inverted shape; the legacy-drift decision cites its record; the repo-root `python -m pytest` was measured, compared against the pre-step recorded count, and the owner then updated to the new figure
 - **Depends on:** 106
-- **Status:** NOT STARTED
+- **Status:** DONE (2026-08-26)
 
 ### Step 108: Build and install into a scratch home
 - **Problem:** Editing a core changes nothing invokable — this repository is the canonical source, not an installed tree, and the installed `<dev-root>/.claude/skills/plan-init/core.md` is a separate 26,477-byte copy against the canonical 26,657. Without this step, Step 109 would exercise the OLD behavior and report PASS. Build all three profiles and install the claude profile into a **disposable scratch home** (never the operator's real home), then verify the emitted core actually carries the new contract.
