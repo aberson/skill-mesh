@@ -9,9 +9,10 @@
 
 # Citation review — evidence-check one LLM-facing artifact
 
-Review ONE scanned LLM-facing artifact (a rule, a skill, a memory, a `CLAUDE.md`, a plan) through
-the Citation Needed calibrated pipeline: extract each distinct decision, cite it, classify it, score
-it, and render a breakdown. Invoke as `/citation-review <workspace-relative-path> [--calibrate]`.
+Review ONE scanned LLM-facing artifact (a rule, a skill, a memory, a CLAUDE.md or AGENTS.md,
+a plan) through the Citation Needed calibrated pipeline: extract each distinct decision, cite it,
+classify it, score it, and render a breakdown. Invoke as
+`/citation-review <workspace-relative-path> [--calibrate]`.
 
 Run from the coding-root workspace. **The Citation Needed CLI is the only database writer** — this
 skill never opens the database directly and never re-implements scoring, quote verification, or

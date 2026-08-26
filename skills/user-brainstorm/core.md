@@ -151,7 +151,7 @@ Every investigation file uses this exact structure:
 
 Each sub-agent's prompt instructs it to read (whatever exists in the workspace):
 
-- Project root `CLAUDE.md` if present.
+- Project root instruction file (CLAUDE.md or AGENTS.md) if present.
 - Rule files under `.claude/rules/*.md` if the project has them.
 - Workspace memory index (typically at `<workspace-memory>/MEMORY.md`) and any `feedback_*.md` / `project_*.md` files it points to that look topic-relevant.
 - `SKILL.md` files under `.claude/skills/<name>/` for skills clearly relevant to the topic.

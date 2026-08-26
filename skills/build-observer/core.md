@@ -54,8 +54,8 @@ proposal-only skill's job.
 
 ### 3. Read the project's own documentation
 
-In order of preference, read whichever exist: `README.md`, `CLAUDE.md`, `plans/plan.md` (or
-`docs/*-plan.md`). Pull out, verbatim or close to it:
+In order of preference, read whichever exist: `README.md`, the project's instruction file
+(CLAUDE.md or AGENTS.md), `plans/plan.md` (or `docs/*-plan.md`). Pull out, verbatim or close to it:
 
 - the one- or two-sentence **mission** (for the blurb / card);
 - **documented guarantees or invariants** — a "Design decisions" section, a bulleted list of hard

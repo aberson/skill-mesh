@@ -58,7 +58,7 @@ Investigate <PROJECT_NAME> at <PROJECT_DIR> to identify 2-3 specific /deep-resea
 Background from workspace memory: <MEMORY_LINE — the one-line MEMORY.md entry, or "not in memory" if absent>
 
 Read in this order (stop when you have enough context — EXCEPT item 5, which is never skippable):
-1. <PROJECT_DIR>/CLAUDE.md — stack, commands, known gotchas
+1. <PROJECT_DIR>/CLAUDE.md or AGENTS.md — stack, commands, known gotchas
 2. <PROJECT_DIR>/documentation/master_plan.md or plan.md — current phase/step status
 3. git -C "<PROJECT_DIR>" log --oneline -15 — recent work
 4. Any open investigation docs under <PROJECT_DIR>/documentation/investigations/

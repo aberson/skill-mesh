@@ -44,7 +44,7 @@ Depth knob: `maximal` = full KB + 4-5 notebooks + standalone examples + full exe
 Before dispatching, gather the inputs the agents need:
 
 - **Canonical-papers list.** Assemble a vetted list of real, well-known papers for the topic. Format: `Author, Year` only. Include an arXiv ID only if you are absolutely certain of it AND mark it explicitly as `(verified)` — e.g. `Kingma & Welling, 2013 (verified: arxiv:1312.6114)`. If uncertain, omit the ID entirely. The seminal-papers agent gets this verbatim so it never fabricates citations.
-- **Project applications.** Read the `CLAUDE.md` of the user's active workspace projects relevant to the topic (e.g. Alpha4Gate, toybox, sandtable, void_furnace, b2_project_goblin). The seed-ideas agent gets these paths + your notes so applications are concrete and real.
+- **Project applications.** Read the instruction file (CLAUDE.md or AGENTS.md) of the user's active workspace projects relevant to the topic (e.g. Alpha4Gate, toybox, sandtable, void_furnace, b2_project_goblin). The seed-ideas agent gets these paths + your notes so applications are concrete and real.
 - **Notebook plan.** Decide the 3-5 notebooks: order them toy/intuition (numpy-only, always runs) -> from-scratch -> realistic-but-tiny -> advanced concept. Write a one-line spec per notebook (what it shows, what graphic it produces, whether it needs torch).
 
 ### 4. Dispatch sub-agents in waves
@@ -101,7 +101,7 @@ Write ONE markdown file at <ABS-PATH>/<FILE>.
 
 Topic: "<TOPIC>". This file is the <ROLE> (e.g. "essentials", "seminal papers", "seed ideas").
 
-READ for grounding (don't invent): <repo CLAUDE.md; for seed-ideas, the listed project CLAUDE.md paths; for seminal-papers, USE THE VETTED LIST BELOW VERBATIM>.
+READ for grounding (don't invent): <repo CLAUDE.md or AGENTS.md; for seed-ideas, the listed project instruction-file paths (CLAUDE.md or AGENTS.md); for seminal-papers, USE THE VETTED LIST BELOW VERBATIM>.
 
 <for papers-seminal.md: VETTED CANONICAL PAPERS (use these, do not add ids you are unsure of):
 - <Author Year — Title — arxiv id if certain> ...>
@@ -158,7 +158,7 @@ CONSTRAINTS: runs headless on CPU in seconds (tiny); ASCII-only print(); only de
 - **No fabricated references.** Seed the seminal-papers agent with a vetted list; instruct author+year over uncertain ids.
 - **Tiny + fast** — everything runs headless on CPU in seconds, or it doesn't ship.
 - **70/20/10 layout** — always the numeric-prefix folders.
-- **Ground seed-ideas in real projects** — read their CLAUDE.md; generic "you could use this for X" is the failure mode.
+- **Ground seed-ideas in real projects** — read their CLAUDE.md or AGENTS.md; generic "you could use this for X" is the failure mode.
 - **No emojis. Terse reference tone.**
 
 ## Limitations

@@ -30,8 +30,15 @@ and remains available for non-session/offline use.
   still works, with less context).
 - `uv sync` has been run in the `b2_project_goblin` directory (installs the `goblin`
   console script + deps).
-- The target project is a direct child of the dev workspace root and has a `CLAUDE.md`
-  and a discoverable plan doc (grounding fails loud otherwise).
+- The target project is a direct child of the dev workspace root, has a discoverable
+  plan doc, and has a SUBSTANTIVE project instruction file — CLAUDE.md or AGENTS.md —
+  under the name this run grounds on. Existence is not the test: a pointer to the
+  sibling file does not satisfy this, and a substantive file under the other name
+  does not rescue it. On an inverted project, confirm which name the installed
+  `goblin` reads before relying on it. For the classification rules
+  see the Instruction-file contract in plan-init/core.md
+  ([`../plan-init/core.md`](../plan-init/core.md)); this core applies it by citation
+  and deliberately does not restate it.
 
 ## How to invoke
 
@@ -99,9 +106,9 @@ a DISTINCT pipeline with its own triage (no 4-axis scores). See **What it does**
 
 ### `--small` / `--big` (the suggestion pipeline)
 
-1. **ground** — validate the project arg, read its real CLAUDE.md + plan + open issues +
-   memory atoms. All fetched content is enveloped as untrusted DATA (prompt-injection
-   defense) before any model sees it.
+1. **ground** — validate the project arg, read its real CLAUDE.md or AGENTS.md + plan +
+   open issues + memory atoms. All fetched content is enveloped as untrusted DATA
+   (prompt-injection defense) before any model sees it.
 2. **generate** — build one generation prompt (`goblin suggest --export-prompts`), then
    call ONE `agent()` (session path) or `claude -p` (CLI fallback). Parse the model's
    JSON array into candidates. The prompt's instruction framing branches on the mode:

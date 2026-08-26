@@ -141,7 +141,7 @@ When the action is a UI button-press but the *consequence* is recorded in the DB
 
 If the agent setup or verify is non-trivial, the rewritten step may include short shell blocks. Keep them copy-pasteable AND executable by `/user-uat` (the `--exec` hand-off target — Step 5.5).
 
-**Before writing any shell block, determine the target shell from the project's CLAUDE.md or workspace instructions.** Shell syntax must match the runtime environment:
+**Before writing any shell block, determine the target shell from the project's CLAUDE.md or AGENTS.md, or from the workspace instructions.** Shell syntax must match the runtime environment:
 - **Windows / PowerShell (default in many workspaces):** `curl.exe` not `curl` (`curl` aliases to `Invoke-WebRequest` and rejects standard curl flags); backtick (`` ` ``) for line continuation; `$env:VAR` not `$VAR`; `NUL` not `/dev/null`; `ConvertFrom-Json` instead of `python -m json.tool` when piping JSON. **`&&` and `||` chain operators are parser errors in PowerShell 5.1** — split into separate commands or use `; if ($?) { ... }` for conditional chaining; never put multiple install/setup commands in one block with `&&`. For Python projects managed with `uv`: use `uv pip install` not bare `pip` — `pip` is typically not on PATH in uv environments. See `.claude/rules/windows-shell.md` for the full landmine list.
 - **bash / POSIX:** standard syntax, but on Windows hosts `gh.exe` and other native tools may not resolve POSIX paths — write temp files under `$TEMP` or an absolute Windows path.
 
