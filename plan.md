@@ -173,11 +173,22 @@ Round 5 in § 12 of the phase plan:
    Phase IS park after the shared gate and the next window pivot to the utility track. The operator
    redirected on 2026-08-26, after the gate came back green: **the next step is Phase IS Step 107**,
    via `/build-phase --plan documentation/instruction-file-symmetry-plan.md --resume 107`. The
-   utility track is deferred behind Steps 107–109, not cancelled — when it resumes,
-   `<dev-root>/documentation/utility-hookup-plan.md` still needs a plan-review refresh first (its
-   prerequisite, host-parity Step 65, is DONE 2026-08-13 and it predates the codex adapter catalog),
-   then its Step 4 (installer current-byte authority), which unblocks host-parity Step 70 and utility
-   wiring Steps 6–23.
+   utility track is deferred behind Steps 107–109, not cancelled.
+   **Updated 2026-08-26 — the deferred track's two prerequisites are now BOTH already satisfied, so
+   when it resumes it resumes further along than this row assumed:**
+   - The **plan-review refresh has RUN.** `<dev-root>/documentation/utility-hookup-plan.md` went
+     through plan-review + plan-wrap (verdict **READY**, 0 blockers / 0 gaps) and `/repo-sync`
+     re-derived issues #399–#418 plus umbrella #395 in `aberson/coding-root`. Two blockers were
+     found and fixed, and the codex-catalog staleness this row names is resolved (new D13/D14).
+   - Its **Step 4 (installer current-byte authority) was already built** — closed as **#116** on
+     2026-08-18. It is not pending and nothing is dispatched for it. Host-parity Step 70's stale
+     `BLOCKED` precondition and the matching `OPEN BLOCKER` risk row were retired accordingly in
+     `documentation/host-parity-repair-plan.md`, so **Step 70 (#101) is now unblocked** and is the
+     remaining gate on that track.
+   - That plan was also renumbered (a Step 4 was inserted): its wiring work is **Steps 6–24**, not
+     6–23, and **Step 5 is a `Type: wait` operator-only gate** — a `DEV_UTILITIES_ROOT` bootstrap
+     plus a full host restart, which cannot be dispatched. A resuming session picks up at
+     `--resume 6` only after that is done by hand.
 
    Step 107 is well-placed to run next on its own merits: its `Done when` requires measuring the
    repo-root suite, comparing it against the count recorded *before* the step, and only then writing

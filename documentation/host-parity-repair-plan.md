@@ -636,9 +636,18 @@ a test written to pass — the codifying-test-diff anti-pattern. Instead Step 63
 
 <!-- autofix-applied: 2026-08-09 -->
 ### Step 70: Release-candidate rehearsal against a throwaway home
-- **PRECONDITION ADDED 2026-08-12:** BLOCKED until the ordinary-install customized-marker overwrite
-  recorded in Step 65's new PRE-LIVE prerequisite is fixed and regression-tested. A release rehearsal
-  that runs the known-destructive installer without first closing that defect is not valid evidence.
+- **PRECONDITION ADDED 2026-08-12 - RESOLVED 2026-08-26. This step is UNBLOCKED.** The
+  ordinary-install customized-marker overwrite recorded in Step 65's PRE-LIVE prerequisite was fixed
+  and regression-tested: issue **#116** ("Harden installer destructive authority with installed-byte
+  hashes") landed on `main` and CLOSED 2026-08-18. Contract at `tools/install-skill-mesh.ps1:40-66`;
+  `owned_file_hashes` enforced at `:927`, `:944`, `:1006`, `:1083`, `:1166`, `:1195`; `created_dirs`
+  is audit-only and uninstall deletes no directory (`:64-66`, `:1277`). All four destructive paths
+  carry named regression tests in `tests/distributions/test_distributions.py` - routine overwrite
+  `:2103`, stale removal `:2177`, normal uninstall `:2200`, corrupt-ledger fallback `:2468` and
+  `:2869` - plus same-dist self-seed `:2117`, forced-mismatch external backup `:2136`,
+  `-ForceShared` scope `:1852`/`:1876`/`:2004`, restorability `:1911-1944`, clean upgrade
+  `:2087`/`:2659`, old-shape ledger `:2514`, and `created_dirs`-never-authorizes-deletion
+  `:2237-2240`/`:2779-2895`. The rehearsal may now run against the repaired installer.
 - **Problem:** Every prior step is verified in-repo. Nothing has yet proved that a *clean consumer home* — one with no preserved legacy `_shared/` to fall back on — receives a self-contained skill tree. This is the producer→consumer smoke gate for the whole phase
 - **Type:** code
 - **Issue:** #101
@@ -662,9 +671,12 @@ a test written to pass — the codifying-test-diff anti-pattern. Instead Step 63
 
 <!-- autofix-applied: 2026-08-09 -->
 ### Step 71: Cut the live consumer home over and hand off to Phase 8
-- **PRECONDITION ADDED 2026-08-12:** BLOCKED until both Step 70 passes and the ordinary-install
-  customized-marker overwrite recorded under Step 65 is fixed and regression-tested. No live install
-  is authorized while an ordinary reinstall can erase customized marker-bearing bytes without backup.
+- **PRECONDITION ADDED 2026-08-12 - PARTIALLY RESOLVED 2026-08-26.** The installer half is closed:
+  the ordinary-install customized-marker overwrite was fixed and regression-tested by **#116**
+  (CLOSED 2026-08-18; evidence enumerated under Step 70 above), so an ordinary reinstall can no
+  longer erase customized marker-bearing bytes without an explicit force plus an external backup.
+  **The Step 70 half still stands** - this step remains blocked until Step 70 itself records PASS.
+  No live install is authorized before that.
 - **Problem:** Every step up to here verifies in-repo or against a throwaway home. The two trees that actually exist — `<user-home>/.claude/skills` and `<coding-root>/.github/skills` — still carry the 43 + 18 dangling references this phase exists to eliminate, so without this step Phase 7.5 ships a repo fix that never reaches the machine. Re-install both profiles into the live home under the decided take-ownership policy, confirm both native hosts still resolve, and record the Phase 8 run order
 - **Type:** operator
 - **Issue:** #102
@@ -697,7 +709,7 @@ a test written to pass — the codifying-test-diff anti-pattern. Instead Step 63
 | **DECIDED — `_shared` collision in the live home** | The real consumer home holds 43 marker-less `_shared/` files and 7 collide by name with Step 64's payload, so the first post-Step-64 install throws "REFUSING to install" and writes nothing | **Documented `-Force` take-ownership** (operator, 2026-08-09), gated on Step 64's four guardrails: backup-with-hashes, scope limited to `_shared/`, the other 36 files byte-unchanged, and marker+`owned_files` proven after install. Step 70 rehearses it against a pre-seeded home |
 | **DECIDED — `judge-ui/calibration-notes.md`** | Manifest-declared (`:378-379`), absent from `git ls-files`, sole copy living in the installed GPT tree — and that tree is what `-Force` take-ownership is about to write to | **Vendor it, rescued in Step 62** before any forced install runs. The manifest entry and `test_manifest_contract.py:282` both stay |
 | **DECIDED — Phase 8 run order + the live home** | Phase 8's minted issues collide on four files, and no step re-installed into the two trees that actually exist | **Step 71 added** (`Type: operator`): live cutover, host acceptance in both hosts, and the written handoff — Phase 7.5 completes first, then Phase 8 Step 55 is re-read against the hermetic `gen_manifest.py`. Step 67's retarget preserves the semantic constants, so the collision drops to a same-file merge risk |
-| **OPEN BLOCKER — four installer paths trust customized marker-bearing bytes** | Routine overwrite, stale removal, normal uninstall, and corrupt-ledger fallback all treat a valid retained/forged header as destructive authority; ordinary overwrite was measured replacing consumer-customized bytes at exit 0 with no backup on 2026-08-12 | Separate installer authority-model repair before Steps 70/71: persist installed hashes and require current-byte identity for overwrite/stale/uninstall, otherwise refuse or require explicit backed-up adoption; corrupt-ledger fallback must fail closed or quarantine recoverably. Step 65 remains scoped to migration retirement |
+| **~~OPEN BLOCKER~~ — RESOLVED 2026-08-26 — four installer paths trusted customized marker-bearing bytes** | Routine overwrite, stale removal, normal uninstall, and corrupt-ledger fallback all treat a valid retained/forged header as destructive authority; ordinary overwrite was measured replacing consumer-customized bytes at exit 0 with no backup on 2026-08-12 | Separate installer authority-model repair before Steps 70/71: persist installed hashes and require current-byte identity for overwrite/stale/uninstall, otherwise refuse or require explicit backed-up adoption; corrupt-ledger fallback must fail closed or quarantine recoverably. Step 65 remains scoped to migration retirement. **CLOSED by #116 (CLOSED 2026-08-18):** all four paths now require the current bytes to equal the recorded `owned_file_hashes` entry; a legacy/hashless entry grants no destructive authority; a corrupt ledger deletes nothing; and `created_dirs` is audit-only so uninstall removes no directory. Per-path regression coverage and the Step 70/71 precondition updates are recorded above |
 | Missing `**Files:**` lines | No step carries a `**Files:**` field; `build-phase/core.md:213` reads it to flag parallelizable step pairs, and Steps 64/66/67 all touch `build-distributions.ps1`, `_shared/`, and `test_distributions.py` | Add a `Files:` line per step — load-bearing for the three overlapping steps above |
 | **Open** | `utility-hookup-plan.md` needs a `/plan-review` pass before `--resume 5`: its `:line` anchors all point into the deleted `.claude/skills-gpt/` tree, its Done-whens say "suite green" without naming suites (D6), and `session-wrap/core.md` is edited by six steps, requiring sequential single-branch execution | Out of scope here; sequenced into the coding-root plan |
 
