@@ -75,7 +75,7 @@ does not reinterpret that evidence or revive its stopped experiment.
 | Phase CP Step 12 (#129) | disposition follows Step 11 | See its block in the delivery plan; the observatory-visibility question is being resolved against `dev-observatory/plans/utility-project-surfaces-plan.md` |
 | Phase CP Step M3 (#132) | PENDING (2026-08-20) — daily-use row only | The operator: a few genuine Codex-hosted sessions. Delta triage is DONE — 43 rows across 4 tables, 0 undisposed, 0 `fix-later` owed; the providers-doc gap was filed as #142 and is now CLOSED at `2462afd` (codex given first-class doc coverage; the host-discovery gate derives its provider set from `Get-SkillMeshDiscoveryRoots` instead of hand-listing two). Evidence: `documentation/parity-deltas.md` § M3 checks |
 | Phase CP Step M4 (#133) | COMPLETE (2026-08-20) — PASS | Nothing — codex arm reinstalled clean (125 files; 0 stale, 0 unledgered) and all seven observatory locators verified `unwired` on the rendered surface, before and after. The claude and gpt `-Force` arms were deliberately not run. Evidence: `documentation/parity-deltas.md` § M4 checks and § Scope of the M4 PASS |
-| Phase IS (#143) | BUILDING (2026-08-26) — 4 of 10 steps built (Step 103 / #147 at `80107ba`) | The build, which must run on Claude Code: `/build-step` is a recorded `blocker`/`wontfix` on Codex (no isolated fresh-context primitive), so a Codex `/build-phase` halts at Step 100. Planned, reviewed (22 Blockers), wrapped (9 Blockers), redlined and synced; steps 100–109 are #144–#153. Authority: `documentation/instruction-file-symmetry-plan.md` |
+| Phase IS (#143) | BUILDING (2026-08-26) — 7 of 10 steps built (Step 106 / #150 at `dc21c9e`; 104–106 flipped DONE on one shared repo-root gate, `1341 passed / 1 skipped`) | The build, which must run on Claude Code: `/build-step` is a recorded `blocker`/`wontfix` on Codex (no isolated fresh-context primitive), so a Codex `/build-phase` halts at Step 100. Planned, reviewed (22 Blockers), wrapped (9 Blockers), redlined and synced; steps 100–109 are #144–#153. Authority: `documentation/instruction-file-symmetry-plan.md` |
 | Legacy-migrator hardening (#138) | DEFERRED | Its own issue — Phase CP ships zero migrator delta by the option-3 decision of 2026-08-18 |
 | Goal NP live cutover | LOCKED | Approval 2 on the immutable deliverable after disposable rehearsal |
 | Provider expansion | PARKED | A later explicit Abraham decision must resume that track; Goal NP does not unlock it |
@@ -137,11 +137,29 @@ wider proposal's Phase 3 inverts instruction files across up to 32 repositories,
 catalog *write* those files — run one against an already-inverted project and it silently recreates
 the duplication the inversion exists to remove. Nothing may migrate until Phase IS lands.
 
-**Phase IS is 4 of 10 steps built as of 2026-08-26** at `80107ba`. Steps 100–103 are DONE and their
-issues (#144–#147) closed; steps 104–109 (#148–#153) are not started. Step 103 records the
+**Phase IS is 7 of 10 steps built as of 2026-08-26** at `dc21c9e`. Steps 100–106 are DONE and their
+issues (#144–#150) closed; steps 107–109 (#151–#153) are not started. Step 103 records the
 authoritative WRITE/READ/REFERENCE classification in § 4 of the phase plan — `WRITE=5 READ=9
 REFERENCE=13` over the 27 files under `skills/**` that name `CLAUDE.md`, against denominators of 54
 cores and 165 provider files.
+
+**Steps 104–106 flipped DONE together on one shared repo-root gate**: `1341 passed, 1 skipped` in
+2:16:29, exit 0, run detached at `dc21c9e` — exactly `+6` against the 1335 recorded in
+`documentation/phase-75-baseline.md`, which is Step 106's six new tests, with the skip count
+unchanged. Summary retained at `documentation/findings/phase-is-shared-gate-dc21c9e.txt`. Available
+memory sat between 1737 and 1864 MB for the whole run — continuously inside the band issue #156
+associates with spurious subprocess reds — and the run produced zero failures regardless, so #156
+remains a risk factor to check against, not a predictor.
+
+Step 104 repointed ten sites across seven cores; Step 105 gave every one of context-slim's 20
+`CLAUDE.md` occurrences an explicit keep-or-repoint verdict while preserving D9's `CLAUDE.md`-anchored
+ancestor walk byte-for-byte; Step 106 added
+`tests/package-integrity/test_instruction_contract_single_owner.py`, whose 21 assert lines were each
+proven RED against a planted defect. Two findings that outlived the steps are tracked separately:
+**#159** (the `goblin` and `citation-needed` CLIs hard-code `CLAUDE.md`, so two repointed skills
+cannot yet act on `AGENTS.md`), and the fact that **review-deep's calibration gate cannot run inside
+this repository** — `skill-mesh` carries no `evals/` tree, so `calibrate_judge.py` exits 1 here and
+the Step 106 deep review was run and reported as uncalibrated.
 
 **The two Step-106 carry-forwards are resolved — operator decisions of 2026-08-25**, recorded as
 Round 5 in § 12 of the phase plan:
@@ -151,12 +169,21 @@ Round 5 in § 12 of the phase plan:
    with an explicit resurrection condition. Issue #150 stays open at the narrowed scope.
 2. **Steps 104, 105, and 106 share one batched DONE gate**: iterate on `tests/package-integrity`,
    then a single repo-root `python -m pytest` after all three land flips all three DONE.
-3. **Park-and-pivot**: after the shared gate, Phase IS parks (Steps 107–109 / #151–#153 stay open,
-   not abandoned) and the next window pivots to the utility track —
-   `<dev-root>/documentation/utility-hookup-plan.md` gets a plan-review refresh (its prerequisite,
-   host-parity Step 65, is DONE 2026-08-13; it predates the codex adapter catalog), then its Step 4
-   (installer current-byte authority) is built, unblocking host-parity Step 70 and utility wiring
-   Steps 6–23.
+3. **Park-and-pivot — SUPERSEDED 2026-08-26 by an in-session operator instruction.** Round 5 had
+   Phase IS park after the shared gate and the next window pivot to the utility track. The operator
+   redirected on 2026-08-26, after the gate came back green: **the next step is Phase IS Step 107**,
+   via `/build-phase --plan documentation/instruction-file-symmetry-plan.md --resume 107`. The
+   utility track is deferred behind Steps 107–109, not cancelled — when it resumes,
+   `<dev-root>/documentation/utility-hookup-plan.md` still needs a plan-review refresh first (its
+   prerequisite, host-parity Step 65, is DONE 2026-08-13 and it predates the codex adapter catalog),
+   then its Step 4 (installer current-byte authority), which unblocks host-parity Step 70 and utility
+   wiring Steps 6–23.
+
+   Step 107 is well-placed to run next on its own merits: its `Done when` requires measuring the
+   repo-root suite, comparing it against the count recorded *before* the step, and only then writing
+   the new figure into `documentation/phase-75-baseline.md` — in that order, so the comparison is not
+   circular. The shared gate above supplies that measurement (`1341 passed / 1 skipped` against a
+   recorded 1335/1), so Step 107 inherits it rather than paying another 2h16m.
 
 The Goal NP recovery decision is **closed**. No Publication-8 approval is pending or will be sought.
 Do not run any Publication-8 `Preflight` or `Run`, and do not invoke

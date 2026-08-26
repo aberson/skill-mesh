@@ -736,7 +736,7 @@ mechanism `test_autofix_marker_single_owner.py` uses.
 - **Produces:** modified cores for every reader Step 103 proved broken
 - **Done when:** every core on Step 103's broken list names both files with the canonical phrasing; goblin-suggest's precondition fails loud on a POINTER; the verified-safe readers are unmodified; no core carries a designated probe literal; `python -m pytest tests/package-integrity` green as the iteration gate. **DONE gate (amended by operator 2026-08-25, batched with Steps 105 and 106):** this step flips DONE on the single repo-root `python -m pytest` run executed once, after Steps 104, 105, and 106 have all landed — green at or above the recorded count, skip unchanged, checkpoint naming it as the shared gate for all three steps
 - **Depends on:** 103
-- **Status:** NOT STARTED
+- **Status:** DONE (2026-08-26)
 
 ### Step 105: Make context-slim inversion-aware
 - **Problem:** `skills/context-slim/providers/claude.md` walks the `CLAUDE.md` ancestor chain (`:21, :23-24`), classifies sections (`:59-61`), and **writes** under `--apply` (`:166`). Provider-native, no `core.md`. On an inverted project it audits a pointer file and reports near-zero context cost — a false green. Per D9 **keep the CLAUDE.md-anchored ancestor walk** and change only what is read and appended to. The file names `CLAUDE.md` on **19 lines carrying 20 occurrences** (re-measured 2026-08-26; the plan's earlier figure of 16 was wrong — see § 4.2.4 finding 3), including `:3` (its emitted `description:` frontmatter) and `:5` (the `--project` default) — enumerate all of them, do not work from the four cited here. As an adapter it may not cite `<repo>/_shared/`; it carries D11's bounded cite phrase.
@@ -747,7 +747,7 @@ mechanism `test_autofix_marker_single_owner.py` uses.
 - **Produces:** modified context-slim adapter
 - **Done when:** **every `CLAUDE.md` occurrence in the file is enumerated and given an explicit keep-or-repoint verdict**; on an inverted project the audit reads and `--apply` appends to the content file; the ancestor-walk anchor is unchanged so `user-afterparty`'s parity holds; non-inverted behavior unchanged; the file carries no `<repo>/_shared/` citation and neither probe literal; `python -m pytest tests/package-integrity` green as the iteration gate. **DONE gate (amended by operator 2026-08-25, batched with Steps 104 and 106):** this step flips DONE on the single repo-root `python -m pytest` run executed once, after Steps 104, 105, and 106 have all landed — green at or above the recorded count, skip unchanged, checkpoint naming it as the shared gate for all three steps
 - **Depends on:** 100
-- **Status:** NOT STARTED
+- **Status:** DONE (2026-08-26)
 
 ### Step 106: The single-owner gate (write-surface gate deferred)
 - **Problem:** Nothing asserts instruction-file handling anywhere. **Scope trimmed by operator decision 2026-08-25** (§ 4.2.4 findings 10 and 11): the originally specified **write-surface gate** (`test_instruction_file_contract.py`) is **DEFERRED** to a future phase — after Steps 104/105 land it has zero live true positives, so as specified it cannot fail; see § 10 for the deferral record and resurrection condition. This step builds only the **single-owner gate** (`test_instruction_contract_single_owner.py`): modeled on `test_autofix_marker_single_owner.py` — the owner section exists and carries both D11 probe literals; each declared citer carries the bounded cite phrase; **no other file under `skills/**/*.md`, `_shared/**/*.md` or `documentation/**/*.md` carries either probe literal** (the sweep must include `_shared/`, which is also the only mechanical enforcement of Step 100's "no `_shared/` file was created"). The gate may not red on this repository's own root files (D5), and may not be worded as a restatement of `documentation/host-discovery.md:158-160`, which is the installer axis. **Known self-collision, found during Step 101 (2026-08-25) — do not rediscover this at build time.** This plan file is itself under `documentation/**` and quotes probe literal 1 *verbatim* inside D11's designated-probe-literals bullet — **locate both literals by grep, never by a line number: this plan's numbers shift on every edit and this citation has already gone stale three times** — so the sweep as specified reds on the plan. Probe literal 2 sits on the following line, **unbolded** inside backticks, so it collides only if the gate matches the bare sentence rather than the bolded literal the owner declares. Decide the rule explicitly and state it in the test: exempt this plan by path, or match the exact bolded literal and re-word the literal-1 line.
@@ -758,7 +758,7 @@ mechanism `test_autofix_marker_single_owner.py` uses.
 - **Produces:** the single-owner gate file
 - **Done when:** the single-owner gate is green; **every new assertion proven RED against a planted defect** — the owner section renamed, a citation deleted, a probe literal re-duplicated into a second file, and a `_shared/` file created carrying one (four proofs, each restored); `test_recovery_plan_hygiene.py` still passes; `python -m pytest tests/package-integrity` green as the iteration gate. **DONE gate (amended by operator 2026-08-25):** this step flips DONE on the same single repo-root `python -m pytest` run shared with Steps 104 and 105, executed after all three steps' edits land — green at or above the recorded count, skip unchanged, checkpoint naming it as the shared gate
 - **Depends on:** 101, 102, 104, 105
-- **Status:** NOT STARTED
+- **Status:** DONE (2026-08-26)
 
 ### Step 107: Vendor the measurement, document the shape, update the count owner
 - **Problem:** Create `documentation/codex-instruction-delivery.md` holding § 1's measurement table, the `codex-cli 0.147.0` pin, and the `codex debug prompt-input` reproduction recipe, so nothing load-bearing depends on an out-of-tree file. Document the inverted shape in `documentation/host-discovery.md` (the host-loading authority) and the adapter view in `documentation/architecture.md` (the contract). Record D7's accepted legacy drift citing `documentation/parity-deltas.md`. Then **measure the repo-root run first, compare against the count recorded in `documentation/phase-75-baseline.md` BEFORE this step, and only then write the new count into that owner** — in that order, so the comparison is not circular.
@@ -950,7 +950,44 @@ operator in-session after Steps 100–103 landed:
   refresh `<dev-root>/documentation/utility-hookup-plan.md` (stale prerequisites — host-parity
   Step 65 is DONE 2026-08-13; predates the codex adapter catalog) and build its Step 4, the
   installer current-byte-authority repair, which unblocks host-parity Step 70 and the entire
-  utility wiring sequence.
+  utility wiring sequence. **Superseded 2026-08-26 — see Round 6.**
+
+**Round 6 (build outcome + operator redirect, 2026-08-26)** — Steps 104, 105 and 106 built and
+DONE. Recorded because three things happened that the plan did not predict:
+
+- **The shared gate came back `1341 passed, 1 skipped`** in 2:16:29 at `dc21c9e`, exit 0 — exactly
+  `+6` on the 1335 recorded in `phase-75-baseline.md`, being Step 106's six new tests, skip count
+  unchanged. Summary at `documentation/findings/phase-is-shared-gate-dc21c9e.txt`. Available memory
+  stayed between 1737 and 1864 MB throughout, continuously inside issue #156's spurious-red band,
+  and the run was clean anyway.
+
+- **§ 6 D8's text is stale relative to the owner section Step 100 landed, and it cost an
+  iteration.** § 6 D8 defines SUBSTANTIVE as requiring "at least one `##` section heading";
+  `skills/plan-init/core.md:475-477` — the ONE owner, and authoritative — says that heading is "the
+  TYPICAL shape, **never a necessary condition**", SUBSTANTIVE being the complement of POINTER. A
+  Step 104 iteration transcribed § 6's wording into `goblin-suggest` and was rejected for
+  contradicting the owner. **Read the owner section, not § 6 D8, wherever the two differ**, and
+  treat § 6 D8 as historical narrative. Finding 2's "one source of truth" argument applies to this
+  plan's own prose.
+
+- **Two findings outlived the steps.** (a) Step 103 classified sites by reading skill *prose* and
+  never opened the source of the CLIs two of those skills drive: `goblin`'s
+  `grounding.py:293` hard-codes `project_dir / "CLAUDE.md"` and `citation-needed`'s
+  `discover.py:592` classifies only `filename == "CLAUDE.md"`, so `goblin-suggest` and
+  `citation-review` now name both files in prose that their tools cannot act on. Tracked as
+  **#159**; out of scope here (no step writes into a consumer project). A skill that delegates to an
+  external tool cannot be classified from its own prose alone — worth folding into how a future
+  instruction-file audit enumerates. (b) **`/review-deep`'s calibration gate cannot run in this
+  repository**: `calibrate_judge.py` resolves `review-deep/evals/golden/recorded_scores.json` and
+  `skill-mesh` carries no `evals/` tree at all, so it exits 1 here. Step 106's deep review was run
+  and reported as **uncalibrated** rather than pointed at the installed tree, per
+  `measurement-validity.md`'s rule that a fallback path is an abort condition, not a warning.
+
+- **Park-and-pivot superseded.** The operator redirected in-session on 2026-08-26 after the gate
+  returned: the next step is **Step 107**, not the utility track. Steps 107–109 run first; the
+  utility track is deferred behind them, not cancelled. Step 107 is well-placed regardless — its
+  `Done when` needs a repo-root measurement compared against the pre-step count before the owner is
+  updated, and the shared gate supplies exactly that.
 
 ---
 

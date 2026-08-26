@@ -1,0 +1,18 @@
+Phase IS shared DONE gate for Steps 104-106
+Commit: dc21c9e7620e1a7c632922015ff89c7bdb2f45fe  (dc21c9e, step 106 checkpoint)
+Command: python -m pytest   (repo root, no path argument -- the full suite)
+Started: 2026-08-26 06:14:25   Ended: 2026-08-26 08:30:55   Elapsed: 2:16:29
+Detached with an exit-code sentinel; exit 0.
+
+Result: 1341 passed, 1 skipped in 8189.65s (2:16:29)
+
+Baseline in documentation/phase-75-baseline.md was 1335 passed / 1 skipped.
+Delta is exactly +6, the six tests added by Step 106's single-owner gate
+(tests/package-integrity/test_instruction_contract_single_owner.py). Steps 104
+and 105 are prose-only and add no tests. Skip count unchanged at 1.
+
+Machine load during the run: available memory sampled every 120s stayed
+between 1737 and 1864 MB for the whole 2h16m -- continuously below the 2 GB
+floor that issue #156 associates with spurious subprocess-test reds. This run
+produced zero failures anyway, so the #156 band is a risk factor, not a
+guarantee of flakes. Memory samples retained in the run log.
