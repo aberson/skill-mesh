@@ -75,7 +75,7 @@ does not reinterpret that evidence or revive its stopped experiment.
 | Phase CP Step 12 (#129) | disposition follows Step 11 | See its block in the delivery plan; the observatory-visibility question is being resolved against `dev-observatory/plans/utility-project-surfaces-plan.md` |
 | Phase CP Step M3 (#132) | PENDING (2026-08-20) — daily-use row only | The operator: a few genuine Codex-hosted sessions. Delta triage is DONE — 43 rows across 4 tables, 0 undisposed, 0 `fix-later` owed; the providers-doc gap was filed as #142 and is now CLOSED at `2462afd` (codex given first-class doc coverage; the host-discovery gate derives its provider set from `Get-SkillMeshDiscoveryRoots` instead of hand-listing two). Evidence: `documentation/parity-deltas.md` § M3 checks |
 | Phase CP Step M4 (#133) | COMPLETE (2026-08-20) — PASS | Nothing — codex arm reinstalled clean (125 files; 0 stale, 0 unledgered) and all seven observatory locators verified `unwired` on the rendered surface, before and after. The claude and gpt `-Force` arms were deliberately not run. Evidence: `documentation/parity-deltas.md` § M4 checks and § Scope of the M4 PASS |
-| Phase IS (#143) | BUILDING (2026-08-25) — 2 of 10 steps built (Step 101 / #145 at `6ee2847`) | The build, which must run on Claude Code: `/build-step` is a recorded `blocker`/`wontfix` on Codex (no isolated fresh-context primitive), so a Codex `/build-phase` halts at Step 100. Planned, reviewed (22 Blockers), wrapped (9 Blockers), redlined and synced; steps 100–109 are #144–#153. Authority: `documentation/instruction-file-symmetry-plan.md` |
+| Phase IS (#143) | BUILDING (2026-08-26) — 4 of 10 steps built (Step 103 / #147 at `80107ba`) | The build, which must run on Claude Code: `/build-step` is a recorded `blocker`/`wontfix` on Codex (no isolated fresh-context primitive), so a Codex `/build-phase` halts at Step 100. Planned, reviewed (22 Blockers), wrapped (9 Blockers), redlined and synced; steps 100–109 are #144–#153. Authority: `documentation/instruction-file-symmetry-plan.md` |
 | Legacy-migrator hardening (#138) | DEFERRED | Its own issue — Phase CP ships zero migrator delta by the option-3 decision of 2026-08-18 |
 | Goal NP live cutover | LOCKED | Approval 2 on the immutable deliverable after disposable rehearsal |
 | Provider expansion | PARKED | A later explicit Abraham decision must resume that track; Goal NP does not unlock it |
@@ -129,6 +129,32 @@ M3 is `PENDING` on exactly one row — daily-use quality — which needs a few g
 Codex-hosted sessions and cannot be satisfied by re-reading the M1/M2 milestone runs it exists
 to backstop. Everything else M3 required is recorded and durable. Phase CP closes when that one
 row is graded; then `/repo-update` runs and #132, #133 (and the stale-open #131) close.
+
+**The active build is Phase IS (#143), not Phase CP.** Phase CP is parked on the single
+operator row M3 (#132) described above and cannot close until it is graded. Phase IS
+(`documentation/instruction-file-symmetry-plan.md`) is a **prerequisite**, not a follow-up: the
+wider proposal's Phase 3 inverts instruction files across up to 32 repositories, and skills in this
+catalog *write* those files — run one against an already-inverted project and it silently recreates
+the duplication the inversion exists to remove. Nothing may migrate until Phase IS lands.
+
+**Phase IS is 4 of 10 steps built as of 2026-08-26** at `80107ba`. Steps 100–103 are DONE and their
+issues (#144–#147) closed; steps 104–109 (#148–#153) are not started. Step 103 records the
+authoritative WRITE/READ/REFERENCE classification in § 4 of the phase plan — `WRITE=5 READ=9
+REFERENCE=13` over the 27 files under `skills/**` that name `CLAUDE.md`, against denominators of 54
+cores and 165 provider files.
+
+**Two carry-forwards need an operator decision before Step 106 (#150) runs**, recorded as findings
+10 and 11 in § 4.2.4 of the phase plan and deliberately not amended by the build:
+
+1. **The write-surface gate is unfalsifiable as specified.** It has zero live true positives, so a
+   predicate narrowed until its false-positive count reaches zero still passes all six planted-defect
+   proofs Step 106's `Done when` requires. Per-verb and far-marker proofs are needed for the gate to
+   prove anything.
+2. **Step 106's `Problem` contradicts its own `Done when`** — "report the measured false-positive
+   count *rather than asserting zero*" versus "the measured false-positive count … *is zero*".
+
+Amending an accepted plan's acceptance criteria is an operator call, so the build recorded both and
+stopped there.
 
 The Goal NP recovery decision is **closed**. No Publication-8 approval is pending or will be sought.
 Do not run any Publication-8 `Preflight` or `Run`, and do not invoke

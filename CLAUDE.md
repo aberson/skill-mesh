@@ -91,14 +91,22 @@ constants in `tools/gen_manifest.py` changes:
 python tools/gen_manifest.py
 ```
 
-**Editing any `skills/<name>/core.md` invalidates `documentation/release-candidate-report.md`.**
-That report records a SHA-256 per *emitted* artifact, and an emitted provider artifact embeds its
-core in full — so a one-line core edit moves the recorded hashes for that skill's
-`providers/*.md` rows. `tests/smoke/test_release_candidate_report.py` regenerates the report and
-diffs it, so a stale report is a hard red. It lives in the **smoke** suite, which a
-`tests/package-integrity` iteration gate never collects — meaning the failure surfaces only in the
-two-hour repo-root gate, hours after the edit that caused it. Regenerate in the same change as any
-core edit, before the gate, not after (Phase IS Steps 100 and 101 each paid for this):
+**Editing a *representative* skill's `core.md` invalidates
+`documentation/release-candidate-report.md`.** The report covers exactly the four skills named in
+`tests/fixtures/representative_skills.json` — one per family: `plan-init` (planning),
+`review-gauntlet` (review), `build-phase` (build-orchestration), `session-wrap` (session). It
+records a SHA-256 per *emitted* artifact, and an emitted provider artifact embeds its core in full,
+so a one-line edit to one of those four moves the recorded hashes for that skill's `providers/*.md`
+rows. Editing any other skill's core is a **no-op** for the report — verified at Phase IS Step 102,
+where `skills/repo-update/core.md` changed by +133/-9 and the regenerator produced no diff, because
+the report carries zero `repo-update` rows. Read the fixture, do not assume; it is the single source
+both the smoke scenarios and the generator consume.
+
+`tests/smoke/test_release_candidate_report.py` regenerates the report and diffs it, so a stale
+report is a hard red. It lives in the **smoke** suite, which a `tests/package-integrity` iteration
+gate never collects — meaning the failure surfaces only in the two-hour repo-root gate, hours after
+the edit that caused it. When you edit one of the four, regenerate in the same change, before the
+gate, not after (Phase IS Steps 100 and 101 each paid for this):
 
 ```
 python tests/smoke/gen_release_candidate_report.py

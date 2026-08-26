@@ -70,8 +70,8 @@ config override that does **not** persist:
   **3 name `AGENTS.md`** (`plan-feature`, `plan-merge`, `plan-review`); **3 of the 165 provider
   files name `CLAUDE.md`** (`context-slim/providers/claude.md`, `plan-init/providers/codex.md`,
   `judge-motion/providers/claude.md`).
-- **The seven-section contract is duplicated** in `skills/plan-init/core.md:446-458` and
-  `skills/repo-update/core.md:240-248`. **The two are NOT verbatim duplicates** — same bold
+- **The seven-section contract is duplicated** in `skills/plan-init/core.md:601-609` and
+  `skills/repo-update/core.md:342-348` (re-measured 2026-08-26; the ranges moved when Steps 100-102 landed). **The two are NOT verbatim duplicates** — same bold
   section names, different gloss, because one bootstraps and the other refreshes. Merging them
   would change behavior under cover of a move; § 3 forbids it.
 - **`_shared/` citation rules are asymmetric and restrictive.** Cores must cite as the literal
@@ -162,7 +162,7 @@ job is the Change Type column: create vs modify, per artifact.*
 |---|---|---|---|
 | `skills/plan-init/core.md` | modify | WRITE core **and** contract owner: the bootstrap block, its skip guard, the seven authored sections, the write itself, the report string, the scrapability constraint, the post-save handoff. Per-line anchors dropped — they moved when Steps 100/101 landed; § 4.2 row 8 carries the governing site | `grep -n 'CLAUDE\.md'` → **39** lines / **41** occurrences |
 | `skills/plan-init/providers/codex.md` | modify | `:11` names the bootstrapped `CLAUDE.md` as the file Codex writes | only provider file naming the written artifact |
-| `skills/repo-update/core.md` | modify | WRITE core. `:52`; **`:164`** stale-reference grep hardcoding `README.md CLAUDE.md documentation/*.md`; `:236-250` Step 7; `:400` report line; `:438` scrapability | `:164` missed by the round-1 audit |
+| `skills/repo-update/core.md` | modify | WRITE core. The `What this skill does` instruction-file item; the stale-reference grep that hardcoded `README.md CLAUDE.md documentation/*.md`; Step 7; the report line; the dev-observatory hook (preserved). Step 102 has landed, so locate each by name, not by line — its edit moved every anchor this row originally carried | the stale-reference grep was missed by the round-1 audit |
 | `skills/goblin-suggest/core.md` | modify | READ, breaks silently. `:33` is a **precondition**; a stub passes the existence check so the documented loud grounding failure never fires | `:13, :33, :102, :178` |
 | `skills/build-observer/core.md` | modify | READ, breaks. `:57` has no AGENTS.md arm | `:57` |
 | `skills/research-prospect/core.md` | modify | READ, breaks. `:61` baked into a dispatched sub-agent prompt | `:51, :61` |
@@ -739,7 +739,7 @@ mechanism `test_autofix_marker_single_owner.py` uses.
 - **Status:** NOT STARTED
 
 ### Step 105: Make context-slim inversion-aware
-- **Problem:** `skills/context-slim/providers/claude.md` walks the `CLAUDE.md` ancestor chain (`:21, :23-24`), classifies sections (`:59-61`), and **writes** under `--apply` (`:166`). Provider-native, no `core.md`. On an inverted project it audits a pointer file and reports near-zero context cost — a false green. Per D9 **keep the CLAUDE.md-anchored ancestor walk** and change only what is read and appended to. The file names `CLAUDE.md` at **16 sites**, including `:3` (its emitted `description:` frontmatter) and `:5` (the `--project` default) — enumerate all of them, do not work from the four cited here. As an adapter it may not cite `<repo>/_shared/`; it carries D11's bounded cite phrase.
+- **Problem:** `skills/context-slim/providers/claude.md` walks the `CLAUDE.md` ancestor chain (`:21, :23-24`), classifies sections (`:59-61`), and **writes** under `--apply` (`:166`). Provider-native, no `core.md`. On an inverted project it audits a pointer file and reports near-zero context cost — a false green. Per D9 **keep the CLAUDE.md-anchored ancestor walk** and change only what is read and appended to. The file names `CLAUDE.md` on **19 lines carrying 20 occurrences** (re-measured 2026-08-26; the plan's earlier figure of 16 was wrong — see § 4.2.4 finding 3), including `:3` (its emitted `description:` frontmatter) and `:5` (the `--project` default) — enumerate all of them, do not work from the four cited here. As an adapter it may not cite `<repo>/_shared/`; it carries D11's bounded cite phrase.
 - **Type:** code
 - **Issue:** #149
 - **Files:** skills/context-slim/providers/claude.md
@@ -911,7 +911,7 @@ Step 100 unaided. Material changes:
 - Minor: `repo-update:240-248` citation corrected (it had excluded section 7); `<repo>`/`<leaf>`
   noted as literal bytes; decision-ID legend added; Rail A glossed; Step 107's count update ordered
   non-circularly; `judge-motion/providers/claude.md:146` named alongside `tier-escalate`;
-  context-slim's 16 sites flagged against the 4 cited.
+  context-slim's 19 lines / 20 occurrences flagged against the 4 cited.
 
 **Round 3 (plan-redline)** — Publication 1 rendered beside this plan; the stable proposal
 locator and append-only Decision Inventory were added. The two choices already marked
