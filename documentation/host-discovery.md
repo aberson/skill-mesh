@@ -169,6 +169,53 @@ private `CLAUDE.md` or a personalized `AGENTS.md` (cutover plan §6, "Public pac
 owns mechanics; consumer owns private instructions"). No private workspace paths or
 policies belong in this document.
 
+### The inverted shape — content in `AGENTS.md`, `CLAUDE.md` as a one-line import
+
+A project may keep its instruction content in `AGENTS.md` and reduce `CLAUDE.md` to
+a single line, `@AGENTS.md`. This is a rearrangement **within** workspace
+instruction injection and nothing more: both files stay instruction adapters, neither
+gains a skill implementation or an enumeration of one, and no discovery root is
+affected. A project in the inverted shape is discovered exactly as before — the shape
+decides which file carries the prose, never which tree a host scans.
+
+Which file each of the two measured hosts opens differs, and that is the part this map
+owns: Claude Code reads `CLAUDE.md`, OpenAI Codex CLI reads `AGENTS.md`. Both
+reach the same content, by different routes, from one copy of it.
+
+Which delivery form actually carries content on which host — and therefore why the
+content sits in `AGENTS.md` rather than behind a pointer — is the measurement, not this
+map's to state. It is owned by
+[`codex-instruction-delivery.md`](codex-instruction-delivery.md), together with the
+version pin it was taken against and the read-only `codex debug prompt-input`
+reproduction, and is deliberately not restated here: a second carrier of those verdicts
+would silently keep the old answer the day a host changes.
+
+**GitHub Copilot CLI is not covered by that measurement.** It appears throughout this
+document as a discovery host, and this map's design authority records its
+instruction-loading behavior as version-dependent
+([`host-native-discovery-cutover-plan.md`](host-native-discovery-cutover-plan.md) §8),
+which is why the runtime-injection note above is worded as a possibility rather than a
+finding. Its behavior on this axis was not measured — so no claim about what it loads
+from the inverted shape may be read off this page.
+
+Whether a given project may be *put* into the shape, and which of the two files a
+lifecycle skill is permitted to write, is a separate normative contract with its own
+single owner: see the Instruction-file contract in plan-init/core.md
+([`../skills/plan-init/core.md`](../skills/plan-init/core.md)).
+
+Two axes stay apart across the whole arrangement, in the exact sense the top of this
+document sets out:
+
+- **A skill is still never found through an instruction file.** An inverted `AGENTS.md`
+  is a longer instruction adapter, not a registry; the discovery roots above remain the
+  only places a `SKILL.md` is found.
+- **The two are proven by different evidence, and neither substitutes for the other.**
+  That a project's instruction content reached a host is proven by the host's prompt
+  payload (on Codex, the JSON from `codex debug prompt-input`). That a skill tree was
+  discovered is proven by the captured `SKILL.md` path. A host that loaded the content
+  may have no profile installed, and an installed profile says nothing about whether
+  the content was delivered.
+
 ## Router dispatch — explicit, not implicit
 
 **The router is explicit, not implicit.** `runtime/skill-router.ps1`
@@ -208,6 +255,7 @@ installation contract (cutover plan §6, "Host binding is the normal path").
 | Which skill tree was discovered? | the captured `SKILL.md` path (`.claude/skills` for Claude, `.github/skills` for GPT, `.agents/skills` for Codex) | the model's output |
 | Which host wrote a discovered tree? | the generated file's provenance marker and the installer's ownership ledger (`inspect-host-install.ps1`) | the root's name — `.agents/skills` is the codex install target **and** a Copilot discovery root |
 | Are workspace instructions loaded? | the host's instruction-file convention (`CLAUDE.md` / `AGENTS.md`) | the presence of a skill implementation |
+| Did the project's instruction content actually reach the model? | the host's prompt payload (on Codex, `codex debug prompt-input`) — the row above says which file is read, only the payload says what arrived | a plausible model answer, or the file merely existing on disk |
 | Was a skill run cross-provider / headless? | an explicit `runtime/skill-router.ps1` invocation | native host discovery |
 
 A correct GPT model answer proves only the first row. A correctly installed GPT
@@ -223,5 +271,6 @@ correctly installed profile.
 - [`providers/claude.md`](providers/claude.md), [`providers/gpt.md`](providers/gpt.md),
   [`providers/codex.md`](providers/codex.md),
   [`providers/README.md`](providers/README.md) — per-host binding, discovery root, capabilities.
+- [`codex-instruction-delivery.md`](codex-instruction-delivery.md) — the vendored measurement behind the inverted instruction-file shape: the per-host delivery table, the version pin it was taken against, and the read-only reproduction.
 - [`host-native-discovery-cutover-plan.md`](host-native-discovery-cutover-plan.md) §2, §6, §8 — the design authority for this map.
 - [`../config/skill-manifest.json`](../config/skill-manifest.json) — the single source of truth for which skills are published and each skill's frontmatter `description`.

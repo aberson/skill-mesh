@@ -42,7 +42,8 @@ against `codex-cli 0.147.0` (`codex --version`).
 Consequence: **the file Codex reads must *be* the content.** `CLAUDE.md` carrying `@AGENTS.md`
 is the only shape that serves both hosts from one copy.
 
-**Reproduction** (read-only; runs no model session and writes nothing):
+**Reproduction** (runs no model session and writes nothing *in the project*; it is not
+side-effect-free — it refreshes Codex's own caches under the Codex home):
 
 ```
 cd <project-dir>
@@ -52,7 +53,15 @@ codex debug prompt-input
 Its JSON output contains the instruction text Codex would send. Grep it for a heading you
 expect (`## Stack`); absence means the content never reached the model. A one-invocation
 config override that does **not** persist:
-`codex debug prompt-input -c 'project_doc_fallback_filenames=["CLAUDE.md"]'`.
+`codex debug prompt-input -c "project_doc_fallback_filenames=['CLAUDE.md']"`.
+
+> **Corrected 2026-08-26 (Step 107).** This section previously claimed the reproduction
+> "writes nothing" and spelled the override with outer single / inner double quotes. Both
+> were wrong and were transcribed faithfully into Step 107's first iteration before review
+> caught them: the old spelling exits 1 in Windows PowerShell 5.1 (PS strips the inner
+> quotes; codex reports `invalid type: string "[CLAUDE.md]", expected a sequence`), and the
+> command does refresh Codex-home caches. `documentation/codex-instruction-delivery.md` is
+> now the vendored owner of this measurement; prefer it over this section.
 
 ---
 
@@ -988,6 +997,48 @@ DONE. Recorded because three things happened that the plan did not predict:
   utility track is deferred behind them, not cancelled. Step 107 is well-placed regardless — its
   `Done when` needs a repo-root measurement compared against the pre-step count before the owner is
   updated, and the shared gate supplies exactly that.
+
+**Round 7 (build outcome, 2026-08-26)** — Step 107 built and its code landed. Four things are
+recorded because the plan did not predict them:
+
+- **Steps 107 and 108 share one batched DONE gate**, authorized by the operator in-session on the
+  same reasoning as Round 5's batch: each step iterates on `tests/package-integrity` (~50s), and the
+  repo-root `python -m pytest` runs **once**, after both land. This also keeps Step 107's Done-when
+  non-circular in the order the step demands — measure, compare against the 1335 recorded in
+  `documentation/phase-75-baseline.md`, and only then write the new figure into that owner.
+
+- **Three of Step 107's review findings originated in § 1 of this plan, not in the build.** The
+  developer transcribed § 1 faithfully and inherited its defects: § 1 claimed the reproduction
+  "writes nothing" (false — measured, it refreshes Codex-home caches on every invocation; what is
+  true is that it writes nothing in the *project*), spelled the config override with outer-single /
+  inner-double quotes (**exits 1** in Windows PowerShell 5.1, this repository's declared floor —
+  PS strips the inner quotes and codex reports `invalid type: string "[CLAUDE.md]", expected a
+  sequence`), and writes `§ N` with a space where the rest of `documentation/` writes `§N` by
+  roughly 240:7. § 1 is corrected above; `documentation/codex-instruction-delivery.md` is now the
+  vendored owner. **A step that transcribes this plan inherits this plan's errors** — the same
+  lesson Round 6 recorded for § 6 D8, now with a second instance.
+
+- **Step 107 took three iterations, and the third was re-scoped rather than patched.** Iterations 1
+  and 2 each fixed every finding put to them (2 high + 10 medium, then all of them), but three of
+  iteration 2's five new findings sat *inside the hunk written to fix iteration 1's HIGH*. That is
+  build-step's oscillation trigger, so iteration 3 applied one invariant instead of more line
+  patches: **`architecture.md`, `host-discovery.md` and `codex-instruction-delivery.md` are CITERS
+  of the instruction-file contract, not its owner, so any clause whose ground truth lives elsewhere
+  must be a resolvable citation, never a local paraphrase** — because the single-owner gate probes
+  designated *literals*, not meaning, so a paraphrase carries no mechanical guard. Eight sites were
+  cut or converted; fourteen already-compliant ones were left alone. The deciding argument was that
+  `architecture.md` already *declared* this policy ("cites it … rather than restating the file
+  states or the writer matrix") and did not follow it. Final review: five APPROVEs, 0 high /
+  1 medium / 11 low.
+
+- **The unguarded-paraphrase risk was already realized, undetected.** `architecture.md` claimed
+  reading a pointer yields "simply an empty read", while this repository's own vendored measurement
+  records the import line as *delivered verbatim* — a drift that survived five reviewer passes
+  across two rounds and was found only by the re-scope's diagnosis arm. Cut, not corrected. The
+  obvious remedy — widening the citer gate's glob to `documentation/` — was **executed and
+  measured** before being declined: two immediate false reds, zero true positives, because that
+  gate's marker arm models a write surface and the owner scopes the cite-site minimum to "a citing
+  core or adapter." Recorded so a later reviewer does not re-propose it.
 
 ---
 
