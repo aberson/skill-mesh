@@ -143,18 +143,20 @@ authoritative WRITE/READ/REFERENCE classification in § 4 of the phase plan — 
 REFERENCE=13` over the 27 files under `skills/**` that name `CLAUDE.md`, against denominators of 54
 cores and 165 provider files.
 
-**Two carry-forwards need an operator decision before Step 106 (#150) runs**, recorded as findings
-10 and 11 in § 4.2.4 of the phase plan and deliberately not amended by the build:
+**The two Step-106 carry-forwards are resolved — operator decisions of 2026-08-25**, recorded as
+Round 5 in § 12 of the phase plan:
 
-1. **The write-surface gate is unfalsifiable as specified.** It has zero live true positives, so a
-   predicate narrowed until its false-positive count reaches zero still passes all six planted-defect
-   proofs Step 106's `Done when` requires. Per-verb and far-marker proofs are needed for the gate to
-   prove anything.
-2. **Step 106's `Problem` contradicts its own `Done when`** — "report the measured false-positive
-   count *rather than asserting zero*" versus "the measured false-positive count … *is zero*".
-
-Amending an accepted plan's acceptance criteria is an operator call, so the build recorded both and
-stopped there.
+1. **Step 106 is trimmed to the single-owner gate.** The write-surface gate — unfalsifiable as
+   specified (finding 10) and self-contradictory (finding 11) — is deferred to the phase plan's § 10
+   with an explicit resurrection condition. Issue #150 stays open at the narrowed scope.
+2. **Steps 104, 105, and 106 share one batched DONE gate**: iterate on `tests/package-integrity`,
+   then a single repo-root `python -m pytest` after all three land flips all three DONE.
+3. **Park-and-pivot**: after the shared gate, Phase IS parks (Steps 107–109 / #151–#153 stay open,
+   not abandoned) and the next window pivots to the utility track —
+   `<dev-root>/documentation/utility-hookup-plan.md` gets a plan-review refresh (its prerequisite,
+   host-parity Step 65, is DONE 2026-08-13; it predates the codex adapter catalog), then its Step 4
+   (installer current-byte authority) is built, unblocking host-parity Step 70 and utility wiring
+   Steps 6–23.
 
 The Goal NP recovery decision is **closed**. No Publication-8 approval is pending or will be sought.
 Do not run any Publication-8 `Preflight` or `Run`, and do not invoke

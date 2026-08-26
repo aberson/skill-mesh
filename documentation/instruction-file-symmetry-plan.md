@@ -728,13 +728,13 @@ mechanism `test_autofix_marker_single_owner.py` uses.
 - **Status:** DONE (2026-08-25)
 
 ### Step 104: Repoint every reader Step 103 proved broken
-- **Problem:** Repoint each core Step 103 classified as a READ of a **project** instruction file to the canonical phrasing `CLAUDE.md or AGENTS.md`. Known members: `build-observer:57`, `research-prospect:61`, `user-brainstorm:154`, `user-learn:161`, `citation-review:12`, plus whatever Step 103 added. `goblin-suggest:33` additionally needs its grounding **precondition** repaired: it currently treats existence as sufficient, so a POINTER passes and the documented loud failure never fires.
+- **Problem:** Repoint each core Step 103 classified as a READ of a **project** instruction file to the canonical phrasing `CLAUDE.md or AGENTS.md`. The work-list is **seven** members (§ 4.2): `build-observer:57`, `citation-review:12`, `goblin-suggest:33`, `research-prospect:61`, `review-uat:144` (added by Step 103), `user-brainstorm:154`, `user-learn:161`. `goblin-suggest:33` additionally needs its grounding **precondition** repaired: it currently treats existence as sufficient, so a POINTER passes and the documented loud failure never fires. Two site-level riders the per-core Done-when does not gate but § 4.2.3 requires: `goblin-suggest:102` must be repointed in the same pass as `:33` (repairing only `:33` leaves an inverted project grounding silently on the pointer), and `user-learn:47`/`:104` ride along with `:161`. All seven measure AGENTS.md=0 and marker=0 today, so a 0→≥1 per-file assertion is clean.
 - **Type:** code
 - **Issue:** #148
 - **Files:** skills/goblin-suggest/core.md, skills/build-observer/core.md, skills/research-prospect/core.md, skills/user-brainstorm/core.md, skills/user-learn/core.md, skills/citation-review/core.md, skills/review-uat/core.md
 - **Flags:** --reviewers code
 - **Produces:** modified cores for every reader Step 103 proved broken
-- **Done when:** every core on Step 103's broken list names both files with the canonical phrasing; goblin-suggest's precondition fails loud on a POINTER; the verified-safe readers are unmodified; no core carries a designated probe literal; the repo-root `python -m pytest` green at or above the recorded count, skip unchanged
+- **Done when:** every core on Step 103's broken list names both files with the canonical phrasing; goblin-suggest's precondition fails loud on a POINTER; the verified-safe readers are unmodified; no core carries a designated probe literal; `python -m pytest tests/package-integrity` green as the iteration gate. **DONE gate (amended by operator 2026-08-25, batched with Steps 105 and 106):** this step flips DONE on the single repo-root `python -m pytest` run executed once, after Steps 104, 105, and 106 have all landed — green at or above the recorded count, skip unchanged, checkpoint naming it as the shared gate for all three steps
 - **Depends on:** 103
 - **Status:** NOT STARTED
 
@@ -745,18 +745,18 @@ mechanism `test_autofix_marker_single_owner.py` uses.
 - **Files:** skills/context-slim/providers/claude.md
 - **Flags:** --reviewers code
 - **Produces:** modified context-slim adapter
-- **Done when:** **every `CLAUDE.md` occurrence in the file is enumerated and given an explicit keep-or-repoint verdict**; on an inverted project the audit reads and `--apply` appends to the content file; the ancestor-walk anchor is unchanged so `user-afterparty`'s parity holds; non-inverted behavior unchanged; the file carries no `<repo>/_shared/` citation and neither probe literal; the repo-root `python -m pytest` green at or above the recorded count, skip unchanged
+- **Done when:** **every `CLAUDE.md` occurrence in the file is enumerated and given an explicit keep-or-repoint verdict**; on an inverted project the audit reads and `--apply` appends to the content file; the ancestor-walk anchor is unchanged so `user-afterparty`'s parity holds; non-inverted behavior unchanged; the file carries no `<repo>/_shared/` citation and neither probe literal; `python -m pytest tests/package-integrity` green as the iteration gate. **DONE gate (amended by operator 2026-08-25, batched with Steps 104 and 106):** this step flips DONE on the single repo-root `python -m pytest` run executed once, after Steps 104, 105, and 106 have all landed — green at or above the recorded count, skip unchanged, checkpoint naming it as the shared gate for all three steps
 - **Depends on:** 100
 - **Status:** NOT STARTED
 
-### Step 106: The two gates
-- **Problem:** Nothing asserts instruction-file handling anywhere. **(a) Write-surface gate** (`test_instruction_file_contract.py`): enumerate `skills/*/core.md` AND `skills/*/providers/*.md`, asserting no surface carries an **unguarded** `CLAUDE.md` write per D11 — a write verb in a section with no `CLAUDE.md or AGENTS.md` marker. Per-arm non-empty floors re-derived at test time (§ 2's 54 and 165), never hard-coded. Report the measured false-positive count against Step 103's enumerated REFERENCE bucket rather than asserting zero. **Read § 4.2.4 finding 10 before authoring the proofs** — it records that the planted defects named in this step's `Done when` cannot detect a predicate narrowed into uselessness, and names the additional proofs (one per covered write verb, plus the far-marker proof) the gate needs beyond them. **(b) Single-owner gate** (`test_instruction_contract_single_owner.py`): modeled on `test_autofix_marker_single_owner.py` — the owner section exists and carries both D11 probe literals; each declared citer carries the bounded cite phrase; **no other file under `skills/**/*.md`, `_shared/**/*.md` or `documentation/**/*.md` carries either probe literal** (the sweep must include `_shared/`, which is also the only mechanical enforcement of Step 100's "no `_shared/` file was created"). Neither gate may red on this repository's own root files (D5), and neither may be worded as a restatement of `documentation/host-discovery.md:158-160`, which is the installer axis. **Known self-collision, found during Step 101 (2026-08-25) — do not rediscover this at build time.** This plan file is itself under `documentation/**` and quotes probe literal 1 *verbatim* inside D11's designated-probe-literals bullet — **locate both literals by grep, never by a line number: this plan's numbers shift on every edit and this citation has already gone stale three times** — so the sweep as specified reds on the plan. Probe literal 2 sits on the following line, **unbolded** inside backticks, so it collides only if the gate matches the bare sentence rather than the bolded literal the owner declares. Decide the rule explicitly and state it in the test: exempt this plan by path, or match the exact bolded literal and re-word the literal-1 line.
+### Step 106: The single-owner gate (write-surface gate deferred)
+- **Problem:** Nothing asserts instruction-file handling anywhere. **Scope trimmed by operator decision 2026-08-25** (§ 4.2.4 findings 10 and 11): the originally specified **write-surface gate** (`test_instruction_file_contract.py`) is **DEFERRED** to a future phase — after Steps 104/105 land it has zero live true positives, so as specified it cannot fail; see § 10 for the deferral record and resurrection condition. This step builds only the **single-owner gate** (`test_instruction_contract_single_owner.py`): modeled on `test_autofix_marker_single_owner.py` — the owner section exists and carries both D11 probe literals; each declared citer carries the bounded cite phrase; **no other file under `skills/**/*.md`, `_shared/**/*.md` or `documentation/**/*.md` carries either probe literal** (the sweep must include `_shared/`, which is also the only mechanical enforcement of Step 100's "no `_shared/` file was created"). The gate may not red on this repository's own root files (D5), and may not be worded as a restatement of `documentation/host-discovery.md:158-160`, which is the installer axis. **Known self-collision, found during Step 101 (2026-08-25) — do not rediscover this at build time.** This plan file is itself under `documentation/**` and quotes probe literal 1 *verbatim* inside D11's designated-probe-literals bullet — **locate both literals by grep, never by a line number: this plan's numbers shift on every edit and this citation has already gone stale three times** — so the sweep as specified reds on the plan. Probe literal 2 sits on the following line, **unbolded** inside backticks, so it collides only if the gate matches the bare sentence rather than the bolded literal the owner declares. Decide the rule explicitly and state it in the test: exempt this plan by path, or match the exact bolded literal and re-word the literal-1 line.
 - **Type:** code
 - **Issue:** #150
-- **Files:** tests/package-integrity/test_instruction_file_contract.py, tests/package-integrity/test_instruction_contract_single_owner.py, skills/plan-init/core.md
+- **Files:** tests/package-integrity/test_instruction_contract_single_owner.py, skills/plan-init/core.md (only if a proof requires an owner-side canary adjustment; the § 4.2.1 predicate pin defers with the write-surface gate)
 - **Flags:** --reviewers deep
-- **Produces:** both gate files
-- **Done when:** both gates green; **every new assertion proven RED against a planted defect** — an unguarded `CLAUDE.md` write re-introduced in a core, again in a provider file, the owner section renamed, a citation deleted, a probe literal re-duplicated into a second file, and a `_shared/` file created carrying one (six proofs, each restored); the measured false-positive count against Step 103's REFERENCE bucket is reported and is zero; `test_recovery_plan_hygiene.py` still passes; the repo-root `python -m pytest` green at or above the recorded count, skip unchanged
+- **Produces:** the single-owner gate file
+- **Done when:** the single-owner gate is green; **every new assertion proven RED against a planted defect** — the owner section renamed, a citation deleted, a probe literal re-duplicated into a second file, and a `_shared/` file created carrying one (four proofs, each restored); `test_recovery_plan_hygiene.py` still passes; `python -m pytest tests/package-integrity` green as the iteration gate. **DONE gate (amended by operator 2026-08-25):** this step flips DONE on the same single repo-root `python -m pytest` run shared with Steps 104 and 105, executed after all three steps' edits land — green at or above the recorded count, skip unchanged, checkpoint naming it as the shared gate
 - **Depends on:** 101, 102, 104, 105
 - **Status:** NOT STARTED
 
@@ -855,6 +855,16 @@ Round 2 identified these as real but out of scope here; recorded so they are not
 - The seven-section contract remains duplicated across `plan-init` and `repo-update` with no
   single owner. This plan deliberately does not merge them (§ 3); the duplication predates the
   feature and is tracked separately.
+- **The write-surface gate (`test_instruction_file_contract.py`), deferred by operator decision
+  2026-08-25** (Round 5). Grounds: § 4.2.4 finding 10 — after Steps 104/105 land the gate has
+  zero live true positives, so a predicate narrowed into uselessness still passes every planted-defect
+  proof the original `Done when` required (a gate that cannot fail); and finding 11 — the step's
+  `Problem` and `Done when` contradicted each other on the zero-count clause. **Resurrection
+  condition:** build it when a genuine unguarded `CLAUDE.md` write surface exists to catch, and only
+  with (a) the § 4.2.1 predicate pin adopted as the owner-section edit at `skills/plan-init/core.md`,
+  (b) one planted-defect proof per covered write verb, and (c) the far-marker proof — the three
+  things finding 10 records as necessary for the gate to prove anything. Step 106 retains the
+  single-owner gate, which has neither defect.
 
 ---
 
@@ -921,6 +931,26 @@ defaults pending feedback. No implementation behavior changed.
 **Round 4 (plan-redline feedback)** — the operator accepted Publication 1 as written on
 2026-08-20. D3–D11 retain their stable IDs and are marked accepted; the same proposal locator
 was refreshed as Publication 2. No decision or implementation behavior changed.
+
+**Round 5 (mid-build operator amendment, 2026-08-25)** — four changes, each authorized by the
+operator in-session after Steps 100–103 landed:
+
+- **Steps 104, 105, and 106 now share one batched DONE gate.** Each iterates on
+  `tests/package-integrity` (~40s); the full repo-root `python -m pytest` (~2h20m per
+  `phase-75-baseline.md`) runs **once**, after all three land, and flips all three DONE. This
+  satisfies the gate-scope rule — the DONE-flipping gate is still the full suite — while removing
+  two redundant full-suite runs.
+- **Step 106 trimmed to the single-owner gate.** The write-surface gate is deferred to § 10 with
+  its resurrection condition, resolving § 4.2.4 findings 10 and 11 (unfalsifiable-as-specified;
+  Problem/Done-when contradiction). Issue #150 stays open at the narrowed scope.
+- **Step 104's Problem made self-contained** — the seven-member work-list (review-uat:144 included)
+  and the two § 4.2.3 site-level riders (goblin-suggest:102; user-learn:47/:104) folded inline.
+- **Park-and-pivot recorded.** The build parks after the shared gate flips 104–106 DONE; Steps
+  107–109 stay open and are not abandoned. The next window pivots to the utility track:
+  refresh `<dev-root>/documentation/utility-hookup-plan.md` (stale prerequisites — host-parity
+  Step 65 is DONE 2026-08-13; predates the codex adapter catalog) and build its Step 4, the
+  installer current-byte-authority repair, which unblocks host-parity Step 70 and the entire
+  utility wiring sequence.
 
 ---
 
