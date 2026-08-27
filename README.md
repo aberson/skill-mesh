@@ -546,14 +546,20 @@ three hosts; 3 are Claude-native (`claude-oauth-auth`, `context-slim`, `judge-mo
   wiring is already built and has been waiting on the wiring rather than the reverse.
   Evidence: [documentation/parity-deltas.md](documentation/parity-deltas.md).
 - **Phase IS — 9 of 11 build units landed, 8 certified DONE; issues #144–#151 closed, #152
-  reopened for certification repair.** The
+  pending recertification.** The
   instruction-file contract now has one owner, the lifecycle writers and readers use the
   three-valued `AGENTS.md`/`CLAUDE.md` matrix, and the Codex delivery recipe is vendored. Step 108's
-  historical build/install evidence landed; its post-merge replay instruments have since been
-  hardened, independently reviewed at high 0 / medium 0 on the exact final bytes, and passed the
-  278-test package gate, but have not yet passed a fresh stable repo-root certification gate. The original OS-temp
-  install is not a Step 109 fixture; that step must recreate receipt-bound project/config/build
-  roots outside the real profile, bind their physical handle identities, reject path aliases, build
+  historical build/install evidence landed, but a fresh immutable-blob audit refuted the prior
+  high-0/medium-0 certification. The repaired candidate is Git blob
+  `bec161f56ec42f37b0e2d89cbcbc3b0a51e28f95`, raw SHA-256
+  `CF88FDB26FFE730A25A34EFA281D17F8F043678704E021DC8DC5C2258CFEA7D4` (137,620 bytes; 1,902
+  lines). Its pre-commit audit reports 0 high and 0 medium defects; all 24 PowerShell-bearing fences
+  parse, all 18 streamed blockers stop nonzero, the credential corpus is 107/107 unique, and the
+  package-integrity gate passes 278 tests. Two independent reviews of the immutable commit and the
+  stable repository-root gate remain pending, so Step 108 is not DONE. The original OS-temp
+  install is not a Step 109 fixture; that step must recreate receipt-bound project/config/build plus
+  durable evidence-export roots outside the real profile, retain their physical handles for the
+  complete lifetime, reject path aliases, build
   once into a proven-empty output, and install/reverify from those exact bytes. Its pre-launch gate
   must also reject unreviewed managed or ancestor instruction/rule/skill sources. Step 108P (#162)
   now owns the required containment code and is blocked on #152 plus the deliberate UAT mode/override
