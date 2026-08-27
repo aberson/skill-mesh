@@ -1,8 +1,9 @@
 # Phase IS — instruction-file symmetry
 
 **Phase label:** `Phase IS` (instruction-file symmetry). Steps 100–109.
-**Status:** BUILDING — 9 of 10 units landed; 8 of 10 certified DONE. Steps 100–107 are DONE,
-Step 108 is landed / certification pending, and Step 109 is blocked before grading.
+**Status:** BUILDING — 9 of 11 units landed; 8 of 11 certified DONE. Steps 100–107 are DONE,
+Step 108 is landed / certification pending, Step 108P is blocked before implementation, and Step 109
+is blocked before grading.
 **Approval history:** REDLINE ACCEPTED (Publication 2, 2026-08-20) — issues synced 2026-08-21
 under umbrella #143; all ten `**Issue:**` fields populated.
 **Created:** 2026-08-20 against `main` @ `1f410fc`. Initial planning was revised after plan-review
@@ -805,23 +806,36 @@ mechanism `test_autofix_marker_single_owner.py` uses.
 - **Files:** documentation/findings/instruction-file-symmetry-uat.md
 - **Flags:** --reviewers code
 - **Produces:** a scratch install home plus the verification transcript appended to the findings file
-- **Done when:** `powershell -File tools/build-distributions.ps1 -Provider all` exits 0; `powershell -File tools/install-skill-mesh.ps1 -Provider claude -Home <scratch-home>` exits 0; `powershell -File tools/inspect-host-install.ps1 -Home <scratch-home>` reports the profile installed; the emitted profile is byte-compared to the fresh build and the installed writer cores are hash-bound to it; the transcript's mandatory predicates throw on missing/false/error results, compare D8's raw pointer bytes exactly, canonicalize tree identity before rejecting same/nested roots, make tree-comparison and path/Git/reparse/hard-link containment fail closed, and grade all seven populated sections; every Step-109 builder remains blocked until an immediate pre-build guard receipt-binds new outside-profile project/config/build roots by handle-final local-volume paths and file IDs, rejects UNC/SUBST/8.3 and other aliases, proves all deletable provider children absent, and installation consumes that prebuilt root rather than launching an implicit second build; filename and write allowlists are case-sensitive; the downstream Step-109 skeleton remains non-runnable until #153 supplies its receipt-bound outside-profile roots, preventive containment, isolated config/auth lifecycle, exact captured-core payload equality, and a pre-launch inventory that rejects every unreviewed managed or ancestor instruction/rule/skill/dynamic-context source; independent review reports no high or medium defect; and a clean detached repo-root `python -m pytest` at or above `documentation/phase-75-baseline.md` completes with the recorded skip count unchanged
+- **Done when:** `powershell -File tools/build-distributions.ps1 -Provider all` exits 0; `powershell -File tools/install-skill-mesh.ps1 -Provider claude -Home <scratch-home>` exits 0; `powershell -File tools/inspect-host-install.ps1 -Home <scratch-home>` reports the profile installed; the emitted profile is byte-compared to the fresh build and the installed writer cores are hash-bound to it; the transcript's mandatory predicates throw on missing/false/error results, compare D8's raw pointer bytes exactly, canonicalize tree identity before rejecting same/nested roots, make tree-comparison and path/Git/reparse/hard-link containment fail closed, and grade all seven populated sections; every Step-109 builder remains blocked until an immediate pre-build guard receipt-binds new outside-profile project/config/build roots by file ID and both final paths sampled from one open handle, rejects UNC/SUBST/8.3 and other aliases, proves all deletable provider children absent, and installation consumes that prebuilt root rather than launching an implicit second build; filename and write allowlists are case-sensitive; immutable pre-build, post-install launch-attestation, and post-hook-probe readiness receipts bind the source/tool/process closure, full profile/writer/inspector facts, trust, hooks, managed policy, exact child environments, and real deny result; every read/mutation/snapshot/launch/parse/grade remains blocked until #153 supplies a receipt-pinned self-contained bundle whose OS-code-integrity-admitted static native bootstrap, precompiled native helper, and entire data/executable closure perform the actual operation in a fresh process without a runtime compiler/temp-file or validated-beforeward live-function surface; it uses strict duplicate-detecting JSON, handle-coupled existing/absent read results, atomic writes, and an exact case-insensitive Windows environment grammar; the native broker owns a preventively image-and-argv-gated descendant process tree to quiescence; the downstream Step-109 skeleton remains non-runnable until #153 supplies its preventive containment, isolated config/auth/trust lifecycle, exact captured-core and Codex project-payload equality, locked-byte Claude import evidence, and a pre-launch inventory that rejects every unreviewed managed, built-in, or ancestor instruction/rule/skill/dynamic-context source plus every effective process-spawning setting/plugin/agent/background surface in the pinned host grammar, proves hook failures cannot fall through to writes, and proves server-managed policy cannot refresh before the exact startup-consumed snapshot is bound ahead of any hook/process; either route clears a new full repo-root gate after #153 code lands, while route 1 also derives and attests current profile/inspector counts and emitted heading location instead of reusing `d4c88ee` literals; independent review reports no high or medium defect; and a clean detached repo-root `python -m pytest` at or above `documentation/phase-75-baseline.md` completes with the recorded skip count unchanged
 - **Depends on:** 107
-- **Status:** LANDED / CERTIFICATION PENDING (2026-08-26) — build/install acceptance PASS and the transcript merged at `600af9e`, but a post-merge audit found fail-open replay instruments and an incomplete Step 109 containment/delivery design. Certification repairs are tracked on #152; the repo-root DONE gate has not yet covered their final bytes. Its downstream operator section leaves every behavioral cell blank. See § 12 Rounds 8–10 and issues #152–#153.
+- **Status:** LANDED / CERTIFICATION PENDING (2026-08-26) — build/install acceptance PASS and the transcript merged at `600af9e`; post-merge certification repairs now have two independent exact-byte PASS verdicts (SHA-256 `5B3FC46697D5BE6D6083A8E69DCA43D19670F8EC105DA79BAD9F64D92BD995F8`, high 0, medium 0), 25 PowerShell-bearing fences parse with 0 errors, and the package-integrity gate passes 278 tests. The clean stable detached repo-root DONE gate has not yet covered these final bytes, so #152 stays open and Step 108 is not DONE. Its downstream operator section leaves every behavioral cell blank. See § 12 Rounds 8–10 and issues #152–#153.
+
+### Step 108P: Implement and certify the Step-109 containment packet
+- **Problem:** Step 109 is attended operator acceptance and may not create the substantial code needed to make its host actions safe. This preparation step owns that code after #153 records one of its two accepted routes. It replaces every unconditional blocker in the UAT skeleton with a reviewed packet: a static native `prepare`/launcher trust root, precompiled helper, self-contained Windows PowerShell 5.1 executor bundle, strict parsers, exact mode artifacts, handle-coupled read broker, kernel I/O rail, portable evidence exporter, and safe cleanup. Native user/kernel components use pinned Microsoft Visual C++ (**MSVC**) C++17 with the Windows Software Development Kit (**SDK**) and Windows Driver Kit (**WDK**) because the required pre-entry-point code-integrity, handle, Job Object, process-creation, and minifilter boundaries cannot begin inside the Common Language Runtime (**CLR**) or a script; orchestration stays on Windows PowerShell 5.1 because that is the repository's supported Windows floor. The implementation records the exact compiler/SDK/WDK/signing manifest. In this step, **MVID** means a managed assembly Module Version ID, **UNC** means a Universal Naming Convention network path, and **SUBST** means a Windows substituted drive. A file identity is uppercase `<8-hex volume serial>:<16-hex file index>`, produced from one no-follow handle by the pinned helper; the same handle produces DOS-final and volume-GUID-final paths. Preparation, every later guard, and cleanup consume that identity.
+- **Structures:** The strict pre-build receipt minimally binds schema/nonce, the three caller/final paths and identities, real-profile identity, preparation/source-tool-process/fence/launcher/helper hashes, and creation time. The launch attestation chains its hash/nonce and minimally binds trust/bootstrap, inspector/build/install/process, whole-profile/writer/heading, environment/hook/policy, fence, and creation facts. The readiness receipt chains both earlier receipts and minimally binds the effective-hook manifest, real denied-probe result, fence, nonce, and time. Every native result minimally binds schema/mode, applicable receipt hashes, executable/argv/environment and descendant manifests, physical root, started/exit/process-tree/quiescence facts, protected pre/post digests, and one redacted mode proof. Exact property names, scalar types, sidecar schemas, and negative mutations are normative in `documentation/findings/instruction-file-symmetry-uat.md` § 1.8/§ 2.0.
+- **Type:** code
+- **Issue:** #162
+- **Files:** `tools/phase-is-uat/**` (new); `tests/phase-is-uat/**` (new); `documentation/findings/instruction-file-symmetry-uat.md`; `documentation/release-candidate-report.md` plus `skills/plan-init/core.md`, `skills/repo-update/core.md`, and affected package-integrity tests only if the selected route changes a distribution/core input
+- **Flags:** --reviewers code
+- **Produces:** committed, versioned containment binaries/bundle/schemas/tests and exact artifact hashes that #153 only invokes; no behavioral UAT observation
+- **Done when:** #153 records the selected route; every blocker/placeholder in the Step-109 skeleton is replaced by committed artifacts; all strict receipt/result schemas and the complete negative corpus pass; the prepare/launcher/loader/signing closure, exact environment/hook/policy/process rails, unforgeable per-invocation read/write containment, evidence export, and cleanup are independently reviewed; route 1 rebuilds/reinstalls/reverifies and refreshes release-candidate/writer facts, while route 2 proves tooling changes are outside distribution inputs and reruns its package/reference gates; and a clean stable detached repo-root `python -m pytest` reads its sentinel as `0`, meets `documentation/phase-75-baseline.md`, and preserves the recorded skip count
+- **Depends on:** 108
+- **Status:** BLOCKED (2026-08-26) — #152 must first return to certified DONE and #153 must record the route choice. No implementation or host action has run.
 
 ### Step 109: Operator confirmation of all five D10 rows
-- **Problem:** These cores are prose read by an agent; a test asserts what the prose instructs, never what an agent does. Using freshly created, receipt-bound, mutually non-nested project, Claude-config, and build-output roots outside the real profile, bind their handle-final local-volume identities, reject aliased roots, build once into the proven-empty output root, install from those exact bytes, and reverify the Claude profile. Before launch, reject every unreviewed effective managed or ancestor instruction/rule/skill/dynamic-context source. Then exercise every D10 row: run `/plan-init` from nothing (row 1) and verify `AGENTS.md` plus a `CLAUDE.md` matching D8's exact pointer bytes; run it beside a SUBSTANTIVE `CLAUDE.md` (row 2) and verify it writes nothing; run `/repo-update` on the inverted project (row 3) and verify it refreshes `AGENTS.md`, leaves the pointer, and is a no-op on a second pass; manufacture row 5 and verify the advisory prints without blocking. Then verify delivery on both hosts: `codex debug prompt-input` in the scratch project must show the section headings, and the Claude-side `@AGENTS.md` import must resolve.
+- **Problem:** These cores are prose read by an agent; a test asserts what the prose instructs, never what an agent does. Consume Step 108P's already-committed and certified packet without creating or modifying code. Using that packet, create the receipt-bound project/config/build roots, build/install/reverify the selected route's exact bytes, establish the complete receipt and containment preconditions, then exercise every D10 row: run `/plan-init` from nothing (row 1) and verify `AGENTS.md` plus a `CLAUDE.md` matching D8's exact pointer bytes; run it beside a SUBSTANTIVE `CLAUDE.md` (row 2) and verify it writes nothing; run `/repo-update` on the inverted project (row 3) and verify it refreshes `AGENTS.md`, leaves the pointer, and is a no-op on a second pass; run `/repo-update` with SUBSTANTIVE `AGENTS.md` and absent `CLAUDE.md` (row 4) and verify it refreshes `AGENTS.md` plus writes the exact D8 pointer; manufacture row 5 and verify the advisory prints without blocking. Then verify exact normalized Codex project-payload equality and the Claude import event while both instruction files remain locked to their attested bytes, publish the exact redacted evidence chain, and clean up only through the certified no-follow disposition-recording bundle.
 - **Type:** operator
 - **Issue:** #153
 - **Files:** documentation/findings/instruction-file-symmetry-uat.md
 - **Flags:** --reviewers code
 - **Produces:** `documentation/findings/instruction-file-symmetry-uat.md` — operator observations only, no code artifacts
 - **Done when:** all five D10 rows confirmed on disk; the second `/repo-update` pass is observed to be a no-op; `codex debug prompt-input` shows the content; the Claude `@` import resolves; the row-5 advisory prints without blocking; every behavioral difference recorded
-- **Depends on:** 108
-- **Status:** BLOCKED BEFORE GRADING (2026-08-26) — the accepted step requires real named-skill behavior, but neither current core exposes a safe instruction-file-only UAT mode and normal `repo-update` cannot safely reach Step 7 in the deliberately outside-git fixture. Issue #153 must choose either a new core-supported UAT mode (with rebuild/reinstall/reverification) or a deliberate plan amendment accepting narrower operator-scoped named-skill subsection overrides. No row or host-delivery check has run.
+- **Depends on:** 108P
+- **Status:** BLOCKED BEFORE GRADING (2026-08-26) — the accepted step requires real named-skill behavior, but neither current core exposes a safe instruction-file-only UAT mode and normal `repo-update` cannot safely reach Step 7 in the deliberately outside-git fixture. Issue #153 must choose either a new core-supported UAT mode (with rebuild/reinstall/reverification) or a deliberate plan amendment accepting narrower operator-scoped named-skill subsection overrides; #162 then implements and certifies that route's packet. No row or host-delivery check has run.
 
-**Rollback.** Every repository change is `git revert`-able here; no step writes into a consumer
-project. Step 108's historical install artifact is retained only as evidence. Step 109 must create
+**Rollback.** Every repository change, including Step 108P's containment packet, is `git revert`-able
+here; no step writes into a consumer project. Step 108's historical install artifact is retained only
+as evidence. Step 109 must create
 a new receipt-bound scratch home/project, a distinct scratch Claude config root, and a distinct
 fresh-build output root outside the real user profile; after acceptance, all three exact roots are
 deleted rather than reverted through #153's
@@ -872,11 +886,13 @@ that neither may flip a step or a phase DONE. **Every remaining code/certificati
 therefore runs the repo-root `python -m pytest` with no path argument**, covering the eight `tests/` suites plus
 `_shared/`, `skill-iterate/scripts/` and `skill-eval-setup/scripts/`. Counts are owned by
 `phase-75-baseline.md`; this plan restates none, and Step 107 updates the owner in a
-non-circular order. Step 109 starts only from Step 108's certified bytes and closes on its attended
-behavior/delivery checks rather than rerunning the suite.
+non-circular order. Step 108P starts only from Step 108's certified bytes, owns the new containment
+code and its full gate, and hands immutable artifacts to Step 109. Step 109 closes on attended
+behavior/delivery checks without creating code or rerunning the suite.
 
-**End-to-end.** Step 108 makes the edited prose actually loadable; Step 109 exercises it. Step
-109 is `Type: operator` and produces observations only.
+**End-to-end.** Step 108 makes the edited prose actually loadable; Step 108P implements and certifies
+the selected safe UAT packet; Step 109 invokes that packet and exercises the prose. Step 109 is
+`Type: operator` and produces observations only.
 
 ---
 
@@ -1184,11 +1200,13 @@ were recorded:
   skills, but `plan-init` and `repo-update` expose no instruction-only UAT mode; a normal
   `repo-update` cannot safely reach Step 7 in the outside-git fixture. Every behavioral cell stays
   blank. Issue #153 must choose a core-supported mode or deliberately amend the acceptance to
-  named-skill subsection overrides. The Rollback clause now records the bounded native host
+  named-skill subsection overrides; Step 108P/#162, not the operator step, owns the resulting code
+  packet. The Rollback clause now records the bounded native host
   session/cache state inherent in either attended route.
 
 **Round 10 (post-merge certification audit, 2026-08-26)** — Step 108 is landed but its
-certification is pending; Step 109 remains blocked before grading.
+certification is pending; Step 108P is blocked before implementation; Step 109 remains blocked before
+grading.
 
 - The historical build/install evidence still passes its four acceptance criteria. The defects are
   in the published replay and downstream UAT instruments: exact-pointer decoding accepted multiple
@@ -1217,14 +1235,33 @@ certification is pending; Step 109 remains blocked before grading.
   surface, managed MCP configuration, and managed skill definitions before launch; managed
   same-name writers and managed-skill shell preprocessing must be rejected. That inventory also
   covers organization-wide managed `CLAUDE.md`/`claudeMd`/policy instructions and every physical
-  project ancestor's instruction, rule, same-name-skill, and dynamic-context surface. The three
+  project ancestor's root or `.claude/CLAUDE.md`, local instruction, rule, same-name-skill, and
+  legacy-command/agent/dynamic-context surface. It rejects every process-spawning setting exposed
+  by the pinned host, including policy/credential/telemetry helpers and command-backed
+  file-suggestion/status-line settings, plus every plugin MCP/LSP/hook/agent/monitor/workflow/channel
+  or background component. The three root facts are sampled from one handle and every destructive
+  or launch boundary uses a fresh receipt-pinned self-contained fence bundle rooted in an
+  OS-admitted static native launcher with a precompiled hash/file-ID/MVID-bound helper as the actual
+  executor rather than a mutable live-function consumer or runtime compiler. Immutable pre-build,
+  post-install launch-attestation, and post-hook-probe readiness receipts bind the full profile,
+  inspector/process results, trust, hook, policy, and exact-environment facts; its process broker
+  preventively image/argv-gates every descendant to quiescence. It also proves managed policy cannot
+  refresh during startup or binds the exact startup-consumed snapshot before any hook/process can
+  fire; a post-launch diff is not preventive. Route 1 derives current build/profile/inspector counts
+  and emitted heading location rather than copying `d4c88ee` literals. The three
   disposable roots and real profile are bound by handle-final paths and file IDs; UNC, SUBST, 8.3,
   other aliases, nesting, and case-mismatched allowlist targets are rejected. Project-only settings
   and `--strict-mcp-config` are not treated as managed-policy boundaries.
 - No Step-109 host session or writer skill ran. Issue #153 must still choose a core-supported UAT
   mode or deliberately amend the acceptance to operator-scoped named-skill subsection overrides;
-  that resolution must also supply and negative-test the containment arguments and hook before the
-  first row.
+  Step 108P/#162 must then implement and negative-test the complete containment packet before the
+  first operator row.
+- The repaired transcript's exact final bytes are SHA-256
+  `5B3FC46697D5BE6D6083A8E69DCA43D19670F8EC105DA79BAD9F64D92BD995F8` (252,727 bytes;
+  4,136 lines). Two independent read-only reviews each report high 0 / medium 0, all 25
+  PowerShell-bearing fences parse under Windows PowerShell 5.1 with 0 errors, `git diff --check`
+  is clean, and `python -m pytest tests/package-integrity` reports 278 passed. This is the bounded
+  iteration/review evidence, not the still-required stable repo-root certification gate.
 - Two attempted post-`52d44c9` repo-root runs are explicitly invalid evidence: one was stopped when
   another session moved `HEAD` and dirtied documentation; the second was stopped when this audit
   found the fail-open transcript. Both sentinels are `-1`. A clean detached repo-root gate at a

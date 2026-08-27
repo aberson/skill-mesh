@@ -545,17 +545,19 @@ three hosts; 3 are Claude-native (`claude-oauth-auth`, `context-slim`, `judge-mo
   dependency and, in the process, found that the observatory surface meant to display this
   wiring is already built and has been waiting on the wiring rather than the reverse.
   Evidence: [documentation/parity-deltas.md](documentation/parity-deltas.md).
-- **Phase IS — 9 of 10 build units landed, 8 certified DONE; issues #144–#151 closed, #152
+- **Phase IS — 9 of 11 build units landed, 8 certified DONE; issues #144–#151 closed, #152
   reopened for certification repair.** The
   instruction-file contract now has one owner, the lifecycle writers and readers use the
   three-valued `AGENTS.md`/`CLAUDE.md` matrix, and the Codex delivery recipe is vendored. Step 108's
   historical build/install evidence landed; its post-merge replay instruments have since been
-  hardened but have not yet passed a fresh repo-root certification gate. The original OS-temp
+  hardened, independently reviewed at high 0 / medium 0 on the exact final bytes, and passed the
+  278-test package gate, but have not yet passed a fresh stable repo-root certification gate. The original OS-temp
   install is not a Step 109 fixture; that step must recreate receipt-bound project/config/build
   roots outside the real profile, bind their physical handle identities, reject path aliases, build
   once into a proven-empty output, and install/reverify from those exact bytes. Its pre-launch gate
-  must also reject unreviewed managed or ancestor instruction/rule/skill sources. Step 109 (#153) remains
-  blocked before grading pending a deliberate UAT mode/override choice. See
+  must also reject unreviewed managed or ancestor instruction/rule/skill sources. Step 108P (#162)
+  now owns the required containment code and is blocked on #152 plus the deliberate UAT mode/override
+  choice; Step 109 (#153) remains operator-only and blocked before grading. See
   [documentation/instruction-file-symmetry-plan.md](documentation/instruction-file-symmetry-plan.md).
 - **Phase 8 is superseded** by Phase CP's additive, cohort-based rollout (course change 2026-08-16).
   Step 47b remains the separately scheduled containment-gate hardening follow-up and is off the
