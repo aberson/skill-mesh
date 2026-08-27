@@ -3,7 +3,8 @@
 A second `/build-phase --resume 107` session ran concurrently with the one that produced
 `d4c88ee`. Both sessions authored Step 107 independently. `d4c88ee` won the race and is on
 `main`; this document records what the losing session's review round measured, because that
-evidence does not exist anywhere in `d4c88ee` and four of its findings are **live on `main`**.
+evidence does not exist anywhere in `d4c88ee`. Four findings were live at that commit and were
+subsequently corrected at `52d44c9`.
 
 Nothing here is a gate. It is an evidence record for a follow-up step.
 
@@ -20,7 +21,7 @@ Review effort behind it: two developer iterations, ten reviewer passes (five len
 rounds), and two adversarial verification workflows. Round 1 gated 1 high / 12 medium / 30 low;
 round 2 gated 2 high / 19 medium / 22 low.
 
-## 2. Live on `main` at `d4c88ee`
+## 2. Confirmed live on `main` at `d4c88ee` (resolved at `52d44c9`)
 
 Each row was confirmed by direct enumeration against the landed files, not inferred from the
 parallel branch.
@@ -92,3 +93,17 @@ repo-rooted spelling, and its own assertion message calls that an extendable sco
 This is the **owner** of the instruction-file contract, so it is out of scope for any
 documentation step and needs its own change. A sweep found exactly two instances of the shape
 and no third, so `/build-step`'s stop-and-audit threshold was not reached.
+
+## 6. Resolution and gate provenance
+
+Commit `52d44c9` fixed all four § 2 defects without merging the alternate Step-107 branch:
+portable-adapter ownership now names the live `plan-init` Codex adapter counterexample; workspace
+delivery no longer equates convention with loaded content; the four reproduction descriptions are
+project-scoped; and the Codex delivery record publishes no per-invocation home-file count. The
+post-change package-integrity iteration gate passed 278 tests.
+
+Step 107's own ordered DONE-gate sequence completed independently at `d4c88ee`: the pre-step owner
+figure **1335 passed / 1 skipped** was captured first; the detached repo-root command completed with
+sentinel `0` and **1341 passed / 1 skipped**; the comparison was made; only then did `719e622` update
+`documentation/phase-75-baseline.md`. The later full-suite run that certifies `52d44c9` together
+with the repaired Step-108 transcript is pending and does not replace that historical sequence.

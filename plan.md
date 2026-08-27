@@ -75,7 +75,7 @@ does not reinterpret that evidence or revive its stopped experiment.
 | Phase CP Step 12 (#129) | disposition follows Step 11 | See its block in the delivery plan; the observatory-visibility question is being resolved against `dev-observatory/plans/utility-project-surfaces-plan.md` |
 | Phase CP Step M3 (#132) | PENDING (2026-08-20) — daily-use row only | The operator: a few genuine Codex-hosted sessions. Delta triage is DONE — 43 rows across 4 tables, 0 undisposed, 0 `fix-later` owed; the providers-doc gap was filed as #142 and is now CLOSED at `2462afd` (codex given first-class doc coverage; the host-discovery gate derives its provider set from `Get-SkillMeshDiscoveryRoots` instead of hand-listing two). Evidence: `documentation/parity-deltas.md` § M3 checks |
 | Phase CP Step M4 (#133) | COMPLETE (2026-08-20) — PASS | Nothing — codex arm reinstalled clean (125 files; 0 stale, 0 unledgered) and all seven observatory locators verified `unwired` on the rendered surface, before and after. The claude and gpt `-Force` arms were deliberately not run. Evidence: `documentation/parity-deltas.md` § M4 checks and § Scope of the M4 PASS |
-| Phase IS (#143) | BUILDING (2026-08-26) — 9 of 10 landed. Step 107 (#151) is DONE: sentinel `0`, repo-root gate `1341 passed, 1 skipped`, baseline updated at `719e622`; its four concurrent-review documentation defects are fixed at `52d44c9`. Step 108 (#152) is DONE and merged at `600af9e`; build/install PASS and the repaired transcript has no high/medium finding. Step 109 (#153) is **BLOCKED BEFORE GRADING**: neither named skill exposes a safe instruction-only UAT mode, so all behavioral cells remain blank. | The operator must choose on #153 between a new core-supported UAT mode (then rebuild/reinstall/reverify) and a deliberate plan amendment accepting narrower named-skill subsection overrides. Do not start a host session until that choice is recorded. Authority: `documentation/instruction-file-symmetry-plan.md` and `documentation/findings/instruction-file-symmetry-uat.md` § 2. |
+| Phase IS (#143) | BUILDING (2026-08-26) — 9 of 10 landed, 8 certified DONE. Step 107 (#151) is DONE: sentinel `0`, repo-root gate `1341 passed, 1 skipped`, baseline updated at `719e622`; its four concurrent-review documentation defects are fixed at `52d44c9`. Step 108 (#152) is LANDED / CERTIFICATION PENDING: build/install PASS, but a fresh audit refuted the transcript's prior 0-high/0-medium review; its replay/UAT instruments are hardened and await final review plus a stable repo-root gate. Step 109 (#153) is **BLOCKED BEFORE GRADING**: neither named skill exposes a safe instruction-only UAT mode, so all behavioral cells remain blank. | The operator must choose on #153 between a new core-supported UAT mode (then rebuild/reinstall/reverify) and a deliberate plan amendment accepting narrower named-skill subsection overrides. The selected route must also provide tested fail-closed host containment, pre-launch effective managed/plugin/hook, managed-MCP, and managed-skill enumeration, and Claude core/import evidence. Do not start a host session until that choice is recorded. Authority: `documentation/instruction-file-symmetry-plan.md` and `documentation/findings/instruction-file-symmetry-uat.md` § 2. |
 | Legacy-migrator hardening (#138) | DEFERRED | Its own issue — Phase CP ships zero migrator delta by the option-3 decision of 2026-08-18 |
 | Goal NP live cutover | LOCKED | Approval 2 on the immutable deliverable after disposable rehearsal |
 | Provider expansion | PARKED | A later explicit Abraham decision must resume that track; Goal NP does not unlock it |
@@ -137,17 +137,25 @@ wider proposal's Phase 3 inverts instruction files across up to 32 repositories,
 catalog *write* those files — run one against an already-inverted project and it silently recreates
 the duplication the inversion exists to remove. Nothing may migrate until Phase IS lands.
 
-**Phase IS is 9 of 10 landed as of 2026-08-26** at `600af9e`. Steps 100–106 are DONE and their
+**Phase IS is 9 of 10 landed, 8 certified DONE, as of 2026-08-26.** Steps 100–106 are DONE and their
 issues (#144–#150) closed. Step 107 (#151) is DONE: its named sentinel was `0`, the repo-root gate
 reported `1341 passed, 1 skipped`, the baseline owner was updated only after comparison at
 `719e622`, and #151 is closed. The four live documentation defects found by its concurrent session
-are fixed at `52d44c9`. Step 108 (#152) is DONE: all-profile build, scratch Claude install,
-inspector and whole-profile equality passed, and its repaired transcript merged at `600af9e` with
-no high or medium review finding. Step 109 (#153) is **BLOCKED BEFORE GRADING** because neither
+are fixed at `52d44c9`. Step 108 (#152) is LANDED / CERTIFICATION PENDING: all-profile build,
+scratch Claude install, inspector and whole-profile equality passed, but a post-merge audit found
+fail-open replay instruments and incomplete preventive/core-delivery evidence in the transcript.
+The repaired transcript is present; its stable repo-root DONE gate remains pending. Its historical
+OS-temp install is ineligible for Step 109, which must always create receipt-bound project/config
+roots outside the real profile and reinstall/reverify. Step 109 (#153) is **BLOCKED
+BEFORE GRADING** because neither
 named skill has a safe instruction-only UAT mode and normal `repo-update` cannot safely reach Step
 7 in the outside-git fixture. The operator must choose a core-supported mode or deliberately amend
-the acceptance to narrower named-skill subsection overrides; no behavioral row or delivery probe
-has run. Step 103 records the
+the acceptance to narrower named-skill subsection overrides; that choice must also supply tested
+fail-closed host containment, pre-launch enumeration of every effective managed/plugin/session
+hook and setting plus managed MCP and managed-skill configuration, isolated config/auth and
+background-lifecycle controls, complete native Base/Profile/attribution/core-read binding, and an
+exact asynchronously captured Claude import event. No
+behavioral row or delivery probe has run. Step 103 records the
 authoritative WRITE/READ/REFERENCE classification in § 4 of the phase plan — `WRITE=5 READ=9
 REFERENCE=13` over the 27 files under `skills/**` that name `CLAUDE.md`, against denominators of 54
 cores and 165 provider files.
@@ -205,8 +213,12 @@ Round 5 in § 12 of the phase plan:
    circular. **Superseded 2026-08-26:** Step 107 did NOT inherit the 104–106 gate. That gate was
    measured at `dc21c9e`, before Step 107's own `documentation/**` edits — and Step 107 edits files
    the single-owner gate sweeps, so an inherited figure would not have covered the change it is
-   meant to gate. A fresh repo-root run was started detached at `d4c88ee` and is still in flight at
-   wrap time; the count owner therefore still reads **1335** and #151 stays open until it returns.
+   meant to gate. The fresh detached run at `d4c88ee` completed with sentinel `0` and `1341 passed,
+   1 skipped`; only after comparison against the captured **1335 passed / 1 skipped** figure was the
+   count owner updated at `719e622` and #151 closed. Two later attempts to cover the Step-107
+   follow-up corrections and Step-108 transcript were cancelled with sentinel `-1`—one after a
+   concurrent `HEAD`/worktree change, one after the transcript audit found fail-open evidence—so
+   neither is a gate result. A stable repaired-head run remains pending for Step 108 certification.
 
 The Goal NP recovery decision is **closed**. No Publication-8 approval is pending or will be sought.
 Do not run any Publication-8 `Preflight` or `Run`, and do not invoke

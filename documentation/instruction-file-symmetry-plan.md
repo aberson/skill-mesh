@@ -1,14 +1,17 @@
 # Phase IS — instruction-file symmetry
 
 **Phase label:** `Phase IS` (instruction-file symmetry). Steps 100–109.
-**Status:** REDLINE ACCEPTED (Publication 2, 2026-08-20) — issues synced 2026-08-21 under
-umbrella #143; all ten `**Issue:**` fields populated.
-**Created:** 2026-08-20 against `main` @ `1f410fc`. **Revised twice** — after plan-review
-round 1 (22 Blockers) and plan-wrap round 2 (9 Blockers). Revision log: § 12.
+**Status:** BUILDING — 9 of 10 units landed; 8 of 10 certified DONE. Steps 100–107 are DONE,
+Step 108 is landed / certification pending, and Step 109 is blocked before grading.
+**Approval history:** REDLINE ACCEPTED (Publication 2, 2026-08-20) — issues synced 2026-08-21
+under umbrella #143; all ten `**Issue:**` fields populated.
+**Created:** 2026-08-20 against `main` @ `1f410fc`. Initial planning was revised after plan-review
+round 1 (22 Blockers) and plan-wrap round 2 (9 Blockers); execution revisions continue in § 12.
 
 **Reading aid.** `P<n>` = operator-picked decision *n* and `D<n>` = agent-defaulted decision
 *n* in § 6. `A` = the project's `AGENTS.md`, `C` = its `CLAUDE.md`. Angle brackets inside a citation spelling like
 `<repo>/_shared/<leaf>` are **literal source bytes**, not a substitution — see D6.
+CLI = command-line interface; UAT = user acceptance testing; MCP = Model Context Protocol.
 
 ---
 
@@ -42,8 +45,9 @@ against `codex-cli 0.147.0` (`codex --version`).
 Consequence: **the file Codex reads must *be* the content.** `CLAUDE.md` carrying `@AGENTS.md`
 is the only shape that serves both hosts from one copy.
 
-**Reproduction** (runs no model session and writes nothing *in the project*; it is not
-side-effect-free — it refreshes Codex's own caches under the Codex home):
+**Reproduction** (runs no model session and writes nothing *in the project* on any controlled
+run; Codex-home background churn prevents attributing any outside-project file count to one
+invocation):
 
 ```
 cd <project-dir>
@@ -59,13 +63,19 @@ config override that does **not** persist:
 > "writes nothing" and spelled the override with outer single / inner double quotes. Both
 > were wrong and were transcribed faithfully into Step 107's first iteration before review
 > caught them: the old spelling exits 1 in Windows PowerShell 5.1 (PS strips the inner
-> quotes; codex reports `invalid type: string "[CLAUDE.md]", expected a sequence`), and the
-> command does refresh Codex-home caches. `documentation/codex-instruction-delivery.md` is
-> now the vendored owner of this measurement; prefer it over this section.
+> quotes; codex reports `invalid type: string "[CLAUDE.md]", expected a sequence`). Controlled
+> protocols later established only that every run leaves the project directory unchanged and
+> that a `-c` override leaves nothing on disk; zero-invocation controls reproduced the observed
+> Codex-home signature, so no per-invocation outside-project count is published.
+> `documentation/codex-instruction-delivery.md` is now the vendored owner of this measurement;
+> prefer it over this section.
 
 ---
 
-## 2. Existing Context
+## 2. Pre-implementation baseline (2026-08-20)
+
+Unless a later annotation explicitly says it was re-measured, the figures in this section are
+historical planning inputs captured before Steps 100–109. They are not a current inventory.
 
 - **Cores and adapters.** `skills/<name>/core.md` is the provider-independent behavior
   contract; `skills/<name>/providers/{claude,gpt,codex}.md` are thin loaders that may never
@@ -73,8 +83,8 @@ config override that does **not** persist:
 - **54 cores, 57 skill directories.** The three provider-native skills (`claude-oauth-auth`,
   `context-slim`, `judge-motion`) carry `core: null` and have **no core.md**.
   `skills/*/core.md` reaches 54 directories; `skills/*/providers/*.md` reaches all 57
-  (57 claude + 54 gpt + 54 codex = 165). Step 106 derives its floors from these numbers by
-  re-running the enumeration, never by hard-coding them.
+  (57 claude + 54 gpt + 54 codex = 165). The now-deferred write-surface design would re-derive
+  its floors from these numbers rather than hard-code them; see § 10.
 - **24 of the 54 cores name `CLAUDE.md`** (`grep -l 'CLAUDE\.md' skills/*/core.md | wc -l`);
   **3 name `AGENTS.md`** (`plan-feature`, `plan-merge`, `plan-review`); **3 of the 165 provider
   files name `CLAUDE.md`** (`context-slim/providers/claude.md`, `plan-init/providers/codex.md`,
@@ -92,11 +102,11 @@ config override that does **not** persist:
   (`tools/build-distributions.ps1:624-628`). These constraints are why this plan creates no
   `_shared/` file — D6.
 - **Editing a core does not change any invokable skill.** This repository is the canonical
-  source and build toolchain, not an installed tree. The installed
-  `<dev-root>/.claude/skills/plan-init/core.md` is a **separate 26,477-byte copy**; the
-  canonical `skills/plan-init/core.md` is 26,657 bytes. Nothing an operator can invoke changes
+  source and build toolchain, not an installed tree. At this baseline, the installed
+  `<dev-root>/.claude/skills/plan-init/core.md` was a **separate 26,477-byte copy** and the
+  canonical `skills/plan-init/core.md` was 26,657 bytes. Nothing an operator can invoke changes
   until `tools/build-distributions.ps1` then `tools/install-skill-mesh.ps1` have run. Step 108
-  exists solely because of this.
+  exists solely because of this separation.
 - **This repository is deliberately NOT inverted.** Its `AGENTS.md` is a 6-line prose pointer
   to `CLAUDE.md`, frozen by `tests/package-integrity/test_recovery_plan_hygiene.py:41-60`.
   D8 gives this exact pair as its worked example.
@@ -109,8 +119,9 @@ config override that does **not** persist:
   and a **bounded cite-site minimum guarded by named canary phrases**. D11 supplies both here.
 - **Test counts are owned by `documentation/phase-75-baseline.md`.** That file states in its
   own words that `python -m pytest tests/` and `python -m pytest tests/package-integrity` are
-  iteration gates and **neither may flip a step or a phase DONE**. Every step below therefore
-  ends on the repo-root invocation. This plan restates no count.
+  iteration gates and **neither may flip a step or a phase DONE**. Every remaining
+  code/certification step therefore ends on the repo-root invocation. Step 109 consumes Step 108's certified bytes
+  and closes on its attended checks rather than rerunning the suite. This plan restates no count.
 
 ---
 
@@ -124,7 +135,8 @@ config override that does **not** persist:
 - Every core or provider file the Step 103 enumeration proves reads or authors a **project**
   instruction file.
 - `context-slim`, which writes `CLAUDE.md` under `--apply` and has no core.
-- Two package-integrity gates.
+- One landed package-integrity single-owner gate; the proposed write-surface gate is deferred
+  under § 10 and intentionally absent.
 - A build + install into a scratch home, then operator confirmation.
 
 **Out of scope — explicitly**
@@ -180,11 +192,11 @@ job is the Change Type column: create vs modify, per artifact.*
 | `skills/citation-review/core.md` | modify | READ — missed by round 1. `:12` names a project `CLAUDE.md` as a reviewable artifact class | `:12, :46-47` |
 | `skills/context-slim/providers/claude.md` | modify | **WRITES** under `--apply` (`:166`); ancestor walk (`:21, :23-24`); classification (`:59-61`). **16 `CLAUDE.md` sites total**, incl. `:3` frontmatter and `:5` default | `ls skills/context-slim/` → `providers/claude.md` only |
 | *(the round-2 candidates)* | **no change** | `repo-sync:51,:521`, `observatory-doctor:78`, `build-phase:31,:198,:229` — **all adjudicated REFERENCE** by § 4.2; none joins Step 104's work-list | § 4.2 |
-| `tests/package-integrity/test_instruction_file_contract.py` | create | write-surface gate | absent today |
-| `tests/package-integrity/test_instruction_contract_single_owner.py` | create | single-owner gate | absent today |
-| `documentation/codex-instruction-delivery.md` | create | vendored measurement + reproduction recipe (§ 1's content, expanded) | absent today |
-| `documentation/host-discovery.md`, `documentation/architecture.md` | modify | document the inverted shape in the authority map and the contract | both exist |
-| `documentation/phase-75-baseline.md` | modify | single owner of the suite counts this plan changes | `CLAUDE.md` names it the one owner |
+| `tests/package-integrity/test_instruction_file_contract.py` | deferred / intentionally absent | future write-surface gate | deferred 2026-08-25; resurrection contract in § 10 |
+| `tests/package-integrity/test_instruction_contract_single_owner.py` | create | single-owner gate | landed by Step 106 |
+| `documentation/codex-instruction-delivery.md` | create | vendored measurement + reproduction recipe (§ 1's content, expanded) | landed by Step 107 |
+| `documentation/host-discovery.md`, `documentation/architecture.md` | modify | document the inverted shape in the authority map and the contract | updated by Step 107 |
+| `documentation/phase-75-baseline.md` | modify | single owner of the suite counts this plan changes | updated after Step 107's measured gate |
 
 ### Verified as needing NO change *(evidence corrected by § 4.2)*
 
@@ -211,6 +223,11 @@ literal does not see it there. Enumerated marker sites at this baseline —
 
 **This is the authoritative table for this phase.** It is derived mechanically from both arms of the
 enumeration, not hand-listed:
+
+**Execution-history boundary.** The classification remains evidence for the landed reader repairs,
+but forward-looking instructions in this subsection that assign the write-surface gate to Step 106
+are historical. Step 106 landed only the single-owner gate; § 10 supersedes those instructions and
+owns the write-surface gate's resurrection conditions.
 
 ```
 grep -l 'CLAUDE\.md' skills/*/core.md          # 24 hits, of 54 cores
@@ -552,7 +569,6 @@ no behavior and edits no core):
   owner, holding D8, D10 and D11 including their designated probe literals. No new file, no
   new payload surface (D6).
 - **`documentation/codex-instruction-delivery.md`** — the vendored measurement and recipe.
-- **`tests/package-integrity/test_instruction_file_contract.py`** — the write-surface gate.
 - **`tests/package-integrity/test_instruction_contract_single_owner.py`** — the single-owner
   gate.
 
@@ -565,15 +581,17 @@ no behavior and edits no core):
 overwrites an existing SUBSTANTIVE `CLAUDE.md`**. *Rejected:* detect-then-follow; an opt-in flag.
 
 **P2 — `repo-update` reports drift as an always-print advisory that never blocks.** *(operator,
-2026-08-20.)* Matches `.claude/rules/advisory-calls.md`; keeps the `/build-phase` halt allowlist
-closed. Load-bearing because `/repo-update` also runs **unattended** inside phase wraps and via
+2026-08-20.)* The in-repo implementation contract is `skills/repo-update/core.md:310-318`; it keeps
+the `/build-phase` halt allowlist closed. Load-bearing because `/repo-update` also runs
+**unattended** inside phase wraps and via
 `/repo-wrap` Rail A — its registered-owned-project rail, which delegates verbatim to
 `/repo-update` (`skills/repo-wrap/core.md:124-126`).
 
-**D3 — The write-surface gate enumerates every surface, with a PER-ARM floor.** Enumerates
+**D3 — Resurrection contract for the deferred write-surface gate.** If resurrected, it enumerates
 `skills/*/core.md` **and** `skills/*/providers/*.md`, each arm carrying its own non-empty floor
 re-derived at test time (54 and 165 per § 2), because one combined floor is satisfiable while an
-arm is empty. D6 removes the would-be third surface rather than gating it. *Rationale:* this
+arm is empty. Implementation is deferred under § 10. D6 removes the would-be third surface rather
+than gating it. *Rationale:* this
 repository closed #142 on 2026-08-20 — a gate whose enumeration set was narrower than the
 product. The first draft of this plan reintroduced that shape.
 
@@ -610,8 +628,8 @@ For either `AGENTS.md` or `CLAUDE.md`:
   `@AGENTS.md` import line, **or** a prose sentence directing the reader to the sibling file,
   and carries **no `##` section heading**. (§ 1: a prose pointer is inert on both hosts. A
   pointer may legally carry a comment line; byte thresholds are rejected.)
-- **SUBSTANTIVE** — the file exists, carries at least one `##` section heading, and is not a
-  pointer.
+- **SUBSTANTIVE** — the file exists and is not a POINTER. A `##` section heading is the typical
+  shape, never a necessary condition.
 
 The three are exhaustive and mutually exclusive. "Stub" is a synonym for POINTER and is not
 used normatively below.
@@ -663,8 +681,8 @@ D10 row 2 obliges `repo-update` to keep writing `CLAUDE.md` on ~32 projects, so 
   `refresh`) with no such marker anywhere in its section.
 
 **Designated probe literals.** These exact strings live in the owner section and nowhere else
-under `skills/`; the single-owner gate probes for them and the write-surface gate excludes
-their own section:
+under `skills/`; the single-owner gate probes for them, and any future resurrected write-surface
+gate must exclude their own section:
 
 - the sentinel comment `<!-- instruction-file-contract: owner -->`
 - the sentence `Instruction-file states are three-valued`
@@ -682,7 +700,7 @@ mechanism `test_autofix_marker_single_owner.py` uses.
   inside phase wraps — which is why its drift path must never block.
 - **Data-pipeline trigger DOES fire and is handled by a prose-analogue smoke gate.** The
   contract is a shared definition multiple cores must agree on. A runtime smoke gate cannot
-  exist for prose; the achievable analogue is the single-owner gate (Step 106b), proven here by
+  exist for prose; the achievable analogue is the single-owner gate (Step 106), proven here by
   `test_autofix_marker_single_owner.py`. Steps 108–109 are the executed end-to-end confirmation.
 - **Prose-core limitation, stated honestly.** A test can assert what the prose *instructs*,
   never what an agent *does*. Steps 108 and 109 exist because that gap cannot be closed by
@@ -759,7 +777,7 @@ mechanism `test_autofix_marker_single_owner.py` uses.
 - **Status:** DONE (2026-08-26)
 
 ### Step 106: The single-owner gate (write-surface gate deferred)
-- **Problem:** Nothing asserts instruction-file handling anywhere. **Scope trimmed by operator decision 2026-08-25** (§ 4.2.4 findings 10 and 11): the originally specified **write-surface gate** (`test_instruction_file_contract.py`) is **DEFERRED** to a future phase — after Steps 104/105 land it has zero live true positives, so as specified it cannot fail; see § 10 for the deferral record and resurrection condition. This step builds only the **single-owner gate** (`test_instruction_contract_single_owner.py`): modeled on `test_autofix_marker_single_owner.py` — the owner section exists and carries both D11 probe literals; each declared citer carries the bounded cite phrase; **no other file under `skills/**/*.md`, `_shared/**/*.md` or `documentation/**/*.md` carries either probe literal** (the sweep must include `_shared/`, which is also the only mechanical enforcement of Step 100's "no `_shared/` file was created"). The gate may not red on this repository's own root files (D5), and may not be worded as a restatement of `documentation/host-discovery.md:158-160`, which is the installer axis. **Known self-collision, found during Step 101 (2026-08-25) — do not rediscover this at build time.** This plan file is itself under `documentation/**` and quotes probe literal 1 *verbatim* inside D11's designated-probe-literals bullet — **locate both literals by grep, never by a line number: this plan's numbers shift on every edit and this citation has already gone stale three times** — so the sweep as specified reds on the plan. Probe literal 2 sits on the following line, **unbolded** inside backticks, so it collides only if the gate matches the bare sentence rather than the bolded literal the owner declares. Decide the rule explicitly and state it in the test: exempt this plan by path, or match the exact bolded literal and re-word the literal-1 line.
+- **Problem:** Nothing asserts instruction-file handling anywhere. **Scope trimmed by operator decision 2026-08-25** (§ 4.2.4 findings 10 and 11): the originally specified **write-surface gate** (`test_instruction_file_contract.py`) is **DEFERRED** to a future phase — after Steps 104/105 land it has zero live true positives, so as specified it cannot fail; see § 10 for the deferral record and resurrection condition. This step builds only the **single-owner gate** (`test_instruction_contract_single_owner.py`): modeled on `test_autofix_marker_single_owner.py` — the owner section exists and carries both D11 probe literals; each declared citer carries the bounded cite phrase; **no other file under `skills/**/*.md`, `_shared/**/*.md` or `documentation/**/*.md` carries either probe literal** (the sweep must include `_shared/`, which is also the only mechanical enforcement of Step 100's "no `_shared/` file was created"). The gate may not red on this repository's own root files (D5), and may not be worded as a restatement of `documentation/host-discovery.md:158-160`, which is the installer axis. **Known self-collision, found during Step 101 (2026-08-25) — resolved in the landed gate.** The gate applies a path-independent use/mention rule: a probe literal inside a backtick code span is a permitted mention, while a bare occurrence is a use forbidden outside the owner; fenced-code occurrences remain uses, and citer sites may carry neither literal in any form.
 - **Type:** code
 - **Issue:** #150
 - **Files:** tests/package-integrity/test_instruction_contract_single_owner.py, skills/plan-init/core.md (only if a proof requires an owner-side canary adjustment; the § 4.2.1 predicate pin defers with the write-surface gate)
@@ -781,18 +799,18 @@ mechanism `test_autofix_marker_single_owner.py` uses.
 - **Status:** DONE (2026-08-26)
 
 ### Step 108: Build and install into a scratch home
-- **Problem:** Editing a core changes nothing invokable — this repository is the canonical source, not an installed tree, and the installed `<dev-root>/.claude/skills/plan-init/core.md` is a separate 26,477-byte copy against the canonical 26,657. Without this step, Step 109 would exercise the OLD behavior and report PASS. Build all three profiles and install the claude profile into a **disposable scratch home** (never the operator's real home), then verify the emitted core actually carries the new contract.
+- **Problem:** Editing a core changes nothing invokable — this repository is the canonical source, not an installed tree, and the live pre-Step-100 install is a separate stale copy. Without this step, Step 109 would exercise the OLD behavior and report PASS. Build all three profiles and install the claude profile into a **disposable scratch home** (never the operator's real home), then verify the emitted tree carries the new contract. A post-merge audit also made this step the owner of its transcript's certification repair: replay and UAT predicates must fail closed before a fresh repo-root gate can return the step to DONE.
 - **Type:** code
 - **Issue:** #152
 - **Files:** documentation/findings/instruction-file-symmetry-uat.md
 - **Flags:** --reviewers code
 - **Produces:** a scratch install home plus the verification transcript appended to the findings file
-- **Done when:** `powershell -File tools/build-distributions.ps1 -Provider all` exits 0; `powershell -File tools/install-skill-mesh.ps1 -Provider claude -Home <scratch-home>` exits 0; `powershell -File tools/inspect-host-install.ps1 -Home <scratch-home>` reports the profile installed; and the emitted `plan-init/core.md` under the scratch home is confirmed to contain the `## Instruction-file contract` section — i.e. the new behavior is what a host would load
+- **Done when:** `powershell -File tools/build-distributions.ps1 -Provider all` exits 0; `powershell -File tools/install-skill-mesh.ps1 -Provider claude -Home <scratch-home>` exits 0; `powershell -File tools/inspect-host-install.ps1 -Home <scratch-home>` reports the profile installed; the emitted profile is byte-compared to the fresh build and the installed writer cores are hash-bound to it; the transcript's mandatory predicates throw on missing/false/error results, compare D8's raw pointer bytes exactly, canonicalize tree identity before rejecting same/nested roots, make tree-comparison and path/Git/reparse/hard-link containment fail closed, and grade all seven populated sections; the downstream Step-109 skeleton remains non-runnable until #153 supplies its receipt-bound outside-profile roots, preventive containment, isolated config/auth lifecycle, and invocation design; independent review reports no high or medium defect; and a clean detached repo-root `python -m pytest` at or above `documentation/phase-75-baseline.md` completes with the recorded skip count unchanged
 - **Depends on:** 107
-- **Status:** DONE (2026-08-26) — build/install acceptance PASS; the repaired transcript merged at `600af9e`. Its downstream operator section honestly leaves every behavioral cell blank and records Step 109's separate pre-grading blocker. See § 12 Rounds 8–9 and issue #152.
+- **Status:** LANDED / CERTIFICATION PENDING (2026-08-26) — build/install acceptance PASS and the transcript merged at `600af9e`, but a post-merge audit found fail-open replay instruments and an incomplete Step 109 containment/delivery design. Certification repairs are tracked on #152; the repo-root DONE gate has not yet covered their final bytes. Its downstream operator section leaves every behavioral cell blank. See § 12 Rounds 8–10 and issues #152–#153.
 
 ### Step 109: Operator confirmation of all five D10 rows
-- **Problem:** These cores are prose read by an agent; a test asserts what the prose instructs, never what an agent does. Using the Step 108 scratch home and a **disposable scratch project**, exercise every D10 row: run `/plan-init` from nothing (row 1) and verify `AGENTS.md` plus a `CLAUDE.md` matching D8's exact pointer bytes; run it beside a SUBSTANTIVE `CLAUDE.md` (row 2) and verify it writes nothing; run `/repo-update` on the inverted project (row 3) and verify it refreshes `AGENTS.md`, leaves the pointer, and is a no-op on a second pass; manufacture row 5 and verify the advisory prints without blocking. Then verify delivery on both hosts: `codex debug prompt-input` in the scratch project must show the section headings, and the Claude-side `@AGENTS.md` import must resolve.
+- **Problem:** These cores are prose read by an agent; a test asserts what the prose instructs, never what an agent does. Using a freshly created, receipt-bound, outside-profile successor to Step 108's historical scratch home as the **disposable scratch project**, reinstall and reverify the Claude profile, then exercise every D10 row: run `/plan-init` from nothing (row 1) and verify `AGENTS.md` plus a `CLAUDE.md` matching D8's exact pointer bytes; run it beside a SUBSTANTIVE `CLAUDE.md` (row 2) and verify it writes nothing; run `/repo-update` on the inverted project (row 3) and verify it refreshes `AGENTS.md`, leaves the pointer, and is a no-op on a second pass; manufacture row 5 and verify the advisory prints without blocking. Then verify delivery on both hosts: `codex debug prompt-input` in the scratch project must show the section headings, and the Claude-side `@AGENTS.md` import must resolve.
 - **Type:** operator
 - **Issue:** #153
 - **Files:** documentation/findings/instruction-file-symmetry-uat.md
@@ -803,12 +821,15 @@ mechanism `test_autofix_marker_single_owner.py` uses.
 - **Status:** BLOCKED BEFORE GRADING (2026-08-26) — the accepted step requires real named-skill behavior, but neither current core exposes a safe instruction-file-only UAT mode and normal `repo-update` cannot safely reach Step 7 in the deliberately outside-git fixture. Issue #153 must choose either a new core-supported UAT mode (with rebuild/reinstall/reverification) or a deliberate plan amendment accepting narrower operator-scoped named-skill subsection overrides. No row or host-delivery check has run.
 
 **Rollback.** Every repository change is `git revert`-able here; no step writes into a consumer
-project. Step 108's install artifacts and Step 109's project artifacts live only in a disposable
-scratch home/project, which is deleted rather than reverted. Attended Step 109 host sessions also
+project. Step 108's historical install artifact is retained only as evidence. Step 109 must create
+a new receipt-bound scratch home/project and a distinct scratch Claude config root outside the real
+user profile; after acceptance, both exact roots are deleted rather than reverted through #153's
+reviewed safe-cleanup block. Attended Step 109 host sessions also
 create routine native session records and may refresh host-owned caches outside that scratch root;
 that bounded observational transport state is explicitly permitted before any host session runs,
-but it authorizes no installer, skill-tree, source-tree or consumer-project write outside scratch.
-Use tested isolated host state instead if that bounded native state is unacceptable.
+but it authorizes no auto-memory/semantic-memory, installer, skill-tree, source-tree or
+consumer-project write outside scratch. Auto memory must be disabled for every row. Use tested
+isolated host state instead if that bounded native state is unacceptable.
 
 ---
 
@@ -817,8 +838,8 @@ Use tested isolated host state instead if that bounded native state is unaccepta
 | Item | Risk | Mitigation |
 |---|---|---|
 | Prose cores are not executable | A gate asserts instructions, never agent behavior | Steps 108–109 build, install and run for real; the limitation is stated in § 6 |
-| The gate's predicate over prose | An unguarded-write predicate could still false-red the REFERENCE bucket | D11 gives the marker; Step 106 must **report a measured false-positive count** against Step 103's enumerated bucket, not assert zero |
-| Enumeration set | A cores-only sweep misses `context-slim` — the #142 shape | D3's dual enumeration with per-arm floors; D6 removes the third surface; Step 106b's sweep includes `_shared/` |
+| The future write-surface predicate over prose | An unguarded-write predicate could still false-red the REFERENCE bucket | D11 gives the marker; any resurrection step must **report a measured false-positive count** against Step 103's enumerated bucket, not assert zero |
+| Enumeration set | A narrow single-owner sweep could miss a third contract carrier — the #142 shape | Step 106 sweeps `skills/**/*.md`, `_shared/**/*.md`, and `documentation/**/*.md`; D6 removes the third authored surface |
 | Backward compatibility | ~32 non-inverted projects must keep working | D10 row 2; every writer step's Done-when carries it; Step 109 exercises it |
 | Destructive overwrite | A naive P1 implementation would replace a user's `CLAUDE.md` with a pointer | P1 is scoped to D10 row 1; Step 101's Done-when requires the no-write case be provable |
 | `repo-update` runs unattended | It executes inside phase wraps and `/repo-wrap` Rail A | P2's never-block/never-halt is load-bearing and stated |
@@ -830,14 +851,13 @@ Use tested isolated host state instead if that bounded native state is unaccepta
 
 ## 9. Testing Strategy
 
-**What is added.** Two gates (§ 5). The write-surface gate enumerates both arms with per-arm
-floors re-derived at test time. The single-owner gate follows
+**What is added.** One gate (§ 5). The single-owner gate follows
 `test_autofix_marker_single_owner.py` — this repository's proven pattern for a shared prose
 constant, and the achievable analogue of a data-pipeline smoke gate.
 
-**Proof obligation.** Six planted-defect proofs, each restored: an unguarded `CLAUDE.md` write
-in a core; the same in a provider file; the owner section renamed; a citation deleted; a probe
-literal re-duplicated into a second file; a `_shared/` file created carrying one.
+**Proof obligation.** Four planted-defect proofs, each restored: the owner section renamed; a
+citation deleted; a probe literal re-duplicated into a second file; a `_shared/` file created
+carrying one.
 
 **What might break, and why each is named.** `test_recovery_plan_hygiene.py:41-60` if this
 repo's own root files are touched (D5 forbids it). `test_link_resolution.py` if any step
@@ -847,11 +867,12 @@ fail, not an amendable baseline. `test_distributions.py:770-777` if any adapter 
 
 **Gates.** `python -m pytest tests/` and `python -m pytest tests/package-integrity` are
 in-step **iteration** gates only — `documentation/phase-75-baseline.md` states in its own words
-that neither may flip a step or a phase DONE. **Every step's final Done-when therefore runs the
-repo-root `python -m pytest` with no path argument**, covering the eight `tests/` suites plus
+that neither may flip a step or a phase DONE. **Every remaining code/certification step's final Done-when
+therefore runs the repo-root `python -m pytest` with no path argument**, covering the eight `tests/` suites plus
 `_shared/`, `skill-iterate/scripts/` and `skill-eval-setup/scripts/`. Counts are owned by
 `phase-75-baseline.md`; this plan restates none, and Step 107 updates the owner in a
-non-circular order.
+non-circular order. Step 109 starts only from Step 108's certified bytes and closes on its attended
+behavior/delivery checks rather than rerunning the suite.
 
 **End-to-end.** Step 108 makes the edited prose actually loadable; Step 109 exercises it. Step
 109 is `Type: operator` and produces observations only.
@@ -878,6 +899,10 @@ Round 2 identified these as real but out of scope here; recorded so they are not
   (b) one planted-defect proof per covered write verb, and (c) the far-marker proof — the three
   things finding 10 records as necessary for the gate to prove anything. Step 106 retains the
   single-owner gate, which has neither defect.
+- The opening rationale in `skills/plan-init/core.md`'s `## Instruction-file contract` still
+  describes the deferred plural/two-glob write-surface design and overstates the adapter citation
+  constraint. Correcting that canonical core is not a documentation-only closeout: it requires its
+  own code step, package gate, rebuild/reinstall, and installed-byte reverification.
 
 ---
 
@@ -924,7 +949,7 @@ Step 100 unaided. Material changes:
 - **Step 108 inserted.** Round 2 proved Step 109 had no path to the behavior it grades: the
   installed core is a separate 26,477-byte copy and no step built or installed anything, so the
   operator step would have confirmed the OLD behavior and passed.
-- **Every step now ends on the repo-root DONE gate.** Six steps had been flipping DONE on
+- **Every later code/certification step after Step 103 now ends on the repo-root DONE gate.** Six steps had been flipping DONE on
   `python -m pytest tests/`, which the cited count owner explicitly forbids.
 - **Step 102's executed fixed-point check moved to Step 109** — it required operator presence
   in a `Type: code` step.
@@ -974,14 +999,14 @@ DONE. Recorded because three things happened that the plan did not predict:
   stayed between 1737 and 1864 MB throughout, continuously inside issue #156's spurious-red band,
   and the run was clean anyway.
 
-- **§ 6 D8's text is stale relative to the owner section Step 100 landed, and it cost an
-  iteration.** § 6 D8 defines SUBSTANTIVE as requiring "at least one `##` section heading";
+- **§ 6 D8's text was stale relative to the owner section Step 100 landed, and it cost an
+  iteration.** Before this wrap, § 6 D8 defined SUBSTANTIVE as requiring "at least one `##`
+  section heading";
   `skills/plan-init/core.md:475-477` — the ONE owner, and authoritative — says that heading is "the
   TYPICAL shape, **never a necessary condition**", SUBSTANTIVE being the complement of POINTER. A
   Step 104 iteration transcribed § 6's wording into `goblin-suggest` and was rejected for
-  contradicting the owner. **Read the owner section, not § 6 D8, wherever the two differ**, and
-  treat § 6 D8 as historical narrative. Finding 2's "one source of truth" argument applies to this
-  plan's own prose.
+  contradicting the owner. This wrap corrected § 6 D8; the incident remains the plan's own example
+  of Finding 2's "one source of truth" argument.
 
 - **Two findings outlived the steps.** (a) Step 103 classified sites by reading skill *prose* and
   never opened the source of the CLIs two of those skills drive: `goblin`'s
@@ -1000,21 +1025,20 @@ DONE. Recorded because three things happened that the plan did not predict:
   returned: the next step is **Step 107**, not the utility track. Steps 107–109 run first; the
   utility track is deferred behind them, not cancelled. Step 107 is well-placed regardless — its
   `Done when` needs a repo-root measurement compared against the pre-step count before the owner is
-  updated, and the shared gate supplies exactly that.
+  updated, and a fresh Step-107 gate supplies exactly that.
 
 **Round 7 (build outcome, 2026-08-26)** — Step 107 built and its code landed. Four things are
 recorded because the plan did not predict them:
 
-- **Steps 107 and 108 share one batched DONE gate**, authorized by the operator in-session on the
-  same reasoning as Round 5's batch: each step iterates on `tests/package-integrity` (~50s), and the
-  repo-root `python -m pytest` runs **once**, after both land. This also keeps Step 107's Done-when
-  non-circular in the order the step demands — measure, compare against the 1335 recorded in
-  `documentation/phase-75-baseline.md`, and only then write the new figure into that owner.
+- **A shared Steps 107–108 gate was authorized here but did not become the execution record.** The
+  Step-107 gate completed first at `d4c88ee`: measure, compare against the 1335 recorded in
+  `documentation/phase-75-baseline.md`, and only then write the new figure into that owner. Step 108
+  therefore needs its own later certification gate after its transcript repairs land.
 
 - **Three of Step 107's review findings originated in § 1 of this plan, not in the build.** The
   developer transcribed § 1 faithfully and inherited its defects: § 1 claimed the reproduction
-  "writes nothing" (false — measured, it refreshes Codex-home caches on every invocation; what is
-  true is that it writes nothing in the *project*), spelled the config override with outer-single /
+  "writes nothing" without a project scope (controlled protocols establish no project write;
+  zero-invocation controls make Codex-home churn unattributable), spelled the config override with outer-single /
   inner-double quotes (**exits 1** in Windows PowerShell 5.1, this repository's declared floor —
   PS strips the inner quotes and codex reports `invalid type: string "[CLAUDE.md]", expected a
   sequence`), and writes `§ N` with a space where the rest of `documentation/` writes `§N` by
@@ -1081,19 +1105,20 @@ after 3/3 iterations. Recorded because four things generalize beyond these steps
   `copilot -C <home> skill list --json` — and Steps 49/50 are **DONE (2026-08-09)**. That instrument
   grades the **binding**; § 2.0's probe grades only a tree the operator names. Two measured
   consequences for Step 109: a stale `plan-init` (26,477 bytes, **0** `AGENTS.md`) is live in the
-  personal `~/.claude/skills` root, which Claude Code discovers regardless of cwd — so **row 2 can
-  report PASS against it**; and that root symlinks into the coding-root repo's **1,235 git-tracked
-  files** with an install ledger already present, making § 2.0's option-2 install a routine *owned*
-  overwrite (no `-Force`, no prompt, measured). Following the documented mechanism removes the need
-  for option 2 entirely.
+  personal `~/.claude/skills` root and becomes eligible under the default user + project + local
+  setting sources — so an invocation that omits or widens the mandatory project-only source can
+  **report PASS against it**; and that junction target contains **1,235 git-tracked files** with an
+  install ledger already present, making § 2.0's option-2 install a routine *owned* overwrite (no
+  `-Force`, no prompt, measured). Following the documented mechanism removes the need for option 2
+  entirely.
 
-**Round 8 addendum — a concurrent session, and four defects live on `main`.** A second
+**Round 8 addendum — a concurrent session, and four defects then live at `d4c88ee`.** A second
 `/build-phase --resume 107` ran at the same time and authored Step 107 independently; `d4c88ee`
 won the race, and commit `d5afe97` plus branch `build-step-1787765607` @ `8af9e36` are that
 session's. Its review (ten reviewer passes, two adversarial workflows) is preserved at
 `documentation/findings/step-107-parallel-review-evidence.md`. **Four of its findings were
-re-confirmed by direct enumeration against the landed files and are live on `main`** — they are
-NOT fixed here and need their own step:
+re-confirmed by direct enumeration against the landed files at `d4c88ee`**; commit `52d44c9`
+subsequently fixed all four:
 
 1. `architecture.md:627,632` — "the write surface is the core, never the adapter, for every
    portable skill" and adapters "need no instruction-file prose of their own". **False**, and
@@ -1137,8 +1162,9 @@ provider-native and cites `_shared/judge-core.md` via the relative spelling toda
 `tests/distributions/test_distributions.py:769-777` forbids only the repo-rooted spelling. A sweep
 found exactly two instances and no third, so stop-and-audit was not reached.
 
-**Round 9 (Codex handoff closeout, 2026-08-26)** — Steps 107–108 are DONE; Step 109 is
-blocked before grading. Four outcomes supersede Round 8's parked state:
+**Round 9 (interim Codex handoff closeout, 2026-08-26; superseded by Round 10)** — At this
+checkpoint Steps 107–108 were marked DONE and Step 109 was blocked before grading. Four outcomes
+were recorded:
 
 - **Step 107's gate passed from its sentinel, not its log tail.** The named scratch sentinel was
   `0`; only after that was read did the UTF-16 log supply `1341 passed, 1 skipped in 8843.47s`.
@@ -1151,13 +1177,50 @@ blocked before grading. Four outcomes supersede Round 8's parked state:
 - **Step 108's own acceptance was always independent of downstream UAT.** Its all-profile build,
   scratch Claude install, inspector result, current owner section and whole-profile equality are
   verified in `documentation/findings/instruction-file-symmetry-uat.md`; the repaired transcript
-  merged at `600af9e` after current-byte review found no high or medium defect. Issue #152 can close.
+  merged at `600af9e` after the then-current review reported no high or medium defect. Round 10's
+  fresh audit refuted that review result without refuting the historical build/install evidence.
 - **Step 109 has a newly exposed design blocker, not a D10 failure.** The plan requires real named
   skills, but `plan-init` and `repo-update` expose no instruction-only UAT mode; a normal
   `repo-update` cannot safely reach Step 7 in the outside-git fixture. Every behavioral cell stays
   blank. Issue #153 must choose a core-supported mode or deliberately amend the acceptance to
   named-skill subsection overrides. The Rollback clause now records the bounded native host
   session/cache state inherent in either attended route.
+
+**Round 10 (post-merge certification audit, 2026-08-26)** — Step 108 is landed but its
+certification is pending; Step 109 remains blocked before grading.
+
+- The historical build/install evidence still passes its four acceptance criteria. The defects are
+  in the published replay and downstream UAT instruments: exact-pointer decoding accepted multiple
+  byte sequences; mandatory predicates printed false values with exit 0; the tree comparator could
+  print `IDENTICAL` after probe errors or compare one directory through its long and 8.3 aliases;
+  path changes and Git containment failed open; hard links
+  could escape the scratch boundary; and the heading-only grader did not prove seven populated,
+  surgically refreshed sections.
+- The host design also proved too weak. Wrapper/base attribution did not prove Claude read the
+  co-located canonical `core.md`; `--setting-sources project` excludes the stale user skill but does
+  not disable auto memory; post-action trace inspection is audit rather than prevention; and Claude
+  strips block HTML comments before injection, so the original delivery canary was not decisive.
+  The repaired skeleton therefore requires a successful native core `Read`, exact core hash,
+  auto-memory disablement, strict-empty MCP plus verified absence of any managed MCP server,
+  fail-closed tool/path containment, plain-text canary, and an exact `InstructionsLoaded` include
+  event. The historical OS-temp install is now audit-obsoleted for Step 109: #153 must always
+  create receipt-bound project/config roots outside the real profile, reinstall, and reverify.
+  The Claude wrapper relocates configuration/temp/plugin state, disables background lifecycle
+  surfaces, verifies authentication under the exact isolated environment without exposing a
+  credential, waits for the asynchronous delivery logger, and snapshots both contained static
+  state and outside-host mutation surfaces. Because managed settings outrank lower sources and effective hooks merge, the selected
+  resolution must also enumerate and hash/allowlist the effective managed/plugin/session hook
+  surface, managed MCP configuration, and managed skill definitions before launch; managed
+  same-name writers and managed-skill shell preprocessing must be rejected. Project-only settings
+  and `--strict-mcp-config` are not treated as managed-policy boundaries.
+- No Step-109 host session or writer skill ran. Issue #153 must still choose a core-supported UAT
+  mode or deliberately amend the acceptance to operator-scoped named-skill subsection overrides;
+  that resolution must also supply and negative-test the containment arguments and hook before the
+  first row.
+- Two attempted post-`52d44c9` repo-root runs are explicitly invalid evidence: one was stopped when
+  another session moved `HEAD` and dirtied documentation; the second was stopped when this audit
+  found the fail-open transcript. Both sentinels are `-1`. A clean detached repo-root gate at a
+  stable repaired commit is still required before Step 108 may return to DONE.
 
 ---
 
@@ -1183,7 +1246,7 @@ renumbered.
 |---|---|---|---|
 | P1 | P | `plan-init` authors the inverted `AGENTS.md`-primary shape only when both instruction files are absent and never overwrites a substantive `CLAUDE.md` | operator-picked 2026-08-20 |
 | P2 | P | `repo-update` reports dual-substantive drift as an always-print advisory that never blocks or halts | operator-picked 2026-08-20 |
-| D3 | D | Enumerate both core and provider write surfaces with separate non-empty floors derived at test time | accepted 2026-08-20 |
+| D3 | D | If the write-surface gate is resurrected, enumerate both core and provider surfaces with separate non-empty floors derived at test time | implementation deferred 2026-08-25 (§ 10) |
 | D4 | D | Let the complete Step 103 enumeration determine the repair set instead of freezing a file list | accepted 2026-08-20 |
 | D5 | D | Leave this repository's own root instruction files unchanged and accept its temporary Codex content gap | accepted 2026-08-20 |
 | D6 | D | Keep the instruction-file contract in one owning core and create no `_shared/` file | accepted 2026-08-20 |
