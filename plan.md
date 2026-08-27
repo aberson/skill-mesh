@@ -4,7 +4,8 @@
 
 Complete Phase IS (`documentation/instruction-file-symmetry-plan.md`): certify Step 108, record the
 operator's Step-109 route choice, implement and certify Step 108P, and then run the five attended
-Step-109 acceptance rows. Phase CP remains parked on its operator-only M3 row.
+Step-109 acceptance rows. The subordinate completion sequence is
+`documentation/phase-is-completion-plan.md`. Phase CP remains parked on its operator-only M3 row.
 
 Phase IS is the active prerequisite inside the broader Phase CP delivery. Goal NP's two-approval
 publication gate was closed unapproved on 2026-08-16 and replaced by Phase CP's additive,
@@ -89,7 +90,8 @@ does not reinterpret that evidence or revive its stopped experiment.
 
 Execute Phase IS per `documentation/instruction-file-symmetry-plan.md`. That plan is the current
 authority for the active build; `documentation/codex-parity-delivery-plan.md` remains the broader
-parked delivery plan. This file records status and history.
+parked delivery plan. Use `documentation/phase-is-completion-plan.md` for the dependency-ordered
+remaining-work runbook; it introduces no new Phase IS unit. This file records status and history.
 
 **Pass 1 (Steps 1–5) is complete as of 2026-08-18** at commit `4bcbef5`. **Step M1 (#130) is
 complete as of 2026-08-18 with a passing verdict** — evidence, check rows, delta rows (one

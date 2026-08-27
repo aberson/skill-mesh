@@ -568,6 +568,8 @@ three hosts; 3 are Claude-native (`claude-oauth-auth`, `context-slim`, `judge-mo
   now owns the required containment code and is blocked on #152 plus the deliberate UAT mode/override
   choice; Step 109 (#153) remains operator-only and blocked before grading. See
   [documentation/instruction-file-symmetry-plan.md](documentation/instruction-file-symmetry-plan.md).
+  The reviewed dependency-ordered finish sequence is
+  [documentation/phase-is-completion-plan.md](documentation/phase-is-completion-plan.md).
 - **Phase 8 is superseded** by Phase CP's additive, cohort-based rollout (course change 2026-08-16).
   Step 47b remains the separately scheduled containment-gate hardening follow-up and is off the
   completed cutover path.

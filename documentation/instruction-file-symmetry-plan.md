@@ -8,6 +8,9 @@ is blocked before grading.
 under umbrella #143; all ten `**Issue:**` fields populated.
 **Created:** 2026-08-20 against `main` @ `1f410fc`. Initial planning was revised after plan-review
 round 1 (22 Blockers) and plan-wrap round 2 (9 Blockers); execution revisions continue in § 12.
+**Completion runbook:** [`phase-is-completion-plan.md`](phase-is-completion-plan.md) coordinates the
+remaining certification, operator-decision, containment, attended-UAT, and closeout sequence. It is
+subordinate to this plan and introduces no additional Phase IS unit.
 
 **Reading aid.** `P<n>` = operator-picked decision *n* and `D<n>` = agent-defaulted decision
 *n* in § 6. `A` = the project's `AGENTS.md`, `C` = its `CLAUDE.md`. Angle brackets inside a citation spelling like
