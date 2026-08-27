@@ -550,15 +550,15 @@ three hosts; 3 are Claude-native (`claude-oauth-auth`, `context-slim`, `judge-mo
   instruction-file contract now has one owner, the lifecycle writers and readers use the
   three-valued `AGENTS.md`/`CLAUDE.md` matrix, and the Codex delivery recipe is vendored. Step 108's
   historical build/install evidence landed, but a fresh immutable-blob audit refuted the prior
-  high-0/medium-0 certification. Four immutable checkpoints were rejected by one of their
-  independent reviewers (0 high / 2 medium, 0 high / 4 medium, 0 high / 2 medium, then 0 high / 1
-  medium). Those nine plus two pre-freeze phase-plan ordering contradictions are repaired across the
-  affected files. The resulting UAT candidate is Git blob
-  `97e4c5b8b0c898217613102b2a3f83d48c89ad39`, raw SHA-256
-  `BF87DBAE4E82F546B70A56356493A0F120F7E4CB5BE4ECC569C195A66DE02372` (140,726 bytes; 1,928
+  high-0/medium-0 certification. Five immutable checkpoints were rejected during independent review
+  (0 high / 2 medium, 0 high / 4 medium, 0 high / 2 medium, 0 high / 1 medium, then the same sole 0
+  high / 1 medium defect reported by both reviewers). Those ten plus two pre-freeze phase-plan
+  ordering contradictions are repaired across the affected files. The resulting UAT candidate is
+  Git blob `bd1c9205b80c468dcbb4ef64da5b1532e1cfba06`, raw SHA-256
+  `15043DB9FFA0BAE7F5D8FC0B33A7F90964DBD72505FB035B219FC3BE0BC6D612` (140,728 bytes; 1,928
   lines). The repaired bytes pass 24/24 PowerShell parses, 18/18 streamed nonzero blockers, the
   107/107 credential check, unchanged manifest regeneration, and all 278 package-integrity tests.
-  Two independent reviews of the next immutable commit and the stable repository-root gate remain
+  Two fresh independent reviews of the next immutable commit and the stable repository-root gate remain
   pending, so Step 108 is not DONE. The original OS-temp
   install is not a Step 109 fixture; that step must recreate receipt-bound project/config/build plus
   durable evidence-export roots outside the real profile, retain their physical handles for the

@@ -414,7 +414,7 @@ adapter, never a skill registry — so that Codex check needs no codex skill pro
 the gpt nor the codex profile is installed in this home, and neither needs to be.
 
 **Cost of that scoping, stated plainly:** the gpt and codex profiles have build-count evidence
-only (54/54 files emitted); no content check was run against either. If a later step needs an
+only (125/125 files emitted); no content check was run against either. If a later step needs an
 installed codex skill tree, that install and its verification are unbudgeted work.
 
 ### O2 — the emit-time repoint inverts the meaning of one sentence that is *about* the spelling
