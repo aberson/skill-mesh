@@ -808,7 +808,7 @@ mechanism `test_autofix_marker_single_owner.py` uses.
 - **Produces:** a scratch install home plus the verification transcript appended to the findings file
 - **Done when:** `powershell -File tools/build-distributions.ps1 -Provider all` exits 0; `powershell -File tools/install-skill-mesh.ps1 -Provider claude -Home <scratch-home>` exits 0; `powershell -File tools/inspect-host-install.ps1 -Home <scratch-home>` reports the profile installed; the emitted profile is byte-compared to the fresh build and the installed writer cores are hash-bound to it; the seven canonical writer sections, fixture fact lines, stack table, directory tree, and structural-versus-semantic grading split are stated without claiming a downstream behavior result; all 18 Step-109 PowerShell fences contain only one standalone terminating blocker owned by Step 108P, so linewise or whole-block execution cannot reach a stateful/host action; the immutable Git blob identity and raw SHA-256, not checkout-dependent line endings, bind independent review; two independent reviews report no high or medium defect; all 24 PowerShell-bearing fences parse under Windows PowerShell 5.1; `python -m pytest tests/package-integrity` passes; and a clean stable detached repo-root `python -m pytest` reads its sentinel as `0`, meets `documentation/phase-75-baseline.md`, and preserves the recorded skip count. All packet implementation, negative corpus, and the post-code full gate belong to Step 108P.
 - **Depends on:** 107
-- **Status:** LANDED / CERTIFICATION PENDING (2026-08-26) — build/install acceptance remains PASS. Three immutable checkpoints were rejected by one of their independent reviewers (0 high / 2 medium, 0 high / 4 medium, then 0 high / 2 medium). Those eight plus two pre-freeze phase-plan ordering contradictions are repaired across the affected files. The resulting UAT candidate is Git blob `417813e04007167dbe81b081e56ea07b017d3427`, raw SHA-256 `3C8BD6D64DE5B99F9D5E9C54DB8A67B5461AFA30F589E9AEF17C28A0179F34A9` (139,223 bytes; 1,917 lines). The repaired bytes pass 24/24 PowerShell parses, 18/18 streamed nonzero blockers, the 107/107 credential check, unchanged manifest regeneration, and all 278 package-integrity tests. Two independent reviews of the next immutable commit and the stable repo-root gate remain pending; #152 stays open and Step 108 is not DONE. Every behavioral cell remains blank. See § 12 Round 10 and issues #152–#153.
+- **Status:** LANDED / CERTIFICATION PENDING (2026-08-27) — build/install acceptance remains PASS. Four immutable checkpoints were rejected by one of their independent reviewers (0 high / 2 medium, 0 high / 4 medium, 0 high / 2 medium, then 0 high / 1 medium). Those nine plus two pre-freeze phase-plan ordering contradictions are repaired across the affected files. The resulting UAT candidate is Git blob `97e4c5b8b0c898217613102b2a3f83d48c89ad39`, raw SHA-256 `BF87DBAE4E82F546B70A56356493A0F120F7E4CB5BE4ECC569C195A66DE02372` (140,726 bytes; 1,928 lines). The repaired bytes pass 24/24 PowerShell parses, 18/18 streamed nonzero blockers, the 107/107 credential check, unchanged manifest regeneration, and all 278 package-integrity tests. Two independent reviews of the next immutable commit and the stable repo-root gate remain pending; #152 stays open and Step 108 is not DONE. Every behavioral cell remains blank. See § 12 Round 10 and issues #152–#153.
 
 ### Step 108P: Implement and certify the Step-109 containment packet
 - **Problem:** Step 109 is attended operator acceptance and may not create the substantial code needed to make its host actions safe. This preparation step owns that code after #153 records one of its two accepted routes. It replaces every unconditional blocker in the UAT skeleton with a reviewed packet: a static native `prepare`/launcher/guardian trust root, precompiled helper, self-contained Windows PowerShell 5.1 executor bundle, strict parsers and machine-readable schemas, exact mode artifacts, handle-coupled read broker, kernel I/O rail, portable evidence uploader/exporter, and safe cleanup. Native user/kernel components use pinned Microsoft Visual C++ (**MSVC**) C++17 with the Windows Software Development Kit (**SDK**) and Windows Driver Kit (**WDK**) because the required pre-entry-point code-integrity, handle, Job Object, process-creation, and minifilter boundaries cannot begin inside the Common Language Runtime (**CLR**) or a script; orchestration stays on Windows PowerShell 5.1 because that is the repository's supported Windows floor. The implementation records the exact compiler/SDK/WDK/signing manifest. In this step, **MVID** means a managed assembly Module Version ID, **UNC** means a Universal Naming Convention network path, and **SUBST** means a Windows substituted drive. A file identity is uppercase `<16-hex volume serial>:<32-hex file ID>` from `FILE_ID_INFO`, produced from one retained no-follow handle by the pinned helper; that same handle produces DOS-final and volume-GUID-final paths plus `FILE_STANDARD_INFO.NumberOfLinks`. The admitted guardian retains no-delete-sharing handles to the common creation parent, the combined install-home/project root, the config root, the build root, the evidence-export root, and the real profile from creation through handle-based final disposition and duplicates only the required handles to fresh runners; a path reopen plus a reused ID cannot re-establish continuity. Preparation, every later guard, and cleanup consume those live handles and fail closed if the guardian, either information class, or share denial is unavailable.
@@ -842,11 +842,13 @@ profile. During Step 109 closeout, after behavioral acceptance and the first ver
 publication but before the step completes, the three disposable roots are disposed rather than
 reverted through Step 108P's reviewed safe-cleanup block; the cleanup attestation is then remotely
 verified in the second publication and the export root is retained. Attended Step 109 host sessions also
-create routine native session records and may refresh host-owned caches outside that scratch root;
-that bounded observational transport state is explicitly permitted before any host session runs,
-but it authorizes no auto-memory/semantic-memory, installer, skill-tree, source-tree or
-consumer-project write outside scratch. Auto memory must be disabled for every row. Use tested
-isolated host state instead if that bounded native state is unacceptable.
+create routine native session records and may refresh host-owned caches outside that scratch root.
+Only Codex delivery may use that exception, and only through Step 108P's receipt-bound per-mode
+transport policy: it enumerates exact physical cache/session roots, relative-leaf grammar,
+operations, writer images, preventive kernel rail and complete pre/post aggregate delta while
+forbidding instruction/semantic-memory/policy/skill/source/project content. Every other mode binds
+the empty transport policy. Use tested isolated Codex state with the empty policy instead, or remain
+blocked, if the exact real-profile boundary cannot be enforced. Auto memory stays disabled for every row.
 
 ---
 
@@ -1204,8 +1206,9 @@ were recorded:
   `repo-update` cannot safely reach Step 7 in the outside-git fixture. Every behavioral cell stays
   blank. Issue #153 must choose a core-supported mode or deliberately amend the acceptance to
   named-skill subsection overrides; Step 108P/#162, not the operator step, owns the resulting code
-  packet. The Rollback clause now records the bounded native host
-  session/cache state inherent in either attended route.
+  packet. The Rollback clause now records the bounded native host session/cache state inherent in
+  either attended route and confines its only outside-scratch form to Codex delivery's exact
+  transport policy (otherwise tested isolated Codex state or BLOCKED).
 
 **Round 10 (post-merge certification audit, 2026-08-26)** — Step 108 is landed but its
 certification is pending; Step 108P is blocked before implementation; Step 109 remains blocked before
@@ -1284,15 +1287,19 @@ grading.
   was placed both after and inside Step 109. Both ordering defects are repaired. A subsequent
   pre-freeze cross-file pass found two phase-plan summaries that still ordered the entire evidence
   chain before cleanup or placed cleanup after acceptance; they now state first publication,
-  cleanup/cleanup attestation, then second publication before Step 109 closes. The next frozen
-  candidate is Git blob `417813e04007167dbe81b081e56ea07b017d3427`, whose raw blob bytes have
-  SHA-256 `3C8BD6D64DE5B99F9D5E9C54DB8A67B5461AFA30F589E9AEF17C28A0179F34A9`, length 139,223 bytes and
-  1,917 LF-terminated lines. All 24 PowerShell-bearing fences parse under Windows PowerShell 5.1,
+  cleanup/cleanup attestation, then second publication before Step 109 closes. Those fixes landed at
+  `6e71905`; one reviewer passed that fourth checkpoint while the other reported 0 high / 1 medium:
+  the UAT simultaneously allowed bounded host transport/cache state and unqualifiedly forbade every
+  real-profile write. The repaired contract gives six modes an empty outside-scratch transport
+  policy and makes Codex delivery choose either tested isolated state or one manifest-bound,
+  kernel-enforced transport-only policy. The next frozen candidate is Git blob
+  `97e4c5b8b0c898217613102b2a3f83d48c89ad39`, whose raw blob bytes have SHA-256
+  `BF87DBAE4E82F546B70A56356493A0F120F7E4CB5BE4ECC569C195A66DE02372`, length 140,726 bytes and
+  1,928 LF-terminated lines. All 24 PowerShell-bearing fences parse under Windows PowerShell 5.1,
   all 18 blockers exit nonzero when streamed through `powershell -NoProfile -Command -`, the closed
   credential corpus is 107/107 ordinal-ignore-case unique, manifest regeneration is unchanged, and
   the package-integrity iteration gate passes 278 tests. Two independent reviews of the next
-  immutable commit and a stable repo-root gate are still required; neither is claimed by this
-  addendum.
+  immutable commit and a stable repo-root gate are still required; neither is claimed by this addendum.
 - Two attempted post-`52d44c9` repo-root runs are explicitly invalid evidence: one was stopped when
   another session moved `HEAD` and dirtied documentation; the second was stopped when this audit
   found the fail-open transcript. Both sentinels are `-1`. A clean detached repo-root gate at a
