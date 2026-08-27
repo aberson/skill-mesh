@@ -558,8 +558,8 @@ three hosts; 3 are Claude-native (`claude-oauth-auth`, `context-slim`, `judge-mo
   `15043DB9FFA0BAE7F5D8FC0B33A7F90964DBD72505FB035B219FC3BE0BC6D612` (140,728 bytes; 1,928
   lines). The repaired bytes pass 24/24 PowerShell parses, 18/18 streamed nonzero blockers, the
   107/107 credential check, unchanged manifest regeneration, and all 278 package-integrity tests.
-  Two fresh independent reviews of the next immutable commit and the stable repository-root gate remain
-  pending, so Step 108 is not DONE. The original OS-temp
+  At immutable commit `81e8062`, two fresh independent object-only reviews both report 0 high / 0
+  medium. The stable repository-root gate remains pending, so Step 108 is not DONE. The original OS-temp
   install is not a Step 109 fixture; that step must recreate receipt-bound project/config/build plus
   durable evidence-export roots outside the real profile, retain their physical handles for the
   complete lifetime, reject path aliases, build
