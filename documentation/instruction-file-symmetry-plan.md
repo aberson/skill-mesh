@@ -715,7 +715,7 @@ mechanism `test_autofix_marker_single_owner.py` uses.
 - **Problem:** D8, D10 and D11 exist nowhere in the catalog. Add a named `## Instruction-file contract` section to `skills/plan-init/core.md` as the ONE owner, holding D8's three states and worked example, D8's exact pointer bytes, D10's five-row matrix, and D11's guarded/unguarded rule plus its two designated probe literals and the bounded cite-site minimum. Do **not** create a `_shared/` file (D6). Do **not** move or merge the seven-section bodies (§ 3). Add the bounded citation to `skills/repo-update/core.md`.
 - **Type:** code
 - **Issue:** #144
-- **Files:** skills/plan-init/core.md, skills/repo-update/core.md
+- **Files:** skills/plan-init/core.md, skills/repo-update/core.md, documentation/release-candidate-report.md
 - **Flags:** --reviewers code
 - **Produces:** the owner section; a bounded citation in repo-update's core
 - **Done when:** the owner section carries D8, D10, D11, both probe literals and the exact pointer bytes; repo-update carries only the bounded cite phrase and neither probe literal; **no `_shared/` file was created**; no new dangling reference; the repo-root `python -m pytest` (no path argument) is green at or above the count recorded in `documentation/phase-75-baseline.md`, skip count unchanged
@@ -726,7 +726,7 @@ mechanism `test_autofix_marker_single_owner.py` uses.
 - **Problem:** `skills/plan-init/core.md:439-475` bootstraps `CLAUDE.md` as the content file. Implement D10's `plan-init` column, walking all five rows explicitly. Author `AGENTS.md` and write `CLAUDE.md` as D8's exact pointer bytes **only on row 1**; on row 2 touch neither and report the project non-inverted. Repair the `:443` skip guard, which keys on `CLAUDE.md` existence — a POINTER satisfies it, so plan-init writes nothing on an inverted project. Update the report string at `:462`, the scrapability constraint at `:475` (it is the dev-observatory scrape contract — see § 8's resolved row for what it must say on an inverted project), and the post-save handoff at `:481`. Update `skills/plan-init/providers/codex.md:11`; the adapter carries only D11's bounded cite phrase and neither probe literal.
 - **Type:** code
 - **Issue:** #145
-- **Files:** skills/plan-init/core.md, skills/plan-init/providers/codex.md
+- **Files:** skills/plan-init/core.md, skills/plan-init/providers/codex.md, documentation/release-candidate-report.md
 - **Flags:** --reviewers deep
 - **Produces:** modified plan-init core and codex adapter; the new report string quoted verbatim in the step's checkpoint entry
 - **Done when:** all five D10 rows are walked explicitly in the prose; **row 2 provably writes nothing**; the skip guard no longer suppresses on a POINTER; every `CLAUDE.md` write in the file carries D11's canonical marker in its section; the adapter carries neither probe literal; the repo-root `python -m pytest` green at or above the recorded count, skip unchanged
