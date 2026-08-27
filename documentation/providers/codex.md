@@ -170,13 +170,19 @@ install must therefore have been built with `-Provider codex` or `-Provider all`
 ## Capabilities
 
 A Codex adapter loads the core in full and maps host abstractions onto it; it never
-weakens a gate the core defines. Five class-level deltas separate it from its Claude
-and GPT siblings:
+weakens a gate the core defines. The mapping is capability-conditioned because Codex
+hosts do not all expose the same orchestration surface. Five recurring host-binding
+questions separate it from its Claude and GPT siblings:
 
-- **No Agent/Workflow primitive.** Where a core asks for an isolated fresh-context
-  agent, the wrapper runs the work through the core's documented single-context
-  fallback with the same gates, ordering, and evidence requirements — never
-  presenting a re-read of its own output as an independent verdict.
+- **Host-conditioned agent dispatch.** An embedded Codex host can expose explicit
+  fresh-context dispatch even though an ordinary CLI host does not. Support is proven
+  from the active callable schema plus a non-mutating no-inheritance probe, never from
+  the provider or function name. A core with no single-context fallback runs only when
+  its adapter maps that proven primitive; otherwise it halts `required_tool_missing`.
+  Shared filesystem/tools are compatible with conversational isolation and do not
+  claim an OS security boundary. Where a phase verdict is authenticated, fresh child
+  dispatch, opaque parent key retention, and a host-caller-scoped, strict JSON-lines
+  parent-only sign/write service are separately probed capability gates.
 - **No Artifact tool.** Every artifact a core asks to publish is written as a FILE
   under the repository (or the operator-named output path) and reported by path.
 - **No Codex tier peer.** `config/model-tier-map.json` maps Claude tier names onto
@@ -193,23 +199,26 @@ and GPT siblings:
   cross-host handoff, and a closure loop simply keeps driving in-session until its
   own termination check passes.
 
-**Where a core requires a host primitive Codex lacks and documents no fallback, the
-adapter halts visibly with `required_tool_missing`.** The authoring rule of record is
-that such wrappers halt at the isolated dispatch "instead of weakening the
-producer-never-grades-itself gate"; documenting a single-context fallback for one of
-those cores would be a CORE change with its own review, never a wrapper edit. An
-unavailable capability is its own reported result, never a silently degraded one.
+**Where the active Codex host or the skill's adapter lacks a primitive the core
+requires and documents no fallback, the adapter halts visibly with
+`required_tool_missing`.** The authoring rule of record is that such wrappers halt at
+the isolated dispatch instead of weakening the producer-never-grades-itself gate.
+Documenting a single-context fallback for one of those cores would be a CORE change
+with its own review, never a wrapper edit. An unavailable or unproven capability is
+its own reported result, never a silently degraded one.
 
 ## Known limitations
 
-- **13 skills halt instead of running.** `build-step`, `review-deep`,
-  `review-gauntlet`, `skill-iterate`, `skill-evolve`, `test-prune`, `tier-escalate`,
-  `tier-offload`, `judge-ui`, `research-prospect`, `user-brainstorm`, `user-debug`,
-  and `user-learn` each require an isolated fresh-context arm — for `judge-ui`, an
-  independent vision judge — that this host has no primitive for, and their cores
-  document no single-context fallback. Their portable legs still run (`build-step`'s
-  worktree lifecycle and mechanical gates, `judge-ui`'s Playwright driving and
-  mechanical asserts), but the adapter halts at the dispatch.
+- **Agent-dependent behavior varies by host and adapter.** On an ordinary CLI host
+  without fresh-context dispatch, the 13 previously enumerated paths still halt at
+  their required isolated arm. On a capable embedded host, `build-step` runs only
+  after its explicit no-history probe passes; `build-phase` additionally requires a
+  fresh per-step opaque parent HMAC state and a usable caller-scoped parent-only verdict
+  service. The other 12 adapters from that historical set
+  (`review-deep`, `review-gauntlet`, `skill-iterate`, `skill-evolve`, `test-prune`,
+  `tier-escalate`, `tier-offload`, `judge-ui`, `research-prospect`, `user-brainstorm`,
+  `user-debug`, and `user-learn`) retain their current mappings pending their own
+  capability audits. This repair does not silently generalize one proven mapping.
 - **Visual verdicts are unreachable, so `--ui` degrades downstream.** `judge-motion`
   is Claude-native and absent from this profile, and `judge-ui` halts at its
   vision-judge dispatch, so `user-uat --ui` surfaces `required_tool_missing` naming
@@ -221,10 +230,11 @@ unavailable capability is its own reported result, never a silently degraded one
   backend is absent it uses the core's documented non-dispatch modes (`--dry-run`,
   `--verify-only`, hand-crafted examples) and reports which mode ran, with the
   script-deterministic verification gate unchanged in every mode.
-- **Two orchestrators run natively yet stop downstream.** `build-phase` orchestrates
-  natively, but every dispatched `/build-step` halts here, so a run stops at the
-  first code step's dispatch; `build-queue` runs its own machinery and then parks
-  items rather than building them — the park-not-abort contract rendering as designed.
+- **Orchestrator outcome follows the three capability gates.** `build-phase` can run a
+  code step on a host that proves fresh build-step children, fresh per-step opaque
+  parent key retention, and a parent-only verdict service. It halts `required_tool_missing` before dispatch when any is
+  absent or inconclusive. `build-queue` retains its own park-not-abort behavior for
+  downstream halts.
 - **`user-afterparty` sweeps with holes.** `context-slim` is Claude-native and absent
   from the codex profile; `test-prune` and the tier-drift pair halt. Each lands in
   the one report as its reason code rather than being reimplemented inline.

@@ -29,9 +29,9 @@ values are `portable` and `provider-native`.
 
 | Capability class | Claude | GPT/Copilot | Codex | Local (`code-30b`) |
 |---|---|---|---|---|
-| Portable skills (54) | yes | yes | an adapter for all 54, but 13 halt `required_tool_missing` at an isolated-agent dispatch — see [codex.md](codex.md) § Known limitations | 24 of 54 (`local_capable`) |
+| Portable skills (54) | yes | yes | an adapter for all 54; agent-dependent behavior is capability-conditioned. `build-step` supports a proven fresh-context host, while an ordinary CLI host halts `required_tool_missing` — see [codex.md](codex.md) § Known limitations | 24 of 54 (`local_capable`) |
 | Vision skills (2: judge-ui, judge-motion) | yes | judge-ui only (judge-motion is a native exclusion) | judge-ui adapter only; its independent vision-judge dispatch halts with `required_tool_missing` | no |
-| `sub-agent` fan-out skills (17) | yes | yes, parent-owned actions (15 GPT-portable; context-slim + judge-motion are native exclusions) | the same 15 adapters, but no isolated fresh-context primitive: 12 halt with `required_tool_missing`; `goblin-do` and `goblin-suggest` ride their cores' documented `claude -p` CLI fallback; `citation-sweep` runs the reviews serially under the core's unchanged per-artifact return contract (boundedness, not judge independence, is what its fan-out buys) | no |
+| `sub-agent` fan-out skills (17) | yes | yes, parent-owned actions (15 GPT-portable; context-slim + judge-motion are native exclusions) | the same 15 adapters: `build-step` uses proven fresh-context dispatch plus separate opaque parent state and parent-only verdict service when phase-run; 11 current adapters halt; `goblin-do` and `goblin-suggest` use their documented `claude -p` CLI fallback; `citation-sweep` uses its current serial mapping | no |
 | Claude-native exclusions (3) | yes | **no adapter** | **no adapter** | no |
 
 ### Claude-native exclusions

@@ -13,6 +13,7 @@ test_score_skill_absolute.py.
 from __future__ import annotations
 
 import json
+import subprocess
 import sys
 from pathlib import Path
 
@@ -30,7 +31,10 @@ from build_step_verdict import (  # noqa: E402  (sys.path tweak above)
     BLOCKED,
     ORCHESTRATOR_WRITER,
     SCHEMA_VERSION,
+    SERVICE_SCHEMA,
+    VerdictService,
     classify_verdict,
+    decode_service_request,
     translate_build_step_verdict,
     write_verdict,
 )
@@ -408,6 +412,215 @@ def test_write_verdict_rejects_invalid_secret(tmp_path, secret):
             secret=secret,
             terminal="PASS",
         )
+
+
+# ---------------------------------------------------------------------------
+# parent-only JSON-lines verdict service
+# ---------------------------------------------------------------------------
+
+
+def test_verdict_service_open_write_classify_tamper_and_cleanup(tmp_path):
+    path = tmp_path / "service" / "verdict.json"
+    service = VerdictService()
+
+    opened, close = service.handle({
+        "op": "open", "verdict_path": str(path), "run_id": "run-service",
+    })
+    assert opened == {"ok": True, "op": "open"}
+    assert close is False
+    assert service.handle({"op": "classify"})[0] == {
+        "ok": True, "op": "classify", "classification": BLOCKED,
+    }
+
+    written, _ = service.handle({
+        "op": "write",
+        "terminal": "PASS",
+        "halt": None,
+        "summary": "all gates passed",
+    })
+    assert written == {"ok": True, "op": "write"}
+    assert service.handle({"op": "classify"})[0]["classification"] == ADVANCE
+
+    path.write_text("{}\n", encoding="utf-8")
+    assert service.handle({"op": "classify"})[0]["classification"] == BLOCKED
+
+    cleaned, _ = service.handle({"op": "cleanup"})
+    assert cleaned == {"ok": True, "op": "cleanup"}
+    assert not path.exists()
+
+
+@pytest.mark.parametrize(
+    "raw",
+    [
+        '{"op":"classify","op":"write"}',
+        '{"op":"classify","extra":true}',
+        '[]',
+        'not-json',
+        "x" * 4097,
+    ],
+)
+def test_service_decoder_rejects_duplicate_extra_malformed_and_oversize(raw):
+    with pytest.raises(ValueError):
+        decode_service_request(raw)
+
+
+@pytest.mark.parametrize(
+    "service_request",
+    [
+        {"op": "open", "verdict_path": "relative.json", "run_id": "run"},
+        {"op": "write", "terminal": "PASS", "halt": None, "summary": "line\nbreak"},
+        {"op": "write", "terminal": "PASS", "halt": None, "summary": "x" * 513},
+        {"op": "classify", "extra": "not allowed"},
+        {"op": "unknown"},
+    ],
+)
+def test_verdict_service_rejects_invalid_request_shapes(tmp_path, service_request):
+    service = VerdictService()
+    response, close = service.handle(service_request)
+    assert response["ok"] is False
+    assert set(response) == {"ok", "error"}
+    assert close is False
+
+
+def test_service_treats_summary_as_data_not_python(tmp_path):
+    verdict_path = tmp_path / "verdict.json"
+    injected_path = tmp_path / "injected.txt"
+    summary = (
+        '"; __import__("pathlib").Path('
+        + repr(str(injected_path))
+        + ').write_text("owned"); #'
+    )
+    service = VerdictService()
+    assert service.handle({
+        "op": "open", "verdict_path": str(verdict_path), "run_id": "run-injection",
+    })[0]["ok"]
+    assert service.handle({
+        "op": "write", "terminal": "PASS", "halt": None, "summary": summary,
+    })[0]["ok"]
+    assert not injected_path.exists()
+    assert json.loads(verdict_path.read_text(encoding="utf-8"))["summary"] == summary
+
+
+def test_service_rotates_the_hmac_key_for_each_open_channel(tmp_path):
+    first_secret = "11" * 32
+    second_secret = "22" * 32
+    secret_values = iter((first_secret, second_secret))
+    service = VerdictService(secret_factory=lambda: next(secret_values))
+
+    first_path = tmp_path / "first.json"
+    assert service.handle({
+        "op": "open", "verdict_path": str(first_path), "run_id": "run-first",
+    })[0]["ok"]
+    assert service.handle({
+        "op": "write", "terminal": "PASS", "halt": None, "summary": "first",
+    })[0]["ok"]
+    assert classify_verdict(
+        first_path, expected_run_id="run-first", expected_secret=first_secret,
+    ) == ADVANCE
+    assert service.handle({"op": "cleanup"})[0]["ok"]
+
+    second_path = tmp_path / "second.json"
+    assert service.handle({
+        "op": "open", "verdict_path": str(second_path), "run_id": "run-second",
+    })[0]["ok"]
+    assert service.handle({
+        "op": "write", "terminal": "PASS", "halt": None, "summary": "second",
+    })[0]["ok"]
+    assert classify_verdict(
+        second_path, expected_run_id="run-second", expected_secret=first_secret,
+    ) == BLOCKED
+    assert classify_verdict(
+        second_path, expected_run_id="run-second", expected_secret=second_secret,
+    ) == ADVANCE
+
+
+def test_unlink_failure_destroys_channel_state_and_cannot_keep_close_alive(
+    tmp_path, monkeypatch,
+):
+    secrets = iter(("33" * 32, "44" * 32, "55" * 32))
+    service = VerdictService(secret_factory=lambda: next(secrets))
+    cleanup_path = tmp_path / "cleanup-failure.json"
+    close_path = tmp_path / "close-failure.json"
+    blocked_paths = {cleanup_path, close_path}
+    original_unlink = Path.unlink
+
+    def refuse_selected_unlinks(path, *args, **kwargs):
+        if path in blocked_paths:
+            raise PermissionError("planted sidecar lock")
+        return original_unlink(path, *args, **kwargs)
+
+    with monkeypatch.context() as scoped:
+        scoped.setattr(Path, "unlink", refuse_selected_unlinks)
+
+        assert service.handle({
+            "op": "open", "verdict_path": str(cleanup_path),
+            "run_id": "run-cleanup-failure",
+        })[0]["ok"]
+        cleanup_response, cleanup_close = service.handle({"op": "cleanup"})
+        assert cleanup_response == {"ok": False, "error": "invalid_request"}
+        assert cleanup_close is False
+        assert service.handle({"op": "classify"})[0]["ok"] is False
+
+        # The failed unlink did not leave the old channel/key live: a new open
+        # succeeds and therefore consumes a fresh secret.
+        recovered_path = tmp_path / "recovered.json"
+        assert service.handle({
+            "op": "open", "verdict_path": str(recovered_path),
+            "run_id": "run-recovered",
+        })[0]["ok"]
+        assert service.handle({"op": "cleanup"})[0]["ok"]
+
+        assert service.handle({
+            "op": "open", "verdict_path": str(close_path),
+            "run_id": "run-close-failure",
+        })[0]["ok"]
+        close_response, should_close = service.handle({"op": "close"})
+        assert close_response == {"ok": False, "error": "cleanup_failed"}
+        assert should_close is True
+        assert service.handle({"op": "classify"})[0]["ok"] is False
+
+    # Simulate the parent's external best-effort cleanup after releasing a lock.
+    cleanup_path.unlink()
+    close_path.unlink()
+
+
+def test_service_cli_is_strict_json_lines_and_emits_no_verdict_secret(tmp_path):
+    verdict_path = tmp_path / "cli" / "verdict.json"
+    process = subprocess.Popen(
+        [sys.executable, str(THIS_DIR / "build_step_verdict.py"), "--service"],
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        encoding="utf-8",
+    )
+    requests = (
+        {"op": "open", "verdict_path": str(verdict_path), "run_id": "run-cli"},
+        {"op": "write", "terminal": "PASS", "halt": None, "summary": "clean"},
+        {"op": "classify"},
+        {"op": "close"},
+    )
+    request_stream = "".join(
+        json.dumps(request, separators=(",", ":")) + "\n" for request in requests
+    )
+    try:
+        stdout, stderr = process.communicate(input=request_stream, timeout=10)
+    except subprocess.TimeoutExpired:
+        process.kill()
+        process.communicate()
+        pytest.fail("verdict service did not complete its bounded JSON-lines exchange")
+
+    responses = [json.loads(line) for line in stdout.splitlines()]
+    assert responses[0] == {"ok": True, "schema": SERVICE_SCHEMA}
+
+    assert responses[-2]["classification"] == ADVANCE
+    assert responses[-1] == {"ok": True, "op": "close"}
+    assert process.returncode == 0
+    assert stderr == ""
+    assert not verdict_path.exists()
+    rendered = json.dumps(responses, separators=(",", ":"))
+    assert "signature" not in rendered
+    assert "secret" not in rendered
 
 
 # ---------------------------------------------------------------------------

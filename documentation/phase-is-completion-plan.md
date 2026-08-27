@@ -165,8 +165,8 @@ authorize a same-context producer/reviewer substitution or move containment work
 | `tools/phase-is-uat/**` | New from C2N through C3 | Contract records, schemas, native preparation, guardian/launcher, broker, bundle, and cleanup | Directory absent at orientation |
 | `tests/phase-is-uat/**` | New in C3 | Positive, negative, identity, containment, schema, and cleanup coverage | Directory absent at orientation |
 | `skills/plan-init/core.md` and `skills/repo-update/core.md` | Conditional in route 1 | Add a core-supported safety-gated UAT mode | Both are distribution inputs; `plan-init` is representative-report input |
-| `documentation/release-candidate-report.md` | Conditional in route 1 or C0R | Refresh representative emitted hashes if `skills/plan-init/core.md` or the emitted `build-phase` Codex adapter changes | Representative fixture names `plan-init` and `build-phase` |
-| `skills/build-step/providers/codex.md`, `skills/build-phase/providers/codex.md`, `_shared/build_step_verdict.py`, `_shared/test_build_step_verdict.py`, and `tests/package-integrity/test_codex_agent_isolation_contract.py` (new) | Conditional before C1 | Narrow remedy if C0 returns `CONTRACT_DRIFT` | Current build-step adapter declares the capability absent; the other three existing files own parent/verdict behavior |
+| `documentation/release-candidate-report.md` | Conditional in route 1; no-diff regeneration gate in C0R | Refresh representative emitted hashes only when `skills/plan-init/core.md`, another representative shared core, or its Claude/GPT adapter input changes; a Codex-only adapter edit must regenerate byte-identically | The representative fixture names `plan-init` and `build-phase`, but its scenarios select only Claude/GPT adapters and fingerprint the shared core |
+| `skills/build-step/providers/codex.md`, `skills/build-phase/providers/codex.md`, `_shared/build_step_verdict.py`, `_shared/test_build_step_verdict.py`, `tests/package-integrity/test_codex_agent_isolation_contract.py` (new), `documentation/providers/codex.md`, and `documentation/providers/README.md` | Conditional before C1 | Narrow remedy if C0 returns `CONTRACT_DRIFT` | The build-step/build-phase adapters and active provider docs repeat the stale host-wide claim; the shared helper's opening contract prose misstates which values cross dispatch |
 | `config/skill-manifest.json` and `tests/package-integrity/expected_inventory.json` | Regenerated when documentation inventory changes | Keep generated inventory synchronized | `tools/gen_manifest.py` owns both artifacts |
 | `documentation/phase-75-baseline.md` | Evidence update after a successful root gate when counts move | Preserve the single baseline owner | Current owner inspected |
 | `plan.md`, `README.md`, the phase plan, and issues #152/#162/#153/#143 | Status updates | Record evidence and unblock the next owner | Current status and issue states inspected |
@@ -659,7 +659,18 @@ secret.
 - **Done when:** one verdict and its evidence are recorded. Only `SUPPORTED` unlocks C1; the other
   verdicts stop this completion run until remediation/environment selection and a repeated C0 return
   `SUPPORTED`.
-- **Status:** NOT STARTED
+- **Recorded result (2026-08-27):** `CONTRACT_DRIFT` against start commit `f74997d`. The active
+  callable schema exposed explicit no-history child dispatch. Direct fresh producer and reviewer
+  siblings could not read a parent canary or one another's nonce; a fresh child explicitly given a
+  disposable parent execution-session handle received `Unknown process id`; and the parent-only
+  JSON-lines service authenticated an outside-worktree sidecar while a planted byte replacement
+  classified `BLOCKED`. Shared filesystem/tool access remained visible, as expected, but conveyed
+  neither conversational inheritance nor final-verdict authority. Those probes established D2's
+  fresh producer, fresh reviewer, external sidecar, opaque parent key, and parent-only classification
+  properties separately. The canonical build-step adapter at `f74997d` still asserted that Codex had
+  no such primitive, and the build-phase adapter repeated the stale same-context/private-state
+  assumption, so the host was capable while its mapping contract had drifted.
+- **Status:** COMPLETE — `CONTRACT_DRIFT`; C0R authorized by the operator's repair request
 
 ### Completion Stage C0R: Repair canonical adapter drift when authorized
 
@@ -671,27 +682,32 @@ secret.
 - **Applicability:** dispatch only after C0 returns `CONTRACT_DRIFT` and the operator explicitly
   authorizes this separate source change. Record `NOT APPLICABLE` when C0 returns `SUPPORTED` or
   `UNSUPPORTED`.
-- **Files:** `skills/build-step/providers/codex.md`; `skills/build-phase/providers/codex.md` only if
+- **Files:** `skills/build-step/providers/codex.md`; `skills/build-phase/providers/codex.md` because
   its parent mapping also drifts; `tests/package-integrity/test_codex_agent_isolation_contract.py`
-  (new); `_shared/build_step_verdict.py` and
-  `_shared/test_build_step_verdict.py` only if C0 proves the canonical verdict protocol itself drifts;
-  `documentation/release-candidate-report.md` if the emitted representative `build-phase` artifact
-  changes
+  (new); `_shared/build_step_verdict.py` for its parent-only JSON-lines service and corrected dispatch
+  contract; `_shared/test_build_step_verdict.py` for that service's schema, injection, lifecycle, and
+  no-secret-output tests;
+  `documentation/providers/codex.md` and `documentation/providers/README.md` for their repeated active
+  capability claims. `documentation/release-candidate-report.md` is a required no-diff regeneration
+  gate, not an expected C0R edit, because its representative rows do not select the Codex adapter
 - **Actions:** edit canonical repository sources, not the installed generated `SKILL.md`. Encode only
   the dispatch pattern proven by C0, preserve the parent-private key and outside-worktree sidecar,
   and add a planted-negative test for each corrected capability claim.
 - **Exact gates:** focused adapter/verdict tests; `python -m pytest tests/package-integrity`;
   `powershell -File tools/build-distributions.ps1 -Provider codex`; regenerate the representative
-  report when its input changes; independent review in the C0-proven host pattern or another named
+  report and require no diff for this Codex-only adapter change; independent review in the C0-proven host pattern or another named
   supported environment; stable detached repo-root `python -m pytest`
 - **Produces:** reviewed canonical source/test change and reproducible Codex distribution; no active
   home installation
-- **Stop conditions:** capability remains inferred from a tool name, the key or sidecar reaches a
-  child/worktree, a producer can self-review, a non-Codex contract is weakened, or a gate fails
+- **Stop conditions:** capability remains inferred from a tool name; the key or usable verdict-service
+  authority reaches a child; the sidecar path is passed into child context or the sidecar is placed in
+  the worktree; a producer can self-review; a non-Codex contract is weakened; or a gate fails. Ambient
+  discovery of an outside-worktree sidecar is permitted only because tampering fails closed.
 - **Operator action:** none during the code stage; authorization is a prerequisite
 - **Done when:** the canonical change is reviewed, all gates pass, and its commit is synchronized
 - **Depends on:** C0=`CONTRACT_DRIFT` plus prior operator authorization
-- **Status:** NOT APPLICABLE UNTIL AUTHORIZED
+- **Status:** IN PROGRESS — implementation and focused gates complete; detached root certification
+  and synchronization pending
 
 ### Completion Stage C0A: Activate an authorized C0R repair
 

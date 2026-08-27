@@ -93,6 +93,16 @@ authority for the active build; `documentation/codex-parity-delivery-plan.md` re
 parked delivery plan. Use `documentation/phase-is-completion-plan.md` for the dependency-ordered
 remaining-work runbook; it introduces no new Phase IS unit. This file records status and history.
 
+**Completion overlay status (2026-08-27):** C0 returned `CONTRACT_DRIFT`, not `UNSUPPORTED`:
+the active host proved separate no-history producer/reviewer siblings, a caller-scoped parent
+execution session, an opaque per-step HMAC service, an outside-worktree sidecar, and parent-only
+authenticated classification. The stale provider-wide Codex rejection is now repaired in canonical
+source with planted-negative coverage; focused tests report 86 passed, package integrity reports
+302 passed, distribution parity reports 4 passed, both independent reviews report PASS, and the
+Codex profile builds reproducibly as 54 skills / 125 files. C0R remains certification-pending on its
+stable detached repo-root gate and synchronization. C0A activation, repeated C0, and C1 remain
+blocked until C0R is DONE.
+
 **Pass 1 (Steps 1–5) is complete as of 2026-08-18** at commit `4bcbef5`. **Step M1 (#130) is
 complete as of 2026-08-18 with a passing verdict** — evidence, check rows, delta rows (one
 `fix`-dispositioned: plan-review's autofix fix-count line), and the D-CP6 accept decision are

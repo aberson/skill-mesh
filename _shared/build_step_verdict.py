@@ -1,17 +1,25 @@
 #!/usr/bin/env python3
 """Single source of truth for the build-step -> build-phase verdict contract.
 
-`/build-phase` creates a private run id, HMAC key, and durable verdict path
-outside the developer worktree and passes all three to `/build-step`. The build-step orchestrator
-atomically writes that sidecar on every terminal path; the developer and reviewer
-children never receive the path or run id. `/build-phase` §2c ("Capture result")
+`/build-phase` creates a private run id and durable verdict path outside the
+developer worktree, then starts this module's `--service` mode in a caller-scoped
+parent execution session. The service generates and retains the HMAC key in opaque
+parent state; `/build-phase` passes only the verdict path and run id to `/build-step`. The build-step
+orchestrator atomically writes that sidecar on every terminal path by sending a strict
+JSON-lines request to the parent service;
+the path, run id, and key are never passed to developer or reviewer children. A child
+with shared filesystem tools might discover or alter the sidecar, but unauthenticated,
+missing, or malformed bytes fail closed and cannot authorize advancement.
+`/build-phase` §2c ("Capture result")
 reads it with the expected run id/key and decides whether to ADVANCE to the next step
 or treat the step as BLOCKED. This module is the ONE place the emit/consume rule
 lives so the SKILL.md prose and the test suite cannot drift apart (per
 `dev/.claude/rules/code-quality.md` -- "one source of truth for data-shape
 constants" / "grep all downstream consumers when changing a key/id shape").
 
-Pure stdlib (json, pathlib). No LLM, no third-party deps.
+Pure stdlib (json, pathlib). No LLM, no third-party deps. `--service` is the
+non-executable request boundary used by capable Codex hosts; direct imports remain
+the library API used by other hosts and tests.
 
 verdict.json schema
 -------------------
@@ -56,10 +64,12 @@ import json
 import hashlib
 import hmac
 import os
+import secrets
+import sys
 import tempfile
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 # The two literal results classify_verdict / build-phase distinguish.
 ADVANCE = "ADVANCE"
@@ -83,6 +93,21 @@ SIGNED_FIELDS = (
     "halt",
     "summary",
 )
+
+# Parent-only JSON-lines service.  The service owns the HMAC key inside its
+# process and accepts data-only requests; callers never interpolate request
+# values into Python source.  The host adapter separately proves that the
+# process/session handle is caller-scoped to the parent orchestration context.
+SERVICE_SCHEMA = "skill-mesh/build-step-verdict-service/v1"
+SERVICE_MAX_REQUEST_BYTES = 4096
+SERVICE_MAX_SUMMARY_CHARS = 512
+SERVICE_REQUEST_KEYS = {
+    "open": {"op", "verdict_path", "run_id"},
+    "write": {"op", "terminal", "halt", "summary"},
+    "classify": {"op"},
+    "cleanup": {"op"},
+    "close": {"op"},
+}
 
 
 def _secret_bytes(secret: str) -> bytes:
@@ -329,3 +354,210 @@ def write_verdict(
             except OSError:
                 pass
     return payload
+
+
+def _service_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+    """Build one JSON object while rejecting duplicate keys."""
+    result: dict[str, Any] = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError("duplicate service request key")
+        result[key] = value
+    return result
+
+
+def _validate_service_request(request: Any) -> dict[str, Any]:
+    """Validate the closed, non-executable service request vocabulary."""
+    if not isinstance(request, dict):
+        raise ValueError("service request must be an object")
+    op = request.get("op")
+    if not isinstance(op, str) or op not in SERVICE_REQUEST_KEYS:
+        raise ValueError("unknown service operation")
+    if set(request) != SERVICE_REQUEST_KEYS[op]:
+        raise ValueError("service request fields do not match operation")
+
+    if op == "open":
+        path = request["verdict_path"]
+        run_id = request["run_id"]
+        if (
+            not isinstance(path, str)
+            or not path
+            or "\x00" in path
+            or not Path(path).is_absolute()
+        ):
+            raise ValueError("verdict_path must be a non-empty absolute path")
+        if not isinstance(run_id, str) or not run_id or len(run_id) > 256:
+            raise ValueError("run_id must be a non-empty bounded string")
+
+    if op == "write":
+        terminal = request["terminal"]
+        halt = request["halt"]
+        summary = request["summary"]
+        if not isinstance(terminal, str) or not terminal:
+            raise ValueError("terminal must be a non-empty string")
+        if halt is not None and not isinstance(halt, str):
+            raise ValueError("halt must be a string or null")
+        if (
+            not isinstance(summary, str)
+            or len(summary) > SERVICE_MAX_SUMMARY_CHARS
+            or any(ord(char) < 32 or ord(char) == 127 for char in summary)
+        ):
+            raise ValueError("summary must be one bounded printable line")
+
+    return request
+
+
+def decode_service_request(raw: str) -> dict[str, Any]:
+    """Decode one strict JSON-lines request without accepting duplicate keys."""
+    if not isinstance(raw, str) or not raw:
+        raise ValueError("empty service request")
+    if len(raw.encode("utf-8")) > SERVICE_MAX_REQUEST_BYTES:
+        raise ValueError("service request exceeds byte limit")
+    try:
+        request = json.loads(raw, object_pairs_hook=_service_object)
+    except (TypeError, ValueError, json.JSONDecodeError) as exc:
+        raise ValueError("invalid service request JSON") from exc
+    return _validate_service_request(request)
+
+
+class VerdictService:
+    """One-channel parent service that rotates its process-internal key per open."""
+
+    def __init__(
+        self,
+        *,
+        secret_factory: Callable[[], str] | None = None,
+    ) -> None:
+        self.__secret_factory = secret_factory or (lambda: secrets.token_hex(32))
+        self.__secret: str | None = None
+        self._path: Path | None = None
+        self._run_id: str | None = None
+
+    def cleanup(self) -> None:
+        path = self._path
+        try:
+            if path is not None:
+                path.unlink()
+        except FileNotFoundError:
+            pass
+        finally:
+            # Destroy authorization state even when Windows or another host
+            # refuses sidecar deletion.  The caller treats the cleanup error as
+            # a halt, but a stale file must never keep a usable signing key live.
+            self._path = None
+            self._run_id = None
+            self.__secret = None
+
+    def _requires_channel(self) -> tuple[Path, str, str]:
+        if self._path is None or self._run_id is None or self.__secret is None:
+            raise ValueError("no open verdict channel")
+        return self._path, self._run_id, self.__secret
+
+    def handle(self, request: Any) -> tuple[dict[str, Any], bool]:
+        """Handle one already-decoded request; return (response, should_close)."""
+        try:
+            request = _validate_service_request(request)
+            op = request["op"]
+
+            if op == "open":
+                if self._path is not None:
+                    raise ValueError("verdict channel already open")
+                path = Path(request["verdict_path"])
+                run_id = request["run_id"]
+                secret = self.__secret_factory()
+                _secret_bytes(secret)
+                write_verdict(
+                    path,
+                    run_id=run_id,
+                    secret=secret,
+                    terminal="NEEDS WORK",
+                    summary="run incomplete",
+                )
+                self._path = path
+                self._run_id = run_id
+                self.__secret = secret
+                return {"ok": True, "op": "open"}, False
+
+            if op == "write":
+                path, run_id, secret = self._requires_channel()
+                write_verdict(
+                    path,
+                    run_id=run_id,
+                    secret=secret,
+                    terminal=request["terminal"],
+                    halt=request["halt"],
+                    summary=request["summary"],
+                )
+                return {"ok": True, "op": "write"}, False
+
+            if op == "classify":
+                path, run_id, secret = self._requires_channel()
+                classification = classify_verdict(
+                    path,
+                    expected_run_id=run_id,
+                    expected_secret=secret,
+                )
+                return {
+                    "ok": True,
+                    "op": "classify",
+                    "classification": classification,
+                }, False
+
+            if op == "cleanup":
+                self.cleanup()
+                return {"ok": True, "op": "cleanup"}, False
+
+            # The closed vocabulary makes this the only remaining operation.
+            # Close always terminates the service, even if unlinking the
+            # sidecar fails.  cleanup() has already destroyed the key/state.
+            try:
+                self.cleanup()
+            except OSError:
+                return {"ok": False, "error": "cleanup_failed"}, True
+            return {"ok": True, "op": "close"}, True
+        except (OSError, TypeError, ValueError):
+            # Fail closed without reflecting request values, paths, or exception
+            # text into the parent transcript.
+            return {"ok": False, "error": "invalid_request"}, False
+
+
+def _emit_service_response(stdout: Any, response: dict[str, Any]) -> None:
+    stdout.write(json.dumps(response, separators=(",", ":"), ensure_ascii=True) + "\n")
+    stdout.flush()
+
+
+def serve_verdict_service(stdin: Any = None, stdout: Any = None) -> int:
+    """Run the strict JSON-lines service; the HMAC key never leaves this call."""
+    if stdin is None:
+        stdin = sys.stdin
+    if stdout is None:
+        stdout = sys.stdout
+    service = VerdictService()
+    _emit_service_response(stdout, {"ok": True, "schema": SERVICE_SCHEMA})
+    try:
+        for raw in stdin:
+            try:
+                request = decode_service_request(raw.rstrip("\r\n"))
+            except ValueError:
+                _emit_service_response(stdout, {"ok": False, "error": "invalid_request"})
+                continue
+            response, should_close = service.handle(request)
+            _emit_service_response(stdout, response)
+            if should_close:
+                return 0
+    finally:
+        service.cleanup()
+    return 0
+
+
+def _main(argv: list[str] | None = None) -> int:
+    if argv is None:
+        argv = sys.argv[1:]
+    if argv != ["--service"]:
+        print("usage: build_step_verdict.py --service", file=sys.stderr)
+        return 2
+    return serve_verdict_service()
+
+
+if __name__ == "__main__":
+    raise SystemExit(_main())
