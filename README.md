@@ -550,10 +550,11 @@ three hosts; 3 are Claude-native (`claude-oauth-auth`, `context-slim`, `judge-mo
   instruction-file contract now has one owner, the lifecycle writers and readers use the
   three-valued `AGENTS.md`/`CLAUDE.md` matrix, and the Codex delivery recipe is vendored. Step 108's
   historical build/install evidence landed, but a fresh immutable-blob audit refuted the prior
-  high-0/medium-0 certification. At the first immutable checkpoint (`bad6f77`), one review passed
-  while the second found two medium stale-prose contradictions; both are repaired in candidate Git
-  blob `9bc814303e1e313f0ccd4f5a67ccccb711ff86ca`, raw SHA-256
-  `186A476450B496B4AB48E411B834E25549777B0DF70045B74713DFEF750F6A3E` (137,846 bytes; 1,903
+  high-0/medium-0 certification. Two immutable checkpoints were rejected by one of their independent
+  reviewers (0 high / 2 medium, then 0 high / 4 medium). All six stale-contract contradictions are
+  repaired across the affected files. The resulting UAT candidate is Git blob
+  `e08541be4378b9262e5f6813cb2191e8b750179b`, raw SHA-256
+  `6AC9D8E09E84C96D88227892C07BB015C9C430D588DEA7B95B0142B4C946E886` (137,961 bytes; 1,904
   lines). The repaired bytes pass 24/24 PowerShell parses, 18/18 streamed nonzero blockers, the
   107/107 credential check, unchanged manifest regeneration, and all 278 package-integrity tests.
   Two independent reviews of the next immutable commit and the stable repository-root gate remain

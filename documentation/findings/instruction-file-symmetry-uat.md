@@ -474,10 +474,10 @@ That summary line is a dated observation of this run at `d4c88ee`, not a new cou
 repo-root DONE gate and the `tests/` iteration gate; it names `tests/package-integrity` as an
 iteration gate but records no count row for it, so nothing here duplicates an owned figure.
 
-Per `CLAUDE.md § Key commands`, the repo-root full-suite invocation (no path argument) was
-deliberately **not** run here — it is hours long and belongs to the phase gate, not to this
-step. This repository has **no lint and no typecheck command** by design; none was invented or
-claimed.
+The repo-root full-suite invocation (no path argument) was deliberately **not** part of the
+historical build/install command sequence recorded here. Step 108's separate certification gate
+runs it only after the repaired immutable transcript clears review. This repository has **no lint
+and no typecheck command** by design; none was invented or claimed.
 
 ## 1.8 The historical scratch home — AUDIT-OBSOLETED for Step 109
 
@@ -1467,8 +1467,9 @@ contain the skill-specific terminal line, carry no truncation marker, and recons
 whose SHA-256 equals the verified co-located core under #162's pinned native-payload normalization.
 Every one of those Reads must occur in that exact prefix before any other read or action:
 
-**The hand-entered block below is a non-grading shape check, not mechanical ordering proof.** Step
-108P must replace it with a committed parser over one native session record. That
+**The requirements below are prose, not a hand-entered shape-check implementation or mechanical
+ordering proof.** Step 108P must replace the terminating blocker with a committed parser over one
+native session record. That
 parser must bind the session/transcript identity, invoked skill name, host-supplied native Base,
 generated-wrapper `Profile: claude`, matching `attributionSkill`, and every required successful Read.
 For `plan-init`, the complete core Read is the first post-Skill tool/action event except exact
@@ -1483,11 +1484,11 @@ unchanged-writer route uses these exact completion predicates:
 | `plan-init/core.md` | 678 | `block plan-init's completion.` |
 | `repo-update/core.md` | 571 | ``This re-derives verbs/ports from the current `CLAUDE.md` + plan and regenerates the `dev.code-workspace` tasks. Keep README/CLAUDE.md command + port mentions scrapable.`` |
 
-negative tests must mutate one middle payload line, move each core behind an otherwise allowed
+Negative tests must mutate one middle payload line, move each core behind an otherwise allowed
 `AGENTS.md`/`CLAUDE.md` Read, and on a `repo-update` record swap or delay only the delegated
-`plan-init` Read; every case must throw. Until that parser and its
-negative tests land, this instrument remains blocked even when its manual
-path/full/captured/on-disk-hash booleans are all true.
+`plan-init` Read; every case must throw. Until that parser and its negative tests land, the fence
+remains only the blocker below; no manual path/full/captured/on-disk-hash implementation is
+published here.
 
 ```powershell
 throw 'BLOCKED: Step 108P (#162) must replace this entire illustrative fence with its certified receipt-pinned subcommand.'
