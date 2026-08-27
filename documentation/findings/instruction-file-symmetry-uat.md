@@ -19,9 +19,9 @@
 
 **Status: § 1's historical build/install outcome is COMPLETE — its original commands produced the
 recorded results. Later safety requirements are stated as contracts, not presented as retroactively
-executed or ready-to-run implementations. Step 108 certification is pending the post-merge
-instrument repairs, independent review, and stable
-repo-root gate. § 2 (Step 109) is
+executed or ready-to-run implementations. Step 108 certification requires independent review of
+these repaired instrument-boundary bytes and a stable repo-root gate; neither completion receipt is
+claimed inside this frozen artifact. § 2 (Step 109) is
 BLOCKED BEFORE GRADING: selected fixture and filesystem-only components were mechanically
 validation-run, but no skill was invoked, no host-delivery command ran and no D10 row was graded.
 The engineering blocker is recorded in § 2.5; no behavioral observation or row verdict may be
@@ -65,10 +65,10 @@ Nothing outside the worktree and the session scratchpad was written. `dist/` is 
 
 ## 1.0 Shell contract
 
-**Every fenced command in § 1 is written for Windows PowerShell 5.1.** The original commands were
-executed in that shell. Post-merge fail-closed guards added to the replay blocks are identified
-where they appear and must be executed against Step 109's newly created roots; they were not
-retroactively run against the now-audit-obsoleted historical home. Commands are spelled
+**Every command fence in § 1 is written for Windows PowerShell 5.1.** The original commands were
+executed in that shell. Later fail-closed requirements are prose contracts for Step 108P; § 1
+publishes no replay implementation for them, and they were not retroactively run against the
+now-audit-obsoleted historical home. Historical commands are spelled
 `powershell`; PowerShell 7 (`pwsh`) is not installed on this machine.
 
 This is stated as a per-command contract rather than as scenery, because two POSIX spellings
@@ -88,10 +88,10 @@ failed *silently*. Measured in PowerShell 5.1 on this machine:
   so this one is called out by name.
 
 Both were replaced with PowerShell 5.1 forms, and the core replacement operations were **run**, not
-merely written; § 1.5 records their historical output. The surrounding fail-closed path, link,
-count, and error guards shown now were added later. Where a figure below was originally obtained
-with a POSIX tool under Git Bash, it was re-measured in PowerShell 5.1 for this record and the two
-agreed.
+merely written; § 1.5 records their historical output. The fail-closed path, link, count, and error
+requirements were specified later as prose for Step 108P, not published here as replay guards or
+retroactively executed. Where a figure below was originally obtained with a POSIX tool under Git
+Bash, it was re-measured in PowerShell 5.1 for this record and the two agreed.
 
 ## 1.1 Results at a glance
 
@@ -1569,8 +1569,9 @@ five state pairs in Windows PowerShell 5.1; its state-pair/text/hash logic was e
 A's earlier two halves were run separately against unchanged and changed states, and Instrument B's
 earlier predicate was self-tested against the five manufactured post-skill pointer states listed
 below rather than concatenated after the empty row-1 fixture. The receipt-pinned atomic mutator,
-fresh-process executor, chained receipts, handle locks, and current integrated blocks were designed
-during the audit and were **not** run. No skill was invoked and no D10 row was graded.
+fresh-process executor, chained receipts, and handle locks now specified as Step 108P contracts were
+neither implemented nor run; the executable fence above is only the terminating blocker. No skill
+was invoked and no D10 row was graded.
 
 ### Instrument A — did the skill touch a file it must not touch?
 
@@ -1668,9 +1669,9 @@ The committed grader reads and hashes bytes from the same no-follow, regular, si
 through grading. It accepts only strict UTF-8 **without** a BOM, NUL, carriage return, or invalid
 Unicode; fixture and writer output therefore use LF only. `[IO.File]::ReadAllText` is forbidden
 because its default decoder replaces malformed sequences. Negative tests insert an invalid middle
-byte, BOM, NUL, lone CR, CRLF, and a path/in-place swap after the handle opens; each must fail. The
-illustrative path read below documents the byte predicate, but #162 replaces the entire block with
-that handle-owning bundle subcommand.
+byte, BOM, NUL, lone CR, CRLF, and a path/in-place swap after the handle opens; each must fail. This
+paragraph documents the byte predicate; no path-read implementation is published here. #162
+replaces the terminating blocker below with the certified handle-owning bundle subcommand.
 
 ```powershell
 throw 'BLOCKED: Step 108P (#162) must replace this entire illustrative fence with its certified receipt-pinned subcommand.'

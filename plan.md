@@ -2,13 +2,14 @@
 
 ## Current goal
 
-Execute Phase CP (`documentation/codex-parity-delivery-plan.md`): ship the same maintained Skill Mesh
-behaviors through native Claude Code and Codex discovery, wire the known utility portfolio, expose
-truthful model evidence through Dev Observatory, and make shared-core maintenance multi-host safe.
+Complete Phase IS (`documentation/instruction-file-symmetry-plan.md`): certify Step 108, record the
+operator's Step-109 route choice, implement and certify Step 108P, and then run the five attended
+Step-109 acceptance rows. Phase CP remains parked on its operator-only M3 row.
 
-The goal is unchanged from Goal NP; the delivery path is not. Goal NP's two-approval publication gate
-was closed unapproved on 2026-08-16 and replaced by Phase CP's additive, cohort-based rollout — a
-five-skill pilot proven on a real host first, then cohorts gated on that evidence.
+Phase IS is the active prerequisite inside the broader Phase CP delivery. Goal NP's two-approval
+publication gate was closed unapproved on 2026-08-16 and replaced by Phase CP's additive,
+cohort-based rollout — a five-skill pilot proven on a real host first, then cohorts gated on that
+evidence.
 
 ## Main execution plan
 
@@ -75,7 +76,7 @@ does not reinterpret that evidence or revive its stopped experiment.
 | Phase CP Step 12 (#129) | disposition follows Step 11 | See its block in the delivery plan; the observatory-visibility question is being resolved against `dev-observatory/plans/utility-project-surfaces-plan.md` |
 | Phase CP Step M3 (#132) | PENDING (2026-08-20) — daily-use row only | The operator: a few genuine Codex-hosted sessions. Delta triage is DONE — 43 rows across 4 tables, 0 undisposed, 0 `fix-later` owed; the providers-doc gap was filed as #142 and is now CLOSED at `2462afd` (codex given first-class doc coverage; the host-discovery gate derives its provider set from `Get-SkillMeshDiscoveryRoots` instead of hand-listing two). Evidence: `documentation/parity-deltas.md` § M3 checks |
 | Phase CP Step M4 (#133) | COMPLETE (2026-08-20) — PASS | Nothing — codex arm reinstalled clean (125 files; 0 stale, 0 unledgered) and all seven observatory locators verified `unwired` on the rendered surface, before and after. The claude and gpt `-Force` arms were deliberately not run. Evidence: `documentation/parity-deltas.md` § M4 checks and § Scope of the M4 PASS |
-| Phase IS (#143) | BUILDING (2026-08-26) — 9 of 11 landed, 8 certified DONE. Step 107 (#151) is DONE: sentinel `0`, repo-root gate `1341 passed, 1 skipped`, baseline updated at `719e622`; its four concurrent-review documentation defects are fixed at `52d44c9`. Step 108 (#152) is LANDED / CERTIFICATION PENDING: build/install PASS; repaired UAT Git blob `bec161f56ec42f37b0e2d89cbcbc3b0a51e28f95`, raw SHA-256 `CF88FDB26FFE730A25A34EFA281D17F8F043678704E021DC8DC5C2258CFEA7D4` (137,620 bytes; 1,902 lines), has pre-commit audit 0 high/0 medium, parser 24/24, streamed blockers 18/18, credential corpus 107/107, and package gate 278 passed. Two immutable-commit reviews and the stable repo-root gate remain pending. Step 108P (#162) is **BLOCKED BEFORE IMPLEMENTATION** on #152 and the #153 route choice; it owns all containment code. Step 109 (#153) remains operator-only and **BLOCKED BEFORE GRADING**, with every behavioral cell blank. | The operator must choose on #153 between a new core-supported UAT mode (then rebuild/reinstall/reverify) and a deliberate plan amendment accepting narrower named-skill subsection overrides. Step 108P then implements and certifies the route's retained-handle roots, three-stage receipt chain, OS-admitted native launcher/helper, strict JSON, handle-coupled reads, kernel I/O rail, per-mode environments/secrets, remotely verified evidence export, exact core/Codex/Claude evidence, and safe cleanup, followed by its full gate. Step 109 only invokes those artifacts and records observations. Do not start a host session until #152 is DONE, the route is recorded, and #162 is complete. Authority: `documentation/instruction-file-symmetry-plan.md` and `documentation/findings/instruction-file-symmetry-uat.md` § 2. |
+| Phase IS (#143) | BUILDING (2026-08-26) — 9 of 11 landed, 8 certified DONE. Step 107 (#151) is DONE: sentinel `0`, repo-root gate `1341 passed, 1 skipped`, baseline updated at `719e622`; its four concurrent-review documentation defects are fixed at `52d44c9`. Step 108 (#152) is LANDED / CERTIFICATION PENDING: build/install PASS. At immutable checkpoint `bad6f77`, one review passed and the second reported 0 high / 2 medium stale-prose contradictions; both are repaired in UAT Git blob `9bc814303e1e313f0ccd4f5a67ccccb711ff86ca`, raw SHA-256 `186A476450B496B4AB48E411B834E25549777B0DF70045B74713DFEF750F6A3E` (137,846 bytes; 1,903 lines). The repaired bytes pass parser 24/24, streamed blockers 18/18, credential corpus 107/107, unchanged manifest regeneration, and package gate 278 passed. Two immutable-commit reviews and the stable repo-root gate remain pending. Step 108P (#162) is **BLOCKED BEFORE IMPLEMENTATION** on #152 and the #153 route choice; it owns all containment code. Step 109 (#153) remains operator-only and **BLOCKED BEFORE GRADING**, with every behavioral cell blank. | The operator must choose on #153 between a new core-supported UAT mode (then rebuild/reinstall/reverify) and a deliberate plan amendment accepting narrower named-skill subsection overrides. Step 108P then implements and certifies the route's retained-handle roots, three-stage receipt chain, OS-admitted native launcher/helper, strict JSON, handle-coupled reads, kernel I/O rail, per-mode environments/secrets, remotely verified evidence export, exact core/Codex/Claude evidence, and safe cleanup, followed by its full gate. Step 109 only invokes those artifacts and records observations. Do not start a host session until #152 is DONE, the route is recorded, and #162 is complete. Authority: `documentation/instruction-file-symmetry-plan.md` and `documentation/findings/instruction-file-symmetry-uat.md` § 2. |
 | Legacy-migrator hardening (#138) | DEFERRED | Its own issue — Phase CP ships zero migrator delta by the option-3 decision of 2026-08-18 |
 | Goal NP live cutover | LOCKED | Approval 2 on the immutable deliverable after disposable rehearsal |
 | Provider expansion | PARKED | A later explicit Abraham decision must resume that track; Goal NP does not unlock it |
@@ -86,8 +87,9 @@ does not reinterpret that evidence or revive its stopped experiment.
 
 ## Current instruction
 
-Execute Phase CP per `documentation/codex-parity-delivery-plan.md`. That plan is the current
-delivery authority; this file records status and history.
+Execute Phase IS per `documentation/instruction-file-symmetry-plan.md`. That plan is the current
+authority for the active build; `documentation/codex-parity-delivery-plan.md` remains the broader
+parked delivery plan. This file records status and history.
 
 **Pass 1 (Steps 1–5) is complete as of 2026-08-18** at commit `4bcbef5`. **Step M1 (#130) is
 complete as of 2026-08-18 with a passing verdict** — evidence, check rows, delta rows (one
@@ -144,13 +146,16 @@ reported `1341 passed, 1 skipped`, the baseline owner was updated only after com
 are fixed at `52d44c9`. Step 108 (#152) is LANDED / CERTIFICATION PENDING: all-profile build,
 scratch Claude install, inspector and whole-profile equality passed, but a post-merge audit found
 fail-open replay instruments and incomplete preventive/core-delivery evidence in the transcript.
-Fresh immutable-blob review refuted the prior high-0/medium-0 claim and checkout-dependent byte hash;
-the repaired candidate is Git blob `bec161f56ec42f37b0e2d89cbcbc3b0a51e28f95`, raw SHA-256
-`CF88FDB26FFE730A25A34EFA281D17F8F043678704E021DC8DC5C2258CFEA7D4` (137,620 bytes; 1,902
-lines). Its pre-commit audit reports 0 high and 0 medium defects, all 24 PowerShell-bearing fences
-parse, all 18 streamed blockers exit nonzero, the credential corpus is 107/107 unique, and the
-package-integrity gate passes 278 tests. Two independent immutable-commit reviews and the stable
-repo-root gate remain pending, so Step 108 is not DONE. Its historical
+Fresh immutable-blob review refuted the prior high-0/medium-0 claim and checkout-dependent byte hash.
+At checkpoint `bad6f77`, one immutable review passed and the second reported 0 high / 2 medium: stale
+UAT prose still described removed replay implementations as present, and this file named both Phase
+CP and Phase IS as the active authority. Both are repaired. The next candidate is Git blob
+`9bc814303e1e313f0ccd4f5a67ccccb711ff86ca`, raw SHA-256
+`186A476450B496B4AB48E411B834E25549777B0DF70045B74713DFEF750F6A3E` (137,846 bytes; 1,903
+lines). The repaired bytes pass 24/24 PowerShell parses, 18/18 streamed nonzero blockers, the 107/107
+credential check, unchanged manifest regeneration, and all 278 package-integrity tests. Two
+independent immutable-commit reviews and the stable repo-root gate remain pending, so Step 108 is
+not DONE. Its historical
 OS-temp install is ineligible for Step 109, which must always create receipt-bound
 project/config/build plus durable evidence-export roots outside the real profile, build once into a proven-empty output, and
 install/reverify from those exact bytes. The install home and UAT project are one physical root. A
