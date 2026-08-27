@@ -6,7 +6,7 @@
        <scratch-home>          the disposable install home (see § 1.8)
        <scratch-project>       the disposable project Step 109 runs against (see § 2)
        <scratch-claude-config> the distinct disposable Claude state root (see §§ 1.8 and 2.0)
-       <fresh-build-output>    the throwaway build directory used by § 1.5's comparison
+       <fresh-build-output>    the build root (historical throwaway; Step 109 receipt-bound, § 1.8)
        <repo>                  this checkout's absolute path, where it appeared in tool output
 
      One token needs care. In §§ 1.5-1.6, `<repo>/_shared/<leaf>` is NOT a redaction — it is
@@ -135,6 +135,10 @@ recorded in § 1.6 — one expected warning and one cosmetic prose artifact.
 powershell -File tools/build-distributions.ps1 -Provider all
 ```
 
+**Historical command only — do not replay it for Step 109.** With the default output, the builder
+removes existing `<repo>\dist\{claude,gpt,codex}` subtrees before its later containment checks.
+Step 109 uses only § 1.8's proven-empty, receipt-bound custom output root.
+
 **Exit code: 0.** Output, verbatim except for the redacted repository path:
 
 ```
@@ -245,24 +249,166 @@ powershell -File tools/build-distributions.ps1 -Provider claude -OutputDir '<fre
 recorded at run time: `HEAD=d4c88ee`, and `git status --porcelain --untracked-files=no` empty,
 so the rebuild is from HEAD source with no local modification.
 
+**Historical command only — do not replay it standalone.** The builder removes an existing
+`<OutputDir>\claude` before its later containment checks. Step 109 therefore does not rerun this
+one-provider command or use the default `<repo>\dist`: § 1.8 requires one all-provider build only
+after a committed guard proves every deletable provider child absent under a new receipt-bound
+output root. The installed tree is then compared to that already-built `claude` subtree.
+
 The historical comparison used relative-path/SHA-256 manifests plus `Compare-Object` and produced
 the recorded zero-difference result below. The replay block now shown here is its post-merge,
-fail-closed replacement: it adds canonical-root, non-nesting, link-ancestry, nonempty/count/hash,
-and throwing-delta guards. Those added guards must run against Step 109's fresh roots; this exact
-hardened block was not rerun against the historical temp home.
+fail-closed replacement: it adds canonical-root, filesystem-identity, non-nesting, link-ancestry,
+nonempty/count/hash, and throwing-delta guards. Those added guards must run against Step 109's
+safely prebuilt fresh roots; this exact hardened block was not rerun against the historical temp
+home.
 
 ```
+$FreshInput = '<fresh-build-output>\claude'
+$InstalledInput = '<scratch-home>\.claude\skills'
 $FreshRootItem = Get-Item -LiteralPath `
-  (Resolve-Path -LiteralPath '<fresh-build-output>\claude' -ErrorAction Stop).Path `
+  (Resolve-Path -LiteralPath $FreshInput -ErrorAction Stop).Path `
   -Force -ErrorAction Stop
 $InstalledRootItem = Get-Item -LiteralPath `
-  (Resolve-Path -LiteralPath '<scratch-home>\.claude\skills' -ErrorAction Stop).Path `
+  (Resolve-Path -LiteralPath $InstalledInput -ErrorAction Stop).Path `
   -Force -ErrorAction Stop
 $Fresh = $FreshRootItem.FullName.TrimEnd('\')
 $Installed = $InstalledRootItem.FullName.TrimEnd('\')
-if ($Fresh.Equals($Installed, [StringComparison]::OrdinalIgnoreCase) -or
-    $Fresh.StartsWith($Installed + '\', [StringComparison]::OrdinalIgnoreCase) -or
-    $Installed.StartsWith($Fresh + '\', [StringComparison]::OrdinalIgnoreCase)) {
+if (-not ('SkillMeshUat.NativeFileIdentity' -as [type])) {
+  Add-Type -TypeDefinition @'
+using System;
+using System.IO;
+using System.Runtime.InteropServices;
+using System.Text;
+using Microsoft.Win32.SafeHandles;
+namespace SkillMeshUat {
+  [StructLayout(LayoutKind.Sequential)]
+  public struct ByHandleFileInformation {
+    public uint FileAttributes;
+    public System.Runtime.InteropServices.ComTypes.FILETIME CreationTime;
+    public System.Runtime.InteropServices.ComTypes.FILETIME LastAccessTime;
+    public System.Runtime.InteropServices.ComTypes.FILETIME LastWriteTime;
+    public uint VolumeSerialNumber;
+    public uint FileSizeHigh;
+    public uint FileSizeLow;
+    public uint NumberOfLinks;
+    public uint FileIndexHigh;
+    public uint FileIndexLow;
+  }
+  public static class NativeFileIdentity {
+    [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true,
+      EntryPoint = "CreateFileW")]
+    public static extern SafeFileHandle CreateFile(
+      string name, uint access, FileShare share, IntPtr security,
+      FileMode mode, uint flags, IntPtr template);
+    [DllImport("kernel32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool GetFileInformationByHandle(
+      SafeFileHandle handle, out ByHandleFileInformation information);
+    [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true,
+      EntryPoint = "GetFinalPathNameByHandleW")]
+    public static extern uint GetFinalPathNameByHandle(
+      SafeFileHandle handle, StringBuilder path, uint capacity, uint flags);
+  }
+}
+'@ -ErrorAction Stop
+}
+function Get-DirectoryFileIdentity([string]$Path, [string]$Label) {
+  $DirectoryItem = Get-Item -LiteralPath $Path -Force -ErrorAction Stop
+  if (-not $DirectoryItem.PSIsContainer) {
+    throw "$Label is not a directory: $Path"
+  }
+  $Handle = [SkillMeshUat.NativeFileIdentity]::CreateFile(
+    $DirectoryItem.FullName, 0, [IO.FileShare]::ReadWrite -bor [IO.FileShare]::Delete,
+    [IntPtr]::Zero, [IO.FileMode]::Open, 0x02000000, [IntPtr]::Zero)
+  if ($Handle.IsInvalid) {
+    $ErrorCode = [Runtime.InteropServices.Marshal]::GetLastWin32Error()
+    $Handle.Dispose()
+    throw [ComponentModel.Win32Exception]::new(
+      $ErrorCode, "Cannot open $Label identity handle: $Path")
+  }
+  try {
+    $Information = New-Object SkillMeshUat.ByHandleFileInformation
+    if (-not [SkillMeshUat.NativeFileIdentity]::GetFileInformationByHandle(
+        $Handle, [ref]$Information)) {
+      $ErrorCode = [Runtime.InteropServices.Marshal]::GetLastWin32Error()
+      throw [ComponentModel.Win32Exception]::new(
+        $ErrorCode, "Cannot read $Label identity: $Path")
+    }
+    return ('{0:X8}:{1:X8}{2:X8}' -f $Information.VolumeSerialNumber,
+      $Information.FileIndexHigh, $Information.FileIndexLow)
+  } finally {
+    $Handle.Dispose()
+  }
+}
+function Get-DirectoryHandleFacts([string]$Path, [string]$Label) {
+  $DirectoryItem = Get-Item -LiteralPath $Path -Force -ErrorAction Stop
+  if (-not $DirectoryItem.PSIsContainer) {
+    throw "$Label is not a directory: $Path"
+  }
+  $Identity = Get-DirectoryFileIdentity $DirectoryItem.FullName $Label
+  try {
+    $CallerPath = [IO.Path]::GetFullPath([string]$Path).TrimEnd('\')
+  } catch {
+    throw "$Label caller path cannot be normalized: $Path"
+  }
+  $Handle = [SkillMeshUat.NativeFileIdentity]::CreateFile(
+    $DirectoryItem.FullName, 0, [IO.FileShare]::ReadWrite -bor [IO.FileShare]::Delete,
+    [IntPtr]::Zero, [IO.FileMode]::Open, 0x02000000, [IntPtr]::Zero)
+  if ($Handle.IsInvalid) {
+    $ErrorCode = [Runtime.InteropServices.Marshal]::GetLastWin32Error()
+    $Handle.Dispose()
+    throw [ComponentModel.Win32Exception]::new(
+      $ErrorCode, "Cannot open $Label final-path handle: $Path")
+  }
+  try {
+    $DosBuffer = New-Object Text.StringBuilder 32768
+    $DosLength = [SkillMeshUat.NativeFileIdentity]::GetFinalPathNameByHandle(
+      $Handle, $DosBuffer, $DosBuffer.Capacity, 0x0)
+    if ($DosLength -eq 0 -or $DosLength -ge $DosBuffer.Capacity) {
+      $ErrorCode = [Runtime.InteropServices.Marshal]::GetLastWin32Error()
+      throw [ComponentModel.Win32Exception]::new(
+        $ErrorCode, "Cannot resolve $Label into the local DOS namespace: $Path")
+    }
+    $DosFinalPath = $DosBuffer.ToString().TrimEnd('\')
+    if ($DosFinalPath -cnotmatch '^\\\\\?\\[A-Za-z]:\\' -or
+        $CallerPath -cne $DosFinalPath.Substring(4)) {
+      throw "$Label must use its exact case-preserved local long path: $Path"
+    }
+    $Buffer = New-Object Text.StringBuilder 32768
+    $FinalLength = [SkillMeshUat.NativeFileIdentity]::GetFinalPathNameByHandle(
+      $Handle, $Buffer, $Buffer.Capacity, 0x1)
+    if ($FinalLength -eq 0 -or $FinalLength -ge $Buffer.Capacity) {
+      $ErrorCode = [Runtime.InteropServices.Marshal]::GetLastWin32Error()
+      throw [ComponentModel.Win32Exception]::new(
+        $ErrorCode, "Cannot resolve $Label into the local volume-GUID namespace: $Path")
+    }
+    $FinalPath = $Buffer.ToString().TrimEnd('\')
+    if ($FinalPath -cnotmatch `
+        '^\\\\\?\\Volume\{[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}\}(?:\\|$)') {
+      throw "$Label did not resolve to a local volume-GUID path: $FinalPath"
+    }
+    return [pscustomobject]@{
+      Identity = $Identity
+      FinalPath = $FinalPath
+      DosPath = $DosFinalPath.Substring(4)
+    }
+  } finally {
+    $Handle.Dispose()
+  }
+}
+function Test-FinalPathWithin([string]$Candidate, [string]$Container) {
+  return ($Candidate.Equals($Container, [StringComparison]::Ordinal) -or
+          $Candidate.StartsWith($Container + '\', [StringComparison]::Ordinal))
+}
+$FreshIdentity = Get-DirectoryFileIdentity $FreshInput 'fresh build root'
+$InstalledIdentity = Get-DirectoryFileIdentity $InstalledInput 'installed profile root'
+if ($FreshIdentity -ceq $InstalledIdentity) {
+  throw 'Fresh and installed roots resolve to the same filesystem directory.'
+}
+$FreshFacts = Get-DirectoryHandleFacts $FreshInput 'fresh build root'
+$InstalledFacts = Get-DirectoryHandleFacts $InstalledInput 'installed profile root'
+if ((Test-FinalPathWithin $FreshFacts.FinalPath $InstalledFacts.FinalPath) -or
+    (Test-FinalPathWithin $InstalledFacts.FinalPath $FreshFacts.FinalPath)) {
   throw 'Fresh and installed roots must be distinct and non-nested.'
 }
 
@@ -539,26 +685,40 @@ The original Step 108 home remains historical build/install evidence, but it was
 the OS temp tree, which on this host is inside the real user profile. The strengthened § 2.0
 pre-flight therefore rejects it as a Step 109 target. Do not search for, revive, or reuse that
 directory. Whether or not it still exists, Step 109 must create a new receipt-bound scratch
-home/project and a distinct scratch Claude config root outside the real profile, then reinstall
-and reverify the profile. Delete those two new roots only after § 2 is complete, and delete rather
-than revert: nothing in either root is tracked by git.
+home/project, a distinct scratch Claude config root, and a distinct fresh-build output root outside
+the real profile, then safely build, install, and reverify the profile. Delete those three new
+roots only after § 2 is complete, and delete rather than revert: nothing in them is tracked by git.
 
 Create the fresh compliant roots using these five Windows PowerShell 5.1 steps:
 
-1. From a `skill-mesh` checkout whose four writer hashes match § 2.0's recorded values, run
-   § 1.2's build command. If issue #153 instead adds a UAT mode, use that approved commit and
-   follow the rebuild/reverification/hash-refresh branch at the top of § 2.
-2. Issue #153's committed preparation block must atomically create a new random-named
-   `<scratch-home>` and a distinct `<scratch-claude-config>` under a validated, unlinked,
-   outside-git parent — **never** the real home, `$HOME`, `C:/Users/<user>`, or an existing
-   consumer. Before installation, create a `FileMode.CreateNew` JSON receipt in the new home that
-   binds a random nonce and both canonical roots. Record its SHA-256 and nonce on #153 before the
-   installer runs; do not record either absolute path. A directory merely named `step108-home` is
-   not sufficient evidence that it is disposable.
+1. Issue #153's committed preparation block must atomically create a new random-named
+   `<scratch-home>`, a distinct `<scratch-claude-config>`, and a distinct
+   `<fresh-build-output>` under a validated, unlinked, outside-git parent — **never** the real
+   home, `$HOME`, `C:/Users/<user>`, an ancestor of that home, or an existing consumer. Caller and
+   `Resolve-Path` spellings are not identity evidence: reject UNC, SUBST, 8.3, mapped-drive, and
+   other aliased/nonlocal spellings, then bind each disposable root and the real profile by a
+   Win32 handle-final local volume-GUID path plus volume-serial/file ID. Compare those physical
+   paths for equality and ancestry. Create a `FileMode.CreateNew` schema-v3 JSON receipt in the new
+   home that binds a random nonce, all three exact caller paths, their handle-final paths and file
+   IDs, and the real-profile handle identity used for the exclusion decision. Record its SHA-256
+   and nonce on #153 before any builder or installer runs; do not record an absolute path. A
+   familiar basename is not disposable-root evidence.
+2. Immediately before the only builder invocation, the committed block must re-open all four
+   handle identities, revalidate the receipt and physical unlinked/outside-git/outside-profile
+   ancestry, prove the build root empty, and prove its `claude`, `gpt`, and `codex` children absent.
+   Its tests must fail closed for a `\\localhost\c$` alias, a SUBST alias, an available 8.3 alias,
+   roots nested in either direction, a root under the real profile, and a case-mismatched filename
+   on a per-directory case-sensitive fixture when the host supports one. Only then run
+   `powershell -File tools/build-distributions.ps1 -Provider all -OutputDir
+   '<fresh-build-output>'`. If #153 adds a UAT mode, use that approved checkout and follow § 2's
+   rebuild/reverification/hash-refresh branch. Never replay § 1.2 against default `<repo>\dist` or
+   § 1.5's one-provider build during Step 109.
 3. Create the config root's unlinked `tmp` directory and establish the approved isolated
    authentication mode without copying or exposing an ambient credential. Keep all settings,
    plugins, credentials, history, transcripts, and temp state under that config root.
-4. Run § 1.3's install command against the new home.
+4. Install only the prebuilt bytes with `powershell -File tools/install-skill-mesh.ps1 -Provider
+   claude -Home '<scratch-home>' -DistDir '<fresh-build-output>'`; do not let the installer launch
+   a second implicit builder.
 5. Confirm with § 1.4's inspector command, § 1.5's equality and heading probes, and § 2.0's
    receipt, path, Git, link, and writer-hash checks before any host launch; bind the fresh writer
    hashes, receipt hash, and receipt nonce into #153's committed preflight.
@@ -573,8 +733,9 @@ reverification branch, not an "at or after" assumption.
 A recreated home is equivalent to the original: § 1.5 established that the installed profile
 is byte-identical to a fresh build at the same commit, so the same commands produce the same
 tree. What Step 109 needs is *a* compliant scratch home carrying the current Claude profile plus
-its paired, isolated config root — not the historical temp directory. After Step 109, delete both
-new roots only through #153's exact receipt-bound safe-cleanup block; never derive a cleanup target
+its paired isolated config root and receipt-bound build root — not the historical temp directory.
+After Step 109, delete all three new roots only through #153's exact receipt-bound safe-cleanup
+block; never derive a cleanup target
 from a basename, wildcard, ambient environment variable, or unresolved placeholder.
 
 `dist/` is gitignored and was never staged. No other durable artifact was produced by § 1.
@@ -612,11 +773,16 @@ it to a running host is § 2.0's job, and it is not optional.
 > not normal named-skill behavior. **Run no skill or host-delivery command in this section until
 > issue #153 records one of two deliberate resolutions:**
 >
-> 1. Add a core-supported, safety-gated UAT mode. This is a new code step: rebuild all profiles,
->    reinstall the Claude profile, rerun § 1.2–1.7, regenerate
->    `documentation/release-candidate-report.md`, and
->    replace § 2.0's four expected hashes from the newly verified
->    install before grading anything.
+> 1. Add a core-supported, safety-gated UAT mode. This is a new code step: use § 1.8's
+>    receipt-bound three-root preparation, one guarded `-Provider all -OutputDir
+>    <fresh-build-output>` build, and the explicit `-DistDir` install. Then rerun the inspector,
+>    equality/heading, reference, and package-gate criteria against those exact bytes (without
+>    replaying § 1.2's default output or § 1.5's one-provider builder), regenerate
+>    `documentation/release-candidate-report.md`, and replace § 2.0's four expected hashes from the
+>    newly verified install. Because this route changes code, its new preparation step must then
+>    clear a clean detached repo-root `python -m pytest` at or above
+>    `documentation/phase-75-baseline.md` with the recorded skip count unchanged before grading
+>    anything; the package-integrity run is only its iteration gate.
 > 2. Deliberately amend Step 109 to accept **operator-scoped named-skill subsection overrides** and
 >    their narrower evidence. This keeps the existing installed bytes and still requires the
 >    native Skill/Base/Profile/attribution proof below. A manual core-file read or non-skill probe
@@ -636,9 +802,16 @@ it to a running host is § 2.0's job, and it is not optional.
 > managed policy: managed settings outrank lower sources, hooks from effective sources merge, and
 > `--strict-mcp-config` does not suppress managed MCP policy. Before launch, the selected resolution
 > must enumerate the effective managed/plugin/session hook and settings surface, managed MCP
-> configuration, and managed skill definitions without firing a session; hash/allowlist every active
-> hook; reject every configured managed MCP server; reject any managed `plan-init` or `repo-update`
-> definition; and forbid managed-skill shell preprocessing/dynamic-context commands. If the
+> configuration, managed skill definitions, and **every effective instruction/rule source** without
+> firing a session. That inventory includes the organization-wide managed `CLAUDE.md`, managed
+> `claudeMd` content and other managed policy instructions, plus a physical ancestor walk from the
+> scratch project through the volume root for `CLAUDE.md`, `CLAUDE.local.md`, `.claude/rules/**`,
+> colliding skills, and dynamic-context preprocessing. The row's root instruction fixture and the
+> two receipt-pinned installed writer skills are the only permitted project instruction/skill
+> sources. Hash/allowlist every active hook; reject every configured managed MCP server; reject any
+> managed or ancestor `plan-init` or `repo-update` definition; and forbid all managed/ancestor-skill
+> shell preprocessing or dynamic-context commands. If the host cannot enumerate organization-wide
+> managed instruction content before launch, Step 109 stays blocked. If the
 > preventive path rail uses `PreToolUse`, that one pinned guard and the pinned delivery logger are
 > the only two command-hook exceptions; with a non-process permission rail, the logger is the sole
 > exception. If the host cannot provide that pre-launch evidence, Step 109 stays blocked.
@@ -647,10 +820,11 @@ it to a running host is § 2.0's job, and it is not optional.
 This section records *observations* and supplies the instruments; where the two disagree, the
 plan wins and the disagreement is itself worth recording in § 2.4.
 
-**Preconditions.** A newly created, receipt-bound scratch home carrying the Claude profile and a
-distinct scratch Claude config root, both outside the real user profile — see § 1.8's five-step
-recreation recipe. The disposable home is `<scratch-project>` during Step 109; neither root is a
-real project, the real home, or an ancestor of the real home.
+**Preconditions.** A newly created, receipt-bound scratch home carrying the Claude profile, a
+distinct scratch Claude config root, and a distinct fresh-build output root, all outside the real
+user profile — see § 1.8's five-step recreation recipe. The disposable home is
+`<scratch-project>` during Step 109; none is a real project, the real home, or an ancestor of the
+real home.
 
 **Redaction still applies.** Everything recorded below lands in a public file. Replace
 absolute paths with `<scratch-home>` / `<scratch-project>` / `<scratch-claude-config>` before
@@ -705,41 +879,228 @@ hook disable cannot override managed hooks; this is why effective pre-launch enu
 
 First validate the exact scratch target in both the observer PowerShell window and the separate
 host terminal. The #153 resolution must replace the receipt blocker and placeholders below with
-the recorded creation-time values. This prevents an existing non-git consumer or a substituted
-project from becoming the serial fixture:
+the recorded creation-time values. Before that replacement can run, it must reject every
+non-local/aliased spelling and bind the project/install, config, build-output, and real-profile
+directories by handle-final volume-GUID path and volume-serial/file ID. Every equality, nesting,
+real-profile, Git-ancestry, write-parent, and cleanup decision must use those physical facts; a
+`Resolve-Path`/`FullName` string is only a secondary spelling check. The receipt must bind the exact
+case-preserved caller spelling and the handle-final facts. The preparation and preflight negative
+suite must reject `\\localhost\c$`, SUBST, 8.3, nested-root, under-profile, and case-mismatched
+fixtures. If any handle-final, ancestor, or effective case check is unavailable, stay blocked. This
+prevents an existing non-git consumer or a substituted project from becoming the serial fixture:
 
 ```powershell
+foreach ($StaleUatFunction in @(
+    'Assert-UatScratchReceipt', 'Assert-UatFenceReady',
+    'Get-HostMutationSurfaceSnapshot', 'Get-ContainedConfigStateSnapshot',
+    'Test-ResolutionContainmentReceipt', 'Invoke-ContainedClaude',
+    'Clear-InstructionFixture', 'Write-InstructionFixture', 'Set-RowFixture',
+    'Get-InstructionSnapshot', 'Get-ProtectedRootSnapshot')) {
+  Remove-Item -LiteralPath ("Function:\$StaleUatFunction") -Force `
+    -ErrorAction SilentlyContinue
+}
+foreach ($StaleUatVariable in @(
+    'ExpectedScratchReceiptHash', 'ExpectedScratchNonce',
+    'ExpectedUatFenceGuardHash', 'ResolutionContainmentReceipt',
+    'ResolutionLaunchArguments', 'ResolutionExpectedAuthMethod',
+    'ResolutionExpectedApiProvider', 'Proj', 'ScratchHome', 'ClaudeConfigDir',
+    'FreshBuildRoot', 'ProjInput', 'ScratchHomeInput', 'ClaudeConfigInput',
+    'FreshBuildInput', 'ProjFacts', 'ScratchHomeFacts', 'ClaudeConfigFacts',
+    'FreshBuildFacts', 'RealHome', 'RealHomeFacts', 'ExpectedSkillHashes',
+    'SkillHashesBefore')) {
+  Remove-Variable -Name $StaleUatVariable -Force -ErrorAction SilentlyContinue
+}
+function Assert-UatScratchReceipt {
+  throw 'BLOCKED: #153 has not installed the receipt-bound scratch guard in this process.'
+}
+function Assert-UatFenceReady {
+  throw 'BLOCKED: #153 has not installed the hash-bound UAT fence guard in this process.'
+}
+throw 'BLOCKED: #153 must replace this guard only with committed handle-final root identity, ancestry, case, and receipt-v3 checks.'
+if (-not ('SkillMeshUat.NativeFileIdentity' -as [type])) {
+  Add-Type -TypeDefinition @'
+using System;
+using System.IO;
+using System.Runtime.InteropServices;
+using System.Text;
+using Microsoft.Win32.SafeHandles;
+namespace SkillMeshUat {
+  [StructLayout(LayoutKind.Sequential)]
+  public struct ByHandleFileInformation {
+    public uint FileAttributes;
+    public System.Runtime.InteropServices.ComTypes.FILETIME CreationTime;
+    public System.Runtime.InteropServices.ComTypes.FILETIME LastAccessTime;
+    public System.Runtime.InteropServices.ComTypes.FILETIME LastWriteTime;
+    public uint VolumeSerialNumber;
+    public uint FileSizeHigh;
+    public uint FileSizeLow;
+    public uint NumberOfLinks;
+    public uint FileIndexHigh;
+    public uint FileIndexLow;
+  }
+  public static class NativeFileIdentity {
+    [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true,
+      EntryPoint = "CreateFileW")]
+    public static extern SafeFileHandle CreateFile(
+      string name, uint access, FileShare share, IntPtr security,
+      FileMode mode, uint flags, IntPtr template);
+    [DllImport("kernel32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool GetFileInformationByHandle(
+      SafeFileHandle handle, out ByHandleFileInformation information);
+    [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true,
+      EntryPoint = "GetFinalPathNameByHandleW")]
+    public static extern uint GetFinalPathNameByHandle(
+      SafeFileHandle handle, StringBuilder path, uint capacity, uint flags);
+  }
+}
+'@ -ErrorAction Stop
+}
+function Get-DirectoryFileIdentity([string]$Path, [string]$Label) {
+  $DirectoryItem = Get-Item -LiteralPath $Path -Force -ErrorAction Stop
+  if (-not $DirectoryItem.PSIsContainer) {
+    throw "$Label is not a directory: $Path"
+  }
+  $Handle = [SkillMeshUat.NativeFileIdentity]::CreateFile(
+    $DirectoryItem.FullName, 0, [IO.FileShare]::ReadWrite -bor [IO.FileShare]::Delete,
+    [IntPtr]::Zero, [IO.FileMode]::Open, 0x02000000, [IntPtr]::Zero)
+  if ($Handle.IsInvalid) {
+    $ErrorCode = [Runtime.InteropServices.Marshal]::GetLastWin32Error()
+    $Handle.Dispose()
+    throw [ComponentModel.Win32Exception]::new(
+      $ErrorCode, "Cannot open $Label identity handle: $Path")
+  }
+  try {
+    $Information = New-Object SkillMeshUat.ByHandleFileInformation
+    if (-not [SkillMeshUat.NativeFileIdentity]::GetFileInformationByHandle(
+        $Handle, [ref]$Information)) {
+      $ErrorCode = [Runtime.InteropServices.Marshal]::GetLastWin32Error()
+      throw [ComponentModel.Win32Exception]::new(
+        $ErrorCode, "Cannot read $Label identity: $Path")
+    }
+    return ('{0:X8}:{1:X8}{2:X8}' -f $Information.VolumeSerialNumber,
+      $Information.FileIndexHigh, $Information.FileIndexLow)
+  } finally {
+    $Handle.Dispose()
+  }
+}
+function Get-DirectoryHandleFacts([string]$Path, [string]$Label) {
+  $DirectoryItem = Get-Item -LiteralPath $Path -Force -ErrorAction Stop
+  if (-not $DirectoryItem.PSIsContainer) {
+    throw "$Label is not a directory: $Path"
+  }
+  $Identity = Get-DirectoryFileIdentity $DirectoryItem.FullName $Label
+  try {
+    $CallerPath = [IO.Path]::GetFullPath([string]$Path).TrimEnd('\')
+  } catch {
+    throw "$Label caller path cannot be normalized: $Path"
+  }
+  $Handle = [SkillMeshUat.NativeFileIdentity]::CreateFile(
+    $DirectoryItem.FullName, 0, [IO.FileShare]::ReadWrite -bor [IO.FileShare]::Delete,
+    [IntPtr]::Zero, [IO.FileMode]::Open, 0x02000000, [IntPtr]::Zero)
+  if ($Handle.IsInvalid) {
+    $ErrorCode = [Runtime.InteropServices.Marshal]::GetLastWin32Error()
+    $Handle.Dispose()
+    throw [ComponentModel.Win32Exception]::new(
+      $ErrorCode, "Cannot open $Label final-path handle: $Path")
+  }
+  try {
+    $DosBuffer = New-Object Text.StringBuilder 32768
+    $DosLength = [SkillMeshUat.NativeFileIdentity]::GetFinalPathNameByHandle(
+      $Handle, $DosBuffer, $DosBuffer.Capacity, 0x0)
+    if ($DosLength -eq 0 -or $DosLength -ge $DosBuffer.Capacity) {
+      $ErrorCode = [Runtime.InteropServices.Marshal]::GetLastWin32Error()
+      throw [ComponentModel.Win32Exception]::new(
+        $ErrorCode, "Cannot resolve $Label into the local DOS namespace: $Path")
+    }
+    $DosFinalPath = $DosBuffer.ToString().TrimEnd('\')
+    if ($DosFinalPath -cnotmatch '^\\\\\?\\[A-Za-z]:\\' -or
+        $CallerPath -cne $DosFinalPath.Substring(4)) {
+      throw "$Label must use its exact case-preserved local long path: $Path"
+    }
+    $Buffer = New-Object Text.StringBuilder 32768
+    $FinalLength = [SkillMeshUat.NativeFileIdentity]::GetFinalPathNameByHandle(
+      $Handle, $Buffer, $Buffer.Capacity, 0x1)
+    if ($FinalLength -eq 0 -or $FinalLength -ge $Buffer.Capacity) {
+      $ErrorCode = [Runtime.InteropServices.Marshal]::GetLastWin32Error()
+      throw [ComponentModel.Win32Exception]::new(
+        $ErrorCode, "Cannot resolve $Label into the local volume-GUID namespace: $Path")
+    }
+    $FinalPath = $Buffer.ToString().TrimEnd('\')
+    if ($FinalPath -cnotmatch `
+        '^\\\\\?\\Volume\{[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}\}(?:\\|$)') {
+      throw "$Label did not resolve to a local volume-GUID path: $FinalPath"
+    }
+    return [pscustomobject]@{
+      Identity = $Identity
+      FinalPath = $FinalPath
+      DosPath = $DosFinalPath.Substring(4)
+    }
+  } finally {
+    $Handle.Dispose()
+  }
+}
+function Test-FinalPathWithin([string]$Candidate, [string]$Container) {
+  return ($Candidate.Equals($Container, [StringComparison]::Ordinal) -or
+          $Candidate.StartsWith($Container + '\', [StringComparison]::Ordinal))
+}
+$ProjInput = '<scratch-project>'
+$ScratchHomeInput = '<scratch-home>'
+$ClaudeConfigInput = '<scratch-claude-config>'
+$FreshBuildInput = '<fresh-build-output>'
 $ProjItem = Get-Item -LiteralPath `
-  (Resolve-Path -LiteralPath '<scratch-project>' -ErrorAction Stop).Path -Force -ErrorAction Stop
+  (Resolve-Path -LiteralPath $ProjInput -ErrorAction Stop).Path -Force -ErrorAction Stop
 $ScratchHomeItem = Get-Item -LiteralPath `
-  (Resolve-Path -LiteralPath '<scratch-home>' -ErrorAction Stop).Path -Force -ErrorAction Stop
+  (Resolve-Path -LiteralPath $ScratchHomeInput -ErrorAction Stop).Path -Force -ErrorAction Stop
 $ClaudeConfigItem = Get-Item -LiteralPath `
-  (Resolve-Path -LiteralPath '<scratch-claude-config>' -ErrorAction Stop).Path `
+  (Resolve-Path -LiteralPath $ClaudeConfigInput -ErrorAction Stop).Path `
+  -Force -ErrorAction Stop
+$FreshBuildItem = Get-Item -LiteralPath `
+  (Resolve-Path -LiteralPath $FreshBuildInput -ErrorAction Stop).Path `
   -Force -ErrorAction Stop
 if (-not $ProjItem.PSIsContainer -or $null -eq $ProjItem.Parent -or
     -not $ScratchHomeItem.PSIsContainer -or $null -eq $ScratchHomeItem.Parent -or
-    -not $ClaudeConfigItem.PSIsContainer -or $null -eq $ClaudeConfigItem.Parent) {
+    -not $ClaudeConfigItem.PSIsContainer -or $null -eq $ClaudeConfigItem.Parent -or
+    -not $FreshBuildItem.PSIsContainer -or $null -eq $FreshBuildItem.Parent) {
   throw 'Scratch roots must be non-root directories.'
 }
 $Proj = $ProjItem.FullName.TrimEnd('\')
 $ScratchHome = $ScratchHomeItem.FullName.TrimEnd('\')
 $ClaudeConfigDir = $ClaudeConfigItem.FullName.TrimEnd('\')
-$RealHome = (Resolve-Path -LiteralPath `
-  ([Environment]::GetFolderPath('UserProfile')) -ErrorAction Stop).Path.TrimEnd('\')
-if (-not $Proj.Equals($ScratchHome, [StringComparison]::OrdinalIgnoreCase)) {
+$FreshBuildRoot = $FreshBuildItem.FullName.TrimEnd('\')
+$RealHomeItem = Get-Item -LiteralPath (Resolve-Path -LiteralPath `
+  ([Environment]::GetFolderPath('UserProfile')) -ErrorAction Stop).Path `
+  -Force -ErrorAction Stop
+$RealHome = $RealHomeItem.FullName.TrimEnd('\')
+$ProjFacts = Get-DirectoryHandleFacts $ProjInput 'scratch project'
+$ScratchHomeFacts = Get-DirectoryHandleFacts $ScratchHomeInput 'scratch install home'
+$ClaudeConfigFacts = Get-DirectoryHandleFacts $ClaudeConfigInput 'scratch Claude config'
+$FreshBuildFacts = Get-DirectoryHandleFacts $FreshBuildInput 'fresh build output'
+$RealHomeFacts = Get-DirectoryHandleFacts $RealHome 'real user profile'
+if ($ProjFacts.Identity -cne $ScratchHomeFacts.Identity -or
+    -not $ProjFacts.FinalPath.Equals(
+      $ScratchHomeFacts.FinalPath, [StringComparison]::Ordinal)) {
   throw 'Scratch project must be the verified scratch install home.'
 }
-function Test-PathWithin([string]$Candidate, [string]$Container) {
-  return ($Candidate.Equals($Container, [StringComparison]::OrdinalIgnoreCase) -or
-          $Candidate.StartsWith($Container + '\', [StringComparison]::OrdinalIgnoreCase))
+$DisposableFacts = @($ProjFacts, $ClaudeConfigFacts, $FreshBuildFacts)
+foreach ($DisposableFact in $DisposableFacts) {
+  if ((Test-FinalPathWithin $DisposableFact.FinalPath $RealHomeFacts.FinalPath) -or
+      (Test-FinalPathWithin $RealHomeFacts.FinalPath $DisposableFact.FinalPath)) {
+    throw 'A disposable root is inside or above the real home.'
+  }
 }
-if ((Test-PathWithin $Proj $RealHome) -or
-    (Test-PathWithin $RealHome $Proj) -or
-    (Test-PathWithin $ClaudeConfigDir $RealHome) -or
-    (Test-PathWithin $RealHome $ClaudeConfigDir) -or
-    (Test-PathWithin $ClaudeConfigDir $Proj) -or
-    (Test-PathWithin $Proj $ClaudeConfigDir)) {
-  throw 'Scratch project/config roots must be distinct, non-nested, and outside/never above the real home.'
+for ($LeftIndex = 0; $LeftIndex -lt $DisposableFacts.Count; $LeftIndex++) {
+  for ($RightIndex = $LeftIndex + 1;
+       $RightIndex -lt $DisposableFacts.Count; $RightIndex++) {
+    if ($DisposableFacts[$LeftIndex].Identity -ceq
+          $DisposableFacts[$RightIndex].Identity -or
+        (Test-FinalPathWithin $DisposableFacts[$LeftIndex].FinalPath `
+          $DisposableFacts[$RightIndex].FinalPath) -or
+        (Test-FinalPathWithin $DisposableFacts[$RightIndex].FinalPath `
+          $DisposableFacts[$LeftIndex].FinalPath)) {
+      throw 'Disposable project, config, and build roots must be distinct and non-nested.'
+    }
+  }
 }
 function Test-LinkedItem($Item) {
   return ((($Item.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) -or
@@ -758,17 +1119,16 @@ function Get-CanonicalAbsolutePath($Path, $Label) {
     throw "$Label path is empty."
   }
   $IsDriveAbsolute = $PathText -cmatch '^[A-Za-z]:\\'
-  $IsUncAbsolute = $PathText -cmatch '^\\\\[^\\]+\\[^\\]+(?:\\|$)'
-  if (-not $IsDriveAbsolute -and -not $IsUncAbsolute) {
-    throw "$Label path is not drive-absolute or UNC-absolute: $PathText"
+  if (-not $IsDriveAbsolute) {
+    throw "$Label path is not a direct local drive-absolute spelling: $PathText"
   }
   try {
     $FullPath = [IO.Path]::GetFullPath($PathText)
   } catch {
     throw "$Label path cannot be normalized: $PathText"
   }
-  if (-not $PathText.Equals($FullPath, [StringComparison]::OrdinalIgnoreCase)) {
-    throw "$Label path is relative, root-relative, or non-canonical: $Path"
+  if (-not $PathText.Equals($FullPath, [StringComparison]::Ordinal)) {
+    throw "$Label path is relative, aliased, case-mismatched, or non-canonical: $Path"
   }
   return $FullPath
 }
@@ -817,12 +1177,60 @@ function Assert-OutsideGitWorktree([string]$Path, [string]$Label) {
 }
 Assert-OutsideGitWorktree $Proj 'scratch project'
 Assert-OutsideGitWorktree $ClaudeConfigDir 'scratch Claude config'
-throw 'BLOCKED: #153 must commit the creation-time scratch receipt hash and nonce here.'
+Assert-OutsideGitWorktree $FreshBuildRoot 'fresh build output'
+throw 'BLOCKED: #153 must commit the creation-time receipt and fence-guard hashes here.'
 $ExpectedScratchReceiptHash = '<issue-153-recorded-creation-receipt-sha256>'
 $ExpectedScratchNonce = '<issue-153-recorded-random-nonce>'
+$ExpectedUatFenceGuardHash = '<issue-153-recorded-fence-guard-sha256>'
 function Assert-UatScratchReceipt {
   Assert-UnlinkedPathAncestry $Proj 'receipt-bound scratch project' | Out-Null
   Assert-UnlinkedPathAncestry $ClaudeConfigDir 'receipt-bound scratch config' | Out-Null
+  Assert-UnlinkedPathAncestry $FreshBuildRoot 'receipt-bound fresh build output' | Out-Null
+  Assert-OutsideGitWorktree $Proj 'receipt-bound scratch project'
+  Assert-OutsideGitWorktree $ClaudeConfigDir 'receipt-bound scratch config'
+  Assert-OutsideGitWorktree $FreshBuildRoot 'receipt-bound fresh build output'
+  $CurrentProjFacts = Get-DirectoryHandleFacts $Proj 'current scratch project'
+  $CurrentConfigFacts = Get-DirectoryHandleFacts $ClaudeConfigDir `
+    'current scratch Claude config'
+  $CurrentBuildFacts = Get-DirectoryHandleFacts $FreshBuildRoot `
+    'current fresh build output'
+  $CurrentRealHomeFacts = Get-DirectoryHandleFacts $RealHome 'current real user profile'
+  if ($CurrentProjFacts.Identity -cne $ProjFacts.Identity -or
+      -not $CurrentProjFacts.FinalPath.Equals(
+        $ProjFacts.FinalPath, [StringComparison]::Ordinal) -or
+      $CurrentConfigFacts.Identity -cne $ClaudeConfigFacts.Identity -or
+      -not $CurrentConfigFacts.FinalPath.Equals(
+        $ClaudeConfigFacts.FinalPath, [StringComparison]::Ordinal) -or
+      $CurrentBuildFacts.Identity -cne $FreshBuildFacts.Identity -or
+      -not $CurrentBuildFacts.FinalPath.Equals(
+        $FreshBuildFacts.FinalPath, [StringComparison]::Ordinal) -or
+      $CurrentRealHomeFacts.Identity -cne $RealHomeFacts.Identity -or
+      -not $CurrentRealHomeFacts.FinalPath.Equals(
+        $RealHomeFacts.FinalPath, [StringComparison]::Ordinal)) {
+    throw 'A disposable root changed filesystem identity after preflight.'
+  }
+  $CurrentDisposableFacts = @($CurrentProjFacts, $CurrentConfigFacts, $CurrentBuildFacts)
+  foreach ($CurrentDisposableFact in $CurrentDisposableFacts) {
+    if ((Test-FinalPathWithin $CurrentDisposableFact.FinalPath `
+          $CurrentRealHomeFacts.FinalPath) -or
+        (Test-FinalPathWithin $CurrentRealHomeFacts.FinalPath `
+          $CurrentDisposableFact.FinalPath)) {
+      throw 'A receipt-bound disposable root is inside or above the real home.'
+    }
+  }
+  for ($LeftIndex = 0; $LeftIndex -lt $CurrentDisposableFacts.Count; $LeftIndex++) {
+    for ($RightIndex = $LeftIndex + 1;
+         $RightIndex -lt $CurrentDisposableFacts.Count; $RightIndex++) {
+      if ($CurrentDisposableFacts[$LeftIndex].Identity -ceq
+            $CurrentDisposableFacts[$RightIndex].Identity -or
+          (Test-FinalPathWithin $CurrentDisposableFacts[$LeftIndex].FinalPath `
+            $CurrentDisposableFacts[$RightIndex].FinalPath) -or
+          (Test-FinalPathWithin $CurrentDisposableFacts[$RightIndex].FinalPath `
+            $CurrentDisposableFacts[$LeftIndex].FinalPath)) {
+        throw 'Receipt-bound project, config, and build roots are the same or nested.'
+      }
+    }
+  }
   $ReceiptPath = Join-Path $Proj '.skill-mesh-phase-is-uat-receipt.json'
   Assert-RegularUnlinkedFile $ReceiptPath 'UAT scratch receipt' | Out-Null
   $ReceiptHash = (Get-FileHash -LiteralPath $ReceiptPath -Algorithm SHA256 `
@@ -836,7 +1244,11 @@ function Assert-UatScratchReceipt {
   $Receipt = Get-Content -LiteralPath $ReceiptPath -Raw -ErrorAction Stop |
     ConvertFrom-Json -ErrorAction Stop
   $ExpectedReceiptProperties = @(
-    'schema', 'nonce', 'project_path', 'claude_config_path', 'created_utc'
+    'schema', 'nonce', 'project_path', 'claude_config_path', 'build_output_path',
+    'project_final_path', 'claude_config_final_path', 'build_output_final_path',
+    'project_identity', 'claude_config_identity', 'build_output_identity',
+    'real_home_final_path', 'real_home_identity',
+    'fence_guard_sha256', 'created_utc'
   )
   $ReceiptProperties = @($Receipt.PSObject.Properties | ForEach-Object { $_.Name })
   $ReceiptPropertyDifference = @(Compare-Object $ExpectedReceiptProperties `
@@ -845,19 +1257,73 @@ function Assert-UatScratchReceipt {
   $CreatedUtcIsExact = [DateTime]::TryParseExact(
     [string]$Receipt.created_utc, 'o', [Globalization.CultureInfo]::InvariantCulture,
     [Globalization.DateTimeStyles]::RoundtripKind, [ref]$ParsedCreatedUtc)
+  $ReceiptProjectPath = Get-CanonicalAbsolutePath $Receipt.project_path `
+    'receipt project root'
+  $ReceiptConfigPath = Get-CanonicalAbsolutePath $Receipt.claude_config_path `
+    'receipt Claude config root'
+  $ReceiptBuildPath = Get-CanonicalAbsolutePath $Receipt.build_output_path `
+    'receipt build output root'
+  $ReceiptProjectFacts = Get-DirectoryHandleFacts $ReceiptProjectPath `
+    'receipt project root'
+  $ReceiptConfigFacts = Get-DirectoryHandleFacts $ReceiptConfigPath `
+    'receipt Claude config root'
+  $ReceiptBuildFacts = Get-DirectoryHandleFacts $ReceiptBuildPath `
+    'receipt build output root'
   if ($ReceiptPropertyDifference.Count -ne 0 -or
-      $Receipt.schema -cne 'skill-mesh/phase-is-uat-scratch/v1' -or
+      $Receipt.schema -cne 'skill-mesh/phase-is-uat-scratch/v3' -or
       $Receipt.nonce -cne $ExpectedScratchNonce -or -not $CreatedUtcIsExact -or
-      -not (Get-CanonicalAbsolutePath $Receipt.project_path `
-        'receipt project root').Equals($Proj, [StringComparison]::OrdinalIgnoreCase) -or
-      -not (Get-CanonicalAbsolutePath $Receipt.claude_config_path `
-        'receipt Claude config root').Equals(
-          $ClaudeConfigDir, [StringComparison]::OrdinalIgnoreCase)) {
+      $Receipt.project_path -cne $ProjInput -or
+      $Receipt.claude_config_path -cne $ClaudeConfigInput -or
+      $Receipt.build_output_path -cne $FreshBuildInput -or
+      $Receipt.project_identity -cne $CurrentProjFacts.Identity -or
+      $Receipt.claude_config_identity -cne $CurrentConfigFacts.Identity -or
+      $Receipt.build_output_identity -cne $CurrentBuildFacts.Identity -or
+      $Receipt.real_home_identity -cne $CurrentRealHomeFacts.Identity -or
+      $Receipt.project_final_path -cne $CurrentProjFacts.FinalPath -or
+      $Receipt.claude_config_final_path -cne $CurrentConfigFacts.FinalPath -or
+      $Receipt.build_output_final_path -cne $CurrentBuildFacts.FinalPath -or
+      $Receipt.real_home_final_path -cne $CurrentRealHomeFacts.FinalPath -or
+      $ReceiptProjectPath -cne $Proj -or
+      $ReceiptConfigPath -cne $ClaudeConfigDir -or
+      $ReceiptBuildPath -cne $FreshBuildRoot -or
+      $Receipt.fence_guard_sha256 -cne $ExpectedUatFenceGuardHash -or
+      $ExpectedUatFenceGuardHash -cnotmatch '^[0-9A-F]{64}$' -or
+      $ReceiptProjectFacts.Identity -cne $CurrentProjFacts.Identity -or
+      -not $ReceiptProjectFacts.FinalPath.Equals(
+        $CurrentProjFacts.FinalPath, [StringComparison]::Ordinal) -or
+      $ReceiptConfigFacts.Identity -cne $CurrentConfigFacts.Identity -or
+      -not $ReceiptConfigFacts.FinalPath.Equals(
+        $CurrentConfigFacts.FinalPath, [StringComparison]::Ordinal) -or
+      $ReceiptBuildFacts.Identity -cne $CurrentBuildFacts.Identity -or
+      -not $ReceiptBuildFacts.FinalPath.Equals(
+        $CurrentBuildFacts.FinalPath, [StringComparison]::Ordinal)) {
     $ReceiptPropertyDifference
     throw 'Scratch receipt fields do not bind the validated disposable roots.'
   }
+  return $true
 }
-Assert-UatScratchReceipt
+function Assert-UatFenceReady {
+  $GuardCommand = Get-Command Assert-UatFenceReady -CommandType Function `
+    -ErrorAction Stop
+  $GuardBytes = [Text.Encoding]::UTF8.GetBytes($GuardCommand.ScriptBlock.ToString())
+  $GuardHash = [BitConverter]::ToString(
+    [Security.Cryptography.SHA256]::Create().ComputeHash($GuardBytes)).Replace('-', '')
+  if ($ExpectedUatFenceGuardHash -cnotmatch '^[0-9A-F]{64}$' -or
+      $GuardHash -cne $ExpectedUatFenceGuardHash) {
+    throw 'The live UAT fence guard does not match its receipt-bound script hash.'
+  }
+  $ReceiptResult = @(Assert-UatScratchReceipt)
+  if ($ReceiptResult.Count -ne 1 -or $ReceiptResult[0] -isnot [bool] -or
+      $ReceiptResult[0] -cne $true) {
+    throw 'The UAT scratch receipt guard did not return exactly one True result.'
+  }
+  return $true
+}
+$InitialFenceResult = @(Assert-UatFenceReady)
+if ($InitialFenceResult.Count -ne 1 -or $InitialFenceResult[0] -isnot [bool] -or
+    $InitialFenceResult[0] -cne $true) {
+  throw 'Initial UAT fence guard did not return exactly one True result.'
+}
 $LedgerPath = Join-Path $Proj '.skill-mesh-install.json'
 Assert-RegularUnlinkedFile $LedgerPath 'scratch-install ledger' | Out-Null
 $Ledger = Get-Content -LiteralPath $LedgerPath -Raw -ErrorAction Stop | ConvertFrom-Json
@@ -872,13 +1338,13 @@ foreach ($relative in $WriterFiles) {
   $WriterPath = Join-Path $Proj $relative
   Assert-RegularUnlinkedFile $WriterPath 'writer file' | Out-Null
   $CurrentPath = (Get-Item -LiteralPath $WriterPath -Force -ErrorAction Stop).FullName
-  while ($CurrentPath.Equals($Proj, [StringComparison]::OrdinalIgnoreCase) -or
-         $CurrentPath.StartsWith($Proj + '\', [StringComparison]::OrdinalIgnoreCase)) {
+  while ($CurrentPath.Equals($Proj, [StringComparison]::Ordinal) -or
+         $CurrentPath.StartsWith($Proj + '\', [StringComparison]::Ordinal)) {
     $Node = Get-Item -LiteralPath $CurrentPath -Force -ErrorAction Stop
     if (Test-LinkedItem $Node) {
       throw "Refusing a writer path with a linked component: $($Node.FullName)"
     }
-    if ($CurrentPath.Equals($Proj, [StringComparison]::OrdinalIgnoreCase)) { break }
+    if ($CurrentPath.Equals($Proj, [StringComparison]::Ordinal)) { break }
     $CurrentPath = [IO.Path]::GetDirectoryName($CurrentPath)
   }
 }
@@ -908,6 +1374,11 @@ upgrade requires an explicit re-audit and pin update before Step 109 runs.
 Keep the observer window open. Capture the two writers' installed bytes before the first row:
 
 ```powershell
+throw 'BLOCKED: #153 must commit and verify the receipt-bound installed-writer preflight here.'
+$FenceGuardCommand = Get-Command Assert-UatFenceReady -CommandType Function -ErrorAction Stop
+$FenceGuardResult = @(& $FenceGuardCommand)
+if ($FenceGuardResult.Count -ne 1 -or $FenceGuardResult[0] -isnot [bool] -or
+    $FenceGuardResult[0] -cne $true) { throw 'UAT fence guard did not return exactly one True.' }
 $ObservedSkillFiles = @(
   'plan-init\SKILL.md', 'plan-init\core.md',
   'repo-update\SKILL.md', 'repo-update\core.md'
@@ -951,19 +1422,29 @@ list plus verified hashes/content for the empty MCP config and preventive settin
 That replacement must reject duplicate/unknown flags and every authority-broadening option; a
 runtime-supplied array is not evidence. It must also bind the pre-launch effective-configuration
 inventory, reject every managed/plugin/session hook or setting not explicitly reviewed, and prove
-the effective managed MCP configuration is absent or empty. It must enumerate managed skills,
-reject managed definitions of either writer, and reject managed-skill shell preprocessing before
-the first Skill invocation. It must also reject every settings-file `env` assignment to a protected
+the effective managed MCP configuration is absent or empty. It must enumerate organization-wide
+managed instructions (including managed `CLAUDE.md`, managed `claudeMd`, and policy/rule content),
+managed skills, and every project ancestor's `CLAUDE.md`, `CLAUDE.local.md`, `.claude/rules/**`,
+same-name skill, and dynamic-context preprocessing surface through the physical volume root. Reject
+every source except the row's root fixture and the two receipt-pinned writer skills; reject managed
+or ancestor definitions of either writer and every managed/ancestor-skill shell preprocessing path
+before the first Skill invocation. If the pinned host cannot expose any of those sources without
+starting a session, the launch remains blocked. It must also reject every settings-file `env` assignment to a protected
 isolation key, because those values can replace inherited shell values during startup. Use only the
 distinct disposable `$ClaudeConfigDir` for settings, plugins, credentials, history and temp state;
 on Windows that means either a process-only `CLAUDE_CODE_OAUTH_TOKEN` or a login performed directly
 into that scratch config. Never copy, print, or hash the ambient credential file. The committed
 receipt must enumerate and reject every competing credential/provider-selection environment
 variable supported by the pinned release, including direct API-key/token and Bedrock, Vertex,
-Foundry, profile, federation, and custom-base-URL paths. With the exact isolation environment and
+Foundry, Mantle, Anthropic-AWS, host-managed-provider, workspace, mTLS client-certificate,
+profile, federation, and custom-base-URL paths. The receipt must also bind the one expected
+`authMethod` and `apiProvider`; an intentionally selected mTLS mode must instead pin regular,
+unlinked certificate/key files below the isolated config root and update this default-reject list
+in the same reviewed change. With the exact isolation environment and
 launch root set and the pinned executable hash rechecked, the wrapper must run
 `claude auth status`, require exit 0, and parse its default JSON output without recording that
-output; a check run before containment is established is not evidence. Only the pinned path guard
+output; `loggedIn` must be Boolean true and its method/provider must exactly equal the receipt.
+A check run before containment is established is not evidence. Only the pinned path guard
 (if process-based) and pinned delivery logger may be command-hook exceptions. The
 committed `Get-ContainedConfigStateSnapshot` must return a deterministic inventory of every static
 or prohibited startup surface under the isolated config root: receipt-pinned settings, hooks, MCP
@@ -975,17 +1456,33 @@ same containment receipt after the process exits. The current blocked skeleton c
 
 ```powershell
 throw 'BLOCKED: #153 must commit an exact launch grammar and containment-artifact hashes here.'
+$FenceGuardCommand = Get-Command Assert-UatFenceReady -CommandType Function -ErrorAction Stop
+$FenceGuardResult = @(& $FenceGuardCommand)
+if ($FenceGuardResult.Count -ne 1 -or $FenceGuardResult[0] -isnot [bool] -or
+    $FenceGuardResult[0] -cne $true) { throw 'UAT fence guard did not return exactly one True.' }
 # The selected resolution replaces the throw with the exact $ResolutionLaunchArguments literal
-# and $ResolutionContainmentReceipt, plus closed-grammar/artifact/auth verification and committed
+# and $ResolutionContainmentReceipt, exact $ResolutionExpectedAuthMethod and
+# $ResolutionExpectedApiProvider literals, plus closed-grammar/artifact/auth verification and committed
 # Get-HostMutationSurfaceSnapshot, Get-ContainedConfigStateSnapshot, and
 # Test-ResolutionContainmentReceipt functions. Do not define any of them ad hoc in the shell.
 function Invoke-ContainedClaude(
     [string]$ExpectedRoot,
     [object[]]$AdditionalArguments,
     [string]$InstructionsLogPath) {
+  $LiveFenceGuard = Get-Command Assert-UatFenceReady -CommandType Function `
+    -ErrorAction Stop
+  $LiveFenceResult = @(& $LiveFenceGuard)
+  if ($LiveFenceResult.Count -ne 1 -or $LiveFenceResult[0] -isnot [bool] -or
+      $LiveFenceResult[0] -cne $true) {
+    throw 'Contained Claude launch fence did not return exactly one True.'
+  }
   $ResolutionArgsVariable = Get-Variable -Name ResolutionLaunchArguments `
     -ErrorAction SilentlyContinue
   $ResolutionReceiptVariable = Get-Variable -Name ResolutionContainmentReceipt `
+    -ErrorAction SilentlyContinue
+  $ResolutionAuthMethodVariable = Get-Variable -Name ResolutionExpectedAuthMethod `
+    -ErrorAction SilentlyContinue
+  $ResolutionApiProviderVariable = Get-Variable -Name ResolutionExpectedApiProvider `
     -ErrorAction SilentlyContinue
   foreach ($RequiredFunction in @(
       'Get-HostMutationSurfaceSnapshot', 'Get-ContainedConfigStateSnapshot',
@@ -997,9 +1494,17 @@ function Invoke-ContainedClaude(
   }
   if ($null -eq $ResolutionArgsVariable -or $null -eq $ResolutionReceiptVariable -or
       $ResolutionReceiptVariable.Value -isnot [string] -or
-      $ResolutionReceiptVariable.Value -cnotmatch '^[0-9A-F]{64}$') {
-    throw 'Resolution launch grammar/receipt is absent or malformed.'
+      $ResolutionReceiptVariable.Value -cnotmatch '^[0-9A-F]{64}$' -or
+      $null -eq $ResolutionAuthMethodVariable -or
+      $ResolutionAuthMethodVariable.Value -isnot [string] -or
+      [String]::IsNullOrWhiteSpace($ResolutionAuthMethodVariable.Value) -or
+      $null -eq $ResolutionApiProviderVariable -or
+      $ResolutionApiProviderVariable.Value -isnot [string] -or
+      [String]::IsNullOrWhiteSpace($ResolutionApiProviderVariable.Value)) {
+    throw 'Resolution launch grammar/receipt/auth expectation is absent or malformed.'
   }
+  $ResolutionExpectedAuthMethod = [string]$ResolutionAuthMethodVariable.Value
+  $ResolutionExpectedApiProvider = [string]$ResolutionApiProviderVariable.Value
   $BaseArguments = @($ResolutionArgsVariable.Value)
   if ($BaseArguments.Count -eq 0 -or @($BaseArguments | Where-Object {
         $_ -isnot [string] -or [String]::IsNullOrWhiteSpace($_)
@@ -1018,22 +1523,44 @@ function Invoke-ContainedClaude(
     throw 'Only one exact delivery --session-id pair may extend the committed grammar.'
   }
   $LaunchRoot = Get-CanonicalAbsolutePath $ExpectedRoot 'Claude launch root'
-  if (-not $LaunchRoot.Equals($Proj, [StringComparison]::OrdinalIgnoreCase)) {
+  $LaunchRootFacts = Get-DirectoryHandleFacts $LaunchRoot 'Claude launch root'
+  $CurrentProjFacts = Get-DirectoryHandleFacts $Proj 'current scratch project'
+  if ($LaunchRootFacts.Identity -cne $CurrentProjFacts.Identity -or
+      -not $LaunchRootFacts.FinalPath.Equals(
+        $CurrentProjFacts.FinalPath, [StringComparison]::Ordinal)) {
     throw 'Claude launch root does not match the validated scratch project.'
   }
   $ContainedConfigRoot = Get-CanonicalAbsolutePath $ClaudeConfigDir `
     'scratch Claude config'
   Assert-UnlinkedPathAncestry $ContainedConfigRoot 'scratch Claude config' | Out-Null
-  if ((Test-PathWithin $ContainedConfigRoot $LaunchRoot) -or
-      (Test-PathWithin $LaunchRoot $ContainedConfigRoot) -or
-      (Test-PathWithin $ContainedConfigRoot $RealHome)) {
+  $ContainedConfigFacts = Get-DirectoryHandleFacts $ContainedConfigRoot `
+    'scratch Claude config'
+  $CurrentConfigFacts = Get-DirectoryHandleFacts $ClaudeConfigDir `
+    'current scratch Claude config'
+  $CurrentRealHomeFacts = Get-DirectoryHandleFacts $RealHome 'current real user profile'
+  if ($ContainedConfigFacts.Identity -cne $CurrentConfigFacts.Identity -or
+      -not $ContainedConfigFacts.FinalPath.Equals(
+        $CurrentConfigFacts.FinalPath, [StringComparison]::Ordinal) -or
+      (Test-FinalPathWithin $ContainedConfigFacts.FinalPath `
+        $LaunchRootFacts.FinalPath) -or
+      (Test-FinalPathWithin $LaunchRootFacts.FinalPath `
+        $ContainedConfigFacts.FinalPath) -or
+      (Test-FinalPathWithin $ContainedConfigFacts.FinalPath `
+        $CurrentRealHomeFacts.FinalPath)) {
     throw 'Claude config root is not the validated isolated scratch root.'
   }
   $ClaudeTempRoot = (Resolve-Path -LiteralPath `
     (Join-Path $ContainedConfigRoot 'tmp') -ErrorAction Stop).Path.TrimEnd('\')
   Assert-UnlinkedPathAncestry $ClaudeTempRoot 'scratch Claude temp root' | Out-Null
+  $ClaudeTempFacts = Get-DirectoryHandleFacts $ClaudeTempRoot 'scratch Claude temp root'
+  if ($ClaudeTempFacts.Identity -ceq $ContainedConfigFacts.Identity -or
+      -not (Test-FinalPathWithin $ClaudeTempFacts.FinalPath `
+        $ContainedConfigFacts.FinalPath)) {
+    throw 'Claude temp root is not a proper child of the isolated config root.'
+  }
   $ContainmentReceiptResult = @(Test-ResolutionContainmentReceipt $BaseArguments `
-    $ResolutionReceiptVariable.Value $LaunchRoot $ContainedConfigRoot)
+    $ResolutionReceiptVariable.Value $LaunchRoot $ContainedConfigRoot `
+    $ResolutionExpectedAuthMethod $ResolutionExpectedApiProvider)
   if ($ContainmentReceiptResult.Count -ne 1 -or
       $ContainmentReceiptResult[0] -isnot [bool] -or
       $ContainmentReceiptResult[0] -cne $true) {
@@ -1043,8 +1570,11 @@ function Invoke-ContainedClaude(
     $CanonicalInstructionsLog = Get-CanonicalAbsolutePath $InstructionsLogPath `
       'InstructionsLoaded log'
     $InstructionsLogParent = [IO.Path]::GetDirectoryName($CanonicalInstructionsLog)
-    if (-not $InstructionsLogParent.Equals($LaunchRoot,
-          [StringComparison]::OrdinalIgnoreCase) -or
+    $InstructionsLogParentFacts = Get-DirectoryHandleFacts $InstructionsLogParent `
+      'InstructionsLoaded log parent'
+    if ($InstructionsLogParentFacts.Identity -cne $LaunchRootFacts.Identity -or
+        -not $InstructionsLogParentFacts.FinalPath.Equals(
+          $LaunchRootFacts.FinalPath, [StringComparison]::Ordinal) -or
         (Test-Path -LiteralPath $CanonicalInstructionsLog)) {
       throw 'Delivery log must be a new direct child of the scratch project.'
     }
@@ -1065,7 +1595,10 @@ function Invoke-ContainedClaude(
     'ANTHROPIC_BEDROCK_BASE_URL', 'ANTHROPIC_BEDROCK_MANTLE_BASE_URL',
     'ANTHROPIC_VERTEX_BASE_URL', 'ANTHROPIC_FOUNDRY_BASE_URL',
     'CLAUDE_CODE_USE_BEDROCK', 'CLAUDE_CODE_USE_VERTEX',
-    'CLAUDE_CODE_USE_FOUNDRY'
+    'CLAUDE_CODE_USE_FOUNDRY', 'CLAUDE_CODE_USE_MANTLE',
+    'CLAUDE_CODE_USE_ANTHROPIC_AWS', 'ANTHROPIC_AWS_WORKSPACE_ID',
+    'CLAUDE_CODE_PROVIDER_MANAGED_BY_HOST', 'CLAUDE_CODE_CLIENT_CERT',
+    'CLAUDE_CODE_CLIENT_KEY', 'CLAUDE_CODE_CLIENT_KEY_PASSPHRASE'
   )
   foreach ($ForbiddenAmbientName in @($ClearedIsolationNames) +
       @('CLAUDE_CODE_PACKAGE_MANAGER_AUTO_UPDATE') + $ForbiddenCredentialNames) {
@@ -1104,11 +1637,12 @@ function Invoke-ContainedClaude(
   if ($IsDeliveryLaunch) {
     $IsolationValues['SKILL_MESH_UAT_INSTRUCTIONS_LOG'] = $CanonicalInstructionsLog
   }
-  $ClearedAtLaunchNames = @($ClearedIsolationNames | Where-Object {
+  $ClearedAtLaunchNames = @(@($ClearedIsolationNames) + $ForbiddenCredentialNames |
+    Where-Object {
       $IsolationValues.Keys -cnotcontains $_
     })
   $PriorIsolationValues = @{}
-  foreach ($Name in @($IsolationValues.Keys) + $ClearedIsolationNames) {
+  foreach ($Name in @($IsolationValues.Keys) + $ClearedAtLaunchNames) {
     $PriorIsolationValues[$Name] =
       [Environment]::GetEnvironmentVariable($Name, 'Process')
   }
@@ -1141,7 +1675,11 @@ function Invoke-ContainedClaude(
         throw "Failed to clear forbidden Claude environment value: $Name"
       }
     }
-    Assert-UatScratchReceipt
+    $ReceiptBoundary = @(Assert-UatScratchReceipt)
+    if ($ReceiptBoundary.Count -ne 1 -or $ReceiptBoundary[0] -isnot [bool] -or
+        $ReceiptBoundary[0] -cne $true) {
+      throw 'Pre-launch scratch receipt did not return exactly one True.'
+    }
     Assert-UnlinkedPathAncestry $LaunchRoot 'Claude launch root' | Out-Null
     Assert-UnlinkedPathAncestry $ContainedConfigRoot 'scratch Claude config' | Out-Null
     Assert-UnlinkedPathAncestry $ClaudeTempRoot 'scratch Claude temp root' | Out-Null
@@ -1154,12 +1692,15 @@ function Invoke-ContainedClaude(
     Set-Location -LiteralPath $LaunchRoot -ErrorAction Stop
     $ObservedLaunchRoot = (Get-Location).ProviderPath.TrimEnd('\')
     if (-not $ObservedLaunchRoot.Equals($LaunchRoot,
-          [StringComparison]::OrdinalIgnoreCase)) {
+          [StringComparison]::Ordinal)) {
       throw 'Claude launch root does not match the validated scratch project.'
     }
+    $LASTEXITCODE = $null
     $AuthStatusOutput = @(& $ClaudeCommand auth status 2>$null)
+    $AuthStatusInvocationSucceeded = $?
     $AuthStatusExit = $LASTEXITCODE
-    if ($AuthStatusExit -ne 0 -or $AuthStatusOutput.Count -eq 0) {
+    if (-not $AuthStatusInvocationSucceeded -or $null -eq $AuthStatusExit -or
+        $AuthStatusExit -ne 0 -or $AuthStatusOutput.Count -eq 0) {
       throw 'Pinned Claude executable is not authenticated in the isolated configuration.'
     }
     try {
@@ -1168,8 +1709,19 @@ function Invoke-ContainedClaude(
     } catch {
       throw 'Pinned Claude auth status did not return valid JSON.'
     }
-    if ($null -eq $AuthStatusObject) {
-      throw 'Pinned Claude auth status returned an empty JSON value.'
+    $AuthStatusProperties = @($AuthStatusObject.PSObject.Properties |
+      ForEach-Object { $_.Name })
+    $MissingAuthStatusProperties = @(Compare-Object `
+      @('loggedIn', 'authMethod', 'apiProvider') $AuthStatusProperties `
+      -PassThru -ErrorAction Stop | Where-Object { $_.SideIndicator -ceq '<=' })
+    if ($null -eq $AuthStatusObject -or $MissingAuthStatusProperties.Count -ne 0 -or
+        $AuthStatusObject.loggedIn -isnot [bool] -or
+        $AuthStatusObject.loggedIn -ne $true -or
+        $AuthStatusObject.authMethod -isnot [string] -or
+        $AuthStatusObject.apiProvider -isnot [string] -or
+        $AuthStatusObject.authMethod -cne $ResolutionExpectedAuthMethod -or
+        $AuthStatusObject.apiProvider -cne $ResolutionExpectedApiProvider) {
+      throw 'Pinned Claude auth status did not match the receipt-bound authentication mode/provider.'
     }
     $ClaudeCommandHashAfterAuth = (Get-FileHash -LiteralPath $ClaudeCommand -Algorithm SHA256 `
       -ErrorAction Stop).Hash
@@ -1177,8 +1729,13 @@ function Invoke-ContainedClaude(
       throw 'Claude executable bytes changed during isolated authentication verification.'
     }
     $FinalArguments = @($BaseArguments) + $ExtraArguments
+    $LASTEXITCODE = $null
     & $ClaudeCommand @FinalArguments
+    $ClaudeInvocationSucceeded = $?
     $ClaudeExit = $LASTEXITCODE
+    if (-not $ClaudeInvocationSucceeded -or $null -eq $ClaudeExit) {
+      throw 'Pinned Claude native launch did not start and return an exit code.'
+    }
     if ($IsDeliveryLaunch) {
       $LogDeadline = [DateTime]::UtcNow.AddSeconds(10)
       $LogIsClosed = $false
@@ -1199,7 +1756,7 @@ function Invoke-ContainedClaude(
   } catch {
     $LaunchFailure = $_
   } finally {
-    foreach ($Name in @($IsolationValues.Keys) + $ClearedIsolationNames) {
+    foreach ($Name in @($IsolationValues.Keys) + $ClearedAtLaunchNames) {
       [Environment]::SetEnvironmentVariable($Name, $PriorIsolationValues[$Name], 'Process')
     }
     Set-Location -LiteralPath $PriorLocation -ErrorAction Stop
@@ -1209,7 +1766,8 @@ function Invoke-ContainedClaude(
                                                   $ContainedConfigAfter -CaseSensitive `
                                                   -ErrorAction Stop)
   $ContainmentReceiptAfterResult = @(Test-ResolutionContainmentReceipt $BaseArguments `
-    $ResolutionReceiptVariable.Value $LaunchRoot $ContainedConfigRoot)
+    $ResolutionReceiptVariable.Value $LaunchRoot $ContainedConfigRoot `
+    $ResolutionExpectedAuthMethod $ResolutionExpectedApiProvider)
   $HostMutationSurfaceAfter = @(Get-HostMutationSurfaceSnapshot)
   $HostMutationDifference = @(Compare-Object $HostMutationSurfaceBefore `
                                              $HostMutationSurfaceAfter -CaseSensitive `
@@ -1253,21 +1811,31 @@ shell-preprocessing path; post-invocation attribution is too late to contain eit
 
 For **each** writer invocation, capture that row's own native record. Set the `HostSupplied*`
 values below from that record, never from the intended directory. One successful `Read(path)` is
-not enough: the same Read result must start at line 1, reach the expected final line, contain the
-skill-specific terminal line, and carry no truncation marker. It must occur after Skill invocation
-and before any response or non-read behavior action:
+not enough: every required core's Read result must start at line 1, reach the expected final line,
+contain the skill-specific terminal line, carry no truncation marker, and reconstruct to bytes
+whose SHA-256 equals the verified co-located core under #153's pinned native-payload normalization.
+Every one of those Reads must occur after Skill invocation and before any response or non-read
+behavior action:
 
 **The hand-entered block below is a non-grading shape check, not mechanical ordering proof.** Issue
 #153's resolution must replace it with a committed parser over one native session record. That
 parser must bind the session/transcript identity, invoked skill name, host-supplied native Base,
-generated-wrapper `Profile: claude`, matching `attributionSkill`, successful Skill event,
-successful Read result, and first response or non-read action to event indices satisfying
-`Skill < Read < first action`, and must hash the captured complete Read result. Until that parser
-and its negative tests land, this instrument remains blocked even when its manual
-path/full/hash booleans are all true.
+generated-wrapper `Profile: claude`, matching `attributionSkill`, every required successful Read
+result, and first response or non-read action to event indices satisfying `SkillIndex < ReadIndex <
+FirstActionIndex` independently for each required core. It must reconstruct each complete captured
+Read payload under a pinned normalization rule and compare its SHA-256 to the corresponding
+verified on-disk core; merely computing or recording a payload hash is not equality evidence. Its
+negative tests must mutate one middle payload line and, on a `repo-update` record, move only the
+delegated `plan-init` Read after the first action; both cases must throw. Until that parser and its
+negative tests land, this instrument remains blocked even when its manual
+path/full/captured/on-disk-hash booleans are all true.
 
 ```powershell
 throw 'BLOCKED: #153 must replace hand-entered core-read evidence with an ordered native-record parser.'
+$FenceGuardCommand = Get-Command Assert-UatFenceReady -CommandType Function -ErrorAction Stop
+$FenceGuardResult = @(& $FenceGuardCommand)
+if ($FenceGuardResult.Count -ne 1 -or $FenceGuardResult[0] -isnot [bool] -or
+    $FenceGuardResult[0] -cne $true) { throw 'UAT fence guard did not return exactly one True.' }
 $InvokedSkill = 'plan-init' # use repo-update on its rows
 $HostSuppliedBase = '<host-supplied-base>'
 $HostSuppliedCoreReads = @(
@@ -1278,6 +1846,7 @@ $HostSuppliedCoreReads = @(
     EndLine = 678
     WasTruncated = $false
     TerminalLine = "block plan-init's completion."
+    CapturedPayloadHash = '<sha256-of-pinned-normalized-native-read-payload>'
   }
 )
 $ExpectedCoreHashes = @{
@@ -1302,11 +1871,12 @@ $ExpectedSkillBase = (Resolve-Path -LiteralPath `
 $LoadedSkillBase = (Get-CanonicalAbsolutePath $HostSuppliedBase `
   'host-supplied skill base').TrimEnd('\')
 $BaseMatches = $LoadedSkillBase.Equals(
-  $ExpectedSkillBase, [StringComparison]::OrdinalIgnoreCase)
+  $ExpectedSkillBase, [StringComparison]::Ordinal)
 $BaseMatches
 if (-not $BaseMatches) { throw 'Host loaded a different skill wrapper.' }
 $RequiredReadProperties = @(
-  'Skill', 'Path', 'StartLine', 'EndLine', 'WasTruncated', 'TerminalLine'
+  'Skill', 'Path', 'StartLine', 'EndLine', 'WasTruncated', 'TerminalLine',
+  'CapturedPayloadHash'
 )
 if (@($HostSuppliedCoreReads).Count -ne $RequiredCoreSkills.Count) {
   throw 'Native core-read evidence has an unexpected record count.'
@@ -1327,7 +1897,9 @@ foreach ($CoreSkill in $RequiredCoreSkills) {
       $ObservedRead.StartLine -isnot [int] -or
       $ObservedRead.EndLine -isnot [int] -or
       $ObservedRead.WasTruncated -isnot [bool] -or
-      $ObservedRead.TerminalLine -isnot [string]) {
+      $ObservedRead.TerminalLine -isnot [string] -or
+      $ObservedRead.CapturedPayloadHash -isnot [string] -or
+      $ObservedRead.CapturedPayloadHash -cnotmatch '^[0-9A-F]{64}$') {
     $MissingReadProperties
     throw "Native core-read evidence for $CoreSkill is incomplete or ill-typed."
   }
@@ -1336,7 +1908,7 @@ foreach ($CoreSkill in $RequiredCoreSkills) {
   $LoadedCoreReadPath = Get-CanonicalAbsolutePath $ObservedRead.Path `
     "host-supplied $CoreSkill core read"
   $CoreReadMatches = $LoadedCoreReadPath.Equals(
-    $ExpectedCorePath, [StringComparison]::OrdinalIgnoreCase)
+    $ExpectedCorePath, [StringComparison]::Ordinal)
   $CoreReadIsComplete = (($ObservedRead.StartLine -eq 1) -and
     ($ObservedRead.EndLine -eq $ExpectedCoreLineCounts[$CoreSkill]) -and
     ($ObservedRead.WasTruncated -ceq $false) -and
@@ -1346,16 +1918,19 @@ foreach ($CoreSkill in $RequiredCoreSkills) {
   $LoadedCoreHash = (Get-FileHash -LiteralPath $ExpectedCorePath -Algorithm SHA256 `
                                  -ErrorAction Stop).Hash
   $CoreHashMatches = $LoadedCoreHash -ceq $ExpectedCoreHashes[$CoreSkill]
-  "$CoreSkill path=$CoreReadMatches full=$CoreReadIsComplete hash=$CoreHashMatches"
-  if (-not $CoreReadMatches -or -not $CoreReadIsComplete -or -not $CoreHashMatches) {
+  $CapturedPayloadMatches = $ObservedRead.CapturedPayloadHash -ceq $LoadedCoreHash
+  "$CoreSkill path=$CoreReadMatches full=$CoreReadIsComplete captured=$CapturedPayloadMatches hash=$CoreHashMatches"
+  if (-not $CoreReadMatches -or -not $CoreReadIsComplete -or
+      -not $CapturedPayloadMatches -or -not $CoreHashMatches) {
     throw "Host did not load the exact current $CoreSkill core in full."
   }
 }
 ```
 
 **Expect after #153 replaces the blocker:** the ordered native-record parser passes, followed by
-`True` for the exact wrapper base and one all-true path/full/hash row for `plan-init` on rows 1–2.
-Rows 3–5 require two all-true rows: `repo-update` and the sibling `plan-init` owner it cites for D10.
+`True` for the exact wrapper base and one all-true path/full/captured/hash row for `plan-init` on
+rows 1–2. Rows 3–5 require two all-true rows: `repo-update` and the sibling `plan-init` owner it
+cites for D10.
 A complete `repo-update` read alone does not deliver the delegated contract. No row may borrow
 another session's record. If a future UAT-mode change moves a count or terminal line, § 1 must be
 rerun and this block updated together with the four hashes.
@@ -1363,6 +1938,11 @@ rerun and this block updated together with the four hashes.
 After the last row:
 
 ```powershell
+throw 'BLOCKED: #153 must commit and verify the receipt-bound post-host hash fence here.'
+$FenceGuardCommand = Get-Command Assert-UatFenceReady -CommandType Function -ErrorAction Stop
+$FenceGuardResult = @(& $FenceGuardCommand)
+if ($FenceGuardResult.Count -ne 1 -or $FenceGuardResult[0] -isnot [bool] -or
+    $FenceGuardResult[0] -cne $true) { throw 'UAT fence guard did not return exactly one True.' }
 $SkillHashesAfter = @(Get-ObservedSkillHashes)
 $SkillHashDifference = @(Compare-Object $SkillHashesBefore $SkillHashesAfter `
                                         -CaseSensitive -ErrorAction Stop)
@@ -1412,15 +1992,26 @@ substitute. Any action outside the row allowlist is blocking evidence, not a D10
 § 2.0. Run one row at a time; record its observations and close its host session before
 resetting the root for the next row.
 
-```
+```powershell
+throw 'BLOCKED: #153 must commit and verify the receipt-bound fixture mutation rail here.'
+$FenceGuardCommand = Get-Command Assert-UatFenceReady -CommandType Function -ErrorAction Stop
+$FenceGuardResult = @(& $FenceGuardCommand)
+if ($FenceGuardResult.Count -ne 1 -or $FenceGuardResult[0] -isnot [bool] -or
+    $FenceGuardResult[0] -cne $true) { throw 'UAT fence guard did not return exactly one True.' }
 $Sub = "# Scratch`n`n## Stack summary`n`nMarkdown. UAT preservation canary: keep this line.`n"
 
 function Clear-InstructionFixture {
-  Assert-UatScratchReceipt
+  $LiveFenceGuard = Get-Command Assert-UatFenceReady -CommandType Function `
+    -ErrorAction Stop
+  $LiveFenceResult = @(& $LiveFenceGuard)
+  if ($LiveFenceResult.Count -ne 1 -or $LiveFenceResult[0] -isnot [bool] -or
+      $LiveFenceResult[0] -cne $true) {
+    throw 'Fixture-reset fence did not return exactly one True.'
+  }
   $ExpectedFixtureRoot = (Resolve-Path -LiteralPath '<scratch-home>' `
     -ErrorAction Stop).Path.TrimEnd('\')
   if (-not $Proj.Equals($ExpectedFixtureRoot,
-                        [StringComparison]::OrdinalIgnoreCase)) {
+                        [StringComparison]::Ordinal)) {
     throw 'Scratch target changed; refusing fixture reset.'
   }
   Assert-UnlinkedPathAncestry $Proj 'fixture scratch root' | Out-Null
@@ -1432,7 +2023,11 @@ function Clear-InstructionFixture {
           (Test-LinkedItem $item)) {
         throw "Refusing to remove non-file or linked fixture path: $name"
       }
-      Assert-UatScratchReceipt
+      $ReceiptBoundary = @(Assert-UatScratchReceipt)
+      if ($ReceiptBoundary.Count -ne 1 -or $ReceiptBoundary[0] -isnot [bool] -or
+          $ReceiptBoundary[0] -cne $true) {
+        throw 'Pre-remove scratch receipt did not return exactly one True.'
+      }
       Remove-Item -LiteralPath $path -Force -ErrorAction Stop
       Assert-UnlinkedPathAncestry $Proj 'fixture scratch root' | Out-Null
     }
@@ -1440,26 +2035,48 @@ function Clear-InstructionFixture {
 }
 
 function Write-InstructionFixture([string]$Name, [string]$Text) {
+  $LiveFenceGuard = Get-Command Assert-UatFenceReady -CommandType Function `
+    -ErrorAction Stop
+  $LiveFenceResult = @(& $LiveFenceGuard)
+  if ($LiveFenceResult.Count -ne 1 -or $LiveFenceResult[0] -isnot [bool] -or
+      $LiveFenceResult[0] -cne $true) {
+    throw 'Fixture-write fence did not return exactly one True.'
+  }
   if (@('AGENTS.md', 'CLAUDE.md') -cnotcontains $Name) {
     throw "Unexpected fixture filename: $Name"
   }
   $FixtureRoot = (Assert-UnlinkedPathAncestry $Proj `
     'fixture scratch root').FullName.TrimEnd('\')
-  if (-not $FixtureRoot.Equals($Proj, [StringComparison]::OrdinalIgnoreCase)) {
+  if (-not $FixtureRoot.Equals($Proj, [StringComparison]::Ordinal)) {
     throw 'Fixture scratch root changed before write.'
   }
   $FixturePath = Join-Path $FixtureRoot $Name
   if (Test-Path -LiteralPath $FixturePath) {
     throw "Fixture write target unexpectedly exists: $Name"
   }
-  Assert-UatScratchReceipt
+  $ReceiptBoundary = @(Assert-UatScratchReceipt)
+  if ($ReceiptBoundary.Count -ne 1 -or $ReceiptBoundary[0] -isnot [bool] -or
+      $ReceiptBoundary[0] -cne $true) {
+    throw 'Pre-write scratch receipt did not return exactly one True.'
+  }
   [IO.File]::WriteAllText($FixturePath, $Text)
-  Assert-UatScratchReceipt
+  $ReceiptBoundary = @(Assert-UatScratchReceipt)
+  if ($ReceiptBoundary.Count -ne 1 -or $ReceiptBoundary[0] -isnot [bool] -or
+      $ReceiptBoundary[0] -cne $true) {
+    throw 'Post-write scratch receipt did not return exactly one True.'
+  }
   Assert-UnlinkedPathAncestry $Proj 'fixture scratch root' | Out-Null
   Assert-RegularUnlinkedFile $FixturePath 'new fixture file' | Out-Null
 }
 
 function Set-RowFixture([ValidateSet(1,2,3,4,5)][int]$Row) {
+  $LiveFenceGuard = Get-Command Assert-UatFenceReady -CommandType Function `
+    -ErrorAction Stop
+  $LiveFenceResult = @(& $LiveFenceGuard)
+  if ($LiveFenceResult.Count -ne 1 -or $LiveFenceResult[0] -isnot [bool] -or
+      $LiveFenceResult[0] -cne $true) {
+    throw 'Row-fixture fence did not return exactly one True.'
+  }
   Clear-InstructionFixture
   switch ($Row) {
     1 { } # both ABSENT
@@ -1522,12 +2139,17 @@ filesystem changes, and the native action trace catches a forbidden byte-identic
 
 **Run in:** `<scratch-project>` · Windows PowerShell 5.1.
 
-```
+```powershell
+throw 'BLOCKED: #153 must commit and verify the receipt-bound snapshot rail here.'
+$FenceGuardCommand = Get-Command Assert-UatFenceReady -CommandType Function -ErrorAction Stop
+$FenceGuardResult = @(& $FenceGuardCommand)
+if ($FenceGuardResult.Count -ne 1 -or $FenceGuardResult[0] -isnot [bool] -or
+    $FenceGuardResult[0] -cne $true) { throw 'UAT fence guard did not return exactly one True.' }
 function Get-InstructionSnapshot($Dir) {
   $SnapshotRoot = (Assert-UnlinkedPathAncestry $Dir `
     'instruction snapshot root').FullName.TrimEnd('\')
   Get-ChildItem -LiteralPath $SnapshotRoot -File -ErrorAction Stop |
-    Where-Object { $_.Name -eq 'AGENTS.md' -or $_.Name -eq 'CLAUDE.md' } |
+    Where-Object { $_.Name -ceq 'AGENTS.md' -or $_.Name -ceq 'CLAUDE.md' } |
     ForEach-Object {
       if (Test-LinkedItem $_) { throw "Refusing linked instruction file: $($_.FullName)" }
       $Digest = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256 `
@@ -1554,12 +2176,12 @@ function Get-ProtectedRootSnapshot($Dir, [string[]]$ExcludedRelativePaths) {
       }
       $Relative = $Child.FullName.Substring($Root.Length).TrimStart('\')
       if ($Child.PSIsContainer) {
-        if ($ExcludedRelativePaths -contains $Relative) {
+        if ($ExcludedRelativePaths -ccontains $Relative) {
           throw "An allowed file path became a directory: $Relative"
         }
         $Snapshot += "D $Relative"
         $Pending.Push($Child.FullName)
-      } elseif ($ExcludedRelativePaths -notcontains $Relative) {
+      } elseif ($ExcludedRelativePaths -cnotcontains $Relative) {
         $Digest = (Get-FileHash -LiteralPath $Child.FullName -Algorithm SHA256 `
                                 -ErrorAction Stop).Hash
         if ($Digest -cnotmatch '^[0-9A-F]{64}$') {
@@ -1611,7 +2233,12 @@ For row 5, create the absolute memory target in its subsection below **before** 
 pre-action snapshot. Once issue #153 supplies an authorized action, run it in the separate host
 session. Keep the observer window open, then run the post-action half separately:
 
-```
+```powershell
+throw 'BLOCKED: #153 must commit and verify the receipt-bound post-action snapshot here.'
+$FenceGuardCommand = Get-Command Assert-UatFenceReady -CommandType Function -ErrorAction Stop
+$FenceGuardResult = @(& $FenceGuardCommand)
+if ($FenceGuardResult.Count -ne 1 -or $FenceGuardResult[0] -isnot [bool] -or
+    $FenceGuardResult[0] -cne $true) { throw 'UAT fence guard did not return exactly one True.' }
 $after          = @(Get-InstructionSnapshot $Row)
 $protectedAfter = @(Get-ProtectedRootSnapshot $Row $AllowedWrites)
 $ProtectedDifference = @(Compare-Object $protectedBefore $protectedAfter `
@@ -1631,9 +2258,12 @@ changes `AGENTS.md` and adds `CLAUDE.md`. Capture both preimages for every row; 
 takes row 3's post-first-pass snapshot.
 
 The preventive tool/path rail must have denied every non-allowlisted action before execution.
-Also audit that invocation's native tool-action trace. Normalize every Write/Edit target with
-`[IO.Path]::GetFullPath()` and require exact case-insensitive membership in
-`$AllowedWritePaths`; any shell/process tool action or a write outside that list blocks the row.
+Also audit that invocation's native tool-action trace. For every Write/Edit target, preserve the
+native spelling's case, open its existing parent by handle, require that parent's handle-final path
+and file ID to equal the receipt-bound project root, and require the leaf name to be exact
+case-sensitive membership in `$AllowedWrites`. `[IO.Path]::GetFullPath()` and textual membership in
+`$AllowedWritePaths` are secondary checks only; any shell/process action, case mismatch, aliased
+parent, or write outside that physical allowlist blocks the row.
 Rows 2 and the fixed-point pass allow no write action at all. This trace requirement is what
 catches an otherwise invisible byte-identical rewrite or a write-then-restore sequence.
 
@@ -1646,7 +2276,12 @@ intentionally lack that file.
 
 **Run in:** `<scratch-project>` · Windows PowerShell 5.1.
 
-```
+```powershell
+throw 'BLOCKED: #153 must commit and verify the receipt-bound row-root check here.'
+$FenceGuardCommand = Get-Command Assert-UatFenceReady -CommandType Function -ErrorAction Stop
+$FenceGuardResult = @(& $FenceGuardCommand)
+if ($FenceGuardResult.Count -ne 1 -or $FenceGuardResult[0] -isnot [bool] -or
+    $FenceGuardResult[0] -cne $true) { throw 'UAT fence guard did not return exactly one True.' }
 $Row = $Proj
 $PointerPath = Join-Path $Row 'CLAUDE.md'
 Assert-RegularUnlinkedFile $PointerPath 'D8 pointer' | Out-Null
@@ -1665,6 +2300,11 @@ line inside every body. A hash delta or heading list alone is not proof of the r
 Rows 3 and 4 must also preserve the line planted in their already-accurate stack section:
 
 ```powershell
+throw 'BLOCKED: #153 must commit and verify the receipt-bound D10 grader here.'
+$FenceGuardCommand = Get-Command Assert-UatFenceReady -CommandType Function -ErrorAction Stop
+$FenceGuardResult = @(& $FenceGuardCommand)
+if ($FenceGuardResult.Count -ne 1 -or $FenceGuardResult[0] -isnot [bool] -or
+    $FenceGuardResult[0] -cne $true) { throw 'UAT fence guard did not return exactly one True.' }
 $ContentPath = Join-Path $Proj 'AGENTS.md'
 Assert-RegularUnlinkedFile $ContentPath 'content file' | Out-Null
 $ContentText = [IO.File]::ReadAllText($ContentPath)
@@ -1821,19 +2461,28 @@ After `Set-RowFixture 5` and before Instrument A's pre-action snapshot, create o
 Step 8 target and record its preimage:
 
 ```powershell
+throw 'BLOCKED: #153 must commit and verify the receipt-bound row-5 fixture write here.'
+$FenceGuardCommand = Get-Command Assert-UatFenceReady -CommandType Function -ErrorAction Stop
+$FenceGuardResult = @(& $FenceGuardCommand)
+if ($FenceGuardResult.Count -ne 1 -or $FenceGuardResult[0] -isnot [bool] -or
+    $FenceGuardResult[0] -cne $true) { throw 'UAT fence guard did not return exactly one True.' }
 $Row5Memory = [IO.Path]::GetFullPath((Join-Path $Proj 'uat-memory.md'))
 $Row5MemoryParent = [IO.Path]::GetDirectoryName($Row5Memory)
-if (-not $Row5MemoryParent.Equals($Proj, [StringComparison]::OrdinalIgnoreCase)) {
+if (-not $Row5MemoryParent.Equals($Proj, [StringComparison]::Ordinal)) {
   throw 'Row-5 MEMORY_FILE must be directly under the validated scratch root.'
 }
 if (Test-Path -LiteralPath $Row5Memory) {
   Assert-RegularUnlinkedFile $Row5Memory 'uat-memory.md' | Out-Null
 }
-Assert-UatScratchReceipt
+$ReceiptBoundary = @(Assert-UatScratchReceipt)
+if ($ReceiptBoundary.Count -ne 1 -or $ReceiptBoundary[0] -isnot [bool] -or
+    $ReceiptBoundary[0] -cne $true) { throw 'Pre-row-5-write receipt was not exactly True.' }
 Assert-UnlinkedPathAncestry $Proj 'row-5 scratch root' | Out-Null
 [IO.File]::WriteAllText($Row5Memory,
   "# UAT memory`n`n## Status`n`nBefore row-5 continuation.`n")
-Assert-UatScratchReceipt
+$ReceiptBoundary = @(Assert-UatScratchReceipt)
+if ($ReceiptBoundary.Count -ne 1 -or $ReceiptBoundary[0] -isnot [bool] -or
+    $ReceiptBoundary[0] -cne $true) { throw 'Post-row-5-write receipt was not exactly True.' }
 Assert-UnlinkedPathAncestry $Proj 'row-5 scratch root' | Out-Null
 Assert-RegularUnlinkedFile $Row5Memory 'uat-memory.md' | Out-Null
 $Row5MemoryBefore = (Get-FileHash -LiteralPath $Row5Memory -Algorithm SHA256 `
@@ -1851,6 +2500,11 @@ at Step 7 and whose safe boundary ends immediately before Step 9. Supply the **a
 property under test. Step 8 is allowed to write only `$Row5Memory`. Afterward:
 
 ```powershell
+throw 'BLOCKED: #153 must commit and verify the receipt-bound row-5 post-action evidence here.'
+$FenceGuardCommand = Get-Command Assert-UatFenceReady -CommandType Function -ErrorAction Stop
+$FenceGuardResult = @(& $FenceGuardCommand)
+if ($FenceGuardResult.Count -ne 1 -or $FenceGuardResult[0] -isnot [bool] -or
+    $FenceGuardResult[0] -cne $true) { throw 'UAT fence guard did not return exactly one True.' }
 Assert-RegularUnlinkedFile $Row5Memory 'uat-memory.md' | Out-Null
 $Row5MemoryAfter = (Get-FileHash -LiteralPath $Row5Memory -Algorithm SHA256 `
                                  -ErrorAction Stop).Hash
@@ -1858,7 +2512,7 @@ if ($Row5MemoryAfter -cnotmatch '^[0-9A-F]{64}$') {
   throw 'Invalid post-action SHA-256 for uat-memory.md.'
 }
 $Row5MemoryChanged = -not $Row5MemoryAfter.Equals(
-  $Row5MemoryBefore, [StringComparison]::OrdinalIgnoreCase)
+  $Row5MemoryBefore, [StringComparison]::Ordinal)
 $ContinuationFound = Select-String -LiteralPath $Row5Memory `
   -SimpleMatch 'Phase IS Step 109 row 5 continuation observed' -Quiet -ErrorAction Stop
 $Row5MemoryChanged
@@ -1902,6 +2556,11 @@ did nothing are not a fixed point.
 fixture reset. In the observer window, take a new post-first-pass baseline:
 
 ```powershell
+throw 'BLOCKED: #153 must commit and verify the receipt-bound row-5 grading root here.'
+$FenceGuardCommand = Get-Command Assert-UatFenceReady -CommandType Function -ErrorAction Stop
+$FenceGuardResult = @(& $FenceGuardCommand)
+if ($FenceGuardResult.Count -ne 1 -or $FenceGuardResult[0] -isnot [bool] -or
+    $FenceGuardResult[0] -cne $true) { throw 'UAT fence guard did not return exactly one True.' }
 $Row = $Proj
 $before = @(Get-InstructionSnapshot $Row)
 $fixedRootBefore = @(Get-ProtectedRootSnapshot $Row -ExcludedRelativePaths @())
@@ -1914,6 +2573,11 @@ the host session. Until that literal exists, this check remains blocked.
 Finally, in the observer window:
 
 ```powershell
+throw 'BLOCKED: #153 must commit and verify the receipt-bound row-5 grader here.'
+$FenceGuardCommand = Get-Command Assert-UatFenceReady -CommandType Function -ErrorAction Stop
+$FenceGuardResult = @(& $FenceGuardCommand)
+if ($FenceGuardResult.Count -ne 1 -or $FenceGuardResult[0] -isnot [bool] -or
+    $FenceGuardResult[0] -cne $true) { throw 'UAT fence guard did not return exactly one True.' }
 $after = @(Get-InstructionSnapshot $Row)
 $fixedRootAfter = @(Get-ProtectedRootSnapshot $Row -ExcludedRelativePaths @())
 $FixedRootDifference = @(Compare-Object $fixedRootBefore $fixedRootAfter `
@@ -1941,6 +2605,11 @@ checks on the completed and fixed-point-graded row-3 state at the validated root
 it for row 4. First add a delivery-only random canary, after all row-3 behavior measurements:
 
 ```powershell
+throw 'BLOCKED: #153 must commit and verify the receipt-bound delivery-canary write here.'
+$FenceGuardCommand = Get-Command Assert-UatFenceReady -CommandType Function -ErrorAction Stop
+$FenceGuardResult = @(& $FenceGuardCommand)
+if ($FenceGuardResult.Count -ne 1 -or $FenceGuardResult[0] -isnot [bool] -or
+    $FenceGuardResult[0] -cne $true) { throw 'UAT fence guard did not return exactly one True.' }
 $DeliveryCanary = 'skill-mesh-step109-delivery-' + [Guid]::NewGuid().ToString('N')
 $CanarySearchPathsBefore = @(Get-UnlinkedFilePaths $Proj)
 $PriorCanaryHit = @(
@@ -1952,10 +2621,14 @@ $PriorCanaryHit = @(
 if ($PriorCanaryHit.Count -ne 0) { throw 'Random delivery canary already exists.' }
 $AgentsPath = Join-Path $Proj 'AGENTS.md'
 Assert-RegularUnlinkedFile $AgentsPath 'AGENTS.md delivery target' | Out-Null
-Assert-UatScratchReceipt
+$ReceiptBoundary = @(Assert-UatScratchReceipt)
+if ($ReceiptBoundary.Count -ne 1 -or $ReceiptBoundary[0] -isnot [bool] -or
+    $ReceiptBoundary[0] -cne $true) { throw 'Pre-canary-write receipt was not exactly True.' }
 Assert-UnlinkedPathAncestry $Proj 'delivery scratch root' | Out-Null
 [IO.File]::AppendAllText($AgentsPath, "`nUAT delivery canary: $DeliveryCanary`n")
-Assert-UatScratchReceipt
+$ReceiptBoundary = @(Assert-UatScratchReceipt)
+if ($ReceiptBoundary.Count -ne 1 -or $ReceiptBoundary[0] -isnot [bool] -or
+    $ReceiptBoundary[0] -cne $true) { throw 'Post-canary-write receipt was not exactly True.' }
 Assert-UnlinkedPathAncestry $Proj 'delivery scratch root' | Out-Null
 Assert-RegularUnlinkedFile $AgentsPath 'AGENTS.md delivery target' | Out-Null
 $CanarySearchPathsAfter = @(Get-UnlinkedFilePaths $Proj)
@@ -1967,7 +2640,7 @@ $CanaryFiles = @(
   }
 )
 if ($CanaryFiles.Count -ne 1 -or
-    -not $CanaryFiles[0].Equals($AgentsPath, [StringComparison]::OrdinalIgnoreCase)) {
+    -not $CanaryFiles[0].Equals($AgentsPath, [StringComparison]::Ordinal)) {
   throw 'Delivery canary is not unique to root AGENTS.md.'
 }
 $VerifiedHeading = (Select-String -LiteralPath $AgentsPath -Pattern '^## ' -ErrorAction Stop |
@@ -1983,6 +2656,10 @@ if ([String]::IsNullOrWhiteSpace($VerifiedHeading)) {
 
 ```powershell
 throw 'BLOCKED: #153 must commit and verify the receipt-bound Codex delivery launch here.'
+$FenceGuardCommand = Get-Command Assert-UatFenceReady -CommandType Function -ErrorAction Stop
+$FenceGuardResult = @(& $FenceGuardCommand)
+if ($FenceGuardResult.Count -ne 1 -or $FenceGuardResult[0] -isnot [bool] -or
+    $FenceGuardResult[0] -cne $true) { throw 'UAT fence guard did not return exactly one True.' }
 $CodexShimInfo = Get-Command codex.cmd -All -CommandType Application `
                             -ErrorAction Stop | Select-Object -First 1
 $CodexShim = Get-CanonicalAbsolutePath $CodexShimInfo.Source 'Codex command shim'
@@ -2023,7 +2700,9 @@ if ($CodexShimHash -cne 'C54DB6755E710C39703F7C37512F9E35ED41042D8080558D2B84B8D
   $CodexVendorDifference
   throw 'Codex native executable tree differs from the audited 0.147.0 delivery host.'
 }
-Assert-UatScratchReceipt
+$ReceiptBoundary = @(Assert-UatScratchReceipt)
+if ($ReceiptBoundary.Count -ne 1 -or $ReceiptBoundary[0] -isnot [bool] -or
+    $ReceiptBoundary[0] -cne $true) { throw 'Pre-Codex-launch receipt was not exactly True.' }
 Assert-UnlinkedPathAncestry $Proj 'Codex launch root' | Out-Null
 Assert-UnlinkedPathAncestry $CodexVendorBin 'Codex vendor bin' | Out-Null
 $CodexVendorManifestAtLaunch = @(Get-CodexVendorManifest)
@@ -2039,7 +2718,7 @@ if ($CodexLaunchManifestDifference.Count -ne 0 -or
 }
 Set-Location -LiteralPath $Proj -ErrorAction Stop
 $CodexLaunchRoot = (Get-Location).ProviderPath.TrimEnd('\')
-if (-not $CodexLaunchRoot.Equals($Proj, [StringComparison]::OrdinalIgnoreCase)) {
+if (-not $CodexLaunchRoot.Equals($Proj, [StringComparison]::Ordinal)) {
   throw 'Codex launch root does not match the validated scratch project.'
 }
 $PromptCanaryFound = $false
@@ -2110,9 +2789,15 @@ session:
 
 ```powershell
 throw 'BLOCKED: #153 must commit and verify the contained delivery hook/launch receipt here.'
+$FenceGuardCommand = Get-Command Assert-UatFenceReady -CommandType Function -ErrorAction Stop
+$FenceGuardResult = @(& $FenceGuardCommand)
+if ($FenceGuardResult.Count -ne 1 -or $FenceGuardResult[0] -isnot [bool] -or
+    $FenceGuardResult[0] -cne $true) { throw 'UAT fence guard did not return exactly one True.' }
 $DeliverySessionId = [Guid]::NewGuid().ToString()
 $InstructionsLog = Join-Path $Proj ('.uat-instructions-loaded-' + $DeliverySessionId + '.jsonl')
-Assert-UatScratchReceipt
+$ReceiptBoundary = @(Assert-UatScratchReceipt)
+if ($ReceiptBoundary.Count -ne 1 -or $ReceiptBoundary[0] -isnot [bool] -or
+    $ReceiptBoundary[0] -cne $true) { throw 'Pre-Claude-log receipt was not exactly True.' }
 Assert-UnlinkedPathAncestry $Proj 'delivery log root' | Out-Null
 if (Test-Path -LiteralPath $InstructionsLog) {
   throw 'Fresh InstructionsLoaded log already exists.'
@@ -2127,7 +2812,11 @@ After closing the fresh session, require exactly one newly logged include event 
 identity, cwd, and import parent all bound to this fixture:
 
 ```powershell
-Assert-UatScratchReceipt
+throw 'BLOCKED: #153 must commit and verify the receipt-bound Claude delivery grader here.'
+$FenceGuardCommand = Get-Command Assert-UatFenceReady -CommandType Function -ErrorAction Stop
+$FenceGuardResult = @(& $FenceGuardCommand)
+if ($FenceGuardResult.Count -ne 1 -or $FenceGuardResult[0] -isnot [bool] -or
+    $FenceGuardResult[0] -cne $true) { throw 'UAT fence guard did not return exactly one True.' }
 Assert-UnlinkedPathAncestry $Proj 'delivery log root' | Out-Null
 Assert-RegularUnlinkedFile $InstructionsLog 'InstructionsLoaded event log' | Out-Null
 $LoggedLines = @(Get-Content -LiteralPath $InstructionsLog -ErrorAction Stop)
@@ -2163,19 +2852,30 @@ $EventTranscriptPath = Get-CanonicalAbsolutePath $LoggedEvent.transcript_path `
 $ExpectedTranscriptRoot = (Resolve-Path -LiteralPath `
   (Join-Path $ClaudeConfigDir 'projects') -ErrorAction Stop).Path.TrimEnd('\')
 Assert-UnlinkedPathAncestry $ExpectedTranscriptRoot 'Claude transcript root' | Out-Null
-Assert-UnlinkedPathAncestry (Split-Path -Parent $EventTranscriptPath) `
+$EventTranscriptParent = Split-Path -Parent $EventTranscriptPath
+Assert-UnlinkedPathAncestry $EventTranscriptParent `
   'Claude transcript parent' | Out-Null
 Assert-RegularUnlinkedFile $EventTranscriptPath 'fresh Claude transcript' | Out-Null
+$EventCwdFacts = Get-DirectoryHandleFacts $EventCwd 'event cwd'
+$ExpectedProjectFacts = Get-DirectoryHandleFacts $Proj 'expected event project'
+$ExpectedTranscriptFacts = Get-DirectoryHandleFacts $ExpectedTranscriptRoot `
+  'expected Claude transcript root'
+$EventTranscriptParentFacts = Get-DirectoryHandleFacts $EventTranscriptParent `
+  'event transcript parent'
 if ($LoggedEvent.hook_event_name -cne 'InstructionsLoaded' -or
     $LoggedEvent.session_id -cne $DeliverySessionId -or
-    -not $EventCwd.Equals($Proj, [StringComparison]::OrdinalIgnoreCase) -or
+    $EventCwdFacts.Identity -cne $ExpectedProjectFacts.Identity -or
+    -not $EventCwdFacts.FinalPath.Equals(
+      $ExpectedProjectFacts.FinalPath, [StringComparison]::Ordinal) -or
+    -not $EventCwd.Equals($Proj, [StringComparison]::Ordinal) -or
     -not $EventFilePath.Equals($ExpectedAgentsPath,
-      [StringComparison]::OrdinalIgnoreCase) -or
+      [StringComparison]::Ordinal) -or
     $LoggedEvent.memory_type -cne 'Project' -or
     $LoggedEvent.load_reason -cne 'include' -or
     -not $EventParentPath.Equals($ExpectedClaudePath,
-      [StringComparison]::OrdinalIgnoreCase) -or
-    -not (Test-PathWithin $EventTranscriptPath $ExpectedTranscriptRoot) -or
+      [StringComparison]::Ordinal) -or
+    -not (Test-FinalPathWithin $EventTranscriptParentFacts.FinalPath `
+      $ExpectedTranscriptFacts.FinalPath) -or
     [IO.Path]::GetFileName($EventTranscriptPath) -cne ($DeliverySessionId + '.jsonl')) {
   throw 'Fresh Claude session lacks one exactly bound AGENTS.md include event.'
 }

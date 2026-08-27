@@ -805,12 +805,12 @@ mechanism `test_autofix_marker_single_owner.py` uses.
 - **Files:** documentation/findings/instruction-file-symmetry-uat.md
 - **Flags:** --reviewers code
 - **Produces:** a scratch install home plus the verification transcript appended to the findings file
-- **Done when:** `powershell -File tools/build-distributions.ps1 -Provider all` exits 0; `powershell -File tools/install-skill-mesh.ps1 -Provider claude -Home <scratch-home>` exits 0; `powershell -File tools/inspect-host-install.ps1 -Home <scratch-home>` reports the profile installed; the emitted profile is byte-compared to the fresh build and the installed writer cores are hash-bound to it; the transcript's mandatory predicates throw on missing/false/error results, compare D8's raw pointer bytes exactly, canonicalize tree identity before rejecting same/nested roots, make tree-comparison and path/Git/reparse/hard-link containment fail closed, and grade all seven populated sections; the downstream Step-109 skeleton remains non-runnable until #153 supplies its receipt-bound outside-profile roots, preventive containment, isolated config/auth lifecycle, and invocation design; independent review reports no high or medium defect; and a clean detached repo-root `python -m pytest` at or above `documentation/phase-75-baseline.md` completes with the recorded skip count unchanged
+- **Done when:** `powershell -File tools/build-distributions.ps1 -Provider all` exits 0; `powershell -File tools/install-skill-mesh.ps1 -Provider claude -Home <scratch-home>` exits 0; `powershell -File tools/inspect-host-install.ps1 -Home <scratch-home>` reports the profile installed; the emitted profile is byte-compared to the fresh build and the installed writer cores are hash-bound to it; the transcript's mandatory predicates throw on missing/false/error results, compare D8's raw pointer bytes exactly, canonicalize tree identity before rejecting same/nested roots, make tree-comparison and path/Git/reparse/hard-link containment fail closed, and grade all seven populated sections; every Step-109 builder remains blocked until an immediate pre-build guard receipt-binds new outside-profile project/config/build roots by handle-final local-volume paths and file IDs, rejects UNC/SUBST/8.3 and other aliases, proves all deletable provider children absent, and installation consumes that prebuilt root rather than launching an implicit second build; filename and write allowlists are case-sensitive; the downstream Step-109 skeleton remains non-runnable until #153 supplies its receipt-bound outside-profile roots, preventive containment, isolated config/auth lifecycle, exact captured-core payload equality, and a pre-launch inventory that rejects every unreviewed managed or ancestor instruction/rule/skill/dynamic-context source; independent review reports no high or medium defect; and a clean detached repo-root `python -m pytest` at or above `documentation/phase-75-baseline.md` completes with the recorded skip count unchanged
 - **Depends on:** 107
 - **Status:** LANDED / CERTIFICATION PENDING (2026-08-26) — build/install acceptance PASS and the transcript merged at `600af9e`, but a post-merge audit found fail-open replay instruments and an incomplete Step 109 containment/delivery design. Certification repairs are tracked on #152; the repo-root DONE gate has not yet covered their final bytes. Its downstream operator section leaves every behavioral cell blank. See § 12 Rounds 8–10 and issues #152–#153.
 
 ### Step 109: Operator confirmation of all five D10 rows
-- **Problem:** These cores are prose read by an agent; a test asserts what the prose instructs, never what an agent does. Using a freshly created, receipt-bound, outside-profile successor to Step 108's historical scratch home as the **disposable scratch project**, reinstall and reverify the Claude profile, then exercise every D10 row: run `/plan-init` from nothing (row 1) and verify `AGENTS.md` plus a `CLAUDE.md` matching D8's exact pointer bytes; run it beside a SUBSTANTIVE `CLAUDE.md` (row 2) and verify it writes nothing; run `/repo-update` on the inverted project (row 3) and verify it refreshes `AGENTS.md`, leaves the pointer, and is a no-op on a second pass; manufacture row 5 and verify the advisory prints without blocking. Then verify delivery on both hosts: `codex debug prompt-input` in the scratch project must show the section headings, and the Claude-side `@AGENTS.md` import must resolve.
+- **Problem:** These cores are prose read by an agent; a test asserts what the prose instructs, never what an agent does. Using freshly created, receipt-bound, mutually non-nested project, Claude-config, and build-output roots outside the real profile, bind their handle-final local-volume identities, reject aliased roots, build once into the proven-empty output root, install from those exact bytes, and reverify the Claude profile. Before launch, reject every unreviewed effective managed or ancestor instruction/rule/skill/dynamic-context source. Then exercise every D10 row: run `/plan-init` from nothing (row 1) and verify `AGENTS.md` plus a `CLAUDE.md` matching D8's exact pointer bytes; run it beside a SUBSTANTIVE `CLAUDE.md` (row 2) and verify it writes nothing; run `/repo-update` on the inverted project (row 3) and verify it refreshes `AGENTS.md`, leaves the pointer, and is a no-op on a second pass; manufacture row 5 and verify the advisory prints without blocking. Then verify delivery on both hosts: `codex debug prompt-input` in the scratch project must show the section headings, and the Claude-side `@AGENTS.md` import must resolve.
 - **Type:** operator
 - **Issue:** #153
 - **Files:** documentation/findings/instruction-file-symmetry-uat.md
@@ -822,8 +822,9 @@ mechanism `test_autofix_marker_single_owner.py` uses.
 
 **Rollback.** Every repository change is `git revert`-able here; no step writes into a consumer
 project. Step 108's historical install artifact is retained only as evidence. Step 109 must create
-a new receipt-bound scratch home/project and a distinct scratch Claude config root outside the real
-user profile; after acceptance, both exact roots are deleted rather than reverted through #153's
+a new receipt-bound scratch home/project, a distinct scratch Claude config root, and a distinct
+fresh-build output root outside the real user profile; after acceptance, all three exact roots are
+deleted rather than reverted through #153's
 reviewed safe-cleanup block. Attended Step 109 host sessions also
 create routine native session records and may refresh host-owned caches outside that scratch root;
 that bounded observational transport state is explicitly permitted before any host session runs,
@@ -1204,14 +1205,21 @@ certification is pending; Step 109 remains blocked before grading.
   auto-memory disablement, strict-empty MCP plus verified absence of any managed MCP server,
   fail-closed tool/path containment, plain-text canary, and an exact `InstructionsLoaded` include
   event. The historical OS-temp install is now audit-obsoleted for Step 109: #153 must always
-  create receipt-bound project/config roots outside the real profile, reinstall, and reverify.
+  create receipt-bound project/config/build roots outside the real profile, prove every builder
+  deletion target absent immediately before the one explicit build, install from that output, and
+  reverify. Its native parser must compare every captured complete core-read payload to the exact
+  verified on-disk bytes and place each required read before the first action.
   The Claude wrapper relocates configuration/temp/plugin state, disables background lifecycle
   surfaces, verifies authentication under the exact isolated environment without exposing a
   credential, waits for the asynchronous delivery logger, and snapshots both contained static
   state and outside-host mutation surfaces. Because managed settings outrank lower sources and effective hooks merge, the selected
   resolution must also enumerate and hash/allowlist the effective managed/plugin/session hook
   surface, managed MCP configuration, and managed skill definitions before launch; managed
-  same-name writers and managed-skill shell preprocessing must be rejected. Project-only settings
+  same-name writers and managed-skill shell preprocessing must be rejected. That inventory also
+  covers organization-wide managed `CLAUDE.md`/`claudeMd`/policy instructions and every physical
+  project ancestor's instruction, rule, same-name-skill, and dynamic-context surface. The three
+  disposable roots and real profile are bound by handle-final paths and file IDs; UNC, SUBST, 8.3,
+  other aliases, nesting, and case-mismatched allowlist targets are rejected. Project-only settings
   and `--strict-mcp-config` are not treated as managed-policy boundaries.
 - No Step-109 host session or writer skill ran. Issue #153 must still choose a core-supported UAT
   mode or deliberately amend the acceptance to operator-scoped named-skill subsection overrides;

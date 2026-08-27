@@ -75,7 +75,7 @@ does not reinterpret that evidence or revive its stopped experiment.
 | Phase CP Step 12 (#129) | disposition follows Step 11 | See its block in the delivery plan; the observatory-visibility question is being resolved against `dev-observatory/plans/utility-project-surfaces-plan.md` |
 | Phase CP Step M3 (#132) | PENDING (2026-08-20) — daily-use row only | The operator: a few genuine Codex-hosted sessions. Delta triage is DONE — 43 rows across 4 tables, 0 undisposed, 0 `fix-later` owed; the providers-doc gap was filed as #142 and is now CLOSED at `2462afd` (codex given first-class doc coverage; the host-discovery gate derives its provider set from `Get-SkillMeshDiscoveryRoots` instead of hand-listing two). Evidence: `documentation/parity-deltas.md` § M3 checks |
 | Phase CP Step M4 (#133) | COMPLETE (2026-08-20) — PASS | Nothing — codex arm reinstalled clean (125 files; 0 stale, 0 unledgered) and all seven observatory locators verified `unwired` on the rendered surface, before and after. The claude and gpt `-Force` arms were deliberately not run. Evidence: `documentation/parity-deltas.md` § M4 checks and § Scope of the M4 PASS |
-| Phase IS (#143) | BUILDING (2026-08-26) — 9 of 10 landed, 8 certified DONE. Step 107 (#151) is DONE: sentinel `0`, repo-root gate `1341 passed, 1 skipped`, baseline updated at `719e622`; its four concurrent-review documentation defects are fixed at `52d44c9`. Step 108 (#152) is LANDED / CERTIFICATION PENDING: build/install PASS, but a fresh audit refuted the transcript's prior 0-high/0-medium review; its replay/UAT instruments are hardened and await final review plus a stable repo-root gate. Step 109 (#153) is **BLOCKED BEFORE GRADING**: neither named skill exposes a safe instruction-only UAT mode, so all behavioral cells remain blank. | The operator must choose on #153 between a new core-supported UAT mode (then rebuild/reinstall/reverify) and a deliberate plan amendment accepting narrower named-skill subsection overrides. The selected route must also provide tested fail-closed host containment, pre-launch effective managed/plugin/hook, managed-MCP, and managed-skill enumeration, and Claude core/import evidence. Do not start a host session until that choice is recorded. Authority: `documentation/instruction-file-symmetry-plan.md` and `documentation/findings/instruction-file-symmetry-uat.md` § 2. |
+| Phase IS (#143) | BUILDING (2026-08-26) — 9 of 10 landed, 8 certified DONE. Step 107 (#151) is DONE: sentinel `0`, repo-root gate `1341 passed, 1 skipped`, baseline updated at `719e622`; its four concurrent-review documentation defects are fixed at `52d44c9`. Step 108 (#152) is LANDED / CERTIFICATION PENDING: build/install PASS, but a fresh audit refuted the transcript's prior 0-high/0-medium review; its replay/UAT instruments are hardened and await final review plus a stable repo-root gate. Step 109 (#153) is **BLOCKED BEFORE GRADING**: neither named skill exposes a safe instruction-only UAT mode, so all behavioral cells remain blank. | The operator must choose on #153 between a new core-supported UAT mode (then rebuild/reinstall/reverify) and a deliberate plan amendment accepting narrower named-skill subsection overrides. The selected route must also provide handle-final receipt-bound outside-profile project/config/build roots with a proven-empty builder target and alias rejection, tested fail-closed host containment with case-sensitive write allowlists, pre-launch enumeration of every effective managed/ancestor instruction, rule, hook, MCP, skill, and dynamic-context surface, exact captured-core payload equality, and Claude import evidence. Do not start a host session until that choice is recorded. Authority: `documentation/instruction-file-symmetry-plan.md` and `documentation/findings/instruction-file-symmetry-uat.md` § 2. |
 | Legacy-migrator hardening (#138) | DEFERRED | Its own issue — Phase CP ships zero migrator delta by the option-3 decision of 2026-08-18 |
 | Goal NP live cutover | LOCKED | Approval 2 on the immutable deliverable after disposable rehearsal |
 | Provider expansion | PARKED | A later explicit Abraham decision must resume that track; Goal NP does not unlock it |
@@ -145,14 +145,18 @@ are fixed at `52d44c9`. Step 108 (#152) is LANDED / CERTIFICATION PENDING: all-p
 scratch Claude install, inspector and whole-profile equality passed, but a post-merge audit found
 fail-open replay instruments and incomplete preventive/core-delivery evidence in the transcript.
 The repaired transcript is present; its stable repo-root DONE gate remains pending. Its historical
-OS-temp install is ineligible for Step 109, which must always create receipt-bound project/config
-roots outside the real profile and reinstall/reverify. Step 109 (#153) is **BLOCKED
+OS-temp install is ineligible for Step 109, which must always create receipt-bound
+project/config/build roots outside the real profile, build once into a proven-empty output, and
+install/reverify from those exact bytes. Those roots must be bound by handle-final local-volume
+paths and file IDs, with UNC/SUBST/8.3 aliases, nesting, and case-mismatched allowlist targets
+rejected. Step 109 (#153) is **BLOCKED
 BEFORE GRADING** because neither
 named skill has a safe instruction-only UAT mode and normal `repo-update` cannot safely reach Step
 7 in the outside-git fixture. The operator must choose a core-supported mode or deliberately amend
 the acceptance to narrower named-skill subsection overrides; that choice must also supply tested
 fail-closed host containment, pre-launch enumeration of every effective managed/plugin/session
-hook and setting plus managed MCP and managed-skill configuration, isolated config/auth and
+hook and setting plus managed MCP, managed/ancestor instruction/rule, and managed/ancestor-skill
+and dynamic-context configuration, isolated config/auth and
 background-lifecycle controls, complete native Base/Profile/attribution/core-read binding, and an
 exact asynchronously captured Claude import event. No
 behavioral row or delivery probe has run. Step 103 records the

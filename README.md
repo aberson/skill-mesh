@@ -551,8 +551,10 @@ three hosts; 3 are Claude-native (`claude-oauth-auth`, `context-slim`, `judge-mo
   three-valued `AGENTS.md`/`CLAUDE.md` matrix, and the Codex delivery recipe is vendored. Step 108's
   historical build/install evidence landed; its post-merge replay instruments have since been
   hardened but have not yet passed a fresh repo-root certification gate. The original OS-temp
-  install is not a Step 109 fixture; that step must recreate receipt-bound project/config roots
-  outside the real profile and reinstall/reverify. Step 109 (#153) remains
+  install is not a Step 109 fixture; that step must recreate receipt-bound project/config/build
+  roots outside the real profile, bind their physical handle identities, reject path aliases, build
+  once into a proven-empty output, and install/reverify from those exact bytes. Its pre-launch gate
+  must also reject unreviewed managed or ancestor instruction/rule/skill sources. Step 109 (#153) remains
   blocked before grading pending a deliberate UAT mode/override choice. See
   [documentation/instruction-file-symmetry-plan.md](documentation/instruction-file-symmetry-plan.md).
 - **Phase 8 is superseded** by Phase CP's additive, cohort-based rollout (course change 2026-08-16).
