@@ -1561,7 +1561,7 @@ substitute. Any action outside the row allowlist is blocking evidence, not a D10
 | Row | `AGENTS.md` | `CLAUDE.md` | Contract surface | Expected | Observed | Verdict |
 |---|---|---|---|---|---|---|
 | 1 | ABSENT | ABSENT | `plan-init` | Author `AGENTS.md` (the seven sections listed under `plan-init/core.md`'s `## After plan.md exists` section); write `CLAUDE.md` as D8's exact pointer bytes | *(operator)* | *(operator)* |
-| 2 | ABSENT / POINTER | SUBSTANTIVE | `plan-init` | **Touch neither.** Report the project non-inverted | *(operator)* | *(operator)* |
+| 2 | ABSENT | SUBSTANTIVE | `plan-init` | **Touch neither.** Report the project non-inverted | *(operator)* | *(operator)* |
 | 3 | SUBSTANTIVE | POINTER *(inverted)* | `repo-update` | Refresh `AGENTS.md`; leave `CLAUDE.md` untouched | *(operator)* | *(operator)* |
 | 4 | SUBSTANTIVE | ABSENT | `repo-update` *(chosen here; D10 gives both writers an identical cell)* | Refresh `AGENTS.md`; write `CLAUDE.md` as the D8 pointer | *(operator)* | *(operator)* |
 | 5 | SUBSTANTIVE | SUBSTANTIVE *(drift)* | `repo-update` | Refresh **neither**; emit the P2 advisory naming both paths; **continue without blocking** | *(operator)* | *(operator)* |
