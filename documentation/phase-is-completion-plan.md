@@ -706,8 +706,10 @@ secret.
 - **Operator action:** none during the code stage; authorization is a prerequisite
 - **Done when:** the canonical change is reviewed, all gates pass, and its commit is synchronized
 - **Depends on:** C0=`CONTRACT_DRIFT` plus prior operator authorization
-- **Status:** IN PROGRESS — implementation and focused gates complete; detached root certification
-  and synchronization pending
+- **Status:** DONE — canonical repair commit `6d14626` passed both independent reviews, 86 focused
+  tests, 302 package-integrity tests, four distribution-parity tests, reproducible 54-skill / 125-file
+  Codex packaging, and the detached repo-root gate (1380 passed, 1 skipped in 2:30:30). The repair and
+  its certification record are synchronized on `main` before C0A begins.
 
 ### Completion Stage C0A: Activate an authorized C0R repair
 
@@ -730,7 +732,9 @@ secret.
 - **Operator action:** authorize and observe the active-profile install and fresh-session restart
 - **Done when:** repeated C0 is `SUPPORTED`
 - **Depends on:** C0R
-- **Status:** NOT APPLICABLE UNTIL C0R
+- **Status:** IN PROGRESS — C0R is certified; the operator's request to transition back to Terra
+  authorizes exact-distribution activation and a fresh repeated C0. C1 remains locked until that
+  repeated verdict is `SUPPORTED`.
 
 ### Completion Stage C1: Certify Step 108
 

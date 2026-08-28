@@ -99,9 +99,10 @@ execution session, an opaque per-step HMAC service, an outside-worktree sidecar,
 authenticated classification. The stale provider-wide Codex rejection is now repaired in canonical
 source with planted-negative coverage; focused tests report 86 passed, package integrity reports
 302 passed, distribution parity reports 4 passed, both independent reviews report PASS, and the
-Codex profile builds reproducibly as 54 skills / 125 files. C0R remains certification-pending on its
-stable detached repo-root gate and synchronization. C0A activation, repeated C0, and C1 remain
-blocked until C0R is DONE.
+Codex profile builds reproducibly as 54 skills / 125 files. C0R is DONE at repair commit `6d14626`:
+the stable detached repo-root gate reports 1380 passed / 1 skipped in 2:30:30, with exact-HEAD and
+clean-tree sentinels. C0A activation and a repeated fresh Terra C0 are now in progress. C1 remains
+locked until that repeated C0 returns `SUPPORTED`.
 
 **Pass 1 (Steps 1–5) is complete as of 2026-08-18** at commit `4bcbef5`. **Step M1 (#130) is
 complete as of 2026-08-18 with a passing verdict** — evidence, check rows, delta rows (one

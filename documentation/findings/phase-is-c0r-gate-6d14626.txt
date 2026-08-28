@@ -1,0 +1,31 @@
+Phase IS C0R gate -- certification of 6d14626
+Command: python -m pytest        (repo root, no path argument)
+Run: 2026-08-27 to 2026-08-28, detached and uninterrupted on main at 6d14626
+Tree: 6d146262e0af56cf7c74210bc28c4014c33630fc "fix: capability-gate Codex build isolation"
+Interpreter: Python 3.14.3, pytest-9.1.1
+
+Launch facts:
+- Expected HEAD equaled observed HEAD: 6d146262e0af56cf7c74210bc28c4014c33630fc
+- Clean-tree status rows: 0
+- Competing pytest processes: 0
+- Available memory at admission: 2144 MB
+- Baseline bytes read before launch: 18348 chars
+- Baseline SHA-256: 8536F03C8036E86DE8321BB48AF7F48ABF9F920F68E2A0A0CDB552668198D73A
+- Started UTC: 2026-08-27T23:24:17.9285672Z
+
+Terminal summary:
+================ 1380 passed, 1 skipped in 9030.25s (2:30:30) =================
+
+Exit code: 0
+Sentinel status: completed
+Sentinel elapsed_seconds: 9031.193
+Finished UTC: 2026-08-28T01:54:49.1698935Z
+Collected 1381 items = 1380 passed + 1 skipped.
+The one skip is the environment-gated path-guard case.
+Zero FAILED and zero ERROR lines; stderr was empty.
+
+Count reconciliation against the prior current baseline:
+- Prior Step-107 gate: 1341 passed, 1 skipped.
+- New Codex isolation contract file: 24 passed.
+- New parent-only verdict-service cases: 15 passed.
+- New current total: 1380 passed, 1 skipped.

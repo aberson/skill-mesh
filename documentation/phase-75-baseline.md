@@ -208,16 +208,29 @@ the two reds on the same commit, and against 2:27:03 for the identical 1335/1 co
 `2462afd`. That is consistent with #156's page-fault-stall reading. The variance warning
 above still stands, and nothing gates on these timings.
 
-### Re-measured 2026-08-26 (Phase IS Step 107 gate, at `d4c88ee`) — CURRENT
+### Re-measured 2026-08-26 (Phase IS Step 107 gate, at `d4c88ee`) — SUPERSEDED by the 2026-08-27 C0R gate below
 
 | Command | Passed | Failed | Skipped | Provenance |
 |---|---|---|---|---|
-| `python -m pytest` (DONE gate) | **1341** | 0 | **1** | **CURRENT** — Step 107 gate at `d4c88ee`; 2:27:23, detached with an exit-code sentinel, uninterrupted; summary retained at `documentation/findings/phase-is-gate-d4c88ee.txt` |
+| `python -m pytest` (DONE gate) | **1341** | 0 | **1** | superseded as current by the 2026-08-27 C0R gate below — Step 107 gate at `d4c88ee`; 2:27:23, detached with an exit-code sentinel, uninterrupted; summary retained at `documentation/findings/phase-is-gate-d4c88ee.txt` |
 
 Collection was **1342 items**. This is **+6 passed** against the pre-Step-107 owner figure
 of 1335 passed / 1 skipped, so it clears the non-regression comparison before this owner
 is updated. It also matches the earlier Steps 104–106 shared gate at `dc21c9e`: Step 107's
 documentation-only payload moved neither the pass count nor the one known skip.
+
+### Re-measured 2026-08-27 (Phase IS C0R gate, at `6d14626`) — CURRENT
+
+| Command | Passed | Failed | Skipped | Provenance |
+|---|---|---|---|---|
+| `python -m pytest` (DONE gate) | **1380** | 0 | **1** | **CURRENT** — C0R gate at `6d14626`; 2:30:30, detached with an exit-code sentinel, uninterrupted; summary retained at `documentation/findings/phase-is-c0r-gate-6d14626.txt` |
+
+Collection was **1381 items**. This is exactly **+39 passed** against the Step-107 owner
+figure of 1341 passed / 1 skipped: 24 cases in the new Codex agent-isolation contract file
+plus 15 cases for the parent-only verdict service. The known environment-gated skip held at
+one, and there were zero failures or errors. The watcher admitted the run only after available
+memory reached 2144 MB, confirmed zero competing pytest processes, a clean tree, and exact
+HEAD `6d146262e0af56cf7c74210bc28c4014c33630fc`.
 
 ### The three failures this baseline is clean of
 
