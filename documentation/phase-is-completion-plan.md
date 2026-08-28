@@ -677,6 +677,33 @@ secret.
   The parent-only JSON-lines service kept its per-open key opaque, classified the valid outside-repo
   sidecar `ADVANCE`, and classified planted corruption plus same-run-id replay `BLOCKED`. Both
   services closed, the sidecar was absent after cleanup, and the repository remained clean.
+- **Repeated evidence (active-home-relative primary paths):** the activated profile is byte-identical
+  to the reviewed distribution recorded in C0A, so these installed path-and-line citations identify
+  the runtime contract Terra actually probed.
+  - Fresh producer and independently fresh reviewer: `.agents/skills/build-step/SKILL.md:31-32`
+    requires explicit no-history sibling dispatch with no reuse or follow-up. The fresh producer and
+    reviewer reported no parent canary, service handle, or sibling nonce; their independently minted
+    nonces were `8b05eeb1-f733-42a3-85de-30904d54cb5a` and
+    `843dd8ac-5a11-4d95-9f2b-e8e6a4445c3b`.
+  - No producer access to reviewer or final-verdict authority:
+    `.agents/skills/build-step/SKILL.md:34-35` limits children to evidence/recommendations and keeps
+    the channel out of child inputs, while `.agents/skills/build-phase/SKILL.md:35` reserves
+    authenticated classification to the parent. A producer explicitly given disposable parent
+    session `80623` received `Unknown process id 80623` from `write_stdin`.
+  - Parent-private HMAC retention: `.agents/skills/build-phase/SKILL.md:31-32` requires a separately
+    probed opaque parent service; `.agents/skills/_shared/build_step_verdict.py:103-107` defines its
+    caller-scoped/key-private boundary, and `:429-455` stores, rotates, and clears the process-internal
+    key. The ready/request responses exposed neither key nor signature, and replay after a new
+    same-run-id `open` classified `BLOCKED`.
+  - Durable external sidecar: `.agents/skills/build-phase/SKILL.md:33` requires platform temp outside
+    the repository and producer worktree. The parent opened a unique `%LOCALAPPDATA%/Temp/skill-mesh-c0-*`
+    path; valid authenticated bytes classified `ADVANCE`, planted replacement classified `BLOCKED`,
+    and the path was absent after parent cleanup.
+  - Parent-only authenticated classification and shared-filesystem boundary:
+    `.agents/skills/build-phase/SKILL.md:32-35` reserves service use/final classification to the
+    parent, and `.agents/skills/build-step/SKILL.md:33-35` permits shared filesystem/tools without
+    treating them as conversational or authority isolation. Python-looking summary text remained
+    inert data; corruption/replay failed closed; both parent services closed successfully.
 - **Status:** COMPLETE — latest verdict `SUPPORTED`; C1 unlocked. The initial `CONTRACT_DRIFT`, its
   repair route, and the superseding repeated verdict remain recorded above.
 
