@@ -43,8 +43,9 @@ Use these sources in this order:
    Done-when clauses for Steps 108, 108P, and 109.
 3. `documentation/findings/instruction-file-symmetry-uat.md` owns the frozen Step-108 evidence and
    the Step-108P/109 packet specification.
-4. Open issues #152, #162, and #153 coordinate the corresponding units. When an issue body and a
-   newer comment disagree, verify the Git object named by the newer comment before using it.
+4. Issue #152 is closed as certified DONE; open issues #162 and #153 coordinate the remaining
+   units. When an issue body and a newer comment disagree, verify the Git object named by the newer
+   comment before using it.
 5. `documentation/findings/phase-is-codex-handoff-2026-08-26.md` contributes only its surviving
    §§0 and 4–6. Its removed status snapshot is not authority.
 
@@ -838,7 +839,7 @@ secret.
 - **Operator action:** choose route 1 or route 2 on #153
 - **Done when:** the exact remote route record exists and unlocks mandatory C2V only
 - **Depends on:** C1
-- **Status:** BLOCKED ON C1 AND OPERATOR CHOICE
+- **Status:** BLOCKED ON OPERATOR CHOICE
 
 ### Completion Stage C2V: Validate and seal the remote route decision
 

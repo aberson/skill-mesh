@@ -546,27 +546,18 @@ three hosts; 3 are Claude-native (`claude-oauth-auth`, `context-slim`, `judge-mo
   wiring is already built and has been waiting on the wiring rather than the reverse.
   Evidence: [documentation/parity-deltas.md](documentation/parity-deltas.md).
 - **Phase IS — 9 of 11 build units landed, 9 certified DONE; issues #144–#152 closed, #153
-  awaits its operator route decision.** The
-  instruction-file contract now has one owner, the lifecycle writers and readers use the
-  three-valued `AGENTS.md`/`CLAUDE.md` matrix, and the Codex delivery recipe is vendored. Step 108's
-  historical build/install evidence landed, but a fresh immutable-blob audit refuted the prior
-  high-0/medium-0 certification. Five immutable checkpoints were rejected during independent review
-  (0 high / 2 medium, 0 high / 4 medium, 0 high / 2 medium, 0 high / 1 medium, then the same sole 0
-  high / 1 medium defect reported by both reviewers). Those ten plus two pre-freeze phase-plan
-  ordering contradictions are repaired across the affected files. The resulting UAT candidate is
-  Git blob `bd1c9205b80c468dcbb4ef64da5b1532e1cfba06`, raw SHA-256
-  `15043DB9FFA0BAE7F5D8FC0B33A7F90964DBD72505FB035B219FC3BE0BC6D612` (140,728 bytes; 1,928
-  lines). The repaired bytes pass 24/24 PowerShell parses, 18/18 streamed nonzero blockers, the
-  107/107 credential check, unchanged manifest regeneration, and all 278 package-integrity tests.
-  At immutable commit `81e8062`, two fresh independent object-only reviews both report 0 high / 0
-  medium. The stable repository-root gate remains pending, so Step 108 is not DONE. The original OS-temp
-  install is not a Step 109 fixture; that step must recreate receipt-bound project/config/build plus
-  durable evidence-export roots outside the real profile, retain their physical handles for the
-  complete lifetime, reject path aliases, build
-  once into a proven-empty output, and install/reverify from those exact bytes. Its pre-launch gate
-  must also reject unreviewed managed or ancestor instruction/rule/skill sources. Step 108P (#162)
-  now owns the required containment code and is blocked on #152 plus the deliberate UAT mode/override
-  choice; Step 109 (#153) remains operator-only and blocked before grading. See
+  awaits its operator route decision.** The instruction-file contract now has one owner, the
+  lifecycle writers and readers use the three-valued `AGENTS.md`/`CLAUDE.md` matrix, and the Codex
+  delivery recipe is vendored. Step 108 is certified DONE: the final UAT is frozen as Git blob
+  `c285605543f1c3ad02f8ceaf70dac5cb0af37b43`, two fresh no-history reviews found no high or medium
+  defects, and its sentinel-first detached repository-root gate passed. The historical OS-temp install
+  is not a Step 109 fixture; that step must recreate receipt-bound project/config/build plus durable
+  evidence-export roots outside the real profile, retain their physical handles for the complete
+  lifetime, reject path aliases, build once into a proven-empty output, and install/reverify from those
+  exact bytes. Its pre-launch gate must also reject unreviewed managed or ancestor
+  instruction/rule/skill sources. Step 108P (#162) owns the required containment code and is blocked
+  on the deliberate UAT mode/override choice recorded by #153; Step 109 (#153) remains operator-only
+  and blocked before grading. See
   [documentation/instruction-file-symmetry-plan.md](documentation/instruction-file-symmetry-plan.md).
   The reviewed dependency-ordered finish sequence is
   [documentation/phase-is-completion-plan.md](documentation/phase-is-completion-plan.md).
