@@ -682,9 +682,8 @@ secret.
   the runtime contract Terra actually probed.
   - Fresh producer and independently fresh reviewer: `.agents/skills/build-step/SKILL.md:31-32`
     requires explicit no-history sibling dispatch with no reuse or follow-up. The fresh producer and
-    reviewer reported no parent canary, service handle, or sibling nonce; their independently minted
-    nonces were `8b05eeb1-f733-42a3-85de-30904d54cb5a` and
-    `843dd8ac-5a11-4d95-9f2b-e8e6a4445c3b`.
+    reviewer reported no parent canary, service handle, or sibling nonce; each independently
+    returned a distinct, non-empty UUIDv4 nonce. Raw values are omitted from the public record.
   - No producer access to reviewer or final-verdict authority:
     `.agents/skills/build-step/SKILL.md:34-35` limits children to evidence/recommendations and keeps
     the channel out of child inputs, while `.agents/skills/build-phase/SKILL.md:35` reserves
