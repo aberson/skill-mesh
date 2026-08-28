@@ -101,8 +101,11 @@ source with planted-negative coverage; focused tests report 86 passed, package i
 302 passed, distribution parity reports 4 passed, both independent reviews report PASS, and the
 Codex profile builds reproducibly as 54 skills / 125 files. C0R is DONE at repair commit `6d14626`:
 the stable detached repo-root gate reports 1380 passed / 1 skipped in 2:30:30, with exact-HEAD and
-clean-tree sentinels. C0A activation and a repeated fresh Terra C0 are now in progress. C1 remains
-locked until that repeated C0 returns `SUPPORTED`.
+clean-tree sentinels. C0A is DONE: the installed 125-file profile and ledger match the disposable
+reviewed build exactly, and a fresh Terra context repeated C0=`SUPPORTED` with all five properties
+proven independently. C1 is unlocked and moving to fresh Terra execution. Follow-up issue #165 owns
+the broader capability-conditioned audit so the same provider-wide assumption is not repeated in
+the remaining Codex adapters.
 
 **Pass 1 (Steps 1–5) is complete as of 2026-08-18** at commit `4bcbef5`. **Step M1 (#130) is
 complete as of 2026-08-18 with a passing verdict** — evidence, check rows, delta rows (one

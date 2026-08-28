@@ -670,7 +670,15 @@ secret.
   properties separately. The canonical build-step adapter at `f74997d` still asserted that Codex had
   no such primitive, and the build-phase adapter repeated the stale same-context/private-state
   assumption, so the host was capable while its mapping contract had drifted.
-- **Status:** COMPLETE — `CONTRACT_DRIFT`; C0R authorized by the operator's repair request
+- **Repeated result (2026-08-27):** `SUPPORTED` in a fresh `gpt-5.6-terra` context against
+  synchronized HEAD `3ff717b` and the activated 125-file Codex profile. Separate no-history producer
+  and reviewer siblings saw neither the parent canary nor one another's nonce; the producer was
+  rejected with `Unknown process id` when explicitly given the disposable parent service handle.
+  The parent-only JSON-lines service kept its per-open key opaque, classified the valid outside-repo
+  sidecar `ADVANCE`, and classified planted corruption plus same-run-id replay `BLOCKED`. Both
+  services closed, the sidecar was absent after cleanup, and the repository remained clean.
+- **Status:** COMPLETE — latest verdict `SUPPORTED`; C1 unlocked. The initial `CONTRACT_DRIFT`, its
+  repair route, and the superseding repeated verdict remain recorded above.
 
 ### Completion Stage C0R: Repair canonical adapter drift when authorized
 
@@ -732,9 +740,13 @@ secret.
 - **Operator action:** authorize and observe the active-profile install and fresh-session restart
 - **Done when:** repeated C0 is `SUPPORTED`
 - **Depends on:** C0R
-- **Status:** IN PROGRESS — C0R is certified; the operator's request to transition back to Terra
-  authorizes exact-distribution activation and a fresh repeated C0. C1 remains locked until that
-  repeated verdict is `SUPPORTED`.
+- **Status:** DONE — the active home resolved unambiguously through the canonical probe; its valid
+  owned Codex profile was updated through the repository installer without force. All 125 installed files
+  equal the disposable reviewed build (aggregate manifest SHA-256
+  `a58c8ca5762e47bc8808528a58702745e2f74272b5f7b480cc5a85abac783075`), the ledger contains 125
+  matching ownership hashes, and the inspector reports 55 owned entries, zero unowned entries, and
+  zero Codex-root warnings. Four probe-generated `.pyc` files were moved to a recoverable temp
+  quarantine before the exact-tree comparison. Fresh Terra repeated C0=`SUPPORTED`.
 
 ### Completion Stage C1: Certify Step 108
 
@@ -768,7 +780,8 @@ secret.
   floor, leave C1 blocked and resolve that prerequisite outside this code/certification stage.
 - **Done when:** Step 108's accepted Done-when is met and #152 is closed as certified DONE
 - **Depends on:** C0=`SUPPORTED` directly, or C0R/C0A followed by repeated C0=`SUPPORTED`
-- **Status:** CERTIFICATION PENDING
+- **Status:** IN PROGRESS — unlocked by the repeated fresh Terra C0=`SUPPORTED`; dispatch C1 in a
+  fresh Terra context against the synchronized clean candidate.
 
 ### Completion Stage C2: Record the operator route
 
