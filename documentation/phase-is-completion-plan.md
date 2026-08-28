@@ -1,7 +1,7 @@
 # Phase IS completion runbook
 
-**Status:** ACTIVE COMPLETION OVERLAY — Step 108 is landed but not certified; Step 108P and
-Step 109 remain blocked.
+**Status:** ACTIVE COMPLETION OVERLAY — Step 108 is certified DONE; Step 108P and Step 109
+remain blocked.
 **Created:** 2026-08-27.
 **Scope:** completion coordination for existing Phase IS units 108, 108P, and 109. The `C*` labels
 below are runbook stages, not new Phase IS units and not inputs to issue synchronization.
@@ -806,8 +806,11 @@ secret.
   floor, leave C1 blocked and resolve that prerequisite outside this code/certification stage.
 - **Done when:** Step 108's accepted Done-when is met and #152 is closed as certified DONE
 - **Depends on:** C0=`SUPPORTED` directly, or C0R/C0A followed by repeated C0=`SUPPORTED`
-- **Status:** IN PROGRESS — unlocked by the repeated fresh Terra C0=`SUPPORTED`; dispatch C1 in a
-  fresh Terra context against the synchronized clean candidate.
+- **Status:** COMPLETE — certified at `472a62829fe355557584dbf11916e9b3a6958e45`: two fresh
+  no-history reviews reported zero High/Medium findings; the frozen UAT is Git blob
+  `c285605543f1c3ad02f8ceaf70dac5cb0af37b43` (raw SHA-256
+  `38A149808F5236D03FBDA41CDE1018A240FEC8E5CC3BF8AEC34BC1C7674A71E5`); and the sentinel-first
+  detached root gate returned `0` with `1380 passed, 1 skipped in 8886.70s (2:28:06)`.
 
 ### Completion Stage C2: Record the operator route
 

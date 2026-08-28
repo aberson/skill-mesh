@@ -1,8 +1,8 @@
 # Phase IS — instruction-file symmetry
 
 **Phase label:** `Phase IS` (instruction-file symmetry). Steps 100–109.
-**Status:** BUILDING — 9 of 11 units landed; 8 of 11 certified DONE. Steps 100–107 are DONE,
-Step 108 is landed / certification pending, Step 108P is blocked before implementation, and Step 109
+**Status:** BUILDING — 9 of 11 units landed; 9 of 11 certified DONE. Steps 100–108 are DONE,
+Step 108P is blocked before implementation, and Step 109
 is blocked before grading.
 **Approval history:** REDLINE ACCEPTED (Publication 2, 2026-08-20) — issues synced 2026-08-21
 under umbrella #143; all ten `**Issue:**` fields populated.

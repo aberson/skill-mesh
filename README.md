@@ -545,8 +545,8 @@ three hosts; 3 are Claude-native (`claude-oauth-auth`, `context-slim`, `judge-mo
   dependency and, in the process, found that the observatory surface meant to display this
   wiring is already built and has been waiting on the wiring rather than the reverse.
   Evidence: [documentation/parity-deltas.md](documentation/parity-deltas.md).
-- **Phase IS — 9 of 11 build units landed, 8 certified DONE; issues #144–#151 closed, #152
-  pending recertification.** The
+- **Phase IS — 9 of 11 build units landed, 9 certified DONE; issues #144–#152 closed, #153
+  awaits its operator route decision.** The
   instruction-file contract now has one owner, the lifecycle writers and readers use the
   three-valued `AGENTS.md`/`CLAUDE.md` matrix, and the Codex delivery recipe is vendored. Step 108's
   historical build/install evidence landed, but a fresh immutable-blob audit refuted the prior

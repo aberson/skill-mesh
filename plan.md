@@ -2,8 +2,8 @@
 
 ## Current goal
 
-Complete Phase IS (`documentation/instruction-file-symmetry-plan.md`): certify Step 108, record the
-operator's Step-109 route choice, implement and certify Step 108P, and then run the five attended
+Complete Phase IS (`documentation/instruction-file-symmetry-plan.md`): record the operator's
+Step-109 route choice, implement and certify Step 108P, and then run the five attended
 Step-109 acceptance rows. The subordinate completion sequence is
 `documentation/phase-is-completion-plan.md`. Phase CP remains parked on its operator-only M3 row.
 
@@ -103,7 +103,11 @@ Codex profile builds reproducibly as 54 skills / 125 files. C0R is DONE at repai
 the stable detached repo-root gate reports 1380 passed / 1 skipped in 2:30:30, with exact-HEAD and
 clean-tree sentinels. C0A is DONE: the installed 125-file profile and ledger match the disposable
 reviewed build exactly, and a fresh Terra context repeated C0=`SUPPORTED` with all five properties
-proven independently. C1 is unlocked and moving to fresh Terra execution. Follow-up issue #165 owns
+proven independently. C1 is COMPLETE: `472a62829fe355557584dbf11916e9b3a6958e45` carries the
+frozen UAT blob `c285605543f1c3ad02f8ceaf70dac5cb0af37b43` (raw SHA-256
+`38A149808F5236D03FBDA41CDE1018A240FEC8E5CC3BF8AEC34BC1C7674A71E5`); two fresh reviews reported
+zero High/Medium findings and the sentinel-first detached root gate returned `0` with `1380 passed,
+1 skipped` in 2:28:06. Step 108/#152 is certified DONE. Follow-up issue #165 owns
 the broader capability-conditioned audit so the same provider-wide assumption is not repeated in
 the remaining Codex adapters.
 
