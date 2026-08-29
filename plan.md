@@ -2,8 +2,8 @@
 
 ## Current goal
 
-Complete Phase IS (`documentation/instruction-file-symmetry-plan.md`): record the operator's
-Step-109 route choice, implement and certify Step 108P, and then run the five attended
+Complete Phase IS (`documentation/instruction-file-symmetry-plan.md`): validate and seal the selected
+`core-uat-mode` route in C2V, resolve it in mandatory C2A, implement and certify Step 108P, and then run the five attended
 Step-109 acceptance rows. The subordinate completion sequence is
 `documentation/phase-is-completion-plan.md`. Phase CP remains parked on its operator-only M3 row.
 
@@ -77,7 +77,7 @@ does not reinterpret that evidence or revive its stopped experiment.
 | Phase CP Step 12 (#129) | disposition follows Step 11 | See its block in the delivery plan; the observatory-visibility question is being resolved against `dev-observatory/plans/utility-project-surfaces-plan.md` |
 | Phase CP Step M3 (#132) | PENDING (2026-08-20) — daily-use row only | The operator: a few genuine Codex-hosted sessions. Delta triage is DONE — 43 rows across 4 tables, 0 undisposed, 0 `fix-later` owed; the providers-doc gap was filed as #142 and is now CLOSED at `2462afd` (codex given first-class doc coverage; the host-discovery gate derives its provider set from `Get-SkillMeshDiscoveryRoots` instead of hand-listing two). Evidence: `documentation/parity-deltas.md` § M3 checks |
 | Phase CP Step M4 (#133) | COMPLETE (2026-08-20) — PASS | Nothing — codex arm reinstalled clean (125 files; 0 stale, 0 unledgered) and all seven observatory locators verified `unwired` on the rendered surface, before and after. The claude and gpt `-Force` arms were deliberately not run. Evidence: `documentation/parity-deltas.md` § M4 checks and § Scope of the M4 PASS |
-| Phase IS (#143) | BUILDING (2026-08-28) — 9 of 11 landed, 9 certified DONE. Step 107 (#151) is DONE. Step 108 (#152) is certified DONE at `472a62829fe355557584dbf11916e9b3a6958e45`: frozen UAT blob `c285605543f1c3ad02f8ceaf70dac5cb0af37b43`, two fresh no-history reviews with zero High/Medium findings, and a sentinel-first detached root gate of `1380 passed, 1 skipped`; #152 is closed. Step 108P (#162) remains **BLOCKED BEFORE IMPLEMENTATION** pending #153's route choice. Step 109 (#153) remains operator-only and **BLOCKED BEFORE GRADING**, with every behavioral cell blank. | The operator must choose on #153 between a new core-supported UAT mode (then rebuild/reinstall/reverify) and a deliberate plan amendment accepting narrower named-skill subsection overrides. Step 108P then implements and certifies the route's retained-handle roots, three-stage receipt chain, OS-admitted native launcher/helper, strict JSON, handle-coupled reads, kernel I/O rail, per-mode environments/secrets, remotely verified evidence export, exact core/Codex/Claude evidence, and safe cleanup, followed by its full gate. Step 109 only invokes those artifacts and records observations. Do not start a host session until the route is recorded and #162 is complete. Authority: `documentation/instruction-file-symmetry-plan.md` and `documentation/findings/instruction-file-symmetry-uat.md` § 2. |
+| Phase IS (#143) | BUILDING (2026-08-28) — 9 of 11 landed, 9 certified DONE. Step 107 (#151) is DONE. Step 108 (#152) is certified DONE at `472a62829fe355557584dbf11916e9b3a6958e45`: frozen UAT blob `c285605543f1c3ad02f8ceaf70dac5cb0af37b43`, two fresh no-history reviews with zero High/Medium findings, and a sentinel-first detached root gate of `1380 passed, 1 skipped`; #152 is closed. #153 comment `5457823134` selected `core-uat-mode`; C2V validation and its #153 seal remain **PENDING**. C2A is **PENDING — NOT STARTED**. Step 108P (#162) remains **BLOCKED BEFORE IMPLEMENTATION**. Step 109 (#153) remains operator-only and **BLOCKED BEFORE GRADING**, with every behavioral cell blank. | C2V must validate the selected `core-uat-mode` route and post its #153 seal; C2A then must produce its branch-consistent resolution before C2N, C2P, or any implementation. No C2A artifact, UAT edit, Step-108P implementation, or host session has run. Step 108P will then implement and certify the selected route's containment packet; Step 109 only invokes that certified packet and records observations. Authority: `documentation/instruction-file-symmetry-plan.md` and `documentation/findings/instruction-file-symmetry-uat.md` § 2. |
 | Legacy-migrator hardening (#138) | DEFERRED | Its own issue — Phase CP ships zero migrator delta by the option-3 decision of 2026-08-18 |
 | Goal NP live cutover | LOCKED | Approval 2 on the immutable deliverable after disposable rehearsal |
 | Provider expansion | PARKED | A later explicit Abraham decision must resume that track; Goal NP does not unlock it |
@@ -194,12 +194,11 @@ every read/mutation/snapshot/launch/parse/grade uses a fresh receipt-pinned self
 its actual executor, rooted in an OS-admitted static native launcher with a precompiled
 hash/file-ID/MVID-bound helper, chained pre-build/launch/readiness receipts, strict JSON,
 handle-coupled existing/absent reads, exact child environments, and no runtime compiler/temp-file or live-function-consumer
-surface. Step 108P (#162) now owns every code/artifact obligation and is blocked on the #153 route
-choice. Step 109 (#153) remains operator-only and is **BLOCKED
+surface. Step 108P (#162) now owns every code/artifact obligation and is blocked before implementation
+pending C2V validation and its #153 seal for the selected `core-uat-mode`; C2A remains not started. Step 109 (#153) remains operator-only and is **BLOCKED
 BEFORE GRADING** because neither
 named skill has a safe instruction-only UAT mode and normal `repo-update` cannot safely reach Step
-7 in the outside-git fixture. The operator must choose a core-supported mode or deliberately amend
-the acceptance to narrower named-skill subsection overrides; #162 must then supply tested
+7 in the outside-git fixture. After C2V posts that seal, C2A resolves the selected route before #162 may supply tested
 fail-closed host containment, pre-launch enumeration of every effective managed/plugin/session
 hook and setting plus managed MCP, managed/ancestor instruction/rule/legacy-command/agent/skill,
 process-spawning setting, plugin/background component, and dynamic-context configuration, proof that

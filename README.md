@@ -546,7 +546,7 @@ three hosts; 3 are Claude-native (`claude-oauth-auth`, `context-slim`, `judge-mo
   wiring is already built and has been waiting on the wiring rather than the reverse.
   Evidence: [documentation/parity-deltas.md](documentation/parity-deltas.md).
 - **Phase IS — 9 of 11 build units landed, 9 certified DONE; issues #144–#152 closed, #153
-  awaits its operator route decision.** The instruction-file contract now has one owner, the
+  has selected `core-uat-mode`; C2V validation and its #153 seal are pending.** The instruction-file contract now has one owner, the
   lifecycle writers and readers use the three-valued `AGENTS.md`/`CLAUDE.md` matrix, and the Codex
   delivery recipe is vendored. Step 108 is certified DONE: the final UAT is frozen as Git blob
   `c285605543f1c3ad02f8ceaf70dac5cb0af37b43`, two fresh no-history reviews found no high or medium
@@ -555,8 +555,8 @@ three hosts; 3 are Claude-native (`claude-oauth-auth`, `context-slim`, `judge-mo
   evidence-export roots outside the real profile, retain their physical handles for the complete
   lifetime, reject path aliases, build once into a proven-empty output, and install/reverify from those
   exact bytes. Its pre-launch gate must also reject unreviewed managed or ancestor
-  instruction/rule/skill sources. Step 108P (#162) owns the required containment code and is blocked
-  on the deliberate UAT mode/override choice recorded by #153; Step 109 (#153) remains operator-only
+  instruction/rule/skill sources. Step 108P (#162) owns the required containment code and remains **BLOCKED BEFORE IMPLEMENTATION**
+  pending C2V validation and its #153 seal; C2A is pending/not started. Step 109 (#153) remains operator-only
   and blocked before grading. See
   [documentation/instruction-file-symmetry-plan.md](documentation/instruction-file-symmetry-plan.md).
   The reviewed dependency-ordered finish sequence is

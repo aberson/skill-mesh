@@ -839,7 +839,8 @@ secret.
 - **Operator action:** choose route 1 or route 2 on #153
 - **Done when:** the exact remote route record exists and unlocks mandatory C2V only
 - **Depends on:** C1
-- **Status:** BLOCKED ON OPERATOR CHOICE
+- **Status:** COMPLETE — #153 comment `5457823134` selected `core-uat-mode`; C2V validation and the
+  #153 seal are pending.
 
 ### Completion Stage C2V: Validate and seal the remote route decision
 
@@ -883,7 +884,7 @@ secret.
   prove no later commit changed either path; any mismatch blocks before C2A. The resolver consumes the
   sealed Git blobs and repeats the complete remote drift check.
 - **Depends on:** C2
-- **Status:** BLOCKED ON C2
+- **Status:** PENDING — validate the selected `core-uat-mode` and post its #153 seal. C2A is pending/not started.
 
 ### Completion Stage C2A: Resolve the selected route
 
@@ -926,7 +927,7 @@ secret.
 - **Done when:** one branch-consistent resolution blob is landed, gated, independently reviewed,
   remotely sealed on #153, and available for C2N's `existing_inputs` array
 - **Depends on:** C2V
-- **Status:** BLOCKED ON C2V
+- **Status:** PENDING / NOT STARTED — awaiting C2V's validated, posted `core-uat-mode` seal.
 
 ### Completion Stage C2N: Freeze schema, nonce, dependency, and toolchain inputs
 
