@@ -11,6 +11,7 @@ import argparse
 import datetime as datetime
 import hashlib
 import json
+import os
 import re
 import subprocess
 import sys
@@ -235,14 +236,18 @@ def load_route_decision(
     return decision
 
 
-def _git_index_blob(path: Path) -> tuple[str, bytes]:
-    """Read one tracked stage-0 blob directly from Git, never from the worktree."""
+def _relative_route_path(path: Path) -> str:
+    """Return a route-artifact path relative to this module's repository root."""
     try:
-        relative_path = path.resolve().relative_to(REPO_ROOT.resolve()).as_posix()
+        return path.resolve().relative_to(REPO_ROOT.resolve()).as_posix()
     except ValueError as error:
         raise RouteDecisionError("staged route artifact must remain under the repository root") from error
+
+
+def _git_index_blob_at(repo_root: Path, relative_path: str) -> tuple[str, bytes]:
+    """Read one tracked stage-0 blob from the specified Git worktree root."""
     listing = subprocess.run(
-        ["git", "ls-files", "-s", "--", relative_path],
+        ["git", "-C", str(repo_root), "ls-files", "-s", "--", relative_path],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         check=False,
@@ -263,13 +268,13 @@ def _git_index_blob(path: Path) -> tuple[str, bytes]:
         raise RouteDecisionError(f"staged Git index entry is malformed for {relative_path}")
     blob = fields[1]
     object_read = subprocess.run(
-        ["git", "cat-file", "blob", blob],
+        ["git", "-C", str(repo_root), "cat-file", "blob", blob],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         check=False,
     )
     index_read = subprocess.run(
-        ["git", "show", f":{relative_path}"],
+        ["git", "-C", str(repo_root), "show", f":{relative_path}"],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         check=False,
@@ -281,6 +286,44 @@ def _git_index_blob(path: Path) -> tuple[str, bytes]:
     return blob, object_read.stdout
 
 
+def _git_index_blob(path: Path) -> tuple[str, bytes]:
+    """Read one tracked stage-0 blob directly from this Git index, never from the worktree."""
+    return _git_index_blob_at(REPO_ROOT, _relative_route_path(path))
+
+
+def _source_authority_root(source_root: Path) -> Path:
+    """Require an explicit source authority to be the root of a Git worktree."""
+    try:
+        resolved = source_root.resolve(strict=True)
+    except OSError as error:
+        raise RouteDecisionError("staged-release source authority does not exist") from error
+    probe = subprocess.run(
+        ["git", "-C", str(resolved), "rev-parse", "--show-toplevel"],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=False,
+    )
+    if probe.returncode != 0:
+        raise RouteDecisionError("staged-release source authority is not a Git worktree")
+    try:
+        git_root = Path(probe.stdout.decode("utf-8", "strict").strip()).resolve(strict=True)
+    except (OSError, UnicodeDecodeError) as error:
+        raise RouteDecisionError("staged-release source authority returned an invalid Git root") from error
+    if git_root != resolved:
+        raise RouteDecisionError("staged-release source authority must be the Git worktree root")
+    unmerged = subprocess.run(
+        ["git", "-C", str(resolved), "ls-files", "-u"],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=False,
+    )
+    if unmerged.returncode != 0:
+        raise RouteDecisionError("cannot inspect staged-release source authority for unmerged entries")
+    if unmerged.stdout:
+        raise RouteDecisionError("staged-release source authority contains unmerged Git index entries")
+    return resolved
+
+
 def load_staged_route_decision(
     decision_path: Path = DEFAULT_DECISION,
     selector_path: Path = DEFAULT_SELECTOR,
@@ -290,6 +333,42 @@ def load_staged_route_decision(
     selector_blob, selector_raw = _git_index_blob(selector_path)
     decision = decode_decision_bytes(decision_raw)
     validate_selector_bytes(selector_raw, decision["selected_route"])
+    return StagedRouteDecision(
+        decision=decision,
+        decision_blob=decision_blob,
+        selector_blob=selector_blob,
+    )
+
+
+def load_staged_release_route_decision(
+    source_root: Path,
+    decision_path: Path = DEFAULT_DECISION,
+    selector_path: Path = DEFAULT_SELECTOR,
+) -> StagedRouteDecision:
+    """Validate a git-less release stage against an explicit source Git index.
+
+    This is intentionally separate from ``load_staged_route_decision``: normal
+    callers remain index-authoritative at their own repository root and never
+    consult an environment-derived authority. The stage's two artifact byte
+    strings must match the source's exact stage-0 blobs before either is
+    decoded or schema-validated.
+    """
+    authority = _source_authority_root(source_root)
+    decision_rel = _relative_route_path(decision_path)
+    selector_rel = _relative_route_path(selector_path)
+    try:
+        staged_decision = decision_path.read_bytes()
+        staged_selector = selector_path.read_bytes()
+    except OSError as error:
+        raise RouteDecisionError("cannot read staged route artifacts") from error
+    decision_blob, source_decision = _git_index_blob_at(authority, decision_rel)
+    selector_blob, source_selector = _git_index_blob_at(authority, selector_rel)
+    if staged_decision != source_decision:
+        raise RouteDecisionError("staged route decision bytes do not match the source Git index")
+    if staged_selector != source_selector:
+        raise RouteDecisionError("staged route selector bytes do not match the source Git index")
+    decision = decode_decision_bytes(staged_decision)
+    validate_selector_bytes(staged_selector, decision["selected_route"])
     return StagedRouteDecision(
         decision=decision,
         decision_blob=decision_blob,
@@ -593,7 +672,13 @@ def main(argv: list[str] | None = None) -> int:
     try:
         staged = None
         if args.check_staged:
-            staged = load_staged_route_decision(args.decision, args.selector)
+            source_authority = os.environ.get("SKILL_MESH_SOURCE_ROOT")
+            if source_authority:
+                staged = load_staged_release_route_decision(
+                    Path(source_authority), args.decision, args.selector
+                )
+            else:
+                staged = load_staged_route_decision(args.decision, args.selector)
             decision = staged.decision
         else:
             decision = load_route_decision(args.decision, args.selector)

@@ -12,7 +12,8 @@
     left looking green:
 
       1. STAGE    Enumerate SourceRoot's TRACKED files via `git ls-files` and
-                  copy exactly those paths into a clean StageDir. A release
+                  materialize their exact stage-0 index blobs into a clean
+                  StageDir with `git checkout-index`. A release
                   must contain only committed content: this is authoritative
                   (git's own index), never a hand-maintained denylist, so it
                   can never leak an untracked scratch file, local note, or
@@ -194,31 +195,35 @@ if ($LASTEXITCODE -ne 0) {
 }
 # Native stdout capture already splits on newlines into an array; @() guards
 # the single-line-output edge case (PowerShell would otherwise return a bare
-# string, which the foreach below would then iterate CHARACTER by character).
+# string, which the Count check below would otherwise misreport).
 $trackedPaths = @($trackedOutput) | Where-Object { $_ -and $_.Trim() -ne '' }
 if ($trackedPaths.Count -eq 0) {
     throw "release: 'git ls-files' returned no tracked paths under $sourceRootFull -- nothing to release"
 }
 
-$copied = 0
-foreach ($rel in $trackedPaths) {
-    $relWin = $rel -replace '/', '\'
-    $srcFile = Join-Path $sourceRootFull $relWin
-    if (-not (Test-Path -LiteralPath $srcFile -PathType Leaf)) {
-        # Tracked in the index but absent from the working tree (rare
-        # index/worktree mismatch, e.g. a deleted-but-not-yet-`git rm`d file);
-        # skip rather than error -- there is nothing to copy.
-        continue
-    }
-    $destFile = Join-Path $StageDir $relWin
-    $destDir = Split-Path -Parent $destFile
-    if (-not (Test-Path -LiteralPath $destDir)) {
-        New-Item -ItemType Directory -Path $destDir -Force | Out-Null
-    }
-    Copy-Item -LiteralPath $srcFile -Destination $destFile -Force
-    $copied++
+# Do not fall back to Copy-Item: it would silently ship mutable worktree
+# bytes. checkout-index reads the current stage-0 index objects directly and
+# writes them binary-safe under the canonical stage prefix. Refuse an
+# unmerged index rather than allowing an incomplete source tree through.
+$unmergedOutput = & git -C $sourceRootFull ls-files -u
+if ($LASTEXITCODE -ne 0) {
+    throw "release: cannot inspect unmerged Git index entries under $sourceRootFull (exit $LASTEXITCODE)"
 }
-Write-Host "release: staged $copied tracked file(s)"
+if (@($unmergedOutput | Where-Object { $_ -and $_.Trim() -ne '' }).Count -ne 0) {
+    throw "release: source Git index contains unmerged entries; refusing to stage a partial release"
+}
+$stagePrefix = $StageDir
+if (-not $stagePrefix.EndsWith([System.IO.Path]::DirectorySeparatorChar)) {
+    $stagePrefix += [System.IO.Path]::DirectorySeparatorChar
+}
+# Disable checkout conversion explicitly: the release stage is an index-blob
+# materialization boundary, not a worktree checkout, so CRLF/autocrlf smudging
+# would be a byte-for-byte authority violation.
+& git -C $sourceRootFull -c core.autocrlf=false checkout-index --all --force "--prefix=$stagePrefix"
+if ($LASTEXITCODE -ne 0) {
+    throw "release: 'git checkout-index' failed while materializing source index blobs (exit $LASTEXITCODE)"
+}
+Write-Host "release: staged $($trackedPaths.Count) tracked index file(s)"
 
 # -- Phase 2: BUILD (invoke the STAGED builder, not the source copy) --------
 

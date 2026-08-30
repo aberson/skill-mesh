@@ -155,6 +155,23 @@ def test_release_stage_excludes_vcs_and_untracked_content(source_repo, tmp_path)
         (source_repo / "UNTRACKED_SCRATCH.txt").unlink()
 
 
+def test_release_stages_index_bytes_not_unstaged_worktree_bytes(source_repo, tmp_path):
+    """A tracked, unstaged README defect must neither leak into stage nor fail it."""
+    mutated = _clone_repo(source_repo, tmp_path / "mutated")
+    readme = mutated / "README.md"
+    readme.write_bytes(
+        readme.read_bytes()
+        + b"\n[unstaged release leak](documentation/DOES_NOT_EXIST_UNSTAGED.md)\n"
+    )
+    expected = subprocess.run(
+        ["git", "show", ":README.md"], cwd=mutated, capture_output=True, check=True
+    ).stdout
+    stage = tmp_path / "stage"
+    r = _run(["-SourceRoot", str(mutated), "-StageDir", str(stage)])
+    assert r.returncode == 0, f"unstaged worktree bytes leaked into release:\n{r.stdout}\n{r.stderr}"
+    assert (stage / "README.md").read_bytes() == expected
+
+
 # --------------------------------------------------------------------------- #
 # Determinism
 # --------------------------------------------------------------------------- #
@@ -237,6 +254,7 @@ def test_release_aborts_and_writes_no_checksums_on_a_broken_link(source_repo, tm
     text = readme.read_text(encoding="utf-8")
     text += "\n\nSee the [planted broken link](documentation/DOES_NOT_EXIST_PLANTED.md).\n"
     readme.write_text(text, encoding="utf-8")
+    _git(["add", "README.md"], mutated)
 
     stage = tmp_path / "stage"
     r = _run(["-SourceRoot", str(mutated), "-StageDir", str(stage)])

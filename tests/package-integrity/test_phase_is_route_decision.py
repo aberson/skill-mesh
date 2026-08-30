@@ -5,6 +5,7 @@ from __future__ import annotations
 import copy
 import importlib.util
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -87,6 +88,8 @@ def test_committed_json_is_exact_canonical_utf8_bytes():
 
 
 def test_staged_loader_validates_the_exact_index_blobs_not_worktree_bytes(monkeypatch):
+    if os.environ.get("SKILL_MESH_SOURCE_ROOT"):
+        pytest.skip("normal-loader worktree-read proof runs only outside a git-less release stage")
     original_read_bytes = Path.read_bytes
 
     def reject_route_artifact_worktree_reads(path):
@@ -104,6 +107,96 @@ def test_staged_loader_validates_the_exact_index_blobs_not_worktree_bytes(monkey
     assert staged.selector_blob == subprocess.check_output(
         ["git", "rev-parse", f":{SELECTOR_PATH.relative_to(REPO_ROOT).as_posix()}"], text=True
     ).strip()
+
+
+def test_staged_release_loader_uses_explicit_source_authority_when_configured():
+    """A release's git-less stage may use only its deliberately supplied root."""
+    source_root = Path(os.environ.get("SKILL_MESH_SOURCE_ROOT", REPO_ROOT))
+    staged = route.load_staged_release_route_decision(
+        source_root, DECISION_PATH, SELECTOR_PATH
+    )
+    assert staged.decision["selected_route"] == "core-uat-mode"
+    assert staged.decision_blob == subprocess.check_output(
+        ["git", "-C", str(source_root), "rev-parse",
+         f":{DECISION_PATH.relative_to(REPO_ROOT).as_posix()}"], text=True
+    ).strip()
+
+
+def _init_git_repo(root):
+    root.mkdir()
+    subprocess.run(["git", "init", "-q"], cwd=root, check=True)
+    subprocess.run(["git", "config", "user.email", "t@example.com"], cwd=root, check=True)
+    subprocess.run(["git", "config", "user.name", "test"], cwd=root, check=True)
+
+
+def _release_authority_fixture(tmp_path, monkeypatch):
+    source = tmp_path / "source"
+    stage = tmp_path / "stage"
+    decision_rel = Path("documentation/findings/phase-is-route-decision.json")
+    selector_rel = Path("documentation/findings/phase-is-route-decision.selector")
+    _init_git_repo(source)
+    for root in (source, stage):
+        (root / decision_rel).parent.mkdir(parents=True)
+        (root / decision_rel).write_bytes(DECISION_PATH.read_bytes())
+        (root / selector_rel).write_bytes(SELECTOR_PATH.read_bytes())
+    subprocess.run(["git", "add", "-A"], cwd=source, check=True)
+    monkeypatch.setattr(route, "REPO_ROOT", stage)
+    return source, stage, stage / decision_rel, stage / selector_rel
+
+
+def test_gitless_staged_release_loader_accepts_matching_explicit_authority(tmp_path, monkeypatch):
+    source, stage, decision, selector = _release_authority_fixture(tmp_path, monkeypatch)
+    assert not (stage / ".git").exists()
+    staged = route.load_staged_release_route_decision(source, decision, selector)
+    assert staged.decision["selected_route"] == "core-uat-mode"
+
+
+@pytest.mark.parametrize("artifact", ("decision", "selector"))
+def test_staged_release_loader_rejects_altered_stage_before_decode(tmp_path, monkeypatch, artifact):
+    source, _, decision, selector = _release_authority_fixture(tmp_path, monkeypatch)
+    target = decision if artifact == "decision" else selector
+    target.write_bytes(b"tampered-before-decode\n")
+    with pytest.raises(route.RouteDecisionError, match="do not match the source Git index"):
+        route.load_staged_release_route_decision(source, decision, selector)
+
+
+@pytest.mark.parametrize("kind", ("missing", "not-git", "partial", "unmerged"))
+def test_staged_release_loader_rejects_missing_invalid_partial_or_unmerged_authority(
+    tmp_path, monkeypatch, kind
+):
+    source, _, decision, selector = _release_authority_fixture(tmp_path, monkeypatch)
+    if kind == "missing":
+        authority = tmp_path / "missing"
+    elif kind == "not-git":
+        authority = tmp_path / "not-git"
+        authority.mkdir()
+    elif kind == "partial":
+        selector_path = source / "documentation/findings/phase-is-route-decision.selector"
+        subprocess.run(["git", "rm", "--cached", str(selector_path.relative_to(source))],
+                       cwd=source, check=True)
+        authority = source
+    else:
+        conflict = source / "unmerged-authority.txt"
+        conflict.write_text("base\n", encoding="utf-8")
+        subprocess.run(["git", "add", "-A"], cwd=source, check=True)
+        subprocess.run(["git", "commit", "-qm", "base"], cwd=source, check=True)
+        branch = subprocess.run(["git", "branch", "--show-current"], cwd=source,
+                                capture_output=True, text=True, check=True).stdout.strip()
+        subprocess.run(["git", "checkout", "-qb", "conflicting-authority"],
+                       cwd=source, check=True)
+        conflict.write_text("other\n", encoding="utf-8")
+        subprocess.run(["git", "add", "unmerged-authority.txt"], cwd=source, check=True)
+        subprocess.run(["git", "commit", "-qm", "other"], cwd=source, check=True)
+        subprocess.run(["git", "checkout", "-q", branch], cwd=source, check=True)
+        conflict.write_text("current\n", encoding="utf-8")
+        subprocess.run(["git", "add", "unmerged-authority.txt"], cwd=source, check=True)
+        subprocess.run(["git", "commit", "-qm", "current"], cwd=source, check=True)
+        merge = subprocess.run(["git", "merge", "conflicting-authority"], cwd=source,
+                               capture_output=True, text=True, check=False)
+        assert merge.returncode != 0
+        authority = source
+    with pytest.raises(route.RouteDecisionError):
+        route.load_staged_release_route_decision(authority, decision, selector)
 
 
 @pytest.mark.parametrize(
