@@ -1,0 +1,310 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Phase IS C2E disposable environment — operator proposal</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #f3f5f7;
+      --panel: #ffffff;
+      --ink: #17202a;
+      --muted: #5f6b76;
+      --line: #cbd3da;
+      --accent: #2457a6;
+      --accent-soft: #e5eefc;
+      --safe: #187044;
+      --safe-soft: #e1f3e9;
+      --warn: #8b5314;
+      --warn-soft: #f8ead3;
+      --danger: #98313b;
+      --danger-soft: #f8e2e4;
+      --shadow: 0 12px 32px rgba(27, 39, 51, .08);
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #10151b;
+        --panel: #171e26;
+        --ink: #edf2f7;
+        --muted: #aab5c0;
+        --line: #36414d;
+        --accent: #89b4ff;
+        --accent-soft: #1e3150;
+        --safe: #8ad7ae;
+        --safe-soft: #183a2a;
+        --warn: #f0bd77;
+        --warn-soft: #432f1c;
+        --danger: #f3a1aa;
+        --danger-soft: #47262c;
+        --shadow: 0 12px 32px rgba(0, 0, 0, .28);
+      }
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font: 16px/1.55 ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    a { color: var(--accent); }
+    code, pre { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
+    code { overflow-wrap: anywhere; }
+    .shell { width: min(1180px, calc(100% - 32px)); margin: 0 auto; }
+    header { padding: 56px 0 28px; }
+    .eyebrow { color: var(--accent); font-size: .78rem; font-weight: 800; letter-spacing: .09em; text-transform: uppercase; }
+    h1 { max-width: 920px; margin: 10px 0 14px; font-size: clamp(2.25rem, 6vw, 4.8rem); line-height: 1; letter-spacing: -.045em; }
+    .lede { max-width: 880px; color: var(--muted); font-size: 1.12rem; }
+    .status {
+      display: inline-flex; align-items: center; gap: 9px; margin-top: 14px; padding: 9px 13px;
+      color: var(--warn); background: var(--warn-soft); border: 1px solid var(--warn); border-radius: 999px; font-weight: 750;
+    }
+    .status::before { content: ""; width: 9px; height: 9px; border-radius: 50%; background: currentColor; }
+    nav { position: sticky; top: 0; z-index: 5; border-block: 1px solid var(--line); background: color-mix(in srgb, var(--bg) 90%, transparent); backdrop-filter: blur(12px); }
+    nav .shell { display: flex; gap: 18px; overflow-x: auto; padding: 11px 0; white-space: nowrap; }
+    nav a { color: var(--muted); text-decoration: none; font-size: .9rem; font-weight: 700; }
+    nav a:hover { color: var(--accent); }
+    main { padding: 32px 0 72px; }
+    section { margin: 30px 0; scroll-margin-top: 60px; }
+    h2 { margin: 0 0 14px; font-size: clamp(1.55rem, 3vw, 2.2rem); letter-spacing: -.025em; }
+    h3 { margin: 0 0 7px; font-size: 1.08rem; }
+    p { margin: 8px 0 14px; }
+    .grid { display: grid; gap: 15px; }
+    .grid.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .grid.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .card { padding: 19px; border: 1px solid var(--line); border-radius: 15px; background: var(--panel); box-shadow: var(--shadow); }
+    .card p:last-child { margin-bottom: 0; }
+    .callout { padding: 18px 20px; border-left: 5px solid var(--accent); border-radius: 10px; background: var(--accent-soft); }
+    .callout.safe { border-color: var(--safe); background: var(--safe-soft); }
+    .callout.danger { border-color: var(--danger); background: var(--danger-soft); }
+    .label { display: inline-block; margin-bottom: 8px; padding: 3px 8px; border: 1px solid var(--line); border-radius: 999px; color: var(--muted); font-size: .76rem; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
+    .label.p { color: var(--safe); border-color: var(--safe); background: var(--safe-soft); }
+    .label.d { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
+    .label.wait { color: var(--warn); border-color: var(--warn); background: var(--warn-soft); }
+    .timeline { display: grid; gap: 10px; }
+    .phase { display: grid; grid-template-columns: 88px 1fr; gap: 14px; padding: 15px 17px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); }
+    .phase .num { color: var(--accent); font-weight: 850; }
+    .phase strong { display: block; }
+    .phase small { color: var(--muted); }
+    table { width: 100%; border-collapse: collapse; background: var(--panel); }
+    th, td { padding: 11px 12px; border: 1px solid var(--line); text-align: left; vertical-align: top; }
+    th { background: var(--accent-soft); }
+    pre { margin: 12px 0 0; padding: 17px; overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); line-height: 1.45; }
+    ul { padding-left: 1.25rem; }
+    li + li { margin-top: 7px; }
+    .decision .why, .decision .tweak { color: var(--muted); font-size: .94rem; }
+    .decision .why::before { content: "Why: "; color: var(--ink); font-weight: 750; }
+    .decision .tweak::before { content: "Tweak: "; color: var(--ink); font-weight: 750; }
+    footer { padding: 24px 0 42px; color: var(--muted); border-top: 1px solid var(--line); }
+    @media (max-width: 820px) { .grid.two, .grid.three { grid-template-columns: 1fr; } .phase { grid-template-columns: 1fr; } }
+    @media print {
+      :root { color-scheme: light; --bg: #fff; --panel: #fff; --ink: #111; --muted: #444; --line: #aaa; --accent: #173f7a; --accent-soft: #eef3fa; --safe-soft: #eef8f2; --warn-soft: #fff7e8; --danger-soft: #fff0f1; --shadow: none; }
+      nav { display: none; }
+      body { font-size: 10.5pt; }
+      header { padding-top: 18px; }
+      section, .card, .phase, table, pre { break-inside: avoid; }
+      a { color: inherit; text-decoration: none; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="shell">
+      <div class="eyebrow">Skill Mesh · Phase IS · C2E · Publication 2 · 2026-08-30</div>
+      <h1>Disposable driver-test environment</h1>
+      <p class="lede">A provider-neutral, fail-closed plan for moving driver, App Control, boot, and genuine-host evidence off the real workstation into one disposable Windows execution guest, while keeping the private test publisher in a separate isolated signer appliance.</p>
+      <div class="status">Planning reviewed; execution not authorized</div>
+    </div>
+  </header>
+
+  <nav aria-label="Proposal sections">
+    <div class="shell">
+      <a href="#heard">What I heard</a>
+      <a href="#shape">Why this shape</a>
+      <a href="#timeline">Timeline</a>
+      <a href="#commands">Afterwards</a>
+      <a href="#operator">Operator choices</a>
+      <a href="#defaults">Agent defaults</a>
+      <a href="#not-v1">Not in v1</a>
+      <a href="#risks">Risks</a>
+      <a href="#feedback">Feedback</a>
+    </div>
+  </nav>
+
+  <main class="shell">
+    <section id="heard">
+      <h2>What I heard</h2>
+      <div class="callout safe">
+        <strong>Plan a dedicated disposable environment for C2N through C4.</strong>
+        Do not change this workstation's certificates, Code Integrity/App Control policies, Secure Boot, or boot configuration.
+      </div>
+      <p>C2V and C2A are already sealed. A read-only prerequisite check showed this workstation does not have the qualifying WDK, signing identity, or enforced admission policy needed by C2N. The safe response is a separate test target—not remediation of the real machine.</p>
+    </section>
+
+    <section id="shape">
+      <h2>Why this shape</h2>
+      <div class="grid three">
+        <article class="card">
+          <h3>Execution and signing are separated</h3>
+          <p>C2N discovery, C3 native/security work, and C4 attended acceptance stay on one S1/R0 execution lineage. A separate non-snapshotted appliance holds the private publisher key and never runs candidate code.</p>
+        </article>
+        <article class="card">
+          <h3>Parent keeps authority</h3>
+          <p>The coordinator alone owns provider leases, asymmetric admin/signing grants, Git integration, review classification, and final verdicts. Only independently reviewed exact objects can reach the signer appliance. A producer can never certify its own output.</p>
+        </article>
+        <article class="card">
+          <h3>Failure has an owner</h3>
+          <p>After Step-4 selection, while both the environment ID and every provider resource are absent, an authenticated closure destroys every committed key, journal, store, and provider authorization and proves every never-committed planned allocation absent. Once an environment ID or provider resource exists, every terminal C2E/C2N/C2P/C3/C4 branch runs disposition. Abort cleanup cannot unlock C5; a failed C4-PASS retention transition immediately destroys the whole lineage and records a blocker.</p>
+        </article>
+      </div>
+      <div class="callout danger" style="margin-top:15px">
+        <strong>Hard boundary:</strong> no local hypervisor install, certificate import, App Control/Code Integrity change, Secure Boot change, BCD change, WDK install, driver action, or genuine host session is authorized by this proposal.
+      </div>
+    </section>
+
+    <section id="timeline">
+      <h2>Phase timeline</h2>
+      <div class="timeline">
+        <div class="phase"><div class="num">C2E.1–3</div><div><strong>Lock contracts, waits, and coordinator facts</strong><small>Closed environment/readiness/disposition schemas, no-write verifier, authenticated wait/marker protocol, and a read-only before/after collector for this workstation.</small></div></div>
+        <div class="phase"><div class="num">C2E.4</div><div><strong><span class="label wait">Hard wait</span> Select provider and retention route</strong><small>Provider, Windows license/cost, separate external control/wait/emergency-broker/retention authorities, exact-body publication broker, dormant one-use C5-shortener preauthorization, private evidence, immutable lifecycle/key deadlines, and owner. No guest or environment lineage is provisioned.</small></div></div>
+        <div class="phase"><div class="num">C2E.5–12</div><div><strong>Implement selected provider and guest control planes</strong><small>Sixteen closed operations; separate provider, guest, retention, and admin authority; durable replay/resource journals; lease, inventory, typed resource, lineage, lifecycle, read-only dispatch, content-addressed transfer, and elevation controls.</small></div></div>
+        <div class="phase"><div class="num">C2E.13–20</div><div><strong>Build execution, signing, rollback, and normal disposition</strong><small>Facts/refusal; S1; isolated signer; public trust/App Control; clean R0 before throwaway canaries; rollback; and exhaustive normal cleanup.</small></div></div>
+        <div class="phase"><div class="num">C2E.21–23</div><div><strong>Build direct emergency safety closure</strong><small>A deterministic native executable, mandatory image-bound least-privilege broker, and raw safety runner work without Git, tests, build-phase, GitHub, or control-receipt/wait-result signers. They also provide destroy-only fallback when a C4-PASS retention transition cannot be verified.</small></div></div>
+        <div class="phase"><div class="num">C2E.24–28</div><div><strong>Build lifecycle and retention proof</strong><small>Separate atoms for immutable active expiry, one-way proof-bound PASS retention, proof-bound broker-only failure quarantine, one-hour parent-only C5 shortening, absence verification, and verification-key retirement.</small></div></div>
+        <div class="phase"><div class="num">C2E.29</div><div><strong><span class="label wait">Hard wait</span> Provision S1, signer, and R0</strong><small>Materialize and live-preflight the exact emergency executable/broker before the environment ID; atomically seal its locator-free bootstrap and resource journal; preflight again; only then permit the first provider mutation and create the guest, no-route signer, and clean R0. This workstation remains unchanged.</small></div></div>
+        <div class="phase"><div class="num">C2E.30</div><div><strong><span class="label wait">Hard wait</span> Live rollback, signer-isolation, and fresh-context smoke</strong><small>Intentional failure-before-write, restore/replay denial, signed/negative canaries, exact-body publication capability and direct-API egress denials, external signer/network audit, separate Terra producer/reviewer, parent-only verdict.</small></div></div>
+        <div class="phase"><div class="num">C2E.31</div><div><strong>Build the local readiness candidate</strong><small>Reviewed redacted receipt and detached root gate. Build-phase stops with an immutable local candidate; it does not push or post.</small></div></div>
+        <div class="phase"><div class="num">C2E.32</div><div><strong><span class="label wait">Hard wait</span> Push and seal readiness</strong><small>The parent pushes with expected-old protection, signs the exact remote candidate, posts/rereads #162, then commits returned marker facts. C2N starts only in a fresh context.</small></div></div>
+        <div class="phase"><div class="num">C2N → C4</div><div><strong>Resume Phase IS</strong><small>C2N freezes guest inputs; C2P plans; C3 builds/certifies; C4 runs attended acceptance.</small></div></div>
+        <div class="phase"><div class="num">C2E.33</div><div><strong><span class="label wait">Mandatory</span> Terminal disposition</strong><small>C4 PASS first attempts the proof-bound atomic PASS transition; unavailable, failed, or ambiguous transition falls back to emergency destroy-only cleanup and blocks C5. Abort uses normal immediate destruction or the image-bound emergency path. Safety is independent of Git/tests/build-phase/GitHub/control/wait signers; bookkeeping follows.</small></div></div>
+        <div class="phase"><div class="num">C5</div><div><strong>Close Phase IS</strong><small>Only a verified C4-PASS retention transition may enter C5. The parent pushes a pending closeout candidate, signs the shortening time, mints a one-hour exact-rule identity, shortens and rereads the deadline, revokes that identity, then records final status.</small></div></div>
+      </div>
+    </section>
+
+    <section id="commands">
+      <h2>Afterwards: exact execution windows</h2>
+      <p>These are intentionally separate. A whole-plan unattended invocation is forbidden.</p>
+      <pre><code>/build-phase --plan documentation/phase-is-disposable-c2n-c4-environment-plan.md --steps 1,2,3
+ # stop; the parent completes wait Step 4; no provider resource is created
+ # if this run stops before Step 29 creates environment_id: execute pre-resource closure
+ /build-phase --plan documentation/phase-is-disposable-c2n-c4-environment-plan.md --steps 5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28
+ # stop; the parent completes provisioning wait Step 29
+ # stop; the parent completes live-smoke wait Step 30
+ /build-phase --plan documentation/phase-is-disposable-c2n-c4-environment-plan.md --steps 31
+ # stop; build-phase created only the local candidate
+ # the parent completes push/seal/status wait Step 32 outside build-phase
+ # after C4 PASS, or on a terminal stop after an environment ID or provider resource exists,
+ # run Step 33 outside build-phase
+
+# emergency abort path: safety first; no build-phase/Git/test/GitHub/control-receipt/wait-result signer preflight
+# the image-bound emergency-broker attestation remains mandatory
+$env:SKILL_MESH_C2E_PROVIDER_BROKER_REF = '&lt;process-only-image-bound-broker-handle&gt;'
+try {
+    &amp; '&lt;absolute-private-sealed-c2e-bundle&gt;\phase-is-emergency-launcher.exe' `
+      emergency-dispose `
+      --bootstrap-descriptor '&lt;absolute-private-bootstrap-descriptor.json&gt;' `
+      --resource-inventory-journal '&lt;absolute-private-resource-inventory-journal&gt;' `
+      --entry-reason '&lt;C4_PASS_TRANSITION_FAILED|C2E_ABORT|C2N_ABORT|C2P_ABORT|C3_ABORT|C4_ABORT&gt;' `
+      --expected-environment-id '&lt;c2e- plus 32 lowercase hex&gt;' `
+      --out '&lt;absolute-private-emergency-disposition.json&gt;' `
+      --format json
+    if ($LASTEXITCODE -ne 0) { throw "emergency-dispose failed with exit code $LASTEXITCODE" }
+}
+finally {
+    Remove-Item Env:\SKILL_MESH_C2E_PROVIDER_BROKER_REF -ErrorAction SilentlyContinue
+}
+ # after safety: Step 33 creates signed bookkeeping and the exact #143 marker</code></pre>
+    </section>
+
+    <section id="operator">
+      <h2>Operator-picked choices</h2>
+      <div class="grid two">
+        <article class="card decision" id="P1"><span class="label p">P1</span><h3>Dedicated disposable C2N–C4 environment</h3><p>This is the approved planning objective.</p></article>
+        <article class="card decision" id="P2"><span class="label p">P2</span><h3>No workstation security/boot mutation</h3><p>Certificates, Code Integrity policies, Secure Boot, and boot configuration are outside the authorized surface.</p></article>
+      </div>
+      <p><strong>Not yet picked:</strong> provider, image/license, cost ceiling, private artifact service, external publication broker, and retention owner. A separate execution authorization is required before Step 1; C2E.4 then stops for those provider decisions, and C2E.29 stops again before provisioning.</p>
+    </section>
+
+    <section id="defaults">
+      <h2>Agent defaults</h2>
+      <div class="grid two">
+        <article class="card decision" id="D1"><span class="label d">D1</span><h3>One execution guest plus one signer appliance</h3><p class="why">Keeps native build/policy/driver behavior on one measured S1/R0 lineage while moving the private signing key outside the untrusted-kernel boundary.</p><p class="tweak">A different topology needs equivalent toolchain, key-isolation, and no-route proof.</p></article>
+        <article class="card decision" id="D2"><span class="label d">D2</span><h3>Provider-neutral contract, selected concrete adapter</h3><p class="why">Repository semantics stay portable while runtime integration is real and testable.</p><p class="tweak">Choose the provider at C2E.4; no provider is assumed here.</p></article>
+        <article class="card decision" id="D3"><span class="label d">D3</span><h3>Coordinator owns authority</h3><p class="why">Separates production, review, admin, Git, and final-verdict powers.</p><p class="tweak">Authority can move only with an equivalent authenticated boundary.</p></article>
+        <article class="card decision" id="D4"><span class="label d">D4</span><h3>Canonical closed 16-operation connector</h3><p class="why">RFC 8785-plus-LF bytes, separate authority planes, domain-separated length-delimited full-envelope proofs, an immutable locator-free bootstrap, and transactional control/resource/guest replay journals close arbitrary shell, path, wildcard, implicit resource, stale-state, orphan, and crash-retry escapes.</p><p class="tweak">A provider adapter may translate mechanics, not widen the operation, canonical-byte, proof, authority, tagging, or journal sets.</p></article>
+        <article class="card decision" id="D5"><span class="label d">D5</span><h3>Public-only S1/R0 and one writable descendant</h3><p class="why">Separates reusable tools from run-specific public trust, keeps the private leaf out of snapshots, and prevents simultaneous divergent runs.</p><p class="tweak">A different topology needs equivalent lineage, key isolation, and exclusivity proof.</p></article>
+        <article class="card decision" id="D6"><span class="label d">D6</span><h3>Guest-only test trust posture</h3><p class="why">Secure Boot off plus TESTSIGNING is the ordinary disposable driver-test route; HVCI remains on; App Control enforces one exact Publisher-level PCA-TBS-plus-leaf-CN rule in both user and kernel scenarios.</p><p class="tweak">Use another Microsoft-supported route only after re-planning its boot/signing contract.</p></article>
+        <article class="card decision" id="D7"><span class="label d">D7</span><h3>One common-parent encrypted run volume</h3><p class="why">Matches the frozen UAT exactly. The retained disk is private because deleted roots can leave block remnants.</p><p class="tweak">Topology cannot change without authoritative UAT/plan action.</p></article>
+        <article class="card decision" id="D8"><span class="label d">D8</span><h3>Observed 28000.2804 baseline, rechecked at execution</h3><p class="why">Avoids stale PATH selection and records dated supported servicing facts.</p><p class="tweak">C2E.4 may record newer official versions before provisioning.</p></article>
+        <article class="card decision" id="D9"><span class="label d">D9</span><h3>Thirty-three bounded steps</h3><p class="why">Keeps each code atom and authority plane reviewable, makes provider/human boundaries machine-stopping, and keeps build-phase away from push/seal/disposition waits.</p><p class="tweak">Steps may be split further; Steps 4, 29, 30, 32, and 33 may not be collapsed into build-phase.</p></article>
+        <article class="card decision" id="D10"><span class="label d">D10</span><h3>C2E inventories; C2N selects</h3><p class="why">Preserves the existing stage owner and prevents readiness from pre-selecting tool inputs.</p><p class="tweak">None without changing the authoritative completion contract.</p></article>
+        <article class="card decision" id="D11"><span class="label d">D11</span><h3>Automatic retention expiry</h3><p class="why">A calendar note is not cleanup. Only a remotely proven C4 PASS may atomically destroy runnable state and reclassify the detached run volume to a fixed C4-plus-120-day rule; a separate verifier later proves absence.</p><p class="tweak">Failure quarantine is fixed at the earlier of the immutable stop receipt plus seven days or the original 30-day deadline; C5 uses signed authorization plus 90 days. No caller may reset or extend those bounds.</p></article>
+        <article class="card decision" id="D12"><span class="label d">D12</span><h3>Active provider authority revoked last</h3><p class="why">Cleanup needs control-plane authority through power-off, inventory, destruction/quarantine, lease release, and receipt verification.</p><p class="tweak">Successful PASS retention also preserves read-only verification, credential-free C5 preauthorization, and control/wait/emergency proof authorities only through C5 teardown; every other route removes them.</p></article>
+        <article class="card decision" id="D13"><span class="label d">D13</span><h3>Exactly authenticated wait results</h3><p class="why">A provider success string or producer assertion cannot advance execution. The parent uses the fixed RSA/SPKI/PSS profile, binds the selected adapter, and requires the API-returned marker ID to equal the exact remote reread before committing facts.</p><p class="tweak">Storage can vary; key profile, parent-only signing, exact enums, selector tuple, and ordering cannot.</p></article>
+        <article class="card decision" id="D14"><span class="label d">D14</span><h3>Root pytest DONE gates</h3><p class="why">Package-integrity is fast feedback, not repository-wide certification.</p><p class="tweak">Gate frequency may be revisited only if project instructions change.</p></article>
+        <article class="card decision" id="D15"><span class="label d">D15</span><h3>Separate asymmetric admin grants</h3><p class="why">The guest connector HMAC proves session membership, not parent authorship. A non-self-referential payload hash and domain-separated exact signature let only the distinct parent key authorize one elevated action.</p><p class="tweak">Key implementation can vary; canonical proof scope and the ban on HMAC-granted elevation cannot.</p></article>
+        <article class="card decision" id="D16"><span class="label d">D16</span><h3>Isolated RSA-3072/SHA-256 chain</h3><p class="why">The root, PCA, and signing leaf use one closed X.509 v3 profile with bounded validity and one no-timestamp SHA-256 Authenticode signature, while the signer appliance has no execution-guest route, runs no candidate code, and accepts one independently reviewed exact object under one parent grant.</p><p class="tweak">Equivalent isolation is acceptable only with the same whole-chain profile, no-route, source/object-review, positive, and denial proofs.</p></article>
+        <article class="card decision" id="D17"><span class="label d">D17</span><h3>Separate control and guest receipts</h3><p class="why">A powered-off or destroyed guest cannot attest its own control state. Provider-control results need independent reread and parent signature.</p><p class="tweak">Provider mechanics can vary; the authority split and tagged schema cannot.</p></article>
+        <article class="card decision" id="D18"><span class="label d">D18</span><h3>Active expiry and direct emergency cleanup</h3><p class="why">A lost coordinator must not leave privileged resources indefinitely. Provider rules enforce 30-minute lease, five-minute power-off, 60-minute descendant destruction, 30-day complete-lineage destruction, and 60-day control/wait/broker/C5-preauthorization maxima.</p><p class="tweak">C2E.4 may shorten active-lifecycle maxima. Emergency safety cannot depend on Git, tests, build-phase, GitHub, or control/wait signers.</p></article>
+        <article class="card decision" id="D19"><span class="label d">D19</span><h3>Kernel entry makes the descendant untrusted</h3><p class="why">A candidate kernel image can control guest-local events, HMAC, services, and files. Security claims therefore depend on pre-sign source/object review and external provider/signer facts, not guest self-attestation.</p><p class="tweak">If a required claim cannot be externally corroborated or accepted as attended behavior of the reviewed bytes, stop.</p></article>
+        <article class="card decision" id="D20"><span class="label d">D20</span><h3>Failed PASS retention becomes destroy-only</h3><p class="why">A C4 PASS does not justify leaving an ambiguously retained or partially transitioned volume. If the atomic transition cannot be verified, the broker destroys the whole lineage and preserves both the PASS and transition failure.</p><p class="tweak">This route records C2E.33 BLOCKED and never makes C5 eligible.</p></article>
+        <article class="card decision" id="D21"><span class="label d">D21</span><h3>C5 gets one exact signed intent and identity</h3><p class="why">The active provider identity is intentionally gone after C2E.33. A remotely reread pending candidate and domain-separated parent-signed intent unlock one new one-hour shortener; no reusable credential survives from the active run.</p><p class="tweak">Revoke the shortener and preauthorization after use, then destroy control/wait/emergency authorities before final DONE.</p></article>
+        <article class="card decision" id="D22"><span class="label d">D22</span><h3>Wait key is the first allocation</h3><p class="why">Every partial provider-selection failure must still have a valid authenticated cleanup path.</p><p class="tweak">The first atomic allocation is reconciled and sign-tested; closure binds either the private selection attempt or the final PASS.</p></article>
+        <article class="card decision" id="D23"><span class="label d">D23</span><h3>Private profile-signed toolchain manifest</h3><p class="why">Emergency build atoms need exact tools, libraries, arguments, identities, ACL facts, and a domain-separated signature without leaking host paths or handles into Git or child prompts.</p><p class="tweak">Only the parent receives a process-scoped opaque retrieval handle and verifies the content-addressed manifest.</p></article>
+        <article class="card decision" id="D24"><span class="label d">D24</span><h3>Read and transfer are separate atoms</h3><p class="why">Read-only dispatch and content-addressed transfer are independently observable connector behaviors.</p><p class="tweak">Each gets its own implementation, tests, review, and dependency edge.</p></article>
+        <article class="card decision" id="D25"><span class="label d">D25</span><h3>GitHub credential stays external</h3><p class="why">A candidate kernel can read guest process memory. Each upload therefore receives only a separate five-minute capability bound to issue 153, one exact body and ordinal; the broker keeps the real credential.</p><p class="tweak">Direct GitHub API egress is denied, and wrong-body, replay, third-use, expiry, and reuse attempts must fail.</p></article>
+      </div>
+    </section>
+
+    <section id="not-v1">
+      <h2>Not in this planning deliverable</h2>
+      <ul>
+        <li>No provider purchase or selection, VM creation, image download, software installation, or host restart.</li>
+        <li>No certificate, App Control/Code Integrity, Secure Boot, BCD, firmware, WDK, service, or driver change on this workstation.</li>
+        <li>No C2N discovery, C2P plan, Step-108P containment implementation, C3 certification, or C4 host session.</li>
+        <li>No edit to the accepted Phase IS plan or frozen UAT.</li>
+        <li>No production signing, HLK certification, Partner Center submission, or non-disposable deployment.</li>
+      </ul>
+    </section>
+
+    <section id="risks">
+      <h2>Risks and controls</h2>
+      <table>
+        <thead><tr><th>Risk</th><th>Control</th></tr></thead>
+        <tbody>
+          <tr><td>No qualifying provider</td><td>Stop at C2E.4. Never fall back to a host share, private network, arbitrary shell, or this workstation.</td></tr>
+          <tr><td>Producer gains certification power</td><td>Producer never receives provider/admin/signing/reviewer/Git/verdict authority. A fresh reviewer passes source/object binding before the parent grants one exact signer action; the signer appliance is unreachable from the execution guest.</td></tr>
+          <tr><td>Kernel-controlled child steals its upload secret</td><td>The process-only value named <code>GH_TOKEN</code> is only a five-minute exact-body one-publication broker capability. The real GitHub credential stays external, direct API egress is denied, and each of the two uploads uses a different revoked-after-reread capability.</td></tr>
+          <tr><td>Connector receipt is forged or replayed</td><td>RFC 8785-plus-LF canonical bytes and domain-separated, length-delimited proofs bind every full outer request/response and authenticator field. Provider control uses independent reread plus parent RSA; guest operations use a separate HMAC; retention and elevation use distinct asymmetric identities. External and target-local INTENT/APPLIED/RESULT journals reconcile crashes before any retry or new session.</td></tr>
+          <tr><td>A provider call creates an unrecorded object</td><td>Seal a locator-free bootstrap before creation, journal intent before every call, append response plus independent reread afterward, and reconcile every crash against an exhaustive immutable run/environment tag query.</td></tr>
+          <tr><td>Selection stops before provisioning</td><td>The pre-resource closure proves tag inventory empty, destroys each committed authority/journal/store allocation, records each never-committed planned allocation as independently proven absent, retires its own wait key, and records cleanup without reusing the run ID.</td></tr>
+          <tr><td>Evidence topology violates frozen UAT</td><td>All four roots are direct children of one common parent on one encrypted run volume; export is not a mount or reparse point.</td></tr>
+          <tr><td>Failure leaves live security state</td><td>Before the first provider mutation, the exact sealed native launcher and broker must pass a live read-only empty-inventory provider preflight. Provider-native expiry then limits the runnable lineage; emergency cleanup needs no Git/tests/build-phase/GitHub/control/wait signer. Raw provider response plus independent reread establishes safety; signed bookkeeping follows.</td></tr>
+          <tr><td>Private artifacts survive indefinitely</td><td>Provider-native automatic deletion, a hard cap, named verifier, and later absence receipt; otherwise immediate destruction.</td></tr>
+          <tr><td>Candidate kernel forges guest evidence</td><td>Review source and unsigned object before signing; keep signing/provider/Git/verdict authority external; use external provider/signer facts after kernel entry; destroy the descendant after use.</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="feedback">
+      <h2>Feedback grammar</h2>
+      <div class="callout">
+        Reply with terse ID-directed edits, for example: <code>D1 -&gt; two guests</code>, <code>D11 -&gt; failure TTL 3 days</code>, or <code>accept defaults; keep execution blocked</code>.
+      </div>
+      <p>The Markdown plan remains authoritative. This HTML is a stable operator view and will be republished at the same path if a decision changes.</p>
+      <ul>
+        <li><a href="phase-is-disposable-c2n-c4-environment-plan.md">Canonical C2E plan</a></li>
+        <li><a href="phase-is-completion-plan.md">Phase IS completion runbook</a></li>
+        <li><a href="instruction-file-symmetry-plan.md">Accepted Phase IS product plan</a></li>
+        <li><a href="findings/instruction-file-symmetry-uat.md">Frozen UAT contract</a></li>
+        <li><a href="../plan.md">Mutable project status</a></li>
+      </ul>
+    </section>
+  </main>
+
+  <footer>
+    <div class="shell">Skill Mesh · Phase IS C2E operator proposal · Publication 2 · Source of truth: <code>documentation/phase-is-disposable-c2n-c4-environment-plan.md</code></div>
+  </footer>
+</body>
+</html>

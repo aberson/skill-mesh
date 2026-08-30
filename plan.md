@@ -2,10 +2,12 @@
 
 ## Current goal
 
-Complete Phase IS (`documentation/instruction-file-symmetry-plan.md`): validate and seal the selected
-`core-uat-mode` route in C2V, resolve it in mandatory C2A, implement and certify Step 108P, and then run the five attended
-Step-109 acceptance rows. The subordinate completion sequence is
-`documentation/phase-is-completion-plan.md`. Phase CP remains parked on its operator-only M3 row.
+Complete Phase IS (`documentation/instruction-file-symmetry-plan.md`): C2V and C2A have sealed the
+selected `core-uat-mode`; next prepare and certify the dedicated disposable C2N–C4 driver-test
+environment in C2E, then run C2N, C2P, C3, the five attended Step-109 rows in C4, and C5 closeout.
+The subordinate completion sequence is `documentation/phase-is-completion-plan.md`, and C2E's
+environment contract is `documentation/phase-is-disposable-c2n-c4-environment-plan.md`. Phase CP
+remains parked on its operator-only M3 row.
 
 Phase IS is the active prerequisite inside the broader Phase CP delivery. Goal NP's two-approval
 publication gate was closed unapproved on 2026-08-16 and replaced by Phase CP's additive,
@@ -77,7 +79,7 @@ does not reinterpret that evidence or revive its stopped experiment.
 | Phase CP Step 12 (#129) | disposition follows Step 11 | See its block in the delivery plan; the observatory-visibility question is being resolved against `dev-observatory/plans/utility-project-surfaces-plan.md` |
 | Phase CP Step M3 (#132) | PENDING (2026-08-20) — daily-use row only | The operator: a few genuine Codex-hosted sessions. Delta triage is DONE — 43 rows across 4 tables, 0 undisposed, 0 `fix-later` owed; the providers-doc gap was filed as #142 and is now CLOSED at `2462afd` (codex given first-class doc coverage; the host-discovery gate derives its provider set from `Get-SkillMeshDiscoveryRoots` instead of hand-listing two). Evidence: `documentation/parity-deltas.md` § M3 checks |
 | Phase CP Step M4 (#133) | COMPLETE (2026-08-20) — PASS | Nothing — codex arm reinstalled clean (125 files; 0 stale, 0 unledgered) and all seven observatory locators verified `unwired` on the rendered surface, before and after. The claude and gpt `-Force` arms were deliberately not run. Evidence: `documentation/parity-deltas.md` § M4 checks and § Scope of the M4 PASS |
-| Phase IS (#143) | BUILDING (2026-08-28) — 9 of 11 landed, 9 certified DONE. Step 107 (#151) is DONE. Step 108 (#152) is certified DONE at `472a62829fe355557584dbf11916e9b3a6958e45`: frozen UAT blob `c285605543f1c3ad02f8ceaf70dac5cb0af37b43`, two fresh no-history reviews with zero High/Medium findings, and a sentinel-first detached root gate of `1380 passed, 1 skipped`; #152 is closed. #153 comment `5457823134` selected `core-uat-mode`; C2V validation and its #153 seal remain **PENDING**. C2A is **PENDING — NOT STARTED**. Step 108P (#162) remains **BLOCKED BEFORE IMPLEMENTATION**. Step 109 (#153) remains operator-only and **BLOCKED BEFORE GRADING**, with every behavioral cell blank. | C2V must validate the selected `core-uat-mode` route and post its #153 seal; C2A then must produce its branch-consistent resolution before C2N, C2P, or any implementation. No C2A artifact, UAT edit, Step-108P implementation, or host session has run. Step 108P will then implement and certify the selected route's containment packet; Step 109 only invokes that certified packet and records observations. Authority: `documentation/instruction-file-symmetry-plan.md` and `documentation/findings/instruction-file-symmetry-uat.md` § 2. |
+| Phase IS (#143) | BUILDING (2026-08-30) — 9 of 11 landed, 9 certified DONE. Step 108/#152 is certified DONE at `472a62829fe355557584dbf11916e9b3a6958e45`. C2V is sealed at `09e7f4d0b740ddfb723dd77682108c3b4405d13e`; C2A is sealed at `2f6c7b87dbe68182d2c43c8b1e2faa0a9229817d` with `core-plan-amendment-not-required`. A read-only C2N prerequisite probe made no changes and stopped because this workstation has no qualifying WDK, signing identity, or demonstrated enforced admission policy. C2E is **PLANNED / NOT AUTHORIZED FOR EXECUTION**. Step 108P/#162 remains **BLOCKED BEFORE IMPLEMENTATION**; Step 109/#153 remains operator-only and **BLOCKED BEFORE GRADING**, with every behavioral cell blank. | After separate execution authorization, complete C2E Steps 1–32 in `documentation/phase-is-disposable-c2n-c4-environment-plan.md` and seal the disposable environment receipt. The topology is one Windows execution guest plus one isolated non-snapshotted signer appliance; execution snapshots contain no signing private key. Then run C2N → C2P → C3 → C4 → C2E.33 → C5. C2E.33 also runs after any terminal C2E/C2N/C2P/C3/C4 stop once an environment ID or provider resource exists; its exact-current-candidate self-contained image-bound safety action is sealed and live-preflighted before the first provider mutation and later uses no Git/test/build-phase/GitHub/control-signer/wait-signer preflight. A failed or unavailable C4-PASS retention transition uses its distinct destroy-only emergency route, preserves the PASS plus transition failure, and blocks C5. Abort cleanup also never unblocks C5. Only successful PASS retention preserves the read-only verifier, credential-free C5 preauthorization, and control/wait/emergency proof authorities through C5; C5 mints and revokes a new one-hour exact-rule identity, then tears those authorities down. A stop after Step-4 selection while both the environment ID and every provider resource are absent uses the authenticated pre-resource closure instead. Do not run C2N discovery or any certificate, policy, boot, driver, or genuine host action on this workstation. The accepted Phase IS plan and frozen UAT remain unchanged until their existing C3/C4 owners act. |
 | Phase CL — Skill catalog lifecycle safety (#167) | PLANNED / PARKED — `documentation/skill-catalog-lifecycle-plan.md`; no implementation has started | Phase IS Completion Stage C5, then Phase CP Step M3 plus its closeout `repo-update`. Once released, Steps 110–117 (#168–#175) build and certify a hermetic portable-by-default CRUD rail; Step 118 (#176) performs attended disposable-host acceptance. Phase CL is not part of Phase IS's 11-unit count. |
 | Legacy-migrator hardening (#138) | DEFERRED | Its own issue — Phase CP ships zero migrator delta by the option-3 decision of 2026-08-18 |
 | Goal NP live cutover | LOCKED | Approval 2 on the immutable deliverable after disposable rehearsal |
@@ -93,6 +95,20 @@ Execute Phase IS per `documentation/instruction-file-symmetry-plan.md`. That pla
 authority for the active build; `documentation/codex-parity-delivery-plan.md` remains the broader
 parked delivery plan. Use `documentation/phase-is-completion-plan.md` for the dependency-ordered
 remaining-work runbook; it introduces no new Phase IS unit. This file records status and history.
+
+The planned C2E overlay is `documentation/phase-is-disposable-c2n-c4-environment-plan.md`. It adds no
+Phase IS product unit. This workstation is limited to coordination plus the pinned unsigned user-mode
+emergency-safety build: do not change its certificates, Code
+Integrity/App Control/AppLocker policies, Secure Boot, BCD/boot configuration, SDK/WDK, driver state,
+or real host profiles. The approved work is planning only: C2E requires separate execution
+authorization before Step 1, a provider/license/cost/retention choice at Step 4, and provisioning
+authorization at Step 29. Its v1 topology uses one execution guest plus a separate signer appliance;
+the private publisher leaf never enters S1/R0 or a candidate-running descendant. Its safety contract
+sets non-extendable active-lineage and key-lifetime maxima and, after an environment ID or provider resource exists, keeps a sealed
+self-contained emergency-disposition path independent of repository, test, build-phase, GitHub,
+control-signer, and wait-signer availability. C4 publication also keeps the real GitHub credential in
+an external broker: each child process receives only a distinct five-minute exact-body/issue/ordinal
+one-publication capability named `GH_TOKEN`, and direct guest GitHub API egress is denied.
 
 Phase CL (`documentation/skill-catalog-lifecycle-plan.md`) is prepared as the next catalog-safety
 track but has no build authority yet. Keep it parked until Phase IS C5 and Phase CP M3 closeout;
@@ -115,6 +131,14 @@ zero High/Medium findings and the sentinel-first detached root gate returned `0`
 1 skipped` in 2:28:06. Step 108/#152 is certified DONE. Follow-up issue #165 owns
 the broader capability-conditioned audit so the same provider-wide assumption is not repeated in
 the remaining Codex adapters.
+
+C2V is DONE at `09e7f4d0b740ddfb723dd77682108c3b4405d13e` with #153 seal `5460494882`.
+C2A is DONE at `2f6c7b87dbe68182d2c43c8b1e2faa0a9229817d` with route-resolution blob
+`14482e5ac6ac550d1e65e511fcfe9b31a18385f6` and #153 seal `5464987667`; the accepted phase-plan blob
+remained `6fb9f94f957fca5d3416ffd6dbe6a99ebe6a16e2`. A later read-only C2N prerequisite probe changed no
+repository, issue, certificate, policy, boot, or tool state and returned STOP: the current workstation
+lacks a qualifying WDK/signing/admission set. C2E now owns the planned disposable remediation; C2N
+must consume the sealed guest facts and must not retry discovery here.
 
 **Pass 1 (Steps 1–5) is complete as of 2026-08-18** at commit `4bcbef5`. **Step M1 (#130) is
 complete as of 2026-08-18 with a passing verdict** — evidence, check rows, delta rows (one
@@ -199,11 +223,12 @@ every read/mutation/snapshot/launch/parse/grade uses a fresh receipt-pinned self
 its actual executor, rooted in an OS-admitted static native launcher with a precompiled
 hash/file-ID/MVID-bound helper, chained pre-build/launch/readiness receipts, strict JSON,
 handle-coupled existing/absent reads, exact child environments, and no runtime compiler/temp-file or live-function-consumer
-surface. Step 108P (#162) now owns every code/artifact obligation and is blocked before implementation
-pending C2V validation and its #153 seal for the selected `core-uat-mode`; C2A remains not started. Step 109 (#153) remains operator-only and is **BLOCKED
+surface. Step 108P (#162) now owns every code/artifact obligation and is blocked before implementation.
+C2V and C2A have sealed the selected `core-uat-mode`; C2E must now certify the disposable guest before
+C2N can freeze its guest-local inputs. Step 109 (#153) remains operator-only and is **BLOCKED
 BEFORE GRADING** because neither
 named skill has a safe instruction-only UAT mode and normal `repo-update` cannot safely reach Step
-7 in the outside-git fixture. After C2V posts that seal, C2A resolves the selected route before #162 may supply tested
+7 in the outside-git fixture. After C2E, C2N and C2P must finish before #162 may supply tested
 fail-closed host containment, pre-launch enumeration of every effective managed/plugin/session
 hook and setting plus managed MCP, managed/ancestor instruction/rule/legacy-command/agent/skill,
 process-spawning setting, plugin/background component, and dynamic-context configuration, proof that

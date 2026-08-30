@@ -1,7 +1,7 @@
 # Phase IS completion runbook
 
-**Status:** ACTIVE COMPLETION OVERLAY — Step 108 is certified DONE; Step 108P and Step 109
-remain blocked.
+**Status:** ACTIVE COMPLETION OVERLAY — Step 108, C2V, and C2A are certified DONE. C2E is
+planned but not authorized for execution; C2N, C2P, Step 108P, and Step 109 remain blocked.
 **Created:** 2026-08-27.
 **Scope:** completion coordination for existing Phase IS units 108, 108P, and 109. The `C*` labels
 below are runbook stages, not new Phase IS units and not inputs to issue synchronization.
@@ -22,10 +22,12 @@ C1
   -> C2A mandatory route resolution
        -> core-uat-mode: seal no-amendment result
        -> operator-subsection-override: land and seal authoritative plan amendment
+  -> C2E provision and seal a dedicated disposable C2N–C4 driver-test environment
   -> C2N schema, nonce, and pre-implementation input locks
   -> C2P reviewed build-step-sized Step-108P implementation plan
   -> C3 execute the Step-108P subplan, lock the candidate, and certify it
   -> C4 attended Step 109 acceptance
+  -> C2E.33 perform mandatory terminal disposition and retain permitted evidence
   -> C5 phase closeout
 ```
 
@@ -43,10 +45,13 @@ Use these sources in this order:
    Done-when clauses for Steps 108, 108P, and 109.
 3. `documentation/findings/instruction-file-symmetry-uat.md` owns the frozen Step-108 evidence and
    the Step-108P/109 packet specification.
-4. Issue #152 is closed as certified DONE; open issues #162 and #153 coordinate the remaining
+4. This completion runbook owns stage ordering;
+   `documentation/phase-is-disposable-c2n-c4-environment-plan.md` owns only the subordinate C2E
+   topology, provisioning, readiness, handoff, and disposal contract.
+5. Issue #152 is closed as certified DONE; open issues #162 and #153 coordinate the remaining
    units. When an issue body and a newer comment disagree, verify the Git object named by the newer
    comment before using it.
-5. `documentation/findings/phase-is-codex-handoff-2026-08-26.md` contributes only its surviving
+6. `documentation/findings/phase-is-codex-handoff-2026-08-26.md` contributes only its surviving
    §§0 and 4–6. Its removed status snapshot is not authority.
 
 Issue #163 is a closed historical checkpoint. Its earlier user acceptance testing (UAT) hash and
@@ -81,7 +86,7 @@ current completion bytes.
 ### 2.3 Why the execution is split
 
 This is not one unattended `/build-phase` span. C0 is a capability/contract diagnosis, C2 is an
-operator-owned route decision, C2N is a technical design lock, C2P turns those frozen inputs into a
+operator-owned route decision, C2E prepares and proves a disposable security substrate, C2N is a technical design lock, C2P turns those frozen inputs into a
 reviewed build-step-sized implementation plan, C3 is an aggregate build/certification envelope, and
 C4 is attended operator acceptance. C3 is never dispatched as one producer context: it executes the
 C2P subplan one slice at a time, then freezes and certifies the integrated candidate. Use separate
@@ -137,6 +142,9 @@ authorize a same-context producer/reviewer substitution or move containment work
 - Certify the already-landed Step-108 evidence with valid review provenance and a stable detached
   repo-root gate.
 - Obtain one explicit route choice on #153, then freeze the nonce contract consumed by Step 108P.
+- Prepare and certify one dedicated disposable x64 Windows execution guest for driver-, policy-,
+  boot-, and genuine-host-sensitive C2N/C3/C4 evidence plus one isolated signer appliance for exact-
+  object signing, while keeping the coordinator security posture unchanged.
 - Implement, review, and certify the Step-108P containment packet under #162.
 - Run the five D10 rows, the fixed-point check, both host-delivery checks, the two remote evidence
   publications, and cleanup as attended Step 109 work under #153.
@@ -148,6 +156,8 @@ authorize a same-context producer/reviewer substitution or move containment work
 - Implementing containment code or filling behavioral observations during Step 109.
 - Installing into or cleaning the real user profile. The existing skill home is an owned/junctioned
   tree and is evidence, not a disposable fixture.
+- Installing or changing certificates, Code Integrity/App Control/AppLocker policy, Secure Boot,
+  BCD/boot configuration, firmware, SDK/WDK, or driver state on the coordination workstation.
 - Fixing #159's `goblin` or `citation-needed` instruction-file discovery.
 - Fixing the separate `skills/plan-init/core.md` provider-adapter/shared-citation claim identified
   after Step 107. That contract-owner correction needs its own bounded change.
@@ -161,6 +171,9 @@ authorize a same-context producer/reviewer substitution or move containment work
 | `documentation/instruction-file-symmetry-plan.md` | Link now; route-2-only amendment in C2A; status later | Make the subordinate runbook discoverable, own the route-2 authorization if selected, and mark units only after evidence exists | Steps 108–109 inspected |
 | `documentation/findings/phase-is-route-decision.json` and `documentation/findings/phase-is-route-decision.selector` | New in C2V | Canonical, committed validation plus an exact two-value Git-blob selector for the operator's remote route record | Planned-new; absent at orientation |
 | `documentation/findings/phase-is-route-resolution.json` | New in C2A | Sealed branch result; records either no amendment for the core route or the exact amended plan blob for route 2 | Planned-new; absent at orientation |
+| `documentation/phase-is-disposable-c2n-c4-environment-plan.md` and proposal HTML | New before C2E | Provider-neutral guest contract, reviewed execution decomposition, and operator redline | Planned after the workstation C2N prerequisite stop |
+| `tools/phase_is_environment.py`, `tools/phase-is-environment/**`, and `tests/phase-is-environment/**` | New in C2E.1–C2E.3 and C2E.5–C2E.28 | Strict environment CLI/schemas/verifier, signed-wait materializer/selector, coordinator fact collector, selected-provider connector, guest facts/S1/trust/R0/rollback/disposition/retention and direct emergency actions, redaction, and planted negatives | Planned-new |
+| `documentation/findings/phase-is-c2e-environment.json` | New in C2E.31 | Redacted immutable guest readiness input for C2N | Planned-new |
 | `documentation/phase-is-step-108p-build-plan.md` | New in C2P | Build-phase-compatible, one-slice-per-step implementation plan derived from C2N's frozen contracts | Planned-new; absent at orientation |
 | `documentation/findings/instruction-file-symmetry-uat.md` | Modify in C3/C4 | Replace Step-108P blockers, then record operator observations | Current blob and fence inventory verified |
 | `tools/phase-is-uat/**` | New from C2N through C3 | Contract records, schemas, native preparation, guardian/launcher, broker, bundle, and cleanup | Directory absent at orientation |
@@ -386,8 +399,8 @@ neither route.
 A route-2 selection authorizes only the narrow amendment described above; it does not itself edit the
 authoritative plan. Mandatory code stage C2V authenticates and seals either route record. Mandatory
 code stage C2A resolves that sealed input: it commits a no-amendment result for the core route, or it
-owns the route-2 edit, review, commit, and seal. C2N waits for either resolved outcome. C2 remains
-operator-only.
+owns the route-2 edit, review, commit, and seal. C2E waits for either resolved outcome, and C2N waits
+for C2E's sealed guest-readiness input. C2 remains operator-only.
 
 ### D5 — nonce format is an agent-defaulted technical contract
 
@@ -434,12 +447,16 @@ preventive exception cannot be enforced, Codex delivery and Step 109 remain bloc
 
 Step 108P uses Microsoft Visual C++ (**MSVC**) in C++17 mode plus the Windows SDK and Windows Driver Kit because
 the pre-entry-point code-integrity, retained-handle, Job Object, process-creation, and kernel I/O
-boundaries cannot begin inside Windows PowerShell or the managed runtime. C2N enumerates candidates
-and freezes the deterministic selection rule. After sources exist, C3 records and hashes the exact
-compiler binary/version/arguments, SDK/WDK versions and consumed headers/libraries/tools, signing
-certificate/policy, launcher publisher/hash rule, and complete pre-entry-point loader closure in the
-candidate lock. An unavailable or changed input blocks rather than falling back to runtime
-compilation.
+boundaries cannot begin inside Windows PowerShell or the managed runtime. C2E provisions and seals a
+dedicated disposable guest with a run-specific test publisher, enforced publisher-based App Control
+rule, kernel test-signing state, and matching toolchain family. C2N enumerates candidates only in that
+guest and freezes the deterministic selection rule plus the existing C2E receipt. After sources
+exist, C3 records and hashes the exact compiler binary/version/arguments, SDK/WDK versions and
+consumed headers/libraries/tools, final image signatures/hashes, and complete pre-entry-point loader
+closure in the candidate lock. A future binary hash is not a C2E/C2N policy input: the pre-existing
+publisher rule admits correctly signed future bytes, while C3 binds the final bytes. An unavailable
+or changed input blocks rather than falling back to runtime compilation or changing coordinator
+security state.
 
 Claude is pinned to version `2.1.223.0` and SHA-256
 `A708BA811C4CC46907DF358E22F2AA6DA3DBC28192747E4D3C4A0869752FE722`. Codex is pinned to version
@@ -447,6 +464,18 @@ Claude is pinned to version `2.1.223.0` and SHA-256
 and complete two-file vendor-bin set as approved-anchor-relative locators plus versions, hashes, and
 signatures. C3 alone upgrades those discovery facts to retained-handle physical identities. A host
 upgrade requires re-audit and a candidate-manifest update before C4.
+
+### D9E — C2N–C4 machine evidence comes only from the sealed disposable guest
+
+`documentation/phase-is-disposable-c2n-c4-environment-plan.md` is the narrow environment owner. The
+current workstation remains the capable fresh-context coordinator and sole Git/final-verdict writer;
+it is not a product/driver native-build, signing, policy, boot, driver, or attended-host target. Its
+only native compilation is C2E's pinned unsigned user-mode emergency-safety executable using the
+already-installed toolchain and making no protected-state change. C2E binds a powered-
+off snapshot lineage, connector, public signer/policy facts, test-signing state, one-writable-
+descendant rule, and durable private run-volume disposition. C2N consumes that receipt. C3/C4 revalidate it before
+every guest-sensitive action. App Control proves only pre-entry image admission and does not replace
+the Step-108P broker, environment, descendant, handle, or kernel I/O boundaries.
 
 ### Implementation decomposition rule
 
@@ -602,9 +631,13 @@ $phaseIsCredentialNames | Sort-Object
    If only the `yaml` import is missing, install PyYAML into the selected Python environment with
    `python -m pip install PyYAML`, repeat the import check, and record the resulting version. A
    missing or mismatched Claude/Codex version is a blocked prerequisite, not permission to substitute
-   another executable. These commands are discovery only: C2N admits and hashes host/native inputs.
+   another executable. These commands orient the coordinator only. C2E's sealed connector repeats
+   the machine-local inventory in the guest, and C2N admits and hashes only that guest input set.
 2. Read `AGENTS.md`, `CLAUDE.md`, `plan.md`, the accepted Phase IS plan, the UAT, and the baseline
-   owner. Verify the UAT Git blob and raw SHA-256 against §2.2.
+   owner. Verify the current protected UAT as Git blob
+   `c285605543f1c3ad02f8ceaf70dac5cb0af37b43` and raw SHA-256
+   `38A149808F5236D03FBDA41CDE1018A240FEC8E5CC3BF8AEC34BC1C7674A71E5`. Section 2.2 records
+   historical pre-C1 candidate evidence and is not the current-byte check.
 3. Start C0 with these primary-source reads and searches, then inspect the active host's documented
    agent-spawn schema for the five D2 properties. The variable is read-only and is not a mutation
    target.
@@ -621,17 +654,27 @@ $phaseIsCredentialNames | Sort-Object
 
 4. Do not dispatch C1 review work until the latest C0 verdict is `SUPPORTED`. After C2, C2V must
    validate and seal the remote record, then mandatory C2A must seal the matching resolution outcome.
-   Do not launch C3 until C1, C2V, C2A, and C2N are DONE. Do not start a real host session until C3 is
-   DONE.
+   After C2A, execute the separately approved C2E plan and seal its guest-readiness receipt. Do not
+   run C2N discovery on this workstation. Do not launch C3 until C1, C2V, C2A, C2E, C2N, and C2P are
+   DONE. Do not start a real host session until C3 is DONE, and then start it only in the sealed guest.
 
-Apart from the documented PyYAML prerequisite, no project dependency installation is part of this
-runbook. This repository has no dev server, lint command, or typecheck command; pytest is its sole
+Apart from the documented PyYAML prerequisite, no coordination-workstation dependency installation
+is part of this runbook. Guest provisioning is separately owned and authorized by C2E. This
+repository has no dev server, lint command, or typecheck command; pytest is its sole
 automated gate, and the distribution build/install commands above are the relevant build and install
 operations. C4 requires two process-scoped secrets:
 the operator supplies `CLAUDE_CODE_OAUTH_TOKEN` only to the four authenticated Claude modes, and the
-publication broker supplies `GH_TOKEN` only to `evidence-upload`. The broker constructs each child
-environment from empty, records presence but not value, and does not persist, print, or hash either
-secret.
+publication broker supplies `GH_TOKEN` only to `evidence-upload`. The latter name carries an opaque
+broker capability, never the real GitHub credential: the parent requests a distinct five-minute grant
+for each ordered invocation, bound to issue 153, the exact redacted body digest, ordinal, candidate,
+uploader image/argv, endpoint, and one idempotent creation plus returned-comment rereads. The cleanup
+grant also binds the first remotely reread comment and cleanup attestation. The broker alone holds a
+short-lived repository/issues-scoped GitHub credential, direct guest GitHub API egress is denied, and
+each capability is disabled immediately after reread. Wrong issue/body/order, replay, third use,
+expiry, and direct-API attempts must fail. The broker constructs each child environment from empty,
+records presence but not value, and does not persist, print, or hash either secret. If the final
+uploader requires a literal direct GitHub credential in the post-kernel guest, stop for an
+authoritative decision; do not edit the frozen UAT or weaken the broker boundary.
 
 ### Completion Stage C0: Resolve Codex build-step capability
 
@@ -839,8 +882,8 @@ secret.
 - **Operator action:** choose route 1 or route 2 on #153
 - **Done when:** the exact remote route record exists and unlocks mandatory C2V only
 - **Depends on:** C1
-- **Status:** COMPLETE — #153 comment `5457823134` selected `core-uat-mode`; C2V validation and the
-  #153 seal are pending.
+- **Status:** COMPLETE — #153 comment `5457823134` selected `core-uat-mode`; C2V and C2A later
+  validated and resolved that immutable input.
 
 ### Completion Stage C2V: Validate and seal the remote route decision
 
@@ -884,7 +927,9 @@ secret.
   prove no later commit changed either path; any mismatch blocks before C2A. The resolver consumes the
   sealed Git blobs and repeats the complete remote drift check.
 - **Depends on:** C2
-- **Status:** PENDING — validate the selected `core-uat-mode` and post its #153 seal. C2A is pending/not started.
+- **Status:** DONE — commit `09e7f4d0b740ddfb723dd77682108c3b4405d13e`; decision blob
+  `a18ea40d9ed04e5649c8a681bf72e1c43920fdc9`; selector blob
+  `fa04bb8e39f7d33a8cdb24ccc2d357f211342f7f`; remotely reread #153 seal `5460494882`.
 
 ### Completion Stage C2A: Resolve the selected route
 
@@ -927,7 +972,104 @@ secret.
 - **Done when:** one branch-consistent resolution blob is landed, gated, independently reviewed,
   remotely sealed on #153, and available for C2N's `existing_inputs` array
 - **Depends on:** C2V
-- **Status:** PENDING / NOT STARTED — awaiting C2V's validated, posted `core-uat-mode` seal.
+- **Status:** DONE — `core-uat-mode` resolved without an authoritative phase-plan amendment at
+  commit `2f6c7b87dbe68182d2c43c8b1e2faa0a9229817d`; resolution blob
+  `14482e5ac6ac550d1e65e511fcfe9b31a18385f6`; remotely reread #153 seal `5464987667`.
+
+### Completion Stage C2E: Prepare and seal the disposable driver-test environment
+
+- **Problem:** C2N requires an existing WDK, signing identity, enforced pre-entry admission policy,
+  loader/boot state, and exact host inputs. A read-only prerequisite probe found that this workstation
+  cannot supply those facts, and making it do so would mutate its real security posture.
+- **Type:** reviewed code preparation plus parent-completed provider/provisioning/readiness waits
+- **Issue:** #162; post-C4 disposal is recorded under #143
+- **Prerequisites:** C2A complete; accepted phase-plan and frozen UAT blobs reverified unchanged; a
+  separate operator execution authorization; a selected provider can supply the provider-neutral
+  execution-guest/signer-appliance/connector/lifecycle contract; an external publication broker can
+  retain the real GitHub credential and enforce the exact-body capability contract above
+- **Files:** `documentation/phase-is-disposable-c2n-c4-environment-plan.md`, its proposal HTML,
+  `tools/phase-is-environment/**`, `tests/phase-is-environment/**`, and
+  `documentation/findings/phase-is-c2e-environment.json`; no accepted phase-plan or UAT edit
+- **Actions:** execute C2E plan Steps 1–32 only in their declared split. Build Steps 1–3; stop at
+  parent wait Step 4 for explicit provider/license/cost/private-evidence/retention authorization;
+  if execution stops after a Step-4 PASS while both the environment ID and every provider resource are absent,
+  complete the authenticated pre-resource closure, destroy all committed authorities/journals/store
+  state, and prove every never-committed planned allocation absent; build Steps 5–28; stop at Step 29 to materialize, independently reread, and live-
+  preflight the exact sealed emergency executable/broker before an environment ID; atomically create
+  the environment ID, locator-free bootstrap, and zero-head append-only resource journal; run the
+  second environment-bound preflight; only then perform the first provider mutation, arm immutable
+  lifecycle rules, and provision one Windows
+  execution lineage plus a separate, non-snapshotted, network-isolated Windows signer appliance;
+  stop at Step 30 for live connector/rollback/signer-isolation/fresh-context smoke; invoke build-phase
+  for Step 31 alone to create its local reviewed readiness candidate; then have the parent perform Step 32's expected-
+  old push, signed readiness wait, exact #162 seal reread, and status-only commit. S1/R0 contain only
+  the public publisher chain. The signer appliance holds the non-exportable private leaf, never runs
+  candidate code, signs only independently reviewed exact objects under one parent grant, and is
+  destroyed at the C3 candidate lock before C4. Do not begin C2N in the same context.
+- **Exact gates:** C2E plan-review/redline/wrap; strict schema, asymmetric authenticated wait-result,
+  exact remote-marker/status ordering, coordinator-before/after, and redaction tests; planted negatives
+  for every environment stop class; the closed 16-operation adapter; separate provider-control,
+  guest-HMAC, retention-verification, wait, and asymmetric admin-grant authorities; durable external
+  crash-replay reconciliation; atomic lease acquire/renew/release; complete environment inventory;
+  explicit create/attach/lifecycle controls; isolated signer-appliance, no-route, exact-object grant,
+  and post-kernel external-audit tests; PowerShell 5.1 parse/safety checks; immutable active lifecycle,
+  bounded control/wait/emergency-broker expiry, automatic retention/absence verification, and a self-contained,
+  image-bound emergency-disposition closure; deliberate live failure-before-write plus rollback/old-
+  session replay in a fresh R0 descendant; exact-current-candidate emergency bundle plus live
+  `pre-resource-run` and `pre-resource-environment` empty-inventory broker/provider/reread preflights
+  before the first mutation; external publication-broker capability/receipt tests plus broker-only
+  egress and direct-GitHub-API denial; parent-only authenticated reviewer classification;
+  manifest no-diff, package-integrity, `git diff --check`, qualifying detached sentinel-first
+  repository-root `python -m pytest`, independent review with zero High/Medium; exact unchanged
+  accepted-plan and UAT blob IDs; remote #162 seal reread
+- **Produces:** one immutable `skill-mesh/phase-is-c2e-environment/v1` Git blob plus a #162 seal that
+  binds its commit/tree/blob/raw hash and external evidence-manifest digest; no containment code,
+  future image hash, host observation, or workstation security mutation
+- **Stop conditions:** any workstation security/boot/tool mutation; unavailable or unauthorized
+  provider/Windows media/license/private evidence store/publication broker/retention owner; a real or
+  reusable GitHub credential entering the guest, direct guest GitHub API access, or a publication
+  capability not bound to one exact body/issue/ordinal/expiry; shared filesystem or private-
+  network or signer-route escape; arbitrary or unauthenticated shell; missing auth/replay/journal/
+  lease/inventory/resource/lifecycle proof; missing immutable bootstrap or transactional resource
+  journal/reconciliation; an execution snapshot containing private signing material;
+  signer appliance receiving unreviewed bytes or candidate execution; missing exact toolchain/
+  publisher/policy/boot/canary/snapshot evidence; process/provider/host credential persistence;
+  premature parent provider-identity revocation; missing automatic active-lineage/deletion/later-
+  absence owner; an extendable lifecycle/key deadline; inability to run emergency safety disposition
+  without Git/build/test/GitHub; more than one writable descendant; producer access to signer,
+  reviewer/admin/verdict/Git authority; accepted-plan/UAT drift; failed gate/review/seal reread. Any
+  terminal branch after an environment ID or provider resource exists enters C2E.33 before departure.
+- **Operator action:** this planning approval is not execution authority. Separate execution
+  authorization is required before C2E Step 1. C2E.4 separately selects/authorizes one provider,
+  license/cost, private evidence store, external publication-broker route, retention route, and immutable control, wait, emergency-
+  broker, and retention-key lifecycles. C2E.29 separately authorizes provisioning. Guest certificate,
+  policy, Secure Boot, BCD,
+  reboot, and driver-state changes are guest-only. This stage grants no permission to install a local
+  hypervisor/Windows feature or change this workstation.
+- **Done when:** C2E Step 32's reviewed receipt, remote seal, and returned-marker status are immutable
+  C2N inputs; the execution guest is powered off in sealed R0 state with no signing private key or
+  process/provider/host authentication credential in any snapshot; the isolated signer appliance is
+  powered off and holds the only non-exportable test-publisher private leaf; and C2N starts only in a
+  fresh context
+- **Depends on:** C2A
+- **Status:** PLANNED / NOT AUTHORIZED FOR EXECUTION
+
+**Terminal-disposition rule:** once C2E.29 generates an environment ID or creates any provider
+resource, every terminal C2E, C2N, C2P, C3, or C4 stop invokes C2E.33 before the environment is left.
+C2E.33 revokes guest process/host and connector secrets first; retains narrow active parent provider
+authority through power-off, complete inventory, disposition, lease release, and provider-response/
+independent-reread verification; then revokes that identity last. On C4 PASS it first attempts the
+proof-bound atomic retention transition. A verified success preserves only the detached run volume,
+read-only retention identity, credential-free C5-shortener preauthorization, and the control-receipt/
+wait-result/emergency-broker private authorities needed for C5 proof and final teardown. If that transition
+cannot start or cannot be verified, the sealed emergency broker immediately destroys the complete
+lineage—including the run volume—under the distinct `C4_PASS_TRANSITION_FAILED` reason, preserves the
+PASS plus transition failure, records C2E.33 blocked, and never enables C5. Otherwise C2E.33 either destroys the lineage
+or records a bounded non-runnable quarantine with an automatic deletion rule, owner, deadline, and
+later absence-verification action. Failure cleanup is not deferred to C5. On an abort, the direct
+parent-only self-contained image-bound action runs from the sealed private emergency bundle before
+any Git, test, build-phase, GitHub, control-signer, or wait-signer preflight; raw provider response and
+independent reread establish safety, while signed status and #143 bookkeeping follow afterward.
 
 ### Completion Stage C2N: Freeze schema, nonce, dependency, and toolchain inputs
 
@@ -935,15 +1077,20 @@ secret.
   machine-exact contracts before implementation can safely fan out.
 - **Type:** code / design checkpoint
 - **Issue:** #162
-- **Prerequisites:** C2A complete with one remotely sealed, branch-consistent route-resolution blob
+- **Prerequisites:** C2A complete with one remotely sealed, branch-consistent route-resolution blob;
+  C2E complete with a remotely sealed environment receipt and powered-off R0 lineage
 - **Actions:** produce the schema-design record required by §5. Record D5 in #162's implementation
   notes, including schema pattern, generator API, generation points, uniqueness/reuse rule, consumers,
   publication treatment, and negative cases. Revalidate and include C2V's route-decision/selector
   blobs and C2A's route-resolution blob in the typed pre-implementation manifest with the
   selected-route source/tool/host inputs, then record the
-  native compiler, SDK, WDK, signing, and loader-policy prerequisites that C3 will consume. Do not include future schemas, bundle,
+  guest-local native compiler, SDK, WDK, signing, App Control, boot, snapshot, connector, and
+  loader-policy prerequisites that C3 will consume. Include the C2E receipt blob/raw hash and
+  environment ID as an existing input. Do not include future schemas, bundle,
   launcher/helper sources, binaries, or tests in this pre-implementation lock.
-- **Candidate discovery:** use the commands below to enumerate candidates; do not select by PATH
+- **Candidate discovery:** invoke the sealed C2E read-only connector against the sole writable R0
+  descendant and run the commands below there; never run this inventory against the coordination
+  workstation. Do not select by PATH
   order alone. C2N records the complete candidates and deterministic rule: highest semantic toolset
   or kit version, then the ordinal `anchor + NUL + relative-path` selection key; equal-version
   candidates with different bytes/signer-certificate hashes are ambiguous and block. This lexical
@@ -1133,8 +1280,9 @@ secret.
   their sealed Git blobs against the frozen comment ID/body and selected branch, no later exact-header
   comment exists, and the core/override plan-blob rule holds; pre-implementation inputs include
   existing dependencies only
-  and bind the complete candidate enumeration, deterministic selection rule, approved-anchor/
-  relative locators, versions, hashes, signatures, candidate-set digests, and policy inventory.
+  and bind the C2E environment receipt, complete guest candidate enumeration, deterministic selection
+  rule, approved-anchor/relative locators, versions, hashes, signatures, candidate-set digests,
+  snapshot/boot/publisher facts, and exact policy IDs/hashes/mode/rules plus canary evidence.
   Every discovery/version authority is itself bound, including `vswhere.exe`, the Windows Kits
   installed-root registry key/value name plus approved-anchor/relative locator and canonical fact
   digest, each Codex shim, the
@@ -1142,14 +1290,15 @@ secret.
   and both native Codex binaries. A reviewer confirms all three records match D5, D9, and the selected
   route. C3 upgrades discovery facts to retained-handle identities and the actually consumed
   dependency/loader/policy closure before any distribution build/install or host action.
-- **Stop conditions:** nonce contract weakened without plan amendment, required toolchain/admission
-  boundary unavailable, route-dependent input left implicit, or candidate drift during the freeze
+- **Stop conditions:** nonce contract weakened without plan amendment, C2E receipt/snapshot/connector
+  drift, required guest toolchain/admission boundary unavailable, any coordinator machine-local fact
+  substituted for a guest fact, route-dependent input left implicit, or candidate drift during the freeze
 - **Operator action:** none within C2N. A proposed D5 amendment or missing signing/admission policy
-  leaves this stage blocked and requires a separate operator decision before it is resumed.
+  returns to C2E and requires a separate operator decision before C2N is resumed.
 - **Done when:** all three Git blobs and the remotely verified seal are immutable inputs to C2P and
   carry no hash for a C3 output
-- **Depends on:** C2A
-- **Status:** BLOCKED ON C2A
+- **Depends on:** C2E
+- **Status:** BLOCKED ON C2E
 
 ### Completion Stage C2P: Author the Step-108P implementation subplan
 
@@ -1158,8 +1307,9 @@ secret.
   repository's step-sizing contract and make integration ownership ambiguous.
 - **Type:** code / planning checkpoint
 - **Issue:** #162
-- **Prerequisites:** C2N complete; its three contract blobs and remote seal reverified; the selected
-  route, signing/admission prerequisites, and candidate tool/host inputs are no longer undecided
+- **Prerequisites:** C2N complete; its three contract blobs and remote seal reverified; C2E's
+  environment receipt and R0 lineage still match; the selected route, guest signing/admission
+  prerequisites, and candidate tool/host inputs are no longer undecided
 - **Files:** `documentation/phase-is-step-108p-build-plan.md` (new) and this completion runbook only
   if a cross-reference needs correction
 - **Actions:** derive a `/build-phase`-compatible sequence from C2N's exact records and the Mandatory
@@ -1167,7 +1317,9 @@ secret.
   producer/consumer files, issue #162, `--reviewers deep`, falsifiable acceptance, and dependencies.
   Assign every C3 artifact, negative class, route-specific obligation, UAT replacement, and final
   certification gate exactly once; add explicit integration steps wherever one slice consumes
-  another's output. The final step freezes the integrated candidate and owns review plus the detached
+  another's output. Mark source edits and Git integration as coordinator-owned; mark native build,
+  signing, policy, driver, and host execution as guest-only. Split any parent-held elevated action
+  from the code that prepares its exact inputs. The final step freezes the integrated candidate and owns review plus the detached
   repo-root gate. Do not create a new Phase IS unit or issue.
 - **Exact gates:** both `/plan-review documentation/phase-is-step-108p-build-plan.md` and
   `/plan-wrap documentation/phase-is-step-108p-build-plan.md` report no Blocker; every technical choice is fixed
@@ -1195,12 +1347,22 @@ secret.
 - **Type:** orchestration / certification
 - **Issue:** #162
 - **Prerequisites:** C2P complete; supported C0 dispatch protocol; frozen route/source hashes and
-  approved-anchor-relative tool locators; physical identity admission remains owned by the C2P
-  implementation steps and their integrated candidate
+  approved-anchor-relative tool locators; sealed C2E receipt/R0 lineage; physical identity admission
+  remains owned by the C2P implementation steps and their integrated candidate
 - **Files:** `documentation/phase-is-step-108p-build-plan.md` plus the Step-108P rows in §4 selected
   and assigned by that subplan
 - **Actions:** execute the C2P subplan in dependency order, one independently reviewed producer slice
-  at a time. Integrate the complete packet in the phase plan and UAT. Replace the one comparator
+  at a time. Fresh Terra producers edit isolated coordinator worktrees; the parent sends exact
+  content-addressed candidates through the C2E connector and runs every native/security gate in the
+  sole writable R0 descendant. A fresh reviewer uses a separately restored serialized descendant;
+  the guest never classifies the verdict or pushes Git. Before any candidate user/kernel object is
+  signed or loaded, a separate no-history reviewer must PASS the immutable source, unsigned object,
+  compiler/input manifest, and source-to-object binding. Only the parent may then issue one exact-
+  hash signer-appliance grant; neither producer nor execution guest can reach the signer/key. After
+  kernel entry, treat guest-local events, HMAC, services, and files as kernel-controlled and use
+  external provider/signer facts or attended observations of the reviewed bytes for load-sensitive
+  claims. Integrate the complete packet in the phase
+  plan and UAT. Replace the one comparator
   placeholder, the 18 unconditional blockers, and the two receipt-pinned command tokens. Preserve
   redaction markers and the blank Step-109 observation/verdict cells. Bind the four roots, retained
   handles, file identities, final paths, link counts, receipt chain, environment/secrets, executable
@@ -1210,8 +1372,11 @@ secret.
   `skill-mesh/phase-is-candidate-lock/v1` from their actual identities/hashes and the C2N manifest.
   Seal and remotely verify it through §5's outside-worktree protocol. Repeat this lock plus affected
   review/gates after any candidate byte changes; C2N is not rewritten merely because C3 created its
-  declared outputs.
-- **Toolchain/host admission:** build with the C2N-selected MSVC using `/std:c++17` and compiler
+  declared outputs. At the end of the candidate lock, destroy the signer appliance and private leaf,
+  remotely verify their absence, and retain only public verification material plus the destruction
+  receipt. Any later candidate byte change requires a new signer/publisher/policy/R0 lineage and a
+  repeated source/object review; C4 never runs beside a live signing authority.
+- **Toolchain/host admission:** build in the sealed guest with the C2N-selected MSVC using `/std:c++17` and compiler
   include tracing, and link with verbose library tracing. Canonicalize and deduplicate the observed
   compiler/linker/`dumpbin`, SDK/WDK header/library/tool paths. Open both each C2N anchor and candidate
   through no-follow retained handles, resolve both final paths, and reject a reparse or physical target
@@ -1220,8 +1385,9 @@ secret.
   the pinned `dumpbin` over the launcher/driver/helper PE
   import, delay-import, headers, and load-configuration data; resolve each non-system dependency
   through the closed DLL search policy and bind the applicable KnownDLL/code-integrity policy facts.
-  Bind the exact signing certificate thumbprint/chain, `CiTool` policy identifier/hash/output, and
-  publisher/hash rule that admits the launcher before entry point. The candidate lock contains this
+  Revalidate the exact C2E/C2N signing certificate thumbprint/chain, `CiTool` policy
+  identifier/hash/output, and pre-existing publisher rule that admits the launcher before entry
+  point; then bind each final launcher/helper/driver hash and signature. The candidate lock contains this
   closure and rejects an added/missing import, header/library/tool, signer, policy, loader path, or
   byte change.
 
@@ -1243,11 +1409,17 @@ secret.
   before launch and preserve its skip count.
 - **Produces:** committed versioned packet, schemas, binaries/build recipe, tests, exact hashes,
   review verdicts, root-gate evidence, and a closed #162; no behavioral UAT observation
-- **Stop conditions:** any placeholder or blocker remains; an operator cell is prefilled; identity
+- **Stop conditions:** any C2E receipt/snapshot/policy/boot/connector drift; any coordinator
+  certificate, policy, Secure Boot, BCD, SDK/WDK, driver, or host-session mutation; any placeholder or
+  blocker remains; an operator cell is prefilled; identity
   can be re-established by path reopen; secret/policy/process rules are broader than the seven-mode
   matrix; the real profile becomes a target; publication precedes its attestation; cleanup includes
-  the evidence export; review or root gate fails
-- **Operator action:** none; route and code-integrity/signing prerequisites were frozen by C2/C2N
+  the evidence export; unsigned object/source binding lacks a fresh PASS; a producer/execution guest
+  can reach signing authority; guest-local post-kernel evidence is treated as independent security
+  proof; the signer appliance survives candidate lock; review or root gate fails
+- **Operator action:** no design choice, code authoring, or UAT observation. Any guest-admin action is
+  a pre-authored, hash-bound C2E/C2P operator atom with a canonical receipt; if the selected provider
+  cannot execute it without exposing credentials or arbitrary elevation to a producer, stop.
 - **Done when:** Phase IS Step 108P's Done-when is met and the exact immutable packet is ready for an
   attended run
 - **Depends on:** C2P
@@ -1258,10 +1430,13 @@ secret.
 - **Problem:** Prose tests do not prove real named-skill behavior or host delivery.
 - **Type:** operator
 - **Issue:** #153
-- **Prerequisites:** C3 complete; packet hashes and selected route re-verified; documented session
+- **Prerequisites:** C3 complete; packet hashes, C2E environment receipt/R0 lineage, and selected route
+  re-verified; signer appliance/private leaf destruction remotely verified; one attended writable R0
+  descendant; documented session
   working directory/Base directory binds each host to the intended scratch project; the two
   process-scoped credentials named in the quickstart are available through the certified broker
-- **Actions:** use the certified packet to create and bind the four roots. Build/install/reverify the
+- **Actions:** run only in the sealed disposable guest and use the certified packet to create and bind
+  the four roots. Build/install/reverify the
   selected-route bytes. Run D10 rows 1–5 serially, including the second-pass fixed point for row 3.
   Verify exact normalized Codex project-payload equality and the Claude import event while both
   instruction files remain locked to attested bytes. Record behavioral differences. Emit the
@@ -1273,14 +1448,17 @@ secret.
   two remotely hash-verified redacted records; exact final disposition for each disposable root
 - **Produces:** observations in the existing UAT, two remote redacted records, retained evidence
   export, and the Step-109 verdict; no code artifact
-- **Stop conditions:** host binds to the stale personal `plan-init`; session cwd/Base directory does
+- **Stop conditions:** any action targets the coordinator; C2E environment/policy/boot/snapshot drift;
+  host binds to the stale personal `plan-init`; session cwd/Base directory does
   not prove scratch-project binding; any real-profile write exceeds the certified Codex transport
-  exception; instruction bytes drift under lock; a packet defect requires code; remote reread fails;
-  cleanup cannot assign one exact disposition to a disposable root
+  exception; instruction bytes drift under lock; unsigned object/source binding lacks a fresh PASS;
+  a producer/execution guest can reach signing authority; guest-local post-kernel evidence is treated
+  as independent security proof; the signer appliance survives candidate lock; a packet defect
+  requires code; remote reread fails; cleanup cannot assign one exact disposition to a disposable root
 - **Operator action:** explicitly start the attended run, operate/observe the genuine Claude and
   Codex sessions, and accept or reject each human behavioral observation
 - **Done when:** the Phase IS Step-109 Done-when is met, evidence is remotely verified, the three
-  disposable roots have recorded dispositions, and the retained export is named
+  disposable roots have recorded dispositions, the retained export is named, and C2E.33 is unblocked
 - **Depends on:** C3
 - **Status:** BLOCKED BEFORE GRADING
 
@@ -1289,11 +1467,31 @@ secret.
 - **Problem:** Passing artifacts and UAT need one coherent status/issue/repository closeout.
 - **Type:** code / documentation administration
 - **Issues:** #152 and #162 should already be closed; close #153 and umbrella #143 after verification
-- **Prerequisites:** C4 PASS with complete evidence locators
-- **Actions:** update `plan.md`, the phase plan, README status prose, the UAT verdict, and issue
+- **Prerequisites:** C4 PASS with complete evidence locators; C2E.33 has destroyed the powered-off
+  guest OS/snapshot lineage and retained the verified encrypted run volume as a private artifact
+- **Actions:** verify C2E.33's redacted guest-destruction and retained-run-volume disposition plus its
+  provider-native C4-plus-120-day fail-safe deletion rule and later absence-verification owner. Prepare,
+  review, commit, push with expected-old protection, and remotely reread an immutable pre-closeout
+  candidate that records every final status change except that retention shortening and phase closeout
+  remain pending; do not close an issue yet. Bind that candidate plus the exact C4 PASS transition,
+  C2E.33 wait result, and remotely reread #143 disposition marker into the exact private parent-signed
+  C5 shortening-intent schema and proof profile defined by the C2E environment plan, with a fixed
+  `created_utc` and derived authorized deadline. Under C2E.4's dormant preauthorization, mint one new
+  non-exportable parent-only provider identity lasting at most one hour and scoped only to
+  `shorten-c5` plus independent reread for the exact retained volume/old rule. Atomically shorten the
+  deadline to the earlier of intent `created_utc` plus 90 days or the existing hard cap, verify the
+  updated schedule receipt, then revoke/reread absent both the JIT identity and preauthorization.
+  Destroy and independently reread absent the surviving control-receipt key, wait-result key, and
+  emergency-broker private authority, recording all three destruction receipts; preserve only public
+  verification material and the separately scoped read-only retention identity through its scheduled
+  absence proof.
+  Finally update `plan.md`, the phase plan, README status prose, the UAT verdict, and issue
   comments to the same 11-of-11/DONE state. Keep #159 open and deferred. Leave #163 closed as a
   historical checkpoint and point current readers to the final evidence rather than rewriting its
-  old snapshot. Run `/plan-wrap` against the reduced current documents, then `/repo-update`.
+  old snapshot. Run `/plan-wrap` against the reduced current documents, then `/repo-update`; the final
+  status-only commit/push binds the shortening, JIT-identity/preauthorization revocation, and control/
+  wait/emergency-broker destruction receipts and is the first point that may claim 11-of-11/DONE or
+  close issues.
 - **Exact gates:** regenerate the manifest if file inventory changed; `python -m pytest
   tests/package-integrity`; applicable link/reference gates; `git diff --check`; clean synchronized
   branch after the authorized commit/push. Do not repeat the two-hour root gate for observation-only
@@ -1301,13 +1499,18 @@ secret.
   executable UAT fences, or file inventory after C3's gate, establish a new candidate and rerun the
   affected full gate.
 - **Produces:** Phase IS marked 11 of 11 landed and certified DONE, final evidence index, closed
-  #153/#143, synchronized repository, and an explicit deferred #159
-- **Stop conditions:** missing remote evidence, inconsistent status surfaces, new unreviewed code,
-  stale generated artifacts, failing package/reference gate, or dirty/diverged repository
+  #153/#143, synchronized repository, an explicit deferred #159, no surviving runnable C2E guest
+  lineage, and one explicitly owned private external retained-run-volume locator referenced in Git
+  only by digest, owner, and deadline
+- **Stop conditions:** missing remote evidence, inconsistent status surfaces, expired/mismatched C5-
+  shortener preauthorization, identity scope/lifetime overrun, absent/failed retained-volume schedule
+  shortening, identity/preauthorization revocation, control/wait/emergency-broker destruction, or
+  later verification owner, new unreviewed code, stale generated
+  artifacts, failing package/reference gate, or dirty/diverged repository
 - **Operator action:** none; if a new publication target or scope is proposed, stop this stage and
   request separate authority
 - **Done when:** authoritative status, evidence, issues, and Git agree that Phase IS is complete
-- **Depends on:** C4
+- **Depends on:** C2E.33
 - **Status:** BLOCKED ON STEP 109
 
 ## 8. Risks and Open Questions
@@ -1315,7 +1518,7 @@ secret.
 | Item | Risk | Mitigation or owner |
 |---|---|---|
 | Build-step contract | Fresh context may exist while private verdict authority does not | C0 proves five properties separately and halts on uncertainty |
-| Route choice | A fresh agent may pick the cheaper route silently | #153 records exactly route 1 or 2; operator owns the choice |
+| C2E operator choices | A fresh agent may start execution, pick infrastructure, or provision silently | The Phase IS route is sealed as `core-uat-mode`; require separate C2E execution authorization, the Step-4 provider/license/cost/broker/retention decision, and the Step-29 provisioning wait |
 | Review provenance | Good object reviews may lack the required authenticated dispatch trail | Retain them as support and repeat under the C0-proven protocol when promotion is not proven |
 | Evidence drift | Issue bodies and checkpoint #163 name superseded UAT bytes | Recompute the Git blob/raw identity and prefer verified newer comments |
 | Gate circularity | Updating the baseline before comparison can make a run certify itself | Read owner, run, read sentinel, compare, then update |
@@ -1325,11 +1528,18 @@ secret.
 | Host binding | A stale personal skill can false-pass D10 row 2 | Bind by documented session cwd/Base directory and verify loaded source, not path alone |
 | Real-profile damage | The installed home is owned and may be junctioned | Use admitted scratch roots and retained handles; real profile is never a cleanup target |
 | Concurrent sessions | HEAD or evidence can move between checks | Re-run status/log/hash at each stage boundary and freeze immutable candidates |
+| Disposable environment | Missing WDK/signing/admission prerequisites may tempt mutation of this workstation | C2E seals a separate guest; any coordinator security/boot/tool mutation is a hard stop |
+| Guest authority | A producer with guest admin, signing, Git, or verdict authority could certify its own bytes | Parent controls single-use asymmetric elevation grants, Git integration, reviewer sidecar key, and final classification; the private signing leaf exists only in a separate non-snapshotted appliance with no execution-guest route, and accepts an exact object only after fresh source/object review; guest facts are inputs only |
+| Future-hash circularity | The final launcher does not exist when admission must be frozen | C2E/C2N freeze a publisher signer rule and C3 later binds final image hashes/signatures |
+| Environment drift | Snapshot, policy, boot state, signer, or connector can change between C2N and C4 | Bind C2E receipt/R0 lineage and revalidate before every guest-sensitive stage/action |
+| Evidence disposal | Destroying the guest can erase the retained export, violate the frozen UAT topology, or leave private bytes indefinitely | Put all four UAT roots under one common parent on one encrypted run volume; C2E.33 destroys runnable OS/snapshots only after remote rereads and retains that volume as private under provider-native automatic deletion plus later absence verification |
 | Implementation size | The Step-108P packet cannot fit one producer context without hiding integration seams | C2P derives a reviewed build-step-sized subplan after C2N freezes the exchanged contracts; C3 only orchestrates and certifies it |
 | Scope creep | #159 and the separate plan-init contract-owner defect are real but unrelated | Keep both outside this chain and give each a separate bounded change |
 
-The route choice is the one intentional operator-open question. C0 may expose a second operator
-choice only if this host is `UNSUPPORTED` or a canonical adapter repair needs authorization.
+The Phase IS route is no longer open: C2V/C2A sealed `core-uat-mode`. The intentional remaining
+operator choices are separate C2E execution authorization, Step 4's provider/license/cost/artifact/
+broker/retention selection, and Step 29's provisioning approval. A fresh executor may not infer any
+of them from the sealed route.
 
 ## 9. Testing Strategy
 
@@ -1338,6 +1548,7 @@ choice only if this host is `UNSUPPORTED` or a canonical adapter repair needs au
 | Gate | Purpose | May mark a code/certification stage DONE? |
 |---|---|---|
 | `python -m pytest tests/package-integrity` | Fast inventory, prose-contract, and packaging feedback | No |
+| C2E schema/safety negatives plus live guest substrate smoke | Prove the disposable environment, parent/guest authority split, publisher admission, boot state, and workstation non-mutation | Yes for C2E readiness only |
 | C2P plan-review, plan-wrap, and independent review | Prove Step 108P is decomposed into bounded slices with explicit integration ownership | No |
 | Focused `tests/phase-is-uat/**` and route-specific tests | Step-108P development and falsification | No |
 | PowerShell 5.1 parse enumeration | Syntax-check the complete PowerShell-bearing UAT set | No |
@@ -1362,7 +1573,11 @@ confusion.
 
 ### Completion interpretation
 
-C1 can close #152 after its candidate review and root gate. C3 can close #162 after its candidate
+C1 can close #152 after its candidate review and root gate. C2E can unblock C2N only after its
+reviewed receipt and remotely reread #162 seal; a provisioned but unsealed guest is not readiness.
+C3 can close #162 after its candidate
 review and root gate. C4 can close #153 without rerunning pytest because it consumes the immutable
 code packet and records observations; any code need returns to C3. C5 closes the phase only when the
-status surfaces and external evidence agree with those results.
+status surfaces and external evidence agree with those results and C2E.33 has disposed the runnable
+guest lineage while retaining the encrypted run volume under an explicit private-artifact owner and
+deadline.
