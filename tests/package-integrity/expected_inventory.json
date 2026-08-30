@@ -7,8 +7,8 @@
     "claude": 57,
     "gpt": 54,
     "codex": 54,
-    "local_capable": 24,
-    "sub_agent": 17,
+    "local_capable": 23,
+    "sub_agent": 18,
     "vision": 2,
     "filesystem": 57
   },
@@ -145,7 +145,6 @@
     "review-proof",
     "review-uat",
     "skill-eval-setup",
-    "user-debug",
     "user-draft",
     "user-gateway",
     "user-orient",
@@ -172,6 +171,7 @@
     "tier-escalate",
     "tier-offload",
     "user-brainstorm",
+    "user-debug",
     "user-learn"
   ],
   "vision": [
@@ -1136,9 +1136,10 @@
     {
       "name": "user-debug",
       "status": "portable",
-      "local_capable": true,
+      "local_capable": false,
       "capabilities": [
-        "filesystem"
+        "filesystem",
+        "sub-agent"
       ],
       "migration": {
         "legacy_core": ".claude/skills-gpt/user-debug/SKILL-core.md",

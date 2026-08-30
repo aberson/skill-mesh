@@ -73,8 +73,8 @@
     "claude": 57,
     "gpt": 54,
     "codex": 54,
-    "local_capable": 24,
-    "sub_agent": 17,
+    "local_capable": 23,
+    "sub_agent": 18,
     "vision": 2,
     "filesystem": 57
   },
@@ -1390,9 +1390,10 @@
         "codex": "skills/user-debug/providers/codex.md"
       },
       "capabilities": [
-        "filesystem"
+        "filesystem",
+        "sub-agent"
       ],
-      "local_capable": true,
+      "local_capable": false,
       "migration": {
         "legacy_core": ".claude/skills-gpt/user-debug/SKILL-core.md",
         "legacy_claude_launcher": ".claude/skills/user-debug/SKILL.md",

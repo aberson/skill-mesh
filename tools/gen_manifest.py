@@ -149,7 +149,7 @@ LOCAL_CAPABLE = {
     "lesson-harvest", "memory-distill", "observatory-doctor", "plan-feature",
     "plan-init", "plan-merge", "plan-review", "plan-trim", "plan-wrap",
     "repo-init", "repo-sync", "repo-update", "review-proof", "review-uat",
-    "skill-eval-setup", "user-debug", "user-draft", "user-gateway",
+    "skill-eval-setup", "user-draft", "user-gateway",
     "user-orient", "user-pm", "user-shakedown", "user-uat", "user-walkthrough",
     "user-wrap",
 }
@@ -184,6 +184,7 @@ SUB_AGENT = {
     "tier-escalate",     # fresh-context fan-out arms
     "tier-offload",      # fresh-context task API required
     "user-brainstorm",   # "One background sub-agent per investigation file"
+    "user-debug",        # Step 2 and Option 4 require independent fresh-context arms
     "user-learn",        # "One background sub-agent per file"
 }
 

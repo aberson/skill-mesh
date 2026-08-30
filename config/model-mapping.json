@@ -355,8 +355,8 @@
       "default_model": "claude",
       "claude": true,
       "gpt": true,
-      "local": true,
-      "notes": "Ported - shared core + GPT/Claude wrappers"
+      "local": false,
+      "notes": "Requires independent fresh-context diagnosis arms; local fallback unavailable"
     },
     "user-draft": {
       "default_model": "claude",

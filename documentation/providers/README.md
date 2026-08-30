@@ -29,9 +29,9 @@ values are `portable` and `provider-native`.
 
 | Capability class | Claude | GPT/Copilot | Codex | Local (`code-30b`) |
 |---|---|---|---|---|
-| Portable skills (54) | yes | yes | an adapter for all 54; agent-dependent behavior is capability-conditioned. `build-step` supports a proven fresh-context host, while an ordinary CLI host halts `required_tool_missing` — see [codex.md](codex.md) § Known limitations | 24 of 54 (`local_capable`) |
+| Portable skills (54) | yes | yes | an adapter for all 54; agent-dependent behavior is capability-conditioned. `build-step` and `user-debug` support a proven fresh-context host, while an ordinary CLI host halts `required_tool_missing` — see [codex.md](codex.md) § Known limitations | 23 of 54 (`local_capable`) |
 | Vision skills (2: judge-ui, judge-motion) | yes | judge-ui only (judge-motion is a native exclusion) | judge-ui adapter only; its independent vision-judge dispatch halts with `required_tool_missing` | no |
-| `sub-agent` fan-out skills (17) | yes | yes, parent-owned actions (15 GPT-portable; context-slim + judge-motion are native exclusions) | the same 15 adapters: `build-step` uses proven fresh-context dispatch plus separate opaque parent state and parent-only verdict service when phase-run; 11 current adapters halt; `goblin-do` and `goblin-suggest` use their documented `claude -p` CLI fallback; `citation-sweep` uses its current serial mapping | no |
+| `sub-agent` fan-out skills (18) | yes | yes, parent-owned actions (16 GPT-portable; context-slim + judge-motion are native exclusions) | the same 16 adapters: `build-step` uses proven fresh-context dispatch plus separate opaque parent state and parent-only verdict service when phase-run; `user-debug` separately requires proven fresh siblings for Step 2 and Option 4; 11 current adapters halt; `goblin-do` and `goblin-suggest` use their documented `claude -p` CLI fallback; `citation-sweep` uses its current serial mapping | no |
 | Claude-native exclusions (3) | yes | **no adapter** | **no adapter** | no |
 
 ### Claude-native exclusions

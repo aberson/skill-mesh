@@ -210,15 +210,19 @@ its own reported result, never a silently degraded one.
 ## Known limitations
 
 - **Agent-dependent behavior varies by host and adapter.** On an ordinary CLI host
-  without fresh-context dispatch, the 13 previously enumerated paths still halt at
+  without fresh-context dispatch, the currently audited paths halt at
   their required isolated arm. On a capable embedded host, `build-step` runs only
   after its explicit no-history probe passes; `build-phase` additionally requires a
   fresh per-step opaque parent HMAC state and a usable caller-scoped parent-only verdict
   service. The other 12 adapters from that historical set
   (`review-deep`, `review-gauntlet`, `skill-iterate`, `skill-evolve`, `test-prune`,
   `tier-escalate`, `tier-offload`, `judge-ui`, `research-prospect`, `user-brainstorm`,
-  `user-debug`, and `user-learn`) retain their current mappings pending their own
-  capability audits. This repair does not silently generalize one proven mapping.
+  and `user-learn`) retain their current mappings pending their own capability audits.
+  `user-debug` is capability-conditioned: its parent directly dispatches separately
+  probed fresh siblings for Step 2 and Option 4, or visibly halts
+  `required_tool_missing`; the child receives only symptom, repro, and bounded
+  read-only primary-source scope. This repair does not silently generalize one
+  proven mapping.
 - **Visual verdicts are unreachable, so `--ui` degrades downstream.** `judge-motion`
   is Claude-native and absent from this profile, and `judge-ui` halts at its
   vision-judge dispatch, so `user-uat --ui` surfaces `required_tool_missing` naming

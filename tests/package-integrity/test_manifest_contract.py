@@ -120,12 +120,10 @@ def test_counts_match_fixture_and_array():
     # here without a matching skills/*/providers/codex.md on disk is caught by
     # gen_manifest.py's CODEX-vs-tree guard.
     assert derived["codex"] == 54
-    # local_capable is UNCHANGED at 24: none of the seven Step 10 promotions has a
-    # local-capable row in the legacy model-mapping table, so none was declared (see
-    # gen_manifest.py's LOCAL_CAPABLE note). sub_agent gains exactly one --
-    # citation-sweep, whose core dispatches one isolated per-artifact review worker.
-    assert derived["local_capable"] == 24
-    assert derived["sub_agent"] == 17
+    # user-debug requires independent fresh-context diagnosis arms, so it is no
+    # longer eligible for text-only local fallback and joins the sub-agent set.
+    assert derived["local_capable"] == 23
+    assert derived["sub_agent"] == 18
     assert derived["vision"] == 2
     assert derived["filesystem"] == 57
 
