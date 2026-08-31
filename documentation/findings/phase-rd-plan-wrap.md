@@ -1,43 +1,42 @@
 # Phase RD clean-context wrap
 
 Plan reviewed: `documentation/phase-rd-review-deep-restoration-plan.md`
+
+Companion runbook:
+`documentation/phase-rd-review-deep-activation-runbook.md`
+
 Mode: `--no-autofix`
+
 Date: 2026-08-31
 
-Completion gate: no consistent completion markers found -- running full check (fail-safe default).
+Completion gate: no consistent completion markers found; the full fail-safe check ran.
 
-§1 Schemas and data structures — pass
-§2 Identifiers — pass
-§3 Acronyms and tool names — pass
-§4 Stack decisions with rationale — pass
-§5 Unresolved decisions — pass
-§6 API contracts — N/A: CLI/distribution change, no backend API
-§7 Development process — pass
-§8 Quickstart / how to run — pass
-§9 Referenced external files — pass
-§10 Scope and constraints — pass
-§11 Operator/code step-shape integrity (Blocker if violated) — pass
-§12 Conditional steps must declare a Condition: predicate (Blocker) — pass
-§13 Substrate-smoke step present when the plan touches deployment seams (Significant Gap) — pass:
-the authoritative Phase IS C3/C4 disposable-host stages own live acceptance; this prerequisite bridge
-forbids real-profile and host-security mutation and does not claim substrate acceptance.
+## Results
 
-## Blocker
+1. Schemas and data structures — pass.
+2. Identifiers — pass.
+3. Acronyms and tool names — pass.
+4. Stack decisions with rationale — pass.
+5. Unresolved decisions — pass. The blank Step 4 issue is the explicit pre-`repo-sync` state and
+   execution rejects it until backfilled.
+6. API contracts — N/A; no product backend API.
+7. Development process — pass.
+8. Quickstart / how to run — pass.
+9. Referenced external files — pass.
+10. Scope and constraints — pass.
+11. Operator/code step-shape integrity — pass.
+12. Conditional-step predicate rule — N/A; no conditional steps.
+13. Deployment-seam smoke — pass; Step 4 owns the disposable rehearsal and separately approved
+    active-profile proof.
 
-None.
+Every rehearsal, approval, and seal field has an executable producer, validator, publisher, and
+reread. The active-profile approval format is exact, the fresh child has no verdict authority, and
+all protected Phase IS blobs retain their pinned identities.
 
-## Gap
+Blockers: 0
 
-None.
+Gaps: 0
 
-## Minor
-
-None. Blank step issue numbers are the expected pre-repo-sync state and are backfilled before
-build-phase.
-
-The plan defines the exact trusted source and donor boundaries, package/index/ledger/WAL ownership
-model, derivative provenance rule, build/test commands, review authority, failure recovery, issue
-lifecycle, forbidden host surfaces, and the C2E continuation boundary. A fresh model can act without
-conversation history.
+Minors: 0
 
 Verdict: READY
