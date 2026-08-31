@@ -248,7 +248,7 @@ with `required_tool_missing` before any developer dispatch.
 - **Problem:** The reviewed canonical repair does not update the generated `review-deep` package in
   the active Codex discovery home, so current consumers still cannot run their mandatory deep lane.
 - **Type:** wait
-- **Issue:** #
+- **Issue:** #181
 - **Existing context:** `Type: operator` is deliberately not used here: build-phase defers a
   non-code-producing operator step into its phase-end UAT bundle and continues. `Type: wait` is the
   required serialization barrier that halts after the reviewed code steps and leaves activation to
