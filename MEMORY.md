@@ -5,10 +5,13 @@
 - Phase IS C2V is sealed at `09e7f4d`; C2A is sealed at `2f6c7b8`. Phase RD now owns the
   prerequisite `review-deep` restoration before Phase IS can resume at C2N.
 - Phase PROD is the operator-authorized current detour. Its authority is
-  `documentation/production-toolchain-separation-plan.md`, with umbrella #183 and Steps 1-6 in
-  #184-#189. No production directory or active-profile mutation existed when planning completed.
-- Phase PROD Steps 1-4 use an explicit, plan-local `--reviewers code` bootstrap exception; Step 5 is
-  an attended Codex-only activation of the exact Step-4 artifact. This does not restore or waive
+  `documentation/production-toolchain-separation-plan.md`, with umbrella #183 and seven serialized
+  steps. #184/#185 remain Steps 1/2; #190 is the dedicated activation-engine Step 3;
+  #186-#189 become Steps 4-7. No production directory or active-profile mutation existed when
+  planning completed.
+- Phase PROD revised Steps 1-5 use the fixed-scope lineage of the original Steps 1-4
+  `--reviewers code` bootstrap exception; Step 6 is an attended Codex-only activation of the exact
+  Step-5 artifact. This does not restore or waive
   `--reviewers deep` for any other build.
 - Phase CL — Skill catalog lifecycle safety is planned under umbrella #167 with step issues #168–#176. Its authority is `documentation/skill-catalog-lifecycle-plan.md`.
 - Phase CL implementation is parked until Phase IS C5 (#143/#153) and Phase CP M3 plus closeout (#132) are complete.
@@ -23,7 +26,16 @@
 
 ## Production toolchain decisions
 
-- Production releases live under `C:\Users\abero\prod`; executable code, the live development
+- Phase PROD Step 1 is declarative-only. Policy, schemas, and pure consistency checks never mint a
+  `Validated*`, `Authorized*`, or other caller-constructible runtime capability. Step 2 independently
+  verifies manager/Git/tool/filesystem authority, Step 3 owns the disposable activation transaction
+  and exact closure comparator, Step 5 certifies real release and executed evidence, and attended
+  Step 6 reopens live active-state and rollback pre-images immediately before mutation.
+- The first #184 build-step exhausted 3/3 review iterations and merged nothing. Its preserved
+  worktree is diagnosis/test-idea evidence only; a fresh implementation must be reauthored from the
+  amended plan rather than copied wholesale.
+- Production releases live under runtime-resolved `<prod-root>` (initial host shape
+  `%USERPROFILE%\prod`); executable code, the live development
   workspace, and mutable production data are separate roots.
 - Release snapshots come from exact pushed Git objects in independent no-hardlink clones, never by
   recursively copying dirty working trees or using linked worktrees.

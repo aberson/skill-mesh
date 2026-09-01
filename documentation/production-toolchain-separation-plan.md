@@ -1,19 +1,31 @@
 # Phase PROD — Stable production utility toolchain
 
-**Status:** AUTHORIZED FOR PLANNING AND AUTOMATED BUILD. Steps 1–4 may run through fresh
-Terra `build-step` contexts with the operator-authorized code-review bootstrap exception below.
-Step 5 is an attended production cutover and may use only the exact retained candidate produced by
-Step 4. Step 6 runs after that cutover. Phase RD is paused while a Phase PROD build-step is active;
+**Status:** AUTHORIZED FOR PLANNING AND AUTOMATED BUILD. Revised Steps 1–5 may run through fresh
+Terra `build-step` contexts under the fixed-scope lineage of the operator-authorized code-review
+bootstrap exception below. Step 6 is an attended production cutover and may use only the exact
+retained candidate produced by Step 5. Step 7 runs after that cutover. Phase RD is paused while a
+Phase PROD build-step is active;
 its preserved #178 worktree is evidence and salvage, not a merge source.
 
-**Planning gates:** `plan-review --autofix` READY and `plan-wrap --autofix` READY on 2026-09-01;
-both were rerun after the self-containment corrections recorded in Sections 2.4–2.6.
+**Path notation:** `<dev-root>` and `<prod-root>` are runtime-resolved absolute roots. Their initial
+host shapes are `%USERPROFILE%\dev` and `%USERPROFILE%\prod`; committed contracts never bind a
+private account name. `<skill-mesh-root>` means `<dev-root>\skill-mesh`.
+
+**Planning gates:** the original `plan-review --autofix` and `plan-wrap --autofix` READY verdicts
+were superseded after the first Step-1 build-step exhausted 3/3 iterations and exposed an
+authority-scope contradiction. On 2026-09-01 the operator selected the declarative-only repair:
+Step 1 defines record grammar and pure consistency only, while revised Steps 2, 3, 5, and 6
+independently verify the runtime authorities available at their boundaries. Fresh plan-review and
+plan-wrap returned READY on content SHA-256
+`84f3c9c725836d7df42d05b88419542840940d7d5315efb24f3fdf8bc2d7983b`; repo-sync then created
+Step-3 issue #190, mechanically filled that Issue field, and updated #183–#189 to the seven-step
+topology. The next implementation must be a new Step-1 worktree from checkpointed main.
 
 ## 1. What This Feature Does
 
 Create a stable production copy of Skill Mesh and the utility portfolio under
-`C:\Users\abero\prod` so ordinary project work consumes commit-pinned, reviewed utility code while
-development continues under `C:\Users\abero\dev`. Production code, the live development workspace,
+`<prod-root>` so ordinary project work consumes commit-pinned, reviewed utility code while
+development continues under `<dev-root>`. Production code, the live development workspace,
 and mutable utility state become separate authorities. A new release is staged beside the active
 release, verified, and then selected through an explicit environment/profile cutover with a retained
 rollback release.
@@ -31,11 +43,11 @@ passes, projects whose plans require `--reviewers deep` remain blocked even afte
   `52af1d7ee19ff3bafd00d96d269b8ea1d93891bd`, clean and `0/0` against the existing local
   `origin/main` tracking ref. A builder must reverify and record the actual source identities before
   staging; this orientation SHA is not a release selector.
-- `C:\Users\abero\dev` is itself the `aberson/coding-root` Git repository. Its working tree contains
+- `<dev-root>` is itself the `aberson/coding-root` Git repository. Its working tree contains
   unrelated tracked and untracked changes, so recursively copying it would mix canonical files,
   nested repositories, task state, caches, evidence, and unfinished work.
 - The central portfolio registry is
-  `C:\Users\abero\dev\.claude\observatory\registry.toml`. Its 13 `category = "utility"`
+  `<dev-root>\.claude\observatory\registry.toml`. Its 13 `category = "utility"`
   projects are the default production membership authority. `dev-observatory` and `switchboard`
   are tracked subprojects of `coding-root`; the other registered utilities are nested repositories.
 - Existing installed Skill Mesh cores still contain relative utility invocations such as
@@ -54,11 +66,11 @@ passes, projects whose plans require `--reviewers deep` remain blocked even afte
 
 | Authority | Initial value | Meaning |
 |---|---|---|
-| Production base | `C:\Users\abero\prod` | Stable releases, retained artifacts, cutover records, and backups |
+| Production base | `<prod-root>` | Stable releases, retained artifacts, cutover records, and backups |
 | Production utility code | `%DEV_UTILITIES_ROOT%` = one exact `<prod>\releases\<bundle-id>\workspace` | Executable code and per-release dependency environments |
-| Live development workspace | `%DEV_WORKSPACE_ROOT%` = `C:\Users\abero\dev` | Registry, project repositories, and targets utilities inspect or update |
+| Live development workspace | `%DEV_WORKSPACE_ROOT%` = `<dev-root>` | Registry, project repositories, and targets utilities inspect or update |
 | Persistent utility data | `<prod>\data` plus existing externally configured stores | Ledgers, indexes, databases, telemetry, credentials, and run history; never cloned into a release |
-| Active Skill Mesh profile | Existing provider discovery home and ownership ledger | Updated only by the reviewed installer from Step 4's retained distribution |
+| Active Skill Mesh profile | Existing provider discovery home and ownership ledger | Updated only by the reviewed installer from Step 5's retained distribution |
 
 `<bundle-id>` has the exact form `prod-YYYYMMDDTHHMMSSZ-<skill-mesh-sha12>`, where the timestamp is
 UTC and `<skill-mesh-sha12>` is the first 12 lowercase hexadecimal characters of the selected Skill
@@ -112,6 +124,7 @@ gate, and an explicit policy change reviewed through its own build step.
 | `embedded_inactive_projects` | array of strings | exactly `pocket-relay` |
 | `deferred_projects` | array of objects | unique `slug`, `reason_code` enum `NO_REMOTE_AND_PLACEHOLDER` / `DOCUMENTATION_ONLY` / `NO_REMOTE_AND_NOT_IMPLEMENTED`, and non-empty human-readable `evidence` |
 | `repository_overrides` | object | project slug to repository-owner slug for shared repositories; includes `dev-observatory` and `switchboard` → `coding-root` |
+| `repository_sources` | ordered array | exact 14-owner declarative allowlist: owner slug, checkout path, canonical remote identity, represented project slugs, and allowed upstream ref; `measure-twice` is fixed to `origin/master` |
 | `additionalProperties` | schema rule | false at every object boundary |
 
 `bundle.json` is generated inside an absent release directory and validated against
@@ -144,6 +157,32 @@ ordered install, inspect, environment, fresh-process smoke, and rollback actions
 object rejects additional properties, every action uses an argument array, and no field contains a
 credential or command string for shell evaluation.
 
+These four records have a strict authority boundary. `production-portfolio-policy` is normative
+declarative policy. `bundle.json`, `current.json`, and `activation-plan.json` are declarative records
+and evidence indexes, not capabilities. Schema or pure-consistency validation proves only grammar and
+relationships derivable from supplied record values. Every runtime consumer must reopen and
+independently verify the Git objects, filesystem objects, exact bytes, executed evidence, active
+state, and rollback pre-image it consumes. No Step-1 return value, `validated` token, record hash, or
+matching caller-supplied bytes may substitute for that verification. Passing activation-plan schema
+validation never authorizes execution.
+
+### 2.4.1 Declarative and runtime authority ownership
+
+| Claimed fact | Step 1 records or checks | First independent owner | Required later recheck |
+|---|---|---|---|
+| Canonical Git remote and allowed ref | Exact owner allowlist and lexical ref shape | Step 2 | Fetch/clone the allowed remote/ref, prove reachability and selected commit/tree/blob identities; Step 5 repeats on the real release |
+| Installer and inspector identity | Relative path, role, and digest field grammar | Step 2 | Derive paths and bytes from the verified Skill Mesh Git objects; Step 6 reopens and hashes the retained scripts before use |
+| Gate command | Closed project/role/argument-array declaration | Step 2 | Construct complete non-shell argv from the real supported interface |
+| Gate execution and evidence | Exit/evidence/hash fields as declarations | Step 5 | Execute the exact argv, capture the exit sentinel and exact evidence bytes, require one unique row per active project, and hash reopened evidence |
+| Bundle predecessor | Nullable ID and internal non-self grammar | Step 5 | Read and hash the actual pre-stage selector, or prove its absence, and derive `previous_bundle_id` |
+| Current predecessor lineage | Joint-null/present record shape | Step 6 | Compare the live preflight selector with the certified predecessor and sibling retained release |
+| Retained distribution closure | Provider/checksum/closure field grammar | Step 5 | Build with `-Provider all`, reproduce and hash every retained output, then disposable-install those exact bytes; Step 6 rehashes before install |
+| Release filesystem identity | Lexical path grammar | Step 2 | Prove final-path, reparse, case/alias, containment, and no-hardlink behavior on real disposable objects; Step 5 repeats on the real release |
+| Active-home and backup identity | Lexical path fields | Step 6 | Re-resolve the real home, ledger, backup roots, parents, and targets immediately before mutation |
+| Activation operations | Complete argv or closed typed-operation grammar | Step 2 | Step 3 builds and integration-tests the executable engine against the real installer/inspector interfaces; Step 5 freezes and Step 6 revalidates it |
+| Exact active profile closure | Desired closure fields | Step 3 | Build the retained-dist/ledger/installed-file comparator against disposable homes; Step 6 reopens real bytes and runs it immediately before and after mutation |
+| Rollback pre-image | Typed rollback descriptor | Step 3 | Prove exact disposable pre-image restoration; Step 6 opens and hashes the actual old environment, selector, ledger, owned files, and restorable distribution immediately before mutation |
+
 ### 2.5 Toolchain and commands
 
 - Install/dependency preparation: Python projects use `uv sync --frozen`; `on-brand` uses
@@ -162,7 +201,7 @@ credential or command string for shell evaluation.
 - Full test gate: repository-root `python -m pytest` with separately captured exit status.
 - This is a one-shot release/cutover pipeline, not a daemon or scheduled process. The long-running
   observation trigger does not fire; the real producer→consumer smoke and attended substrate cutover
-  are still mandatory in Steps 4 and 5.
+  are still mandatory in Steps 5 and 6.
 
 ### 2.6 Terms, prerequisites, and execution quickstart
 
@@ -185,27 +224,27 @@ Required local tools are Git, authenticated GitHub CLI (`gh`) for plan/issue adm
 Python 3.12, `pytest`, `uv` (Python project/dependency runner), Node.js matching `on-brand`'s committed
 engine range, npm, and Windows PowerShell 5.1 or PowerShell 7. A missing tool stops before production
 mutation; this phase performs no workstation-wide dependency installation. Require at least 5 GiB free
-under `C:\Users\abero\prod` before Step 4.
+under `<prod-root>` before Step 5.
 
 Fresh-context execution sequence:
 
-1. In `C:\Users\abero\dev\skill-mesh`, run `git status --short`, `git rev-parse HEAD`, and
+1. In `<skill-mesh-root>`, run `git status --short`, `git rev-parse HEAD`, and
    `git rev-list --left-right --count HEAD...origin/main`; stop on unexpected dirt/divergence.
 2. Read this plan in full and reverify the external registry/project identities named in Section 2.3.
-3. After plan-review, plan-wrap, and repo-sync are recorded, run automated Steps 1–4 in order through
-   `/build-phase --plan documentation/production-toolchain-separation-plan.md --steps 1,2,3,4`, or
+3. After plan-review, plan-wrap, and repo-sync are recorded, run automated Steps 1–5 in order through
+   `/build-phase --plan documentation/production-toolchain-separation-plan.md --steps 1,2,3,4,5`, or
    run the next single step through `/build-step` with that step's exact Problem, Issue, Done-when,
    Flags, and plan-step reference.
-4. Stop before Step 5 unless Step 4's retained activation plan and bundle verify byte-for-byte. Step 5
+4. Stop before Step 6 unless Step 5's retained activation plan and bundle verify byte-for-byte. Step 6
    is attended even though the operator has authorized the production detour.
-5. After Step 5 passes, execute Step 6 and hand Phase RD #178 to a fresh Terra context based on the
+5. After Step 6 passes, execute Step 7 and hand Phase RD #178 to a fresh Terra context based on the
    actual new `main`.
 
 ## 3. Scope
 
 ### In scope
 
-- A versioned, commit-pinned production workspace under `C:\Users\abero\prod\releases`.
+- A versioned, commit-pinned production workspace under `<prod-root>\releases`.
 - A committed policy, strict schemas, fail-closed planner/stager/verifier, and external evidence.
 - Independent Git clones created with no shared object hardlinks; no linked worktrees.
 - Exact separation of utility executable code, live workspace, and mutable state.
@@ -241,15 +280,17 @@ Fresh-context execution sequence:
 | `schemas/production-bundle-v1.schema.json` | create | Bind release identity, source trees, retained distribution, and gate evidence | No existing production bundle record found |
 | `schemas/production-current-v1.schema.json` | create | Bind active/previous selection and rollback evidence | No existing production selector found |
 | `schemas/production-activation-plan-v1.schema.json` | create | Bind the sole attended host-mutation input and exact rollback actions | No existing production activation record found |
+| `tools/production_record_contract.py` | create | Strictly parse policy/records, reject duplicate JSON members, and perform reason-coded declarative consistency checks without minting runtime authority | No declarative production-record helper exists; the rejected `ValidatedBundle` design is evidence only and must not be reused |
+| `CLAUDE.md` | modify narrowly | Document the `jsonschema` dependency used by the strict record validator and its loud-at-call failure contract | Current dependency section names PyYAML as the only third-party Python dependency |
 | `tools/production-toolchain.py` | create | Implement `plan`, `stage`, `verify`, and activation-plan generation with argument-array subprocesses | `tools/` inventory has build/install/release scripts but no portfolio bundler |
 | `tools/activate-production-toolchain.ps1` | create | Perform the attended, preflighted environment/profile switch and fail-closed rollback | Existing installer is `tools/install-skill-mesh.ps1`; no production-root activator exists |
 | `_shared/utility-roots.md` | create | One owner for production-code versus live-workspace resolution | Existing generated shared-payload mechanism verified in `tools/build-distributions.ps1`; no utility-root shared contract exists |
-| Existing utility-calling `skills/**/core.md` and provider adapters | modify | Replace bare relative executable lookup with the shared two-root contract while preserving target-root semantics | `rg` found active command sites for dev-observatory, citation-needed, b2_project_goblin, and switchboard; Step 3 must capture an exact before/after inventory and reject newly unclassified command sites |
+| Existing utility-calling `skills/**/core.md` and provider adapters | modify | Replace bare relative executable lookup with the shared two-root contract while preserving target-root semantics | `rg` found active command sites for dev-observatory, citation-needed, b2_project_goblin, and switchboard; Step 4 must capture an exact before/after inventory and reject newly unclassified command sites |
 | `documentation/providers/README.md`, `documentation/providers/claude.md`, `documentation/providers/gpt.md`, `documentation/providers/codex.md` | extend | Explain production root support, fresh-process inheritance, and unchanged provider authority | Files exist and are current provider documentation surfaces |
 | `tests/production-toolchain/**` | create | Policy/schema, path safety, Git identity, no-copy, stage/verify, resolver, activation-plan, and rollback negatives | No production-toolchain test root exists |
 | `tests/package-integrity/expected_inventory.json`, focused `tests/package-integrity/**`, and `tests/distributions/**` | extend only where required | Record the new shared payload leaf, prove it ships in every relevant provider profile, and prevent direct relative calls from reappearing | Existing suites own generated closure and installed distribution behavior; shared assets are emitted transitively from canonical references |
 | `README.md`, `plan.md`, `documentation/architecture.md` | modify narrowly | Publish the operating model and record the follow-up needed to supersede the remaining one-root assumption | Existing architecture separates canonical/generated/installed surfaces; the cross-repository utility-hookup plan remains a read-only dependency during this build and is updated only in its owning repository |
-| `C:\Users\abero\prod\**` | external create/mutate | Hold releases, data boundary, backups, retained artifacts, evidence, and selector | Path was absent during discovery; C: had sufficient free capacity |
+| `<prod-root>\**` | external create/mutate | Hold releases, data boundary, backups, retained artifacts, evidence, and selector | Path was absent during discovery; the selected volume had sufficient free capacity |
 | Active Skill Mesh home and user environment | attended mutation | Install the exact retained candidate and select production code/live workspace roots | Existing installer/inspector own profile bytes; fresh-process boundary is already required by utility-hookup Step 5 |
 
 ## 5. New Components
@@ -261,6 +302,16 @@ which projects share a repository, and which known candidates are deferred. It d
 commits; each generated `bundle.json` does that. The stager compares the live registry enumeration to
 the policy before creating a release and reports added, missing, category-drifted, and unresolvable
 entries.
+
+### Declarative record contract
+
+`tools/production_record_contract.py` is pure and non-mutating. It strictly decodes JSON with
+duplicate-member rejection, validates all four Draft 2020-12 schemas through `jsonschema`, parses the
+real singular `[[project]]` registry shape with `tomllib`, and reports stable reason codes for
+membership, disposition, allowlist, grammar, lexical-path, and internal-coherence defects. It may
+return ordinary declared values for display, but no `Validated*`, `Authorized*`, opaque token, or
+other object accepted later as proof. Missing `jsonschema` fails loudly when validation is called;
+the gate never skips or aborts unrelated test collection.
 
 ### Production bundle manager
 
@@ -308,7 +359,7 @@ collisions fail closed for manual recovery.
 
 ### PROD-D1 — sibling production root
 
-Use `C:\Users\abero\prod`, not a directory inside `dev`. The development root is itself a dirty Git
+Use `<prod-root>`, not a directory inside `<dev-root>`. The development root is itself a dirty Git
 repository, and nesting production beneath it would pollute status, backup, and discovery boundaries.
 
 ### PROD-D2 — immutable releases, not editable copies or linked worktrees
@@ -345,92 +396,187 @@ process's executable root auditable. Rollback restores the prior exact environme
 
 ### PROD-D7 — retain the tested distribution
 
-Step 4 retains the exact all-provider Skill Mesh distribution that passed disposable install,
-reinstall, inspect, and uninstall. Step 5 installs those bytes; it never rebuilds during activation.
+Step 5 retains the exact all-provider Skill Mesh distribution that passed disposable install,
+reinstall, inspect, and uninstall. Step 6 installs those bytes; it never rebuilds during activation.
 
-### PROD-D8 — code-review bootstrap exception
+### PROD-D8 — fixed-scope code-review bootstrap exception
 
-Steps 1–4 use `--reviewers code` because the mandatory deep-review package is the unavailable
-dependency this detour is designed to isolate from ordinary work. Each step still requires fresh
-producer/reviewer contexts, all code-review lenses, the parent-only deterministic verdict, zero
-High/Medium findings, focused gates, and the full repository gate before activation. This exception
-does not authorize any other plan to replace `--reviewers deep` with `code`.
+The operator authorization attaches only to the implementation scope of original pre-split Steps
+1–4. The Step-2 sizing split adds no behavior or authority: original Step 2 is represented by revised
+Step 2 (the four-command Python bundle manager) and revised Step 3 (the PowerShell activation,
+closure-comparison, and rollback engine). The same fixed scope is therefore represented after
+renumbering by revised Steps 1–5: record contract, bundle manager, activation engine, utility
+routing, and real-release certification. Each uses `--reviewers code` because the mandatory deep-
+review package is the unavailable dependency this detour is designed to isolate from ordinary work,
+and each still requires fresh producer/reviewer contexts, all code-review lenses, the parent-only
+deterministic verdict, zero High/Medium findings, focused gates, and the repository-root
+`python -m pytest` DONE gate. This decomposition is not authority for new behavior and does not
+cover revised Step 6, revised Step 7, Phase RD, or any other plan.
 
 ### PROD-D9 — one active mutation owner
 
-Only Step 5 may change user environment values or the active Codex Skill Mesh profile. Steps 1–4 use
-new release directories and disposable homes only. Step 5 invokes the existing installer and
+Only Step 6 may change user environment values or the active Codex Skill Mesh profile. Steps 1–5 use
+new release directories and disposable homes only. Step 6 invokes the existing installer and
 inspector with exact provider `codex`; it never copies profile files directly or mutates live Claude
 or GPT profiles.
 
 ### PROD-D10 — Phase RD resumes from new main, not by blind merge
 
-No Phase PROD build-step runs concurrently with #178. After Step 5, inspect the preserved #178
+No Phase PROD build-step runs concurrently with #178. After Step 6, inspect the preserved #178
 worktree, classify its still-useful commits and uncommitted evidence against the new main, and open a
 fresh Terra build-step from that actual main with the classified evidence in its prompt. Never merge
 or rebase the preserved branch wholesale.
+
+### PROD-D11 — declarations never mint runtime authority
+
+Step 1 is the normative owner of policy and closed record grammar only. It cannot authenticate
+producer-supplied hashes, bytes, paths, evidence, predecessor state, or rollback state. Step 2 owns
+runtime verification machinery over independently opened Git/filesystem sources; Step 3 owns the
+disposable activation transaction, exact closure comparator, and reversible rollback behavior;
+Step 5 owns real release and executed-evidence certification; Step 6 owns the live active-state and
+rollback pre-image immediately before mutation. No public caller-constructible validation object may
+bypass those observations. This decision supersedes the rejected three-iteration `ValidatedBundle`
+approach; none of its product files may be copied wholesale into a fresh build.
 
 ## 7. Build Steps
 
 ### Step 1: Lock the production portfolio and record schemas
 
-- **Status:** PENDING
+- **Status:** PENDING — REVISED AFTER A BLOCKED 3/3 BUILD-STEP; NO PRIOR CANDIDATE MERGED
 - **Problem:** Turn the approved production membership, deferred-candidate rules, root separation,
-  and immutable record shapes into one machine-checkable contract before any external directory is
-  created.
+  source allowlists, and immutable record grammar into one machine-checkable declarative contract
+  before any external directory is created, without claiming runtime verification or activation
+  authority.
 - **Type:** code
 - **Issue:** #184
-- **Files:** `config/production-portfolio-policy.json`;
+- **Files:** `CLAUDE.md`; `config/production-portfolio-policy.json`;
   `schemas/production-portfolio-policy-v1.schema.json`;
   `schemas/production-bundle-v1.schema.json`; `schemas/production-current-v1.schema.json`;
-  `schemas/production-activation-plan-v1.schema.json`;
+  `schemas/production-activation-plan-v1.schema.json`; `tools/production_record_contract.py`;
   `tests/production-toolchain/test_policy_contract.py`; this plan where exact implementation facts
   require reconciliation.
 - **Existing context:** Section 2.3 is the complete release-1 project disposition. The registry
   category resolves the 13 default utility slugs; `skill-mesh` and `utility-project-standard` are
   explicit additions. Deferred projects are visible but cannot enter an executable or smoke matrix.
-- **Produces:** strict v1 policy/bundle/current schemas, committed release policy, deterministic
-  membership and shared-repository validation, and planted negatives for missing/duplicate/unknown
-  projects, invalid states, additional properties, bad commit/tree/hash formats, path escape, and a
-  deferred project appearing in the active set.
-- **Done when:** the committed policy validates; a fixture matching the 13 registry utilities plus
-  the two explicit additions resolves to 15 active slugs and 14 repository owners; exact dispositions
-  for all four named unfinished projects pass; every planted negative fails for the intended reason;
-  `python -m pytest tests/production-toolchain/test_policy_contract.py` and `git diff --check` exit 0.
+  The preserved rejected worktree and its three review rounds are evidence/test-idea sources only;
+  reauthor this slice and do not copy any rejected product file wholesale.
+- **Produces:** the exact release-1 declarative policy, including the 14-owner source/ref allowlist;
+  four strict closed schemas; one pure reason-coded consistency helper that returns no trusted or
+  validated capability; and structural regressions for declarative membership, disposition,
+  source-allowlist, record-shape, lexical-path, and internal-coherence defects.
+- **Done when:** the committed policy resolves a fixture using the real singular `[[project]]`
+  registry shape to 15 active slugs and 14 owners with the exact embedded/deferred dispositions; all
+  four schemas pass Draft 2020-12 meta-validation and close every reachable object boundary;
+  duplicate JSON members are rejected before schema validation; every named negative is an
+  individually reported test that asserts a stable intended reason code; the helper exposes no
+  `Validated*`/`Authorized*` token and makes no Git/filesystem/evidence/profile/rollback truth claim;
+  the focused policy-contract suite, repository-root `python -m pytest`, and `git diff --check` each
+  exit 0 with captured status.
+- **Named negatives:** root and nested duplicate JSON members; missing/duplicate/unknown singular-
+  registry utilities; disposition overlap and wrong reason; owner/project/checkout duplication;
+  wrong repository sharing; canonical-remote or allowed-ref drift including `measure-twice` not on
+  `origin/master`; additional properties at every reachable object boundary; malformed commit/tree/
+  SHA-256 and timestamp formats; lexical path escape, mixed separators, controls, reserved names,
+  and trailing-dot/space aliases; bundle-ID/source-suffix mismatch; predecessor null-pair or
+  self-reference; declared root collapse; provider/action-order drift; and shell-evaluation shapes.
+- **Out of scope:** Git invocation/reachability, filesystem observation, tool/evidence-byte
+  authentication, gate execution, retained-distribution proof, active-state inspection, activation
+  execution, and rollback-pre-image authentication. These belong to Sections 2.4.1 and revised
+  Steps 2/3/5/6.
 - **Flags:** --isolation worktree --reviewers code --max-iter 3
 - **Depends on:** none.
-- **Review routing:** operator-authorized PROD-D8 bootstrap exception; zero High/Medium findings.
+- **Review routing:** fixed-scope PROD-D8 exception (original Steps 1–4); zero High/Medium findings.
 
 ### Step 2: Build the fail-closed production bundle manager
 
 - **Status:** PENDING / BLOCKED ON STEP 1
-- **Problem:** Create a release from exact Git objects without copying dirty worktrees, state, or Git
-  storage, and make every partial/error path leave the prior production selection untouched.
+- **Problem:** Provide one four-command CLI whose release lifecycle derives candidates solely from
+  independently reopened Git, filesystem, and tool authorities without changing the current
+  production selection.
 - **Type:** code
 - **Issue:** #185
-- **Files:** `tools/production-toolchain.py`; `tools/activate-production-toolchain.ps1`;
-  `tests/production-toolchain/test_bundle_manager.py`;
-  `tests/production-toolchain/test_activation_contract.py`;
-  `tests/production-toolchain/fixtures/**`; `documentation/production-toolchain-operations.md`.
+- **Files:** `tools/production-toolchain.py`;
+  `tests/production-toolchain/test_bundle_manager.py`; manager/Git/filesystem fixtures under
+  `tests/production-toolchain/fixtures/**`; the manager, staging, verification, and incomplete-
+  release-recovery sections of `documentation/production-toolchain-operations.md`; this plan only
+  for proven implementation-fact reconciliation. Step-1 policy, schemas, and
+  `tools/production_record_contract.py` are read-only dependencies.
 - **Existing context:** Section 5 defines the four commands and record order. Use Python 3.12 standard
-  library plus the repository's test dependencies; parse TOML with `tomllib` and invoke Git/uv/npm/
-  PowerShell with argument arrays. Do not add a service, daemon, package manager, or credential store.
-- **Produces:** read-only plan, absent-directory stage, read-only verify, non-mutating activation-plan,
-  exact external evidence records, and recovery guidance for incomplete releases.
-- **Done when:** integration fixtures prove no-hardlink independent clones, detached exact commits,
-  canonical remotes, sibling layout, dirty/untracked source exclusion, pushed-object eligibility,
-  policy/registry drift refusal, case/path/reparse/collision refusal, no forbidden state copied, bundle
-  written last, repeat-stage refusal, read-only verification, tamper detection, and unchanged prior
-  `current.json`; activation tests reject schema/hash/provider/home/environment/script/argument drift
-  before mutation and prove a planted mid-cutover failure restores the fixture pre-image; focused tests
-  and `git diff --check` exit 0.
+  library plus repository test dependencies; parse TOML with `tomllib` and invoke Git/uv/npm/
+  PowerShell with argument arrays. Step 1 supplies declarations only. Do not add a service, daemon,
+  package manager, credential store, or caller-constructible runtime authority.
+- **Produces:** the real `plan`, `stage`, `verify`, and `activation-plan` commands; independently
+  derived Git/filesystem/tool observations; exact non-shell project-gate and activation action argv;
+  bundle/evidence records written in the required order; and manager-side recovery guidance.
+- **Done when:** tests invoke the real Python entry point and prove all four commands' declared
+  behavior; `plan` and `verify` are read-only; `stage` writes only a new absent release directory and
+  writes `bundle.json` last; `activation-plan` is non-mutating and emits complete typed operations or
+  argv for the existing installer/inspector interfaces. Disposable repositories prove independent
+  `--no-hardlinks` clones, detached exact commits, canonical remotes, allowed refs, fetched
+  reachability, exact commit/tree/required-blob identities, sibling layout, dirty/untracked
+  exclusion, and pushed-object eligibility. Policy/registry drift, case/path/reparse/collision,
+  forbidden-state, repeated-output, alias/containment, tamper, and caller-supplied script-byte/hash
+  plants fail closed; installer/inspector identity is derived from verified Skill Mesh Git objects;
+  no Step-1 validation result is accepted as runtime proof; every failure leaves the prior
+  `current.json` byte-identical. The focused bundle-manager suite, the compile check
+  `python -m compileall -q tools/production-toolchain.py`, repository-root `python -m pytest`, and
+  `git diff --check` each exit 0 with captured status.
+- **Out of scope:** activation execution, active-profile mutation, the exact installed-closure
+  comparator, rollback execution, real-release gate execution/evidence, and live-state authority.
 - **Flags:** --isolation worktree --reviewers code --max-iter 3
 - **Depends on:** Step 1.
-- **Review routing:** operator-authorized PROD-D8 bootstrap exception; zero High/Medium findings.
+- **Review routing:** fixed-scope PROD-D8 exception inherited from original Step 2; zero High/Medium
+  findings.
 
-### Step 3: Route Skill Mesh utility calls through production code
+### Step 3: Build the reversible production activation engine
 
 - **Status:** PENDING / BLOCKED ON STEP 2
+- **Problem:** Turn a declarative activation plan into one fail-closed transaction whose observable
+  result is either the exact requested profile/environment/selector closure or the exact
+  independently captured pre-image.
+- **Type:** code
+- **Issue:** #190
+- **Files:** `tools/activate-production-toolchain.ps1`;
+  `tests/production-toolchain/test_activation_contract.py`; activation/home/ledger/rollback fixtures
+  under `tests/production-toolchain/fixtures/**`; the activation, closure-verification, rollback, and
+  manual-recovery sections of `documentation/production-toolchain-operations.md`; this plan only for
+  proven implementation-fact reconciliation. The Step-2 manager, four schemas, and existing build,
+  release, installer, inspector, transaction, and path-guard tools are read-only dependencies unless
+  a failing production-caller test returns a defect to their owning step.
+- **Existing context:** Consume a valid activation plan emitted by the real Step-2 CLI, but treat that
+  record as declarative. The existing inspector reports inventory/link/marker and ledger-provider
+  state; it does not authenticate the exact installed-file closure. The activator must own that
+  comparator and orchestrate the existing installer without force.
+- **Produces:** the real PowerShell activator entry point; exact retained-dist/ledger/installed-file
+  closure comparison; independent preflight; write-last selector publication; fail-closed rollback;
+  and operator recovery guidance. This build step produces no live authority.
+- **Done when:** end-to-end tests invoke the real PowerShell entry point against disposable homes and
+  use a valid activation plan emitted by the real Step-2 `activation-plan` command. Immediately
+  before fixture mutation, the activator independently reopens the plan, bundle, retained
+  distribution, resolved home/backup/selector paths, installer/inspector bytes, current selector,
+  ledger, installed owned bytes, and rollback pre-image. Schema, hash, provider, home, environment,
+  script, argument, ordering, path/reparse, collision, and predecessor drift each fail before the
+  first mutation. The install call matches `-Provider codex -Home <home> -DistDir <retained-dist>` and
+  uses neither `-Force` nor `-ForceShared`; the inspector call matches `-Home <home> -Format json`.
+  The activator-owned comparator derives the retained Codex file set, validates the ledger's exact
+  `owned_files`/`owned_file_hashes` bijection, reopens installed bytes, and proves zero missing,
+  stale, unledgered, foreign-at-managed-path, or hash-mismatched entries. Success publishes fixture
+  `current.json` last. Planted failures after each mutation class restore the exact fixture Process/
+  User environment, selector, ledger, and owned bytes; rollback refuses changed pre-image or target
+  authority. Tests prove no real User environment, active host profile, or external production root
+  changes. The focused activation-contract suite, a Windows PowerShell 5.1 parse check,
+  repository-root `python -m pytest`, and `git diff --check` each exit 0 with captured status.
+- **Out of scope:** utility-call routing, staging a real portfolio release, writing the real
+  production base, mutating a live host profile or User environment, fresh-host smoke, or claiming
+  live rollback authority. Step 6 must recapture the real pre-image immediately before mutation.
+- **Flags:** --isolation worktree --reviewers code --max-iter 3
+- **Depends on:** Step 2.
+- **Review routing:** fixed-scope PROD-D8 exception inherited from original Step 2; zero High/Medium
+  findings.
+
+### Step 4: Route Skill Mesh utility calls through production code
+
+- **Status:** PENDING / BLOCKED ON STEP 3
 - **Problem:** A stable bundle is ineffective while installed skills still launch utilities from
   cwd-relative development paths; make executable-root and target-workspace selection explicit across
   every current utility command without claiming unbuilt advisory hookups.
@@ -454,20 +600,20 @@ or rebase the preserved branch wholesale.
   absolute `DEV_WORKSPACE_ROOT`; missing/relative/wrong-shape roots stop before subprocess launch;
   tests plant bare-relative, same-root, cwd-fallback, deferred-project, and provider-output negatives;
   all three profiles contain the contract and representative migrated commands; focused suites,
-  `python -m pytest tests/`, and `git diff --check` exit 0.
+  repository-root `python -m pytest`, and `git diff --check` each exit 0 with captured status.
 - **Flags:** --isolation worktree --reviewers code --max-iter 3
-- **Depends on:** Step 2.
-- **Review routing:** operator-authorized PROD-D8 bootstrap exception; zero High/Medium findings.
+- **Depends on:** Step 3.
+- **Review routing:** fixed-scope PROD-D8 exception (original Steps 1–4); zero High/Medium findings.
 
-### Step 4: Stage and certify the first production bundle
+### Step 5: Stage and certify the first production bundle
 
-- **Status:** PENDING / BLOCKED ON STEP 3
+- **Status:** PENDING / BLOCKED ON STEP 4
 - **Problem:** Freeze one exact release-1 bundle and Skill Mesh distribution with real-project and
   disposable-install evidence before any user environment or active profile changes.
 - **Type:** code
 - **Issue:** #187
 - **Files:** no canonical product mutation beyond narrowly required test/operations corrections;
-  external `C:\Users\abero\prod\releases\<bundle-id>\**` and disposable homes only;
+  external `<prod-root>\releases\<bundle-id>\**` and disposable homes only;
   `documentation/findings/production-toolchain-release-1.json` records redacted immutable evidence.
 - **Existing context:** Reverify every remote/upstream and actual commit. Use the pushed
   `measure-twice` commit. Preserve source dirt by selecting Git objects, not by stashing or cleaning.
@@ -477,46 +623,59 @@ or rebase the preserved branch wholesale.
   release/checksums, disposable install evidence, representative utility health results, and a
   non-mutating activation plan.
 - **Done when:** all 15 active project slugs resolve at their exact selected objects; every clone is
-  independent and tracked-clean; `uv sync --frozen`/`npm ci` and each declared CLI `--help` smoke pass;
+  independent and tracked-clean; actual remote/ref/reachability/commit/tree/required-blob results are
+  recorded for all 14 owners; `uv sync --frozen`/`npm ci` and each exact Step-2-owned CLI `--help`
+  argv pass with one unique gate identity, captured exit sentinel, exact evidence bytes, and hashes;
   Skill Mesh all-provider build is reproducible; disposable Claude/GPT/Codex install, reinstall,
   inspect, and uninstall pass with exact closures and no residue; the repository-root
   `python -m pytest` and `git diff --check` exit 0 at the recorded commit; two fresh reviews of the
-  release evidence report zero High/Medium findings; `verify` rereads the retained bundle; and no
-  user environment or active profile byte changed.
+  release evidence report zero High/Medium findings; the actual pre-stage selector (or proven
+  absence) derives `bundle.previous_bundle_id`; final-path/reparse/no-hardlink measurements cover the
+  real release; retained provider closures plus Step-2 manager and Step-3 activator Git-blob/byte
+  identities are frozen; `verify` reopens all authorities and rereads the retained bundle; the activation plan is
+  called declaratively valid, never authorized; and no user environment or active profile byte
+  changed.
 - **Flags:** --isolation worktree --reviewers code --max-iter 3
-- **Depends on:** Step 3.
-- **Review routing:** operator-authorized PROD-D8 bootstrap exception; zero High/Medium findings plus
+- **Depends on:** Step 4.
+- **Review routing:** fixed-scope PROD-D8 exception (original Steps 1–4); zero High/Medium findings plus
   the two release-evidence reviews.
 
-### Step 5: Activate and smoke the production toolchain
+### Step 6: Activate and smoke the production toolchain
 
 - **Status:** PENDING / ATTENDED CUTOVER
 - **Problem:** The certified source and distribution do not protect daily work until fresh host
   processes actually execute the production code while targeting the live development workspace.
 - **Type:** operator
 - **Issue:** #188
-- **Existing context:** Consume only Step 4's exact verified activation-plan JSON and retained
+- **Existing context:** Consume only Step 5's exact declaratively valid activation-plan JSON and retained
   distribution. The operator approved the production detour and cutover; this step still fails closed
   on identity drift, active owned-byte drift, collision, or failed smoke. It does not alter any
   certificate, policy, boot, SDK/WDK, driver, Phase IS artifact, or frozen UAT.
 - **Produces:** selected user environment roots, installer-owned active profile, external backup and
   cutover evidence, `current.json`, a fresh-process smoke report, and retained rollback authority.
-- **Done when:** preflight proves the old active profile and environment equal the activation plan;
+- **Done when:** preflight reopens and hashes the bundle, retained distribution, tool scripts,
+  activation record, old selector, Process/User environment, ledger, active owned bytes, and exact
+  rollback pre-image; predecessor identity/path agree with Step 5 evidence; the old active profile
+  and environment equal the activation plan;
   the existing installer consumes the Codex profile from the retained all-provider distribution via
-  exact `-Provider codex` without `-Force`; inspector
-  reports exact ownership with zero missing/stale/unledgered/hash-mismatched entries; user and process
+  exact `-Provider codex` without `-Force`; the inspector reports inventory/link/marker and ledger-
+  provider state, while the Step-3-owned exact closure comparator proves zero missing, stale,
+  unledgered, foreign-at-managed-path, or hash-mismatched entries against the retained Codex
+  distribution and current ledger; only the complete frozen argv is executed after those checks;
+  user and process
   values select the exact production workspace and live development workspace; a fresh Codex process
   sees both values and runs installed Skill Mesh plus representative `observatory`, `goblin`, `cite`,
   `onbrand`, and `utility-standard` `--help` commands from production code, plus `observatory doctor
-  --root C:\Users\abero\dev`, against safe read-only development targets; `current.json` is written
-  last and verifies; rollback is rehearsed in a disposable home and its exact command is retained.
+  --root <dev-root>`, against safe read-only development targets; `current.json` is written
+  last as a declarative result record and verifies; rollback is derived from the independently
+  captured live pre-image, rehearsed in a disposable home, and its exact command is retained.
   Any failure restores the old environment/profile
   or stops with the old release still selected.
-- **Depends on:** Step 4.
+- **Depends on:** Step 5.
 
-### Step 6: Reconcile status and resume the review-deep critical path
+### Step 7: Reconcile status and resume the review-deep critical path
 
-- **Status:** PENDING / BLOCKED ON STEP 5
+- **Status:** PENDING / BLOCKED ON STEP 6
 - **Problem:** Production activation must be durable in project documentation and the paused Phase RD
   repair must restart against the new main without losing or blindly merging preserved #178 evidence.
 - **Type:** code
@@ -534,11 +693,12 @@ or rebase the preserved branch wholesale.
 - **Done when:** documentation identifies the exact active bundle and rollback, the owning-repository
   follow-up for the utility-hookup plan's one-root wording is recorded, all production issues/statuses
   agree, Git is clean and synchronized, and the next action is a fresh #178 build-step against actual
-  main with its preserved salvage classified. `python -m pytest tests/production-toolchain` and
-  `git diff --check` exit 0.
+  main with its preserved salvage classified. The focused production-toolchain suite,
+  repository-root `python -m pytest`, and `git diff --check` each exit 0 with captured status.
 - **Flags:** --isolation worktree --reviewers code --max-iter 3
-- **Depends on:** Step 5.
-- **Review routing:** operator-authorized PROD-D8 bootstrap exception; zero High/Medium findings.
+- **Depends on:** Step 6.
+- **Review routing:** routine post-cutover code review with zero High/Medium findings; PROD-D8 applies
+  only to the fixed original Steps 1–4 scope and is not authority for this step.
 
 ## 8. Risks and Open Questions
 
@@ -551,24 +711,28 @@ or rebase the preserved branch wholesale.
 | Registry drift | New utilities are silently absent from production | Stage compares the exhausted registry category set to policy and refuses unclassified changes |
 | Deferred project misrepresentation | Skeleton projects appear as usable production commands | Machine-visible deferred/embedded states; active set and smoke matrix reject them |
 | Active profile damage | Direct copies bypass ledger/current-byte authority | Existing installer/inspector only, retained exact dist, external backup, no `-Force`, fail-closed rollback |
-| Release/source mismatch | Rebuild during cutover installs unreviewed bytes | Step 5 consumes Step 4's retained artifact and hashes; never rebuild |
+| Release/source mismatch | Rebuild during cutover installs unreviewed bytes | Step 6 consumes Step 5's retained artifact and hashes; never rebuild |
 | Phase RD overlap | Preserved #178 changes clobber or are clobbered by PROD | No concurrent build-step; post-cutover path-by-path salvage and fresh baseline |
 | Mutable data loss/fork | Release switch strands databases/indexes/telemetry | Data stays outside releases; explicit existing paths or `<prod>\data`; cutover verifies continuity |
 | Stale host environment | Current process sees new values but fresh hosts do not | Persist User values, open a genuinely fresh process, and verify exact paths there |
 | Rollback schema evolution | Older installer cannot understand newer ledger/WAL | Retain the newer installer as rollback executor and record it in the activation plan |
+| Declarative record mistaken for authority | Producer-controlled bytes/hashes or a forgeable validation object bypass independent observation | Enforce PROD-D11 and the Section 2.4.1 ownership table; every runtime consumer reopens its own authorities |
 
-No unresolved operator choice remains for Steps 1–4. Step 5's release path, hashes, and old/new
-environment values are derived from Step 4 evidence rather than chosen conversationally.
+No unresolved operator choice remains for revised Steps 1–5. Step 6's release path, hashes, and
+old/new environment values are derived from Step 5 evidence rather than chosen conversationally.
 
 ## 9. Testing Strategy
 
 ### Contract and unit tests
 
-- Validate all three strict schemas and exact policy membership/dispositions.
-- Plant missing, duplicate, unknown, category-drifted, shared-owner, additional-property, bad-hash,
-  path-escape, reparse, and active-deferred negative fixtures.
+- Validate all four strict schemas and exact policy membership/dispositions/source allowlists.
+- Plant individually named, reason-coded duplicate-member, missing, duplicate, unknown,
+  category-drifted, shared-owner, additional-property, bad-hash, lexical-path, and active-deferred
+  fixtures. Runtime reparse, reachability, byte-authentication, activation, evidence, active-state,
+  and rollback negatives remain in their owning Steps 2, 3, 5, and 6.
 - Test release-ID parsing, deterministic ordering, command argument arrays, exact record hashing,
-  write-last behavior, and redaction/no-credential rules.
+  write-last behavior, and redaction/no-credential rules. Add a structural guard that Step 1 exposes
+  no `Validated*`/`Authorized*` capability API.
 
 ### Git/filesystem integration
 
@@ -590,7 +754,7 @@ environment values are derived from Step 4 evidence rather than chosen conversat
 ### Real release smoke
 
 - Stage from the actual portfolio, prepare locked dependencies, and run each active CLI's non-mutating
-  `--help`; additionally run `observatory doctor --root C:\Users\abero\dev` as the portfolio health
+  `--help`; additionally run `observatory doctor --root <dev-root>` as the portfolio health
   command.
 - Run the full Skill Mesh repository gate at the exact candidate commit and retain exit sentinels and
   hashes outside the source tree.
