@@ -129,7 +129,7 @@ with `required_tool_missing` before any developer dispatch.
 
 ### Step 1: Securely land the review-deep package-asset capability
 
-- **Status:** PENDING
+- **Status:** BLOCKED (2026-08-31) — iteration cap reached; pending-WAL raw-junction retry authority remains unsafe (see #178)
 - **Problem:** Add planted regressions for interrupted pure raw-asset deletion, both
   `lint_prepass.sh` defects, exit-0 help for both shell helpers, and installed tier-map resolution;
   then implement the smallest complete calibration package, manifest/index, deterministic builder,
