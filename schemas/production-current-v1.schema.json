@@ -1,0 +1,123 @@
+{
+    "$schema":  "https://json-schema.org/draft/2020-12/schema",
+    "type":  "object",
+    "additionalProperties":  false,
+    "required":  [
+                     "schema",
+                     "active_bundle_id",
+                     "previous_bundle_id",
+                     "active_bundle_path",
+                     "previous_bundle_path",
+                     "environment",
+                     "activated_utc",
+                     "installer_result",
+                     "inspector_result",
+                     "active_skill_mesh_distribution"
+                 ],
+    "properties":  {
+                       "schema":  {
+                                      "const":  "skill-mesh/production-current/v1"
+                                  },
+                       "active_bundle_id":  {
+                                                "$ref":  "#/$defs/bundle_id"
+                                            },
+                       "previous_bundle_id":  {
+                                                  "anyOf":  [
+                                                                {
+                                                                    "type":  "null"
+                                                                },
+                                                                {
+                                                                    "$ref":  "#/$defs/bundle_id"
+                                                                }
+                                                            ]
+                                              },
+                       "active_bundle_path":  {
+                                                  "$ref":  "#/$defs/absolute_path"
+                                              },
+                       "previous_bundle_path":  {
+                                                    "anyOf":  [
+                                                                  {
+                                                                      "type":  "null"
+                                                                  },
+                                                                  {
+                                                                      "$ref":  "#/$defs/absolute_path"
+                                                                  }
+                                                              ]
+                                                },
+                       "activated_utc":  {
+                                             "$ref":  "#/$defs/timestamp"
+                                         },
+                       "environment":  {
+                                           "type":  "object",
+                                           "additionalProperties":  false,
+                                           "required":  [
+                                                            "DEV_UTILITIES_ROOT",
+                                                            "DEV_WORKSPACE_ROOT"
+                                                        ],
+                                           "properties":  {
+                                                              "DEV_UTILITIES_ROOT":  {
+                                                                                         "$ref":  "#/$defs/absolute_path"
+                                                                                     },
+                                                              "DEV_WORKSPACE_ROOT":  {
+                                                                                         "$ref":  "#/$defs/absolute_path"
+                                                                                     }
+                                                          }
+                                       },
+                       "installer_result":  {
+                                                "$ref":  "#/$defs/result"
+                                            },
+                       "inspector_result":  {
+                                                "$ref":  "#/$defs/result"
+                                            },
+                       "active_skill_mesh_distribution":  {
+                                                              "type":  "object",
+                                                              "additionalProperties":  false,
+                                                              "required":  [
+                                                                               "path",
+                                                                               "codex_closure_sha256"
+                                                                           ],
+                                                              "properties":  {
+                                                                                 "path":  {
+                                                                                              "$ref":  "#/$defs/absolute_path"
+                                                                                          },
+                                                                                 "codex_closure_sha256":  {
+                                                                                                              "$ref":  "#/$defs/sha256"
+                                                                                                          }
+                                                                             }
+                                                          }
+                   },
+    "$defs":  {
+                  "sha256":  {
+                                 "type":  "string",
+                                 "pattern":  "^[0-9a-f]{64}$"
+                             },
+                  "bundle_id":  {
+                                    "type":  "string",
+                                    "pattern":  "^prod-[0-9]{8}T[0-9]{6}Z-[0-9a-f]{12}$"
+                                },
+                  "timestamp":  {
+                                    "type":  "string",
+                                    "pattern":  "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+                                },
+                  "absolute_path":  {
+                                        "type":  "string",
+                                        "pattern":  "^[A-Za-z]:[\\\\/].+$"
+                                    },
+                  "result":  {
+                                 "type":  "object",
+                                 "additionalProperties":  false,
+                                 "required":  [
+                                                  "path",
+                                                  "sha256"
+                                              ],
+                                 "properties":  {
+                                                    "path":  {
+                                                                 "$ref":  "#/$defs/absolute_path"
+                                                             },
+                                                    "sha256":  {
+                                                                   "$ref":  "#/$defs/sha256"
+                                                               }
+                                                }
+                             }
+              }
+}

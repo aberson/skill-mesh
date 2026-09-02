@@ -1,0 +1,218 @@
+{
+    "$schema":  "https://json-schema.org/draft/2020-12/schema",
+    "type":  "object",
+    "additionalProperties":  false,
+    "required":  [
+                     "schema",
+                     "bundle_id",
+                     "created_utc",
+                     "policy_sha256",
+                     "registry_sha256",
+                     "repositories",
+                     "workspace_relative_path",
+                     "skill_mesh_release",
+                     "gates",
+                     "previous_bundle_id"
+                 ],
+    "properties":  {
+                       "schema":  {
+                                      "const":  "skill-mesh/production-bundle/v1"
+                                  },
+                       "bundle_id":  {
+                                         "$ref":  "#/$defs/bundle_id"
+                                     },
+                       "created_utc":  {
+                                           "$ref":  "#/$defs/timestamp"
+                                       },
+                       "policy_sha256":  {
+                                             "$ref":  "#/$defs/sha256"
+                                         },
+                       "registry_sha256":  {
+                                               "$ref":  "#/$defs/sha256"
+                                           },
+                       "workspace_relative_path":  {
+                                                       "const":  "workspace"
+                                                   },
+                       "previous_bundle_id":  {
+                                                  "anyOf":  [
+                                                                {
+                                                                    "type":  "null"
+                                                                },
+                                                                {
+                                                                    "$ref":  "#/$defs/bundle_id"
+                                                                }
+                                                            ]
+                                              },
+                       "repositories":  {
+                                            "type":  "array",
+                                            "minItems":  1,
+                                            "items":  {
+                                                          "type":  "object",
+                                                          "additionalProperties":  false,
+                                                          "required":  [
+                                                                           "owner_slug",
+                                                                           "checkout_relative_path",
+                                                                           "canonical_remote_url",
+                                                                           "upstream_ref",
+                                                                           "commit",
+                                                                           "tree",
+                                                                           "project_slugs"
+                                                                       ],
+                                                          "properties":  {
+                                                                             "owner_slug":  {
+                                                                                                "$ref":  "#/$defs/slug"
+                                                                                            },
+                                                                             "checkout_relative_path":  {
+                                                                                                            "$ref":  "#/$defs/relative_path"
+                                                                                                        },
+                                                                             "canonical_remote_url":  {
+                                                                                                          "$ref":  "#/$defs/remote"
+                                                                                                      },
+                                                                             "upstream_ref":  {
+                                                                                                  "$ref":  "#/$defs/ref"
+                                                                                              },
+                                                                             "commit":  {
+                                                                                            "$ref":  "#/$defs/oid"
+                                                                                        },
+                                                                             "tree":  {
+                                                                                          "$ref":  "#/$defs/oid"
+                                                                                      },
+                                                                             "project_slugs":  {
+                                                                                                   "type":  "array",
+                                                                                                   "minItems":  1,
+                                                                                                   "uniqueItems":  true,
+                                                                                                   "items":  {
+                                                                                                                 "$ref":  "#/$defs/slug"
+                                                                                                             }
+                                                                                               }
+                                                                         }
+                                                      }
+                                        },
+                       "skill_mesh_release":  {
+                                                  "type":  "object",
+                                                  "additionalProperties":  false,
+                                                  "required":  [
+                                                                   "retained_relative_path",
+                                                                   "provider_closures",
+                                                                   "checksums_sha256",
+                                                                   "source_commit",
+                                                                   "source_tree",
+                                                                   "manifest_blob"
+                                                               ],
+                                                  "properties":  {
+                                                                     "retained_relative_path":  {
+                                                                                                    "$ref":  "#/$defs/relative_path"
+                                                                                                },
+                                                                     "provider_closures":  {
+                                                                                               "type":  "object",
+                                                                                               "additionalProperties":  false,
+                                                                                               "required":  [
+                                                                                                                "claude",
+                                                                                                                "gpt",
+                                                                                                                "codex"
+                                                                                                            ],
+                                                                                               "properties":  {
+                                                                                                                  "claude":  {
+                                                                                                                                 "$ref":  "#/$defs/sha256"
+                                                                                                                             },
+                                                                                                                  "gpt":  {
+                                                                                                                              "$ref":  "#/$defs/sha256"
+                                                                                                                          },
+                                                                                                                  "codex":  {
+                                                                                                                                "$ref":  "#/$defs/sha256"
+                                                                                                                            }
+                                                                                                              }
+                                                                                           },
+                                                                     "checksums_sha256":  {
+                                                                                              "$ref":  "#/$defs/sha256"
+                                                                                          },
+                                                                     "source_commit":  {
+                                                                                           "$ref":  "#/$defs/oid"
+                                                                                       },
+                                                                     "source_tree":  {
+                                                                                         "$ref":  "#/$defs/oid"
+                                                                                     },
+                                                                     "manifest_blob":  {
+                                                                                           "$ref":  "#/$defs/oid"
+                                                                                       }
+                                                                 }
+                                              },
+                       "gates":  {
+                                     "type":  "array",
+                                     "minItems":  1,
+                                     "items":  {
+                                                   "type":  "object",
+                                                   "additionalProperties":  false,
+                                                   "required":  [
+                                                                    "project_slug",
+                                                                    "role",
+                                                                    "arguments",
+                                                                    "exit_code",
+                                                                    "evidence_relative_path",
+                                                                    "sha256"
+                                                                ],
+                                                   "properties":  {
+                                                                      "project_slug":  {
+                                                                                           "$ref":  "#/$defs/slug"
+                                                                                       },
+                                                                      "role":  {
+                                                                                   "type":  "string",
+                                                                                   "pattern":  "^[a-z][a-z-]*$"
+                                                                               },
+                                                                      "arguments":  {
+                                                                                        "type":  "array",
+                                                                                        "minItems":  1,
+                                                                                        "items":  {
+                                                                                                      "type":  "string",
+                                                                                                      "minLength":  1,
+                                                                                                      "pattern":  "^[^\\u0000-\\u001f\\r\\n]*$"
+                                                                                                  }
+                                                                                    },
+                                                                      "exit_code":  {
+                                                                                        "const":  0
+                                                                                    },
+                                                                      "evidence_relative_path":  {
+                                                                                                     "$ref":  "#/$defs/relative_path"
+                                                                                                 },
+                                                                      "sha256":  {
+                                                                                     "$ref":  "#/$defs/sha256"
+                                                                                 }
+                                                                  }
+                                               }
+                                 }
+                   },
+    "$defs":  {
+                  "slug":  {
+                               "type":  "string",
+                               "pattern":  "^[a-z][a-z0-9_-]*$"
+                           },
+                  "relative_path":  {
+                                        "type":  "string",
+                                        "minLength":  1
+                                    },
+                  "remote":  {
+                                 "type":  "string",
+                                 "pattern":  "^https://github\\.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+\\.git$"
+                             },
+                  "ref":  {
+                              "type":  "string",
+                              "pattern":  "^origin/[A-Za-z0-9][A-Za-z0-9._/-]*$"
+                          },
+                  "oid":  {
+                              "type":  "string",
+                              "pattern":  "^[0-9a-f]{40}$"
+                          },
+                  "sha256":  {
+                                 "type":  "string",
+                                 "pattern":  "^[0-9a-f]{64}$"
+                             },
+                  "bundle_id":  {
+                                    "type":  "string",
+                                    "pattern":  "^prod-[0-9]{8}T[0-9]{6}Z-[0-9a-f]{12}$"
+                                },
+                  "timestamp":  {
+                                    "type":  "string",
+                                    "pattern":  "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+                                }
+              }
+}

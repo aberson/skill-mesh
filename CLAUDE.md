@@ -189,7 +189,7 @@ the Phase 7.5 status documents, and `documentation/step-4-checkpoint-2026-08-13.
   and release test suites shell out to it. There is no POSIX path.
 - **Python 3 with pytest** on `PATH` (or an activated project venv). No `pyproject.toml`, no
   dependency lockfile, and no pinned interpreter is committed — supply your own.
-- **PyYAML** (`pip install pyyaml`) — the only third-party Python dependency, and test-only.
+- **PyYAML** (`pip install pyyaml`) — the frontmatter and release YAML dependency, and test-only.
   The frontmatter gate (`tests/package-integrity/frontmatter_contract.py`) needs a *real*
   strict parser, because the consumer it models is one (Copilot CLI's scan of the discovery
   roots); a hand-rolled scanner would only be this repository's *model* of YAML. Without
@@ -204,6 +204,9 @@ the Phase 7.5 status documents, and `documentation/step-4-checkpoint-2026-08-13.
   measurement, not as today's suite; the shape is what generalizes (a bounded ~25-test red
   band, one skip). Current counts have exactly one owner,
   `documentation/phase-75-baseline.md`.
+- **jsonschema** (`pip install jsonschema`) — required only when the Phase PROD
+  declarative record contract validates a caller-supplied Draft 2020-12 schema.
+  Its absence is a named call-time error and does not abort unrelated collection.
 - **git** — release staging is `git ls-files`-driven and fails outside a working tree.
 - **`gh` CLI** for issue/PR work.
 - **GitHub Copilot CLI, signed in via `gh auth login`**, for any GPT-side host acceptance.

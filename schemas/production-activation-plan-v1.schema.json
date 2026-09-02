@@ -1,0 +1,240 @@
+{
+    "$schema":  "https://json-schema.org/draft/2020-12/schema",
+    "type":  "object",
+    "additionalProperties":  false,
+    "required":  [
+                     "schema",
+                     "bundle_id",
+                     "bundle_path",
+                     "bundle_sha256",
+                     "provider",
+                     "active_home",
+                     "environment",
+                     "retained_distribution_path",
+                     "codex_closure_sha256",
+                     "installer",
+                     "inspector",
+                     "backup_root",
+                     "rollback_distribution",
+                     "actions",
+                     "created_utc"
+                 ],
+    "properties":  {
+                       "schema":  {
+                                      "const":  "skill-mesh/production-activation-plan/v1"
+                                  },
+                       "bundle_id":  {
+                                         "$ref":  "#/$defs/bundle_id"
+                                     },
+                       "bundle_path":  {
+                                           "$ref":  "#/$defs/absolute_path"
+                                       },
+                       "bundle_sha256":  {
+                                             "$ref":  "#/$defs/sha256"
+                                         },
+                       "provider":  {
+                                        "const":  "codex"
+                                    },
+                       "active_home":  {
+                                           "$ref":  "#/$defs/absolute_path"
+                                       },
+                       "retained_distribution_path":  {
+                                                          "$ref":  "#/$defs/absolute_path"
+                                                      },
+                       "codex_closure_sha256":  {
+                                                    "$ref":  "#/$defs/sha256"
+                                                },
+                       "backup_root":  {
+                                           "$ref":  "#/$defs/absolute_path"
+                                       },
+                       "created_utc":  {
+                                           "$ref":  "#/$defs/timestamp"
+                                       },
+                       "environment":  {
+                                           "type":  "object",
+                                           "additionalProperties":  false,
+                                           "required":  [
+                                                            "old_process",
+                                                            "old_user",
+                                                            "new_process",
+                                                            "new_user"
+                                                        ],
+                                           "properties":  {
+                                                              "old_process":  {
+                                                                                  "$ref":  "#/$defs/environment_values"
+                                                                              },
+                                                              "old_user":  {
+                                                                               "$ref":  "#/$defs/environment_values"
+                                                                           },
+                                                              "new_process":  {
+                                                                                  "$ref":  "#/$defs/new_environment_values"
+                                                                              },
+                                                              "new_user":  {
+                                                                               "$ref":  "#/$defs/new_environment_values"
+                                                                           }
+                                                          }
+                                       },
+                       "installer":  {
+                                         "$ref":  "#/$defs/script"
+                                     },
+                       "inspector":  {
+                                         "$ref":  "#/$defs/script"
+                                     },
+                       "rollback_distribution":  {
+                                                     "type":  "object",
+                                                     "additionalProperties":  false,
+                                                     "required":  [
+                                                                      "path",
+                                                                      "codex_closure_sha256"
+                                                                  ],
+                                                     "properties":  {
+                                                                        "path":  {
+                                                                                     "$ref":  "#/$defs/absolute_path"
+                                                                                 },
+                                                                        "codex_closure_sha256":  {
+                                                                                                     "$ref":  "#/$defs/sha256"
+                                                                                                 }
+                                                                    }
+                                                 },
+                       "actions":  {
+                                       "type":  "array",
+                                       "minItems":  5,
+                                       "maxItems":  5,
+                                       "items":  {
+                                                     "type":  "object",
+                                                     "additionalProperties":  false,
+                                                     "required":  [
+                                                                      "name",
+                                                                      "program",
+                                                                      "script_role",
+                                                                      "script_sha256",
+                                                                      "arguments",
+                                                                      "working_directory"
+                                                                  ],
+                                                     "properties":  {
+                                                                        "name":  {
+                                                                                     "enum":  [
+                                                                                                  "install",
+                                                                                                  "inspect",
+                                                                                                  "environment",
+                                                                                                  "fresh-process-smoke",
+                                                                                                  "rollback"
+                                                                                              ]
+                                                                                 },
+                                                                        "program":  {
+                                                                                        "const":  "declarative"
+                                                                                    },
+                                                                        "script_role":  {
+                                                                                            "enum":  [
+                                                                                                         "installer",
+                                                                                                         "inspector",
+                                                                                                         "none"
+                                                                                                     ]
+                                                                                        },
+                                                                        "script_sha256":  {
+                                                                                              "anyOf":  [
+                                                                                                            {
+                                                                                                                "type":  "null"
+                                                                                                            },
+                                                                                                            {
+                                                                                                                "$ref":  "#/$defs/sha256"
+                                                                                                            }
+                                                                                                        ]
+                                                                                          },
+                                                                        "arguments":  {
+                                                                                          "type":  "array",
+                                                                                          "minItems":  1,
+                                                                                          "items":  {
+                                                                                                        "type":  "string",
+                                                                                                        "minLength":  1,
+                                                                                                        "pattern":  "^[^\\u0000-\\u001f\\r\\n]*$"
+                                                                                                    }
+                                                                                      },
+                                                                        "working_directory":  {
+                                                                                                  "$ref":  "#/$defs/absolute_path"
+                                                                                              }
+                                                                    }
+                                                 }
+                                   }
+                   },
+    "$defs":  {
+                  "sha256":  {
+                                 "type":  "string",
+                                 "pattern":  "^[0-9a-f]{64}$"
+                             },
+                  "bundle_id":  {
+                                    "type":  "string",
+                                    "pattern":  "^prod-[0-9]{8}T[0-9]{6}Z-[0-9a-f]{12}$"
+                                },
+                  "timestamp":  {
+                                    "type":  "string",
+                                    "pattern":  "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+                                },
+                  "absolute_path":  {
+                                        "type":  "string",
+                                        "pattern":  "^[A-Za-z]:[\\\\/].+$"
+                                    },
+                  "script":  {
+                                 "type":  "object",
+                                 "additionalProperties":  false,
+                                 "required":  [
+                                                  "path",
+                                                  "sha256"
+                                              ],
+                                 "properties":  {
+                                                    "path":  {
+                                                                 "$ref":  "#/$defs/absolute_path"
+                                                             },
+                                                    "sha256":  {
+                                                                   "$ref":  "#/$defs/sha256"
+                                                               }
+                                                }
+                             },
+                  "environment_values":  {
+                                             "type":  "object",
+                                             "additionalProperties":  false,
+                                             "required":  [
+                                                              "DEV_UTILITIES_ROOT",
+                                                              "DEV_WORKSPACE_ROOT"
+                                                          ],
+                                             "properties":  {
+                                                                "DEV_UTILITIES_ROOT":  {
+                                                                                           "anyOf":  [
+                                                                                                         {
+                                                                                                             "type":  "null"
+                                                                                                         },
+                                                                                                         {
+                                                                                                             "$ref":  "#/$defs/absolute_path"
+                                                                                                         }
+                                                                                                     ]
+                                                                                       },
+                                                                "DEV_WORKSPACE_ROOT":  {
+                                                                                           "anyOf":  [
+                                                                                                         {
+                                                                                                             "type":  "null"
+                                                                                                         },
+                                                                                                         {
+                                                                                                             "$ref":  "#/$defs/absolute_path"
+                                                                                                         }
+                                                                                                     ]
+                                                                                       }
+                                                            }
+                                         },
+                  "new_environment_values":  {
+                                                 "type":  "object",
+                                                 "additionalProperties":  false,
+                                                 "required":  [
+                                                                  "DEV_UTILITIES_ROOT",
+                                                                  "DEV_WORKSPACE_ROOT"
+                                                              ],
+                                                 "properties":  {
+                                                                    "DEV_UTILITIES_ROOT":  {
+                                                                                               "$ref":  "#/$defs/absolute_path"
+                                                                                           },
+                                                                    "DEV_WORKSPACE_ROOT":  {
+                                                                                               "$ref":  "#/$defs/absolute_path"
+                                                                                           }
+                                                                }
+                                             }
+              }
+}

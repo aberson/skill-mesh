@@ -1,0 +1,29 @@
+{
+  "schema": "skill-mesh/production-portfolio-policy/v1",
+  "registry_categories": ["utility"],
+  "required_projects": ["skill-mesh"],
+  "additional_active_projects": ["utility-project-standard"],
+  "embedded_inactive_projects": ["pocket-relay"],
+  "deferred_projects": [
+    {"slug": "code-stencil", "reason_code": "NO_REMOTE_AND_PLACEHOLDER", "evidence": "No remote or upstream exists, the checkout is dirty, and the implementation is a placeholder."},
+    {"slug": "jurys-out", "reason_code": "DOCUMENTATION_ONLY", "evidence": "The pushed repository contains documentation only and has no executable package."},
+    {"slug": "uat_sentinel", "reason_code": "NO_REMOTE_AND_NOT_IMPLEMENTED", "evidence": "No remote or upstream exists and production entry points raise NotImplementedError."}
+  ],
+  "repository_overrides": {"dev-observatory": "coding-root", "switchboard": "coding-root"},
+  "repository_sources": [
+    {"owner_slug": "b2_project_goblin", "checkout_relative_path": "workspace/b2_project_goblin", "canonical_remote_url": "https://github.com/aberson/b2_project_goblin.git", "project_slugs": ["b2_project_goblin"], "allowed_upstream_ref": "origin/main"},
+    {"owner_slug": "changed-check", "checkout_relative_path": "workspace/changed-check", "canonical_remote_url": "https://github.com/aberson/changed-check.git", "project_slugs": ["changed-check"], "allowed_upstream_ref": "origin/main"},
+    {"owner_slug": "citation-needed", "checkout_relative_path": "workspace/citation-needed", "canonical_remote_url": "https://github.com/aberson/citation-needed.git", "project_slugs": ["citation-needed"], "allowed_upstream_ref": "origin/main"},
+    {"owner_slug": "coding-root", "checkout_relative_path": "workspace", "canonical_remote_url": "https://github.com/aberson/coding-root.git", "project_slugs": ["dev-observatory", "switchboard"], "allowed_upstream_ref": "origin/main"},
+    {"owner_slug": "find-again", "checkout_relative_path": "workspace/find-again", "canonical_remote_url": "https://github.com/aberson/find-again.git", "project_slugs": ["find-again"], "allowed_upstream_ref": "origin/main"},
+    {"owner_slug": "heads-up", "checkout_relative_path": "workspace/heads-up", "canonical_remote_url": "https://github.com/aberson/heads-up.git", "project_slugs": ["heads-up"], "allowed_upstream_ref": "origin/main"},
+    {"owner_slug": "measure-twice", "checkout_relative_path": "workspace/measure-twice", "canonical_remote_url": "https://github.com/aberson/measure-twice.git", "project_slugs": ["measure-twice"], "allowed_upstream_ref": "origin/master"},
+    {"owner_slug": "mesh-lens", "checkout_relative_path": "workspace/mesh-lens", "canonical_remote_url": "https://github.com/aberson/mesh-lens.git", "project_slugs": ["mesh-lens"], "allowed_upstream_ref": "origin/main"},
+    {"owner_slug": "on-brand", "checkout_relative_path": "workspace/on-brand", "canonical_remote_url": "https://github.com/aberson/on-brand.git", "project_slugs": ["on-brand"], "allowed_upstream_ref": "origin/main"},
+    {"owner_slug": "paper-trail", "checkout_relative_path": "workspace/paper-trail", "canonical_remote_url": "https://github.com/aberson/paper-trail.git", "project_slugs": ["paper-trail"], "allowed_upstream_ref": "origin/main"},
+    {"owner_slug": "same-page", "checkout_relative_path": "workspace/same-page", "canonical_remote_url": "https://github.com/aberson/same-page.git", "project_slugs": ["same-page"], "allowed_upstream_ref": "origin/main"},
+    {"owner_slug": "skill-mesh", "checkout_relative_path": "workspace/skill-mesh", "canonical_remote_url": "https://github.com/aberson/skill-mesh.git", "project_slugs": ["skill-mesh"], "allowed_upstream_ref": "origin/main"},
+    {"owner_slug": "tripwire", "checkout_relative_path": "workspace/tripwire", "canonical_remote_url": "https://github.com/aberson/tripwire.git", "project_slugs": ["tripwire"], "allowed_upstream_ref": "origin/main"},
+    {"owner_slug": "utility-project-standard", "checkout_relative_path": "workspace/utility-project-standard", "canonical_remote_url": "https://github.com/aberson/utility-project-standard.git", "project_slugs": ["utility-project-standard"], "allowed_upstream_ref": "origin/main"}
+  ]
+}
