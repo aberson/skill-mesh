@@ -6,9 +6,9 @@
   prerequisite `review-deep` restoration before Phase IS can resume at C2N.
 - Phase PROD is the operator-authorized current detour. Its authority is
   `documentation/production-toolchain-separation-plan.md`, with umbrella #183 and seven serialized
-  steps. #184/#185 remain Steps 1/2; #190 is the dedicated activation-engine Step 3;
-  #186-#189 become Steps 4-7. No production directory or active-profile mutation existed when
-  planning completed.
+  steps. Step 1/#184 is complete at `2e8e4f3`; Step 2/#185 is next; #190 is the dedicated
+  activation-engine Step 3; #186-#189 remain Steps 4-7. No production directory or active-profile
+  mutation has occurred.
 - Phase PROD revised Steps 1-5 use the fixed-scope lineage of the original Steps 1-4
   `--reviewers code` bootstrap exception; Step 6 is an attended Codex-only activation of the exact
   Step-5 artifact. This does not restore or waive
@@ -31,9 +31,10 @@
   verifies manager/Git/tool/filesystem authority, Step 3 owns the disposable activation transaction
   and exact closure comparator, Step 5 certifies real release and executed evidence, and attended
   Step 6 reopens live active-state and rollback pre-images immediately before mutation.
-- The first #184 build-step exhausted 3/3 review iterations and merged nothing. Its preserved
-  worktree is diagnosis/test-idea evidence only; a fresh implementation must be reauthored from the
-  amended plan rather than copied wholesale.
+- The first #184 build-step exhausted 3/3 review iterations and merged nothing. Its worktree remains
+  preserved as diagnosis/test-idea evidence only. A replacement implementation was reauthored from
+  the amended plan and shipped at `2e8e4f3` after five fresh reviews reached High=0/Medium=0 and the
+  full post-merge gate passed.
 - Production releases live under runtime-resolved `<prod-root>` (initial host shape
   `%USERPROFILE%\prod`); executable code, the live development
   workspace, and mutable production data are separate roots.

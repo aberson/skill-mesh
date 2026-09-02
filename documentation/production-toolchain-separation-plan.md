@@ -19,7 +19,8 @@ independently verify the runtime authorities available at their boundaries. Fres
 plan-wrap returned READY on content SHA-256
 `84f3c9c725836d7df42d05b88419542840940d7d5315efb24f3fdf8bc2d7983b`; repo-sync then created
 Step-3 issue #190, mechanically filled that Issue field, and updated #183–#189 to the seven-step
-topology. The next implementation must be a new Step-1 worktree from checkpointed main.
+topology. Step 1 subsequently shipped from a fresh worktree at
+`2e8e4f3e516c7069d07364ab5438e7f810675290`; Step 2 is the next implementation unit.
 
 ## 1. What This Feature Does
 
@@ -231,8 +232,8 @@ Fresh-context execution sequence:
 1. In `<skill-mesh-root>`, run `git status --short`, `git rev-parse HEAD`, and
    `git rev-list --left-right --count HEAD...origin/main`; stop on unexpected dirt/divergence.
 2. Read this plan in full and reverify the external registry/project identities named in Section 2.3.
-3. After plan-review, plan-wrap, and repo-sync are recorded, run automated Steps 1–5 in order through
-   `/build-phase --plan documentation/production-toolchain-separation-plan.md --steps 1,2,3,4,5`, or
+3. Step 1 is complete. Run the remaining automated Steps 2–5 in order through
+   `/build-phase --plan documentation/production-toolchain-separation-plan.md --steps 2,3,4,5`, or
    run the next single step through `/build-step` with that step's exact Problem, Issue, Done-when,
    Flags, and plan-step reference.
 4. Stop before Step 6 unless Step 5's retained activation plan and bundle verify byte-for-byte. Step 6
@@ -275,19 +276,19 @@ Fresh-context execution sequence:
 
 | File | Change Type | Reason | Verified |
 |---|---|---|---|
-| `config/production-portfolio-policy.json` | create | Store category-driven membership, explicit additions, repository sharing, and deferred candidates | No existing production policy found by `rg --files`; registry membership verified against `../.claude/observatory/registry.toml` |
-| `schemas/production-portfolio-policy-v1.schema.json` | create | Fail closed on policy drift | `schemas/` already holds project JSON schemas; no production schema exists |
-| `schemas/production-bundle-v1.schema.json` | create | Bind release identity, source trees, retained distribution, and gate evidence | No existing production bundle record found |
-| `schemas/production-current-v1.schema.json` | create | Bind active/previous selection and rollback evidence | No existing production selector found |
-| `schemas/production-activation-plan-v1.schema.json` | create | Bind the sole attended host-mutation input and exact rollback actions | No existing production activation record found |
-| `tools/production_record_contract.py` | create | Strictly parse policy/records, reject duplicate JSON members, and perform reason-coded declarative consistency checks without minting runtime authority | No declarative production-record helper exists; the rejected `ValidatedBundle` design is evidence only and must not be reused |
-| `CLAUDE.md` | modify narrowly | Document the `jsonschema` dependency used by the strict record validator and its loud-at-call failure contract | Current dependency section names PyYAML as the only third-party Python dependency |
+| `config/production-portfolio-policy.json` | landed in Step 1 | Store category-driven membership, explicit additions, repository sharing, and deferred candidates | Shipped at `2e8e4f3`; registry membership is locked by the focused policy-contract suite |
+| `schemas/production-portfolio-policy-v1.schema.json` | landed in Step 1 | Fail closed on policy drift | Shipped at `2e8e4f3`; Draft 2020-12 meta-validation and closed-boundary negatives pass |
+| `schemas/production-bundle-v1.schema.json` | landed in Step 1 | Bind release identity, source trees, retained distribution, and gate evidence | Shipped at `2e8e4f3`; declarative shape and coherence negatives pass |
+| `schemas/production-current-v1.schema.json` | landed in Step 1 | Bind active/previous selection and rollback evidence | Shipped at `2e8e4f3`; predecessor and selector-shape negatives pass |
+| `schemas/production-activation-plan-v1.schema.json` | landed in Step 1 | Bind the sole attended host-mutation input and exact rollback actions | Shipped at `2e8e4f3`; provider and action-order negatives pass |
+| `tools/production_record_contract.py` | landed in Step 1 | Strictly parse policy/records, reject duplicate JSON members, and perform reason-coded declarative consistency checks without minting runtime authority | Shipped at `2e8e4f3`; it remains a declaration checker, not runtime authority |
+| `CLAUDE.md` | modified in Step 1 | Document the `jsonschema` dependency used by the strict record validator and its loud-at-call failure contract | Shipped at `2e8e4f3`; the dependency and failure contract are recorded |
 | `tools/production-toolchain.py` | create | Implement `plan`, `stage`, `verify`, and activation-plan generation with argument-array subprocesses | `tools/` inventory has build/install/release scripts but no portfolio bundler |
 | `tools/activate-production-toolchain.ps1` | create | Perform the attended, preflighted environment/profile switch and fail-closed rollback | Existing installer is `tools/install-skill-mesh.ps1`; no production-root activator exists |
 | `_shared/utility-roots.md` | create | One owner for production-code versus live-workspace resolution | Existing generated shared-payload mechanism verified in `tools/build-distributions.ps1`; no utility-root shared contract exists |
 | Existing utility-calling `skills/**/core.md` and provider adapters | modify | Replace bare relative executable lookup with the shared two-root contract while preserving target-root semantics | `rg` found active command sites for dev-observatory, citation-needed, b2_project_goblin, and switchboard; Step 4 must capture an exact before/after inventory and reject newly unclassified command sites |
 | `documentation/providers/README.md`, `documentation/providers/claude.md`, `documentation/providers/gpt.md`, `documentation/providers/codex.md` | extend | Explain production root support, fresh-process inheritance, and unchanged provider authority | Files exist and are current provider documentation surfaces |
-| `tests/production-toolchain/**` | create | Policy/schema, path safety, Git identity, no-copy, stage/verify, resolver, activation-plan, and rollback negatives | No production-toolchain test root exists |
+| `tests/production-toolchain/**` | created in Step 1; extend in later steps | Policy/schema, path safety, Git identity, no-copy, stage/verify, resolver, activation-plan, and rollback negatives | Step 1 shipped `test_policy_contract.py`; later manager, activation, resolver, and rollback suites remain prospective |
 | `tests/package-integrity/expected_inventory.json`, focused `tests/package-integrity/**`, and `tests/distributions/**` | extend only where required | Record the new shared payload leaf, prove it ships in every relevant provider profile, and prevent direct relative calls from reappearing | Existing suites own generated closure and installed distribution behavior; shared assets are emitted transitively from canonical references |
 | `README.md`, `plan.md`, `documentation/architecture.md` | modify narrowly | Publish the operating model and record the follow-up needed to supersede the remaining one-root assumption | Existing architecture separates canonical/generated/installed surfaces; the cross-repository utility-hookup plan remains a read-only dependency during this build and is updated only in its owning repository |
 | `<prod-root>\**` | external create/mutate | Hold releases, data boundary, backups, retained artifacts, evidence, and selector | Path was absent during discovery; the selected volume had sufficient free capacity |
@@ -442,7 +443,12 @@ approach; none of its product files may be copied wholesale into a fresh build.
 
 ### Step 1: Lock the production portfolio and record schemas
 
-- **Status:** PENDING — REVISED AFTER A BLOCKED 3/3 BUILD-STEP; NO PRIOR CANDIDATE MERGED
+- **Status:** DONE (2026-09-02)
+- **Completion evidence:** commit `2e8e4f3e516c7069d07364ab5438e7f810675290`; 119 focused
+  policy-contract tests passed; the candidate and post-merge repository-root gates each passed
+  1543 tests with 1 skip; compile, private-path, and diff checks exited 0; five fresh no-history
+  review lenses aggregated High=0 and Medium=0. Issue #184 is closed. No `<prod-root>`, host,
+  profile, Phase IS/UAT, or later Phase PROD mutation occurred.
 - **Problem:** Turn the approved production membership, deferred-candidate rules, root separation,
   source allowlists, and immutable record grammar into one machine-checkable declarative contract
   before any external directory is created, without claiming runtime verification or activation
@@ -489,7 +495,7 @@ approach; none of its product files may be copied wholesale into a fresh build.
 
 ### Step 2: Build the fail-closed production bundle manager
 
-- **Status:** PENDING / BLOCKED ON STEP 1
+- **Status:** PENDING / READY AFTER STEP 1
 - **Problem:** Provide one four-command CLI whose release lifecycle derives candidates solely from
   independently reopened Git, filesystem, and tool authorities without changing the current
   production selection.
