@@ -495,7 +495,7 @@ approach; none of its product files may be copied wholesale into a fresh build.
 
 ### Step 2: Build the fail-closed production bundle manager
 
-- **Status:** PENDING / READY AFTER STEP 1
+- **Status:** BLOCKED (2026-09-02) — Step 2 exhausted 3/3 iterations. The final five fresh review lenses aggregated High=6/Medium=6; the candidate remains unmerged in `<dev-root>\worktree_build-step-prod2-20260902-1836` on `build-step-prod2-20260902-1836`. See issue #185 for the terminal evidence and repair handoff.
 - **Problem:** Provide one four-command CLI whose release lifecycle derives candidates solely from
   independently reopened Git, filesystem, and tool authorities without changing the current
   production selection.
