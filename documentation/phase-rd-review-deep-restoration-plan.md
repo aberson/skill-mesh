@@ -1,5 +1,12 @@
 # Phase RD — Restore review-deep calibration and resume the Codex capability slice
 
+**Status:** RETRY AUTHORIZED (operator decision 2026-09-03). Phase PROD is paused after its
+declarative Step 1 and no longer precedes this phase. Resume Step 1/#178 only from a fresh worktree
+based on actual synchronized `main`; all prior RD and PROD worktrees are read-only evidence.
+Steps 1–3 remain sequential code work, and Step 4 remains a hard attended wait gate with its
+existing separate approval requirements. See
+`documentation/phase-prod-rd-first-course-correction.md`.
+
 ## 1. What This Is
 
 This is the executable bridge between the blocked review-deep package work in issue #177,
@@ -32,12 +39,20 @@ boot configuration, SDK/WDK, driver, provider-resource, or genuine driver-test-h
   `1c5b3650b7073e9d4ce4d660a354dfe426ea30e0e8b7f12ef4cc217561d2d033`.
 - Paused adapter donor, retained read-only and resolved through the same worktree registry: branch
   `build-step-review-deep-capability-20260830220844`.
+- Earlier blocked Step-1 evidence, retained read-only: branch `build-step-phase-rd-178`, HEAD
+  `b36635891e657c859823b28e39f493f9feecff4f`.
+- Latest Step-1 evidence, retained read-only: branch `build-step-rd178-wal-20260831195206`, HEAD
+  `52af1d7ee19ff3bafd00d96d269b8ea1d93891bd`. Its controlled junction RED and repaired GREEN prove
+  the pending-WAL raw-addition and raw-retirement junction boundary is fixed. Its actual terminal
+  result was `180 passed, 3 failed` at the markerless package-asset/provenance/legacy-self-seed
+  integration boundary. The governing decision is
+  `documentation/phase-rd-package-asset-authority-decision.md`.
 - Trusted legacy source: the local `aberson/coding-root` repository (resolve its Git root with
   `git -C .. rev-parse --show-toplevel` from the canonical workspace, then verify its remote),
   immutable commit `3a7ae33d09b9b26edb291e2db0cdaca1022ed643`.
 
-The two donor worktrees are diagnostic evidence only. Every step starts from current `main` in a
-fresh worktree and re-proves its behavior. Do not merge, cherry-pick, or treat either donor's tests,
+All preserved worktrees are diagnostic evidence only. Every step starts from current `main` in a
+fresh worktree and re-proves its behavior. Do not merge, cherry-pick, or treat any donor's tests,
 reports, generated files, or untracked files as acceptance evidence.
 
 ## 3. Locked Inputs and Ownership Model
@@ -129,7 +144,10 @@ with `required_tool_missing` before any developer dispatch.
 
 ### Step 1: Securely land the review-deep package-asset capability
 
-- **Status:** BLOCKED (2026-08-31) — iteration cap reached; pending-WAL raw-junction retry authority remains unsafe (see #178)
+- **Status:** RETRY AUTHORIZED (2026-09-03) — the prior 3/3 window remains blocked history. A later
+  preserved candidate proved the pending-WAL junction repair and stopped at three package-asset
+  integration failures. Use `documentation/phase-rd-package-asset-authority-decision.md`; do not
+  reopen the solved WAL design.
 - **Problem:** Add planted regressions for interrupted pure raw-asset deletion, both
   `lint_prepass.sh` defects, exit-0 help for both shell helpers, and installed tier-map resolution;
   then implement the smallest complete calibration package, manifest/index, deterministic builder,
@@ -148,9 +166,14 @@ with `required_tool_missing` before any developer dispatch.
   `documentation/providers/codex.md`; `documentation/providers/README.md`.
 - **Existing context:** issue #177 owns the complete requirement. Import only the 39 Git objects
   at the pinned coding-root commit. Preserve the accepted Phase IS plan, frozen UAT, C2V/C2A
-  artifacts, current real profiles, and both donor worktrees. The raw corpus, manifest declaration,
-  emitted index, builder, and installer authority land together because any smaller production split
-  creates either undistributable payload or unsafe ownership semantics.
+  artifacts, current real profiles, and all named evidence worktrees. The raw corpus, manifest
+  declaration, emitted index, builder, and installer authority land together because any smaller
+  production split creates either undistributable payload or unsafe ownership semantics.
+  The latest preserved Step-1 evidence reached `180 passed, 3 failed`. Raw package leaves are
+  intentionally markerless and owned through an exact provider/skill/path/hash-bound generated
+  package index; generated files are owned through anchored headers. Legacy `owned_file_hashes`
+  self-seeding is permitted only as the decision document's complete exact-incoming ledger-only
+  no-op. Preserved worktrees are surgical diagnostic reference, never acceptance or wholesale donor.
 - **Produces:** exact `package_assets` declarations for the 39 imported leaves plus the hash-bound
   package-local tier-map snapshot; provenance with 36 byte-identical imports and three explicit
   derivatives; deterministic package index/output; backward-compatible calibration
@@ -238,9 +261,14 @@ with `required_tool_missing` before any developer dispatch.
   with `required_tool_missing`; focused contract, package-integrity, emitted Codex profile,
   mandatory calibration, repo-root `python -m pytest`, and `git diff --check` pass; a fresh
   review-deep run reports zero High/Medium findings.
-- **Flags:** --isolation worktree --reviewers deep --max-iter 3
+- **Flags:** --isolation worktree --reviewers code --max-iter 3
 - **Depends on:** Step 2 complete, so canonical and emitted review-deep packages pass mandatory
   calibration.
+- **Review routing:** final bounded bootstrap exception. The currently installed Codex adapter is the
+  defect and unconditionally returns `required_tool_missing`, so the deep lane cannot review the
+  change that enables itself. Use all five fresh code-review lenses, parent-only deterministic
+  aggregation, and zero High/Medium findings. Step 4 then installs and proves the complete package
+  and capability in a fresh Codex context; this exception grants no authority to any later step.
 
 ### Step 4: Activate and prove the reviewed Codex package
 

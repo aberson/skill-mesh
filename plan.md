@@ -2,12 +2,15 @@
 
 ## Current goal
 
-Build and activate the separately versioned Phase PROD production utility toolchain described by
-`documentation/production-toolchain-separation-plan.md`, then resume Phase RD against the resulting
-main. This operator-authorized detour creates stable utility code under runtime-resolved
-`<prod-root>` without changing the frozen Phase IS UAT or claiming that `--reviewers deep` is restored. Phase RD #178 is
-paused, and its preserved worktree remains evidence/salvage only until Phase PROD's post-cutover
-reorientation.
+Restore and operator-activate the complete `review-deep` Codex package through Phase RD first.
+The solved pending-WAL junction is not the active defect: Step 1 resumes at the three
+package-asset/provenance/legacy-self-seed integration failures under
+`documentation/phase-rd-package-asset-authority-decision.md`.
+The operator-approved course correction is
+`documentation/phase-prod-rd-first-course-correction.md`: Phase PROD is paused after its completed
+declarative Step 1, its old Steps 2–7 are non-executable history, and a smaller production/development
+split is replanned only after Phase RD. Every preserved PROD and RD worktree is read-only evidence;
+new execution starts from actual synchronized `main`.
 
 Complete Phase IS (`documentation/instruction-file-symmetry-plan.md`): C2V and C2A have sealed the
 selected `core-uat-mode`; first restore, review, and operator-activate the complete `review-deep`
@@ -88,7 +91,7 @@ does not reinterpret that evidence or revive its stopped experiment.
 | Phase CP Step M3 (#132) | PENDING (2026-08-20) — daily-use row only | The operator: a few genuine Codex-hosted sessions. Delta triage is DONE — 43 rows across 4 tables, 0 undisposed, 0 `fix-later` owed; the providers-doc gap was filed as #142 and is now CLOSED at `2462afd` (codex given first-class doc coverage; the host-discovery gate derives its provider set from `Get-SkillMeshDiscoveryRoots` instead of hand-listing two). Evidence: `documentation/parity-deltas.md` § M3 checks |
 | Phase CP Step M4 (#133) | COMPLETE (2026-08-20) — PASS | Nothing — codex arm reinstalled clean (125 files; 0 stale, 0 unledgered) and all seven observatory locators verified `unwired` on the rendered surface, before and after. The claude and gpt `-Force` arms were deliberately not run. Evidence: `documentation/parity-deltas.md` § M4 checks and § Scope of the M4 PASS |
 | Phase IS (#143) | BUILDING (2026-08-31) — 9 of 11 landed, 9 certified DONE. Step 108/#152 is certified DONE at `472a62829fe355557584dbf11916e9b3a6958e45`. C2V is sealed at `09e7f4d0b740ddfb723dd77682108c3b4405d13e`; C2A is sealed at `2f6c7b87dbe68182d2c43c8b1e2faa0a9229817d` with `core-plan-amendment-not-required`. A read-only C2N prerequisite probe made no changes and stopped because this workstation has no qualifying WDK, signing identity, or demonstrated enforced admission policy. C2E source preparation is **AUTHORIZED**, but C2E.1 is serialized behind all four steps in `documentation/phase-rd-review-deep-restoration-plan.md`. Phase RD Steps 1–3 are code; Step 4 is a hard `Type: wait` gate for disposable rehearsal plus exact active-Codex-profile approval and fresh-context proof. Step 108P/#162 remains **BLOCKED BEFORE IMPLEMENTATION** until that prerequisite passes; Step 109/#153 remains operator-only and **BLOCKED BEFORE GRADING**, with every behavioral cell blank. | Execute Phase RD code Steps 1–3 through build-phase, then stop at Phase RD Step 4 for the separate active-profile authorization. Only after Step 4 passes, complete pre-provider C2E Steps 1–3 and stop at C2E.4 for the provider/license/cost/retention route choice. The topology remains one Windows execution guest plus one isolated non-snapshotted signer appliance; execution snapshots contain no signing private key. After later C2E authorization boundaries, run C2N → C2P → C3 → C4 → C2E.33 → C5. C2E.33 also runs after any terminal C2E/C2N/C2P/C3/C4 stop once an environment ID or provider resource exists; its exact-current-candidate self-contained image-bound safety action is sealed and live-preflighted before the first provider mutation and later uses no Git/test/build-phase/GitHub/control-signer/wait-signer preflight. A failed or unavailable C4-PASS retention transition uses its distinct destroy-only emergency route, preserves the PASS plus transition failure, and blocks C5. Abort cleanup also never unblocks C5. Only successful PASS retention preserves the read-only verifier, credential-free C5 preauthorization, and control/wait/emergency proof authorities through C5; C5 mints and revokes a new one-hour exact-rule identity, then tears those authorities down. A stop after Step-4 selection while both the environment ID and every provider resource are absent uses the authenticated pre-resource closure instead. Do not run C2N discovery or any certificate, policy, boot, driver, or genuine host action on this workstation. The accepted Phase IS plan and frozen UAT remain unchanged until their existing C3/C4 owners act. |
-| Phase PROD — Stable production utility toolchain | BLOCKED (2026-09-02) — Step 1/#184 remains complete at `2e8e4f3e516c7069d07364ab5438e7f810675290`; Step 2/#185 exhausted 3/3 iterations with final fresh reviews High=6/Medium=6. Its unmerged candidate is preserved at `<dev-root>\worktree_build-step-prod2-20260902-1836`; no external production directory or active-profile mutation occurred. | Resolve Step 2/#185 from the preserved candidate or a fresh synchronized worktree, then rerun `/build-phase --plan documentation/production-toolchain-separation-plan.md --resume 2`. Steps 3–5 remain pending. Phase RD remains paused and deep-dependent builds remain blocked until #178–#181 pass. |
+| Phase PROD — Stable production utility toolchain | PAUSED / SUPERSEDED AFTER STEP 1 (2026-09-03) — Step 1/#184 remains complete at `2e8e4f3e516c7069d07364ab5438e7f810675290`. Two separate Step-2 3/3 windows produced no mergeable candidate; both are preserved read-only. No production directory, environment, selector, or active-profile mutation occurred. | Finish Phase RD first. Then use `documentation/phase-prod-rd-first-course-correction.md` §7 as the `/plan-feature` seed for a routing-first, Codex-first MVP replacement. Do not resume old PROD Steps 2–7. |
 | Phase CL — Skill catalog lifecycle safety (#167) | PLANNED / PARKED — `documentation/skill-catalog-lifecycle-plan.md`; no implementation has started | Phase IS Completion Stage C5, then Phase CP Step M3 plus its closeout `repo-update`. Once released, Steps 110–117 (#168–#175) build and certify a hermetic portable-by-default CRUD rail; Step 118 (#176) performs attended disposable-host acceptance. Phase CL is not part of Phase IS's 11-unit count. |
 | Installed tier-map resolution audit (#182) | DEFERRED / NON-BLOCKING — 145 non-`review-deep` canonical references require classification | Its own reviewed plan after Phase RD. Do not widen #178–#181: Phase RD's package-local tier-map snapshot is the narrow prerequisite repair and remains authoritative for its exact counts. |
 | Legacy-migrator hardening (#138) | DEFERRED | Its own issue — Phase CP ships zero migrator delta by the option-3 decision of 2026-08-18 |
@@ -101,14 +104,17 @@ does not reinterpret that evidence or revive its stopped experiment.
 
 ## Current instruction
 
-Execute Phase PROD first under `documentation/production-toolchain-separation-plan.md`. Do not run a
-Phase PROD build-step concurrently with Phase RD #178, and do not merge the preserved #178 branch
-wholesale. Phase PROD's only permitted active-home mutation is its attended Step 6 using the exact
-Step-5 retained distribution through the existing installer and inspector; this narrow, explicit
-exception does not authorize any certificate, policy, boot, SDK/WDK, driver, frozen-UAT, or Phase IS
-artifact change. It also does not waive `--reviewers deep` for consumer projects. Step 1/#184 is
-complete at `2e8e4f3e516c7069d07364ab5438e7f810675290`; the next separately authorized build target is
-Step 2/#185 from actual synchronized main.
+Execute Phase RD first under `documentation/phase-rd-review-deep-restoration-plan.md`, as recorded
+by `documentation/phase-prod-rd-first-course-correction.md`. Resume Step 1/#178 in a fresh
+`build-step` worktree from actual synchronized main using
+`documentation/phase-rd-package-asset-authority-decision.md`; use preserved branches only as
+diagnostic evidence, do not reopen the proved pending-WAL junction, and never merge a donor
+wholesale. Continue Phase RD Steps 1–3 sequentially and stop at its attended Step 4. Do not run the
+superseded Phase PROD Steps 2–7. After the Phase RD Step-4 attended
+activation succeeds, create and review the MVP replacement PROD plan from the course-correction
+seed. No current approval extends to certificates, policy, boot, SDK/WDK, drivers, frozen UAT,
+Phase IS artifacts, or any active-profile mutation outside Phase RD Step 4's existing separate
+approval boundary.
 
 Execute Phase IS per `documentation/instruction-file-symmetry-plan.md`. That plan is the current
 authority for the active build; `documentation/codex-parity-delivery-plan.md` remains the broader

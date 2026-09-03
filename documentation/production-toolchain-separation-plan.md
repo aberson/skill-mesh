@@ -1,11 +1,11 @@
 # Phase PROD — Stable production utility toolchain
 
-**Status:** AUTHORIZED FOR PLANNING AND AUTOMATED BUILD. Revised Steps 1–5 may run through fresh
-Terra `build-step` contexts under the fixed-scope lineage of the operator-authorized code-review
-bootstrap exception below. Step 6 is an attended production cutover and may use only the exact
-retained candidate produced by Step 5. Step 7 runs after that cutover. Phase RD is paused while a
-Phase PROD build-step is active;
-its preserved #178 worktree is evidence and salvage, not a merge source.
+**Status:** PAUSED AND SUPERSEDED FOR EXECUTION AFTER STEP 1 (operator decision 2026-09-03).
+Step 1 remains complete and authoritative. Steps 2–7 below are retained as historical design and
+evidence context but MUST NOT be resumed or dispatched. The controlling decision is
+`documentation/phase-prod-rd-first-course-correction.md`: finish Phase RD first, then create and
+review a minimum viable replacement Phase PROD plan. All preserved PROD and RD worktrees remain
+read-only evidence.
 
 **Path notation:** `<dev-root>` and `<prod-root>` are runtime-resolved absolute roots. Their initial
 host shapes are `%USERPROFILE%\dev` and `%USERPROFILE%\prod`; committed contracts never bind a
@@ -20,7 +20,8 @@ plan-wrap returned READY on content SHA-256
 `84f3c9c725836d7df42d05b88419542840940d7d5315efb24f3fdf8bc2d7983b`; repo-sync then created
 Step-3 issue #190, mechanically filled that Issue field, and updated #183–#189 to the seven-step
 topology. Step 1 subsequently shipped from a fresh worktree at
-`2e8e4f3e516c7069d07364ab5438e7f810675290`; Step 2 is the next implementation unit.
+`2e8e4f3e516c7069d07364ab5438e7f810675290`. At that time Step 2 was next; the
+2026-09-03 course correction now archives every later contract below.
 
 ## 1. What This Feature Does
 
@@ -227,19 +228,11 @@ engine range, npm, and Windows PowerShell 5.1 or PowerShell 7. A missing tool st
 mutation; this phase performs no workstation-wide dependency installation. Require at least 5 GiB free
 under `<prod-root>` before Step 5.
 
-Fresh-context execution sequence:
+Historical execution sequence — retained only to explain the superseded design:
 
-1. In `<skill-mesh-root>`, run `git status --short`, `git rev-parse HEAD`, and
-   `git rev-list --left-right --count HEAD...origin/main`; stop on unexpected dirt/divergence.
-2. Read this plan in full and reverify the external registry/project identities named in Section 2.3.
-3. Step 1 is complete. Run the remaining automated Steps 2–5 in order through
-   `/build-phase --plan documentation/production-toolchain-separation-plan.md --steps 2,3,4,5`, or
-   run the next single step through `/build-step` with that step's exact Problem, Issue, Done-when,
-   Flags, and plan-step reference.
-4. Stop before Step 6 unless Step 5's retained activation plan and bundle verify byte-for-byte. Step 6
-   is attended even though the operator has authorized the production detour.
-5. After Step 6 passes, execute Step 7 and hand Phase RD #178 to a fresh Terra context based on the
-   actual new `main`.
+The former sequence ran Steps 2–5 and then attended Steps 6–7. It is intentionally not reproduced as
+a callable command because it is no longer executable authority. A fresh context must follow
+`documentation/phase-prod-rd-first-course-correction.md`, finish Phase RD, and create a new MVP plan.
 
 ## 3. Scope
 
@@ -439,7 +432,7 @@ rollback pre-image immediately before mutation. No public caller-constructible v
 bypass those observations. This decision supersedes the rejected three-iteration `ValidatedBundle`
 approach; none of its product files may be copied wholesale into a fresh build.
 
-## 7. Build Steps
+## 7. Completed and archived build-step contracts
 
 ### Step 1: Lock the production portfolio and record schemas
 
@@ -493,9 +486,9 @@ approach; none of its product files may be copied wholesale into a fresh build.
 - **Depends on:** none.
 - **Review routing:** fixed-scope PROD-D8 exception (original Steps 1–4); zero High/Medium findings.
 
-### Step 2: Build the fail-closed production bundle manager
+### Archived Step 2: Build the fail-closed production bundle manager
 
-- **Status:** BLOCKED (2026-09-02) — Step 2 exhausted 3/3 iterations. The final five fresh review lenses aggregated High=6/Medium=6; the candidate remains unmerged in `<dev-root>\worktree_build-step-prod2-20260902-1836` on `build-step-prod2-20260902-1836`. See issue #185 for the terminal evidence and repair handoff.
+- **Status:** SUPERSEDED / DO NOT RESUME (2026-09-03) — two independent 3/3 build windows produced no mergeable candidate. Preserve both registered candidate worktrees as read-only evidence. The replacement MVP is replanned only after Phase RD; see `documentation/phase-prod-rd-first-course-correction.md`.
 - **Problem:** Provide one four-command CLI whose release lifecycle derives candidates solely from
   independently reopened Git, filesystem, and tool authorities without changing the current
   production selection.
@@ -534,9 +527,9 @@ approach; none of its product files may be copied wholesale into a fresh build.
 - **Review routing:** fixed-scope PROD-D8 exception inherited from original Step 2; zero High/Medium
   findings.
 
-### Step 3: Build the reversible production activation engine
+### Archived Step 3: Build the reversible production activation engine
 
-- **Status:** PENDING / BLOCKED ON STEP 2
+- **Status:** SUPERSEDED / PARKED BY COURSE CORRECTION
 - **Problem:** Turn a declarative activation plan into one fail-closed transaction whose observable
   result is either the exact requested profile/environment/selector closure or the exact
   independently captured pre-image.
@@ -580,9 +573,9 @@ approach; none of its product files may be copied wholesale into a fresh build.
 - **Review routing:** fixed-scope PROD-D8 exception inherited from original Step 2; zero High/Medium
   findings.
 
-### Step 4: Route Skill Mesh utility calls through production code
+### Archived Step 4: Route Skill Mesh utility calls through production code
 
-- **Status:** PENDING / BLOCKED ON STEP 3
+- **Status:** SUPERSEDED / PARKED BY COURSE CORRECTION
 - **Problem:** A stable bundle is ineffective while installed skills still launch utilities from
   cwd-relative development paths; make executable-root and target-workspace selection explicit across
   every current utility command without claiming unbuilt advisory hookups.
@@ -611,9 +604,9 @@ approach; none of its product files may be copied wholesale into a fresh build.
 - **Depends on:** Step 3.
 - **Review routing:** fixed-scope PROD-D8 exception (original Steps 1–4); zero High/Medium findings.
 
-### Step 5: Stage and certify the first production bundle
+### Archived Step 5: Stage and certify the first production bundle
 
-- **Status:** PENDING / BLOCKED ON STEP 4
+- **Status:** SUPERSEDED / PARKED BY COURSE CORRECTION
 - **Problem:** Freeze one exact release-1 bundle and Skill Mesh distribution with real-project and
   disposable-install evidence before any user environment or active profile changes.
 - **Type:** code
@@ -646,9 +639,9 @@ approach; none of its product files may be copied wholesale into a fresh build.
 - **Review routing:** fixed-scope PROD-D8 exception (original Steps 1–4); zero High/Medium findings plus
   the two release-evidence reviews.
 
-### Step 6: Activate and smoke the production toolchain
+### Archived Step 6: Activate and smoke the production toolchain
 
-- **Status:** PENDING / ATTENDED CUTOVER
+- **Status:** SUPERSEDED / NO CUTOVER AUTHORITY
 - **Problem:** The certified source and distribution do not protect daily work until fresh host
   processes actually execute the production code while targeting the live development workspace.
 - **Type:** operator
@@ -679,9 +672,9 @@ approach; none of its product files may be copied wholesale into a fresh build.
   or stops with the old release still selected.
 - **Depends on:** Step 5.
 
-### Step 7: Reconcile status and resume the review-deep critical path
+### Archived Step 7: Reconcile status and resume the review-deep critical path
 
-- **Status:** PENDING / BLOCKED ON STEP 6
+- **Status:** SUPERSEDED — PHASE RD NOW PRECEDES THE REPLACEMENT PROD PLAN
 - **Problem:** Production activation must be durable in project documentation and the paused Phase RD
   repair must restart against the new main without losing or blindly merging preserved #178 evidence.
 - **Type:** code
