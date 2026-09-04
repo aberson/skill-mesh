@@ -1,10 +1,12 @@
 # Phase RD — Restore review-deep calibration and resume the Codex capability slice
 
-**Status:** RETRY AUTHORIZED (operator decision 2026-09-03). Phase PROD is paused after its
-declarative Step 1 and no longer precedes this phase. Resume Step 1/#178 only from a fresh worktree
-based on actual synchronized `main`; all prior RD and PROD worktrees are read-only evidence.
-Steps 1–3 remain sequential code work, and Step 4 remains a hard attended wait gate with its
-existing separate approval requirements. See
+**Status:** FORCE BOUNDARY DECIDED; RECOVERY NOT DISPATCHED (operator decision 2026-09-04).
+Phase PROD is paused after its declarative Step 1 and no longer precedes this phase. The latest
+Step-1 candidate exhausted its authorized window and remains read-only evidence. A future recovery
+must start from actual synchronized `main` and obey both
+`documentation/phase-rd-package-asset-authority-decision.md` and
+`documentation/phase-rd-force-boundary-decision.md`. Steps 1–3 remain sequential code work, and
+Step 4 remains a hard attended wait gate with its existing separate approval requirements. See
 `documentation/phase-prod-rd-first-course-correction.md`.
 
 ## 1. What This Is
@@ -47,6 +49,14 @@ boot configuration, SDK/WDK, driver, provider-resource, or genuine driver-test-h
   result was `180 passed, 3 failed` at the markerless package-asset/provenance/legacy-self-seed
   integration boundary. The governing decision is
   `documentation/phase-rd-package-asset-authority-decision.md`.
+- Rejected force-boundary candidate, retained read-only: branch
+  `build-step-rd178-step1-20260903150041`, base HEAD
+  `59a9b269b298d1564db168c9de809ca270969d4a`, 59 status entries, working-snapshot SHA-256
+  `446f4fda4764684b474e24619be9fe6e67c9097a3047dc76ceed17032342eb9f`, installer SHA-256
+  `5901228CE46B832CC3A2EAE9037920262B49560B973F7C66EA03998A60EACDAA`. Issue #178 comment
+  `5536682273` proves its policy contradiction, out-of-scope force/WAL subsystem, pre-existing
+  reparse-hardening gap, candidate-introduced v1 StrictMode defect, and absence of a qualifying
+  repository-root gate. `documentation/phase-rd-force-boundary-decision.md` owns its disposition.
 - Trusted legacy source: the local `aberson/coding-root` repository (resolve its Git root with
   `git -C .. rev-parse --show-toplevel` from the canonical workspace, then verify its remote),
   immutable commit `3a7ae33d09b9b26edb291e2db0cdaca1022ed643`.
@@ -115,6 +125,14 @@ Pending raw bytes authorize only an exact same-source retry. A changed-source re
 before index activation is a true no-mutation refusal. Recovery may not publish a partial normal
 ledger or remove the WAL while the active index still describes a different package state.
 
+Force cannot expand raw authority. Any raw adoption, overwrite, stale removal, uninstall, or
+pending-WAL recovery that would depend on `-Force` or `-ForceShared` refuses before mutation with
+the prefix `install-skill-mesh: RAW_PACKAGE_FORCE_UNSUPPORTED --`. Existing generated-file force
+behavior remains unchanged. Raw authority is classified per leaf; one invalid leaf blocks the
+atomic transaction but never converts byte-identical peers into forced preimages. The four
+candidate-only force/WAL persistence fields and any new production corruption seam are prohibited.
+The complete boundary is `documentation/phase-rd-force-boundary-decision.md`.
+
 ## 4. Development and Gate Commands
 
 - Dependency install: none beyond the repository's existing Python/PowerShell/Bash toolchain;
@@ -135,28 +153,34 @@ ledger or remove the WAL while the active index still describes a different pack
   smoke needed by current downstream `review-deep` consumers. It may run only after all code steps
   are reviewed and pushed, and only after its own explicit operator approval.
 
-Before Step 1, the build-phase parent must pass the Codex acceptance probe for explicit no-history
-sibling dispatch, parent-private state, caller-scoped verdict service, authenticated outside-worktree
-sidecar, and parent-only verdict classification. A missing or inconclusive capability stops visibly
-with `required_tool_missing` before any developer dispatch.
+Before any code step, the invoking `build-step` or `build-phase` coordinator must pass its own
+provider adapter's isolation and verdict-authority acceptance contract. A Claude Code Opus Step-1
+recovery uses Claude's native fresh developer/reviewer contexts and build-step sidecar contract; it
+does not run the Codex-host acceptance probe. A later Codex-hosted invocation must still prove
+explicit no-history sibling dispatch, parent-private state, caller-scoped verdict service,
+authenticated outside-worktree sidecar, and parent-only verdict classification. A missing or
+inconclusive required capability stops visibly with `required_tool_missing` before developer
+dispatch.
 
 ## 5. Build Steps
 
 ### Step 1: Securely land the review-deep package-asset capability
 
-- **Status:** RETRY AUTHORIZED (2026-09-03) — the prior 3/3 window remains blocked history. A later
-  preserved candidate proved the pending-WAL junction repair and stopped at three package-asset
-  integration failures. Use `documentation/phase-rd-package-asset-authority-decision.md`; do not
-  reopen the solved WAL design.
+- **Status:** RECOVERY READY / NOT DISPATCHED (2026-09-04) — the latest 3/3 window remains blocked
+  history and its candidate is preserved. The operator decided the missing force boundary: exclude
+  the candidate-only forced-preimage certificate subsystem, refuse force-dependent raw actions
+  before mutation, and retain per-leaf authority classification. A new implementation window still
+  requires explicit authorization. Use both Step-1 decision documents; do not patch the preserved
+  candidate or reopen the solved ordinary-WAL design.
 - **Problem:** Add planted regressions for interrupted pure raw-asset deletion, both
   `lint_prepass.sh` defects, exit-0 help for both shell helpers, and installed tier-map resolution;
   then implement the smallest complete calibration package, manifest/index, deterministic builder,
   and installer state machine that makes those regressions pass atomically.
 - **Type:** code
 - **Issue:** #178
-- **Files:** `.gitattributes`; `documentation/review-deep-calibration-provenance.json`;
+- **Files:** `.gitattributes` (new); `documentation/review-deep-calibration-provenance.json` (new);
   `skills/review-deep/evals/**`; `skills/review-deep/scripts/**`;
-  `skills/review-deep/config/model-tier-map.json`;
+  `skills/review-deep/config/model-tier-map.json` (new);
   `_shared/calibrate_judge.py`; `_shared/test_calibrate_judge.py`;
   `skills/review-deep/core.md`; `config/skill-manifest.json`; `tools/gen_manifest.py`;
   `tests/package-integrity/expected_inventory.json`;
@@ -173,14 +197,19 @@ with `required_tool_missing` before any developer dispatch.
   intentionally markerless and owned through an exact provider/skill/path/hash-bound generated
   package index; generated files are owned through anchored headers. Legacy `owned_file_hashes`
   self-seeding is permitted only as the decision document's complete exact-incoming ledger-only
-  no-op. Preserved worktrees are surgical diagnostic reference, never acceptance or wholesale donor.
+  no-op. The later rejected candidate added an ungranted forced-preimage/WAL certificate subsystem;
+  none of its four persistence fields or four additional production test seams may be re-derived.
+  Existing generated-file force behavior stays unchanged, while any force-dependent raw action
+  refuses under the force-boundary decision. Preserved worktrees are surgical diagnostic reference,
+  never acceptance or wholesale donor.
 - **Produces:** exact `package_assets` declarations for the 39 imported leaves plus the hash-bound
   package-local tier-map snapshot; provenance with 36 byte-identical imports and three explicit
   derivatives; deterministic package index/output; backward-compatible calibration
   package-directory resolution through an explicit `--skill-dir <path>` option (while retaining
   the existing `--skill <name>` interface); safe raw-asset WAL lifecycle; fixed lint prepass with
   argument terminators and an stdin-preserving parser; exit-0 usage entry points for both shell
-  helpers; targeted planted-negative tests.
+  helpers; per-leaf raw authority with whole-transaction atomic refusal; force-before-mutation raw
+  refusal under the stable prefix; v1 WAL StrictMode compatibility; targeted planted-negative tests.
 - **Done when:** the pure-removal, diff-filename option-injection, and piped-output regressions are
   demonstrated against the defective shape and pass after the repair; frozen-source provenance is
   recomputed from Git objects with the exact 36+3 disposition; `python aggregate.py --help`,
@@ -190,7 +219,11 @@ with `required_tool_missing` before any developer dispatch.
   package shapes; canonical, emitted, and disposable installed calibration calls use the exact
   `--skill-dir` package root rather than relying on repository-relative discovery;
   missing/forged/misbound index, foreign markerless peer, pending changed-source,
-  and pending uninstall refuse before mutation; disposable Claude/GPT/Codex
+  pending uninstall, every force-dependent raw action, and pending raw WAL plus either force flag
+  refuse before mutation; one divergent raw leaf does not reclassify its valid peers; v1 WAL
+  publication reads no v2-only property; the four excluded persistence fields are absent; the
+  installer adds no production `SKILL_MESH_INSTALL_TEST_*` seam beyond the two on main at the
+  force-boundary decision; disposable Claude/GPT/Codex
   install/reinstall/uninstall paths pass; PowerShell/Bash parsers, focused suites, repo-root
   `python -m pytest`, and `git diff --check` pass without an unexplained count regression.
 - **Flags:** --isolation worktree --reviewers code --max-iter 3
@@ -244,7 +277,7 @@ with `required_tool_missing` before any developer dispatch.
 - **Issue:** #180
 - **Files:** `skills/review-deep/providers/codex.md`;
   `documentation/providers/codex.md`; `documentation/providers/README.md`;
-  `tests/package-integrity/test_review_deep_codex_contract.py`; generated provider output only as
+  `tests/package-integrity/test_review_deep_codex_contract.py` (new); generated provider output only as
   disposable verification evidence.
 - **Existing context:** issue #165 owns the broader adapter audit and must remain open. The paused
   donor contains a proposed four-file slice, but it predates Steps 1-2 and is not landable authority.
@@ -350,7 +383,8 @@ Each step receives its own linked tracking issue during repo-sync. Passing a ste
 step issue. After Step 2 passes, close parent #177 with links to both reviewed commits. Parent #165
 remains open after Step 3 because it owns the remaining adapter inventory; add the Step 3 result as
 a progress comment rather than closing #165. Step 4 has its own operator issue and cannot be closed
-from code-step evidence alone.
+from code-step evidence alone. The separate pre-existing forced stale-path defect #192 remains open
+and does not block this phase; Phase RD only proves raw package actions cannot enter that force path.
 
 ## 7. Stop Conditions and Recovery
 
@@ -358,14 +392,14 @@ Before dispatch, stop for a missing pinned commit/path, unresolved 39-file prove
 tier-map snapshot drift, required change to the accepted Phase IS plan or frozen UAT,
 dirty/diverged main, or failed host acceptance probe.
 
-During build-phase, use only its defined halt classes. In particular, preserve the fresh worktree and
-stop on a blocked reviewer verdict, full-gate/count regression, overlapping upstream advancement,
-same-bug-shape stop-and-audit trigger, or worktree merge conflict. Never patch or land the rejected
-donor in place.
+During `build-step` or `build-phase`, use only the invoked skill's defined halt classes. In
+particular, preserve the fresh worktree and stop on a blocked reviewer verdict, full-gate/count
+regression, overlapping upstream advancement, same-bug-shape stop-and-audit trigger, or worktree
+merge conflict. Never patch or land a rejected candidate or donor in place.
 
-If a step fails after modifying only a fresh worktree, main and both donors remain unchanged. If a
-post-merge root gate fails, write the authenticated fail-closed verdict before returning and do not
-advance the plan status.
+If a step fails after modifying only a fresh worktree, main and every preserved evidence worktree
+remain unchanged. If a post-merge root gate fails, write the authenticated fail-closed verdict
+before returning and do not advance the plan status.
 
 ## 8. Phase Acceptance and Automatic Continuation
 
@@ -375,10 +409,11 @@ is clean and synchronized, the final repo-root suite passes, Step 4's fresh-cont
 passes, and no forbidden local-host surface or sealed Phase IS artifact changed.
 
 The paused sibling consumer `../pta_finance`, issue #27 and
-`documentation/treasurer-slides-plan.md` Step 14, may resume only after that complete Phase RD
+`../pta_finance/documentation/treasurer-slides-plan.md` Step 14, may resume only after that complete Phase RD
 condition is true and the remotely reread `PhaseRdActivationSealV1` is linked from the Step 4 issue.
 Its existing command remains `/build-phase --plan
-documentation/treasurer-slides-plan.md --resume 14` with `--reviewers deep --isolation worktree`;
+documentation/treasurer-slides-plan.md --resume 14`, run from the sibling repository, with
+`--reviewers deep --isolation worktree`;
 no fallback, downgrade, bypass, or consumer-repository edit is authorized here.
 
 Only after Step 4 passes, start a separate build-phase invocation for Steps 1-3 of

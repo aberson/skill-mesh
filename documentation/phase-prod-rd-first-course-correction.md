@@ -1,6 +1,6 @@
 # Phase PROD course correction — restore review-deep first, then build the minimum viable split
 
-**Status:** OPERATOR-APPROVED on 2026-09-03.
+**Status:** OPERATOR-APPROVED on 2026-09-03; Step-1 force boundary amended on 2026-09-04.
 
 This decision supersedes the execution order in
 `documentation/production-toolchain-separation-plan.md` after its completed Step 1.
@@ -33,6 +33,8 @@ Terms used below:
   its old Steps 2–7 are archived.
 - **WAL:** the installer write-ahead log that preserves recovery authority across interruption.
 - **Terra:** the `gpt-5.6-terra` implementation model used by `build-step`.
+- **Opus:** the Claude Code high-tier model selected for the next Step-1 recovery after the
+  credit-aware 2026-09-04 handoff; this changes the executor, not the build-step contract.
 - **C2V/C2A/C2E:** sealed or parked Phase IS completion stages; none is modified here.
 - **Verdict service and sidecar:** the caller-scoped parent authority and authenticated external
   result file used to keep developers/reviewers from awarding their own verdict.
@@ -88,6 +90,13 @@ planner, but it explains why the last repair round was debugging the wrong immed
   target-specific active-profile approval.
 - Phase IS C2V/C2A records, accepted plan, and frozen UAT remain immutable.
 
+Subsequent boundary on 2026-09-04: a fresh Step-1 attempt exhausted its authorized three-iteration
+window and stopped unmerged. A read-only Opus forensic pass proved that the candidate had added an
+ungranted forced-preimage/WAL certificate subsystem and had no qualifying repository-root gate.
+The operator chose the narrower force boundary recorded in
+`documentation/phase-rd-force-boundary-decision.md`. Step 1 is recovery-ready but no replacement
+build has been dispatched.
+
 ## 3. Preserved evidence — read-only
 
 Do not edit, merge wholesale, delete, prune, or treat any of these worktrees as acceptance
@@ -99,6 +108,7 @@ evidence. Resolve them through `git worktree list --porcelain` rather than assum
 | `build-step-prod2-recovery-20260903` | `c58222416c96947f5009d518e0507ebd293ff826` | 3 | `3a944fb5b54d97aaf23188ca68d2e5bedcf138be8a0be6d430171bd9abc1b460` | Second exhausted PROD Step-2 candidate |
 | `build-step-phase-rd-178` | `b36635891e657c859823b28e39f493f9feecff4f` | 56 | `36e1c03171f60dd325485ef5eb785c6416b825de30f1511fb53d4b115e5d0c45` | Earlier blocked Phase RD Step-1 candidate |
 | `build-step-rd178-wal-20260831195206` | `52af1d7ee19ff3bafd00d96d269b8ea1d93891bd` | 56 | `89d8853ac932a32abd3b5071f80515aed9b8c2063dd1639f8008bfcb58f20359` | Latest Phase RD Step-1 evidence; WAL junction fixed, three integration failures remain |
+| `build-step-rd178-step1-20260903150041` | `59a9b269b298d1564db168c9de809ca270969d4a` | 59 | `446f4fda4764684b474e24619be9fe6e67c9097a3047dc76ceed17032342eb9f` | Rejected Step-1 force-boundary candidate; no root-gate evidence; issue #178 comment `5536682273` |
 | `build-step-review-deep-calibration-assets-20260830224727` | `4b9b0aa065ac57f9b70a0cb1773e2d6c3e43d420` | 53 | `b8a77d35815a1b10dc8442682982d08a693bb76a7ffc13dad7d3a0a5751e6588` | Rejected package-assets donor |
 | `build-step-review-deep-capability-20260830220844` | `4b9b0aa065ac57f9b70a0cb1773e2d6c3e43d420` | 4 | `00aa910f5c5bb60a0ce181cd8d1d256bfc630a727435e7276e28c4bc1273f1e2` | Paused capability-adapter donor |
 
@@ -194,6 +204,16 @@ distribution-test hashes are respectively
 - Phase RD Step 3 required the unavailable `review-deep` lane to review the adapter that enables
   that lane. The corrected plan uses the same bounded five-lens bootstrap exception as Steps 1–2,
   then proves the installed capability at the attended Step 4 boundary.
+- The next Step-1 candidate introduced four force/WAL persistence fields, expanded an external
+  backup-record schema, and added production corruption seams without plan or decision authority.
+  Three patch iterations then optimized conflicting force-retry policies instead of the granted raw
+  package boundary. The durable correction is an early fail-closed boundary, not a fourth patch.
+- A cumulative `.pytest_cache` was briefly treated as run evidence. Cache membership and mtime do
+  not certify which command produced a candidate; only an owned sidecar or observed command/result
+  does. The rejected candidate has no `.build-step` sidecar and therefore no root-gate evidence.
+- The pre-existing forced stale-removal reparse weakness is split to #192. Phase RD Step 1 neither
+  absorbs nor ignores it: raw force refuses before mutation, while #192 owns general installer
+  hardening after `review-deep` is restored unless the operator separately reprioritizes it.
 
 ## 6. Rules for the replacement Phase PROD plan
 
@@ -258,18 +278,21 @@ Deferred backlog:
 The next execution authority is
 `documentation/phase-rd-review-deep-restoration-plan.md`.
 
-1. The high-tier decision over the three actual integration failures is complete and recorded in
-   `documentation/phase-rd-package-asset-authority-decision.md`; do not reopen the solved WAL design.
-2. Reverify synchronized main plus all six preservation rows above. Stop on drift.
-3. In a fresh `gpt-5.6-terra` coordinator rooted at clean main, invoke
-   `/build-phase --plan documentation/phase-rd-review-deep-restoration-plan.md --steps 1,2,3`.
-   The coordinator invokes `build-step`; `build-step` alone creates and owns each isolated worktree.
-4. For Step 1, inspect preserved worktrees only for reproduction ideas and the specifically recorded
-   WAL proof. Re-import the 39 package files from the pinned coding-root Git objects, recreate the
+1. The package-asset decision and its force-boundary decision are complete. Ordinary pending raw WAL
+   design is closed: exact force-free same-source retry only. Do not reintroduce the excluded
+   forced-preimage certificate subsystem.
+2. Reverify synchronized main plus all seven preservation rows above. Stop on drift.
+3. After separate execution authorization, invoke one fresh Claude Code Opus `build-step` for Phase
+   RD Step 1/#178 only. `build-step` alone creates and owns its isolated worktree. Do not patch the
+   preserved candidate or start with `build-phase` while Step 1 remains unlanded.
+4. Inspect preserved worktrees only for reproduction ideas and the specifically recorded ordinary
+   WAL proof. Re-import the 39 package files from pinned coding-root Git objects, recreate the
    tier-map snapshot from current main, and re-derive every implementation byte. Never merge,
    cherry-pick, or copy a donor candidate wholesale.
-5. Continue to Steps 2 and 3 only after the preceding step is reviewed, merged, pushed, and its root
-   gate passes. Step 3 uses the explicit five-lens bootstrap review recorded in the Phase RD plan.
+5. Stop after Step 1. Only after it is reviewed, merged, pushed, issue-closed, and root-gate-qualified
+   may a later fresh Opus coordinator invoke
+   `/build-phase --plan documentation/phase-rd-review-deep-restoration-plan.md --steps 2,3`.
+   Step 3 uses the explicit five-lens bootstrap review recorded in the Phase RD plan.
 6. Stop at Phase RD Step 4. Its disposable rehearsal and exact active-home installation require
    the separate approvals already defined by that plan.
 7. Do not run Phase PROD, C2E, C2N, C2P, C3, C4, C5, or Phase CL concurrently.
@@ -285,7 +308,7 @@ git worktree list --porcelain
 
 The first command must be empty and the divergence must be `0 0`. Resolve preserved worktree paths
 only from the final command; do not persist or assume a machine-specific path. Recompute each row's
-working-snapshot digest with the algorithm in Section 3 and stop before `build-phase` on any mismatch.
+working-snapshot digest with the algorithm in Section 3 and stop before `build-step` on any mismatch.
 
 Progress labels are evidence-bound:
 
@@ -302,11 +325,12 @@ Progress labels are evidence-bound:
 A fresh coordinator must:
 
 - read `AGENTS.md`, `CLAUDE.md`, `plan.md`, this decision, and the full Phase RD plan;
+- read both Step-1 authority decisions and issue #178 comment `5536682273`;
 - verify actual Git and issue state before trusting any recorded SHA;
 - enumerate issue #178 and its comments;
 - report `PREFLIGHT ONLY — no build worker running` until the verdict-service and baseline probes
   qualify, then `PREFLIGHT CLEARED` until a developer is observed;
-- invoke `build-phase` from synchronized main and let `build-step` create each fresh worktree;
+- invoke Step 1 through `build-step` from synchronized main and create exactly one fresh worktree;
 - preserve every named evidence worktree;
 - stop on the Phase RD plan's existing halt conditions;
 - provide an update at each observed boundary and immediately when an asynchronous worker exits.

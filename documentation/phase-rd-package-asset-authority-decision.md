@@ -1,7 +1,9 @@
 # Phase RD Step 1 package-asset authority decision
 
-**Status:** DECIDED on 2026-09-03. This is the execution authority for the remaining integration
-boundary in Phase RD Step 1/#178. It does not authorize an active-profile or host mutation.
+**Status:** DECIDED on 2026-09-03 and narrowed on 2026-09-04 by
+`documentation/phase-rd-force-boundary-decision.md`. Together those records are the execution
+authority for the remaining integration boundary in Phase RD Step 1/#178. They do not authorize a
+new implementation window, active-profile change, or host mutation.
 
 ## 1. What This Is
 
@@ -23,7 +25,7 @@ gate and terminal sections. That report is diagnostic evidence, never acceptance
 |---|---|---|
 | Generated file, including `package-assets.index.md` | Valid anchored generated header | Provider-domain path plus ledger path/hash, current byte hash, and valid header |
 | Raw `package_assets` leaf | Exact membership in a valid provider/skill/path/hash-bound package index | Provider-domain path plus ledger path/hash, current byte hash, live ledger-owned index/hash binding, and literal non-reparse path |
-| Pending raw leaf | WAL v2 exact raw/index tuple | Exact same-source retry only; never changed-source or uninstall authority |
+| Pending raw leaf | WAL v2 exact raw/index tuple | Force-free exact-same-source retry only; never force, changed-source, or uninstall authority |
 
 Index membership makes the generated and raw classes disjoint. `review-deep/scripts/README.md` is a
 raw derivative. It remains markerless because prepending a generated header would change the byte
@@ -46,6 +48,13 @@ relative path + raw SHA-256 + skill + index relative path + index SHA-256
 
 Source, installed, pending-WAL, and the narrow legacy producer all normalize to that shape. The
 shape is internal evidence, not caller-constructible authority.
+
+Force never expands this table. A transaction that would need `-Force` or `-ForceShared` to adopt,
+overwrite, remove, uninstall, or recover a raw package leaf refuses before mutation with the stable
+prefix `install-skill-mesh: RAW_PACKAGE_FORCE_UNSUPPORTED --`. Existing generated-file force-backup
+behavior on main remains unchanged. The excluded candidate-only force/WAL persistence fields and the
+per-path classification rule are owned by the force-boundary decision. The pre-existing general
+forced stale-path reparse hardening is separately tracked by #192.
 
 ## 3. Legacy exact-incoming self-seed
 
@@ -92,6 +101,12 @@ bytes at coding-root commit `3a7ae33d09b9b26edb291e2db0cdaca1022ed643`, reproduc
 36-byte-identical plus 3-derivative provenance split, recreate the tier-map snapshot from current
 main, and regenerate manifest/inventory output.
 
+Do not add `forced_preimage`, `force_backup_binding`, `write_ahead_force_plan`, or
+`write_ahead_expected_ledger_hash`; do not change the external force-backup record; and do not add
+production `SKILL_MESH_INSTALL_TEST_*` seams beyond the two present on main at the force-boundary
+decision. Add an exact no-mutation negative for every force-dependent raw action and a v1 WAL
+StrictMode compatibility regression.
+
 Required planted negatives, each proving the complete directory/byte state and ledger bytes are
 unchanged:
 
@@ -114,6 +129,10 @@ installer SHA-256 is `33C914D2AAA28A6CFAC907C24A5B0E135C0954DA8DBE45F01EE6842FEC
 its distribution-test SHA-256 is
 `4BC617B02D8F679A2CA60F62D34063166BB87C6D7C8EEE3FA68D5EFFAED985E8`.
 
+The later rejected branch `build-step-rd178-step1-20260903150041` is also read-only forensic
+evidence. Its identity, excluded force subsystem, missing root-gate evidence, and disposition are
+recorded in `documentation/phase-rd-force-boundary-decision.md`; it is not a newer donor.
+
 May be re-derived: the WAL literal-authority refactor, its two junction regressions, package
 builder/index concepts, calibration/helpers, and the pinned-object import. Must not be adopted:
 stale universal-header tests, incomplete legacy raw-peer refusal, any `.build-step` file as
@@ -122,6 +141,7 @@ acceptance, or a whole-branch merge/cherry-pick/copy.
 Stop without further patching on dirty/diverged main, evidence-fingerprint drift, provenance or
 tier-map mismatch, any solution that stamps raw assets or weakens the anchored parser, any legacy
 self-seed payload write/deletion or pending-WAL use, mutation by a planted refusal, WAL regression,
-output count other than `169/166/166`, unexplained gate-count regression, failed root gate,
+force authority over a raw action, any excluded force/WAL persistence field or new production test
+seam, output count other than `169/166/166`, unexplained gate-count regression, failed root gate,
 High/Medium review finding, merge conflict, or any need to touch active profiles, sealed Phase IS
 artifacts, Phase PROD, certificates, policy, boot, driver, or host security state.
