@@ -23,12 +23,13 @@ see the superseded-instruction banner below the Progress table.
   `2e8e4f3`) stays on main as the seed and `tests/production-toolchain` runs in every DONE gate.
   Track C re-enters after S9 by a fresh operator decision.
 
-**Descope execution status (S1–S9, as of 2026-09-05):** the freeze is lifted. S1 (record landed,
-`4fd75c7`) and S2 (freeze lift per DS-D2) are DONE. S3 (worktree rescue; rescue branches
-local-only per DS-D11) and S5 (this bookkeeping pass: the DS-D10 issue sweep, the known-gap
-notes, this status rewrite) run tonight in parallel lanes. S4 (the RD-lite build worker on #177)
-is in flight. S6 (Phase CL plan amendment per DS-D7, then plan-review/plan-wrap) is pending;
-S7 (CRUD rail), S8 (light proof per DS-D9 — #131/#132/#133 close there), and S9 (closeout)
+**Descope execution status (S1–S9, as of 2026-09-06 00:20):** the freeze is lifted. S1 (record
+landed, `4fd75c7`), S2 (freeze lift per DS-D2), S3 (worktree rescue: 6 rescue branches
+local-only per DS-D11, 14 worktrees removed), S5 (the DS-D10 issue sweep — 41 closed, 3 parked
+— plus the known-gap notes and this status rewrite), and S6 (Phase CL amendment per DS-D7,
+plan-review + plan-wrap READY, landed `39b9f44`) are DONE. S4 (the RD-lite build worker on
+#177) is in flight. S7 (CRUD rail — pre-flight owes the #168–#176/#165 issue-body sync against
+the amended plan), S8 (light proof per DS-D9 — #131/#132/#133 close there), and S9 (closeout)
 follow.
 
 **External consumer boundary (DS-D8):** `../pta_finance` Step 14 resumes when RD-lite lands on
