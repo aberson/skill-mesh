@@ -27,10 +27,13 @@ see the superseded-instruction banner below the Progress table.
 landed, `4fd75c7`), S2 (freeze lift per DS-D2), S3 (worktree rescue: 6 rescue branches
 local-only per DS-D11, 14 worktrees removed), S5 (the DS-D10 issue sweep — 41 closed, 3 parked
 — plus the known-gap notes and this status rewrite), and S6 (Phase CL amendment per DS-D7,
-plan-review + plan-wrap READY, landed `39b9f44`) are DONE. S4 (the RD-lite build worker on
-#177) is in flight. S7 (CRUD rail — pre-flight owes the #168–#176/#165 issue-body sync against
-the amended plan), S8 (light proof per DS-D9 — #131/#132/#133 close there), and S9 (closeout)
-follow.
+plan-review + plan-wrap READY, landed `39b9f44`) are DONE. **S4 is DONE (2026-09-06):**
+RD-lite merged at `8a1b501` and certified by the full repo-root DONE gate at `9983e3b` —
+**1565 passed / 1 skipped in 2:27:15, exit 0** (`documentation/findings/rd-lite-gate-9983e3b.txt`);
+review-deep calibrates in-repo from the canonical tree and pta_finance's deep lane resume
+condition (DS-D8) is met. The S7 pre-flight issue-body sync (#168–#176, #165) is done; S7
+(CRUD rail: `/build-phase --steps 119,110,111,112,113,114,115,116,117`), S8 (light proof per
+DS-D9 — #131/#132/#133 close there), and S9 (closeout) follow.
 
 **External consumer boundary (DS-D8):** `../pta_finance` Step 14 resumes when RD-lite lands on
 main; its `--reviewers deep --isolation worktree` lane is not weakened. Non-deep lanes resumed
@@ -317,9 +320,12 @@ ancestor walk byte-for-byte; Step 106 added
 `tests/package-integrity/test_instruction_contract_single_owner.py`, whose 21 assert lines were each
 proven RED against a planted defect. Two findings that outlived the steps are tracked separately:
 **#159** (the `goblin` and `citation-needed` CLIs hard-code `CLAUDE.md`, so two repointed skills
-cannot yet act on `AGENTS.md`), and the fact that **review-deep's calibration gate cannot run inside
-this repository** — `skill-mesh` carries no `evals/` tree, so `calibrate_judge.py` exits 1 here and
-the Step 106 deep review was run and reported as uncalibrated.
+cannot yet act on `AGENTS.md`), and the fact that **review-deep's calibration gate could not run
+inside this repository at the time** — `skill-mesh` then carried no `evals/` tree, so
+`calibrate_judge.py` exited 1 here and the Step 106 deep review was run and reported as
+uncalibrated. **Resolved 2026-09-06 by RD-lite (#177, merged `8a1b501`):** the canonical
+`skills/review-deep/{evals,scripts}` corpus is in-repo and `calibrate_judge.py --skill review-deep`
+exits 0 from the repository root.
 
 **The two Step-106 carry-forwards are resolved — operator decisions of 2026-08-25**, recorded as
 Round 5 in § 12 of the phase plan:

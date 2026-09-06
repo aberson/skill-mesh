@@ -1,0 +1,32 @@
+RD-lite definitive DONE gate (descope S4, issue #177)
+
+Launch facts
+- HEAD: 9983e3bd7a3c79c4365e273d10660f5d71737409 (exact, clean tree)
+- Detached via driver script with exit-code sentinel and per-minute memory trace
+- Admission: the 2048 MB floor was NOT met inside the 20-minute wait (1192 MB free at
+  start; morning agent activity); the driver proceeded per its documented fallback with
+  the memory trace as the adjudication record. Free memory ranged ~850-2400 MB across
+  the run. Zero competing pytest processes; the run produced zero failures, so issue
+  #156's starvation band remained a risk factor checked against, not a predictor.
+
+Terminal summary
+1565 passed, 1 skipped in 8835.87s (2:27:15)
+exit=0
+
+Collection was 1566 items. Accounting against the prior owner figure (1380 passed /
+1 skipped, collection 1381, at 6d14626):
+- +163 landed with Phase PROD Step 1 at 2e8e4f3 (including the 119-test
+  tests/production-toolchain suite), green in that step's own gates but not previously
+  recorded by the baseline owner;
+- +22 landed with RD-lite at 8a1b501 (calibration-resolution regression tests in
+  _shared/test_calibrate_judge.py plus the two package-integrity drift gates,
+  newline-normalized at 9983e3b).
+
+Prior runs of this gate at earlier HEADs, for the audit trail:
+- branch gate at 805473e: 7 failed / 1558 passed / 1 skipped in 2:17:22 - the 7 were
+  exactly the pre-fix descope-doc leak set (test_no_private_leak_in_migrated_tree plus
+  its six tests/release cascades), fixed on main at 3385ca8.
+- main gate at f98772d: 2 failed / 1563 passed / 1 skipped in 2:29:33 - both reds were
+  the new drift gates comparing raw working-tree bytes across files with different
+  checkout-era line endings (blobs byte-identical); fixed at 9983e3b by newline-
+  normalizing the comparisons, per the release pipeline's CRLF->LF precedent.

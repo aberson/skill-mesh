@@ -219,11 +219,25 @@ of 1335 passed / 1 skipped, so it clears the non-regression comparison before th
 is updated. It also matches the earlier Steps 104–106 shared gate at `dc21c9e`: Step 107's
 documentation-only payload moved neither the pass count nor the one known skip.
 
-### Re-measured 2026-08-27 (Phase IS C0R gate, at `6d14626`) — CURRENT
+### Re-measured 2026-09-06 (RD-lite DONE gate, at `9983e3b`) — CURRENT
 
 | Command | Passed | Failed | Skipped | Provenance |
 |---|---|---|---|---|
-| `python -m pytest` (DONE gate) | **1380** | 0 | **1** | **CURRENT** — C0R gate at `6d14626`; 2:30:30, detached with an exit-code sentinel, uninterrupted; summary retained at `documentation/findings/phase-is-c0r-gate-6d14626.txt` |
+| `python -m pytest` (DONE gate) | **1565** | 0 | **1** | **CURRENT** — RD-lite gate at `9983e3b`; 2:27:15, detached with an exit-code sentinel; summary and admission caveat retained at `documentation/findings/rd-lite-gate-9983e3b.txt` |
+
+Collection was **1566 items** — **+185 passed** against the 2026-08-27 owner figure: +163
+landed with Phase PROD Step 1 at `2e8e4f3` (including the 119-test
+`tests/production-toolchain` suite, green in that step's own gates but not previously
+recorded here) and +22 with RD-lite at `8a1b501`/`9983e3b`. The known environment-gated
+skip held at one. Admission caveat: the 2 GB floor was not met at launch (1192 MB; the
+driver proceeded after its 20-minute wait with a per-minute memory trace) and the run
+produced zero failures regardless — recorded per the issue #156 convention.
+
+### Re-measured 2026-08-27 (Phase IS C0R gate, at `6d14626`) — superseded 2026-09-06
+
+| Command | Passed | Failed | Skipped | Provenance |
+|---|---|---|---|---|
+| `python -m pytest` (DONE gate) | **1380** | 0 | **1** | C0R gate at `6d14626`; 2:30:30, detached with an exit-code sentinel, uninterrupted; summary retained at `documentation/findings/phase-is-c0r-gate-6d14626.txt` |
 
 Collection was **1381 items**. This is exactly **+39 passed** against the Step-107 owner
 figure of 1341 passed / 1 skipped: 24 cases in the new Codex agent-isolation contract file
