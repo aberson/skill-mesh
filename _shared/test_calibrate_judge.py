@@ -621,8 +621,8 @@ def test_cli_self_test_flag_still_short_circuits(tmp_path: Path, capsys) -> None
 # (measured), so an in-process assertion cannot tell a cwd-derived resolution
 # root from a location-derived one. Only a different cwd tells them apart, and
 # the documented invocation (`python _shared/calibrate_judge.py --skill
-# review-deep --mode ci`, review-deep/core.md) is relative, i.e. it is run by
-# an operator standing somewhere.
+# review-deep --mode ci`, skills/review-deep/core.md) is relative, i.e. it is
+# run by an operator standing somewhere.
 # ---------------------------------------------------------------------------
 
 
