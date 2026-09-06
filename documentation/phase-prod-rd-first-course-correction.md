@@ -1,6 +1,9 @@
 # Phase PROD course correction — restore review-deep first, then build the minimum viable split
 
-**Status:** OPERATOR-APPROVED on 2026-09-03; Step-1 force boundary amended on 2026-09-04.
+**Status:** SUPERSEDED 2026-09-05 by `documentation/descope-2026-09.md` (operator-approved
+descope decision record). Section 3's preserved-evidence table and digests remain binding
+(carried forward by that record's DS-D11); the execution order below is history.
+Previously: OPERATOR-APPROVED on 2026-09-03; Step-1 force boundary amended on 2026-09-04.
 
 This decision supersedes the execution order in
 `documentation/production-toolchain-separation-plan.md` after its completed Step 1.

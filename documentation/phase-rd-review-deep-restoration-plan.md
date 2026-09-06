@@ -1,6 +1,12 @@
 # Phase RD — Restore review-deep calibration and resume the Codex capability slice
 
-**Status:** FORCE BOUNDARY DECIDED; RECOVERY NOT DISPATCHED (operator decision 2026-09-04).
+**Status:** CUT 2026-09-05 by `documentation/descope-2026-09.md` DS-D3 (operator-approved).
+Phase RD as written is not an executable queue; RD-lite (corpus import + calibration
+resolution fix, no installer machinery) replaces it, and the codex deep lane is a known gap
+accepted by DS-D3 (its documentation lands at that record's S5). Issues #178-#181 close as
+superseded; umbrella #177 stays open, re-scoped to RD-lite. This plan remains the historical
+requirement and evidence index for any future codex-deep restoration.
+Previously: FORCE BOUNDARY DECIDED; RECOVERY NOT DISPATCHED (operator decision 2026-09-04).
 Phase PROD is paused after its declarative Step 1 and no longer precedes this phase. The latest
 Step-1 candidate exhausted its authorized window and remains read-only evidence. A future recovery
 must start from actual synchronized `main` and obey both

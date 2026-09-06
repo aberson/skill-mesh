@@ -2,6 +2,13 @@
 
 ## Current goal
 
+> **AUTHORITY UPDATE 2026-09-05:** `documentation/descope-2026-09.md` (operator-approved
+> descope decision record) supersedes the course correction as the active execution
+> authority. Phase RD as written is cut (replaced by RD-lite), the Phase IS tail is parked,
+> the freeze is lifted at its S2, and Phase CL (the CRUD rail) becomes the main track; the
+> production/development split is Track C, re-priced after S9. The prose below this banner is
+> retained as history until the S5 bookkeeping rewrite and must not be executed.
+
 Restore and operator-activate the complete `review-deep` Codex package through Phase RD first.
 The solved pending-WAL junction is not the active defect. Step 1 is recovery-ready but not
 dispatched after its latest candidate was rejected without a qualifying full root gate; that
