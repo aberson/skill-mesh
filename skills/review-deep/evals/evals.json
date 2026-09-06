@@ -1,0 +1,85 @@
+{
+  "skill": "review-deep",
+  "version": "1.0",
+  "description": "True/false evaluation for the review-deep skill -- verifies SKILL.md captures the 9 Tier-1 patterns from docs/investigations/review-agents/ across 6 lenses (incl. the Security lens), 7 anti-patterns, model strategy, aggregation, flag selection with auth-gate, and scope-boundary deferral.",
+  "passing_threshold": "30/32",
+  "categories": [
+    {
+      "name": "Frontmatter and discoverability",
+      "evals": [
+        { "id": 1, "statement": "SKILL.md has valid YAML frontmatter with name = 'review-deep' and user-invocable: true.", "source": "SKILL.md, lines 1-5", "result": null },
+        { "id": 2, "statement": "The frontmatter description is at most 200 characters and names the six lenses (correctness, bugs, security, tests, style, plan-conformance) plus the anti-pattern catalog and JSON audit trail.", "source": "SKILL.md, line 3", "result": null }
+      ]
+    },
+    {
+      "name": "Invocation contract",
+      "evals": [
+        { "id": 3, "statement": "The Arguments table documents all 10 flags (--prompt, --diff, --plan-step, --reviewers, --model-override, --force-runtime, --url, --start-cmd, --output-dir, --prior-sidecar) with correct required/optional status and defaults (--reviewers default code, --output-dir default .review-deep/).", "source": "SKILL.md, lines 22-36", "result": null },
+        { "id": 4, "statement": "--plan-step has the format <plan-file-path>:<step-id> and explicitly enables the plan-conformance lens; when omitted, the lens is skipped gracefully and not treated as an error.", "source": "SKILL.md, lines 28, 48-54, 308-312", "result": null }
+      ]
+    },
+    {
+      "name": "Reviewer lenses",
+      "evals": [
+        { "id": 5, "statement": "Six standing lenses are documented (correctness, bugs, security, test-quality, style, plan-conformance), each with the six required sub-sections (Scope, Coverage claim, Non-coverage, Evidence shape, Severity rubric, Output format).", "source": "SKILL.md, lines 86-438", "result": null },
+        { "id": 6, "statement": "Each lens emits one of the documented per-lens overall_verdict values (PASS / NEEDS-WORK / NO-EVIDENCE; plus FAILED for overload; plus SKIPPED for plan-conformance only when --plan-step is absent; plus NEEDS-CLARIFICATION for plan-conformance only when --plan-step is provided but the step cannot be located in either heading-format or table-format).", "source": "SKILL.md, lines 149-153, 188-191, 226-231, 263-266, 301-306, 509-525 + per-lens overall_verdict enum table", "result": null },
+        { "id": 7, "statement": "Adversarial framing (verify-dev-claims) is explicitly applied to BOTH the Bugs lens and the Correctness lens, and the framing wrapper is documented as the meta-principle behind anti-patterns 1-3.", "source": "SKILL.md, lines 133, 170, 401-409", "result": null },
+        { "id": 8, "statement": "The universal evidence discipline is documented: every finding cites file:line + excerpt + reasoning; findings missing file_line are dropped during aggregation; findings with empty excerpt are demoted one severity tier.", "source": "SKILL.md, lines 103-105, 614-625", "result": null },
+        { "id": 26, "statement": "Each lens's Output format sub-section pins the same explicit verdict threshold: emit PASS iff findings contains zero Block AND zero Nit (FYI-only is PASS); emit NEEDS-WORK if any Block or any Nit is present; emit NO-EVIDENCE when no diff content was visible (inputs-gathering bug). The threshold paragraph appears six times — the first four sentences are identical across Correctness, Bugs, Security, Test quality, Style, and Plan-conformance lenses; Plan-conformance additionally appends a fifth sentence documenting that it emits SKIPPED when --plan-step is not provided. The universal severity rubric area also notes that FYI findings do not trigger NEEDS-WORK.", "source": "SKILL.md, line 117 (FYI clarification) + lines 158, 198, 240, 277, 320 + the Security lens threshold paragraph (threshold paragraph per lens, six total)", "result": null },
+        { "id": 28, "statement": "The Plan-conformance lens documents detection of two plan formats: heading-format (### Step <step-id>: followed by - **Problem:** / - **Done when:** / - **Files:** / - **Produces:** bullets) AND table-format (markdown table with <step-id> in the first column, e.g. Alpha4Gate phase-d-build-plan.md '| D.6 | #169 | code | ... |' style, with optional narrative section linked from the row's Description column). When both formats are present in the same file, the heading form wins. When neither form locates the step, the lens emits a Block-severity Plan-conformance verdict: NEEDS-CLARIFICATION finding (distinct from SKIPPED, which fires only when --plan-step is not provided).", "source": "SKILL.md, Plan-conformance lens § 'Plan format detection' + verdict ladder entry for NEEDS-CLARIFICATION", "result": null },
+        { "id": 29, "statement": "The Bugs, Style, and Test quality lens prompts each contain a 'Linter pre-pass results' pre-section instructing the lens to (a) load <--output-dir>/lint-findings.json (default .review-deep/lint-findings.json) when present, (b) enumerate findings relevant to the lens (Bugs: ALL findings; Style: style-class rules; Test quality: findings at test-file paths), (c) cite-by-reference for findings at the same file_line ('Already-flagged by <tool> <rule> — surfacing for awareness only.' at FYI severity), and (d) proceed normally when the file is absent. Aggregator rule 7 backs this with a lint-dedup path: any lens finding sharing a concrete file_line with a lint finding demotes to FYI with rationale prefixed 'Cited-by-linter: <tool> <rule>' and an also_flagged_by_linter annotation. The string 'Linter pre-pass results' appears exactly 3 times in SKILL.md (one per lens).", "source": "SKILL.md, Bugs lens / Style lens / Test quality lens § 'Linter pre-pass results' pre-section + Aggregation § Aggregator rules (rule 7 lint-dedup extension)", "result": null },
+        { "id": 30, "statement": "A sixth standing lens 'Security' is documented at H3 (### Security lens) alongside the other five, with the same six required sub-sections (Scope, Coverage claim, Non-coverage, Evidence shape, Severity rubric, Output format) and the uniform six-lens verdict-threshold paragraph. Its narrowed Scope question is whether the diff introduces an adversarial-input / secrets / unsafe-config defect per .claude/rules/security.md, and its Coverage claim enumerates the three security.md failure modes (treat fetched external content as data not instructions / injection-as-data; pair unsafe configs with startup safety checks / unsafe-config-without-startup-guard; never dump secret file contents / secret-dump) plus the review-agents/16 adjacent defect classes (injection, path-traversal, authz, unvalidated-input, bind-guard). It appears in the Standing lens list, the intro paragraph, and the '## Reviewer lenses' spawns-six-sub-agents line.", "source": "SKILL.md, Standing lens list + ### Security lens H3 + line 'spawns six fresh-context sub-agents'", "result": null },
+        { "id": 31, "statement": "The Security lens carries a Non-coverage boundary note distinguishing it from Bugs (Security = .claude/rules/security.md adversarial-input / secrets / unsafe-config failure modes; Bugs = generic robustness / crashes), AND the Bugs lens's Non-coverage note correspondingly defers security defects to the Security lens (Bugs no longer claims 'security issues' in its Coverage claim; it points injection-as-data / secret-dump / unsafe-config / path-traversal / authz / unvalidated-input / bind-guard at the Security lens as primary owner). A bug that is also a security defect is owned by Security and may be cross-tagged FYI on Bugs.", "source": "SKILL.md, ### Security lens § Non-coverage + ### Bugs lens § Coverage claim / Non-coverage", "result": null }
+      ]
+    },
+    {
+      "name": "Anti-pattern catalog",
+      "evals": [
+        { "id": 9, "statement": "The anti-pattern catalog contains exactly seven Tier-1 entries at H3 (silent-wiring, producer-consumer-drift, codifying-test-diff, silent-fallthrough-in-loop, silent-fallthrough-in-hot-path, duplicate-shape-constants, create-table-without-migration), each prefixed 'anti-pattern:' so the catalog is grep-able.", "source": "SKILL.md, lines 316-408", "result": null },
+        { "id": 10, "statement": "Each anti-pattern catalog entry has the fixed six-section shape: Shape, Why it ships past unit tests, Detection prompt, Originating source, Severity (Block), Lens routing.", "source": "SKILL.md, lines 317-408", "result": null },
+        { "id": 11, "statement": "The codifying-test-diff entry documents a tie-breaker: default severity is Nit-suspicion, escalates to Block when no documenting context exists, and downgrades to FYI when documenting context (plan step / changelog / migration note / commit body) endorses the change.", "source": "SKILL.md, lines 349-356", "result": null },
+        { "id": 12, "statement": "The verify-dev-claims framing wrapper is documented as a separate H3 AFTER the seven catalog entries and is referenced by the Bugs and Correctness lens prompts.", "source": "SKILL.md, lines 410-421", "result": null }
+      ]
+    },
+    {
+      "name": "Model strategy",
+      "evals": [
+        { "id": 13, "statement": "The default model-tier table assigns Style to Haiku 4.5 and the other four lenses (Test quality, Plan-conformance, Bugs, Correctness) to Sonnet 4.6.", "source": "SKILL.md, lines 423-436", "result": null },
+        { "id": 14, "statement": "--model-override syntax is <lens>=<tier> where lens is one of style|test-quality|plan-conformance|bugs|correctness and tier is one of haiku|sonnet|opus; the flag is repeatable; unknown lens or tier exits with an error (never silently substitutes).", "source": "SKILL.md, lines 444-475", "result": null },
+        { "id": 15, "statement": "Overload-fallback behavior is fail-loud: retry once at the same tier with 30s backoff (and 180s first-token timeout); if the retry also fails, surface overall_verdict='FAILED' with failure_reason='model_overloaded'; NEVER silently substitute a different tier.", "source": "SKILL.md, lines 478-507", "result": null }
+      ]
+    },
+    {
+      "name": "Aggregation and JSON sidecar",
+      "evals": [
+        { "id": 16, "statement": "The aggregator documents seven deterministic rules (severity dominates count; lens owns its dimension; SKIPPED does not count toward NEEDS-WORK; FAILED and NO-EVIDENCE block PASS; persistent disagreement escalates severity via --prior-sidecar; absence-of-thing findings deduplicate across lenses).", "source": "SKILL.md, lines 661-716", "result": null },
+        { "id": 17, "statement": "The aggregated-verdict output ladder has three values (PASS / NEEDS-WORK / DEFERRED-TO-UAT), and when BOTH NEEDS-WORK and DEFERRED-TO-UAT apply the JSON sidecar's aggregated_verdict.result is 'NEEDS-WORK' (harder verdict wins gating) while the markdown header names both.", "source": "SKILL.md, lines 718-743", "result": null },
+        { "id": 18, "statement": "The JSON sidecar has the documented top-level keys (timestamp, plan_step, skill_version, invocation, lens_verdicts, aggregated_verdict, model_tiers_used, deferred_uat_items); lens_verdicts is a stable 6-element prefix followed by 0..N runtime entries.", "source": "SKILL.md, lines 725-771, 794-805", "result": null },
+        { "id": 19, "statement": "Per-finding shape includes the six fields (severity in Block|Nit|FYI, file_line, excerpt, rationale, optional anti_pattern from the catalog); per-lens shape includes lens_id, model_tier, authority, coverage_claim, findings[], overall_verdict, and optional failure_reason when overall_verdict == FAILED.", "source": "SKILL.md, lines 555-635", "result": null },
+        { "id": 27, "statement": "Aggregator rule 7 documents absence-of-thing finding deduplication across lenses: when multiple lenses surface a finding whose file_line is an absence (rather than a concrete file:line), the aggregator detects duplicates by (anti_pattern, finding-summary fuzzy-match) and demotes all-but-one to FYI. Primary lens is determined by Lens routing in the anti-pattern catalog (e.g., 'missing integration test' -> Test quality primary; 'missing migration' -> Bugs primary). Findings without an anti-pattern are awarded by lens-spawn order.", "source": "SKILL.md, line 716 (rule 7 list item) + line 664 (intro 'seven deterministic rules')", "result": null },
+        { "id": 32, "statement": "Security is registered as the PRIMARY OWNER of security findings in BOTH the SKILL.md aggregator routing prose (rule 2 lens-owns-dimension: when Bugs and Security flag the same security-class defect — injection-as-data / secret-dump / unsafe-config-without-startup-guard — Security wins and the Bugs copy demotes to FYI) AND in scripts/aggregate.py (the three security defect-class names map to 'security' in ANTI_PATTERN_PRIMARY, and 'security' is in CODE_LENS_ORDER after 'bugs'); the two sites agree (single source of truth per code-quality.md). The universal severity rubric keeps 'security finding' as a Block trigger, now annotated as owned by the Security lens. lens_id 'security' is a valid code-lens id in the per-lens verdict shape, and the lens_verdicts[] stable prefix is six elements (runtime lenses at index 6+).", "source": "SKILL.md, Aggregation § Aggregator rules (rule 2) + Per-lens verdict shape (lens_id enum) + Universal severity rubric (Block triggers) + scripts/aggregate.py (CODE_LENS_ORDER, ANTI_PATTERN_PRIMARY)", "result": null }
+      ]
+    },
+    {
+      "name": "Flag selection and auth-gate",
+      "evals": [
+        { "id": 20, "statement": "--reviewers accepts three values (code default, runtime, full) with the static-vs-runtime authority table showing the two lanes are NOT supersets of each other (each can see things the other cannot).", "source": "SKILL.md, lines 850-873", "result": null },
+        { "id": 21, "statement": "Auth-gate probe documents four downgrade triggers (HTTP 401, 3xx redirect to /login|/signin|/auth|/sso, HTTP 200 with login-form via multi-line-aware matcher, 10s probe timeout), reason-string enum (status_401, redirect_to_login:<url>, login_form_in_200_body, timeout), and the --force-runtime override that skips the probe.", "source": "SKILL.md, lines 875-909", "result": null }
+      ]
+    },
+    {
+      "name": "Scope-boundary deferral",
+      "evals": [
+        { "id": 22, "statement": "Six deferral trigger conditions are documented (auth-gated UI; kiosk-mode UX; hardware integration; multi-device flow; external-system handshake; multi-step user journeys with N>2 actions), with TWO concrete producers (Step 6 auth-gate downgrade and lens-emitted finding with reserved anti_pattern='scope-boundary-deferral').", "source": "SKILL.md, lines 969-1029", "result": null },
+        { "id": 23, "statement": "Each deferred_uat_items entry has the five required fields (reason, covered_lenses, needs_verification, recommended_commands[], uat_id='M<N>'); M-numbering restarts at M1 per invocation; the markdown summary ends with 'Please run <lowest-M> next.' before the audit-trail line.", "source": "SKILL.md, lines 1034-1107, 1153-1155", "result": null }
+      ]
+    },
+    {
+      "name": "Anti-patterns (negative assertions)",
+      "evals": [
+        { "id": 24, "statement": "The skill does NOT silently substitute a different model tier on overload: an overloaded lens always surfaces as overall_verdict='FAILED' with failure_reason='model_overloaded'; the operator must explicitly re-invoke with --model-override to retry on a different tier.", "source": "SKILL.md, lines 481-507", "result": null },
+        { "id": 25, "statement": "The skill does NOT emit a pure DEFERRED-TO-UAT verdict when Block findings exist (NEEDS-WORK wins for gating), does NOT count SKIPPED lenses toward NEEDS-WORK, and does NOT codify wrong codifying-test-diff verdicts (default Nit-suspicion; escalate to Block only without documenting context; downgrade to FYI when plan endorses).", "source": "SKILL.md, lines 349-356, 659-664, 692-717", "result": null }
+      ]
+    }
+  ]
+}

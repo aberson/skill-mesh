@@ -1,0 +1,132 @@
+{
+  "skill": "review-deep",
+  "version": "1.0",
+  "scenarios": [
+    {
+      "id": "scenario_silent_wiring_toybox_step15",
+      "name": "Silent-wiring: new module never invoked from production caller",
+      "description": "Based on toybox step 15 iter 1 incident -- developer agent built schedule_judge_sample and unit-tested it directly, but never wired it into the production _do_propose flow. The bug is invisible to unit tests and the gauntlet PASSes; production effect is zero judge calls forever.",
+      "context": "Diff adds a new module src/toybox/judge_sample.py exporting schedule_judge_sample(propose_ctx) plus tests/test_judge_sample.py that imports the function directly and exercises it. No edit to src/toybox/propose.py::_do_propose. --prompt: 'wire judge sampling into the propose flow per plan step 15'. --plan-step: documentation/toybox-plan.md:15 -- Done-when includes 'judge runs on >0 sampled proposes per session'. --reviewers code.",
+      "expected_assertions": [3, 5, 7, 8, 9, 10, 12, 16, 17, 18, 19]
+    },
+    {
+      "id": "scenario_producer_consumer_drift_a4g_phase46",
+      "name": "Producer-consumer drift: key shape changed without updating downstream consumer",
+      "description": "Based on Alpha4Gate Phase 4.6 Step 1 incident -- SC2Env._game_id format changed from <bot>_<seed> to <bot>_<seed>_<wallclock>, but the consumer evaluator._get_game_result(base_id) still parses the old shape. Both endpoint unit tests mock the other side and pass.",
+      "context": "Diff modifies src/alpha4gate/sc2_env.py::_game_id to include a wallclock suffix. tests/test_sc2_env.py asserts the new shape. src/alpha4gate/evaluator.py::_get_game_result(base_id) is unchanged and still calls base_id.split('_')[1] expecting a 2-segment shape. --prompt: 'add wallclock to game ids for replay disambiguation'. --reviewers code.",
+      "expected_assertions": [3, 5, 7, 8, 9, 10, 16, 17, 18, 19]
+    },
+    {
+      "id": "scenario_codifying_test_diff_toybox_g2_undocumented",
+      "name": "Codifying-test-diff with NO documenting context (escalate to Block)",
+      "description": "Based on toybox G2 incident WITHOUT documenting context -- the propose API silently narrows from returning 5 steps to 1, and the dev updates 6 integration tests to assert len(steps) == 1. No plan step, changelog entry, migration note, or commit body explains the narrowing. Per the tie-breaker rule the verdict escalates to Block.",
+      "context": "Diff modifies src/toybox/api/propose.py to return only the first step from the planner. Six integration tests in tests/integration/test_propose.py change their assertions from len(steps) == 5 to len(steps) == 1. Commit message: 'fix propose tests'. No plan-step supplied. --prompt: 'fix flaky propose tests'. --reviewers code.",
+      "expected_assertions": [3, 5, 8, 9, 10, 11, 16, 17, 18, 19, 25]
+    },
+    {
+      "id": "scenario_codifying_test_diff_documented",
+      "name": "Codifying-test-diff WITH documenting context (downgrade to FYI)",
+      "description": "Same narrowing shape as the undocumented scenario, but the plan step explicitly asks for 'narrow propose response to single step for v2 UX'. Per the tie-breaker rule the verdict downgrades to FYI -- surface in audit trail without blocking.",
+      "context": "Diff modifies src/toybox/api/propose.py to return only the first step. Same six test assertions change from 5 to 1. --plan-step documentation/toybox-plan.md:G3 where Problem reads 'narrow propose response to single step for v2 UX'. Commit body explicitly cross-references plan step G3. --reviewers code.",
+      "expected_assertions": [3, 4, 5, 8, 9, 10, 11, 16, 17, 18, 19]
+    },
+    {
+      "id": "scenario_silent_fallthrough_in_loop",
+      "name": "Silent-fallthrough-in-loop: try/except inside for-loop with success-path fallthrough",
+      "description": "Based on Alpha4Gate Phase 4.5 pattern -- a for-loop wraps expensive_op(item) in try/except that only logs the exception; the catch block has no continue or re-raise, so save_checkpoint(result) below the try runs with stale or undefined result. 682 unit tests miss this; a 4-minute smoke test catches it.",
+      "context": "Diff adds src/alpha4gate/curriculum.py::iterate_curriculum(items) with: for item in items: try: result = expensive_op(item) except Exception: log.exception('crashed'); # falls through; save_checkpoint(result); advance_curriculum(result). Tests in tests/test_curriculum.py mock expensive_op to always succeed. --prompt: 'add curriculum iteration loop'. --reviewers code.",
+      "expected_assertions": [3, 5, 7, 8, 9, 10, 16, 17, 18, 19]
+    },
+    {
+      "id": "scenario_silent_fallthrough_in_hot_path_a4g_phase_d6",
+      "name": "Silent-fallthrough-in-hot-path: try/except inside a function called per-RL-step",
+      "description": "Based on the Alpha4Gate Phase D.6 case surfaced by the review-deep v1 M1 smoke (2026-05-22). The hot-path function train_step() wraps its core work in try/except that only logs the exception and returns normally; the per-RL-step caller has no signal that a step silently failed and proceeds to advance the curriculum and write a checkpoint against stale state. Distinct from silent-fallthrough-in-loop because the try/except is inside a helper function, not in a literal loop body -- the loop lives in the caller.",
+      "context": "Diff adds src/alpha4gate/training/step.py::train_step(state) -> StepResult with: try: result = run_ppo_update(state); return StepResult(ok=True, ...) except Exception: log.exception('train step crashed'); return StepResult(ok=False, ...). The caller in src/alpha4gate/training/loop.py does `for episode in episodes: result = train_step(state); state = advance(result); save_checkpoint(state)` and never branches on result.ok. Unit tests in tests/test_step.py call train_step once with a known-good state and assert result.ok is True; the exception path is never exercised. --prompt: 'add resilient train_step wrapper for the PPO loop'. --reviewers code.",
+      "expected_assertions": [3, 5, 7, 8, 9, 10, 16, 17, 18, 19]
+    },
+    {
+      "id": "scenario_duplicate_shape_constants_a4g_phase45",
+      "name": "Duplicate-shape-constants: same shape literal defined in two places",
+      "description": "Based on Alpha4Gate Phase 4.5 -- diff introduces Discrete(5) in src/alpha4gate/agent.py while src/alpha4gate/env.py already defines ACTION_SPACE = Discrete(6). Tests on either side mock the other. Both pass with value-equality (==); silent drift inevitable when one side updates.",
+      "context": "Diff adds 'action_space = Discrete(5)' to src/alpha4gate/agent.py::PPOAgent.__init__. The canonical definition is ACTION_SPACE = Discrete(6) in src/alpha4gate/env.py (unchanged in this diff). tests/test_agent.py mocks env.ACTION_SPACE. tests/test_env.py mocks agent.action_space. --prompt: 'wire agent action space for new PPO config'. --reviewers code.",
+      "expected_assertions": [3, 5, 7, 8, 9, 10, 16, 17, 18, 19]
+    },
+    {
+      "id": "scenario_create_table_no_migration",
+      "name": "Create-table-without-migration: new column added without ALTER for existing prod DBs",
+      "description": "Diff modifies CREATE TABLE IF NOT EXISTS sessions to add a new judge_score INTEGER column. The table is opened against existing prod databases in toybox/data/sessions.db. No migration code ALTERs existing tables; CREATE TABLE IF NOT EXISTS is a no-op for existing tables and does NOT add the new column.",
+      "context": "Diff edits src/toybox/db/schema.sql to add 'judge_score INTEGER' to the sessions table CREATE TABLE statement. src/toybox/db/init.py executes the CREATE TABLE IF NOT EXISTS statement against an existing prod db at startup. No ALTER TABLE migration code added; no migration walker comparing declared vs live columns. Unit tests create fresh empty fixtures. --prompt: 'add judge_score column for v2 session tracking'. --reviewers code.",
+      "expected_assertions": [3, 5, 8, 9, 10, 16, 17, 18, 19]
+    },
+    {
+      "id": "scenario_plan_conformance_scope_drift",
+      "name": "Plan-conformance: Out-of-scope addition flagged as Block",
+      "description": "Diff implements the plan step's Problem (add /api/v2/status endpoint) AND adds an unrelated refactor of the adjacent metrics_collector module. The plan step's Produces does NOT list metrics_collector.py. Plan-conformance lens flags Out-of-scope at Block; other lenses may pass.",
+      "context": "Diff adds src/toybox/api/v2/status.py (matches plan) PLUS rewrites src/toybox/metrics/collector.py for 'cleaner code' (not in plan Produces). --plan-step documentation/toybox-plan.md:42 -- Problem: 'add /api/v2/status endpoint'; Done-when: 'GET /api/v2/status returns 200 with {status: ok}'; Files: 'src/toybox/api/v2/status.py'. --prompt: 'add v2 status endpoint per step 42'. --reviewers code.",
+      "expected_assertions": [3, 4, 5, 8, 16, 17, 18, 19]
+    },
+    {
+      "id": "scenario_plan_conformance_skipped",
+      "name": "Plan-conformance: SKIPPED when --plan-step is absent",
+      "description": "Small bug fix diff; --plan-step not provided. Plan-conformance lens MUST emit SKIPPED (with findings: []) and the aggregator MUST NOT count the skip toward NEEDS-WORK. Aggregated verdict is PASS when other lenses pass.",
+      "context": "Diff fixes a 1-char off-by-one in src/toybox/utils/clamp.py::clamp_score (changes `if x > max` to `if x >= max`). Adds a regression test in tests/test_clamp.py. --prompt: 'fix off-by-one in clamp_score'. No --plan-step supplied. --reviewers code.",
+      "expected_assertions": [3, 4, 5, 6, 8, 16, 17, 18, 19, 25]
+    },
+    {
+      "id": "scenario_deferred_to_uat_auth_gate",
+      "name": "DEFERRED-TO-UAT via auth-gate downgrade (toybox child kiosk)",
+      "description": "Diff modifies toybox child-kiosk UI that sits behind a PIN gate. --reviewers full requested. The auth-gate probe detects status 200 with a login-form (PIN entry) and triggers downgrade. Step 6 produces a deferred item with reason 'Runtime downgraded: login_form_in_200_body' and uat_id M1. Markdown ends with 'Please run M1 next.'",
+      "context": "Diff edits src/toybox/web/child/activities.tsx to add new 'energy elements' sprites. --reviewers full --url http://127.0.0.1:4000/child --start-cmd 'uv run python -m toybox serve --port 4000'. The /child URL returns 200 with a <form><input name='pin'> body. Static lenses all PASS; runtime probe downgrade fires.",
+      "expected_assertions": [3, 5, 17, 18, 20, 21, 22, 23]
+    },
+    {
+      "id": "scenario_clean_pass",
+      "name": "Clean PASS: well-scoped, well-tested, plan-conformant diff",
+      "description": "Diff is a small well-tested utility addition. --plan-step provided and all Done-when satisfied. No anti-patterns present. All 6 lenses emit PASS; aggregated_verdict.result == PASS; 0 Block findings; lens_verdicts is a stable 6-element array with all entries at PASS.",
+      "context": "Diff adds src/toybox/utils/format_duration.py with format_duration(seconds: float) -> str + tests/test_format_duration.py with 8 unit tests covering edge cases. --plan-step documentation/toybox-plan.md:51 -- Problem: 'add duration formatter for UI'; Done-when: 'format_duration(0) == \"0s\"'; Files: 'src/toybox/utils/format_duration.py'. --prompt: 'add duration formatter per step 51'. --reviewers code.",
+      "expected_assertions": [3, 4, 5, 6, 13, 16, 17, 18, 19]
+    },
+    {
+      "id": "scenario_model_overload_failed",
+      "name": "Model overload: lens returns FAILED with failure_reason='model_overloaded'",
+      "description": "Diff is small; one lens's primary model (Sonnet 4.6 for Bugs) returns 529 Overloaded; the single retry at the same tier also returns 529. Bugs lens overall_verdict='FAILED' with failure_reason='model_overloaded'. Aggregated verdict is NEEDS-WORK (FAILED blocks PASS). The skill does NOT silently fall back to a different tier.",
+      "context": "Small diff in src/toybox/utils/parse_iso.py adds parse_iso(s: str) -> datetime. --prompt: 'add ISO 8601 parser'. --reviewers code. During execution, the Bugs lens (Sonnet 4.6) returns 529 Overloaded on first attempt; after 30s backoff the retry also returns 529. Other four lenses complete normally with PASS.",
+      "expected_assertions": [3, 5, 6, 15, 16, 17, 18, 19, 24]
+    },
+    {
+      "id": "scenario_plan_conformance_table_format_a4g_phased6",
+      "name": "Plan-conformance lens parses Alpha4Gate table-format plan (Step D.6)",
+      "description": "Plan-conformance lens is given a --plan-step pointing at the real Alpha4Gate phase-d-build-plan.md which uses table-format (markdown table with step-id in the first column) rather than heading-format. The lens MUST detect the table-format, parse the D.6 row's columns, AND additionally read the surrounding narrative section in the same file (Phase D plans put the per-step table at the top of section 3.1 and the per-step details in narrative paragraphs earlier in the document near the touched-files list). Legacy v1 behavior silently skipped this lens when no ### Step heading was found; v2's table-format support replaces the silent skip with active parsing.",
+      "context": "Diff modifies bots/current/learning/rewards.py + bots/current/data/hyperparams.json to land Alpha4Gate Phase D Step D.6 (Backwards-compat: `use_build_order_reward` flag). --plan-step Alpha4Gate/documentation/plans/phase-d-build-plan.md:D.6. The plan file's section 3.1 contains the table row `| D.6  | #169  | code | Backwards-compat: \\`use_build_order_reward\\` flag |` AND earlier narrative paragraphs document the touched-file context: rewards.py loads rules via load_rules() and accumulates episode_total (RewardCalculator); hyperparams.json gains new keys `use_build_order_reward` (bool, default false) + `build_order_reward_alpha` (float, default 1.0). The lens combines the table row's columns with the narrative prose into a single ground-truth payload and grades the diff against it. --prompt: 'add backwards-compat use_build_order_reward flag per Alpha4Gate phase D.6'. --reviewers code. Expected: Plan-conformance lens emits PASS or NEEDS-WORK per the diff's actual conformance (test exercises only the table-format detection + parsing path); SKIPPED is NOT emitted (--plan-step was provided); NEEDS-CLARIFICATION is NOT emitted (the lens successfully located the step in table form at line 88 of the real plan file).",
+      "expected_assertions": [3, 4, 5, 8, 16, 17, 18, 19, 28]
+    },
+    {
+      "id": "scenario_lint_dedup_python_f401",
+      "name": "Lint dedup: ruff F401 cite-by-reference demotes lens finding to FYI",
+      "description": "Synthetic Python diff that adds 'import os' at the top of src/foo.py without using os anywhere. The orchestrator ran scripts/lint_prepass.sh which wrote lint-findings.json containing a ruff F401 'unused import' finding at src/foo.py:12. The Bugs lens, reading the linter pre-pass per the Bugs lens § 'Linter pre-pass results' pre-section, would normally re-derive the same defect; per the cite-by-reference instruction the lens MUST instead emit an FYI-severity finding with rationale prefixed 'Already-flagged by ruff F401 — surfacing for awareness only.' If the lens slips and emits a Nit at src/foo.py:12 anyway, aggregator rule 7's lint-dedup path catches the escapee: it demotes the lens finding to FYI with rationale prefixed 'Cited-by-linter: ruff F401' and annotates also_flagged_by_linter={tool: ruff, rule: F401} for audit-trail completeness. The lint finding itself is NOT republished by the aggregator (it's already in lint-findings.json).",
+      "context": "Diff adds src/foo.py with `import os\\n\\ndef greet(name): return f'hello, {name}'`. tests/test_foo.py exercises greet(). lint-findings.json contains {tool: 'ruff', rule: 'F401', file_line: 'src/foo.py:12', message: \"'os' imported but unused\"}. Bugs lens emits a finding at file_line='src/foo.py:12' with severity Nit and rationale 'unused import os adds noise and can mask future genuine usage' (or, per cite-by-reference, an FYI with 'Already-flagged by ruff F401 — surfacing for awareness only.'). Expected: aggregator rule 7 lint-dedup demotes the Nit (if emitted) to FYI with rationale prefixed 'Cited-by-linter: ruff F401' AND adds also_flagged_by_linter={tool: 'ruff', rule: 'F401'} to the finding dict. --prompt: 'add greet helper'. --reviewers code. --lint-findings .review-deep/lint-findings.json.",
+      "expected_assertions": [3, 5, 8, 9, 16, 17, 18, 19, 27, 29]
+    },
+    {
+      "id": "scenario_absence_of_thing_cross_lens_dedup",
+      "name": "Absence-of-thing finding deduplicates across Correctness + Test quality lenses",
+      "description": "Synthetic diff that adds a new service entry point without a corresponding integration test. Both the Correctness lens AND the Test quality lens surface findings about the same absent integration test -- file_line is an absence (no anchor line in the diff for either finding), so per rule 7 the aggregator detects the duplicate by (anti_pattern, finding-summary fuzzy-match) and demotes all-but-one to FYI. Neither finding carries an anti_pattern tag, so primary-lens selection falls back to lens-spawn order (Correctness, Bugs, Test quality, Style, Plan-conformance); Correctness emits first and wins as primary. Test quality's emission demotes to FYI. Result: aggregated_verdict counts the finding once at its original severity, not twice.",
+      "context": "Diff adds src/toybox/services/notification.py::send_notification(user_id, channel, body) -- a new service entry point that fans out to email/SMS/in-app handlers. Diff also adds tests/test_notification.py with unit tests that mock each handler individually. No integration test exercises send_notification end-to-end through the real handler chain. Correctness lens flags 'the prompt claims fan-out is wired but no integration test verifies end-to-end behavior; correctness cannot be confirmed against intent' at Nit (file_line: 'tests/integration/ has no test_notification.py'; no anti_pattern). Test quality lens flags 'missing integration test for notification fan-out path; this is a critical-behavior coverage gap' at Nit (file_line: 'no test file for src/toybox/services/notification.py exists'; no anti_pattern). --prompt: 'add notification fan-out service'. --reviewers code. Expected: rule 7 detects the duplicate via finding-summary fuzzy-match on the 'missing integration test' shape; both findings have no anti_pattern so lens-spawn order wins; Correctness keeps the Nit (primary), Test quality demotes to FYI. aggregated_verdict has 1 Nit + 1 FYI instead of 2 Nits.",
+      "expected_assertions": [3, 5, 8, 9, 16, 17, 18, 19, 27]
+    },
+    {
+      "id": "scenario_aggregate_py_end_to_end_integration",
+      "name": "End-to-end aggregator: 6-lens verdict directory through aggregate.py to sidecar + markdown",
+      "description": "Validates the v3 CLI-invocation + filesystem-IO contract for the extracted aggregator (per-rule logic is covered by aggregate.py --unit-test in-process; this scenario covers the script entrypoint, --lens-dir / --output-dir argparse, on-disk JSON read, on-disk sidecar write, and stdout markdown emission). A synthetic 6-lens verdict directory feeds scripts/aggregate.py; the resulting sidecar + stdout markdown are validated against an expected snapshot (timestamps + run-ids are placeholders; schema + rule outputs + markdown structure are the snapshot). Catches CLI-surface regressions that would slip past --unit-test (which calls aggregate() in-process without exercising the argparse / file-IO path).",
+      "context": "Synthetic inputs: 6 lens JSON files in a temp dir AND a synthetic lint-findings.json: (1) correctness.json -- overall_verdict='PASS', findings=[]; (2) bugs.json -- overall_verdict='NEEDS-WORK', findings=[{severity:'Block', anti_pattern:'silent-fallthrough-in-hot-path', file_line:'src/foo.py:42', rationale:'try/except in per-step helper swallows exception then returns; caller never branches on result.ok'}, {severity:'Nit', file_line:'src/foo.py:12', rationale:'import os never used'}]; (3) security.json -- overall_verdict='PASS', findings=[]; (4) test-quality.json -- overall_verdict='NEEDS-WORK', findings=[{severity:'Block', anti_pattern:'missing-integration-test', file_line:'tests/integration/ has no test_foo.py', rationale:'new module foo.py invoked from production but no integration test exercises the production caller end-to-end'}]; (5) style.json -- overall_verdict='PASS', findings=[]; (6) plan-conformance.json -- overall_verdict='SKIPPED', findings=[]. lint-findings.json: {tools_run:['ruff'], findings:[{tool:'ruff', rule:'F401', file_line:'src/foo.py:12', message:'unused import: os'}]}. Invocation: `python scripts/aggregate.py --lens-dir <dir> --output-dir <out> --skill-version v3`. Expected: sidecar at <out>/<timestamp>.json has top-level keys [timestamp, plan_step, skill_version, invocation, lens_verdicts, aggregated_verdict, model_tiers_used, deferred_uat_items]; skill_version='v3'; lens_verdicts is a 6-element array preserving spawn order (correctness, bugs, security, test-quality, style, plan-conformance); aggregated_verdict.result='NEEDS-WORK' (rule 1: severity dominance -- any Block on a non-skipped lens forces NEEDS-WORK); the bugs Nit at src/foo.py:12 demotes to FYI with rationale prefixed 'Cited-by-linter: ruff F401' (rule 7 lint-dedup, assertion 29); aggregated_verdict.rationale cites the 2 Block findings; stdout markdown renders a top-level NEEDS-WORK verdict line followed by per-lens sections with the Block findings surfaced first. --prompt: 'aggregate review-deep verdicts end-to-end'. --reviewers code.",
+      "expected_assertions": [16, 17, 18, 19, 27, 29]
+    },
+    {
+      "id": "scenario_security_secret_dump_owned_by_security",
+      "name": "Security lens flags a secrets-file dump as Block, owned by Security (not Bugs)",
+      "description": "Based on .claude/rules/security.md § 'Never dump secret file contents' (void_furnace 2026-05-09 incidents). The diff adds an operator-debug script that cats a secrets-bearing file to stdout -- exactly the filter-defeating round-trip security.md forbids. This is the secret-dump failure mode (defect_class: secret-dump). The Security lens is the PRIMARY OWNER of this finding and MUST flag it Block; the Bugs lens, even if it notices, defers (Bugs = generic robustness, Security = security.md failure modes), so any Bugs co-flag at the same file_line demotes to FYI per aggregator rule 2's Security-primary routing (ANTI_PATTERN_PRIMARY['secret-dump'] == 'security'). The diff has no functional bug a generic Bugs/Correctness pass would catch -- the file is only reachable via the Security lens's security.md priming, which is the whole point of promoting Security out of Bugs.",
+      "context": "Diff adds scripts/debug_env.sh containing `echo '--- secrets ---'; cat /etc/void_furnace/secrets.env` (a stdout round-trip of a secrets-bearing file), plus a one-line README note 'run scripts/debug_env.sh to inspect the live secrets'. No other code changes; the script parses + runs fine, so Correctness/Bugs/Style/Test-quality have nothing block-class to say. --prompt: 'add an env-debug helper for operators'. No --plan-step supplied. --reviewers code. Expected: the Security lens emits 'Security verdict: NEEDS-WORK (1 Block, 0 Nit)' with a Block finding at scripts/debug_env.sh:<line of the cat>, defect_class secret-dump, reasoning citing security.md § 'Never dump secret file contents' and recommending a metadata-only check (stat / wc -c / file) or effect-based verification instead; the aggregated_verdict.result is NEEDS-WORK (rule 1 severity dominance: one Block forces NEEDS-WORK); the finding is owned by the Security lens (lens_id 'security'); if the Bugs lens also surfaces it at the same file_line, rule 2 demotes the Bugs copy to FYI because Security is the registered primary owner of security findings.",
+      "expected_assertions": [3, 5, 8, 16, 17, 18, 19, 30, 31, 32]
+    }
+  ]
+}

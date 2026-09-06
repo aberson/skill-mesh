@@ -1,0 +1,42 @@
+{
+  "manifest_version": 2,
+  "skill": "review-deep",
+  "generated_at": "2026-05-26T11:42:00Z",
+  "good_source": "auto-generated",
+  "verification_summary": {
+    "accepted": 29,
+    "inert": 0,
+    "total": 29
+  },
+  "bads": [
+    {"file": "bad_unnamed.md", "defect_type": "frontmatter — skill name mismatch in invocation header", "assertion_id": 1, "verified_fails": true, "regen_attempts": 1},
+    {"file": "bad_unnamed_2.md", "defect_type": "frontmatter description — omits plan-conformance lens", "assertion_id": 2, "verified_fails": true, "regen_attempts": 1},
+    {"file": "bad_unnamed_3.md", "defect_type": "invocation contract — required flag echo missing (--output-dir, --reviewers default)", "assertion_id": 3, "verified_fails": true, "regen_attempts": 1},
+    {"file": "bad_unnamed_4.md", "defect_type": "--plan-step contract — lens SKIPPED despite --plan-step provided", "assertion_id": 4, "verified_fails": true, "regen_attempts": 1},
+    {"file": "bad_unnamed_5.md", "defect_type": "lens shape — only four lenses spawned (test-quality dropped)", "assertion_id": 5, "verified_fails": true, "regen_attempts": 1},
+    {"file": "bad_unnamed_6.md", "defect_type": "verdict enum — invalid overall_verdict value (BLOCKED)", "assertion_id": 6, "verified_fails": true, "regen_attempts": 1},
+    {"file": "bad_unnamed_7.md", "defect_type": "adversarial framing — bugs rationale uses confirmatory framing", "assertion_id": 7, "verified_fails": true, "regen_attempts": 1},
+    {"file": "bad_unnamed_8.md", "defect_type": "evidence discipline — finding missing file_line", "assertion_id": 8, "verified_fails": true, "regen_attempts": 1},
+    {"file": "bad_unnamed_9.md", "defect_type": "verdict threshold — lens emits PASS while containing Block finding", "assertion_id": 26, "verified_fails": true, "regen_attempts": 1},
+    {"file": "bad_unnamed_10.md", "defect_type": "plan-format detection — SKIPPED used instead of NEEDS-CLARIFICATION on step-not-found", "assertion_id": 28, "verified_fails": true, "regen_attempts": 1},
+    {"file": "bad_unnamed_11.md", "defect_type": "lint pre-pass — lens re-derived lint finding instead of cite-by-reference", "assertion_id": 29, "verified_fails": true, "regen_attempts": 1},
+    {"file": "bad_unnamed_12.md", "defect_type": "anti-pattern catalog — invalid anti_pattern name (missing-error-handling)", "assertion_id": 9, "verified_fails": true, "regen_attempts": 1},
+    {"file": "bad_unnamed_13.md", "defect_type": "anti-pattern severity — silent-wiring emitted at Nit (catalog mandates Block)", "assertion_id": 10, "verified_fails": true, "regen_attempts": 1},
+    {"file": "bad_unnamed_14.md", "defect_type": "codifying-test-diff tie-breaker — escalated to Block despite documenting context", "assertion_id": 11, "verified_fails": true, "regen_attempts": 1},
+    {"file": "bad_unnamed_15.md", "defect_type": "framing wrapper — verify-dev-claims used as anti_pattern catalog value", "assertion_id": 12, "verified_fails": true, "regen_attempts": 1},
+    {"file": "bad_unnamed_16.md", "defect_type": "model strategy — Style ran on sonnet instead of default haiku", "assertion_id": 13, "verified_fails": true, "regen_attempts": 1},
+    {"file": "bad_unnamed_17.md", "defect_type": "--model-override — unknown tier silently substituted instead of error-exit", "assertion_id": 14, "verified_fails": true, "regen_attempts": 1},
+    {"file": "bad_unnamed_18.md", "defect_type": "overload fallback — silent tier-fallback (sonnet 529 → haiku) instead of FAILED", "assertion_id": 15, "verified_fails": true, "regen_attempts": 1},
+    {"file": "bad_unnamed_19.md", "defect_type": "aggregator rule 3 — SKIPPED counted toward NEEDS-WORK", "assertion_id": 16, "verified_fails": true, "regen_attempts": 1},
+    {"file": "bad_unnamed_20.md", "defect_type": "aggregated verdict ladder — header reads pure DEFERRED-TO-UAT despite Block findings", "assertion_id": 17, "verified_fails": true, "regen_attempts": 1},
+    {"file": "bad_unnamed_21.md", "defect_type": "JSON sidecar shape — 5-element lens_verdicts prefix broken (style dropped)", "assertion_id": 18, "verified_fails": true, "regen_attempts": 1},
+    {"file": "bad_unnamed_22.md", "defect_type": "per-finding severity enum — invalid value 'Critical'", "assertion_id": 19, "verified_fails": true, "regen_attempts": 1},
+    {"file": "bad_unnamed_23.md", "defect_type": "aggregator rule 7 absence-dedup — two lenses both keep Nit on same absence", "assertion_id": 27, "verified_fails": true, "regen_attempts": 1},
+    {"file": "bad_unnamed_24.md", "defect_type": "--reviewers values — invalid value 'static' silently accepted", "assertion_id": 20, "verified_fails": true, "regen_attempts": 1},
+    {"file": "bad_unnamed_25.md", "defect_type": "auth-gate reason enum — non-enum reason string 'password_field_present'", "assertion_id": 21, "verified_fails": true, "regen_attempts": 1},
+    {"file": "bad_unnamed_26.md", "defect_type": "scope-boundary deferral producers — un-evaluable diff slice silently passed (lens producer path not consulted)", "assertion_id": 22, "verified_fails": true, "regen_attempts": 1},
+    {"file": "bad_unnamed_27.md", "defect_type": "deferred-item shape — recommended_commands field missing", "assertion_id": 23, "verified_fails": true, "regen_attempts": 1},
+    {"file": "bad_unnamed_28.md", "defect_type": "negative — silent tier fallback on overload (anti-pattern negative assertion)", "assertion_id": 24, "verified_fails": true, "regen_attempts": 1},
+    {"file": "bad_unnamed_29.md", "defect_type": "negative — pure DEFERRED-TO-UAT emitted alongside Block findings", "assertion_id": 25, "verified_fails": true, "regen_attempts": 1}
+  ]
+}
