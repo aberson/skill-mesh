@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "default_tier_peer": "gpt-5.5",
+  "tier_map": {
+    "haiku": "gpt-5.4-mini",
+    "sonnet": "gpt-5.4",
+    "opus": "gpt-5.5",
+    "fable": "gpt-5.6-sol"
+  },
+  "model_prefix_to_tier": {
+    "claude-haiku": "haiku",
+    "claude-sonnet": "sonnet",
+    "claude-opus": "opus",
+    "claude-fable": "fable"
+  }
+}

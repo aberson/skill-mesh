@@ -769,6 +769,111 @@ def run_self_test(path: Path) -> int:
 
 
 # ---------------------------------------------------------------------------
+# --skill name resolution
+# ---------------------------------------------------------------------------
+
+
+def _validate_skill_name(name: str) -> str:
+    """Return ``name`` stripped, or raise ``ValueError`` if it is not a NAME.
+
+    ``--skill`` takes a bare NAME that is resolved UNDER ``<root>``;
+    ``--skill-dir`` is the supported way to name a directory by path. The
+    constraint is not decoration: ``base / "skills" / name`` uses pathlib join
+    semantics, where an ABSOLUTE right operand DISCARDS ``base`` entirely and
+    ``..`` segments walk out of it. An unchecked name therefore
+    escapes the containment both this module's docstrings and the ``--skill``
+    help text promise, and it collapses the two fail-closed candidates into the
+    same string (``tried: \\etc, \\etc``), which reads like a bug in the tool
+    rather than a bad argument. An EMPTY name is worse still: it resolves to the
+    ``skills/`` root itself and defers into the misleading ``artifact load
+    failed`` message :func:`resolve_skill_dir` exists to prevent.
+    """
+    stripped = name.strip()
+    if not stripped:
+        raise ValueError(
+            "skill name is empty; --skill takes a NAME (e.g. 'review-deep'). "
+            "Use --skill-dir <path> to calibrate a directory by path"
+        )
+    if (
+        stripped in (".", "..")
+        or any(sep in stripped for sep in ("/", "\\", ":"))
+        or Path(stripped).is_absolute()
+    ):
+        raise ValueError(
+            f"skill name {name!r} looks like a PATH; --skill takes a bare NAME "
+            "resolved under <root>. Use --skill-dir <path> to calibrate a "
+            "directory by path"
+        )
+    return stripped
+
+
+def skill_candidates(name: str, root: str | Path | None = None) -> list[Path]:
+    """Ordered candidate directories a ``--skill`` NAME could resolve to.
+
+    ``root`` defaults to ``_THIS_DIR.parent`` -- this module lives in
+    ``<root>/_shared``, so the parent of its own directory is the resolution
+    root. NOTE that the default root is derived from THIS FILE's location, never
+    from the caller's cwd: the documented invocation is a relative
+    ``python _shared/calibrate_judge.py``, and an operator standing anywhere
+    else (or an installed ``<home>/.claude/skills/_shared`` deployment) must
+    resolve the same tree. Returns, IN PRIORITY ORDER::
+
+        [<root>/skills/<name>, <root>/<name>]
+
+    1. ``<root>/skills/<name>`` -- the CANONICAL package tree (skill-mesh's
+       ``skills/review-deep``, which carries ``evals/`` + ``scripts/``).
+    2. ``<root>/<name>`` -- the LEGACY flat layout. This is the historical
+       ``.claude/skills/_shared`` arrangement, where ``<root>`` IS the skills
+       root and no ``<root>/skills/`` directory exists; it is also skill-mesh's
+       deprecated top-level package.
+
+    WHY CANONICAL WINS WHEN BOTH EXIST (the case in skill-mesh itself, where
+    ``skills/review-deep`` and ``review-deep`` are both real directories): only
+    the canonical package carries ``evals/``. The legacy top-level package
+    carries none, so choosing it resolves to a directory that exists but cannot
+    calibrate -- measured, ``FAIL ... artifact load failed: recorded scores not
+    found at review-deep\\evals\\golden\\recorded_scores.json``, which reads as a
+    missing corpus rather than a mis-resolution. That is what the order-pinning
+    tests exist to catch.
+
+    Raises ``ValueError`` when ``name`` is not a bare name (see
+    :func:`_validate_skill_name`). Otherwise pure: builds paths only, touches no
+    disk.
+    """
+    validated = _validate_skill_name(name)
+    base = Path(root) if root is not None else _THIS_DIR.parent
+    return [base / "skills" / validated, base / validated]
+
+
+def resolve_skill_dir(name: str, root: str | Path | None = None) -> Path:
+    """Resolve a ``--skill`` NAME to an EXISTING skill directory.
+
+    Walks :func:`skill_candidates` in order and returns the first candidate that
+    is an existing directory -- canonical package tree first, legacy flat layout
+    second. The legacy fallback is what preserves the historical
+    ``.claude/skills/_shared`` behavior unchanged.
+
+    Fail-closed: when NEITHER candidate is an existing directory, raises
+    ``FileNotFoundError`` naming BOTH candidate paths. Silently returning a
+    nonexistent path would only defer the failure into :func:`calibrate`, where
+    it surfaces as a confusing ``artifact load failed: recorded scores not found
+    at ...`` that names one path and hides the real cause (an unresolvable skill
+    name). Mirrors the fail-closed convention of :func:`load_gold`.
+
+    Raises ``ValueError`` (via :func:`skill_candidates`) when ``name`` is a path
+    rather than a name.
+    """
+    candidates = skill_candidates(name, root)
+    for candidate in candidates:
+        if candidate.is_dir():
+            return candidate
+    tried = ", ".join(str(c) for c in candidates)
+    raise FileNotFoundError(
+        f"skill {name!r} did not resolve to a directory; tried: {tried}"
+    )
+
+
+# ---------------------------------------------------------------------------
 # CLI
 # ---------------------------------------------------------------------------
 
@@ -801,8 +906,26 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--skill",
         default=None,
         help=(
-            "Skill name to calibrate; resolved to <skills>/<name> where "
-            "<skills> is this file's parent dir's parent (.claude/skills/)"
+            "Skill NAME to calibrate; resolved against <root> (this file's "
+            "parent dir's parent) by trying <root>/skills/<name> (canonical "
+            "package tree) then <root>/<name> (legacy layout), first existing "
+            "wins. Must be a bare NAME -- an empty value, a path separator or "
+            "'..' is rejected; use --skill-dir for a path. Mutually exclusive "
+            "with --skill-dir"
+        ),
+    )
+    parser.add_argument(
+        # Deliberately NOT type=Path: `Path("")` is `Path(".")`, so an empty
+        # --skill-dir would become the cwd and be indistinguishable from an
+        # explicit `--skill-dir .`. Kept as a string and converted in main()
+        # after the emptiness guard.
+        "--skill-dir",
+        default=None,
+        help=(
+            "Explicit skill DIRECTORY to calibrate; wins outright, with no "
+            "candidate search (the escape hatch for a skill tree outside "
+            "<root>, e.g. a staged or installed tree). Mutually exclusive "
+            "with --skill"
         ),
     )
     parser.add_argument(
@@ -815,15 +938,56 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 
 def main(argv: list[str] | None = None) -> int:
+    """CLI entry point. Returns the process exit code rather than exiting.
+
+    ``main`` itself never calls ``sys.exit``, but argparse's own usage errors do:
+    ``main(["--bogus"])`` raises ``SystemExit(2)`` and ``main(["--help"])``
+    raises ``SystemExit(0)`` from :func:`_parse_args`. An embedder that passes
+    caller-supplied argv should catch ``SystemExit``.
+
+    Wraps :func:`_run_cli` in a stdout reconfiguration that is RESTORED on the
+    way out. ``sys.stdout.reconfigure`` mutates a process-global object, and
+    ``main`` is called IN-PROCESS by the sibling test suite (and by any other
+    embedder), so leaving it flipped would hand every later caller in the same
+    interpreter UTF-8-with-replacement stdout instead of the platform default --
+    turning a genuine ``UnicodeEncodeError`` elsewhere into a silent '?'.
+    """
     # Reconfigure stdout to UTF-8 with replacement on Windows so non-ASCII
     # content does not crash under cp1252 (mirrors aggregate.py).
-    if sys.platform == "win32":
-        try:
-            sys.stdout.reconfigure(encoding="utf-8", errors="replace")
-        except AttributeError:
-            pass  # Python < 3.7 lacks reconfigure
+    reconfigure = getattr(sys.stdout, "reconfigure", None)  # absent pre-3.7
+    if sys.platform != "win32" or reconfigure is None:
+        return _run_cli(argv)
 
+    previous_encoding = getattr(sys.stdout, "encoding", None)
+    previous_errors = getattr(sys.stdout, "errors", None)
+    try:
+        reconfigure(encoding="utf-8", errors="replace")
+    except (ValueError, OSError):
+        return _run_cli(argv)
+    try:
+        return _run_cli(argv)
+    finally:
+        if previous_encoding:
+            try:
+                reconfigure(
+                    encoding=previous_encoding, errors=previous_errors or "strict"
+                )
+            except (ValueError, OSError):
+                pass
+
+
+def _run_cli(argv: list[str] | None = None) -> int:
     args = _parse_args(argv)
+
+    # Selector validation runs BEFORE the mode routing: --unit-test/--self-test
+    # short-circuit and return, so a contradictory
+    # `--self-test P --skill a --skill-dir b` would otherwise be accepted in
+    # silence with both (mutually exclusive) selectors discarded without a word.
+    if args.skill is not None and args.skill_dir is not None:
+        sys.stderr.write(
+            "error: --skill and --skill-dir are mutually exclusive; pass exactly one\n"
+        )
+        return 2
 
     # Mode routing: unit-test first, self-test second, normal flow third.
     if args.unit_test:
@@ -832,16 +996,34 @@ def main(argv: list[str] | None = None) -> int:
     if args.self_test is not None:
         return run_self_test(args.self_test)
 
-    if args.skill is None:
+    # Exactly one selector is required for the normal flow.
+    if args.skill is None and args.skill_dir is None:
         sys.stderr.write(
-            "error: --skill <name> is required (or pass --unit-test / --self-test)\n"
+            "error: exactly one of --skill <name> / --skill-dir <path> is "
+            "required (or pass --unit-test / --self-test)\n"
         )
         return 2
 
-    # Resolve --skill to <skills>/<name>. _THIS_DIR is .claude/skills/_shared;
-    # its parent is the skills root.
-    skills_root = _THIS_DIR.parent
-    skill_dir = skills_root / args.skill
+    if args.skill_dir is not None:
+        # Explicit directory wins outright -- no candidate search. A path that
+        # does not exist is the caller's own error and fails closed inside
+        # calibrate() with a reason, per the fail-closed contract. An EMPTY
+        # value is rejected here rather than silently becoming the cwd.
+        if not args.skill_dir.strip():
+            sys.stderr.write(
+                "error: --skill-dir requires a non-empty DIRECTORY path\n"
+            )
+            return 2
+        skill_dir = Path(args.skill_dir)
+    else:
+        # Resolve the NAME: <root>/skills/<name> then <root>/<name>. See
+        # resolve_skill_dir; an unresolvable name names both candidates, and a
+        # path-shaped name is rejected outright rather than escaping <root>.
+        try:
+            skill_dir = resolve_skill_dir(args.skill)
+        except (FileNotFoundError, ValueError) as exc:
+            sys.stderr.write(f"error: {exc}\n")
+            return 2
 
     report = calibrate(skill_dir, mode=args.mode)
 
