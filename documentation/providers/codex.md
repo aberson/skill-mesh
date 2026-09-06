@@ -223,6 +223,15 @@ its own reported result, never a silently degraded one.
   `required_tool_missing`; the child receives only symptom, repro, and bounded
   read-only primary-source scope. This repair does not silently generalize one
   proven mapping.
+- **`review-deep` is an accepted known gap on this profile.** Its adapter halts
+  fail-closed with `required_tool_missing` at the required isolated dispatch, by
+  design, and that gap is formally accepted by
+  [`../descope-2026-09.md`](../descope-2026-09.md) decision DS-D3 — the halt is the
+  documented behavior, not a defect to patch in the wrapper. The deep lane
+  calibrates in-repo on the Claude side once RD-lite (#177) lands; any future
+  restoration of the codex deep lane starts from the preserved evidence branches
+  under a new reviewed plan. See "Codex review-deep is a known gap" in
+  [`../troubleshooting.md`](../troubleshooting.md).
 - **Visual verdicts are unreachable, so `--ui` degrades downstream.** `judge-motion`
   is Claude-native and absent from this profile, and `judge-ui` halts at its
   vision-judge dispatch, so `user-uat --ui` surfaces `required_tool_missing` naming

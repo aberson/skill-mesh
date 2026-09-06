@@ -1,42 +1,39 @@
 # Skill Mesh plan
 
-## Current goal
+## Current state (descope-2026-09)
 
-> **AUTHORITY UPDATE 2026-09-05:** `documentation/descope-2026-09.md` (operator-approved
-> descope decision record) supersedes the course correction as the active execution
-> authority. Phase RD as written is cut (replaced by RD-lite), the Phase IS tail is parked,
-> the freeze is lifted at its S2, and Phase CL (the CRUD rail) becomes the main track; the
-> production/development split is Track C, re-priced after S9. The prose below this banner is
-> retained as history until the S5 bookkeeping rewrite and must not be executed.
+**Authority:** `documentation/descope-2026-09.md` (operator-approved 2026-09-05, landed on main
+at `4fd75c7`) is the active execution authority; it supersedes
+`documentation/phase-prod-rd-first-course-correction.md`. Where it is silent, standing repo rules
+apply unchanged. Instruction prose elsewhere in this file predates the descope and is history —
+see the superseded-instruction banner below the Progress table.
 
-Restore and operator-activate the complete `review-deep` Codex package through Phase RD first.
-The solved pending-WAL junction is not the active defect. Step 1 is recovery-ready but not
-dispatched after its latest candidate was rejected without a qualifying full root gate; that
-candidate is one of seven preserved evidence worktrees.
-Its ordinary package-asset authority and capability boundary are fixed by
-`documentation/phase-rd-package-asset-authority-decision.md`; its force boundary is fixed by
-`documentation/phase-rd-force-boundary-decision.md`. The recovery must use per-leaf authority with
-atomic whole-transaction refusal, refuse force-dependent raw-package work before mutation, preserve
-the existing generated-file `-Force` behavior, and exclude the rejected candidate's new
-force-preimage/certificate/WAL subsystem and production-only test seams.
-The operator-approved course correction is
-`documentation/phase-prod-rd-first-course-correction.md`: Phase PROD is paused after its completed
-declarative Step 1, its old Steps 2–7 are non-executable history, and a smaller production/development
-split is replanned only after Phase RD. Every preserved PROD and RD worktree is read-only evidence;
-new execution starts from actual synchronized `main`.
+**Three tracks:**
 
-Complete Phase IS (`documentation/instruction-file-symmetry-plan.md`): C2V and C2A have sealed the
-selected `core-uat-mode`; first restore, review, and operator-activate the complete `review-deep`
-Codex package through Phase RD, then prepare and certify the dedicated disposable C2N–C4 driver-test
-environment in C2E, run C2N, C2P, C3, the five attended Step-109 rows in C4, and complete C5 closeout.
-The subordinate completion sequence is `documentation/phase-is-completion-plan.md`, and C2E's
-environment contract is `documentation/phase-is-disposable-c2n-c4-environment-plan.md`. Phase CP
-remains parked on its operator-only M3 row.
+- **Track A — codex adapter honesty.** #165 (the codex capability-claims honesty sweep) folds
+  into Phase CL as one small batched step (DS-D7(e)); because review-gauntlet is a representative
+  skill, the release-candidate report is regenerated in the same change that edits it.
+- **Track B — RD-lite, then the CRUD rail.** RD-lite (DS-D3, tracked on the re-scoped #177)
+  restores the review-deep calibration corpus and in-repo calibration in one build-step,
+  DONE-gated by the full repo-root pytest. Then Phase CL Steps 110–117 (#168–#175) build the
+  CRUD rail with `--reviewers code` per DS-D7(a). Codex review-deep stays a KNOWN GAP — an
+  honest fail-closed `required_tool_missing` halt; see `documentation/troubleshooting.md`.
+- **Track C — production/development split, parked (kept, not killed).** Per DS-D5 the Phase
+  PROD MVP replan obligation is cut (#183 closed); the landed declarative Step 1 (#184 at
+  `2e8e4f3`) stays on main as the seed and `tests/production-toolchain` runs in every DONE gate.
+  Track C re-enters after S9 by a fresh operator decision.
 
-Phase IS is the active prerequisite inside the broader Phase CP delivery. Goal NP's two-approval
-publication gate was closed unapproved on 2026-08-16 and replaced by Phase CP's additive,
-cohort-based rollout — a five-skill pilot proven on a real host first, then cohorts gated on that
-evidence.
+**Descope execution status (S1–S9, as of 2026-09-05):** the freeze is lifted. S1 (record landed,
+`4fd75c7`) and S2 (freeze lift per DS-D2) are DONE. S3 (worktree rescue; rescue branches
+local-only per DS-D11) and S5 (this bookkeeping pass: the DS-D10 issue sweep, the known-gap
+notes, this status rewrite) run tonight in parallel lanes. S4 (the RD-lite build worker on #177)
+is in flight. S6 (Phase CL plan amendment per DS-D7, then plan-review/plan-wrap) is pending;
+S7 (CRUD rail), S8 (light proof per DS-D9 — #131/#132/#133 close there), and S9 (closeout)
+follow.
+
+**External consumer boundary (DS-D8):** `../pta_finance` Step 14 resumes when RD-lite lands on
+main; its `--reviewers deep --isolation worktree` lane is not weakened. Non-deep lanes resumed
+at the freeze lift (S2).
 
 ## Main execution plan
 
@@ -103,9 +100,10 @@ does not reinterpret that evidence or revive its stopped experiment.
 | Phase CP Step 12 (#129) | disposition follows Step 11 | See its block in the delivery plan; the observatory-visibility question is being resolved against `dev-observatory/plans/utility-project-surfaces-plan.md` |
 | Phase CP Step M3 (#132) | PENDING (2026-08-20) — daily-use row only | The operator: a few genuine Codex-hosted sessions. Delta triage is DONE — 43 rows across 4 tables, 0 undisposed, 0 `fix-later` owed; the providers-doc gap was filed as #142 and is now CLOSED at `2462afd` (codex given first-class doc coverage; the host-discovery gate derives its provider set from `Get-SkillMeshDiscoveryRoots` instead of hand-listing two). Evidence: `documentation/parity-deltas.md` § M3 checks |
 | Phase CP Step M4 (#133) | COMPLETE (2026-08-20) — PASS | Nothing — codex arm reinstalled clean (125 files; 0 stale, 0 unledgered) and all seven observatory locators verified `unwired` on the rendered surface, before and after. The claude and gpt `-Force` arms were deliberately not run. Evidence: `documentation/parity-deltas.md` § M4 checks and § Scope of the M4 PASS |
-| Phase IS (#143) | BUILDING (2026-08-31) — 9 of 11 landed, 9 certified DONE. Step 108/#152 is certified DONE at `472a62829fe355557584dbf11916e9b3a6958e45`. C2V is sealed at `09e7f4d0b740ddfb723dd77682108c3b4405d13e`; C2A is sealed at `2f6c7b87dbe68182d2c43c8b1e2faa0a9229817d` with `core-plan-amendment-not-required`. A read-only C2N prerequisite probe made no changes and stopped because this workstation has no qualifying WDK, signing identity, or demonstrated enforced admission policy. C2E source preparation is **AUTHORIZED**, but C2E.1 is serialized behind all four steps in `documentation/phase-rd-review-deep-restoration-plan.md`. Phase RD Step 1 is **RECOVERY READY / NOT DISPATCHED** after its latest candidate was rejected; seven evidence worktrees are preserved and the ordinary package-asset and force boundaries are decided. Phase RD Steps 1–3 are code; Step 4 is a hard `Type: wait` gate for disposable rehearsal plus exact active-Codex-profile approval and fresh-context proof. Step 108P/#162 remains **BLOCKED BEFORE IMPLEMENTATION** until that prerequisite passes; Step 109/#153 remains operator-only and **BLOCKED BEFORE GRADING**, with every behavioral cell blank. | After separate execution authorization, run a fresh Claude Code Opus `build-step` for Phase RD Step 1 only and stop after it lands. Then run Steps 2–3 through a fresh Opus `build-phase` and stop at Phase RD Step 4 for the separate active-profile authorization. Only after Step 4 passes, complete pre-provider C2E Steps 1–3 and stop at C2E.4 for the provider/license/cost/retention route choice. The topology remains one Windows execution guest plus one isolated non-snapshotted signer appliance; execution snapshots contain no signing private key. After later C2E authorization boundaries, run C2N → C2P → C3 → C4 → C2E.33 → C5. C2E.33 also runs after any terminal C2E/C2N/C2P/C3/C4 stop once an environment ID or provider resource exists; its exact-current-candidate self-contained image-bound safety action is sealed and live-preflighted before the first provider mutation and later uses no Git/test/build-phase/GitHub/control-signer/wait-signer preflight. A failed or unavailable C4-PASS retention transition uses its distinct destroy-only emergency route, preserves the PASS plus transition failure, and blocks C5. Abort cleanup also never unblocks C5. Only successful PASS retention preserves the read-only verifier, credential-free C5 preauthorization, and control/wait/emergency proof authorities through C5; C5 mints and revokes a new one-hour exact-rule identity, then tears those authorities down. A stop after Step-4 selection while both the environment ID and every provider resource are absent uses the authenticated pre-resource closure instead. Do not run C2N discovery or any certificate, policy, boot, driver, or genuine host action on this workstation. The accepted Phase IS plan and frozen UAT remain unchanged until their existing C3/C4 owners act. |
-| Phase PROD — Stable production utility toolchain | PAUSED / SUPERSEDED AFTER STEP 1 (2026-09-03) — Step 1/#184 remains complete at `2e8e4f3e516c7069d07364ab5438e7f810675290`. Two separate Step-2 3/3 windows produced no mergeable candidate; both are preserved read-only. No production directory, environment, selector, or active-profile mutation occurred. | Finish Phase RD first. Then use `documentation/phase-prod-rd-first-course-correction.md` §7 as the `/plan-feature` seed for a routing-first, Codex-first MVP replacement. Do not resume old PROD Steps 2–7. |
-| Phase CL — Skill catalog lifecycle safety (#167) | PLANNED / PARKED — `documentation/skill-catalog-lifecycle-plan.md`; no implementation has started | Phase IS Completion Stage C5, then Phase CP Step M3 plus its closeout `repo-update`. Once released, Steps 110–117 (#168–#175) build and certify a hermetic portable-by-default CRUD rail; Step 118 (#176) performs attended disposable-host acceptance. Phase CL is not part of Phase IS's 11-unit count. |
+| Phase IS (#143) | TAIL PARKED per descope DS-D4 (2026-09-05) — Step 108P/#162, Step 109/#153, and stages C2E–C5 are parked indefinitely, terminal-unless-recertified; the frozen UAT blob and sealed C2V/C2A artifacts stay frozen and untouched. Historical status (2026-08-31): 9 of 11 landed, 9 certified DONE. Step 108/#152 is certified DONE at `472a62829fe355557584dbf11916e9b3a6958e45`. C2V is sealed at `09e7f4d0b740ddfb723dd77682108c3b4405d13e`; C2A is sealed at `2f6c7b87dbe68182d2c43c8b1e2faa0a9229817d` with `core-plan-amendment-not-required`. A read-only C2N prerequisite probe made no changes and stopped because this workstation has no qualifying WDK, signing identity, or demonstrated enforced admission policy. C2E source preparation is **AUTHORIZED**, but C2E.1 is serialized behind all four steps in `documentation/phase-rd-review-deep-restoration-plan.md`. Phase RD as written is **CUT per descope DS-D3** (the stale "RECOVERY READY / NOT DISPATCHED" prose is corrected by that record's section 4 — see the RD-lite row below); seven evidence worktrees are preserved and the ordinary package-asset and force boundaries remain decided history. Step 108P/#162 and Step 109/#153 are **PARKED per DS-D4** (PARK labels and comments on the issues; every behavioral cell blank). | Parked per DS-D4 — only a future recorded operator decision re-prices the tail, and DS-D4's accepted one-way door means the first Phase CL catalog change makes this parked certification uncertifiable unless redone from scratch. The historical unlock runbook is retained in `documentation/phase-is-completion-plan.md` and `documentation/phase-is-disposable-c2n-c4-environment-plan.md`. |
+| Phase RD → RD-lite (#177) | CUT AS WRITTEN per descope DS-D3 (2026-09-05) — Steps 1–4 (#178–#181) closed as superseded; #177 is re-scoped to RD-lite: one build-step importing the 39 calibration-corpus paths from `aberson/coding-root` @ `3a7ae33d` (Git object bytes) into `skills/review-deep/**` and fixing `_shared/calibrate_judge.py` so review-deep calibrates from the canonical `skills/` tree in-repo. The four dirty Step-1 windows are ratified as evidence only (record section 4); the fifth window's final root gate was red (3 failed / 1656 passed / 1 skipped, exit 1) and is recorded on #177. Codex review-deep stays a KNOWN GAP (`documentation/troubleshooting.md`). | S4 build worker (in flight 2026-09-05); the DONE gate is the full repo-root pytest under the standing admission rules. #177 closes when RD-lite lands on main (also the DS-D8 pta_finance resume trigger). |
+| Phase PROD — Stable production utility toolchain | TRACK C — PARKED per descope DS-D5 (2026-09-05); the MVP replan obligation is cut and #183 is closed. Step 1/#184 remains complete at `2e8e4f3e516c7069d07364ab5438e7f810675290` and stays on main as the seed; `tests/production-toolchain` runs in every DONE gate so the seed cannot rot silently. Two separate Step-2 3/3 windows produced no mergeable candidate; both are preserved read-only. No production directory, environment, selector, or active-profile mutation occurred. | Track C re-enters after S9 (closeout) by a fresh operator decision, seeded by `documentation/phase-prod-rd-first-course-correction.md` §7 plus the Step-1 declarative records. Do not resume old PROD Steps 2–7. |
+| Phase CL — Skill catalog lifecycle safety (#167) | ACTIVE TRACK per descope DS-D7 — the main track once the S6 plan amendment lands; `documentation/skill-catalog-lifecycle-plan.md`; no implementation has started. The old prerequisite (Phase IS C5 + Phase CP M3) is retired per DS-D7(b), replaced by: descope record on main + freeze deleted + clean synchronized main. | S6 amends the plan per DS-D7 (Steps 110–117 run `--reviewers code`; gpt demoted to a mandatory build-only adapter; #192 and #165 fold in; shared-gate batching per DS-D7(f)), then plan-review/plan-wrap. After S4 (RD-lite) and S6, S7 builds Steps 110–117 (#168–#175); Step 118 (#176) attended acceptance narrows to claude+codex. Phase CL is not part of Phase IS's 11-unit count. |
 | Installed tier-map resolution audit (#182) | DEFERRED / NON-BLOCKING — 145 non-`review-deep` canonical references require classification | Its own reviewed plan after Phase RD. Do not widen #178–#181: Phase RD's package-local tier-map snapshot is the narrow prerequisite repair and remains authoritative for its exact counts. |
 | Forced stale-path identity hardening (#192) | DEFERRED / PRE-EXISTING — forced stale removal can waive final path identity after reparse substitution | Its own reviewed build after Phase RD restores `review-deep`, unless separately reprioritized. Phase RD Step 1 must keep force-dependent raw actions out of this path by refusing before mutation. |
 | Legacy-migrator hardening (#138) | DEFERRED | Its own issue — Phase CP ships zero migrator delta by the option-3 decision of 2026-08-18 |
@@ -116,7 +114,16 @@ does not reinterpret that evidence or revive its stopped experiment.
 | Historical Goal B / Phase 2 / Step 4 | LOCKED | Goal NP may adopt the four preserved files only after Approval 1 and its own gates |
 | Historical Goal P | LOCKED / NOT AUTHORIZED | Not part of Goal NP |
 
-## Current instruction
+## Superseded instruction record (history — do not execute)
+
+> **SUPERSEDED 2026-09-05:** everything in this section predates
+> `documentation/descope-2026-09.md` and is retained only as history and for its evidence
+> citations and SHA/blob locators. It is not instruction. Current tracks and statuses live in
+> "Current state (descope-2026-09)" at the top of this file; the descope record is the
+> execution authority. In particular: Phase RD as written is cut (DS-D3), the Phase IS tail
+> is parked (DS-D4), Phase CL's prerequisite is retired and replaced (DS-D7(b)), and the
+> `../pta_finance` Step-14 resume condition stated below is amended to "RD-lite landed on
+> main" (DS-D8) with its deep lane unweakened.
 
 Execute Phase RD first under `documentation/phase-rd-review-deep-restoration-plan.md`, as recorded
 by `documentation/phase-prod-rd-first-course-correction.md`. Step 1/#178 awaits separate execution
