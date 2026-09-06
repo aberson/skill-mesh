@@ -241,6 +241,23 @@ evidence neither for nor against an installed profile. Proof comes only from
 the discovery root -- the probe's `.agents/skills` report, or the
 `profiles.codex` block of `inspect-host-install.ps1`.
 
+## Codex review-deep is a known gap
+
+`review-deep` on a Codex host halts fail-closed with `required_tool_missing` at
+its required isolated dispatch. That halt is **by design**, not a wiring defect:
+the adapter refuses to weaken the producer-never-grades-itself gate rather than
+degrading to a single-context review, and the gap is formally accepted by
+[`descope-2026-09.md`](descope-2026-09.md) decision DS-D3. Do not "fix" it by
+editing the wrapper -- documenting a single-context fallback would be a CORE
+change with its own review.
+
+The Claude lane is the working deep-review path: once RD-lite (#177) lands, the
+calibration corpus lives under `skills/review-deep/` and
+`_shared/calibrate_judge.py` calibrates review-deep from the canonical `skills/`
+tree in-repo (exit 0). Any future restoration of the codex deep lane starts from
+the preserved evidence branches under a new reviewed plan -- it does not reopen
+Phase RD as written.
+
 ## Test-only environment overrides (do not use in production)
 
 `SKILL_MESH_COPILOT_BASE_URL`, `SKILL_MESH_OPENAI_BASE_URL`, and

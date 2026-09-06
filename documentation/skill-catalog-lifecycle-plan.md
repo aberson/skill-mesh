@@ -1,12 +1,16 @@
 # Phase CL — Skill catalog lifecycle safety
 
-- **Written:** 2026-08-29
-- **Status:** PLANNED / PARKED — issue preparation is allowed now; implementation is blocked until Phase IS Completion Stage C5 is DONE and Phase CP Step M3 plus its closeout `repo-update` are DONE.
+- **Written:** 2026-08-29; **amended 2026-09-06** per `documentation/descope-2026-09.md` DS-D7
+  (operator-approved): reviewers deep→code, prerequisite park retired, gpt demoted to
+  mandatory build-only adapter, Step 118 narrowed to Claude+Codex, #192 folded into Step 116,
+  #165 folded in as pre-rail Step 119, shared-gate cadence per DS-D7(f).
+- **Status:** ACTIVE — the descope record on main plus the deleted freeze replace the old
+  Phase IS C5 / Phase CP M3 prerequisite (DS-D7(b)).
 - **Umbrella:** #167
 - **Issue label:** `Phase CL Step N:`
-- **Execution:** after both prerequisite phases close, run `/build-phase --plan documentation/skill-catalog-lifecycle-plan.md`; the automated span ends before Step 118.
+- **Execution:** run `/build-phase --plan documentation/skill-catalog-lifecycle-plan.md --steps 119,110,111,112,113,114,115,116,117` once RD-lite (#177 — the review-deep calibration-corpus import and in-repo calibration-resolution step defined by `documentation/descope-2026-09.md` DS-D3; no installer machinery) has landed (`--steps` takes comma-separated step numbers only — no range syntax); the automated span is Step 119 (pre-rail) then Steps 110–117, ending before Step 118.
 - **Goal:** make every routine Skill Mesh create, read, update, delete, or rename operation preserve the provider-neutral catalog contract by default, and fail closed before a partial or provider-only skill can be presented as complete.
-- **Related input:** issue #165 remains a separate audit of older Codex adapter claims. Step 113 rereads its latest disposition before authoring new adapters; Phase CL does not absorb that audit.
+- **Related input:** issue #165 is absorbed as pre-rail Step 119 per DS-D7(e). Step 113 still rereads its latest disposition before authoring new adapters.
 
 ## 1. What This Feature Does
 
@@ -250,7 +254,12 @@ caller-owned disposable directory, is read once, and is never rewritten by the h
   adapters.
 - A read-only lifecycle inspector/verifier and planted-negative tests.
 - Fail-closed catalog guards in `skill-eval-setup`, `skill-evolve`, and `skill-iterate`.
-- Disposable all-provider build/install/rollback rehearsals and attended host acceptance.
+- The #192 installer hardening in `tools/install-skill-mesh.ps1` — forced stale removal
+  re-verifies literal final-path identity after reparse substitution (folded into Step 116 by
+  descope DS-D7(d)).
+- The #165 codex adapter capability-claims honesty sweep (pre-rail Step 119 per DS-D7(e)).
+- Disposable all-provider build/install/rollback rehearsals and attended host acceptance
+  (Claude+Codex attended; gpt build-only per DS-D7(c)).
 
 ### Out of scope
 
@@ -289,6 +298,8 @@ caller-owned disposable directory, is read once, and is never rewritten by the h
 | `tests/smoke/test_skill_crud_lifecycle.py` and fixtures | create | Disposable black-box CRUD sequence through build/install boundaries | Absent at planning HEAD. |
 | `tests/distributions/test_distributions.py`, `tests/release/test_release_script.py`, active count/budget fixtures | modify as discovered by the exact consumer grep | Reject builder-level missing adapters, re-pin 58/55 cardinalities, and prove all-provider install, stale cleanup, rollback, and release without rewriting historical cohort evidence | Step-10 commit `c4a850c` touched these same count and distribution consumers when seven skills were promoted. |
 | `tools/release.ps1` | modify | Update active catalog-count comments while retaining `-Provider all` as lifecycle certification | The script has current-count commentary and deliberately defaults to `both`, which omits Codex. |
+| `tools/install-skill-mesh.ps1` | modify (Step 116, #192 scope only) | Forced stale removal re-verifies literal final-path identity after reparse substitution | Folded in by descope DS-D7(d); Step 116 is the plan's one step exercising the forced deletion paths end-to-end. |
+| `skills/*/providers/codex.md` (audit surface, Step 119) | modify as found | Replace stale provider-wide host-capability claims with capability probes or honest named refusals | Absorbed #165 per DS-D7(e); review-deep's fail-closed halt is the DS-D3 known gap, not a defect. |
 | `README.md`, `documentation/providers/**`, `documentation/migration.md`, `documentation/phase-75-baseline.md` | modify | Publish the supported entry point, 58/55 current counts, commands, and final measured test baseline | These are active operator/status surfaces; historical plans retain their original measurements. |
 | `documentation/findings/skill-crud-uat.md` | create in Step 117, fill in Step 118 | Pre-authored disposable-host acceptance rows | Absent at planning HEAD. |
 
@@ -374,7 +385,7 @@ reported as generated drift by `--check`. `--check` compares all three in memory
 | ID | Decision | Rationale |
 |---|---|---|
 | CL-D1 | Phase CL is a separate post-closeout feature, not a Phase IS amendment. | Phase IS C3 pins 57/54/54 catalog cardinalities and C2A requires the authoritative phase-plan blob to stay unchanged. |
-| CL-D2 | Execution waits for Phase IS C5 and Phase CP M3 plus closeout. | A new catalog member would otherwise change the candidate and parity baseline while each is still being certified. |
+| CL-D2 | AMENDED 2026-09-06 (descope DS-D7(b)/DS-D4): execution waits only for the descope record on main, the deleted freeze, and RD-lite (#177) landed. The original Phase IS C5 / Phase CP M3 park is retired — the Phase IS tail is parked terminal-unless-recertified, and the operator accepted that the first catalog change makes the frozen IS candidate uncertifiable. | Originally: a new catalog member would change the candidate and parity baseline while each was still being certified. That certification program is now parked by operator decision. |
 | CL-D3 | The front door is named `skill-crud`, not `skill-creator`. | It avoids collision and false authority claims over host-provided creator skills. |
 | CL-D4 | Portable means every provider in `portable_provider_contract.required`; initially Claude, GPT, and Codex. | One host-only adapter must be structurally incapable of passing as a portable create. |
 | CL-D5 | New provider-native mutation is blocked, not parameterized. | Native exceptions require operator architecture judgment and cannot be made safe by an unattended flag. |
@@ -390,18 +401,32 @@ reported as generated drift by `--check`. `--check` compares all three in memory
 
 ## 7. Build Steps
 
+<!-- autofix-applied: 2026-09-06 -->
+### Step 119: Codex adapter capability-claims honesty sweep (pre-rail)
+
+- **Status:** PENDING (added 2026-09-06 by descope DS-D7(e); absorbs issue #165. Numbered 119 because the `Step <digits>:` heading grammar is what `/build-phase` walks and 109 belongs to Phase IS; it is dependency-free and dispatches FIRST via the comma-separated `--steps` list in the header.)
+- **Problem:** After the `6d14626` repair fixed build-step/build-phase, other Codex adapters may still carry stale provider-wide host-capability claims (unconditional isolation or tool assertions) instead of capability probes or honest named refusals.
+- **Type:** code
+- **Issue:** #165
+- **Files:** `skills/*/providers/codex.md` (audit all 54), `documentation/troubleshooting.md`, `tests/package-integrity/` (a planted-negative or contract test if one fits naturally)
+- **Existing context:** review-deep's codex adapter keeps its fail-closed `required_tool_missing` halt — that is the DS-D3 known gap, not a defect; reword only if its stated reason is inaccurate. Editing `review-gauntlet/providers/codex.md` (or any other representative skill's file) moves recorded hashes: regenerate the release-candidate report via `python tests/smoke/gen_release_candidate_report.py` IN THE SAME CHANGE (the guard lives in the smoke suite and otherwise reds hours later in the slow gate).
+- **Produces:** every codex adapter's host-capability language is either a runtime capability probe or an honest named refusal; #165 closes with a per-adapter disposition table.
+- **Done when:** the audit table (adapter → claim → disposition) is posted to #165; changed adapters carry no provider-wide claim; the release-candidate report is regenerated if any representative skill changed; focused package-integrity tests pass.
+- **Flags:** --reviewers code
+- **Depends on:** nothing in this plan; dispatch first (lead entry of the header's `--steps` list), may also run alongside Step 110
+
 ### Step 110: Lock the lifecycle contract and project entry rule
 
-- **Status:** PENDING / PARKED ON PHASE PREREQUISITES
+- **Status:** PENDING (prerequisite re-based by DS-D7(b): descope on main + freeze deleted + RD-lite landed)
 - **Problem:** Skill Mesh documents canonical package locations but has no supported CRUD contract or root instruction that prevents a host-only creator from being mistaken for a provider-neutral catalog operation.
 - **Type:** code
 - **Issue:** #168
 - **Files:** `documentation/skill-catalog-lifecycle.md`, `documentation/architecture.md`, `CLAUDE.md`, `tests/package-integrity/test_skill_catalog_lifecycle.py`
-- **Existing context:** before any repository write, verify from `plan.md`, GitHub, and Git that Phase IS C5 is DONE with #143 and #153 closed, Phase CP M3 and its closeout `repo-update` are DONE with #132 closed, and `main` is clean and synchronized with `origin/main`. If any prerequisite is absent, stop with `PHASE_CL_PREREQUISITE_NOT_MET`. `AGENTS.md` is intentionally a thin pointer to `CLAUDE.md`; preserve that shape. Issue #165 is related adapter guidance, not CRUD authority.
+- **Existing context:** before any repository write, verify from Git that `documentation/descope-2026-09.md` is on `main`, the dev workspace freeze file is deleted (its DS-D2), RD-lite (#177) has landed, and `main` is clean and synchronized with `origin/main`. If any prerequisite is absent, stop with `PHASE_CL_PREREQUISITE_NOT_MET` (its meaning re-based by DS-D7(b) — the old Phase IS C5 / CP M3 park is retired). `AGENTS.md` is intentionally a thin pointer to `CLAUDE.md`; preserve that shape. Issue #165 is owned by Step 119, not this step.
 - **Produces:** the canonical CREATE/READ/UPDATE/DELETE/RENAME guide, pasteable request template, locked prerequisite/native/resource/source/mutation stop codes, authoring/generated/consumer boundary, recovery contract, and a root pointer to that guide for catalog-owned mutations until the distributed front door exists.
 - **Done when:** the prerequisite preflight has passed and its evidence is recorded; the guide defines every operation and request field in sections 1–2 of this plan; portable is explicitly core plus Claude/GPT/Codex; native mutation returns `PROVIDER_NATIVE_REVIEW_REQUIRED` before writes; a support-resource topology change returns `PACKAGE_RESOURCE_PLAN_REQUIRED`; non-Skill-Mesh sources stop with `NOT_SKILL_MESH_SOURCE`; direct `dist/`, host-root, release-stage, and legacy-package edits are forbidden; mutation failure preserves unrelated work and returns `CATALOG_MUTATION_INCOMPLETE` without automatic cleanup; tests fail when the guide pointer, required-provider rule, stop codes, recovery rule, or canonical/generated boundary is removed. Step 110 does not claim `/skill-crud` is installed or invokable.
-- **Flags:** --reviewers deep
-- **Depends on:** Phase IS C5 and Phase CP M3 closeout
+- **Flags:** --reviewers code
+- **Depends on:** descope-2026-09 on main, freeze deleted, RD-lite (#177) landed; Step 119 may run before or in parallel
 
 ### Step 111: Make native-born inventory generation hermetic
 
@@ -413,7 +438,7 @@ reported as generated drift by `--check`. `--check` compares all three in memory
 - **Existing context:** preserve the explicit roster and exact native set as anti-silent-addition guards. The committed catalog remains 57/54/3 throughout this infrastructure step; Step 113 performs the one-member growth. `gen_skill_tree.py` keeps historical transform coverage but ceases to be the live inventory writer.
 - **Produces:** truthful `origin`/nullable-`migration` records, `portable_provider_contract.required`, Codex membership derived from `PORTABLE` instead of a second `CODEX` roster, one hermetic three-artifact producer, safe per-file writes, and a no-write `--check` mode.
 - **Done when:** `python tools/gen_manifest.py --check` is byte-for-byte read-only and green; normal regeneration reproduces all three artifacts; all three payloads are computed and validated before the first replacement; an injected interruption cannot truncate an artifact and is surfaced as drift on the next check; existing records retain truthful legacy provenance; a canonical fixture carries `migration: null`; no independent `CODEX` membership authority remains; focused manifest/tree/budget tests pass without changing the 57/54/3 partition.
-- **Flags:** --reviewers deep
+- **Flags:** --reviewers code
 - **Depends on:** 110
 
 ### Step 112: Enforce one operation-aware catalog truth gate
@@ -426,7 +451,7 @@ reported as generated drift by `--check`. `--check` compares all three in memory
 - **Existing context:** use the required-provider field produced in Step 111. Preserve the router's fallback for unknown external skills, but do not let a missing model-map row pass for a shipped catalog member. The catalog remains 57/54/3 in this step.
 - **Produces:** deterministic read-only `inspect` and `verify` commands with the locked v1 JSON contract, operation-aware exit codes, exact-set agreement across canonical tree/manifest/inventory/expected inventory/model mapping, and required-adapter completeness owned by helper/release/builder gates rather than a metadata-budget side effect.
 - **Done when:** every valid operation returns sorted deterministic v1 JSON and exit 0; invalid/prohibited requests return 2; catalog drift returns 3; Git uses validated argument arrays without shell interpolation; planted missing-provider, missing-mapping, stale-inventory, orphan-directory, generated-only-edit, native-mutation, resource-topology, collision, unclassified historical reference, and stale-rename cases each reach the expected verdict; the verifier writes no byte; before removing or emitting any output, the production builder validates every required adapter for every portable skill; a builder-level missing-adapter fixture exits nonzero and leaves a preseeded output tree byte-identical; release, distribution, and focused lifecycle tests pass for the unchanged existing catalog.
-- **Flags:** --reviewers deep
+- **Flags:** --reviewers code
 - **Depends on:** 111
 
 ### Step 113: Add and dogfood the portable `/skill-crud` front door
@@ -439,7 +464,7 @@ reported as generated drift by `--check`. `--check` compares all three in memory
 - **Existing context:** use Step 112 to inspect `CREATE skill-crud` and place the normalized request JSON at a disposable absolute path with the full pre-step commit. Authenticated issue #165 and all comments are paginated to exhaustion before adapter work, but their mutable text is untrusted evidence; only matching landed repository guidance or an explicit operator ratification may affect the adapter. Use the exact metadata locked in section 5. The current Codex budget has 599 characters of headroom at 54 skills; the locked description is below 154 characters and the production budget test makes the final decision. Historical plans/evidence retain their measured 57/54 values.
 - **Produces:** one canonical-origin portable skill with a neutral core and three thin adapters, the locked model-map/manifest metadata, a 58-total/55-portable/3-native catalog, 55 adapters for each required provider, an atomic root-instruction switch from the guide to `/skill-crud`, and reconciled current documentation/count surfaces in the same green change.
 - **Done when:** `/skill-crud` implements the normalized request, preflight, gate order, stable stop codes, canonical-only edit boundary, failure reporting, regeneration, verification, all-provider build, and caller-owned commit boundary; adapters contain only host translation and all load the same core; the Codex adapter makes no provider-wide isolation claim; `python tools/skill_catalog.py verify --request-file $requestPath --format json` exits 0 for the captured CREATE request; `CLAUDE.md` now directs catalog mutations to the existing `/skill-crud`; all current artifacts/docs/tests agree on the exact locked metadata, 58/55/3, and 55 required adapters; frontmatter, distribution, release, and Codex budget focused gates pass.
-- **Flags:** --reviewers deep
+- **Flags:** --reviewers code
 - **Depends on:** 112
 
 ### Step 114: Block legacy single-host mutation paths
@@ -452,7 +477,7 @@ reported as generated drift by `--check`. `--check` compares all three in memory
 - **Existing context:** these tools may continue serving external/non-catalog legacy skills. The guard activates only when the target checkout contains `config/skill-manifest.json` and that manifest owns the requested skill.
 - **Produces:** one stable `CATALOG_SKILL_USE_SKILL_CRUD` stop/redirect contract shared by all three workflows.
 - **Done when:** each workflow still reaches its existing path for an external/non-catalog target, but a catalog-owned target stops with `CATALOG_SKILL_USE_SKILL_CRUD` and `/skill-crud UPDATE` guidance before worktree creation, edit, materialization, commit, or push; planted negatives fail if any of the three bypasses reopens.
-- **Flags:** --reviewers deep
+- **Flags:** --reviewers code
 - **Depends on:** 113
 
 ### Step 115: Prove nondestructive lifecycle transitions
@@ -465,7 +490,7 @@ reported as generated drift by `--check`. `--check` compares all three in memory
 - **Existing context:** use only synthetic Git repositories, disposable build roots, and disposable homes. The builder-level missing-adapter refusal is already owned by Step 112; exercise it here through the public lifecycle flow rather than duplicating its unit implementation.
 - **Produces:** black-box portable CREATE/READ/UPDATE coverage through the actual request, generator, verifier, builder, and installer boundaries.
 - **Done when:** CREATE produces one core, the exact three adapters, locked metadata, mapping, and three generated inventories; READ leaves the repository and all disposable-home hashes unchanged; UPDATE changes shared behavior in the core and propagates it into Claude/GPT/Codex builds and installs; repeated all-provider builds are byte-identical; missing required adapter and CREATE collision are true no-ops; focused smoke/distribution tests and `git diff --check` pass.
-- **Flags:** --reviewers deep
+- **Flags:** --reviewers code
 - **Depends on:** 114
 
 ### Step 116: Prove destructive transitions and recovery
@@ -474,11 +499,11 @@ reported as generated drift by `--check`. `--check` compares all three in memory
 - **Problem:** DELETE and RENAME can damage customized installs or erase historical evidence unless reference disposition, ledger cleanup, and failure recovery are exercised together.
 - **Type:** code
 - **Issue:** #174
-- **Files:** `tests/smoke/test_skill_crud_lifecycle.py`, destructive lifecycle fixtures under `tests/fixtures/`, `tests/distributions/test_distributions.py`
-- **Existing context:** installer tests already prove collision refusal, customized-stale refusal, ledger-owned stale cleanup, and interrupted-publication recovery. Extend those real primitives; do not implement a second deletion path. Historical references are preserved only through the explicit per-occurrence disposition contract in section 2.
-- **Produces:** black-box DELETE/RENAME, exact-reference, stale-install, customized-refusal, interrupted-mutation, and rollback coverage in disposable repositories/homes.
-- **Done when:** RENAME yields the exact new live set with every `must-update` old-name occurrence absent and every listed `historical-preserve` byte unchanged; DELETE removes only unchanged ledger-owned stale files and refuses customized ones; name collision and unclassified/stale dispositions are true no-ops; an injected post-write failure emits `CATALOG_MUTATION_INCOMPLETE`, lists changed paths, preserves unrelated dirty work, and is repairable from the left diff; reinstalling the prior all-provider artifact restores the prior disposable state; focused smoke/distribution tests and `git diff --check` pass.
-- **Flags:** --reviewers deep
+- **Files:** `tests/smoke/test_skill_crud_lifecycle.py`, destructive lifecycle fixtures under `tests/fixtures/`, `tests/distributions/test_distributions.py`, `tools/install-skill-mesh.ps1` (the #192 hardening only)
+- **Existing context:** installer tests already prove collision refusal, customized-stale refusal, ledger-owned stale cleanup, and interrupted-publication recovery. Extend those real primitives; do not implement a second deletion path. Historical references are preserved only through the explicit per-occurrence disposition contract in section 2. Scope addition recorded by descope DS-D7(d): this step also lands issue #192's hardening — forced (`-Force`/`-ForceShared`) stale removal must re-verify literal final-path identity after reparse-point substitution rather than waiving it — because this is the plan's one step that exercises those installer deletion paths end-to-end.
+- **Produces:** black-box DELETE/RENAME, exact-reference, stale-install, customized-refusal, interrupted-mutation, and rollback coverage in disposable repositories/homes; plus the #192 forced-stale-removal path-identity hardening with a planted reparse-substitution negative.
+- **Done when:** RENAME yields the exact new live set with every `must-update` old-name occurrence absent and every listed `historical-preserve` byte unchanged; DELETE removes only unchanged ledger-owned stale files and refuses customized ones; name collision and unclassified/stale dispositions are true no-ops; an injected post-write failure emits `CATALOG_MUTATION_INCOMPLETE`, lists changed paths, preserves unrelated dirty work, and is repairable from the left diff; reinstalling the prior all-provider artifact restores the prior disposable state; a planted reparse-substitution case proves forced stale removal refuses when literal final-path identity fails (#192); focused smoke/distribution tests and `git diff --check` pass.
+- **Flags:** --reviewers code
 - **Depends on:** 115
 
 ### Step 117: Certify the release candidate and prepare attended acceptance
@@ -489,9 +514,9 @@ reported as generated drift by `--check`. `--check` compares all three in memory
 - **Issue:** #175
 - **Files:** `documentation/phase-75-baseline.md`, `documentation/findings/skill-crud-uat.md`, and any additional live evidence-only baseline consumer identified by the opening exact-name/count grep
 - **Existing context:** Step 113 owns active count/docs/release-test reconciliation; Steps 115–116 own behavioral smoke. Before any Step-117 write, capture the full merged Step-116 HEAD and tree as the immutable package candidate. Step 117 may change evidence documents only—no `skills/`, `tools/`, `runtime/`, `config/`, or test byte. A discovered defect stops and routes back to its owning code step. This step does not invoke a host or pre-fill a behavioral verdict.
-- **Produces:** an all-provider release result against the Step-116 package candidate, final measured test baseline, immutable pre-step commit/tree identifiers, and a pre-authored Claude/GPT/Codex UAT packet with exact disposable commands and rollback fields.
+- **Produces:** an all-provider release result against the Step-116 package candidate, final measured test baseline, immutable pre-step commit/tree identifiers, and a pre-authored Claude+Codex attended UAT packet (per DS-D7(c); the gpt profile's checks in the packet are mechanical build/verify rows, not attended rows) with exact disposable commands and rollback fields.
 - **Done when:** the recorded pre-step commit/tree still resolves to the exact Step-116 merged candidate and the candidate package-input hashes match the current checkout; `powershell -NoProfile -File tools\release.ps1 -Provider all` succeeds in its script-owned stage; the release contains the exact 58/55/3 catalog and all required adapters; `git diff --check`, focused suites, `python -m pytest tests/`, and repository-root `python -m pytest` exit 0; the baseline records the measured results plus the pre-Step-117 candidate commit/tree without claiming the evidence commit is its own input; the UAT packet contains exact disposable source/build/home paths, commands, expected mechanical checks, rollback, unchanged-primary-profile checks, and blank observation/verdict fields.
-- **Flags:** --reviewers deep
+- **Flags:** --reviewers code
 - **Depends on:** 116
 
 ### Step 118: Attended disposable-host acceptance
@@ -501,9 +526,9 @@ reported as generated drift by `--check`. `--check` compares all three in memory
 - **Type:** operator
 - **Issue:** #176
 - **Files:** `documentation/findings/skill-crud-uat.md` (record observations only; no code or shipped configuration)
-- **Existing context:** use only the Step-117 certified packet, three disposable source clones, and three disposable host homes. Do not point any install or CRUD command at the operator's real home or this primary checkout.
-- **Produces:** attended Claude, GPT/Copilot, and Codex observations plus a final PASS or FAIL verdict in the prepared UAT record; no code artifact.
-- **Done when:** each fresh host invokes its installed `/skill-crud` against its own disposable clone, completes READ and portable CREATE, and the verifier proves one core plus Claude/GPT/Codex adapters, mapping, manifest, and inventories; the combined rows exercise UPDATE, RENAME, DELETE, collision refusal, native refusal, resource-plan refusal, rollback, and customized-stale refusal; evidence proves the real profiles and primary checkout were unchanged; every row is filled and the final verdict is recorded.
+- **Existing context:** use only the Step-117 certified packet, disposable source clones, and disposable host homes. Do not point any install or CRUD command at the operator's real home or this primary checkout. Narrowed by descope DS-D7(c): attended hosts are Claude and Codex only — gpt remains a mandatory BUILD-ONLY adapter (every build still emits and verifies `dist/gpt`; no attended GPT/Copilot session is required), per product-charter anti-goals 2 and 9.
+- **Produces:** attended Claude and Codex observations plus a final PASS or FAIL verdict in the prepared UAT record; no code artifact.
+- **Done when:** each attended fresh host (Claude, Codex) invokes its installed `/skill-crud` against its own disposable clone, completes READ and portable CREATE, and the verifier proves one core plus Claude/GPT/Codex adapters, mapping, manifest, and inventories (the gpt adapter is verified mechanically in the build, not by an attended session); the combined rows exercise UPDATE, RENAME, DELETE, collision refusal, native refusal, resource-plan refusal, rollback, and customized-stale refusal; evidence proves the real profiles and primary checkout were unchanged; every row is filled and the final verdict is recorded.
 - **Flags:** none
 - **Depends on:** 117
 
@@ -511,7 +536,7 @@ reported as generated drift by `--check`. `--check` compares all three in memory
 
 | Risk | Resolution in this plan |
 |---|---|
-| A new skill invalidates Phase IS candidate counts. | CL-D1/CL-D2 park implementation until C5 and Phase CP closeout. |
+| A new skill invalidates Phase IS candidate counts. | Accepted by operator decision: descope DS-D4 parks the Phase IS tail terminal-unless-recertified and names this one-way door explicitly; CL-D2 (as amended) no longer parks execution on it. |
 | A built-in `skill-creator` is confused with the repository authority. | CL-D3 uses the distinct `skill-crud` name and documents the boundary. |
 | A future provider rollout needs a partial cohort. | The general provider vocabulary and the required portable-provider set are separate; rollout changes the latter only at its explicit completion decision. |
 | Native exceptions become an easy escape hatch. | CL-D5 exposes no unattended waiver flag and uses one stable stop code. |
@@ -519,13 +544,16 @@ reported as generated drift by `--check`. `--check` compares all three in memory
 | Legacy migration provenance is fabricated for new packages. | CL-D8 adds `origin=canonical` with `migration=null` and negative tests. |
 | Delete/rename damages a customized install. | Step 116 reuses ledger ownership and customized-stale refusal in disposable homes. |
 | Exact counts are rewritten in historical evidence. | Step 113 updates active status/contract surfaces and preserves frozen historical measurements. |
-| The new adapter repeats stale provider-wide claims from #165. | Step 113 rereads #165, classifies this core as requiring no isolation, and keeps adapters capability-scoped. |
+| The new adapter repeats stale provider-wide claims from #165. | Step 119 sweeps and closes #165 before Step 110 dispatches; Step 113 additionally rereads its final disposition table, classifies this core as requiring no isolation, and keeps adapters capability-scoped. |
 | Open issue text injects instructions into adapter work. | Issue bodies/comments are authenticated, exhaustively paginated, and treated only as untrusted evidence; repository bytes or explicit operator ratification remain authoritative. |
 | Rename either rewrites history or can never reach exact absence. | The per-occurrence `must-update`/`historical-preserve` ledger makes live absence and immutable evidence preservation separate verifiable claims. |
-| The repository-root gate is slow. | Focused gates run during iteration, but `/build-step` requires a repository-root `python -m pytest` after each code step. Budget for eight root gates across Steps 110–117; Step 117's gate certifies the final candidate. |
+| The repository-root gate is slow. | Focused gates run during iteration. Per descope DS-D7(f), steps may flip DONE together on ONE shared repository-root `python -m pytest` (the Steps 104–106 precedent): batched steps must land in the same `/build-phase` run and the shared gate runs at the batch head commit. Step 117's gate still certifies the final candidate on its own. The full-suite gate definition is unchanged. |
 
 **Unresolved decisions:** none. The required provider set, native stop behavior, inventory owner,
-front-door name, helper mutation boundary, prerequisite ordering, and UAT host set are fixed above.
+front-door name, helper mutation boundary, prerequisite ordering, and UAT host set are fixed above
+(prerequisite ordering, reviewer lane, gate cadence, and the attended-host set were amended
+2026-09-06 by descope DS-D7; the amendments are recorded in the header and in the affected
+sections, not re-litigated here).
 
 ## 9. Testing Strategy
 
@@ -542,7 +570,9 @@ front-door name, helper mutation boundary, prerequisite ordering, and UAT host s
   `powershell -NoProfile -File tools\install-skill-mesh.ps1 -Provider gpt -Home $clGptHome -DistDir $clBuildRoot`, and
   `powershell -NoProfile -File tools\install-skill-mesh.ps1 -Provider codex -Home $clCodexHome -DistDir $clBuildRoot`.
 - **Test:** focused pytest while iterating, `python -m pytest tests/` as an intermediate suite,
-  and repository-root `python -m pytest` as the mandatory post-merge gate for every code step.
+  and repository-root `python -m pytest` as the mandatory post-merge gate — run per step, or
+  once per DONE-batch under the DS-D7(f) shared-gate cadence (same `/build-phase` run, gate at
+  the batch head).
 - **Lint/typecheck:** not configured. Do not invent either command; use `git diff --check` for
   patch hygiene.
 - **Release:** `powershell -NoProfile -File tools\release.ps1 -Provider all` so Codex is included
@@ -573,14 +603,15 @@ smoke.
 
 ### Attended acceptance
 
-Step 118 is the live-substrate gate for the prompt-driven skill. It uses fresh Claude,
-GPT/Copilot, and Codex contexts, but all repositories and homes are disposable. The operator judges
+Step 118 is the live-substrate gate for the prompt-driven skill. It uses fresh Claude and
+Codex contexts (gpt is build-only per descope DS-D7(c)), but all repositories and homes are disposable. The operator judges
 whether each host follows the same lifecycle decisions; the deterministic verifier judges the
 resulting bytes. Either kind of failure produces a FAIL row and blocks Phase CL closeout.
 
 ### Stop conditions
 
-Stop without implementation when either prerequisite phase is incomplete, the worktree contains
+Stop without implementation when the DS-D7(b) prerequisite is absent (descope record on main,
+freeze deleted, RD-lite landed), the worktree contains
 unrelated changes that overlap a target, the captured base commit cannot be resolved, a requested
 name collides, a provider-native mutation is requested, generation is not hermetic, the required
 provider set disagrees across consumers, a real host path resolves outside the disposable roots,
