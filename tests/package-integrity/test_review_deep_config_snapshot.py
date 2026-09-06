@@ -21,7 +21,11 @@ Two assertions, deliberately not one -- they discriminate:
   changed rather than the formatting -- a different remedy.
 
 Both sides are read from the WORKING TREE, never pinned as a recorded digest:
-a digest bakes the authoring machine's line endings into the gate.
+a digest bakes the authoring machine's line endings into the gate. The byte
+assertion is newline-normalized (CRLF/lone CR -> LF on both sides) because two
+files in ONE clone can carry different checkout-era line endings via git's
+stat cache (measured 2026-09-06); eol is checkout noise, and the release
+pipeline itself normalizes CRLF->LF at checksum time.
 
 When the snapshot is eventually wired to a real consumer (or generated rather
 than copied), replace this gate with the generator's own round-trip check
@@ -46,9 +50,14 @@ def _read_bytes(rel):
     return path.read_bytes()
 
 
+def _normalized(raw):
+    """Newline-normalize file bytes (CRLF and lone CR -> LF) before comparing."""
+    return raw.replace(b"\r\n", b"\n").replace(b"\r", b"\n")
+
+
 def test_review_deep_tier_map_snapshot_is_byte_identical_to_the_root_config():
-    root_bytes = _read_bytes(ROOT_CONFIG)
-    snapshot_bytes = _read_bytes(SNAPSHOT)
+    root_bytes = _normalized(_read_bytes(ROOT_CONFIG))
+    snapshot_bytes = _normalized(_read_bytes(SNAPSHOT))
 
     # Vacuity floor: an empty (or truncated-to-nothing) pair would compare equal.
     assert len(root_bytes) > 0, f"{ROOT_CONFIG} is empty"

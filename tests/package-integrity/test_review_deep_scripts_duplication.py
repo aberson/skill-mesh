@@ -30,7 +30,15 @@ one copy, or drifting in bytes between them, still reds.
 Byte comparison is between the two WORKING-TREE files, not against a recorded
 digest: a digest pinned on the authoring machine reds on any clone whose
 checkout line-endings differ (workspace lesson -- never fingerprint source bytes
-without normalizing CRLF/BOM).
+without normalizing CRLF/BOM). The same lesson applies WITHIN one clone: two
+files can carry different checkout-era line endings in the same working tree
+(git's stat cache preserves a smudge state older than the current autocrlf
+setting -- measured 2026-09-06, when the legacy copy sat on disk as CRLF while
+the freshly merged canonical copy was LF, blobs byte-identical). Comparison is
+therefore newline-normalized: CRLF and lone CR read as LF on both sides. A
+drift that consists ONLY of line endings is deliberately invisible here -- the
+release pipeline normalizes CRLF->LF at checksum time, so eol is checkout
+noise, not content.
 """
 
 from pathlib import Path
@@ -52,6 +60,11 @@ SKIP_SUFFIXES = (".pyc", ".pyo")
 _RETIREMENT_HINT = (
     "If the legacy top-level review-deep package was RETIRED, delete this whole "
     "gate in the same change rather than leaving it vacuous or repairing it.")
+
+
+def _normalized(raw):
+    """Newline-normalize file bytes (CRLF and lone CR -> LF) before comparing."""
+    return raw.replace(b"\r\n", b"\n").replace(b"\r", b"\n")
 
 
 def _is_build_artifact(rel):
@@ -114,10 +127,11 @@ def test_every_shared_script_leaf_is_byte_identical():
     for leaf in leaves:
         canonical_bytes = (REPO_ROOT / CANONICAL / leaf).read_bytes()
         legacy_bytes = (REPO_ROOT / LEGACY / leaf).read_bytes()
-        if canonical_bytes != legacy_bytes:
+        if _normalized(canonical_bytes) != _normalized(legacy_bytes):
             drifted.append(
                 f"{leaf} ({len(canonical_bytes)} bytes in {CANONICAL} vs "
-                f"{len(legacy_bytes)} bytes in {LEGACY})")
+                f"{len(legacy_bytes)} bytes in {LEGACY}, newline-normalized "
+                f"before comparing)")
 
     assert not drifted, (
         f"review-deep script copies drifted -- edit BOTH copies identically, "
