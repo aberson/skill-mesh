@@ -28,13 +28,13 @@ Facts checked against primary sources on 2026-09-05 (adversarial verification pa
 1. The freeze is enforced solely by the dev workspace's `.claude/task-state/freeze.json`.
    No hook, test, or scheduled task references its seal condition. Amending it is purely an
    operator-authority act.
-2. The 39 review-deep calibration-corpus paths are byte-exact recoverable from the
-   `aberson/coding-root` repository at immutable commit
-   `3a7ae33d09b9b26edb291e2db0cdaca1022ed643` (reachable from origin/master; spot-checked
-   SHA-256s match the donor worktree). The preserved calibration-assets evidence branch
+2. The 39 review-deep calibration-corpus paths are byte-exact recoverable from the local
+   source repository the restoration plan's §3 names (that plan owns the exact source
+   spelling), at immutable commit `3a7ae33d09b9b26edb291e2db0cdaca1022ed643` (reachable
+   from its origin/master; spot-checked SHA-256s match the donor worktree). The preserved calibration-assets evidence branch
    (tip `4b9b0aa`) carries only 4 of the 39 — the legacy top-level `review-deep/scripts/`
-   copies, byte-identical to the source and also tracked on main — so the coding-root commit
-   is the import source for the full set.
+   copies, byte-identical to the source and also tracked on main — so the source commit
+   above is the import source for the full set.
 3. On main@`70520aa`, `skills/review-deep/evals/` and `scripts/` are empty untracked
    directories with no ignore rule. The calibration blocker is
    `_shared/calibrate_judge.py` (lines ~841-846) resolving `--skill` against the legacy
@@ -79,7 +79,8 @@ record and the rescue branches (section 4). Umbrella **#177 stays open**, re-sco
 comment to RD-lite, and serves as the S4 build-step's tracking issue. The replacement,
 **RD-lite**, is one build-step with one executable boundary:
 
-- Import the 39 corpus paths from `aberson/coding-root` @ `3a7ae33d` (Git object bytes,
+- Import the 39 corpus paths from the restoration plan §3's named source repository at
+  commit `3a7ae33d09b9b26edb291e2db0cdaca1022ed643` (Git object bytes,
   never working-tree bytes) into `skills/review-deep/evals/**` and
   `skills/review-deep/scripts/**`, plus the package-local
   `skills/review-deep/config/model-tier-map.json` snapshot. Duplication hazard, named:
@@ -255,7 +256,7 @@ file's `protected_paths` as the enumeration of record:
   retirement.
 - `skill-mesh-review-output-20260830/` and `review-deep-source.zip` (non-worktree artifacts)
   — retained until RD-lite (S4) has landed and its import has been byte-verified against the
-  coding-root source; they may then be retired via the seed checklist.
+  import source; they may then be retired via the seed checklist.
 - The four dirty Step-1 windows of section 4 — rescue-then-remove per S3 (rescue branches
   local-only per DS-D11).
 - `worktree_build-step-prod184-20260901071930` and
