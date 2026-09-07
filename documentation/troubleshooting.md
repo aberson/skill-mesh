@@ -251,6 +251,31 @@ degrading to a single-context review, and the gap is formally accepted by
 editing the wrapper -- documenting a single-context fallback would be a CORE
 change with its own review.
 
+The halt is **unconditional**, and that is what makes `review-deep` different
+from its siblings. Phase CL Step 119 made nine fan-out adapters
+capability-conditioned: on a host that passes build-step's agent-isolation
+contract they map their isolated arms onto fresh children, and only a host that
+fails it halts. (`skill-evolve` and `skill-iterate` are not among the nine --
+they need the host WORKFLOW primitive, a different capability, and keep their
+own workflow-scoped halts.) `review-deep` was left out deliberately: its halt
+states that THIS WRAPPER maps no isolated dispatch for the per-lens fan-out,
+which is a fact about the descoped track, not a claim about what a Codex host
+can do. Capability-conditioning it would reopen DS-D3 inside a wrapper edit, so
+`tests/package-integrity/test_codex_capability_claims_honesty.py` pins the halt
+unconditional.
+
+**The gap is the `review-deep` lane, not the code lenses.** `review-gauntlet` is
+one of the nine, and its core is a thin profile over review-deep: the same five
+always-on code lenses, lens definitions verbatim, through review-deep's own
+deterministic aggregation reducer. So on a Codex host that passes the contract,
+the deep code-lens fan-out IS reachable -- under `/review-gauntlet`, without the
+JSON audit-trail sidecar and in the leaner report format its core specifies.
+The asymmetry is accepted rather than overlooked: DS-D3 descopes Phase RD as
+written -- the codex deep lane with its corpus, calibration, and sidecar surface
+-- and says nothing about the lenses, which review-gauntlet's core requires on
+its own authority. Read this section as "the `review-deep` lane halts on codex",
+never as "the deep code lenses are unreachable on codex".
+
 The Claude lane is the working deep-review path: once RD-lite (#177) lands, the
 calibration corpus lives under `skills/review-deep/` and
 `_shared/calibrate_judge.py` calibrates review-deep from the canonical `skills/`

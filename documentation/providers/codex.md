@@ -214,10 +214,22 @@ its own reported result, never a silently degraded one.
   their required isolated arm. On a capable embedded host, `build-step` runs only
   after its explicit no-history probe passes; `build-phase` additionally requires a
   fresh per-step opaque parent HMAC state and a usable caller-scoped parent-only verdict
-  service. The other 12 adapters from that historical set
-  (`review-deep`, `review-gauntlet`, `skill-iterate`, `skill-evolve`, `test-prune`,
-  `tier-escalate`, `tier-offload`, `judge-ui`, `research-prospect`, `user-brainstorm`,
-  and `user-learn`) retain their current mappings pending their own capability audits.
+  service. Phase CL Step 119 (issue #165) swept all 54 adapters and closed the rest of
+  that historical set: `citation-sweep`, `judge-ui`, `research-prospect`,
+  `review-gauntlet`, `test-prune`, `tier-escalate`, `tier-offload`,
+  `user-brainstorm`, and `user-learn` are now capability-conditioned on the SAME
+  contract build-step publishes -- a host that passes it may map their isolated arms
+  onto fresh siblings, and a host that does not halts `required_tool_missing` at the
+  required arm. `judge-ui` conditions on that contract AND on a separately proven
+  image-capable child, because its core requires a fresh-context VISION-capable
+  judge; failing either conjunct halts. Three members of the historical set are NOT
+  capability-conditioned on that contract, for reasons specific to what their cores
+  require: `review-deep` stays an unconditional fail-closed halt (next bullet), and
+  `skill-evolve` and `skill-iterate` need the HOST WORKFLOW PRIMITIVE that runs
+  `_shared/score_skill.workflow.js` -- an agent-isolation probe says nothing about
+  whether that script can execute, so those two keep their own workflow-scoped halts.
+  Every adapter still establishes the capability for itself, from the active callable
+  schema plus a non-mutating probe.
   `user-debug` is capability-conditioned: its parent directly dispatches separately
   probed fresh siblings for Step 2 and Option 4, or visibly halts
   `required_tool_missing`; the child receives only symptom, repro, and bounded
@@ -232,9 +244,11 @@ its own reported result, never a silently degraded one.
   restoration of the codex deep lane starts from the preserved evidence branches
   under a new reviewed plan. See "Codex review-deep is a known gap" in
   [`../troubleshooting.md`](../troubleshooting.md).
-- **Visual verdicts are unreachable, so `--ui` degrades downstream.** `judge-motion`
-  is Claude-native and absent from this profile, and `judge-ui` halts at its
-  vision-judge dispatch, so `user-uat --ui` surfaces `required_tool_missing` naming
+- **Visual verdicts are capability-conditioned, so `--ui` can degrade downstream.**
+  `judge-motion` is Claude-native and absent from this profile, and `judge-ui` halts
+  at its vision-judge dispatch on any host that does not pass BOTH the build-step
+  agent-isolation contract and a proven image-capable child. Where it halts,
+  `user-uat --ui` surfaces `required_tool_missing` naming
   the judge and lands the step in `Needs you` — never a self-viewed visual verdict.
   `review-uat` delegates `--exec` to `/user-uat` and `--ui` to `/judge-ui` and halts
   visibly with `required_tool_missing` naming whichever downstream skill is
@@ -248,18 +262,29 @@ its own reported result, never a silently degraded one.
   parent key retention, and a parent-only verdict service. It halts `required_tool_missing` before dispatch when any is
   absent or inconclusive. `build-queue` retains its own park-not-abort behavior for
   downstream halts.
-- **`user-afterparty` sweeps with holes.** `context-slim` is Claude-native and absent
-  from the codex profile; `test-prune` and the tier-drift pair halt. Each lands in
-  the one report as its reason code rather than being reimplemented inline.
+- **`user-afterparty` sweeps with holes on a host that cannot supply the arms.**
+  `context-slim` is Claude-native and absent from the codex profile; `test-prune` and
+  the tier-drift pair halt on a host that does not pass their own capability contract.
+  Each lands in the one report as its reason code rather than being reimplemented
+  inline.
 - **`goblin-do` and `goblin-suggest` need the `claude` CLI.** Their Workflow session
   path is unavailable, so they ride their cores' documented CLI fallback; absent the
   `claude` CLI or its OAuth token they halt `required_tool_missing` rather than
   degrading to an unreviewed edit or a self-judged generation.
-- **`citation-sweep` degrades serially instead of halting.** Of the 15 codex-eligible
-  `sub-agent` skills it is the only one whose adapter substitutes an in-session serial
-  rail: it runs the per-artifact reviews sequentially under the core's unchanged terse
-  per-artifact return contract, on the wrapper's stated reading that boundedness, not
-  judge independence, is what this particular fan-out buys.
+- **`citation-sweep`'s serial rail was withdrawn.** Its core mandates one isolated
+  fresh-context worker per artifact and documents no fallback, so Step 119 made the
+  adapter capability-conditioned like the eight others the first bullet lists alongside
+  it: a host that does not pass the build-step agent-isolation contract halts
+  `required_tool_missing` at the per-artifact worker dispatch rather than degrading.
+  The in-session serial rail the wrapper carried before Step 119 was a wrapper-invented
+  substitute for a fallback the core never documented; writing one back is a CORE edit
+  with its own review, never a wrapper's call. As of Step 119 no adapter in this
+  profile substitutes an in-session serial rail for an isolated arm its core mandates;
+  every remaining mention of serializing an arm across the 54 adapters is a
+  prohibition. (The `sub-agent` capability set in `config/skill-manifest.json` has 18
+  members, 16 of them codex-eligible. The gate
+  `tests/package-integrity/test_codex_capability_claims_honesty.py` derives its
+  halt-gate subject set from that field rather than from any count written here.)
 - **No router dispatch and no host auto-detection** — see the two sections below.
 - **The whole-catalog listing budget is the binding constraint.** Codex's initial
   skill list is capped at 2% of the selected model's context, or 8,000 characters

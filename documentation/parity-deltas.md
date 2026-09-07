@@ -27,6 +27,34 @@ Two consequences, both deliberate:
 - Same rule for anything ELSE written into this file: never spell the M1 line's passing
   form in prose, an example, or a quoted command. Describe it; do not reproduce it.
 
+## Superseded rows: read the cohort tables as DATED observations (2026-09-06)
+
+The cohort tables below are the Step 6/7/8/10 authoring triage as OBSERVED on
+2026-08-19/20, and `plan.md` cites them as the evidence locator for the M1-M4 verdicts.
+They are therefore kept verbatim: a historical observation log keeps its original
+measurements, and correcting a row in place would erase what was actually decided then.
+
+Phase CL Step 119 (issue #165) has since changed the disposition of eleven of those rows,
+so read them against this note, not as current behavior. Present behavior is owned by
+[`providers/codex.md`](providers/codex.md) "Known limitations" and by each adapter file:
+
+- Now CAPABILITY-CONDITIONED on the build-step agent-isolation contract (they halt
+  `required_tool_missing` only on a host that does not pass it, instead of always):
+  `review-gauntlet`, `test-prune`, `tier-escalate`, `tier-offload`, `judge-ui`,
+  `research-prospect`, `user-brainstorm`, `user-learn` -- plus `citation-sweep`, whose
+  serial in-session rail was withdrawn because its core mandates one isolated
+  fresh-context worker per artifact and documents no fallback. `judge-ui` additionally
+  requires a proven image-capable child, so it halts on either unmet conjunct.
+- Still halting, but the stated REASON is now wrapper-scoped rather than a claim about
+  what a Codex host lacks: `skill-evolve` and `skill-iterate` halt on the absent host
+  WORKFLOW primitive (`_shared/score_skill.workflow.js`), which is a different capability
+  from agent isolation; `review-deep` remains an unconditional fail-closed halt under
+  accepted decision DS-D3.
+- Downstream rows follow: `user-afterparty` and `user-uat` no longer see unconditional
+  downstream halts, only halts on a host that fails the relevant capability contract.
+
+Nothing in the M-step verdict lines or the run-environment records is affected.
+
 ---
 
 ## M-step verdicts
@@ -384,7 +412,13 @@ row 1 cannot be satisfied by them. Recorded here rather than edited into the pla
 record grades the plan as it stood at execution. Whoever next touches that block should strike
 the two arms and reconcile row 1's "no foreign files touched" with the `-Force` it mandates.
 
-## Step 6 authoring deltas (Cohort B - authored by construction, not host-observed)
+## Step 6 authoring deltas (Cohort B - authored by construction, not host-observed) -- SUPERSEDED in part, 2026-09-06
+
+> **Superseded 2026-09-06.** Phase CL Step 119 (issue #165) changed the disposition
+> of rows in this table. Present behavior is owned by
+> [`providers/codex.md`](providers/codex.md) "Known limitations" and by each adapter
+> file; see "Superseded rows: read the cohort tables as DATED observations" at the
+> head of this document for the row-by-row list.
 
 Recorded while authoring the twelve Cohort B adapters (plan-init, plan-feature,
 plan-expedite, plan-merge, plan-redline, plan-trim, plan-wrap, repo-init, repo-sync,
@@ -402,7 +436,13 @@ columns as the Deltas table so M2 can promote a row unchanged if it re-observes 
 | user-project | session identity comes from the abstract session-I/O layer; with no stable Codex identity the pin write follows the schema fallback (freshest sessions/*.md) and never mints a session file under a fabricated UUID - with no session file at all, the adapter reports the pin unset in one line and writes nothing (the pin is advisory; honoring skills fall back to cwd) | minor | accept |
 | * | no Cohort B skill is in the manifest's `sub-agent` capability set, so the no-Agent-primitive mapping stays the pilot's single-context fallback with no capability loss for any of the twelve | minor | accept |
 
-## Step 7 authoring deltas (Cohort C - authored by construction, not host-observed)
+## Step 7 authoring deltas (Cohort C - authored by construction, not host-observed) -- SUPERSEDED in part, 2026-09-06
+
+> **Superseded 2026-09-06.** Phase CL Step 119 (issue #165) changed the disposition
+> of rows in this table. Present behavior is owned by
+> [`providers/codex.md`](providers/codex.md) "Known limitations" and by each adapter
+> file; see "Superseded rows: read the cohort tables as DATED observations" at the
+> head of this document for the row-by-row list.
 
 Recorded while authoring the sixteen Cohort C adapters (build-phase, build-step,
 build-queue, review-deep, review-gauntlet, review-proof, review-uat, skill-iterate,
@@ -454,7 +494,13 @@ Disposition notes (Step 7 authoring triage):
   goblin CLI fallback, review-uat delegation, and skill-eval-setup non-dispatch modes
   are all core-documented paths.
 
-## Step 8 authoring deltas (Cohort D - authored by construction, not host-observed)
+## Step 8 authoring deltas (Cohort D - authored by construction, not host-observed) -- SUPERSEDED in part, 2026-09-06
+
+> **Superseded 2026-09-06.** Phase CL Step 119 (issue #165) changed the disposition
+> of rows in this table. Present behavior is owned by
+> [`providers/codex.md`](providers/codex.md) "Known limitations" and by each adapter
+> file; see "Superseded rows: read the cohort tables as DATED observations" at the
+> head of this document for the row-by-row list.
 
 Recorded while authoring the fourteen Cohort D adapters (memory-distill,
 observatory-doctor, research-prospect, user-afterparty, user-brainstorm, user-debug,

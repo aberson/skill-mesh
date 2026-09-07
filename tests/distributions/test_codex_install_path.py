@@ -876,3 +876,54 @@ def test_probe_distinguishes_a_file_at_the_root_from_an_empty_root(tmp_path):
     # ...and the probe created nothing while answering either question.
     assert (home / ".agents" / "skills").is_file()
     assert not any((home2 / ".agents" / "skills").iterdir())
+
+
+# --------------------------------------------------------------------------- #
+# The cited capability contract must survive the emit
+# --------------------------------------------------------------------------- #
+
+def test_the_cited_agent_isolation_contract_reaches_the_emitted_codex_tree(codex_dist):
+    """Nine adapters grant a merge-bearing permission by CITING an owner elsewhere.
+
+    Phase CL Step 119 replaced ten inlined copies of build-step's agent-isolation
+    mechanics with a by-NAME citation of the one owner. That is the right
+    single-owner shape, but it makes the permission's meaning depend on a producer
+    (`build-distributions.ps1`) delivering the cited authority into the same emitted
+    tree the citing adapters land in -- the producer/consumer wire shape CLAUDE.md
+    names. `tests/package-integrity/` grades only the SOURCE adapters, so nothing
+    asserted the owner arrives; a builder change that dropped build-step's contract
+    section would leave nine adapters citing nothing, and every source-side gate
+    would stay green.
+
+    Both halves are enumerated from the emitted tree, never hand-listed.
+    """
+    profile = Path(codex_dist) / PROVIDER
+    emitted = {p.parent.name: p.read_text(encoding="utf-8")
+               for p in sorted(profile.rglob("SKILL.md"))}
+    assert len(emitted) >= 50, (
+        f"only {len(emitted)} emitted codex skills found under {profile} -- this "
+        "assertion would be near-vacuous")
+
+    owner = emitted.get("build-step", "")
+    assert "## Agent-isolation capability contract" in owner, (
+        "the emitted `build-step/SKILL.md` no longer carries the "
+        "`## Agent-isolation capability contract` section that nine other emitted "
+        "adapters cite by name; their permission to map an isolated arm now "
+        "resolves to nothing in the tree a codex host actually reads")
+    assert "Never infer isolation from a function name, model label, or provider name" \
+        in owner, "the emitted contract lost its never-infer-from-a-name row"
+
+    citers = sorted(name for name, text in emitted.items()
+                    if name != "build-step"
+                    and "build-step agent-isolation contract" in text.lower())
+    assert len(citers) >= 5, (
+        f"only {len(citers)} emitted adapters cite the contract by name ({citers}) "
+        "-- check the citation wording before relaxing this floor")
+
+    # The repo-source path must never ship: it does not resolve in a flat tree.
+    stale = sorted(name for name, text in emitted.items()
+                   if name != "build-step"
+                   and "skills/build-step/providers/codex.md" in text)
+    assert not stale, (
+        "these emitted adapters cite the contract by a repo-source path that does "
+        f"not exist in the emitted codex tree: {stale}")
