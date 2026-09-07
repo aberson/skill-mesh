@@ -404,7 +404,7 @@ reported as generated drift by `--check`. `--check` compares all three in memory
 <!-- autofix-applied: 2026-09-06 -->
 ### Step 119: Codex adapter capability-claims honesty sweep (pre-rail)
 
-- **Status:** PENDING (added 2026-09-06 by descope DS-D7(e); absorbs issue #165. Numbered 119 because the `Step <digits>:` heading grammar is what `/build-phase` walks and 109 belongs to Phase IS; it is dependency-free and dispatches FIRST via the comma-separated `--steps` list in the header.)
+- **Status:** DONE at `a7055d2` (2026-09-07). Repo-root DONE gate on the merged tree: **1593 passed, 1 skipped, exit 0** (2:24:38), tree fingerprint `3dbc6f17` identical before and after the run; baseline re-owned in `documentation/phase-75-baseline.md`. #165 closed with the 54-row per-adapter disposition table. Four iterations: the four medium findings that blocked iteration 3 were landed, and a five-lens re-review found seven more defects in those fixes — including a regression the terminator repair itself introduced — all confirmed by adversarial verification and all fixed. 14 of 14 revert-mutations red the gate. (Added 2026-09-06 by descope DS-D7(e); absorbs issue #165. Numbered 119 because the `Step <digits>:` heading grammar is what `/build-phase` walks and 109 belongs to Phase IS; it is dependency-free and dispatches FIRST via the comma-separated `--steps` list in the header.)
 - **Problem:** After the `6d14626` repair fixed build-step/build-phase, other Codex adapters may still carry stale provider-wide host-capability claims (unconditional isolation or tool assertions) instead of capability probes or honest named refusals.
 - **Type:** code
 - **Issue:** #165

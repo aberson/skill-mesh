@@ -35,6 +35,15 @@ condition (DS-D8) is met. The S7 pre-flight issue-body sync (#168–#176, #165) 
 (CRUD rail: `/build-phase --steps 119,110,111,112,113,114,115,116,117`), S8 (light proof per
 DS-D9 — #131/#132/#133 close there), and S9 (closeout) follow.
 
+**S7 in progress — Step 119 is DONE (2026-09-07):** the pre-rail codex capability-claims
+honesty sweep merged at `a7055d2` and is certified by the full repo-root DONE gate —
+**1593 passed / 1 skipped in 2:24:38, exit 0**, tree fingerprint `3dbc6f17` identical
+before and after the run and carried unchanged by the merge commit. Baseline re-owned at
+`a7055d2` in `documentation/phase-75-baseline.md` (+28 = +27 new gate tests, +1
+distributions assertion; no existing test moved). #165 is CLOSED with its 54-row
+per-adapter disposition table. **Remaining in S7: Steps 110–117 (#168–#175)**, which the
+plan declares independent of 119 and which have not started.
+
 **External consumer boundary (DS-D8):** `../pta_finance` Step 14 resumes when RD-lite lands on
 main; its `--reviewers deep --isolation worktree` lane is not weakened. Non-deep lanes resumed
 at the freeze lift (S2).

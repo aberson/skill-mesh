@@ -219,11 +219,36 @@ of 1335 passed / 1 skipped, so it clears the non-regression comparison before th
 is updated. It also matches the earlier Steps 104–106 shared gate at `dc21c9e`: Step 107's
 documentation-only payload moved neither the pass count nor the one known skip.
 
-### Re-measured 2026-09-06 (RD-lite DONE gate, at `9983e3b`) — CURRENT
+### Re-measured 2026-09-07 (Phase CL Step 119 DONE gate, at `a7055d2`) — CURRENT
 
 | Command | Passed | Failed | Skipped | Provenance |
 |---|---|---|---|---|
-| `python -m pytest` (DONE gate) | **1565** | 0 | **1** | **CURRENT** — RD-lite gate at `9983e3b`; 2:27:15, detached with an exit-code sentinel; summary and admission caveat retained at `documentation/findings/rd-lite-gate-9983e3b.txt` |
+| `python -m pytest` (DONE gate) | **1593** | 0 | **1** | **CURRENT** — Step 119 gate at `a7055d2`; 2:24:38, detached with an exit-code sentinel |
+
+**+28 against the 1565 owner figure**, and the delta reconciles exactly to the two things
+Step 119 added: +27 for the new `tests/package-integrity/test_codex_capability_claims_honesty.py`
+and +1 for the new emitted-tree assertion in `tests/distributions/test_codex_install_path.py`.
+No existing test moved. The known environment-gated skip held at one.
+
+Evidence-integrity notes, per the convention this file already uses:
+
+- The staged tree was fingerprinted with `git write-tree` immediately BEFORE launch
+  (`3dbc6f172acfae03e03c96b6aeb0047128f8db80`) and again after the run completed —
+  identical — and `main` fast-forwarded to a commit carrying that same tree, so the
+  suite graded byte-identical bytes to what shipped.
+- Exit code 0 read from a sentinel file the detached runner wrote itself, never from a
+  pipeline status and never inferred from the summary line. Output was redirected, not
+  piped, so no last-stage status could mask a red suite.
+- Admission caveat: Available MBytes was 2057 at launch and dipped to 893 mid-run,
+  below the 2 GB floor. Recorded per the issue #156 convention. The run produced zero
+  failures regardless, and memory starvation manufactures false reds rather than false
+  greens, so the clean result stands as measured.
+
+### Re-measured 2026-09-06 (RD-lite DONE gate, at `9983e3b`) — superseded 2026-09-07
+
+| Command | Passed | Failed | Skipped | Provenance |
+|---|---|---|---|---|
+| `python -m pytest` (DONE gate) | **1565** | 0 | **1** | superseded — RD-lite gate at `9983e3b`; 2:27:15, detached with an exit-code sentinel; summary and admission caveat retained at `documentation/findings/rd-lite-gate-9983e3b.txt` |
 
 Collection was **1566 items** — **+185 passed** against the 2026-08-27 owner figure: +163
 landed with Phase PROD Step 1 at `2e8e4f3` (including the 119-test
