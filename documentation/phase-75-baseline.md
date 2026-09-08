@@ -219,11 +219,39 @@ of 1335 passed / 1 skipped, so it clears the non-regression comparison before th
 is updated. It also matches the earlier Steps 104–106 shared gate at `dc21c9e`: Step 107's
 documentation-only payload moved neither the pass count nor the one known skip.
 
-### Re-measured 2026-09-07 (Phase CL Step 119 DONE gate, at `a7055d2`) — CURRENT
+### Re-measured 2026-09-08 (Phase CL Step 110 DONE gate, at `c350102`) — CURRENT
 
 | Command | Passed | Failed | Skipped | Provenance |
 |---|---|---|---|---|
-| `python -m pytest` (DONE gate) | **1593** | 0 | **1** | **CURRENT** — Step 119 gate at `a7055d2`; 2:24:38, detached with an exit-code sentinel |
+| `python -m pytest` (DONE gate) | **1636** | 0 | **1** | **CURRENT** — Step 110 gate at `c350102`; 2:33:57, detached with an exit-code sentinel |
+
+**+43 against the 1593 owner figure**, reconciling exactly to the one thing Step 110 added:
+the new `tests/package-integrity/test_skill_catalog_lifecycle.py` (43 tests). No existing
+test moved. The known environment-gated skip held at one. Collection was **1637 items**.
+
+Evidence-integrity notes, per the convention this file already uses:
+
+- The gate ran in the build worktree at the committed HEAD `c350102` (tree
+  `05dd0fd9a2ac4d66b8296638d0db10a618edd507`), recorded clean at launch by the build window
+  and measured clean at completion; `main` fast-forwarded to that same commit, so the suite
+  graded byte-identical bytes to what shipped.
+- Exit code 0 read from a sentinel file the detached runner wrote itself, never from a
+  pipeline status and never inferred from the summary line. Output was redirected, not
+  piped, so no last-stage status could mask a red suite.
+- Admission caveat: Available MBytes was about 950 at launch and a per-minute trace (149
+  samples) bottomed at 762, below the 2 GB floor for the whole run. Recorded per the issue
+  #156 convention. The run produced zero failures regardless, and memory starvation
+  manufactures false reds rather than false greens, so the clean result stands as measured.
+  A `pytest -q` from another project ran concurrently for part of the window.
+- `markdown-it-py` (test-only, on the PyYAML precedent) was importable in the gate
+  interpreter; its absence behaviour is measured and owned by `CLAUDE.md` § Environment
+  requirements.
+
+### Re-measured 2026-09-07 (Phase CL Step 119 DONE gate, at `a7055d2`) — superseded 2026-09-08
+
+| Command | Passed | Failed | Skipped | Provenance |
+|---|---|---|---|---|
+| `python -m pytest` (DONE gate) | **1593** | 0 | **1** | superseded — Step 119 gate at `a7055d2`; 2:24:38, detached with an exit-code sentinel |
 
 **+28 against the 1565 owner figure**, and the delta reconciles exactly to the two things
 Step 119 added: +27 for the new `tests/package-integrity/test_codex_capability_claims_honesty.py`

@@ -27,14 +27,16 @@ see the superseded-instruction banner below the Progress table.
 landed, `4fd75c7`), S2 (freeze lift per DS-D2), S3 (worktree rescue: 6 rescue branches
 local-only per DS-D11, 14 worktrees removed), S5 (the DS-D10 issue sweep — 41 closed, 3 parked
 — plus the known-gap notes and this status rewrite), and S6 (Phase CL amendment per DS-D7,
-plan-review + plan-wrap READY, landed `39b9f44`) are DONE. **S7 status (2026-09-08):** pre-rail Step 119 (#165) is DONE at `a7055d2` (54-adapter honesty
-sweep; certified gate 1593 passed / 1 skipped at `a0ec126` — see the baseline owner). Step 110
-(#168) is IN PROGRESS under two recorded decisions on that issue: LOCKED_CLAIMS verbatim
-pinning (2026-09-07) and, after eight review rounds measured seven divergences between the
-hand-rolled markdown scanner and the CommonMark spec, the operator-approved adoption of
-`markdown-it-py` as a test-only dependency on the PyYAML precedent (2026-09-08; loud named
-failure when absent, never a skip). Steps 111–117 queue behind 110 (linear chain). Nothing
-merges except through green gates; the audit trail is on #168.
+plan-review + plan-wrap READY, landed `39b9f44`) are DONE. **S7 status (2026-09-08, updated 14:20):** pre-rail Step 119 (#165) is DONE at `a7055d2` (54-adapter
+honesty sweep; certified gate 1593 passed / 1 skipped at `a0ec126`). **Step 110 (#168) is DONE at
+`c350102`**: certified by the repo-root gate at that exact HEAD (1636 passed / 1 skipped, exit 0,
+2:33:57 — see the baseline owner), `main` fast-forwarded to it, #168 closed with the evidence. It
+landed under the two decisions recorded on that issue: LOCKED_CLAIMS verbatim pinning (2026-09-07)
+and the operator-approved adoption of `markdown-it-py` as a test-only dependency on the PyYAML
+precedent (2026-09-08; loud named failure when absent, never a skip), after ten review rounds
+replaced the hand-rolled markdown scanner with a real CommonMark parser. Step 111 (#169) is next
+and carries a plan-Files correction posted on its issue; Steps 112–117 queue behind it (linear
+chain). Nothing merges except through green gates.
 
 **S4 is DONE (2026-09-06):**
 RD-lite merged at `8a1b501` and certified by the full repo-root DONE gate at `9983e3b` —

@@ -417,7 +417,7 @@ reported as generated drift by `--check`. `--check` compares all three in memory
 
 ### Step 110: Lock the lifecycle contract and project entry rule
 
-- **Status:** PENDING (prerequisite re-based by DS-D7(b): descope on main + freeze deleted + RD-lite landed)
+- **Status:** DONE at `c350102` (2026-09-08). Repo-root DONE gate at that exact HEAD in the build worktree: **1636 passed, 1 skipped, exit 0** (2:33:57), tree `05dd0fd9`, `main` fast-forwarded to the same commit; baseline re-owned in `documentation/phase-75-baseline.md`. #168 closed with the gate evidence. Built on `markdown-it-py` as a test-only dependency (operator-approved 2026-09-08 on the PyYAML precedent) after ten review rounds across windows 2-9: the bespoke markdown scanner was deleted whole, the 179-construction eight-round attack corpus was replayed on the final bytes, and absence behaviour was measured (loud, by name, no skip, no collection abort). Note for Step 111: its Files list must also carry `documentation/architecture.md`, `documentation/skill-catalog-lifecycle.md`, and `tests/package-integrity/test_skill_catalog_lifecycle.py`, because Step 110 pins the two-artifact / no-inventory-producer facts Step 111 makes false (correction posted on #169). (Prerequisite re-based by DS-D7(b): descope on main + freeze deleted + RD-lite landed.)
 - **Problem:** Skill Mesh documents canonical package locations but has no supported CRUD contract or root instruction that prevents a host-only creator from being mistaken for a provider-neutral catalog operation.
 - **Type:** code
 - **Issue:** #168
