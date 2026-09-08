@@ -43,6 +43,7 @@ deprecation window (see `migration.md`), not canonical sources.
 | Codex adapter | `skills/<name>/providers/codex.md` | Thin host adapter; absent for provider-native skills. One per portable skill (54). |
 | Shared prose assets | `_shared/` (repo root) | Cross-skill cores/prose referenced by multiple skills. The manifest declares `skills/_shared/` as the eventual canonical home; that directory does not exist yet, so today's references resolve to the repo-root tree. The divergence is deliberate and locked by `tests/package-integrity/test_skill_tree.py::test_shared_dest_divergence_is_intentional`. |
 | Skill manifest | `config/skill-manifest.json` | Single source for distribution, install, integrity, and README counts. |
+| Skill inventory | `skills/inventory.json` | Machine-readable per-skill inventory. Committed, and graded by `tests/package-integrity/test_skill_tree.py`. Its content is a pure function of the manifest, but no command writes it at this commit — see section 2.1 and Phase CL Step 111. |
 | Model capability mapping | `config/model-mapping.json` | Per-skill provider/local capability booleans (Step 34). |
 | Model tier peer mapping | `config/model-tier-map.json` | Claude-tier to GPT-peer mapping (Step 34). |
 | Runtime router | `runtime/skill-router.ps1` | Provider-neutral CLI router (Step 34). |
@@ -60,6 +61,7 @@ deprecation window (see `migration.md`), not canonical sources.
 | Smoke tests + fixtures | `tests/smoke/`, `tests/fixtures/` | Cross-provider workflow smoke (Step 40). |
 | Release-script tests | `tests/release/` | End-to-end `tools/release.ps1` behavior against throwaway repos (Step 38). |
 | Architecture doc | `documentation/architecture.md` | This document. |
+| Catalog lifecycle contract | `documentation/skill-catalog-lifecycle.md` | The supported create/read/update/delete/rename contract for catalog-owned skills: required provider set, authoring-vs-generated boundary, locked stop codes, and the recovery rule. Its packaging consequence for this document is section 2.1 of this document. |
 | Provider guides | `documentation/providers/` | Per-provider auth, capabilities, divergences, install. |
 | Host-loading authority map | `documentation/host-discovery.md` | Instruction injection vs. native discovery vs. router dispatch (Step 42). |
 | Migration notes | `documentation/migration.md` | Operator-facing migration narrative (Step 39). |
@@ -69,7 +71,7 @@ deprecation window (see `migration.md`), not canonical sources.
 | Generated Codex layout | `dist/codex/` | Build artifact only; never committed. Emitted by `-Provider codex` or `-Provider all`. |
 | Path guard | `runtime/path-guard.ps1` | Canonical real-path resolution shared by the router and release tooling. |
 | Manifest generator | `tools/gen_manifest.py` | Generates `config/skill-manifest.json` + `tests/package-integrity/expected_inventory.json`. |
-| Skill-tree generator | `tools/gen_skill_tree.py` | Generates the migrated `skills/` tree and its inventory. |
+| Skill-tree generator | `tools/gen_skill_tree.py` | Generated the migrated `skills/` tree and `skills/inventory.json`. Retired as a *runnable* producer: its CLI refuses without the legacy `.claude` source the Step 50 consumer cutover overwrote, so no command writes the inventory at this commit — even though its content is a pure function of the manifest (see section 2.1 and Phase CL Step 111). |
 | Release checker | `tools/release_checks.py` | Static release-gate logic used by `tests/package-integrity/test_release_gates.py`. |
 | Router shim generator | `tools/gen-router-shim.ps1` | Generates backward-compatible launcher shims for retired router paths. |
 | Install provenance | `tools/skill-mesh-provenance.ps1` | Install-provenance stamping shared by the builder and installer. |
@@ -77,6 +79,39 @@ deprecation window (see `migration.md`), not canonical sources.
 Rule: if an artifact does not map to exactly one row above, the manifest or this
 table is wrong. There is no second canonical copy of any core, adapter, mapping,
 test, or doc.
+
+### 2.1 Catalog mutation authority — authoring vs. generated surfaces
+
+The table above says where each artifact *lives*. Its lifecycle consequence is that the
+surfaces a catalog mutation can touch fall into the classes below. This is an enumeration by
+class, not a restatement of every row above:
+
+| Class | Examples | May a change be authored here? |
+|---|---|---|
+| Canonical authoring | cores, adapters, `_shared/` prose, `config/model-mapping.json`, the runtime, the tools | Yes — this is the only class a catalog change edits. |
+| Generated in-repo | `config/skill-manifest.json`, `tests/package-integrity/expected_inventory.json` | No — reproduced by `tools/gen_manifest.py`, which owns exactly these two (section 8.5). |
+| Generated / consumer output | `dist/claude`, `dist/gpt`, `dist/codex`, `release-stage/`, and an installed consumer discovery root (`.claude/skills`, `.agents/skills`, `.github/skills`) | No — build, release, and install output. Never an authoring surface, and never the way to effect a catalog change. |
+| Legacy compatibility | the top-level `<skill>/SKILL.md` packages at the repository root | No — non-canonical content in a deprecation window, never the target of a catalog mutation. |
+
+`skills/inventory.json` is deliberately absent from the four classes above: it is neither
+hand-authored nor reproducible by any command at this commit, even though its content is a
+pure function of the manifest. Section 2 carries its row, as that section's own closing
+rule requires. The consequence for a hand-executed mutation is recorded once, in the guide
+cited below.
+
+**The required-provider set is owned elsewhere, and does not redefine `portable`.** Section
+1's Vocabulary row is the definition of the manifest *status* `portable`, and this section
+leaves it exactly as written rather than repeating it here. Phase CL adds a separate and
+narrower rule, about a **mutation** rather than about a record: a skill created or changed
+under the lifecycle contract must carry an adapter for every required provider, and all of
+them land in one change. The two are compatible because they grade different things — one a
+record's status, the other a change's completeness — and the required set itself is stated
+once, in [`skill-catalog-lifecycle.md`](skill-catalog-lifecycle.md) section 4.
+
+The operations, the normalized request, the locked stop codes, the reference-disposition
+rules, and the recovery rule for a mutation that fails after its first write are owned by
+that same guide. Section 2's closing rule above — "There is no second canonical copy of any
+core, adapter, mapping, test, or doc" — is why this section cites it rather than copying it.
 
 ## 3. Skill package shape
 
@@ -530,6 +565,7 @@ package rather than how it is built:
 | Document | Covers |
 |---|---|
 | [`../README.md`](../README.md) | Skill catalog, installation matrix, authentication matrix, capability/exclusion table, workflows |
+| [`skill-catalog-lifecycle.md`](skill-catalog-lifecycle.md) | The supported CREATE/READ/UPDATE/DELETE/RENAME contract for catalog-owned skills; the owner of the required-provider rule, the stop codes, and the mutation recovery rule. The authoring-vs-generated boundary it implies for this package is section 2.1 of this document |
 | [`providers/README.md`](providers/README.md), [`providers/claude.md`](providers/claude.md), [`providers/gpt.md`](providers/gpt.md), [`providers/codex.md`](providers/codex.md) | Per-provider host binding, transport precedence, capabilities |
 | [`troubleshooting.md`](troubleshooting.md) | Provider-selection and transport-authentication failure modes |
 | [`migration.md`](migration.md) | What changed from the pre-migration layout, where things live now, and the top-level `<skill>/SKILL.md` deprecation window |

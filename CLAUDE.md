@@ -170,6 +170,28 @@ tests/                  calibration, distributions, experiments, package-integri
   file can never enter an artifact; checksums cover the generated `dist/` (normalized CRLF→LF, BOM
   stripped) rather than the source checkout, whose line endings vary by clone.
 
+## Catalog mutations — create, read, update, delete, or rename a skill
+
+Any change to a **catalog-owned** skill (one with a record in `config/skill-manifest.json`)
+follows one contract: **`documentation/skill-catalog-lifecycle.md`**. Read it before the
+first edit. It owns the five operations, the normalized request, the required provider set,
+the locked stop codes, the reference-disposition rules, and the recovery rule. This pointer
+restates none of those — it carries only the two triggers that tell you the contract applies:
+
+- **A host-provided or system `skill-creator` is not this repository's authority.** It may
+  correctly author a package for its own host, and that is a host-only artifact — not a
+  catalog member. Which adapters a catalog mutation must produce is the guide's section 4.
+- **Never hand-edit generated or consumer surfaces to effect a catalog change**: not `dist/`,
+  not `release-stage/`, not a consumer discovery root (`.claude/skills`, `.agents/skills`,
+  `.github/skills`), and not a legacy top-level `<skill>/SKILL.md` package. Canonical
+  authoring surfaces are edited; everything else is produced.
+
+**This pointer names the guide, not a skill.** There is no `/skill-crud` package in this
+repository yet and nothing to invoke — it is built later in the same phase that added this
+pointer, and `plan.md` is this repository's status index for that phase. Until it lands, the
+guide is the supported path and you follow it by hand; when it lands, this pointer is
+switched to that skill in the same change.
+
 ## Current authority
 
 `plan.md` is the only mutable execution-status and evidence index. The approved recovery
@@ -204,6 +226,29 @@ the Phase 7.5 status documents, and `documentation/step-4-checkpoint-2026-08-13.
   measurement, not as today's suite; the shape is what generalizes (a bounded ~25-test red
   band, one skip). Current counts have exactly one owner,
   `documentation/phase-75-baseline.md`.
+- **markdown-it-py** (`pip install markdown-it-py`) — the CommonMark dependency, and
+  test-only. The catalog-lifecycle contract gate
+  (`tests/package-integrity/test_skill_catalog_lifecycle.py`) grades what a *reader* sees in
+  three markdown documents: whether a pinned contract sentence is prose or has been parked in
+  a fence, an HTML block, or an indented code block; which row a GFM table actually has;
+  which heading owns a section. The consumer it models is a real markdown renderer, so a
+  hand-rolled scanner would only be this repository's *model* of CommonMark — and that model
+  was measured wrong seven times across eight review rounds of issue #168, once per
+  specification section (HTML-block start conditions, fence opener indent, code-span run
+  pairing, fence info strings, per-leaf-block inline parsing, GFM's optional outer pipes,
+  indented-ATX and setext headings). This is the same reasoning that makes PyYAML a
+  dependency one bullet up, and the absence behaviour is the same shape: without the parser
+  that gate **fails loudly and by name** — every test that reads a document raises an
+  `AssertionError` naming the package and pointing back at this section. It does not skip (a
+  skipped gate is a false green on the one machine nobody checked) and it does not abort
+  collection (that would erase every other test's verdict): measured at Step 110 (2026-09-08,
+  with the parser made unimportable) as **39 failed, 4 passed** in that one file and **39
+  failed, 381 passed** across `tests/package-integrity` — the red band is bounded to the file
+  that needs the parser and every other test in the suite still reports. Read those absolute
+  totals as that dated measurement, not as today's suite; the shape is what generalizes (a
+  bounded red band inside one file, no collection error). The version the gate was measured
+  against is **4.2.0**, recorded in the module beside the parser it builds. Current counts
+  have exactly one owner, `documentation/phase-75-baseline.md`.
 - **jsonschema** (`pip install jsonschema`) — required only when the Phase PROD
   declarative record contract validates a caller-supplied Draft 2020-12 schema.
   Its absence is a named call-time error and does not abort unrelated collection.
