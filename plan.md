@@ -27,7 +27,16 @@ see the superseded-instruction banner below the Progress table.
 landed, `4fd75c7`), S2 (freeze lift per DS-D2), S3 (worktree rescue: 6 rescue branches
 local-only per DS-D11, 14 worktrees removed), S5 (the DS-D10 issue sweep — 41 closed, 3 parked
 — plus the known-gap notes and this status rewrite), and S6 (Phase CL amendment per DS-D7,
-plan-review + plan-wrap READY, landed `39b9f44`) are DONE. **S4 is DONE (2026-09-06):**
+plan-review + plan-wrap READY, landed `39b9f44`) are DONE. **S7 status (2026-09-08):** pre-rail Step 119 (#165) is DONE at `a7055d2` (54-adapter honesty
+sweep; certified gate 1593 passed / 1 skipped at `a0ec126` — see the baseline owner). Step 110
+(#168) is IN PROGRESS under two recorded decisions on that issue: LOCKED_CLAIMS verbatim
+pinning (2026-09-07) and, after eight review rounds measured seven divergences between the
+hand-rolled markdown scanner and the CommonMark spec, the operator-approved adoption of
+`markdown-it-py` as a test-only dependency on the PyYAML precedent (2026-09-08; loud named
+failure when absent, never a skip). Steps 111–117 queue behind 110 (linear chain). Nothing
+merges except through green gates; the audit trail is on #168.
+
+**S4 is DONE (2026-09-06):**
 RD-lite merged at `8a1b501` and certified by the full repo-root DONE gate at `9983e3b` —
 **1565 passed / 1 skipped in 2:27:15, exit 0** (`documentation/findings/rd-lite-gate-9983e3b.txt`);
 review-deep calibrates in-repo from the canonical tree and pta_finance's deep lane resume
