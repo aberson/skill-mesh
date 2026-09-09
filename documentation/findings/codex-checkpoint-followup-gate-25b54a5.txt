@@ -1,0 +1,23 @@
+Codex checkpoint/freshness repair - exact follow-up candidate gate
+Candidate: 25b54a5f6a8e5022a66bc2e9dadcf8c95bd9ffc5
+Tree before/after: 34b1cf02a34140481ca8ee340b97f47cbec99015
+Superseded candidate: 92f082118b695b9275cae6b06e0cb64b808ba0db
+Superseded gate outcome: 1 failed, 1635 passed, 1 skipped in 9865.49s (2:44:25); only tests/distributions/test_codex_install_path.py::test_the_cited_agent_isolation_contract_reaches_the_emitted_codex_tree failed, with assertion: the emitted contract lost its never-infer-from-a-name row.
+Follow-up change: restored the exact no-inference sentence and retained the subjective-self-report prohibition separately.
+Interrupted corrected-candidate run: runner exit 99; pytest exit 1073807364; shutdown interrupted the run before a summary; completion never launched.
+Recovery run: recovery-20260909-restart
+Recovery evidence locator: candidate worktree .build-step/recovery-20260909-restart/ (full-gate, completion, gate-binding.json, preserved-evidence.json).
+Recovery evidence binding SHA256: d463cfdcc16be964e8e8c9205f8db6786d5268500cb3b18bfb2e078221ff7dbc
+Prior failed and interrupted runs remain preserved; only this replacement run supplies passing certification.
+Command: python -m pytest (repository root; no path argument)
+Started: 2026-09-09T09:48:00.070127-07:00
+Completed: 2026-09-09T12:55:46.696171-07:00
+Exit: 0
+Summary: 1636 passed, 1 skipped in 11264.37s (3:07:44)
+Admission: no competing pytest; detached trace records the 2 GiB-or-20-minute admission condition.
+Commit/tree/cleanliness unchanged through the gate.
+Routine Codex install: exit 0; no force; valid 125-file ownership ledger.
+All 125 installed files match the single certified distribution after BOM/newline normalization.
+Installer invoked only for Codex; canonical deep-review source is unchanged.
+Claude Step 111, the unmerged Claude handoff, consumer builds and the expired overnight controller remain parked.
+Deep restoration remains a separate proposal on plan/codex-deep-review-restoration.
