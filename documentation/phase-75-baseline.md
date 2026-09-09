@@ -371,3 +371,12 @@ Nothing else changed: every prose clause, heading, and blank line is byte-for-by
 source copy, and the seven-byte delta is the removal of the `skills/` segment. When the
 later global-support-asset migration creates `skills/_shared/`, this reference gets
 re-pointed with all the others.
+
+### Re-measured 2026-09-09 (Codex checkpoint/freshness follow-up)
+
+Superseded candidate `92f082118b695b9275cae6b06e0cb64b808ba0db` failed only the emitted isolation-contract
+assertion. Exact follow-up candidate `25b54a5f6a8e5022a66bc2e9dadcf8c95bd9ffc5` passed the root DONE gate:
+
+`1636 passed, 1 skipped in 11264.37s (3:07:44)`, exit 0. The follow-up changes one adapter sentence and adds no tests.
+Commit/tree and cleanliness matched before and after. Evidence:
+`documentation/findings/codex-checkpoint-followup-gate-25b54a5.txt`.

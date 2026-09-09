@@ -49,8 +49,12 @@ not a retroactive PASS or a retry of unchanged instructions until success.
 The checkpoint fixture used an explicitly supplied synthetic session identity. Its text
 "8 passed" was scenario input, not an application test result. Protected probe values,
 candidate handle, HMAC key, and signed sidecar bytes are not published in this record.
-The full repository-root gate is still required before landing; its final evidence is
-recorded separately against the committed candidate.
+The original committed candidate `92f0821` reached the repository-root gate and failed only
+the emitted isolation-contract assertion, as recorded by the guarded follow-up job. The exact
+follow-up candidate `25b54a5` restored the pinned sentence while retaining the subjective
+self-report prohibition and passed the full repository-root gate. Final evidence is recorded
+in `codex-checkpoint-followup-gate-25b54a5.txt`; the original candidate history remains
+part of this record and is not a PASS claim.
 
 ## Remaining deep-review boundary
 

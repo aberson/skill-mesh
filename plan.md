@@ -959,3 +959,13 @@ stop condition consumed the authorization. The block must not run again.
 
 Goal A is ended. Phase 2, Goal B, product implementation, Step 4 use, live-home writes, merge, and
 live cutover remain locked. No retry, correction, fallback, or additional experiment is authorized.
+
+## Codex checkpoint and freshness follow-up (2026-09-09)
+
+**Status:** DONE at `25b54a5`; this exact root gate and routine Codex installation are
+certified in `documentation/findings/codex-checkpoint-followup-gate-25b54a5.txt`. The
+preceding `92f0821` root gate failed only its emitted isolation-contract substring assertion;
+the follow-up preserves that history and restores the exact canonical sentence. Checkpoint
+calls still load task-handoff in the parent; Conversation challenge v2 remains calibrated
+and objective. This does not activate deep review. Its separate reviewed proposal remains
+on `plan/codex-deep-review-restoration`; consumer deep flags remain unchanged.
