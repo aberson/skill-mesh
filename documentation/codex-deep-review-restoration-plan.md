@@ -1,6 +1,7 @@
 # Complete build workflows on Codex and Claude
 
 **Phase:** WF
+**Umbrella:** #196
 
 ## 1. What This Is
 
@@ -520,7 +521,7 @@ an unavailable requested model or review host is a visible prerequisite failure.
 - **Status:** PLANNED
 - **Problem:** A nonpassing or incomplete lens set can currently be reported as PASS.
 - **Type:** code
-- **Issue:** #
+- **Issue:** #197
 - **Flags:** --reviewers deep --max-iter 3
 - **Files:** `skills/review-deep/scripts/aggregate.py`, `skills/review-deep/scripts/README.md`, `skills/review-deep/core.md`, `skills/build-step/core.md`, mechanically synchronized legacy script copies, `_shared/calibrate_judge.py`, `_shared/test_calibrate_judge.py`, new `tests/calibration/test_review_deep_aggregate_contract.py`.
 - **Produces:** A validated aggregate CLI preserving actual invocation metadata and a nonpassing result for unresolved lenses.
@@ -531,7 +532,7 @@ an unavailable requested model or review host is a visible prerequisite failure.
 - **Status:** PLANNED
 - **Problem:** A capable Codex host has no executable deep mapping; both installed hosts need explicit, reproducible access to the canonical review assets and parent authority.
 - **Type:** code
-- **Issue:** #
+- **Issue:** #198
 - **Flags:** --reviewers deep --max-iter 3
 - **Files:** `skills/review-deep/core.md`, `skills/review-deep/providers/{claude,codex}.md`, `skills/build-step/providers/{claude,codex}.md`, `skills/build-phase/providers/claude.md`, `skills/build-step/core.md`, capability and distribution tests in the impact table, provider/reader/troubleshooting documents, `documentation/descope-2026-09.md`, `plan.md`.
 - **Produces:** A conditional Codex code-deep adapter, matching Claude asset/authority mapping, and explicit shared support-root and scheduling/timing contracts.
@@ -543,7 +544,7 @@ an unavailable requested model or review host is a visible prerequisite failure.
 - **Status:** PLANNED
 - **Problem:** Ordinary full review lacks a shipped capture dependency, overcommits reviewer capacity and can use incomplete/stale runtime evidence; fresh-session resume can select another task or lose a worktree-local checkpoint.
 - **Type:** code
-- **Issue:** #
+- **Issue:** #199
 - **Flags:** --reviewers deep --max-iter 3
 - **Files:** `skills/build-step/core.md`, `skills/review-gauntlet/core.md`, `skills/build-phase/core.md`, `skills/task-handoff/core.md`, affected Claude/Codex adapters, new canonical capture helper plus mechanical legacy synchronization, new `skills/task-handoff/scripts/task-state-derive.ps1`, new `tests/calibration/test_build_workflow_contract.py`, distribution/duplication tests, release-candidate report, provider/setup docs, `plan.md`.
 - **Produces:** Actual normal-path full review with exact-candidate runtime startup and complete evidence requirements; explicit support helpers and deterministic durable checkpoint selection.
@@ -575,7 +576,7 @@ never substitute the currently edited candidate as its own sole review authority
 - **Status:** PLANNED
 - **Problem:** A review fixture alone cannot prove implementation, runtime review, rejection/correction, checkpoint/resume and final advancement through normal installed skills.
 - **Type:** code
-- **Issue:** #
+- **Issue:** #200
 - **Flags:** --reviewers deep --max-iter 3
 - **Files:** new `documentation/operator/build-workflow-acceptance.md`, new `tests/fixtures/build-workflow/`, existing distribution and workflow-contract tests, provider setup/support statement, `plan.md`.
 - **Produces:** One executable real consumer application and exact two-host W1-W6 run procedure with setup, native fresh-session transition, defect challenge, evidence collection, routine upgrade and rollback.
@@ -587,7 +588,7 @@ never substitute the currently edited candidate as its own sole review authority
 - **Status:** PLANNED
 - **Problem:** Codex workflow compatibility remains unproved until a native installed-host build completes every W1-W6 obligation.
 - **Type:** wait
-- **Issue:** #
+- **Issue:** #201
 - **Files:** Read Step 123's procedure and certified release/fixture evidence.
 - **Produces:** Codex native execution observations and a row-by-row acceptance decision with retained evidence.
 - **Done when:** Both fresh Codex coordinators execute the actual installed workflow and W1-W6 all pass, including eight ordinary/six deep reviewer entries, real rejection/correction, full runtime coverage and durable resume. Record source/install/fixture identities and model receipts. Missing capability or a failed row preserves evidence and leaves this step unready. Codex success alone does not complete this task.
@@ -598,7 +599,7 @@ never substitute the currently edited candidate as its own sole review authority
 - **Status:** PLANNED
 - **Problem:** Codex success cannot establish Claude compatibility, especially when the live Claude tree contains unmerged handoff hardening and quota previously prevented execution.
 - **Type:** wait
-- **Issue:** #
+- **Issue:** #202
 - **Files:** Read Step 123's procedure, the certified release and Codex acceptance evidence; resolve the preserved handoff prerequisite before any live Claude reinstall.
 - **Produces:** Claude native W1-W6 observations and the final two-host acceptance decision/support statement.
 - **Done when:** Claude availability is observed, the existing handoff fix has landed/reconciled without discarding its behavior, routine profile setup matches the same certified release/support/fixture used by Codex, and two genuine native Claude coordinators complete W1-W6. Native parent-only authority is demonstrated rather than assumed. Every mandatory row on BOTH hosts passes before the task is COMPLETE. Record remaining out-of-scope modes beside the passing support statement. A quota or installation prerequisite leaves Claude unobserved and overall completion pending.

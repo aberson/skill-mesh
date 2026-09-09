@@ -37,8 +37,9 @@ the presence of a dispatch tool are insufficient completion evidence.
 
 ## Minor
 
-Issue placeholders are intentionally awaiting the immediately following repo-sync.
-Backfilling tracking IDs changes no implementation or acceptance requirement.
+Issue fields were blank at the readiness check; the subsequent repo-sync created
+umbrella #196 and Steps 120-125 as #197-#202. The tracking-only backfill changes
+no implementation or acceptance requirement.
 The stable HTML marks D1 (support dependency), D4 (expiring bootstrap) and D8
 (finite overnight work) as the principal defaults to inspect.
 

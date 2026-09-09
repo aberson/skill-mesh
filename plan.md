@@ -7,6 +7,8 @@ full review, deep review, rejection/correction, durable checkpoint, fresh native
 coordinator resume, and gated completion. Operator authorized revising the existing
 proposal around this outcome and preparing bounded overnight progress.
 
+**Tracking:** Phase WF umbrella #196; Steps 120-125 are #197-#202.
+
 **Status:** PLANNED, Steps 120-125 in
 `documentation/codex-deep-review-restoration-plan.md` (stable historical filename;
 publication 2 broadens its objective). The proposal, technical review and readiness
