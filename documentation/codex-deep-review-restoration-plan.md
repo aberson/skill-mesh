@@ -1,5 +1,14 @@
 # Complete build workflows on Codex and Claude
 
+> **Execution superseded for first delivery, 2026-09-09.** The operator approved
+> ordinary Codex workflow first, deferring deep review and Claude acceptance.
+> `documentation/codex-ordinary-build-milestone-plan.md` is the controlling M1
+> contract and current decision inventory; `plan.md` owns execution status.
+> The publication-2 text below preserves the unfinished broader commitment.
+> Its old bootstrap, dependency chain, repair-running snapshot and launch commands
+> are historical, not M1 instructions. Its review/wrap reports do not certify M1.
+> The stable proposal locator now renders publication 3 from the M1 plan.
+
 **Phase:** WF
 **Umbrella:** #196
 
@@ -737,3 +746,6 @@ overnight. Certified code progress is not relabeled as W1-W6 acceptance.
 | D8 | D | Eight-hour serial build, three iterations per step, finite gates, no blind restart | Selected default publication 2 |
 | D9 | D | Preserve handoff before Claude activation; quota leaves acceptance pending | Selected default publication 2 |
 | D10 | D | Astra xhigh coordinator, Terra high developer, Astra high Codex reviewers; native Claude policy | Selected default publication 2 |
+| P4 | P | Ordinary Codex first; deep and Claude acceptance deferred | Approved 2026-09-09; controlling M1 plan supersedes first-delivery scope |
+| D11 | D | Ordinary independent source review and bounded checkpoint mapping | Changed 2026-09-09; see controlling M1 plan |
+| D12 | D | New contiguous M1 Steps 126-129; separate full-review and checkpoint slices | Changed 2026-09-09; see controlling M1 plan |

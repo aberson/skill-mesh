@@ -1,27 +1,36 @@
 # Skill Mesh plan
 
-## Complete build workflows on Codex and Claude (2026-09-08)
+## Codex ordinary build milestone (approved 2026-09-09)
 
-**Objective:** both installed hosts complete the same real build-phase workflow:
-full review, deep review, rejection/correction, durable checkpoint, fresh native
-coordinator resume, and gated completion. Operator authorized revising the existing
-proposal around this outcome and preparing bounded overnight progress.
+**Objective:** installed Codex completes a real ordinary full-review build with
+runtime evidence, independent defect rejection/correction and fresh-session resume.
+The operator approved this smaller first milestone (P4). Deep review and Claude
+acceptance are deferred; the broader two-host commitment remains unfinished.
 
-**Tracking:** Phase WF umbrella #196; Steps 120-125 are #197-#202.
+**Authority and tracking:** `documentation/codex-ordinary-build-milestone-plan.md`
+controls M1, under Phase WF #196. Its order is 126 (#199), 127 (issue pending
+repo-sync), 128 (#200), then live Codex acceptance 129 (#201). The previous
+`documentation/codex-deep-review-restoration-plan.md` is retained as the deferred
+broader specification. Its old launch instructions and readiness reports are
+superseded for M1. Steps 120/#197, 121/#198 and 125/#202 remain deferred.
 
-**Status:** PLANNED, Steps 120-125 in
-`documentation/codex-deep-review-restoration-plan.md` (stable historical filename;
-publication 2 broadens its objective). The proposal, technical review and readiness
-reports are linked there. Steps 120-123 prepare certified code and the connected
-acceptance procedure; 124 and 125 must BOTH pass on one common release before this
-task is COMPLETE. A component gate or one passing host cannot close it.
+**Status:** scope adopted; implementation PLANNED. The checkpoint/freshness repair
+is certified and installed at `25b54a5` (certificate below; main `380d38b`). M1
+requires its own C1-C6 native acceptance, not another run of unchanged repair tests.
+The expired native run stopped before implementation with
+`native_qualification_probe_failed` and remains preserved. No M1 builder is active.
 
-Prerequisites remain observable work: finish/correct/certify the checkpoint-probe
-repair, qualify the exact native overnight Codex launcher, and reconcile the
-protected handoff fix before either live acceptance profile is frozen. Claude's
-latest observed quota halt leaves its acceptance pending. The existing Step-111
-stop-and-audit worktree and parked tracks stay preserved. No numbered workflow
-implementation has started as of this plan revision.
+**Plan readiness:** technical review and fresh-context check passed; publication 3
+is rendered at the stable proposal locator. Reports are linked in the M1 plan.
+
+**Next:** synchronize M1 issues, then prepare
+a separate qualification-only run correcting role/native-ID auditing and binding
+readiness to the passing repair certificate. Qualify freshness/private authority
+before builder dispatch. No existing single-use launcher is reusable.
+
+Claude Step 111, the unmerged Claude handoff and consumer builds remain parked.
+Claude handoff reconciliation still gates Claude activation; it no longer gates
+M1 Codex acceptance. No numbered workflow implementation is marked DONE here.
 
 ## Current state (descope-2026-09)
 
