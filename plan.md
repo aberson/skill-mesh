@@ -1,5 +1,26 @@
 # Skill Mesh plan
 
+## Complete build workflows on Codex and Claude (2026-09-08)
+
+**Objective:** both installed hosts complete the same real build-phase workflow:
+full review, deep review, rejection/correction, durable checkpoint, fresh native
+coordinator resume, and gated completion. Operator authorized revising the existing
+proposal around this outcome and preparing bounded overnight progress.
+
+**Status:** PLANNED, Steps 120-125 in
+`documentation/codex-deep-review-restoration-plan.md` (stable historical filename;
+publication 2 broadens its objective). The proposal, technical review and readiness
+reports are linked there. Steps 120-123 prepare certified code and the connected
+acceptance procedure; 124 and 125 must BOTH pass on one common release before this
+task is COMPLETE. A component gate or one passing host cannot close it.
+
+Prerequisites remain observable work: finish/correct/certify the checkpoint-probe
+repair, qualify the exact native overnight Codex launcher, and reconcile the
+protected handoff fix before either live acceptance profile is frozen. Claude's
+latest observed quota halt leaves its acceptance pending. The existing Step-111
+stop-and-audit worktree and parked tracks stay preserved. No numbered workflow
+implementation has started as of this plan revision.
+
 ## Current state (descope-2026-09)
 
 **Authority:** `documentation/descope-2026-09.md` (operator-approved 2026-09-05, landed on main
