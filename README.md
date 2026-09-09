@@ -481,6 +481,13 @@ three hosts; 3 are Claude-native (`claude-oauth-auth`, `context-slim`, `judge-mo
 <details>
 <summary><strong>Current status</strong></summary>
 
+- **Codex checkpoint/freshness repair complete (2026-09-09).** The corrected candidate
+  passed its replacement root gate, was routinely installed for Codex, and its owned
+  installed files were verified. The [repair certificate](documentation/findings/codex-checkpoint-followup-gate-25b54a5.txt)
+  retains the failed and interrupted runs separately. The next approved delivery is the
+  [ordinary Codex build milestone](documentation/codex-ordinary-build-milestone-plan.md):
+  issue synchronization, native qualification, implementation, then connected live acceptance.
+  Deep review and Claude acceptance remain deferred; workflow implementation is still planned.
 - ~57 skills; 54/54 skills are GPT-capable, and all 54 portable skills ship Claude, GPT, and Codex
   adapters behind one shared behavior contract; 3 additional skills are Claude-native.
 - Shipped: the canonical `skills/<name>/{core.md,providers/}` source tree, the provider-neutral router,
