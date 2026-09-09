@@ -185,6 +185,16 @@ questions separate it from its Claude and GPT siblings:
   parent-only sign/write service are separately probed capability gates.
 - **No Artifact tool.** Every artifact a core asks to publish is written as a FILE
   under the repository (or the operator-named output path) and reported by path.
+- **Checkpoint skill invocation.** `build-phase` loads the installed `task-handoff/SKILL.md`
+  and its referenced core, then executes the requested mode in the same parent session.
+  A separate named-skill tool or slash-command API is unnecessary. Missing session identity,
+  a missing rollup helper, or an unreadable package is still a concrete dependency failure.
+  This mapping invokes the checkpoint procedure; it does not substitute a prose handoff for it.
+- **Conversation probe evidence.** The build-phase adapter owns Conversation challenge v2:
+  a positive reporting control followed by two fresh sibling challenges with exact JSON
+  comparisons. Shared host instructions are expected; protected-value recovery is the signal.
+  A child's subjective `inherited_parent_conversation` answer is not an isolation measurement.
+  The explicit no-history dispatch and private verdict-service gates remain required.
 - **No Codex tier peer.** `config/model-tier-map.json` maps Claude tier names onto
   GPT peers and declares no Codex entry, so a tier resolves to the closest capability
   the configured Codex model actually provides — never by weakening a gate to fit a
