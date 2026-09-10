@@ -8,7 +8,8 @@ The operator approved this smaller first milestone (P4). Deep review and Claude
 acceptance are deferred; the broader two-host commitment remains unfinished.
 
 **Authority and tracking:** `documentation/codex-ordinary-build-milestone-plan.md`
-controls M1, under Phase WF #196. Its order is 126 (#199), 127 (#204), 128 (#200), then live Codex acceptance 129 (#201). The previous
+controls M1, under Phase WF #196. Its order is 126 (#199), 127 (#204), 128 (#200),
+then live Codex acceptance 129 (#201). The previous
 `documentation/codex-deep-review-restoration-plan.md` is retained as the deferred
 broader specification. Its old launch instructions and readiness reports are
 superseded for M1. Steps 120/#197, 121/#198 and 125/#202 remain deferred.
@@ -25,10 +26,19 @@ is rendered at the stable proposal locator. Reports are linked in the M1 plan.
 **Issue mapping:** 126/#199, 127/#204, 128/#200 and 129/#201.
 #197/#198/#202 remain open and deferred; #203 covers completed planning only.
 
-**Next:** complete synchronized issue publication, then prepare
-a separate qualification-only run correcting role/native-ID auditing and binding
-readiness to the passing repair certificate. Qualify freshness/private authority
-before builder dispatch. No existing single-use launcher is reusable.
+**Execution checkpoint (2026-09-10 UTC):** M1 issue synchronization is complete
+at `5bd5e57`. A separately reviewed public native diagnostic established all four
+alias/native mappings and expected activity, then STOPPED on `thread/read` RPC
+error `-32600`. Required child metadata remains unverified. No private native
+qualification, implementation or main publication started. Terminal evidence and
+the precise boundary are recorded in
+`documentation/findings/codex-m1-native-identity-recovery-2026-09-10.md`.
+
+**Next:** investigate the authoritative child-metadata lookup from primary source
+before preparing any new reviewed recovery. Preserve the failed diagnostic; its
+supervisor cannot be relaunched, and its failed public prerequisite cannot unlock
+private qualification. Qualify freshness/private authority before builder dispatch.
+The reviewed synchronized M1 plan must be published to main before the queue starts.
 
 Claude Step 111, the unmerged Claude handoff and consumer builds remain parked.
 Claude handoff reconciliation still gates Claude activation; it no longer gates
