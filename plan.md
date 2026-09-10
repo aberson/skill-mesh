@@ -45,7 +45,7 @@ checkout. Its run directory in the proposal worktree is
 `.build-step/m1-private-reference-20260910T100700Z/`; absolute locators stay private.
 The manifest binds 143 inputs with SHA256
 `b69550499a74f567777c954dcc5a4aa56828a7fb45a8132621c4f120580b5871`.
-`qualification-result.json` records the later passing qualification, followed by
+`coordinator-run/qualification-result.json` records the later passing qualification, followed by
 publication and Step 126 dispatch. The older
 `documentation/findings/codex-m1-native-identity-recovery-2026-09-10.md` describes
 a failed predecessor only.
