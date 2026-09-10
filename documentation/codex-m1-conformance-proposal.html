@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <meta name="description" content="M1 publication 4: shared workflow obligations, valid results and different model outputs. Operator choices and agent defaults for explicit approval.">
+  <title>Skill Mesh M1 — publication 4 for approval</title>
+  <style>
+    :root { color-scheme: light; --ground:#f2f5f3; --surface:#fff; --ink:#183029; --muted:#4c635a; --line:#bdccc4; --accent:#075d45; --soft:#e8f3ed; --warm:#fff3d6; --warm-ink:#614508; --shadow:0 5px 22px #18302908; }
+    @media (prefers-color-scheme:dark) { :root { color-scheme:dark; --ground:#111b17; --surface:#1b2923; --ink:#eaf3ed; --muted:#b9cfc2; --line:#4b6658; --accent:#94e1bb; --soft:#294337; --warm:#3a3018; --warm-ink:#f6d787; --shadow:none; } }
+    * { box-sizing:border-box; }
+    html { scroll-behavior:smooth; }
+    body { margin:0; background:var(--ground); color:var(--ink); font:17px/1.6 system-ui,-apple-system,"Segoe UI",sans-serif; }
+    main { max-width:1120px; margin:auto; padding:2.5rem 1.4rem 4rem; }
+    header,section { margin-bottom:1.2rem; padding:1.8rem; border:1px solid var(--line); border-radius:14px; background:var(--surface); box-shadow:var(--shadow); }
+    h1 { font-size:clamp(2rem,5vw,3.3rem); line-height:1.12; letter-spacing:-.035em; max-width:20ch; margin:.8rem 0 1rem; }
+    h2 { margin:0 0 .8rem; font-size:1.45rem; line-height:1.3; }
+    h3 { margin:.25rem 0 .45rem; font-size:1.08rem; }
+    p { margin:.65rem 0; }
+    a { color:var(--accent); text-underline-offset:.16em; }
+    a:hover { text-decoration-thickness:2px; }
+    :focus-visible { outline:3px solid var(--accent); outline-offset:4px; }
+    .skip { position:absolute; left:-10000px; }.skip:focus { left:1rem; top:.5rem; background:var(--surface); padding:.5rem; }
+    .eyebrow,.muted { color:var(--muted); }.eyebrow { font-size:.86rem; letter-spacing:.06em; text-transform:uppercase; }
+    .badge { display:inline-block; padding:.2rem .7rem; border-radius:5px; background:var(--warm); color:var(--warm-ink); font-size:.9rem; font-weight:650; }
+    .lead { font-size:1.14rem; max-width:72ch; }
+    .callout { background:var(--soft); border-left:4px solid var(--accent); padding:.9rem 1rem; border-radius:0 7px 7px 0; margin:1rem 0; }
+    nav { display:flex; flex-wrap:wrap; gap:.55rem 1.2rem; margin-top:1.2rem; font-size:.93rem; }
+    .grid { display:grid; grid-template-columns:1fr 1fr; gap:1rem; }
+    .card { border:1px solid var(--line); padding:1rem; border-radius:8px; }
+    .timeline { list-style:none; padding:0; counter-reset:phase; }
+    .timeline li { counter-increment:phase; position:relative; padding:0 0 1.3rem 3rem; border-left:2px solid var(--line); margin-left:.85rem; }
+    .timeline li::before { content:counter(phase); position:absolute; left:-.9rem; top:0; width:1.8rem; height:1.8rem; border-radius:50%; background:var(--soft); border:1px solid var(--line); text-align:center; font-weight:700; }
+    .timeline li:last-child { border-color:transparent; padding-bottom:0; }
+    .table-scroll { overflow-x:auto; }
+    table { width:100%; border-collapse:collapse; font-size:.9rem; }
+    caption { text-align:left; font-weight:600; padding:0 0 .65rem; }
+    th,td { text-align:left; vertical-align:top; border-bottom:1px solid var(--line); padding:.8rem .65rem; }
+    th { background:var(--soft); } tbody th { background:transparent; white-space:nowrap; }
+    tr.focus td,tr.focus th { background:var(--soft); }
+    code { font: .91em/1.5 ui-monospace,Consolas,monospace; overflow-wrap:anywhere; }
+    pre { white-space:pre-wrap; overflow-wrap:anywhere; background:var(--soft); padding:.85rem; border-radius:7px; }
+    ul { padding-left:1.25rem; } li+li { margin-top:.4rem; }
+    .sources { font-size:.9rem; }
+    @media (max-width:680px) { main { padding:1rem .7rem 2rem; } header,section { padding:1.1rem; }.grid { grid-template-columns:1fr; } table { min-width:680px; } }
+    @media (prefers-reduced-motion:reduce) { html { scroll-behavior:auto; } }
+    @page { size:A4; margin:14mm; }
+    @media print {
+      :root,[data-theme=light],[data-theme=dark] { color-scheme:light; --ground:#fff; --surface:#fff; --ink:#14241d; --muted:#3f5147; --line:#adbdb3; --accent:#07513b; --soft:#eaf2ed; --warm:#fff1cf; --warm-ink:#503b0d; --shadow:none; }
+      * { -webkit-print-color-adjust:exact!important; print-color-adjust:exact!important; }
+      body { font-size:10pt; line-height:1.45; } main { max-width:none; padding:0; }
+      header,section { padding:0 0 4mm; margin:0 0 5mm; border:0; border-bottom:1px solid var(--line); border-radius:0; box-shadow:none; }
+      h1 { font-size:25pt; } h2 { font-size:15pt; } h1,h2,h3 { break-after:avoid; }
+      nav,.skip { display:none; } .lead { font-size:11pt; }
+      .card,.callout,tr,pre { break-inside:avoid; } .grid { grid-template-columns:1fr 1fr; }
+      .table-scroll { overflow:visible; } table { min-width:0; font-size:8.4pt; } th,td { padding:2.2mm; }
+      thead { display:table-header-group; } .timeline li { break-inside:avoid; }
+    }
+  </style>
+</head>
+<body>
+<a class="skip" href="#heard">Skip to proposal</a>
+<main>
+  <header>
+    <div class="eyebrow">Skill Mesh · Phase WF · M1 · Publication 4 · 10 September 2026</div>
+    <p><span class="badge">Ready for your explicit approval</span></p>
+    <h1>Follow the workflow.<br>Allow different valid results.</h1>
+    <p class="lead">Qualify ordinary Codex builds by observing the required steps, real checks, independent reviews and a successful native resume. Different code, prose and review findings are acceptable.</p>
+    <p class="muted">Your P5 planning direction is already authorized. This publication presents the concrete method for approval. The earlier publication-3 approval record is preserved.</p>
+    <div class="callout"><strong>Focus your review:</strong> <a href="#D13">D13: how we prove failure and correction</a> and <a href="#D14">D14: when we adopt the amendment</a>. <a href="#D11">D11: source-review coverage</a> is retained and shown for context.</div>
+    <nav aria-label="Proposal sections"><a href="#heard">What I heard</a><a href="#timeline">Sequence</a><a href="#choices">Your choices</a><a href="#defaults">Agent defaults</a><a href="#risks">Risks</a><a href="#feedback">Approve or amend</a></nav>
+  </header>
+
+  <section id="heard" aria-labelledby="heard-title">
+    <h2 id="heard-title">What I heard</h2>
+    <p>You want confidence that Skill Mesh follows its shared workflow across hosts. You do not expect two LLMs to produce identical implementations or discover the same findings. You asked us to revise constraints that demanded more than that goal, then render the plan for explicit approval.</p>
+    <div class="grid">
+      <div class="card"><h3>Required</h3><p>Correct functional results, required step ordering, complete independent reviews, real runtime evidence, blocked advancement on failures, durable checkpoints and fresh native resume.</p></div>
+      <div class="card"><h3>Allowed to vary</h3><p>Valid implementation choices, prose, review findings and judgments. Native tool names and scheduling may vary while preserving the shared obligations.</p></div>
+    </div>
+    <p>Exact commits, hashes and receipt bindings remain necessary to establish what was tested. A deterministic aggregate is required for identical normalized findings; identical model-generated findings are not required.</p>
+  </section>
+
+  <section id="why" aria-labelledby="why-title">
+    <h2 id="why-title">Why this shape</h2>
+    <p>The old acceptance exercise required a reviewer to discover particular planted defects that deliberately incomplete tests missed. That added a model-quality threshold to workflow qualification.</p>
+    <p><strong>The revised exercise:</strong> ordinary functional tests reject the fixed invalid candidates. A fresh developer corrects each candidate, the same tests pass, and then all required real reviewers run. Any actual blocking finding is honored. Review quality is recorded without demanding a prescribed finding.</p>
+    <p>This preserves an observable failure-and-correction path. It does not claim that a failed test is a reviewer discovery, or that component tests prove the installed native workflow.</p>
+  </section>
+
+  <section id="timeline" aria-labelledby="timeline-title">
+    <h2 id="timeline-title">Phase timeline</h2>
+    <ol class="timeline">
+      <li><h3>Finish the amendment preparation</h3><p>Record your publication-4 feedback or approval, then run the final plan-wrap. Material changes return through technical review. Reconcile the existing controller, checkpoint, terminal test evidence and Git before integration; synchronize the adopted plan links and write the next handoff.</p></li>
+      <li><h3>126 — Make ordinary full review reliable</h3><p>Complete coverage, real candidate capture, support resolution and failure handling through normal callers. This source step's contract is unchanged by the amendment. Preserve the current run's evidence and consumed iterations.</p></li>
+      <li><h3>127 — Resume the intended checkpoint</h3><p>Provide the canonical checkpoint helper and explicit prior-session selection. Preserve the intended plan, native identity and completed work across a real wait. Its source contract is also unchanged.</p></li>
+      <li><h3>128 — Prepare the connected acceptance exercise</h3><p>Build the small loopback app and concrete setup, full-review and resume procedure. Boundary-price and ownership tests must reject invalid candidates and pass corrections without weakening the tests. Preparation cannot mark a live observation as passed.</p></li>
+      <li><h3>129 — Observe installed Codex completing the workflow</h3><p>Complete all C1–C6 observations: discovery, actual failure/correction, real full reviews, native transition, another full build after resume and clean completion, on one certified release/support/fixture identity.</p></li>
+    </ol>
+    <div class="callout"><strong>Afterwards — preparation:</strong> <code>plan-wrap → repo-sync → task-handoff</code> on the final adopted plan. Resolve material edits through <code>plan-review → plan-redline → plan-wrap</code> first. A new native coordinator must establish its own authority.</div>
+    <p><strong>Afterwards — build reference from the plan:</strong> use the qualified coordinator and reconcile completed work before choosing the actual resume point. Do not replay Step 126 or reset an exhausted limit merely by copying this command.</p>
+    <pre><code>build-phase --plan documentation/codex-ordinary-build-milestone-plan.md --steps 126,127,128</code></pre>
+    <p>Step 129 runs only after its procedure and certified release are ready. This publication starts no new build, extends no existing run and activates no parked consumer project.</p>
+  </section>
+
+  <section id="choices" aria-labelledby="choices-title">
+    <h2 id="choices-title">Operator choices <span class="muted">P</span></h2>
+    <p>These record your choices; the implementation methods below remain agent defaults.</p>
+    <ul>
+      <li id="P1"><strong>P1 — retained:</strong> separate reviewed deep restoration and preserve consumer depth. Deferred beyond M1.</li>
+      <li id="P2"><strong>P2 — fulfilled:</strong> checkpoint/freshness repair first, established by the corrected repair certificate.</li>
+      <li id="P3"><strong>P3 — unfinished:</strong> retain the broader full/deep, two-host commitment.</li>
+      <li id="P4"><strong>P4 — approved 9 September:</strong> deliver the ordinary Codex workflow first; defer deep execution and Claude acceptance.</li>
+      <li id="P5"><strong>P5 — planning choice authorized 10 September:</strong> prove shared workflow steps and valid outcomes, allowing different model outputs and findings. Prescribed bug discovery is removed as an M1 completion threshold. Explicit approval of this rendered publication is pending.</li>
+    </ul>
+  </section>
+
+  <section id="defaults" aria-labelledby="defaults-title">
+    <h2 id="defaults-title">Agent defaults <span class="muted">D</span></h2>
+    <p>D13 and D14 implement this amendment. D1–D12 retain their stable identities and prior dispositions; approval does not convert them into operator-invented choices.</p>
+    <div class="table-scroll" role="region" aria-label="Agent defaults with rationale and change options" tabindex="0">
+      <table>
+        <caption>What we propose, why, and what you can change</caption>
+        <thead><tr><th scope="col">ID</th><th scope="col">What</th><th scope="col">Why</th><th scope="col">Tweak axis</th></tr></thead>
+        <tbody>
+          <tr id="D1"><th scope="row">D1</th><td>Retain an explicit pinned support checkout for runtime and checkpoint assets.</td><td>Provide the helpers without redesigning the installer.</td><td>A later packaging change, while preserving source/profile identity.</td></tr>
+          <tr id="D2"><th scope="row">D2</th><td>Retain ordinary fail-closed verdict and coverage semantics; deep CLI work stays deferred.</td><td>Missing or uncertain required results must not authorize progress.</td><td>The scope of shared helper changes; required coverage remains enforced.</td></tr>
+          <tr id="D3"><th scope="row">D3</th><td>Fresh direct sibling reviewers in measured-capacity waves.</td><td>Complete all reviewers within the host's actual capacity.</td><td>Wave size and scheduling, keeping candidate inputs fixed and reviewers independent.</td></tr>
+          <tr id="D4"><th scope="row">D4</th><td>The old six-lens bootstrap for Steps 120/121 remains deferred.</td><td>Deep work is outside M1's first delivery.</td><td>Refresh that method when deep restoration resumes.</td></tr>
+          <tr id="D5"><th scope="row">D5</th><td>First delivery claims ordinary full review on Codex only.</td><td>Match the implemented and observed capability.</td><td>Expand the claim later with affected-host evidence.</td></tr>
+          <tr id="D6"><th scope="row">D6</th><td>Keep calibration replay separate from live workflow proof.</td><td>Replay results cannot establish native execution.</td><td>Later quality experiments; none is a new M1 prerequisite.</td></tr>
+          <tr id="D7"><th scope="row">D7</th><td>A real app with two ordinary-full code steps around a native transition.</td><td>Observe both initial and resumed execution through C1–C6.</td><td>Fixture details while retaining the actual workflow observations.</td></tr>
+          <tr id="D8"><th scope="row">D8</th><td>Retain eight-hour overnight sessions when used, three developer iterations per step, serial gates and no blind restart.</td><td>Bound work and preserve honest stop evidence.</td><td>Future scheduling; an existing deadline or iteration count is not reset by approval.</td></tr>
+          <tr id="D9"><th scope="row">D9</th><td>Reconcile the unmerged handoff before Claude activation.</td><td>Protect that separate behavior while Codex proceeds independently.</td><td>Timing of the later Claude work.</td></tr>
+          <tr id="D10"><th scope="row">D10</th><td>Retain gpt-6-astra/xhigh coordinator, gpt-5.6-terra/high developer and gpt-6-astra/high reviewers.</td><td>Preserve the agreed run policy.</td><td>A separate explicit model-policy decision; no fallback is introduced here.</td></tr>
+          <tr id="D11"><th scope="row">D11</th><td>Five independent high-tier code reviewers for headless source steps, trusted predecessor authority and the bounded checkpoint mapping through 127.</td><td>Avoid the deep bootstrap dependency while retaining mechanical checks and later full runtime acceptance.</td><td>Source-review coverage in a revised plan; ordinary review does not prove six-lens deep coverage.</td></tr>
+          <tr id="D12"><th scope="row">D12</th><td>Keep contiguous Steps 126–129 with separate review-support and checkpoint work.</td><td>Preserve the normal next-step and resume order.</td><td>Future slice boundaries if concrete implementation evidence warrants a change.</td></tr>
+          <tr id="D13" class="focus"><th scope="row">D13<br>Amendment</th><td>Use fixed invalid candidates caught by normal functional tests. Fresh corrections pass the unchanged tests before real full reviews. Record review quality separately.</td><td>Prove failure handling without requiring an LLM to discover a particular bug. Actual blocking reviewer findings still stop advancement.</td><td>The concrete functional failure used. Any replacement must prove the normal failure/correction path and retain real independent reviews.</td></tr>
+          <tr id="D14" class="focus"><th scope="row">D14<br>Amendment</th><td>Publish separately, then integrate after the active controller ends and its checkpoint, terminal evidence and Git reconcile. Preserve any detached gate.</td><td>Protect the running candidate, recorded evidence, deadline and consumed iterations.</td><td>The next handoff timing after reconciliation; approval grants no fourth iteration or automatic relaunch.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="excluded" aria-labelledby="excluded-title">
+    <h2 id="excluded-title">Not in v1 — outside M1</h2>
+    <p>Deep execution, Claude live acceptance, catalog-wide output matching, a new scheduler, an installer redesign, consumer product implementation or a separate model-quality campaign.</p>
+    <p>The amendment does not change the full-root test frequency or reuse policy. Deferred two-host work must apply P5 when refreshed, but is not activated or completed here. Existing deterministic calibration and regression tests keep their contracts.</p>
+  </section>
+
+  <section id="risks" aria-labelledby="risks-title">
+    <h2 id="risks-title">Risks and limits</h2>
+    <ul>
+      <li><strong>A review may miss a defect.</strong> M1 demonstrates workflow conformance, not guaranteed defect discovery. Objective failures and unresolved blocking findings still prevent acceptance; record review limitations honestly.</li>
+      <li><strong>Real integration gaps remain.</strong> Helpers, actual callers and native resume still need their implementation and live evidence. A rendered proposal or green component tests cannot complete M1.</li>
+      <li><strong>Long test gates still cost time.</strong> Their standing obligations are retained. This amendment promises neither a measured speedup nor completion within one overnight window.</li>
+      <li><strong>The active run has fixed limits.</strong> Reconcile the current evidence before adoption. A pending gate is not PASS; exhausted iterations and prior qualification failures retain their recorded outcomes.</li>
+      <li><strong>Later shared changes may invalidate acceptance.</strong> Requalify affected capability; eventual two-host completion needs one common release with each host satisfying the shared requirements.</li>
+    </ul>
+  </section>
+
+  <section id="feedback" aria-labelledby="feedback-title">
+    <h2 id="feedback-title">Approve or amend</h2>
+    <p><strong>Approval target:</strong> this publication's P5 interpretation and D13/D14 method, with P1–P4 and D1–D12 retained as shown. Approval accepts the amendment for final preparation and safe adoption; the existing execution limits still apply. No new build is started by rendering this page.</p>
+    <pre><code>Approve M1 publication 4</code></pre>
+    <p>For changes, use a stable ID and your instruction, for example:</p>
+    <pre><code>D13 -&gt; use a different functional failure in the fixture
+D14 -&gt; explain the next handoff boundary
+D11 -&gt; explain the retained source-review coverage</code></pre>
+    <p>IDs stay stable in later publications. Feedback is folded into the plan first, then this same proposal locator is republished with an incremented label. Explicit approval remains pending until you provide it.</p>
+    <div class="sources">
+      <p><strong>Source of truth:</strong> <a href="codex-ordinary-build-milestone-plan.md">M1 executable plan</a>. <strong>Execution status:</strong> <a href="../plan.md">plan.md</a>. <strong>Change record:</strong> <a href="codex-m1-conformance-amendment.md">P5 amendment</a>.</p>
+      <p><a href="findings/codex-m1-conformance-plan-review-2026-09-10.md">Technical review</a> · <a href="findings/codex-m1-conformance-plan-wrap-2026-09-10.md">Earlier fresh-context check</a> · <a href="codex-deep-review-restoration-proposal.html">Preserved publication 3</a> · <a href="codex-deep-review-restoration-plan.md">Deferred broader plan</a> · <a href="https://github.com/aberson/skill-mesh/pull/205">PR #205</a>.</p>
+      <p class="muted">Rendered from the reviewed amendment at df2f558c089e96b4b0c77c9624bb7f9cfe6613b4 plus this publication's locator, decision-status and preparation-order metadata. This view is neither an implementation certificate nor a live-run status page. Open in a browser → Print → Save as PDF for the print layout.</p>
+    </div>
+  </section>
+</main>
+</body>
+</html>

@@ -10,6 +10,13 @@ This record explains the amendment. The executable contract remains
 The original HTML proposal and September 9 approval/review artifacts remain
 unchanged history.
 
+The formal [publication 4 proposal](codex-m1-conformance-proposal.html) renders
+the same P1-P5 and D1-D14 inventory at a new stable amendment locator, preserving
+the original publication-3 file. Future amendment publications overwrite this
+new locator and increment the publication label. The operator requested explicit
+approval of this rendering; that approval is pending. After feedback, run the
+final plan-wrap before adoption; repeat technical review if substantive text changes.
+
 ## Changes
 
 | Before | After | Decision owner |
@@ -62,6 +69,8 @@ developer iteration, automatic relaunch or retrospective PASS.
 
 ## Validation
 
+- [Publication 4 rendering check](findings/codex-m1-conformance-redline-2026-09-10.md)
+  records decision-ID, source, browser and print checks; explicit approval is pending.
 - [Technical plan review](findings/codex-m1-conformance-plan-review-2026-09-10.md)
   checks source contracts, scope, gate ordering, issue coverage and live-run safety.
 - [Fresh-context plan check](findings/codex-m1-conformance-plan-wrap-2026-09-10.md)

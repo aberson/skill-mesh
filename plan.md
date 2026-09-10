@@ -30,6 +30,10 @@ The earlier failed qualifications remain preserved as failures, not current stat
 inputs. `documentation/codex-m1-conformance-amendment.md` records the change and
 adoption boundary; new review/wrap reports are linked from the M1 contract.
 The original publication-3 proposal remains an unchanged approval record.
+Publication 4 is now rendered at `documentation/codex-m1-conformance-proposal.html`
+for the operator's requested explicit approval; it preserves P1-P5 and D1-D14.
+That approval and the final post-feedback plan-wrap remain pending. Planning
+authorization already exists; no publication approval or new launch is inferred.
 This branch is the prepared next contract, pending safe integration after the
 active controller ends and its checkpoint, terminal evidence and Git reconcile.
 Do not silently switch the running coordinator to this branch.

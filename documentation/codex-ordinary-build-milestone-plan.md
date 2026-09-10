@@ -29,6 +29,11 @@ rule applies when the deferred two-host plan is refreshed.
 | Mechanical identity | Commits, hashes, required receipt fields and candidate bindings match their declared inputs. Identical normalized findings yield the same deterministic aggregate; models need not generate identical findings. |
 | Review quality | Record actual findings and limitations honestly. Discovery of a prescribed planted bug, equal finding counts and cross-model verdict agreement are not M1 completion thresholds. Required reviewers still supply valid, evidence-backed results; uncertainty does not become PASS. |
 
+Proposal: `documentation/codex-m1-conformance-proposal.html`
+
+Publication 4 renders this amendment for the operator's requested explicit
+approval. The P5 planning choice was already authorized; publication approval is
+pending. The proposal is a view of this plan and does not itself launch work.
 Original proposal/approval record (unchanged):
 `documentation/codex-deep-review-restoration-proposal.html`.
 Current amendment record: `documentation/codex-m1-conformance-amendment.md`.
@@ -321,7 +326,10 @@ directory (at most 20 minutes per authorized attempt), record executable/prompt/
 source hashes and real process/start/status/exit evidence, and stop on failure.
 Never revive an expired or consumed runner. Verify no competing run before launch.
 
-Plan review and fresh-context checking precede issue synchronization. Existing
+Plan review -> plan-redline -> plan-wrap precede issue synchronization. Publication
+4 supplies the formal redline after the earlier amendment review/wrap; after
+operator feedback, repeat wrap on the final text before adoption. Material changes
+also repeat technical review. Existing
 #196/#199/#204/#200/#201 retain their identities and must point to the adopted
 contract; #197/#198/#202 remain deferred, never closed as completed by M1.
 The original proposal is an immutable approval record; the amendment record
@@ -408,7 +416,7 @@ operator choices; D entries remain agent-selected methods, including changed one
 | P2 | P | Checkpoint/freshness repair first | Fulfilled by corrected repair certificate |
 | P3 | P | Complete full/deep workflow on both hosts | Broader commitment remains unfinished |
 | P4 | P | Deliver ordinary Codex workflow first; defer deep and Claude acceptance | Approved in conversation 2026-09-09 |
-| P5 | P | Prove shared workflow steps and valid outcomes; allow different model outputs and findings | Authorized in conversation 2026-09-10; prescribed bug detection is not an M1 unfreeze gate |
+| P5 | P | Prove shared workflow steps and valid outcomes; allow different model outputs and findings | Planning choice authorized 2026-09-10; prescribed bug detection is not an M1 unfreeze gate; publication 4 explicit approval pending |
 | D1 | D | Explicit pinned support checkout | Retained; M1 checks runtime/checkpoint assets only |
 | D2 | D | Fail-closed aggregation before enabling dispatch | Changed 2026-09-09: shared ordinary semantics retained; deep-specific CLI work deferred |
 | D3 | D | Fresh capacity-limited review waves | Retained for ordinary review; deep timer amendment deferred |
@@ -421,5 +429,5 @@ operator choices; D entries remain agent-selected methods, including changed one
 | D10 | D | Existing Astra/Terra run model pins | Retained |
 | D11 | D | Five independent code reviewers for headless M1 source steps; predecessor authority and bounded checkpoint mapping | Selected 2026-09-09 to remove the deep bootstrap cycle; full runtime acceptance remains mandatory |
 | D12 | D | New contiguous M1 Steps 126-129, with separate full-review and checkpoint slices | Selected 2026-09-09 to preserve normal next-step/resume ordering |
-| D13 | D | Exercise live rejection/correction with invalid candidates caught by normal functional tests; record review quality separately | Selected 2026-09-10 under P5; mechanical checks still precede model judgment |
-| D14 | D | Publish the amendment separately and adopt after current controller reconciliation | Selected 2026-09-10 to preserve active run pins, iteration count, deadline and evidence |
+| D13 | D | Exercise live rejection/correction with invalid candidates caught by normal functional tests; record review quality separately | Selected 2026-09-10 under P5; mechanical checks still precede model judgment; shown for publication 4 approval |
+| D14 | D | Publish the amendment separately and adopt after current controller reconciliation | Selected 2026-09-10 to preserve active run pins, iteration count, deadline and evidence; shown for publication 4 approval |
