@@ -45,7 +45,7 @@ first, which raises at CALL time -- inside a test body, where pytest reports it 
 FAILURE. Missing PyYAML is then a bounded set of red tests naming the dependency
 (CLAUDE.md's `## Environment requirements` owns the measured counts), and every other
 test in the repository still reports its real verdict. The three checks in this
-module's test file that need no parser (the `user-invokable` spelling scan, the
+module's test file that need no parser (the `user-invocable` spelling scan, the
 quoted-value vacuity guard, and the GPT-adapter premise check, which short-circuits on
 `split_frontmatter` before it can reach a parse) keep passing, because their verdict
 is still true.
@@ -63,7 +63,7 @@ same way rather than silently implying it covers them.
 WHAT THE CONTRACT FORBIDS, AND WHY EACH RULE EXISTS
 ---------------------------------------------------
 1. The block must parse under a strict YAML parser (the original #69 defect).
-2. Keys must come from a closed allowlist. `user-invokable` (the misspelling that
+2. Keys must come from a closed allowlist. `user-invocable` (the misspelling that
    sat in claude-oauth-auth's adapter, where it silently did nothing because every
    host reads `user-invocable`) is caught here for free.
 3. A boolean-valued key must parse to a real `bool` -- checked with `is True` /
