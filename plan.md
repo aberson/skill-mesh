@@ -8,8 +8,7 @@ The operator approved this smaller first milestone (P4). Deep review and Claude
 acceptance are deferred; the broader two-host commitment remains unfinished.
 
 **Authority and tracking:** `documentation/codex-ordinary-build-milestone-plan.md`
-controls M1, under Phase WF #196. Its order is 126 (#199), 127 (issue pending
-repo-sync), 128 (#200), then live Codex acceptance 129 (#201). The previous
+controls M1, under Phase WF #196. Its order is 126 (#199), 127 (#204), 128 (#200), then live Codex acceptance 129 (#201). The previous
 `documentation/codex-deep-review-restoration-plan.md` is retained as the deferred
 broader specification. Its old launch instructions and readiness reports are
 superseded for M1. Steps 120/#197, 121/#198 and 125/#202 remain deferred.
@@ -23,7 +22,10 @@ The expired native run stopped before implementation with
 **Plan readiness:** technical review and fresh-context check passed; publication 3
 is rendered at the stable proposal locator. Reports are linked in the M1 plan.
 
-**Next:** synchronize M1 issues, then prepare
+**Issue mapping:** 126/#199, 127/#204, 128/#200 and 129/#201.
+#197/#198/#202 remain open and deferred; #203 covers completed planning only.
+
+**Next:** complete synchronized issue publication, then prepare
 a separate qualification-only run correcting role/native-ID auditing and binding
 readiness to the passing repair certificate. Qualify freshness/private authority
 before builder dispatch. No existing single-use launcher is reusable.

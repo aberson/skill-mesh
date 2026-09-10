@@ -189,7 +189,7 @@ in the superseded plan; issue bodies/titles are updated before any M1 dispatch.
 - **Status:** PLANNED
 - **Problem:** A fresh coordinator can lose a worktree-owned checkpoint or select an unrelated task.
 - **Type:** code
-- **Issue:** #
+- **Issue:** #204
 - **Flags:** --reviewers code --isolation worktree --max-iter 3
 - **Files:** `skills/task-handoff/core.md`, `skills/build-phase/core.md`, `skills/task-handoff/providers/codex.md`, `skills/build-phase/providers/codex.md`, new `skills/task-handoff/scripts/task-state-derive.ps1`, `tests/calibration/test_build_workflow_contract.py`, regression owners in section 4, `documentation/release-candidate-report.md`, `documentation/providers/codex.md`, `documentation/troubleshooting.md`, `plan.md`.
 - **Produces:** Canonical checkpoint support and explicit prior-session selection through normal task-handoff/build-phase callers.
