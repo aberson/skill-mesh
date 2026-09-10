@@ -18,7 +18,7 @@ then live Codex acceptance 129 (#201). The previous
 broader specification. Its old launch instructions and readiness reports are
 superseded for M1. Steps 120/#197, 121/#198 and 125/#202 remain deferred.
 
-**Status snapshot (2026-09-10 16:51 UTC):** Step 126 implementation is active; no
+**Status snapshot (2026-09-10 17:36 UTC):** Step 126 implementation is active; no
 M1 implementation step is DONE. The checkpoint/freshness repair remains certified
 and installed at `25b54a5`. Native qualification subsequently passed and the
 reviewed 12-document M1 bundle was published to main at
@@ -30,10 +30,13 @@ The earlier failed qualifications remain preserved as failures, not current stat
 inputs. `documentation/codex-m1-conformance-amendment.md` records the change and
 adoption boundary; new review/wrap reports are linked from the M1 contract.
 The original publication-3 proposal remains an unchanged approval record.
-Publication 4 is now rendered at `documentation/codex-m1-conformance-proposal.html`
-for the operator's requested explicit approval; it preserves P1-P5 and D1-D14.
-That approval and the final post-feedback plan-wrap remain pending. Planning
-authorization already exists; no publication approval or new launch is inferred.
+The operator explicitly approved publication 4 on 2026-09-10 without changes.
+`documentation/codex-m1-conformance-proposal.html` is preserved as the approved
+view at `f5891923cabe285e2fdb94f4239dd700e7bb5c19`, retaining P1-P5 and D1-D14.
+Approval evidence is in
+`documentation/findings/codex-m1-publication-4-approval-2026-09-10.md`; the final
+wrap is `documentation/findings/codex-m1-approved-plan-wrap-2026-09-10.md`.
+Approval is no longer a prerequisite outstanding for this amendment.
 This branch is the prepared next contract, pending safe integration after the
 active controller ends and its checkpoint, terminal evidence and Git reconcile.
 Do not silently switch the running coordinator to this branch.

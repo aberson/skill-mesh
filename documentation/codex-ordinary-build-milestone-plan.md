@@ -31,16 +31,20 @@ rule applies when the deferred two-host plan is refreshed.
 
 Proposal: `documentation/codex-m1-conformance-proposal.html`
 
-Publication 4 renders this amendment for the operator's requested explicit
-approval. The P5 planning choice was already authorized; publication approval is
-pending. The proposal is a view of this plan and does not itself launch work.
+The operator explicitly approved publication 4 on 2026-09-10: "Approve M1
+publication 4". The exact rendered HTML at commit
+`f5891923cabe285e2fdb94f4239dd700e7bb5c19` is preserved unchanged as the approved
+view; its pre-approval status text is historical. Approval and its scope are
+recorded in `documentation/findings/codex-m1-publication-4-approval-2026-09-10.md`.
+The proposal remains a view of this plan and does not itself launch work.
 Original proposal/approval record (unchanged):
 `documentation/codex-deep-review-restoration-proposal.html`.
 Current amendment record: `documentation/codex-m1-conformance-amendment.md`.
 Current technical review and fresh-context check:
 `documentation/findings/codex-m1-conformance-plan-review-2026-09-10.md` and
-`documentation/findings/codex-m1-conformance-plan-wrap-2026-09-10.md`.
-The 2026-09-09 reports remain historical. Plan readiness is not native acceptance;
+`documentation/findings/codex-m1-approved-plan-wrap-2026-09-10.md`.
+The earlier conformance wrap and 2026-09-09 reports remain historical.
+Plan readiness is not native acceptance;
 qualification, issue synchronization and the adoption boundary in section 7 still apply.
 
 **Completion boundary:** only Steps 126, 127, 128 and 129 below are M1 obligations,
@@ -416,7 +420,7 @@ operator choices; D entries remain agent-selected methods, including changed one
 | P2 | P | Checkpoint/freshness repair first | Fulfilled by corrected repair certificate |
 | P3 | P | Complete full/deep workflow on both hosts | Broader commitment remains unfinished |
 | P4 | P | Deliver ordinary Codex workflow first; defer deep and Claude acceptance | Approved in conversation 2026-09-09 |
-| P5 | P | Prove shared workflow steps and valid outcomes; allow different model outputs and findings | Planning choice authorized 2026-09-10; prescribed bug detection is not an M1 unfreeze gate; publication 4 explicit approval pending |
+| P5 | P | Prove shared workflow steps and valid outcomes; allow different model outputs and findings | Publication 4 explicitly approved in conversation 2026-09-10; prescribed bug detection is not an M1 unfreeze gate |
 | D1 | D | Explicit pinned support checkout | Retained; M1 checks runtime/checkpoint assets only |
 | D2 | D | Fail-closed aggregation before enabling dispatch | Changed 2026-09-09: shared ordinary semantics retained; deep-specific CLI work deferred |
 | D3 | D | Fresh capacity-limited review waves | Retained for ordinary review; deep timer amendment deferred |
@@ -429,5 +433,5 @@ operator choices; D entries remain agent-selected methods, including changed one
 | D10 | D | Existing Astra/Terra run model pins | Retained |
 | D11 | D | Five independent code reviewers for headless M1 source steps; predecessor authority and bounded checkpoint mapping | Selected 2026-09-09 to remove the deep bootstrap cycle; full runtime acceptance remains mandatory |
 | D12 | D | New contiguous M1 Steps 126-129, with separate full-review and checkpoint slices | Selected 2026-09-09 to preserve normal next-step/resume ordering |
-| D13 | D | Exercise live rejection/correction with invalid candidates caught by normal functional tests; record review quality separately | Selected 2026-09-10 under P5; mechanical checks still precede model judgment; shown for publication 4 approval |
-| D14 | D | Publish the amendment separately and adopt after current controller reconciliation | Selected 2026-09-10 to preserve active run pins, iteration count, deadline and evidence; shown for publication 4 approval |
+| D13 | D | Exercise live rejection/correction with invalid candidates caught by normal functional tests; record review quality separately | Agent-selected method ratified in publication 4 on 2026-09-10; mechanical checks still precede model judgment |
+| D14 | D | Publish the amendment separately and adopt after current controller reconciliation | Agent-selected method ratified in publication 4 on 2026-09-10; active run pins, iteration count, deadline and evidence preserved |
