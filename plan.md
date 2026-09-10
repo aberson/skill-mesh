@@ -18,63 +18,66 @@ then live Codex acceptance 129 (#201). The previous
 broader specification. Its old launch instructions and readiness reports are
 superseded for M1. Steps 120/#197, 121/#198 and 125/#202 remain deferred.
 
-**Status snapshot (2026-09-10 17:36 UTC):** Step 126 implementation is active; no
-M1 implementation step is DONE. The checkpoint/freshness repair remains certified
-and installed at `25b54a5`. Native qualification subsequently passed and the
-reviewed 12-document M1 bundle was published to main at
-`b8acf82924cc3166a078cc50caa26b08d1135321`; local and remote main match that commit.
-The earlier failed qualifications remain preserved as failures, not current status.
+**Status snapshot (2026-09-10 18:04 UTC):** Step 126 remains unfinished at iteration 3/3.
+The previous native controller has stopped at its checkpoint reserve with
+`window_ended_with_gate_preserved_and_checkpoint`; its eight-hour deadline was
+not extended. The original candidate and detached test process are preserved.
+No M1 implementation step is DONE. The repaired installed profile at `25b54a5`
+remains certified; that certificate is not C1-C6 workflow acceptance.
 
-**Plan readiness / adoption:** the P5 amendment is reviewed on
-`plan/m1-workflow-conformance-20260910`, separately from the active run's frozen
-inputs. `documentation/codex-m1-conformance-amendment.md` records the change and
-adoption boundary; new review/wrap reports are linked from the M1 contract.
-The original publication-3 proposal remains an unchanged approval record.
-The operator explicitly approved publication 4 on 2026-09-10 without changes.
-`documentation/codex-m1-conformance-proposal.html` is preserved as the approved
-view at `f5891923cabe285e2fdb94f4239dd700e7bb5c19`, retaining P1-P5 and D1-D14.
-Approval evidence is in
-`documentation/findings/codex-m1-publication-4-approval-2026-09-10.md`; the final
-wrap is `documentation/findings/codex-m1-approved-plan-wrap-2026-09-10.md`.
-Approval is no longer a prerequisite outstanding for this amendment.
-This branch is the prepared next contract, pending safe integration after the
-active controller ends and its checkpoint, terminal evidence and Git reconcile.
-Do not silently switch the running coordinator to this branch.
+**Plan readiness / adoption:** publication 4 is explicitly approved; final
+plan-wrap is READY. This documentation publication adopts the reviewed amendment
+after the old controller's terminal state, processes, checkpoint and Git were
+reconciled. The approved controlling plan and HTML are unchanged from `62aa60a`.
+The original publication-3 and publication-4 views remain immutable approval
+records. See `documentation/findings/codex-m1-publication-4-approval-2026-09-10.md`,
+`documentation/findings/codex-m1-approved-plan-wrap-2026-09-10.md` and the adoption
+record `documentation/findings/codex-m1-coordinator-continuation-2026-09-10.md`.
 
-**Issue mapping:** 126/#199, 127/#204, 128/#200 and 129/#201.
+**Current authorization:** the operator explicitly authorized
+`plan-wrap -> repo-sync -> build-phase` as coordinator. This permits one fresh
+bounded continuation after adoption and completion of the preserved gate. It
+does not extend the old run, reset Step 126's iterations or authorize repeated
+automatic restarts. Fresh native qualification must pass before implementation
+continues; the old parent's private authority is never restored from a checkpoint.
+
+**Issue mapping:** 126/#199, 127/#204, 128/#200 and 129/#201 under umbrella #196.
+All five M1 issue links are refreshed to this adopted publication before dispatch.
 #197/#198/#202 remain open and deferred; #203 covers completed planning only.
 
-**Execution evidence:** original M1 issue synchronization is committed at
-`5bd5e5795fd3ddc20a65b9e72e80844ee8c1fa52`. The active native coordinator is
-`01a08aca-d904-7d81-9d5a-ded248a8a719`, with durable checkpoint
-`.claude/task-state/sessions/01a08aca-d904-7d81-9d5a-ded248a8a719.md` in the main
-checkout. Its run directory in the proposal worktree is
-`.build-step/m1-private-reference-20260910T100700Z/`; absolute locators stay private.
-The manifest binds 143 inputs with SHA256
-`b69550499a74f567777c954dcc5a4aa56828a7fb45a8132621c4f120580b5871`.
-`coordinator-run/qualification-result.json` records the later passing qualification, followed by
-publication and Step 126 dispatch. The older
-`documentation/findings/codex-m1-native-identity-recovery-2026-09-10.md` describes
-a failed predecessor only.
+**Preserved execution evidence:** original M1 synchronization was `5bd5e57`,
+followed by the reviewed main publication `b8acf82924cc3166a078cc50caa26b08d1135321`.
+The old native parent was `01a08aca-d904-7d81-9d5a-ded248a8a719`; its durable
+checkpoint remains in `.claude/task-state/sessions/` in the main checkout.
+The preserved proposal-worktree run is
+`.build-step/m1-private-reference-20260910T100700Z/`; its 143-input manifest SHA256
+is `b69550499a74f567777c954dcc5a4aa56828a7fb45a8132621c4f120580b5871`.
+`coordinator-run/qualification-result.json` records its actual passing native
+qualification. Earlier failed diagnostics remain failures and historical evidence.
 
-The baseline root gate passed at `b8acf82924cc3166a078cc50caa26b08d1135321`:
-1636 passed, 1 skipped in 12612.58 seconds, exit 0. Receipts are under
-`coordinator-run/gate-step-126-iteration-1-baseline/`. Step 126's third candidate
-is `c2f4298a1d45a1356b77b6b81c62cc993347bf87`, tree
-`c524da578d080d04571ce49bd6709063b0218175`; its separate full root gate started
-16:29:37 UTC and is still running in
-`coordinator-run/gate-step-126-iteration-3-candidate/` at this snapshot.
-Gate owner PID 11796 / pytest PID 30480 were live; controller PID 27080 reported
-`waiting_for_root_gate`. Progress is not a terminal gate result.
+The original baseline root gate passed at `b8acf829`: 1636 passed, 1 skipped in
+12612.58 seconds, exit 0. The original third candidate remains
+`c2f4298a1d45a1356b77b6b81c62cc993347bf87`, tree
+`c524da578d080d04571ce49bd6709063b0218175`. Its root gate started 16:29:37 UTC;
+the measured gate phase at this snapshot is `running`. Gate receipts
+are under `coordinator-run/gate-step-126-iteration-3-candidate/`. Read its actual
+terminal sentinels before continuation; this dated snapshot is not a PASS.
 
-**Next:** preserve that gate and its candidate checkout, then reconcile its
-terminal sentinel and the coordinator checkpoint before any review/landing or
-plan integration. The controller's fixed deadline is 2026-09-10 18:09:01 UTC;
-a detached gate may finish later. All three Step 126 developer iterations are
-consumed: this amendment authorizes no fourth iteration, budget extension or
-automatic relaunch. Adopt the reviewed P5 plan at a new recorded commit after
-the controller ends; later dispatch uses reconciled evidence and fresh native
-qualification. Steps 127-129 remain unstarted at this snapshot.
+**Next:** after the preserved gate finishes successfully, a separately reviewed,
+single-use continuation performs fresh native qualification, then resumes 126 at
+iteration 3. Integrate the unchanged candidate with the adopted documentation in
+a new worktree, reconcile the sole `plan.md` status-note overlap and verify all
+13 non-status candidate blobs are unchanged. Any required source fix leaves 126
+BLOCKED; there is no fourth development iteration. New baseline/candidate trees
+receive their own serial root gates, followed by five independent code reviews,
+normal integration and distinct post-merge/after-step gates before DONE. Continue
+127/128 only after genuine advancement. Step 129 remains pending live acceptance.
+
+The deferred launch waits at most six hours for the old gate and launches once.
+The new native invocation has its own finite eight-hour window, including a
+qualification limited to 20 minutes. No model window runs while merely waiting
+for the old gate. Exact launch, source, approval, process and checkpoint bindings
+remain in private records; absolute local paths are not public documentation.
 
 Claude Step 111, the unmerged Claude handoff and consumer builds remain parked.
 Claude handoff reconciliation still gates Claude activation; it no longer gates
