@@ -16,6 +16,12 @@ on Claude Code, GitHub Copilot, and OpenAI Codex from one behavior contract.**
 Swap the placeholders (`<workspace>`, `<project>`, `<your-org>`) before use — see
 [Adapt before use](#adapt-before-use).
 
+One behavior contract means shared workflow steps, protections and functional
+requirements. Models may produce different valid code, prose and review findings;
+identical model outputs are not the portability target. The current
+[Codex ordinary-build milestone](documentation/codex-ordinary-build-milestone-plan.md)
+defines its acceptance checks; [plan.md](plan.md) records execution status.
+
 ## Workflows
 
 How these skills **chain together** in practice — every sequence below is a workflow run in

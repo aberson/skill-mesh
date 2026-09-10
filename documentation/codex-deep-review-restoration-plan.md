@@ -8,6 +8,14 @@
 > Its old bootstrap, dependency chain, repair-running snapshot and launch commands
 > are historical, not M1 instructions. Its review/wrap reports do not certify M1.
 > The stable proposal locator now renders publication 3 from the M1 plan.
+>
+> **Acceptance clarification, 2026-09-10 (P5):** the operator requires shared
+> workflow obligations and valid results, allowing different model outputs and
+> findings. This also governs the future refresh of the deferred two-host work.
+> The historical planted-detection thresholds below are superseded, not future
+> release requirements. See `documentation/codex-m1-conformance-amendment.md` and
+> the controlling M1 plan for the revised functional-failure exercise. No deferred
+> step is completed or activated by this clarification.
 
 **Phase:** WF
 **Umbrella:** #196

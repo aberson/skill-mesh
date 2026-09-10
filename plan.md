@@ -1,11 +1,15 @@
 # Skill Mesh plan
 
-## Codex ordinary build milestone (approved 2026-09-09)
+## Codex ordinary build milestone (approved 2026-09-09; clarified 2026-09-10)
 
 **Objective:** installed Codex completes a real ordinary full-review build with
-runtime evidence, independent defect rejection/correction and fresh-session resume.
+runtime evidence, verified failure/correction handling and fresh-session resume.
 The operator approved this smaller first milestone (P4). Deep review and Claude
 acceptance are deferred; the broader two-host commitment remains unfinished.
+The operator's P5 clarification requires shared workflow obligations and valid
+outcomes, while allowing different model outputs and findings. Prescribed bug
+discovery is removed as an M1 completion threshold; functional failures and
+unresolved blocking findings still prevent advancement.
 
 **Authority and tracking:** `documentation/codex-ordinary-build-milestone-plan.md`
 controls M1, under Phase WF #196. Its order is 126 (#199), 127 (#204), 128 (#200),
@@ -14,36 +18,56 @@ then live Codex acceptance 129 (#201). The previous
 broader specification. Its old launch instructions and readiness reports are
 superseded for M1. Steps 120/#197, 121/#198 and 125/#202 remain deferred.
 
-**Status:** scope adopted; implementation PLANNED. The checkpoint/freshness repair
-is certified and installed at `25b54a5` (certificate below; main `380d38b`). M1
-requires its own C1-C6 native acceptance, not another run of unchanged repair tests.
-The expired native run stopped before implementation with
-`native_qualification_probe_failed` and remains preserved. No M1 builder is active.
+**Status snapshot (2026-09-10 16:51 UTC):** Step 126 implementation is active; no
+M1 implementation step is DONE. The checkpoint/freshness repair remains certified
+and installed at `25b54a5`. Native qualification subsequently passed and the
+reviewed 12-document M1 bundle was published to main at
+`b8acf82924cc3166a078cc50caa26b08d1135321`; local and remote main match that commit.
+The earlier failed qualifications remain preserved as failures, not current status.
 
-**Plan readiness:** technical review and fresh-context check passed; publication 3
-is rendered at the stable proposal locator. Reports are linked in the M1 plan.
+**Plan readiness / adoption:** the P5 amendment is reviewed on
+`plan/m1-workflow-conformance-20260910`, separately from the active run's frozen
+inputs. `documentation/codex-m1-conformance-amendment.md` records the change and
+adoption boundary; new review/wrap reports are linked from the M1 contract.
+The original publication-3 proposal remains an unchanged approval record.
+This branch is the prepared next contract, pending safe integration after the
+active controller ends and its checkpoint, terminal evidence and Git reconcile.
+Do not silently switch the running coordinator to this branch.
 
 **Issue mapping:** 126/#199, 127/#204, 128/#200 and 129/#201.
 #197/#198/#202 remain open and deferred; #203 covers completed planning only.
 
-**Execution checkpoint (2026-09-10 UTC):** M1 issue synchronization is complete
-at `5bd5e57`. The operator renewed M1 approval and authorized overnight work.
-After the first diagnostic's `thread/read` RPC error `-32600`, a separately
-reviewed notification-based recovery passed 32 local controls but also STOPPED:
-all four child `thread/started` metadata records were absent from the observed
-native stream. Alias mappings, public responses and expected activity succeeded;
-required child metadata remains unverified. No private native qualification,
-implementation, pytest run, installation or main publication started. Terminal
-evidence and the precise boundary are recorded in
-`documentation/findings/codex-m1-native-identity-recovery-2026-09-10.md`.
+**Execution evidence:** original M1 issue synchronization is committed at
+`5bd5e5795fd3ddc20a65b9e72e80844ee8c1fa52`. The active native coordinator is
+`01a08aca-d904-7d81-9d5a-ded248a8a719`, with durable checkpoint
+`.claude/task-state/sessions/01a08aca-d904-7d81-9d5a-ded248a8a719.md` in the main
+checkout. Its run directory in the proposal worktree is
+`.build-step/m1-private-reference-20260910T100700Z/`; absolute locators stay private.
+The manifest binds 143 inputs with SHA256
+`b69550499a74f567777c954dcc5a4aa56828a7fb45a8132621c4f120580b5871`.
+`qualification-result.json` records the later passing qualification, followed by
+publication and Step 126 dispatch. The older
+`documentation/findings/codex-m1-native-identity-recovery-2026-09-10.md` describes
+a failed predecessor only.
 
-**Next:** investigate authoritative child-metadata delivery from primary source
-before preparing any new reviewed recovery. Preserve both failed diagnostics;
-neither consumed supervisor can be relaunched, and neither failed public
-prerequisite can unlock private qualification. Qualification must establish
-freshness/private authority before builder dispatch. No further scope approval is
-missing; the blocker is required native evidence.
-The reviewed synchronized M1 plan must be published to main before the queue starts.
+The baseline root gate passed at `b8acf82924cc3166a078cc50caa26b08d1135321`:
+1636 passed, 1 skipped in 12612.58 seconds, exit 0. Receipts are under
+`coordinator-run/gate-step-126-iteration-1-baseline/`. Step 126's third candidate
+is `c2f4298a1d45a1356b77b6b81c62cc993347bf87`, tree
+`c524da578d080d04571ce49bd6709063b0218175`; its separate full root gate started
+16:29:37 UTC and is still running in
+`coordinator-run/gate-step-126-iteration-3-candidate/` at this snapshot.
+Gate owner PID 11796 / pytest PID 30480 were live; controller PID 27080 reported
+`waiting_for_root_gate`. Progress is not a terminal gate result.
+
+**Next:** preserve that gate and its candidate checkout, then reconcile its
+terminal sentinel and the coordinator checkpoint before any review/landing or
+plan integration. The controller's fixed deadline is 2026-09-10 18:09:01 UTC;
+a detached gate may finish later. All three Step 126 developer iterations are
+consumed: this amendment authorizes no fourth iteration, budget extension or
+automatic relaunch. Adopt the reviewed P5 plan at a new recorded commit after
+the controller ends; later dispatch uses reconciled evidence and fresh native
+qualification. Steps 127-129 remain unstarted at this snapshot.
 
 Claude Step 111, the unmerged Claude handoff and consumer builds remain parked.
 Claude handoff reconciliation still gates Claude activation; it no longer gates

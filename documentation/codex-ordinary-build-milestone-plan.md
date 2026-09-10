@@ -6,7 +6,7 @@
 ## 1. What This Is
 
 **Objective:** an installed Codex coordinator completes a real Skill Mesh build
-with independent ordinary full review, real runtime evidence, review-driven defect
+with independent ordinary full review, real runtime evidence, gate-driven defect
 correction, durable checkpointing and a fresh native coordinator resuming to finish.
 
 **Authority:** on 2026-09-09 the operator chose the smaller first milestone:
@@ -16,12 +16,27 @@ This is P4, a scope and sequencing amendment to publication 2 of
 `documentation/codex-deep-review-restoration-plan.md`, not a new parity program.
 `plan.md` owns current execution status. This file owns M1's executable contract.
 
-Proposal: `documentation/codex-deep-review-restoration-proposal.html`
+**Acceptance clarification (P5, operator-authorized 2026-09-10):** prove that each
+host follows the shared workflow obligations and produces a valid result. Different
+implementations, prose, review findings and model judgments are allowed. M1 does
+not compare Claude and Codex outputs or require identical bug discovery. The same
+rule applies when the deferred two-host plan is refreshed.
 
-Technical review: `documentation/findings/codex-ordinary-plan-review-2026-09-09.md`.
-Fresh-context check: `documentation/findings/codex-ordinary-plan-wrap-2026-09-09.md`.
-These reports establish plan readiness only; native qualification and issue sync
-remain execution prerequisites.
+| Acceptance dimension | Required proof |
+|---|---|
+| Workflow conformance | Required steps, ordering, independent reviewer coverage, real runtime capture, failure handling, authorized advancement and durable resume actually run. Native tool names and scheduling may differ while preserving these obligations. |
+| Functional correctness | Objective application requirements pass executable checks. Known failures and unresolved blocking findings prevent merge/DONE; a different valid implementation is acceptable. |
+| Mechanical identity | Commits, hashes, required receipt fields and candidate bindings match their declared inputs. Identical normalized findings yield the same deterministic aggregate; models need not generate identical findings. |
+| Review quality | Record actual findings and limitations honestly. Discovery of a prescribed planted bug, equal finding counts and cross-model verdict agreement are not M1 completion thresholds. Required reviewers still supply valid, evidence-backed results; uncertainty does not become PASS. |
+
+Original proposal/approval record (unchanged):
+`documentation/codex-deep-review-restoration-proposal.html`.
+Current amendment record: `documentation/codex-m1-conformance-amendment.md`.
+Current technical review and fresh-context check:
+`documentation/findings/codex-m1-conformance-plan-review-2026-09-10.md` and
+`documentation/findings/codex-m1-conformance-plan-wrap-2026-09-10.md`.
+The 2026-09-09 reports remain historical. Plan readiness is not native acceptance;
+qualification, issue synchronization and the adoption boundary in section 7 still apply.
 
 **Completion boundary:** only Steps 126, 127, 128 and 129 below are M1 obligations,
 in that order. Code/fixture gates plus every C1-C6 live Codex row must pass at one
@@ -39,7 +54,7 @@ unchanged. UI means browser-visible user interaction, not source inspection.
 
 ## 2. Verified starting point
 
-Main at `380d38b82ee8f07c876e76bf789f7b235ebe0b55` includes corrected repair
+The pre-M1 main at `380d38b82ee8f07c876e76bf789f7b235ebe0b55` includes corrected repair
 `25b54a5f6a8e5022a66bc2e9dadcf8c95bd9ffc5`. Its certificate is
 `documentation/findings/codex-checkpoint-followup-gate-25b54a5.txt`: one replacement
 root gate, 1636 passed / 1 skipped in 3:07:44, routine Codex install and all 125
@@ -47,12 +62,14 @@ installed files verified. Neither the earlier failed `92f0821` gate nor the
 restart-interrupted run is passing evidence. No repair rerun is required merely
 because this plan changes. New workflow changes require their own gates.
 
-The preserved native controller stopped with `native_qualification_probe_failed`
+The historical native controller stopped with `native_qualification_probe_failed`
 before implementation. Its activity audit compared role aliases with observed
 native child IDs. This diagnosis does not prove a qualified host: actual native
 freshness and private-authority checks must pass after the audit is corrected.
 The expired `.build-step/overnight-build/windows-stdin-v2/` directory in the
 proposal worktree is evidence, never a launcher to edit or run again.
+This is the starting-point diagnosis, not current run status; `plan.md` records
+later qualification, publication and implementation evidence.
 
 The source changes needed for M1 have these verified callers:
 
@@ -161,6 +178,7 @@ Minimum evidence record fields (private local files, not a new service):
 | gates | Command/cwd, start/end, commit/tree before/after, stdout/stderr and terminal exit sentinel; no exit-zero inference from progress text. |
 | review_attempts | Expected role, returned native child ID, requested/observed model and effort, raw evidence/verdict, candidate/artifact identity and mutation audit. Unobserved model identity stays unknown. |
 | checkpoint, acceptance | Prior/new session locators, selected plan/next step, C1-C6 result plus evidence paths; no secrets or private authority in published summaries. |
+| quality_observations | Actual review findings and observed limitations, linked to their raw receipts; absence of a particular finding is not a failed conformance row. No separate quality campaign is required for M1. |
 
 ## 5. Build steps
 
@@ -205,7 +223,7 @@ in the superseded plan; issue bodies/titles are updated before any M1 dispatch.
 - **Flags:** --reviewers code --isolation worktree --max-iter 3
 - **Files:** new `documentation/operator/build-workflow-acceptance.md`, new `tests/fixtures/build-workflow/`, `tests/calibration/test_build_workflow_contract.py`, regression owners in section 4, `documentation/providers/codex.md`, `documentation/troubleshooting.md`, `plan.md`.
 - **Produces:** The real app, concrete generated fixture plan and executable C1-C6 procedure defined below.
-- **Done when:** A fresh reader can provision the consumer/local origin, routine Codex profile/support pair and dependencies, run the app/capture/checkpoint smoke and use concrete native start/transition/resume instructions. Fixture tests are intentionally green on the planted challenge but expected findings are kept out of reviewer inputs. Deterministic missing-evidence/identity/coverage negatives and a real Chromium launch pass. All provider builds and the full root gate pass; no live row is marked PASS by preparation.
+- **Done when:** A fresh reader can provision the consumer/local origin, routine Codex profile/support pair and dependencies, run the app/capture/checkpoint smoke and use concrete native start/transition/resume instructions. Both fixed invalid fixture candidates fail their normal functional tests; valid corrections pass those same tests without weakening them. The generated procedure exercises mechanical failure/correction before actual full review, and records review-quality observations separately from C1-C6 conformance. Deterministic missing-evidence/identity/coverage and blocking-verdict routing negatives plus a real Chromium launch pass. All provider builds and the full root gate pass; no live row is marked PASS by preparation.
 - **Depends on:** 127
 
 ### Step 129: Complete the installed ordinary Codex workflow
@@ -217,7 +235,7 @@ in the superseded plan; issue bodies/titles are updated before any M1 dispatch.
 - **Flags:** native installed acceptance per the generated procedure
 - **Files:** read Step 128's procedure and certified release/support/fixture receipts.
 - **Produces:** Retained native Codex observations and a C1-C6 acceptance decision.
-- **Done when:** All C1-C6 rows pass on one certified identity with real independent reviews, defect correction, native transition and ordinary full review after resume. Verify routine Codex installation without force and installed-file hashes; publish the bounded support statement. Missing capability, failed detection or incomplete evidence leaves M1 unfinished. Deep and Claude acceptance remain deferred after a passing M1.
+- **Done when:** All C1-C6 rows pass on one certified identity with actual mechanical failure/correction, real independent full reviews, native transition and ordinary full review after resume. Verify routine Codex installation without force and installed-file hashes; publish the bounded support statement. Missing capability, skipped obligations, known functional failures, unresolved blocking findings or incomplete required evidence leave M1 unfinished. Discovery of a prescribed bug and identical model outputs are not required. Deep and Claude acceptance remain deferred after a passing M1.
 - **Depends on:** 128. Claude handoff reconciliation and Step 125 are not prerequisites for M1.
 
 ## 6. Connected live acceptance
@@ -234,27 +252,41 @@ App routes: `GET /health` returns `{status: "ok", build_id: candidate_commit}`;
 `GET /` serves the page; `GET /assets/app.js` serves the built asset. `POST /quote`
 accepts integer `subtotal_cents`, returns integer `shipping_cents`/`total_cents`:
 shipping is 500 below 5000 and zero at/above 5000. The first candidate deliberately
-mishandles equality while normal fixture tests cover below/above. The browser
-submits 5000 and records the page/backend result. Step 3 adds an order ownership
+mishandles equality; normal fixture tests cover below, equal and above, so the
+candidate fails the ordinary mechanical gate. The corrected candidate's browser
+exercise submits 5000 and records the page/backend result. Step 3 adds an order ownership
 rule: `GET /order?actor=outsider` must return 403; fixed fake owner/admin cases may
-return 200. No real authentication system is introduced.
+return 200. Normal tests cover all three actors and reject the initial ownership
+defect. No real authentication system is introduced. Keep the requirement tests
+unchanged across the invalid/corrected candidates; this exercises the real failure
+path without depending on an LLM noticing a specific bug.
 
 | Row | Required native Codex observation |
 |---|---|
 | C1 Setup/discovery | Coordinator A starts outside the source checkout, discovers normal installed skills, verifies profile/support/fixture identities and proves native freshness/private parent authority. |
-| C2 Reject | Fixture Step 1 uses --reviewers full --isolation worktree --ui. A fresh developer implements the fixed imperfect patch; all five code/three runtime reviewers receive the real candidate and correct requirements. An independent reviewer cites the defect; no merge/DONE/authenticated advance occurs while it remains. |
-| C3 Correct | A fresh developer iteration corrects it. New mechanical gates, all reviewers and runtime evidence bind the corrected candidate. Normal parent authority merges Step 1 and saves its real checkpoint. |
+| C2 Block invalid candidate | Fixture Step 1 uses --reviewers full --isolation worktree --ui. A fresh developer implements the fixed invalid boundary patch. Its real normal test command fails; retain the command/output/exit and observe that the coordinator requests a fix without reviewer dispatch, merge, DONE or authenticated advancement. This mechanical failure is not represented as a reviewer rejection. |
+| C3 Correct and review | A fresh developer iteration corrects it. The same requirement tests and all required mechanical gates pass before five code/three runtime reviewers run as fresh direct siblings with real runtime evidence. Each result binds the corrected candidate and is handled by the normal verdict rules. Resolve any actual blocking findings within the existing limit. Normal parent authority merges Step 1 and saves its real checkpoint. No particular review finding is prescribed. |
 | C4 Transition | Fixture Step 2 is Type: wait. A saves the intended checkpoint and command to resume Step 3, preserving Step 2 PENDING/WAIT, then ends. Add a newer unrelated synthetic session only as routing stimulus. Native B receives only the intended checkpoint locator and normal task instructions, verifies A ended, records the transition, completes Step 2 and resumes Step 3 without replaying Step 1. |
-| C5 Build after resume | Step 3 ALSO uses --reviewers full --isolation worktree --ui, replacing the deferred deep fixture arm. Its initial ownership defect passes the deliberately incomplete fixture tests. Real ordinary reviewers reject it; a fresh developer corrects it and new full review/runtime evidence passes. B reconstructs private authority; none is restored from saved secrets. |
+| C5 Build after resume | Step 3 ALSO uses --reviewers full --isolation worktree --ui, replacing the deferred deep fixture arm. Its initial ownership defect fails the normal test command and blocks advancement before reviewer dispatch. A fresh developer corrects it; unchanged requirement tests and required mechanical gates pass, then all five code/three runtime reviewers complete with new candidate-bound evidence. Resolve actual blocking findings; prescribed bug discovery is not required. B reconstructs private authority; none is restored from saved secrets. |
 | C6 Finish | Normal merges, cleanup, final gates and checkpoint complete with no stale app/reviewer process or unrelated-state writes. Retain every row's evidence and publish M1 ordinary Codex support only. |
 
 No mocks replace native coordinators, developers/reviewers, the app, capture,
-checkpointing, Git or advancement authority. The fixture-only fixed imperfect
-patch is given to the developer; correct requirements go to reviewers, while
+checkpointing, Git or advancement authority. The fixture-only fixed invalid
+patch is given to the first developer iteration, which must retain the actual
+failed gate for coordinator handling rather than silently repairing the challenge
+before the exercise is observed. Correct requirements go to reviewers, while
 mutation recipes, expected findings and prior reviewer reports stay out of their
 inputs. Never fabricate a verdict. One initial attempt and at most three normal
 development/review iterations per fixture code step; do not rerun unchanged input
-to hunt a favorable result. Missed detection fails the acceptance attempt.
+to hunt a favorable result. The invalid first candidate counts toward that limit.
+
+Blocking reviewer-result routing is also checked through deterministic negative
+tests at the real producer/caller boundary; those tests are component evidence,
+never fabricated native review receipts or a substitute for C3/C5's live reviews.
+If actual reviewers return a blocking finding, the live coordinator must honor
+it; if none do, record that outcome without manufacturing a failure. Review-quality
+observations do not add attempts or delay M1 solely to obtain a desired finding.
+Known functional failures still block acceptance even if reviewers miss them.
 
 Fixture steps omit --issue and use only the local origin, as in the original
 fixture exception. Real Skill Mesh code steps require synchronized public issues.
@@ -269,22 +301,32 @@ is optional packaging, not part of delivered capability. Preserve existing run
 pins: gpt-6-astra/xhigh coordinator, gpt-5.6-terra/high developer and independent
 gpt-6-astra/high reviewers. No fallback model or persistent settings change.
 
-Next prepare a separate qualification-only recovery directory. Inspect the frozen
-runner as data; correct role-to-returned-native-ID auditing in the new copy and
-retain fail-closed checks for unmatched IDs, unknown activity, freshness, private
-authority and producer/reviewer separation. Bind its repair prerequisite to the
-new passing certificate and immutable repaired source, never the failed/absent
-old sentinels. Record executable/prompt/source hashes, process identity, start,
-status/logs and exit. Verify no competing run. One bounded qualification attempt
-(at most 20 minutes) must pass before any builder starts; diagnostics alone do
-not carry to another coordinator, which repeats the required live probes.
-Failure preserves evidence and stops. Do not revive or overwrite the expired run.
+**Amendment adoption boundary:** this revision is prepared on a separate planning
+branch while an earlier pinned Step 126 run is active. Do not edit that run's
+inputs, change its source/main branch, reset its third-iteration count, extend its
+deadline or reinterpret any earlier receipt under this revision. `plan.md` owns
+the dated run identity and gate evidence. Publish the reviewed amendment and
+synchronized issue bodies with an explicit pending-integration notice. After
+the active controller ends, reconcile its checkpoint, terminal gates and Git,
+then integrate this docs revision and record the resulting plan commit in a fresh
+handoff before further dispatch. A detached gate may finish independently; keep
+its candidate checkout untouched. No automatic relaunch is authorized here.
 
-Before implementation: complete plan-review -> plan-redline -> plan-wrap, sync
-existing #196/#199/#200/#201 and create/backfill 127's issue, record the plan/source
-commit and trusted checkpoint inputs, then qualify the native host. Updated issue
-bodies must agree with this plan; #197/#198/#202 remain deferred, never closed as
-completed by M1. No unattended builder is launched by a plan readiness verdict.
+Steps 126/127's implementation obligations and the current candidate's pass/fail
+criteria are unchanged. The revised fixture/acceptance requirements apply when
+128/129 are prepared after the adoption boundary. Prior qualification failures
+remain failures. A new native coordinator repeats the required live probes; old
+diagnostics do not transfer private authority. Use a separate bounded qualification
+directory (at most 20 minutes per authorized attempt), record executable/prompt/
+source hashes and real process/start/status/exit evidence, and stop on failure.
+Never revive an expired or consumed runner. Verify no competing run before launch.
+
+Plan review and fresh-context checking precede issue synchronization. Existing
+#196/#199/#204/#200/#201 retain their identities and must point to the adopted
+contract; #197/#198/#202 remain deferred, never closed as completed by M1.
+The original proposal is an immutable approval record; the amendment record
+distinguishes the operator's P5 choice from its implementation defaults.
+No unattended builder is launched by a plan readiness verdict.
 
 Qualified execution in the Skill Mesh source checkout uses:
 
@@ -326,6 +368,9 @@ silently dropped nor misrepresented by old evidence. Reuse of a completed run
 requires the same candidate/tree/inputs and an explicit applicable standing rule;
 otherwise run the required gate. Do not rerun the unchanged installed repair as
 workflow certification. No quantitative time saving is promised.
+These gates check code/toolchain correctness and evidence, not identical LLM
+outputs. Changing their frequency or reuse policy is separate work; P5 does not
+silently waive them.
 
 For every slow root run: no concurrent pytest, pinned clean commit/tree, durable
 stdout/stderr and exit sentinel, measured before/after identities, standing memory
@@ -345,6 +390,12 @@ acceptance. Broader completion requires a refreshed Codex deep fixture/acceptanc
 plan; historical Steps 123/124 are not satisfied by M1 ordinary-only observations.
 Claude activation still requires reconciling `875de2a` handoff behavior first.
 That dependency no longer delays M1's Codex-only profile or acceptance.
+When the broader plan is refreshed, apply P5's workflow-conformance criterion:
+both hosts must satisfy shared obligations and functional requirements, with
+different valid outputs permitted. Its historical planted-detection thresholds
+are superseded by P5 and must not reappear as a default release blocker. Existing
+deterministic regression and calibration tests keep their own contracts; this
+planning amendment does not rewrite their expected results.
 
 ### Decision Inventory
 
@@ -357,6 +408,7 @@ operator choices; D entries remain agent-selected methods, including changed one
 | P2 | P | Checkpoint/freshness repair first | Fulfilled by corrected repair certificate |
 | P3 | P | Complete full/deep workflow on both hosts | Broader commitment remains unfinished |
 | P4 | P | Deliver ordinary Codex workflow first; defer deep and Claude acceptance | Approved in conversation 2026-09-09 |
+| P5 | P | Prove shared workflow steps and valid outcomes; allow different model outputs and findings | Authorized in conversation 2026-09-10; prescribed bug detection is not an M1 unfreeze gate |
 | D1 | D | Explicit pinned support checkout | Retained; M1 checks runtime/checkpoint assets only |
 | D2 | D | Fail-closed aggregation before enabling dispatch | Changed 2026-09-09: shared ordinary semantics retained; deep-specific CLI work deferred |
 | D3 | D | Fresh capacity-limited review waves | Retained for ordinary review; deep timer amendment deferred |
@@ -369,3 +421,5 @@ operator choices; D entries remain agent-selected methods, including changed one
 | D10 | D | Existing Astra/Terra run model pins | Retained |
 | D11 | D | Five independent code reviewers for headless M1 source steps; predecessor authority and bounded checkpoint mapping | Selected 2026-09-09 to remove the deep bootstrap cycle; full runtime acceptance remains mandatory |
 | D12 | D | New contiguous M1 Steps 126-129, with separate full-review and checkpoint slices | Selected 2026-09-09 to preserve normal next-step/resume ordering |
+| D13 | D | Exercise live rejection/correction with invalid candidates caught by normal functional tests; record review quality separately | Selected 2026-09-10 under P5; mechanical checks still precede model judgment |
+| D14 | D | Publish the amendment separately and adopt after current controller reconciliation | Selected 2026-09-10 to preserve active run pins, iteration count, deadline and evidence |
