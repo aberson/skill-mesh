@@ -27,17 +27,22 @@ is rendered at the stable proposal locator. Reports are linked in the M1 plan.
 #197/#198/#202 remain open and deferred; #203 covers completed planning only.
 
 **Execution checkpoint (2026-09-10 UTC):** M1 issue synchronization is complete
-at `5bd5e57`. A separately reviewed public native diagnostic established all four
-alias/native mappings and expected activity, then STOPPED on `thread/read` RPC
-error `-32600`. Required child metadata remains unverified. No private native
-qualification, implementation or main publication started. Terminal evidence and
-the precise boundary are recorded in
+at `5bd5e57`. The operator renewed M1 approval and authorized overnight work.
+After the first diagnostic's `thread/read` RPC error `-32600`, a separately
+reviewed notification-based recovery passed 32 local controls but also STOPPED:
+all four child `thread/started` metadata records were absent from the observed
+native stream. Alias mappings, public responses and expected activity succeeded;
+required child metadata remains unverified. No private native qualification,
+implementation, pytest run, installation or main publication started. Terminal
+evidence and the precise boundary are recorded in
 `documentation/findings/codex-m1-native-identity-recovery-2026-09-10.md`.
 
-**Next:** investigate the authoritative child-metadata lookup from primary source
-before preparing any new reviewed recovery. Preserve the failed diagnostic; its
-supervisor cannot be relaunched, and its failed public prerequisite cannot unlock
-private qualification. Qualify freshness/private authority before builder dispatch.
+**Next:** investigate authoritative child-metadata delivery from primary source
+before preparing any new reviewed recovery. Preserve both failed diagnostics;
+neither consumed supervisor can be relaunched, and neither failed public
+prerequisite can unlock private qualification. Qualification must establish
+freshness/private authority before builder dispatch. No further scope approval is
+missing; the blocker is required native evidence.
 The reviewed synchronized M1 plan must be published to main before the queue starts.
 
 Claude Step 111, the unmerged Claude handoff and consumer builds remain parked.

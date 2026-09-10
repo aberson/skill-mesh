@@ -1,6 +1,49 @@
 # M1 native identity recovery
 
-## Result
+## Latest result: notification recovery stopped
+
+After renewed operator approval for M1 and overnight execution, a separately
+reviewed recovery replaced the rejected stored-thread lookup with authoritative
+`thread/started` notification metadata. The exact pinned binary's generated
+schema describes the required fields; it does not establish their delivery.
+Thirty-two local observer controls passed, and independent Astra/high source
+review passed after rejecting unexpected metadata-only threads both before and
+after the audit. The verified parent remains the sole permitted extra identity.
+
+The new public diagnostic **STOPPED** after 95.587 seconds, at
+2026-09-10T07:06:01.691078Z, with supervisor exit 1. All four alias/native mappings,
+exact public responses, complete lifecycles and expected 0/0/0/1 tool-item counts
+were observed. However, the observer received no required child `thread/started`
+metadata during this measurement: `metadata_failure=missing_thread_started` and
+all four child metadata entries are null. The audit therefore rejected the run.
+This establishes the missing metadata in this observed stream, not a universal
+claim that every native host lacks the capability.
+
+The result's `invalid_result` is the model's accepted failure reason, not evidence
+of malformed JSON. Its `checks.cleanup=false` does not establish a leak: harness
+cleanup succeeded, the disposable directory was empty, and the supervisor,
+worker and app-server processes were confirmed absent. App-server exit 124 again
+records owned Job termination; the ten-minute diagnostic limit was not reached.
+No private native qualification, builder, pytest run, installation or main
+publication started. Overnight scope approval cannot replace this prerequisite.
+
+New private evidence lives in
+`.build-step/m1-overnight-20260910T065627Z-0296fc/`: `authorization.json`,
+`review-receipt.json`, `launch-manifest.json`, `public-value-tests.json`,
+`public-supervisor/`, `public-identity/native-qualification-run/` and
+`terminal-evidence.json`. All 17 bound inputs match the launch manifest; all 347
+predecessor recovery files, 18 original native files and 115 repair-bound files
+remain unchanged. The 125 installed files and ownership ledger were reverified.
+Independent terminal reconciliation confirmed the stop and its claim limits.
+
+The next prerequisite is a primary-source-supported way to obtain each child's
+authoritative direct parentage, ephemeral state and configured model/effort in
+the actual native stream. Neither the rejected stored lookup nor the unobserved
+notifications satisfy it. Preserve both failures and do not relaunch either
+consumed supervisor. Any future measurement needs a concrete, reviewed correction
+and new evidence bindings; private qualification and implementation remain pending.
+
+## Prior result: stored-thread lookup stopped
 
 Issue synchronization is complete at proposal commit
 `5bd5e5795fd3ddc20a65b9e72e80844ee8c1fa52`: umbrella #196 and M1 Steps
