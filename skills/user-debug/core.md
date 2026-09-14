@@ -39,7 +39,7 @@ Use something else when:
 | `--issue` | no | -- | GitHub issue number to link/close. |
 | `--triage` | no | `quick` | `quick` (worktree + reviewers) or `investigate-only` (Diagnosis Block then stop). `full` is accepted as a deprecated synonym for `quick` — the prior TDD-driven `full` mode delegated to `/build-step-tdd`, which was archived 2026-05-24 after 0 invocations. |
 | `--review` | no | `code` | `none`, `code` (review-gauntlet lean profile), `auto` (gates only). Applies to both quick and full. |
-| `--max-iter` | no | 3 | Max developer iterations inside the delegated build skill. |
+| `--max-iter` | no | inherit `/build-step` | Optional positive integer ceiling on developer-reviewer rounds; forward only when explicitly supplied. |
 | `--skip-verify` | no | false | Skip Step 5 (verify-against-original-repro). DANGEROUS — only use when the repro is too expensive or impossible from the skill's environment (multi-hour soak, hardware-bound, live opponent required). The skill prints a loud warning and records the skip in the final report. |
 
 ## Steps
@@ -250,8 +250,11 @@ Delegate to `/build-step` (both `quick` and the deprecated `full` synonym
 route here):
 
 ```bash
-/build-step --problem "<combined problem>" --reviewers <--review value> --max-iter <--max-iter> [--issue <N>]
+/build-step --problem "<combined problem>" --reviewers <--review value> [--max-iter <explicit value>] [--issue <N>]
 ```
+
+When `--max-iter` is omitted, omit it from the delegation so `/build-step` owns the
+default. Preserve an explicit operator value unchanged.
 
 Stop on `/build-step` BLOCKED: do not proceed to Step 5.
 Pass the block to the user with the underlying reason (failing test,

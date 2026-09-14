@@ -35,7 +35,7 @@ Any combination is valid. Examples:
 | `--problem` | yes | -- | What to build or fix |
 | `--issue` | no | -- | GitHub issue number |
 | `--acceptance` | no | -- | Optional acceptance target (the step's `Done when:`, forwarded by `/build-phase`'s Step 0 extract + Step 2 dispatch). `--acceptance` is forwarded to the developer prompt as advisory context only. It does not feed any verdict gate, reviewer lens, or pass/fail determination. If the deep-review prompt includes it, it is for developer orientation only — the reviewer must not treat it as a gate criterion. |
-| `--max-iter` | no | 3 | Max developer-reviewer iterations |
+| `--max-iter` | no | 10 | Positive integer ceiling on total developer-reviewer rounds, including the initial implementation |
 | `--isolation` | no | `worktree` | `worktree` or `docker` |
 | `--reviewers` | no | `auto` | `auto`, `code`, `deep`, `runtime`, or `full` |
 | `--ui` | no | false | Enable Playwright evidence capture |
@@ -52,6 +52,14 @@ Any combination is valid. Examples:
 | `--exercise-timeout` | no | 30 | Max seconds for exercise script |
 | `--verdict-path` | build-phase only | host temp path | Durable parent-owned verdict path outside the developer worktree |
 | `--verdict-run-id` | build-phase only | generated UUID | Opaque parent-minted identity bound to the durable verdict |
+
+The default budget allows repairs to continue unattended beyond round three. Keep
+iterating automatically while rounds remain and no existing halt condition applies;
+do not ask for confirmation merely because a round was rejected. An explicit
+`--max-iter` from the operator or plan replaces the default. Any enclosing time or
+cost budget still applies, and the stop-and-audit and quality gates still apply.
+Record the resolved limit and consumed rounds in the checkpoint; resuming the same
+step preserves both rather than resetting the count or adopting a newer default.
 
 ---
 
@@ -126,6 +134,7 @@ Requires `--start-cmd` and `--url`. Implies `--ui`.
 ### Step 0 -- Pre-flight
 
 1. **Validate flags:**
+   - Require `--max-iter` to be a positive integer; zero does not mean unlimited.
    - If `--reviewers runtime` or `--reviewers full`: require `--start-cmd` and `--url`
    - `--reviewers deep` requires nothing beyond `code`'s prerequisites — code lenses only,
      no `--start-cmd`/`--url` (do NOT halt a deep step for missing runtime fields)
@@ -713,7 +722,8 @@ Compile findings from ALL reviewers into a single block — read each lens's ful
 > if the SAME defect (same failing test, same reviewer finding) has survived TWO fix
 > iterations — or two consecutive rounds are OSCILLATING (each round's new finding sits in
 > the hunk written to close the previous round's finding) — do not dispatch a third
-> line-scoped patch. Iteration 3 is **re-scoped**:
+> line-scoped patch. If a round remains, the next iteration is **re-scoped**
+> (iteration 3 when the pattern begins in round 1):
 > the developer prompt leads with structural-invariant diagnosis — what invariant is
 > violated, which sites share it — and one refactor of the shared invariant, not another
 > patch of the named line. This re-scopes the next iteration inside the existing
@@ -722,7 +732,7 @@ Compile findings from ALL reviewers into a single block — read each lens's ful
 
 > **Phone-a-friend diagnosis arm (solo, read-only, advisory — at most ONE spawn per run):**
 > At the re-scope check (above — same-defect-2x or oscillation), BEFORE dispatching the
-> re-scoped iteration 3: if `<worktree>/.build-step/diagnosis.md` already exists (the ran-once
+> next re-scoped iteration, if a round remains: if `<worktree>/.build-step/diagnosis.md` already exists (the ran-once
 > marker), skip silently; otherwise spawn ONE read-only fresh-context diagnosis arm at the
 > fable-tier (the workspace tier policy's sanctioned solo-diagnosis dispatch — resolve the
 > tier via the tier map, never a hard-coded model id). Its prompt reuses user-debug Step 1's
@@ -731,12 +741,12 @@ Compile findings from ALL reviewers into a single block — read each lens's ful
 > (failing test / finding text verbatim), the iteration history (each attempted fix and why
 > it failed), and the worktree path. The arm is ADVISORY and never gates: write its
 > Diagnosis Block to `<worktree>/.build-step/diagnosis.md` and PREPEND the block to the
-> re-scoped iteration-3 developer prompt as evidence the developer weighs — not a verdict:
+> re-scoped developer prompt as evidence the developer weighs — not a verdict:
 > the developer treats the Block as a HYPOTHESIS and verifies its claims against primary
 > source before implementing (the friend's answer gets the same adversarial treatment as
 > anyone's).
 > Fail-open: dispatch rejection or any error → print one line
-> `phone-a-friend: diagnosis arm skipped (<reason>)` and dispatch iteration 3 unchanged.
+> `phone-a-friend: diagnosis arm skipped (<reason>)` and dispatch that iteration unchanged.
 
 If iterations remain AND the stop-and-audit check did not trigger:
 1. If UI evidence was captured: revert copied files in main project
@@ -746,7 +756,11 @@ If iterations remain AND the stop-and-audit check did not trigger:
 2. Go to Step 2 with all findings appended to developer prompt
 3. Developer works in the same worktree (cumulative fixes)
 
-If max iterations exhausted: **BLOCKED**
+If unresolved findings remain after the configured `--max-iter` rounds: **BLOCKED
+(iteration budget exhausted)**. Reaching the limit with a passing review follows
+Step 8 normally. Budget exhaustion is not evidence that the defect is unfixable;
+report it separately from stop-and-audit or a failed integrity gate. Never turn
+unresolved findings into PASS or restart the same step to reset its budget.
 1. Atomically call `write_verdict` with `terminal="NEEDS WORK"`, halt `null`,
    and a summary naming the terminal reason. This overwrites a planted or stale
    file.
@@ -766,6 +780,7 @@ If max iterations exhausted: **BLOCKED**
 6. Report:
    ```text
    build-step BLOCKED after N/M iterations
+   Reason: iteration budget exhausted | audit required | <other terminal reason>
 
    Remaining findings:
      <per-reviewer summaries>
@@ -833,7 +848,7 @@ against the current worktree. Use an explicit path parameter, not `git rev-parse
 
 | # | Trigger | What to write to current.md |
 |---|---------|----------------------------|
-| 1 | Start of each developer iteration | MUST overwrite `WIP.Approach` with the approach being tried |
+| 1 | Start of each developer iteration | MUST overwrite `WIP.Approach` with the approach being tried and the current round / resolved limit |
 | 2 | Any test failure | MUST append to `Dead Ends`: approach + specific error summary (1 line) |
 | 3 | Any significant codebase discovery | MUST append to `Critical Gotchas`: the fact + why it matters |
 | 4 | File read that reveals non-obvious structure | MUST append to `Key Files`: path + what was learned |
@@ -923,7 +938,7 @@ bug shape:
 - **Same DEFECT surviving two fix iterations, or two oscillating rounds** (one failing
   test or finding, two failed fixes — or each round's new finding sitting in the hunk
   that closed the previous one; distinct from same-shape-across-locations): re-scope
-  iteration 3 as
+  the next available iteration as
   structural-invariant diagnosis plus one refactor of the shared invariant (see
   Step 9's same-defect re-scope check). Re-scope only — the STOP condition stays
   same-shape-3x; the halt allowlist is untouched.

@@ -1,5 +1,25 @@
 # Skill Mesh plan
 
+## Maintenance — build retry budget (2026-09-14)
+
+The operator requested more room for unattended repairs. The default in
+`skills/build-step/core.md` is now ten total developer-reviewer rounds, including
+the initial implementation. `skills/user-debug/core.md` delegates without a limit
+unless the operator supplies one. The re-scope diagnosis applies to the next
+available round, including patterns first encountered later in a run.
+
+Explicit plan limits, enclosing deadlines, quality gates and repeated-defect audits
+remain binding. Resume preserves the consumed rounds and resolved limit; changing
+the default does not reopen an exhausted run or override a plan's `--max-iter 3`.
+
+Validation: `python -m pytest tests/package-integrity` reported **420 passed in
+73.74 seconds**, and `tools/build-distributions.ps1 -Provider all` built all three
+profiles. Both updated Codex packages passed the skill validator. The normal
+installer refreshed the Codex profile; all 125 installed files matched the generated
+distribution, and both changed cores matched their recorded ownership hashes.
+The full repository-root suite was not run for this maintenance change; no numbered
+M1 or Phase CL step is advanced by this validation.
+
 ## Codex ordinary build milestone (approved 2026-09-09; clarified 2026-09-10)
 
 **Objective:** installed Codex completes a real ordinary full-review build with

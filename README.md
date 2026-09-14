@@ -68,6 +68,13 @@ sidecar. Missing, stale, malformed, or tampered verdicts fail closed on both Cla
 Lanes scale the scrutiny: `auto` (tests only) → `code` (5 lenses) → `deep` (`review-deep` + audit
 trail) → `runtime` / `full` (evidence on a running app).
 
+`build-step` allows ten developer-reviewer rounds by default, including the initial
+implementation. Repairs continue automatically while the budget permits; quality gates
+and repeated-defect audits still apply. Set `--max-iter` explicitly to choose another
+limit. `build-phase` forwards a plan's explicit limit, and `user-debug` inherits the
+`build-step` default when its limit is omitted. Existing run deadlines and checkpointed
+budgets remain binding.
+
 ### The routing web
 
 Every operator fragment — a bug report, a half-formed feature idea, a "does this even work?" — lands
