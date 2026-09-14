@@ -364,7 +364,7 @@ dispatch the old build-phase as the lab development procedure.
 - **Problem:** Turn the retained toolkit source into an identifiable release using the existing toolchain.
 - **Type:** code
 - **Status:** PENDING
-- **Issue:**
+- **Issue:** #207
 - **Flags:** --reviewers deep --isolation worktree
 - **Files:** `tools/baseline_release.py` (new); `documentation/baseline-release-runbook.md` (new); `tests/release/test_baseline_release.py` (new). Read/reuse `tools/release.ps1`, `tools/build-distributions.ps1`, `documentation/product-charter.md`; preserve their interfaces.
 - **Existing context:** The existing release entry stages the Git index and checks the staged package; it does not attach a source commit or establish native workflow acceptance.
@@ -379,7 +379,7 @@ dispatch the old build-phase as the lab development procedure.
 - **Problem:** Make the current lab reproducible without confusing incomplete current source with historical native acceptance.
 - **Type:** code
 - **Status:** PENDING
-- **Issue:**
+- **Issue:** #208
 - **Flags:** --reviewers deep --isolation worktree
 - **Files:** `tools/baseline_release.py`, `documentation/baseline-release-runbook.md`, `tests/release/test_baseline_release.py` (extend Step 147). Read only: lab `AGENTS.md`, `plan.md`, `tools/emit_skills.py`, `tools/emit_antigravity.py`, `tools/editor_workflow.py`, `tools/records.py`, `docs/run-record-contract.md`.
 - **Existing context:** The current lab source is incomplete for acceptance; historical 15/15 editor evidence belongs to a different source. Step 147 provides the shared archive/record writer; lab source remains independently owned.
@@ -394,7 +394,7 @@ dispatch the old build-phase as the lab development procedure.
 - **Problem:** Bind daily Codex use to the retained toolkit release with a concrete recovery route.
 - **Type:** code
 - **Status:** PENDING
-- **Issue:**
+- **Issue:** #209
 - **Flags:** --reviewers deep --isolation worktree
 - **Files:** `tools/activate-codex-release.ps1` (new); `documentation/codex-release-adoption.md` (new); `tests/release/test_codex_release_activation.py` (new). Read/reuse `tools/install-skill-mesh.ps1`, `tools/skill-mesh-transaction.ps1`, `tools/inspect-host-install.ps1`; preserve their interfaces.
 - **Existing context:** The current Codex ledger has 125 owned files matching the retained baseline. Ledger paths and raw hashes establish ownership; a generated header alone does not.
@@ -409,7 +409,7 @@ dispatch the old build-phase as the lab development procedure.
 - **Problem:** Use the prepared exact artifact as the daily baseline.
 - **Type:** operator
 - **Status:** PENDING
-- **Issue:**
+- **Issue:** #210
 - **Flags:** N/A - operator adoption after Step 149
 - **Files:** Private adoption receipt under the configured state root; reference `documentation/codex-release-adoption.md`. No source-code authoring in this step.
 - **Existing context:** Step 149 supplies tested mechanics and an exact artifact/target preview; a fresh host session supplies discovery evidence.
@@ -424,7 +424,7 @@ dispatch the old build-phase as the lab development procedure.
 - **Problem:** Show source, release, installation, capability and progress without a second status authority.
 - **Type:** code
 - **Status:** PENDING
-- **Issue:**
+- **Issue:** #211
 - **Flags:** --reviewers deep --isolation worktree
 - **Files:** `tools/baseline_report.py` (new); `config/baseline-targets.example.json` (new, placeholders only); `documentation/baseline-monitoring.md` (new); `tests/telemetry/test_baseline_report.py` (new). Read existing toolkit telemetry, installer ledger, release records and lab run records; do not change their schemas.
 - **Existing context:** The existing telemetry writer can emit stub rows with zero usage. Lab records distinguish source, candidate and oracle; none is interchangeable with an installed version.
@@ -439,7 +439,7 @@ dispatch the old build-phase as the lab development procedure.
 - **Problem:** Reuse afterparty across the two products without wrong-root sweeps or losing valuable history.
 - **Type:** code
 - **Status:** PENDING
-- **Issue:**
+- **Issue:** #212
 - **Flags:** --reviewers code --isolation worktree
 - **Files:** `skills/user-afterparty/core.md`, `skills/user-afterparty/providers/claude.md`, `skills/user-afterparty/providers/gpt.md`, `skills/user-afterparty/providers/codex.md`; `documentation/baseline-monitoring.md`. Follow `documentation/skill-catalog-lifecycle.md`; generated/installed copies are build outputs.
 - **Existing context:** Afterparty is routing glue. Its current nearest-CLAUDE.md discovery does not recognize the lab AGENTS.md boundary; owning hygiene skills may need an explicit root or may report unsupported.
@@ -480,7 +480,8 @@ Activation tests use disposable homes, verify foreign-file preservation and real
 rollback. Report tests target stale/missing identities and meaningful drift;
 the real smoke exercises existing producers without mocking the boundary.
 
-Next preparation: plan-review, then plan-wrap, before repo-sync.
+Preparation gates are recorded in the linked findings and root plan.md.
+Phase BR umbrella: [#206](https://github.com/aberson/skill-mesh/issues/206).
 `/plan-expedite --plan documentation/baseline-releases-plan.md` is the toolkit
 planning front door. Once READY, run this plan in Claude Code with the required isolated reviewer
 capabilities available. Step 148 is toolkit packaging of read-only external input,

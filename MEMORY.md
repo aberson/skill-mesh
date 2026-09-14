@@ -10,6 +10,19 @@
   portfolio integration follows later. Historical PROD instructions below do not
   select the contents of that first release.
 
+## Baseline-release preparation decisions
+
+- The Phase BR plan separates selected product source from the packaging builder's
+  own commit, and archive retention from qualification, publication and activation.
+- Phase BR release/activation/evidence steps require the deep reviewer lane. Until
+  its Codex adapter maps isolated dispatch, run that build in Claude Code; readiness
+  of a plan is not evidence that the old Codex build milestone passed.
+- The lab remains a read-only external packaging input to the toolkit-owned Phase
+  BR steps. Lab development and acceptance stay under its own AGENTS.md and plan.
+- Preparation findings and issue mapping live beside the plan in
+  `documentation/findings/baseline-releases-*-2026-09-14.md`. See root plan.md for
+  the active automated span and operator boundary, rather than duplicating status here.
+
 ## Lifecycle safety decisions
 
 - A routine portable skill means one neutral core plus Claude, GPT, and Codex adapters in the same change.

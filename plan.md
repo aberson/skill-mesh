@@ -11,8 +11,13 @@ the [report](documentation/baseline-release-report.md) records the dated observa
 The [implementation plan](documentation/baseline-releases-plan.md) passed
 [plan-review](documentation/findings/baseline-releases-plan-review-2026-09-14.md) and
 [plan-wrap](documentation/findings/baseline-releases-plan-wrap-2026-09-14.md).
-Issue synchronization and the build handoff are being prepared. Steps 147-152 are pending; no release certification,
+Phase BR [#206](https://github.com/aberson/skill-mesh/issues/206) tracks
+147/#207, 148/#208, 149/#209, 150/#210, 151/#211 and 152/#212.
+Steps 147-152 are pending; no release certification,
 publication, live activation, or old M1/PROD continuation is recorded by this work.
+The next automated span is 147-149 in Claude Code with isolated deep review;
+stop before live operator adoption 150/#210. The preparation branch retains the
+reviewed plan; it has not been merged into main.
 Lab implementation status remains owned by the lab's plan.md. The previous execution
 records below retain their original dates and evidence; this scope does not restart them.
 
