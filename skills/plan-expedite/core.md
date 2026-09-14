@@ -4,16 +4,11 @@
 
 ## Purpose and complete operating contract
 
-`/plan-expedite --plan <path>` runs the full plan -> sync -> handoff pipeline as one
-autonomous step. Default output: TWO continue commands in order — first a `/goal
-"<condition>"` line that arms the Stop hook over the agent-completable span, then the
-`/build-phase --plan <path>` command — both to run **in the same window** — no forced
-`/compact`, because auto-compaction handles
-context on its own when it fills and the `SessionStart` re-inject hook reloads `current.md`
-afterward. (A focused `/compact` before the long build is optional — see step 4.) Add
-`--new-window` to hand off to a fresh window instead: a durable `current.md` write
-(`task-handoff --next-task`), then `/session-wrap --end` renders the handoff to disk
-(`.claude/task-state/handoff-prompt.md`) and prints the Pick-up-here block.
+`/plan-expedite --plan <path>` prepares a plan through review, wrap, issue sync
+and durable handoff. With an explicitly established coordinator/caller, it returns
+a ready work packet to that coordinator; no session reset or goal command is needed.
+Standalone interactive use retains the existing continue-command handoff. Preparation
+alone never starts a build or expands existing execution authorization.
 
 ---
 
@@ -27,7 +22,7 @@ This skill's whole reason to exist is that the operator does not want to type `/
 
 3. **Minimal between-step narration.** Between sub-skill invocations, one brief sentence is enough ("plan-review returned READY with 3 autofixes applied; invoking plan-wrap"). Do not re-describe what the next sub-skill is going to do — its SKILL.md handles that.
 
-4. **Final output is the continue command(s) (or, with `--new-window`, the Pick-up-here block), verbatim.** On default success, the final output is the `/clear`-first recycle shape: a fenced `/clear` block, then a fenced pair — `/goal "<condition>"` (scoped to the agent-completable automated span, per Step 4 of the chain) followed by `/build-phase --plan <path>` — no summary, paraphrase, or "here's what to do next" preamble. With `--new-window`, the Pick-up-here block that `/session-wrap --end` prints (exact next command + digest + pointer to the rendered `handoff-prompt.md`) IS the final output; emit it as-is.
+4. **Final output follows the selected handoff mode.** Coordinator mode returns the packet summary defined in Step 4; it never emits `/clear` or `/goal`. The following continue-command rules apply ONLY to interactive mode. **Interactive final output is the continue command(s) (or, with `--new-window`, the Pick-up-here block), verbatim.** On default success, the final output is the `/clear`-first recycle shape: a fenced `/clear` block, then a fenced pair — `/goal "<condition>"` (scoped to the agent-completable automated span, per Step 4 of the chain) followed by `/build-phase --plan <path>` — no summary, paraphrase, or "here's what to do next" preamble. With `--new-window`, the Pick-up-here block that `/session-wrap --end` prints (exact next command + digest + pointer to the rendered `handoff-prompt.md`) IS the final output; emit it as-is.
 
 ---
 
@@ -48,9 +43,18 @@ This skill's whole reason to exist is that the operator does not want to type `/
 | Arg | Required | Default | Description |
 |---|---|---|---|
 | `--plan` | yes | -- | Path to the plan.md file (e.g., `documentation/foo-plan.md`) |
+| `--handoff` | no | context | `coordinator` or `interactive`. Explicit flag wins; otherwise an established coordinator/calling orchestrator selects coordinator, and standalone use selects interactive. |
 | `--new-window` | no | false | Fresh-window handoff: run `task-handoff --next-task` (durable `current.md` write) FIRST, then `/session-wrap --end` — the handoff is rendered to `.claude/task-state/handoff-prompt.md` and the screen shows the Pick-up-here block (exact next command + <=6-line digest + pointer; no word floor). Use when you want the next step in a fresh window. |
 
 ## Flow
+
+Resolve handoff mode before reading resume state. A coordinator means an explicit
+role in the user instruction or calling workflow, not merely that subagents exist.
+`--new-window` implies interactive when no handoff is supplied; reject it together
+with `--handoff coordinator` before writes. Load
+`<repo>/_shared/task-state-schema.md` section "Coordinator handoff packet (v1)"
+only for coordinator mode. Its packet schema, ownership and reconciliation rules
+are the shared owner; do not create another schema here.
 
 ### Stale-plan check (per BPA plan section 5 D9)
 
@@ -77,13 +81,20 @@ Check for `.plan-expedite-state` JSON file in the project root (sibling to plan.
 }
 ```
 
-`handoff_mode` is `"in-window"` (default — `task-handoff --next-task`) or `"new-window"`
+`handoff_mode` is `"coordinator"` for coordinator mode, with `packet_path` added after
+the packet is saved. Interactive mode uses `"in-window"` (default — `task-handoff --next-task`) or `"new-window"`
 (`--new-window` flag — `task-handoff --next-task` then `session-wrap --end`). Recorded at
 run start; used by resume logic to invoke the correct final sub-skill(s) on re-entry.
 
 `plan_mtime` is a numeric float — seconds since the Unix epoch, as returned by `os.path.getmtime(plan_path)` or `stat -c %Y`. No timezone, no string parsing. Comparison uses a 1-second tolerance: `abs(current_mtime - state_mtime) <= 1.0`. The tolerance accommodates filesystems with different mtime precision (NTFS records to 100ns, FAT32 rounds to 2s) and avoids spurious "plan changed" detections from format-only round-trips.
 
 Logic:
+- Compare canonical plan identity AND handoff mode as well as mtime. A different
+  plan never reuses the state. A mode-only change preserves successful review/wrap/
+  repo-sync entries for the unchanged plan but reruns task-handoff/session-wrap for
+  the selected mode; it never skips the new packet write. Old states without a
+  coordinator mode remain interactive. Mtime is only a prep skip hint: coordinator
+  dispatch still verifies the packet's committed plan and current byte identity.
 - If file does not exist: fresh run, execute all 4 sub-skills sequentially.
 - If file exists AND `abs(current_mtime - state.plan_mtime) <= 1.0`: skip every sub-skill in `completed[]`. Start from the first uncompleted (or from where `halted_at` left off).
 - If file exists BUT the mtime difference exceeds 1 second: plan was edited since last run; discard the resume state and start fresh.
@@ -133,7 +144,49 @@ Read the exit code and final verdict line after each `Skill` call returns. On su
 3. **Invoke `repo-sync` through the host's skill-invocation adapter** with `args: "--plan <plan-path>"` (autonomous default per Step 6 — no `--dry-run`).
    - Same success / halt criteria.
 
-4. **Invoke the final sub-skill, then emit the continue command** — depends on `--new-window`:
+4. **Coordinator handoff (`--handoff coordinator`).** After repo-sync, backfill
+   and verify exact Issue fields, save a committed preparation revision, and build
+   the packet from the COMPLETE ordered plan under the shared contract. Record the
+   existing authorization as preparation-only or build-authorized with its source.
+   Resolve the coordinator host independently of required builder/reviewer hosts;
+   unknown execution capabilities are reported, not silently inferred from a label.
+
+   Invoke `task-handoff` with `args: "--next-task coordinate-build --coordinator-packet
+   <absolute-packet-path>"`. It writes the validated private packet, records its pointer
+   in this session's checkpoint and performs the normal durable boundary save. Next
+   Action is `task-handoff --resume-coordinator <absolute-packet-path>`; no goal or
+   clear command is inserted. Record handoff_mode=coordinator and packet_path in
+   `.plan-expedite-state` only after the callee succeeds.
+
+   Return this compact summary plus the packet locator to the calling coordinator:
+
+   ```text
+   Preparation: READY
+   Automated span: <selected steps and issues, or none>
+   First assignment: <step and issue, or none>
+   Boundary: <operator/wait/manual step, or none>
+   Build authorization: <build-authorized | preparation-only>
+   Execution capabilities: <verified requirements and unresolved requirements>
+   Next owner: coordinator
+   Packet: <absolute path>
+   ```
+
+   An immediate boundary is reported as `Automated span: none` with packet status
+   NEEDS_OPERATOR; preparation can still be READY. Missing execution capability is
+   visible in the summary and prevents dispatch, not successful preparation. The
+   coordinator continues within already-granted build authority after execution
+   preflight, without another confirmation. Otherwise it retains the prepared packet.
+   This skill never launches builders as a side effect of preparation and never
+   clears, ends or relocates the coordinator session. All later interactive branches
+   in this section are bypassed in coordinator mode.
+
+4. **Interactive handoff: invoke the final sub-skill, then emit the continue command** — depends on `--new-window`:
+
+   If this session already carries a Coordinator packet header, add
+   `--detach-coordinator` to the selected branch's single task-handoff invocation
+   below (`--next-task build-phase`). Emit neither the
+   interactive command pair nor a new-window opener until safe detachment succeeds.
+   Preserve the prior packet and evidence for a later explicit resume.
 
    **Default (no `--new-window`):** Invoke `task-handoff` through the host's skill-invocation adapter with
    `args: "--next-task build-phase"` (it writes current.md + MEMORY + push — the durable
@@ -247,7 +300,7 @@ Use the same five-line template regardless of which sub-skill fails (plan-review
 | `/plan-review`, `/plan-wrap` | Autofix sub-skills (Steps 7-8 of BPA plan) |
 | `/repo-sync` | Issue-sync sub-skill (Step 6) |
 | `/session-wrap` | End-window handoff sub-skill (`--new-window` only, invoked `--end` AFTER the durable `task-handoff --next-task` write; renders `handoff-prompt.md` + prints the Pick-up-here block) |
-| `/build-phase` | Continues in-window from the `/goal` + `/build-phase` commands /plan-expedite emits (the `/goal` arms the Stop hook over the automated span; or, with `--new-window`, the fresh window opens from the rendered handoff carrying both) |
+| `/build-phase` | In coordinator mode consumes the selected packet via `--coordinator-packet` and explicit `--steps`; otherwise continues in-window from the `/goal` + `/build-phase` commands /plan-expedite emits (the `/goal` arms the Stop hook over the automated span; or, with `--new-window`, the fresh window opens from the rendered handoff carrying both) |
 
 ## Limitations
 

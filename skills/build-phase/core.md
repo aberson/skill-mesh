@@ -11,6 +11,77 @@ Thin orchestrator that reads step definitions from a plan document and runs
 those are declared in the plan. Posts comprehensive progress updates to GitHub
 issues so long-running builds are visible in real time.
 
+## Coordinator execution mode
+
+`--coordinator-packet <absolute-json-path>` runs the existing phase procedure in the
+coordinator's context using the shared "Coordinator handoff packet (v1)" contract at
+`<repo>/_shared/task-state-schema.md`. Require explicit `--steps`; verify it matches
+the packet selection (resume may select a remaining suffix). Parse the complete plan
+before filtering and validate its identity, authorization, dependencies and first
+unaccepted boundary. Unknown/duplicate step keys, a selection beyond that boundary,
+or mismatched scope are preflight BLOCKED with no dispatch or plan/issue mutation.
+--dry-run may inspect a prepared packet without build authority, writes or probes.
+
+This mode takes precedence over interactive goal-drive, ambient current.md resume,
+deferred-UAT, auto-split, wait-session, the legacy five-item halt allowlist and
+"all steps complete" presentation below. Do not skip, auto-split or
+reclassify an operator/manual/wait boundary to reach later code. Do not mark omitted
+steps DONE, widen a selected span, close the umbrella while later steps are pending,
+or require the operator to arm /goal. The coordinator retains its context; only
+builders and reviewers get fresh assignments. A context reset is optional and first
+checkpoints/reconciles assignments through task-handoff.
+
+Before execution, verify the real builder/reviewer ports and set/report the finite
+allocation and checkpoint reserve. Preserve all project quality gates and step
+review/iteration flags; inability to satisfy a gate is BLOCKED, not a fallback to a
+weaker lane. Existing Codex isolation and authenticated-verdict requirements remain
+in force. A different coordinator/worker host is allowed only with a verified bridge
+and genuine isolated review; a host label alone grants no capability.
+
+Pass `--coordinator-packet <the-same-absolute-path>` on every build-step controller
+call so its committed-candidate, runtime, integration and evidence rules apply.
+Use its clean coordinator-owned integration checkout; the legacy preflight stash
+and checkpoint `git add -A` commands do not apply. After the authenticated result
+and all existing phase gates (including 2f), stage only the declared plan/status
+and checkpoint documentation paths, inspect the staged diff, and commit them.
+Record that checkpoint commit separately from build-step's tested integration
+commit. Do not sweep unrelated files into either commit or mark a step accepted
+before its required gates and checkpoint actually succeed.
+The coordinator runs build-step's controller procedure, directly assigns its fresh
+builder and reviewer arms, serializes integration and is the sole writer of verdicts,
+plan status, issue updates and the packet. Builders return committed candidates and
+check results; reviewers independently inspect the exact candidate and return
+findings. Reuse the existing acceptance/merge gates; do not treat worker prose or
+packet status as PASS. Keep controller keys/service handles out of all children.
+
+Before the per-step finalizer deletes the authenticated verdict or its service,
+archive the parent's actual classifier result, run ID, candidate/integration IDs,
+gate/review receipt hashes and timestamp under the packet's retained evidence root.
+Exclude HMAC secrets, signatures and service handles. Persist the acceptance
+checkpoint only after the existing gates succeed. The archive is audit evidence,
+not a substitute authenticated verdict: after a crash without a persisted accepted
+checkpoint, re-establish the missing controller/gate evidence on the reconciled
+candidate within the remaining allocation, or return INCOMPLETE. Do not rerun a
+code builder solely because its temporary verdict was cleaned up. Preserve evidence
+on failure while still finalizing the secret-bearing service/channel.
+
+For each assignment, persist DISPATCHING before launch and the actual child ID after
+acknowledgment. Record its worktree/base, candidate, evidence, consumed rounds and
+observed exit. Checkpoint before integration and after each accepted step. Use the
+shared reconciliation rules after interruption; no duplicate unresolved assignments,
+no deadline extension or retry reset. At deadline/checkpoint reserve stop admitting
+work, reconcile owned children and return INCOMPLETE. A blocked gate returns BLOCKED.
+These are coordinator return statuses, not discretionary pauses or permission for
+an outer goal loop to relaunch the same work.
+
+When all selected steps are accepted, return COMPLETE for the span, or NEEDS_OPERATOR
+with the exact next boundary and prepared evidence. Keep later steps pending. The
+compact return includes selected/accepted steps, candidate and review/gate locators,
+unresolved assignments, remaining allocation and next owner. Continue within existing
+authority when eligible; ask only for a real operator decision. In this mode each
+legacy task-handoff call preserves/passes the packet pointer, and the final report
+returns to the coordinator instead of emitting /clear, /goal, or a manual wait opener.
+
 ## When to use
 
 - When you have 2+ build steps to run sequentially from a plan
@@ -63,6 +134,7 @@ See `## Halt contract` above for the 5 halt classes + 4 defect-of-input classes.
 
 | Arg | Required | Default | Description |
 |---|---|---|---|
+| `--coordinator-packet` | no | -- | Explicit coordinator packet; requires --steps and enables the bounded coordination/return contract above. |
 | `--plan` | yes | -- | Path to plan doc (plan.md or documentation/*-plan.md) |
 | `--phase` | no | -- | Phase number/name to run (if plan has multiple phases) |
 | `--steps` | no | all | Comma-separated step numbers to run (e.g., `2,3,5`) |
@@ -165,8 +237,12 @@ build-phase walks 4 outer steps: Step 0 (parse), Step 1 (pre-flight), Step 2 (di
    Nothing was dispatched.
    ```
 2. If `--phase` is specified, extract only that phase's steps.
-3. If `--steps` is specified, filter to those step numbers.
-4. If `--resume` is specified, mark earlier steps as already done.
+3. Validate --steps keys against the complete plan before filtering: reject unknown
+   or duplicate keys, retain declared plan order, and apply the coordinator boundary
+   checks above when a packet is supplied. Then filter to the requested steps.
+4. If `--resume` is specified, skip earlier steps for selection only; it never
+   marks them DONE or supplies acceptance evidence. In coordinator mode, reconcile
+   earlier assignments and dependencies before selecting a remaining suffix.
 5. Scan for existing `- **Status:** DONE` lines — treat those steps as already done
    (so `--resume` is not required if previous runs already checkpointed).
 6. For each step, extract: name, problem statement, **type** (default `code`),
@@ -231,6 +307,8 @@ Operator-preference checks (autonomous + UI-bundle + parallel):
   Non-empty notes are repeated in the final phase report so the
   operator sees them after the run without scrolling Step 0 output.
 
+Interactive mode only (no --coordinator-packet): the following optional goal-drive
+presentation does not apply to coordinator execution.
 Provider capability guard: The following applies to Claude/Copilot hosts that support session hooks
 and `/goal`. GPT hosts without this capability should use an external loop monitor or skip this
 optimization.
@@ -927,7 +1005,11 @@ successful step completion — it does not replace or affect the 5 halt conditio
 
 ### Integration point 1 — Phase start (Step 0 parse)
 
-After parsing the step list, before running pre-flight:
+Coordinator mode: derive the next step only from the explicitly selected packet
+after reconciliation. Skip the legacy rollup selector below, even when current.md
+names the same plan. A matching plan path does not identify the same coordinator.
+
+Interactive mode only, after parsing the step list, before running pre-flight:
 
 1. Resolve `<git-root>/.claude/task-state/current.md` via `git rev-parse --show-toplevel`
 2. If the file exists AND its `Task:` field contains the current plan path:
@@ -1002,6 +1084,9 @@ Status: COMPLETE.
 - Creates checkpoint commits per step but does not push -- use `/repo-update` to push
 - Does not infer step type -- the plan must declare `Type:` for non-code steps (defaults to `code` if omitted)
 - Default execution is sequential, but parallelizable pairs are surfaced in Step 0 (operator preference). When the operator opts into parallel worktrees for an independent pair, dispatch the two `/build-step` calls in a single tool message. When in doubt about independence, stay sequential.
+- **Interactive mode only:** the following goal/context guidance is bypassed when
+  --coordinator-packet is supplied; use its bounded execution and reconciliation
+  contract instead.
 - **Provider capability guard:** The following lifecycle guidance applies to Claude/Copilot hosts that support session hooks and `/goal`. GPT hosts without this capability should use an external loop monitor or skip this optimization.
 - **Run continuously — do NOT pause for "context budget."** On supported Claude/Copilot hosts, a long phase is safe end-to-end in one window: auto-compaction fires on its own at the threshold, the `PreCompact` hook stamps + backs up `current.md`, each step ends with a checkpoint commit, and the `SessionStart` (matcher `compact`) hook re-injects `current.md`'s Next Action afterward — so a compaction *between* steps loses nothing and the orchestrator resumes from `--resume N`. **Pause ONLY for the 5 halt-contract reasons — NEVER because "context might fill."** Splitting a code-step phase mid-run for budget is the discretionary-pause anti-pattern that stranded a real run after Step 1 (see `feedback_build_phase_continuous_via_goal`). Practical aids:
   - **Guaranteed no-pause via `/goal` (structural, not advisory):** prose can be overridden, so the real anti-pause is the native `/goal` evaluator — a Stop hook that re-drives the session until the condition holds, overriding any discretionary pause. Step 0 emits a scoped `/goal` line for the operator to set once. **Scope it to the agent-completable span only** (code/conditional steps up to the next operator/wait boundary) per `feedback_goal_mode_only_agent_completable` — a goal of "all steps DONE" on a plan with an operator/wait step busy-loops forever. `/goal` is user-typed (build-phase cannot set it itself); emit it, the operator pastes it once.

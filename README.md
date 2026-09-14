@@ -24,8 +24,8 @@ defines its acceptance checks; [plan.md](plan.md) records execution status.
 
 ## Workflows
 
-How these skills **chain together** in practice — every sequence below is a workflow run in
-production, with copy-pasteable commands. Detailed write-ups are collapsed; click a heading to expand.
+How these skills **chain together**, with copy-pasteable commands. Detailed write-ups are
+collapsed; click a heading to expand. Each workflow's evidence determines its demonstrated support.
 
 - `/goal`, `/loop`, `/schedule`, and `/deep-research` are Claude Code built-in commands (not skills in
   this repo) that several skills emit or arm — substitute your host's equivalent or skip on Copilot.
@@ -49,6 +49,22 @@ paste next.
 Order is load-bearing twice. **plan-review before repo-sync**: a gap caught after issues are minted
 means editing the plan plus N issue bodies (the "N+1 edit" trap). **repo-sync before build-phase**:
 build-phase posts live progress to those issues, so blank `Issue:` lines kill the audit trail.
+
+### Coordinated builds
+
+Use `plan-expedite --handoff coordinator` when one coordinator owns the work and
+fresh builders/reviewers execute its assignments. Preparation returns a durable
+packet with the exact automated span, gates, authorization and first operator
+boundary. The coordinator keeps its context and, when already authorized, calls
+`build-phase --plan <plan> --steps <step-keys> --coordinator-packet <packet>`.
+
+Workers return committed candidates and evidence; the coordinator owns acceptance,
+integration and progress. Resume reconciles the selected packet's real assignments
+and remaining limits before dispatch. `plan-expedite --handoff interactive` retains
+the standalone handoff. See the [shared packet contract](_shared/task-state-schema.md#coordinator-handoff-packet-v1)
+and [build controller](skills/build-step/core.md#coordinator-controller-mode).
+These instructions require real host capabilities; built adapters alone do not
+qualify a cross-host bridge or a live end-to-end run.
 
 ### Inside one build step: the review gate
 

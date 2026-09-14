@@ -1,5 +1,33 @@
 # Skill Mesh plan
 
+## Coordinator handoff implementation (approved 2026-09-14)
+
+**Scope:** update plan-expedite, build-phase, build-step, task-handoff and
+session-wrap cores, their Claude/GPT/Codex adapters, and the shared task-state
+contract for a retained coordinator with fresh builders/reviewers. Preserve
+standalone handoff and existing independent review/verdict gates.
+
+**Status:** source work retained in draft [PR #214](https://github.com/aberson/skill-mesh/pull/214)
+on `feat/coordinator-handoff-20260914`; further qualification is parked at the
+operator's request so the expedited baseline-release build can proceed.
+[Independent contract review](documentation/findings/coordinator-handoff-contract-review-2026-09-14.md)
+and nine forward decision exercises are complete; all three provider builds and
+the focused package-integrity gate passed (420 passed, exit 0). GPT/Codex package
+quick validation passed for all five changed skills. The full repo-root gate is
+pending: its run was interrupted after 5,815.82 seconds to end the supporting-tool
+detour. No terminal test summary or full-suite PASS was produced. This
+source/package evidence is not live coordinator acceptance.
+The changes bind explicit step spans, committed candidates, durable receipts,
+operator boundaries and finite resume limits. No live profile installation,
+cross-host qualification, baseline release execution or old M1 continuation is
+recorded by this change. The source changes are isolated from concurrent main
+checkout edits, including the separately changed build-step retry default.
+
+**Workflow correction:** time-box supporting-tool improvements; use focused
+iteration checks and preserve pending qualification explicitly. Return to the
+approved product build without making unfinished adapter qualification a new
+prerequisite. Required product release and code-step DONE gates remain in force.
+
 ## Baseline releases and operating discipline (scope approved 2026-09-13)
 
 The operator approved establishing first releases from the current toolkit and
