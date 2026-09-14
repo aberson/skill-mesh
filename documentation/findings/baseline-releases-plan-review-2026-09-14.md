@@ -66,7 +66,8 @@ portfolio connector, hosted dashboard or scheduler is required.
 
 Additional primary evidence: toolkit `runtime/telemetry/telemetry-writer.ps1:47`
 sets stub usage; `skills/user-afterparty/core.md:141` selects nearest CLAUDE scope;
-lab `AGENTS.md` and `tools/records.py:45` own its independent checks and run schema.
+the lab's own AGENTS.md and its tools/records.py line 45 -- external lab source, outside
+this repository -- own its independent checks and run schema.
 No existing public API signature is changed by this plan. The implementation steps
 must search all callers again before any proposed shared-interface change.
 
