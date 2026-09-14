@@ -24,8 +24,8 @@ defines its acceptance checks; [plan.md](plan.md) records execution status.
 
 ## Workflows
 
-How these skills **chain together** in practice — every sequence below is a workflow run in
-production, with copy-pasteable commands. Detailed write-ups are collapsed; click a heading to expand.
+How these skills **chain together**, with copy-pasteable commands. Detailed write-ups are
+collapsed; click a heading to expand. Each workflow's evidence determines its demonstrated support.
 
 - `/goal`, `/loop`, `/schedule`, and `/deep-research` are Claude Code built-in commands (not skills in
   this repo) that several skills emit or arm — substitute your host's equivalent or skip on Copilot.
