@@ -1,5 +1,19 @@
 # Skill Mesh plan
 
+## Baseline releases and operating discipline (scope approved 2026-09-13)
+
+The operator approved establishing first releases from the current toolkit and
+experimental lab, followed by development/production separation; utility-portfolio
+integration is a later milestone. The subsequent instruction authorized preparation.
+
+**Current status:** baseline inventory and retained source/install snapshots prepared;
+the [report](documentation/baseline-release-report.md) records the dated observations.
+The [implementation plan](documentation/baseline-releases-plan.md) is drafted for
+plan-review and plan-wrap. Steps 147-152 are pending; no release certification,
+publication, live activation, or old M1/PROD continuation is recorded by this work.
+Lab implementation status remains owned by the lab's plan.md. The previous execution
+records below retain their original dates and evidence; this scope does not restart them.
+
 ## Codex ordinary build milestone (approved 2026-09-09; clarified 2026-09-10)
 
 **Objective:** installed Codex completes a real ordinary full-review build with
