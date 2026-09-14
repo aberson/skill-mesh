@@ -8,8 +8,10 @@ integration is a later milestone. The subsequent instruction authorized preparat
 
 **Current status:** baseline inventory and retained source/install snapshots prepared;
 the [report](documentation/baseline-release-report.md) records the dated observations.
-The [implementation plan](documentation/baseline-releases-plan.md) is drafted for
-plan-review and plan-wrap. Steps 147-152 are pending; no release certification,
+The [implementation plan](documentation/baseline-releases-plan.md) passed
+[plan-review](documentation/findings/baseline-releases-plan-review-2026-09-14.md) and
+[plan-wrap](documentation/findings/baseline-releases-plan-wrap-2026-09-14.md).
+Issue synchronization and the build handoff are being prepared. Steps 147-152 are pending; no release certification,
 publication, live activation, or old M1/PROD continuation is recorded by this work.
 Lab implementation status remains owned by the lab's plan.md. The previous execution
 records below retain their original dates and evidence; this scope does not restart them.
