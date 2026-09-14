@@ -9,6 +9,79 @@
 Execute a single build step end-to-end: developer writes code, reviewer(s) gate it,
 approved changes merge back to the project.
 
+## Coordinator controller mode
+
+`--coordinator-packet <absolute-json-path>` binds this controller call to the
+selected step and owner in `<repo>/_shared/task-state-schema.md`'s coordinator
+contract. The coordinator executes this procedure in its own context and directly
+assigns fresh builder/reviewer siblings. It alone owns integration, verdicts,
+packet writes and plan/issue bookkeeping. Validate the packet, exact step scope,
+build authority, host capabilities and remaining allocation before any mutation.
+Standalone calls without this flag retain the procedure below.
+
+Use a clean coordinator-owned integration checkout bound to the packet's approved
+repo/branch. If the selected checkout contains unrelated dirty work, preserve it
+and resolve a clean integration checkout within the approved scope before execution;
+otherwise return BLOCKED with the concrete checkout conflict. Skip the legacy
+automatic stash/restore path in coordinator mode. Never move unrelated dirty bytes
+into a reviewed tree or restore them between its gates and checkpoint commit.
+
+In this mode the following rules replace the uncommitted-diff, copy-back and cleanup
+parts of Steps 2-9; the declared mechanical and independent-review gates still apply:
+
+1. Record the assignment's actual worktree and full `base_commit` before dispatch.
+   The builder commits only the assigned changes and returns the full
+   `candidate_commit`, `git diff --stat <base_commit> <candidate_commit>`, and test
+   evidence. Exclude private reports and unrelated files from the commit. Verify
+   that the candidate descends from that base, is the inspected checkout's HEAD,
+   and has no additional tracked or in-scope untracked changes. Report a no-change
+   candidate explicitly; an empty diff alone never proves the requested work done.
+   Retain each returned candidate under an immutable coordinator-owned Git ref
+   `refs/skill-mesh/candidates/<assignment-id>/<candidate-commit>` before removing
+   its worktree/branch. Verify an existing ref matches rather than overwriting it.
+2. In Step 3 and EVERY downstream changed-file/diff consumer, use the explicit
+   `base_commit` to `candidate_commit` range, including committed additions,
+   deletions, renames and binary changes. Never use `git diff HEAD` for this mode.
+   Capture a full-index binary patch and NUL-delimited changed paths using Git
+   argument arrays; handle filenames as data. Reviewers receive the exact range,
+   patch and candidate contents; pass the changed-path list to review-deep's
+   `--diff-paths` pre-pass as well as its `--diff` input. Run gates at that candidate
+   and audit HEAD, index and working-tree contents before/after each gate/review.
+   Any source mutation, including a post-review formatter fix, creates a new
+   candidate requiring the applicable gates/review again within the same limits.
+3. For Step 5 runtime evidence, run the app from the verified candidate checkout
+   with rebuilt dependencies and isolated runtime state. Do not copy files into
+   the integration project before review or use Step 9's main-file reversion loop.
+   If the required runtime cannot use that checkout or a verified isolated copy
+   of it, return BLOCKED with the concrete missing capability; preserve the gate.
+4. For Step 8 integration, verify the target repo/branch and clean scoped index;
+   preserve unrelated user/session work. Replace all per-file copy/classification
+   branches with Git's three-way application of the captured full-index binary
+   patch (`git apply --index --3way <patch-path>`) against the verified integration
+   HEAD. Conflicts halt with evidence and do not trigger full-file replacement.
+   Record the resulting tree ID, run the mandatory full post-integration suite and
+   ship re-check on those exact bytes, and verify the tree stayed unchanged.
+   Only the coordinator commits that scoped result after those gates, verifies the
+   commit's tree matches the tested tree, and records its `integration_commit`
+   before cleanup. Acceptance cannot precede those gates. A changed integration
+   tree invalidates the associated gate evidence.
+5. Before ANY cleanup, copy the candidate patch, changed-path inventory, developer
+   report, gate commands/cwds/exit codes/logs and attributable review inputs/results
+   into the packet's retained receipt directory, including candidate/base IDs and
+   the integration tree/commit when available. Verify the receipt and file hashes
+   before recording its path in the packet. These durable receipts and retained
+   candidate refs survive ordinary `--keep-evidence=false` cleanup; disposable
+   copies may then be removed. Never archive verdict secrets or service handles.
+   Archive failure is INCOMPLETE; retain the worktree/evidence for reconciliation.
+6. The parent still finalizes and authenticates the existing verdict only after
+   successful integration, gates and cleanup. Build-phase consumes it through the
+   existing classifier before acceptance; an archived audit receipt never replaces
+   that channel. Persist consumed rounds, deadlines, launch/exit observations and
+   candidate changes on retry. Resume reconciles them before further dispatch and
+   cannot reset limits or treat a returned candidate as an accepted step.
+
+## Invocation
+
 Three independent knobs control how it runs:
 
 | Knob | Flag | Options | Default |
@@ -33,6 +106,7 @@ Any combination is valid. Examples:
 | Arg | Required | Default | Description |
 |---|---|---|---|
 | `--problem` | yes | -- | What to build or fix |
+| `--coordinator-packet` | no | -- | Absolute prepared packet path; coordinator controller mode above |
 | `--issue` | no | -- | GitHub issue number |
 | `--acceptance` | no | -- | Optional acceptance target (the step's `Done when:`, forwarded by `/build-phase`'s Step 0 extract + Step 2 dispatch). `--acceptance` is forwarded to the developer prompt as advisory context only. It does not feed any verdict gate, reviewer lens, or pass/fail determination. If the deep-review prompt includes it, it is for developer orientation only — the reviewer must not treat it as a gate criterion. |
 | `--max-iter` | no | 3 | Max developer-reviewer iterations |

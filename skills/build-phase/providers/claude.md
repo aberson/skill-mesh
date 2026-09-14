@@ -10,6 +10,7 @@ Core: ../core.md
 Model: Claude model selected by `.claude/references/model-tiering.md`
 
 ## Provider-specific instructions
+- When --coordinator-packet is supplied, keep the controller in this coordinator context and honor the exact --steps span, packet boundary, allocation and reconciliation rules. Map only the builder/reviewer arms to verified isolated dispatch. Return the coordinator status instead of an interactive goal/clear or wait-session opener; no packet field bypasses the existing verdict/capability gates.
 - Load the core in full before acting. Use Claude Code's Skill tool for named-skill calls and Agent/Workflow tools for isolated agents where core requires those host abstractions.
 - Preserve the core's gates, retry limits, filesystem safety, and exact output contracts.
 - Mint the durable verdict path/run id/HMAC key in the parent context; never serialize the key into skill arguments or child-visible state. Require authenticated run-bound classification and unconditional sidecar cleanup. Never authorize advancement from prose.

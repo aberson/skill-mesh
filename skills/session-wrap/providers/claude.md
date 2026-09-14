@@ -10,6 +10,7 @@ Core: ../core.md
 Model: Claude model selected by `.claude/references/model-tiering.md`
 
 ## Provider-specific instructions
+- A Coordinator packet header selects the core coordinator-maintenance path. Preserve the exact selected packet and resume-coordinator action across checkpoint/render; reconcile active assignments before a reset. Do not manufacture goal commands or move the coordinator to another host to satisfy a worker capability.
 - Load the core in full before acting. Use Claude Code's Skill tool for named-skill calls and Agent/Workflow tools for isolated agents where core requires those host abstractions.
 - Preserve the core's gates, retry limits, filesystem safety, and exact output contracts.
 - Use Claude session JSONL, scratchpad identity, Artifact actions, or VS Code deep links only where this wrapper can supply them and core requests the corresponding abstraction.

@@ -1,5 +1,24 @@
 # Skill Mesh plan
 
+## Coordinator handoff implementation (approved 2026-09-14)
+
+**Scope:** update plan-expedite, build-phase, build-step, task-handoff and
+session-wrap cores, their Claude/GPT/Codex adapters, and the shared task-state
+contract for a retained coordinator with fresh builders/reviewers. Preserve
+standalone handoff and existing independent review/verdict gates.
+
+**Status:** implementation candidate prepared on `feat/coordinator-handoff-20260914`.
+[Independent contract review](documentation/findings/coordinator-handoff-contract-review-2026-09-14.md)
+and nine forward decision exercises are complete; all three provider builds and
+the focused package-integrity gate passed (420 passed, exit 0). GPT/Codex package
+quick validation passed for all five changed skills. The full repo-root gate is
+pending; this source/package evidence is not live coordinator acceptance.
+The changes bind explicit step spans, committed candidates, durable receipts,
+operator boundaries and finite resume limits. No live profile installation,
+cross-host qualification, baseline release execution or old M1 continuation is
+recorded by this change. The source changes are isolated from concurrent main
+checkout edits, including the separately changed build-step retry default.
+
 ## Baseline releases and operating discipline (scope approved 2026-09-13)
 
 The operator approved establishing first releases from the current toolkit and

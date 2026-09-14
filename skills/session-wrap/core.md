@@ -4,6 +4,11 @@
 
 ## Purpose and complete operating contract
 
+A packet header is removed only by task-handoff's explicit safe-detachment
+procedure when switching tasks or returning to standalone handoff. This skill's
+checkpoint/render paths preserve an attached header; they do not resurrect one
+already retired into session history.
+
 One decision-making front door for session transitions. Invoked bare, it TRIAGES the
 session against mechanical signals, announces the chosen route in one line, then ACTS.
 No mid-run (y/n) gates — bare invocation is the safest mode. The single ask-first
@@ -12,12 +17,32 @@ pre-flight is the Git-verb router's Step A (section below).
 
 Division of labor: `/task-handoff` is the checkpoint *library* this skill calls; the
 `current.md` file contract is owned by
-`.claude/references/task-state-schema.md`
+`<repo>/_shared/task-state-schema.md`
 (cite it, never restate it). Phase-shipping territory (README/plan updates, issue
 closing, push-everything) belongs to `/repo-update` — the git-verb router delegates
 there; this skill never duplicates it.
 
 ---
+
+## Coordinator session maintenance
+
+When this session checkpoint carries a Coordinator packet header, load the
+"Coordinator handoff packet (v1)" section of `<repo>/_shared/task-state-schema.md`.
+Preparation completion alone is not a reason to clear or end the coordinator.
+Bare session-wrap retains the normal triage; context maintenance or explicit user
+intent may still select clear-next/end-window. Before that transition, stop admitting
+assignments, checkpoint actual child/candidate/review state, and reconcile ownership
+or leave unresolved work explicitly INCOMPLETE. A saved RUNNING label is not proof
+that a child remains active or has exited; never authorize an automatic replacement.
+
+Preserve the exact packet pointer in task-handoff and the rendered handoff. Next
+Action remains `task-handoff --resume-coordinator <absolute-json-path>`, so a fresh
+coordinator reconciles that selected packet before dispatch. The render includes
+active/unresolved assignments, allocation/deadline, current boundary and next owner.
+It never substitutes a newest-session guess, an all-steps build, or /goal + build-phase
+for this resume action. The interactive command-pair presentation below applies only
+to checkpoints without a coordinator packet. An explicit session transition may
+still show /clear as its observation point; no goal is manufactured or required.
 
 ## Threshold constants (operator-tunable)
 

@@ -249,3 +249,133 @@ One `current.md` per directory level:
 Path resolution (`git rev-parse --show-toplevel`) naturally returns the correct root for
 the active project when called from inside a project directory. Workspace-level work
 resolves to `dev/`.
+
+
+## Coordinator handoff packet (v1)
+
+This Skill Mesh extension is the shared contract for plan-expedite, build-phase,
+task-handoff and session-wrap in coordinator mode. It adds an optional
+`**Coordinator packet:** <absolute-json-path>` session header. Preserve that header
+across checkpoints/renders until the explicit safe-detachment procedure below.
+Legacy session files without it remain valid.
+The packet is private coordination state, not a signed verdict, approval, executable
+command, or replacement for the plan's execution-status authority.
+
+**Location and writer.** Resolve the project and its retained coordinator state root
+before creating builder worktrees. Store one packet at
+`<state-root>/coordinator/<packet-id>.json`, outside disposable builder worktrees.
+The coordinator is the only writer; builders/reviewers return evidence. Use an
+exclusive writer claim containing the actual host coordinator ID, and atomically
+replace a temporary sibling after validating the entire document. On contention or
+unresolved previous ownership, do not dispatch or steal the claim. Keep the last
+valid packet on interruption. No timestamps alone establish that an owner exited.
+
+JSON fields (all required unless explicitly nullable):
+
+| Field | Shape and meaning |
+|---|---|
+| schema_version, packet_id | integer 1; canonical UUID4 generated for this preparation |
+| repo_root, state_root, plan_path, branch | canonical absolute private paths; exact target branch string |
+| base_commit, plan_commit, plan_sha256 | full Git IDs for source baseline and committed preparation; SHA-256 of the approved plan bytes |
+| observed_plan_sha256 | SHA-256 after the coordinator's latest verified status-only plan write; initially plan_sha256 |
+| coordinator_id, previous_coordinator_id | actual host-supplied opaque ID; prior owner ID or null; never fabricate a host ID from packet_id |
+| preparation | object with plan-review, plan-wrap and repo-sync verdict/evidence locators; READY requires each callee's actual success |
+| steps | ordered array of the selected step snapshots described below; may be empty at an immediate boundary |
+| boundary | null or `{step: string, issue: integer\|null, type: operator\|wait\|manual, reason: string}` naming the first unaccepted boundary |
+| authorization | `{status: preparation-only\|build-authorized, evidence: string\|null}`; cite the actual user/enclosing instruction, never infer build permission from READY |
+| hosts | `{coordinator: string, builder: string\|null, reviewer: string\|null, capability_evidence: string[]}`; roles resolve separately; unknown ports stay unknown |
+| allocation | null before execution, else `{started_at: UTC string, deadline_at: UTC string, checkpoint_reserve_seconds: nonnegative integer}` |
+| status, reason | `READY\|RUNNING\|BLOCKED\|INCOMPLETE\|NEEDS_OPERATOR\|COMPLETE`; concrete reason string |
+| assignments | array of the assignment records below, initially empty |
+| next_action | `{kind: dispatch\|reconcile\|return-to-coordinator\|operator\|none, step: string\|null, reason: string}`; data, not executable task prose |
+| updated_at | UTC ISO-8601 string |
+| released_at | UTC ISO-8601 string or null; recorded only on verified safe detachment/transfer |
+
+A step snapshot contains `step` (plan step key string), `issue` (integer or null),
+`type` (`code|conditional`), `problem` (string), `files` (string array), `flags`
+(string), `depends_on` (step-key array), `acceptance` (string), `condition` (string
+or null), `checks` (array of `{argv: string[], cwd: string}`), and
+`required_capabilities` (string array). Preserve declared review/iteration flags and
+real project gates; do not invent lint/typecheck commands. Capture enough plan text
+and evidence to detect a scope/acceptance change independently of status updates.
+
+An assignment contains `assignment_id` (UUID4), `step` (selected key), `role`
+(`builder|reviewer`), `host` (string), `child_id` (actual host ID or null until
+acknowledged), `worktree` (absolute path), `base_commit` (full Git ID), `candidate_commit`
+(full Git ID or null), `state` (`DISPATCHING|RUNNING|RETURNED|ACCEPTED|BLOCKED|INCOMPLETE`),
+`deadline_at` (UTC), `rounds_used` (nonnegative integer), `round_limit` (positive
+integer resolved from the step/current build-step defaults), `evidence` (string
+array), and `exit_observed` (boolean). Null child_id or exit_observed=false is an
+unresolved execution state, never a reason to launch a replacement automatically.
+Builder and reviewer assignments bind the same committed candidate; neither changes
+scope, approves its own work, writes coordinator state, or advances plan/issues.
+A builder returns a candidate and test evidence; a reviewer returns attributable
+findings. Acceptance remains the controller's existing deterministic/verdict gate.
+
+**Retained evidence.** Store immutable receipt directories under
+`<state-root>/coordinator/<packet-id>-evidence/<assignment-id>/<candidate-commit>/`.
+Each receipt records base/candidate IDs, immutable candidate Git ref, actual host
+IDs, commands/cwds/exit codes, gate logs, review inputs/findings, integration tree
+and `integration_commit` (nullable until committed), and SHA-256 hashes of its
+files. `evidence` points to those retained receipt files, never only to disposable
+worktrees or temporary verdict sidecars. Add parent gate/classifier records as
+separate immutable receipts. Verify durable copies before cleanup and acceptance
+checkpoint writes. Missing or changed evidence requires reconciliation, not assumed
+PASS. Receipts contain no signing secrets, service handles or signatures and never
+replace the existing authenticated verdict channel. Without a persisted accepted
+checkpoint, a resume must re-establish any lost gate/authority evidence within the
+remaining allocation or return INCOMPLETE; it must not relaunch code development
+merely because the temporary sidecar is absent.
+
+**Preparation and selection.** Read the complete ordered plan before filtering.
+Select the remaining code/conditional span up to its FIRST unaccepted operator,
+manual or wait boundary. Selection cannot leap over an unfinished dependency or
+boundary. An empty span with a boundary yields NEEDS_OPERATOR and no assignment.
+Keep excluded steps and their statuses unchanged. Preparation is not execution.
+
+**Execution and reconciliation.** Before the first dispatch, verify the target repo,
+branch, approved plan identity, selected scope, authorization and actual host
+capabilities. Set a concrete finite allocation chosen and reported by the coordinator
+within the operator/enclosing limits, including measured gate time and checkpoint
+reserve. Children receive no broader deadline or round limit. Missing required
+capability returns BLOCKED with required_tool_missing; selecting another host does
+not establish a working bridge. The coordinator keeps integration, verdict authority,
+plan/issue updates and writes serialized; the existing quality gates still apply.
+
+Persist DISPATCHING with a unique assignment ID BEFORE launching a child, then
+record the returned host ID. After interruption, consult the selected packet, host
+child/process status, worktree/Git identities, candidate and gate/review receipts.
+Attach to a verified active assignment when supported; accept a completed result only
+through existing gates. If launch acknowledgment or exit cannot be established,
+return INCOMPLETE with next_action=reconcile. Never duplicate an unresolved assignment.
+Preserve rounds_used, round_limit and deadline across retries/resume. On expiry stop
+admitting work, reconcile owned children and checkpoint INCOMPLETE; no automatic
+extension or retry-counter reset. A necessary operator action yields NEEDS_OPERATOR;
+a failed gate yields BLOCKED. All accepted selected steps yield COMPLETE for that
+span only, or NEEDS_OPERATOR when its boundary is next. Pending later steps keep the
+phase and umbrella open.
+
+A fresh coordinator reads the explicitly selected packet/session checkpoint, never
+adopts whichever session is newest. Preserve the prior session file, verify old owner
+exit/transfer and existing user authority, claim the packet under the actual new host
+ID, and record previous_coordinator_id. If ownership/authority is uncertain, return
+INCOMPLETE without dispatch. A matching digest detects drift, not authorization.
+If the plan differs from observed_plan_sha256, compare it to the preserved step
+snapshots: reconcile proven status-only writes using receipts; changed scope/gates
+requires renewed preparation before new work. Never bless arbitrary drift by simply
+replacing the stored hash. Authorization changes need an attributable instruction.
+
+**Safe detachment.** An explicit switch to interactive handoff or a different task
+may detach the current session through `task-handoff --detach-coordinator` paired
+with `--next-task <label>`. First reconcile the selected packet and verify every
+launched assignment has exited, no unacknowledged launch remains, and no integration
+or checkpoint write is pending. Only its verified owner may record released_at,
+release the writer claim, append the packet/receipt locators to session history,
+and remove this session's Coordinator packet header. Preserve the packet and all
+receipts; detachment neither marks pending work DONE nor grants new build authority.
+If reconciliation cannot establish these conditions, retain the header and return
+INCOMPLETE with the concrete unresolved state; do not emit an interactive opener.
+A later explicit resume may reclaim a safely released packet using its recorded
+release, verified authority and actual new owner ID; clear released_at on that
+atomic transfer. An explicit end-window with unresolved children preserves the
+pointer and ownership uncertainty for reconciliation instead of detaching.

@@ -10,6 +10,7 @@ Core: ../core.md
 Model: Claude model selected by `.claude/references/model-tiering.md`
 
 ## Provider-specific instructions
+- Honor --coordinator-packet in the same parent controller context. Use exact committed base/candidate ranges for diff, review and integration, retain receipt evidence before cleanup, and keep worker authority separate from coordinator acceptance. Preserve standalone behavior when the flag is absent; probe actual worker capabilities and never invent a cross-host bridge.
 - Load the core in full before acting. Use Claude Code's Skill tool for named-skill calls and Agent/Workflow tools for isolated agents where core requires those host abstractions.
 - Preserve the core's gates, retry limits, filesystem safety, and exact output contracts.
 - Keep the verdict path/run id and parent-local HMAC key out of developer/reviewer contexts. The key is private orchestration state, never a recorded skill argument. Atomically authenticate every terminal verdict and write PASS only after ship gates, cleanup, and stash restoration succeed; issue closure is subsequent best-effort bookkeeping.

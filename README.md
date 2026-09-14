@@ -50,6 +50,22 @@ Order is load-bearing twice. **plan-review before repo-sync**: a gap caught afte
 means editing the plan plus N issue bodies (the "N+1 edit" trap). **repo-sync before build-phase**:
 build-phase posts live progress to those issues, so blank `Issue:` lines kill the audit trail.
 
+### Coordinated builds
+
+Use `plan-expedite --handoff coordinator` when one coordinator owns the work and
+fresh builders/reviewers execute its assignments. Preparation returns a durable
+packet with the exact automated span, gates, authorization and first operator
+boundary. The coordinator keeps its context and, when already authorized, calls
+`build-phase --plan <plan> --steps <step-keys> --coordinator-packet <packet>`.
+
+Workers return committed candidates and evidence; the coordinator owns acceptance,
+integration and progress. Resume reconciles the selected packet's real assignments
+and remaining limits before dispatch. `plan-expedite --handoff interactive` retains
+the standalone handoff. See the [shared packet contract](_shared/task-state-schema.md#coordinator-handoff-packet-v1)
+and [build controller](skills/build-step/core.md#coordinator-controller-mode).
+These instructions require real host capabilities; built adapters alone do not
+qualify a cross-host bridge or a live end-to-end run.
+
 ### Inside one build step: the review gate
 
 The core pipeline's BUILD box is a gated loop, not a straight line:

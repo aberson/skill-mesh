@@ -36,7 +36,7 @@ None remaining.
 
 Plan 6.1 defines release, activation, target configuration, observation and run
 projection shapes, field types and identity generators. Existing lab fields were
-checked against actual `tools/records.py:45`; toolkit ownership against
+checked against actual the lab source file tools/records.py:45; toolkit ownership against
 `tools/install-skill-mesh.ps1:998`; stub handling against
 `runtime/telemetry/telemetry-writer.ps1:47`. Git IDs, UUID4s, project/version IDs,
 UTC timestamps, relative evidence paths and private absolute inputs have distinct
