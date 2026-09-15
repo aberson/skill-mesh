@@ -42,9 +42,10 @@ EXIT CODES
        lab archive is a success, and it makes no qualification claim.
     2  bad input or a precondition failure (bad flag, placeholder path, unsafe
        version, unresolvable commit, malformed proofs, release-ID collision).
-    1  execution or IO failure -- including a QUALIFICATION FAILURE. A failed
-       qualification still RETAINS its diagnostics: the attempt directory and
-       receipt paths are printed on the way out.
+    1  execution or IO failure -- including a QUALIFICATION FAILURE. Whatever was
+       built is RETAINED and NAMED on the way out: a failed qualification prints
+       its COMPLETE `.attempts/<uuid>/` directory and receipt paths, and a run
+       that aborts mid-build prints the PARTIAL stage kept at `.aborted/<uuid>/`.
 
 STORE LAYOUT
 ------------
@@ -73,6 +74,12 @@ STORE LAYOUT
                                         It does NOT reserve the version name; a
                                         retry allocates a new attempt and never
                                         disturbs this one. Nothing is ever
+                                        deleted automatically.
+    <store>/.aborted/<uuid>/            the PARTIAL build of a run that aborted
+                                        before it could publish or retain an
+                                        attempt. NOT a release and NOT an attempt:
+                                        it may have no release.json. Its path is
+                                        printed with the failure; nothing is ever
                                         deleted automatically.
     <store>/<product>/.staging-<uuid>/  build scratch, published by ONE rename
     <store>/.work/<uuid>/               disposable checkout + release stage
@@ -233,12 +240,29 @@ RESERVED_SEGMENTS = frozenset(
     + ["lpt%d" % i for i in range(1, 10)]
 )
 
-#: A real absolute Windows home path, either separator. The negative lookahead
-#: keeps the documented placeholder form legal. Deliberately the SAME shape the
-#: repository's own committed-path gate uses
-#: (tests/package-integrity/test_manifest_contract.py) -- this is the runtime
+#: A real absolute user-home path, in the three spellings a machine running this
+#: tool can produce: Windows drive-letter (either separator), POSIX
+#: `/home/<user>/...`, and macOS `/Users/<name>/...`. Each negative lookahead keeps
+#: the documented placeholder form legal.
+#:
+#: The first alternative is the SAME shape the repository's own committed-path gate
+#: uses (tests/package-integrity/test_manifest_contract.py); this is the runtime
 #: counterpart that keeps a GENERATED public artifact as clean as a committed one.
-PRIVATE_PATH_RE = re.compile(r"[A-Za-z]:[\\/]Users[\\/](?!<)")
+#: It is deliberately a SUPERSET of that gate rather than a copy of it: a `lab`
+#: release has no `powershell` precondition (only `toolkit` does), so it can
+#: legitimately run on a non-Windows machine, where a POSIX home path reaching
+#: release.json / release-notes.md / packet.json / receipt.json / attested_by would
+#: be exactly the leak the Windows branch exists to stop.
+#:
+#: The lookbehind is what keeps the POSIX branch off a string that merely CONTAINS
+#: the segment: a repo-relative `docs/Users/x` and a URL
+#: `https://example.com/Users/octocat` are preceded by a path character, while a
+#: genuinely absolute `/home/...` is preceded by nothing, a quote, a space or a
+#: separator.
+PRIVATE_PATH_RE = re.compile(
+    r"[A-Za-z]:[\\/]Users[\\/](?!<)"
+    r"|(?<![A-Za-z0-9_.~%-])/(?:home|Users)/(?!<)"
+)
 
 #: Obviously unresolved placeholders. An operator who pastes the runbook line
 #: without resolving its variables must be refused, never acted on.
@@ -1267,6 +1291,10 @@ def review_qualifies(row: dict, source_commit: str):
         return False, "is not marked independent"
     if str(row["verdict"]).strip().upper() != "PASS":
         return False, "verdict is %r, not PASS" % row["verdict"]
+    # `is not True`, NOT `== False`: cross_family is OPTIONAL in the proofs schema,
+    # so an OMITTED key arrives here as None and must refuse exactly as an explicit
+    # false does. Making no cross-family claim is not a weaker form of making one,
+    # and this is the charter's central invariant -- it fails closed on silence.
     if row.get("cross_family") is not True:
         return False, ("does not explicitly claim cross_family: true, so this tool cannot "
                        "assert the charter's cross-family invariant on its behalf")
@@ -1709,8 +1737,66 @@ def baseline_gaps(product_key: str):
     return gaps
 
 
+def retain_aborted_stage(store: Path, operation_id: str, staging: Path):
+    """Keep and NAME the partial stage of a run that aborted mid-build.
+
+    A qualification FAILURE is a COMPLETE payload -- record, notes, receipt and
+    every evidence file -- and lands in `.attempts/`. A run that aborts part-way
+    (a gate exceeded its ceiling or could not be launched, the pinned source has
+    no release.ps1, the retained manifest is not a faithful copy, a public
+    artifact would have carried a machine path) has no such payload: there may be
+    no release.json at all. Filing that under `.attempts/` would misdescribe it,
+    so it is retained under its own name instead. Nothing is deleted.
+
+    Never raises: it runs on the way OUT of a failure, and a second failure here
+    must not replace the first one's message. If the move itself fails, the
+    stage's own path is still the honest answer.
+    """
+    if not staging.is_dir():
+        return None
+    target = store / ".aborted" / operation_id
+    try:
+        target.parent.mkdir(parents=True, exist_ok=True)
+        os.rename(staging, target)
+        return target
+    except OSError:
+        return staging
+
+
 def perform_release(args, ctx) -> int:
-    """Build, qualify, retain. Returns the process exit code."""
+    """Build, qualify, retain. Returns the process exit code.
+
+    Owns the staging directory's LIFETIME. Anything that aborts between its
+    creation and the publish/attempt rename leaves a partial build, which is
+    retained at `<store>/.aborted/<uuid>/` and printed -- never left behind as an
+    unreferenced scratch directory that nothing names.
+    """
+    store = ctx["store"]
+    product = ctx["product"]
+
+    staging = store / product / (".staging-%s" % ctx["operation_id"])
+    # The guard in prepare() covers --store and its ancestors, but the real output
+    # ancestor is <store>/<product>, which mkdir(parents=True) traverses WITHOUT
+    # complaint when it already exists as a junction -- silently redirecting every
+    # release of that product. Section 6.1 says "reject linked/reparse-point output
+    # ancestors", so grade the actual output ancestor, not just the argument.
+    assert_no_linked_ancestor(store / product, "the output directory <store>/%s" % product)
+    staging.mkdir(parents=True, exist_ok=False)
+    try:
+        return _build_and_publish(args, ctx, staging)
+    except BaseException:
+        kept = retain_aborted_stage(store, ctx["operation_id"], staging)
+        if kept is not None:
+            print("baseline-release: the run aborted before anything was retained; the "
+                  "PARTIAL build is kept at '%s' and nothing is deleted automatically. "
+                  "It is neither a release nor an attempt -- it may be missing "
+                  "release.json and everything written after the failure." % kept,
+                  file=sys.stderr)
+        raise
+
+
+def _build_and_publish(args, ctx, staging: Path) -> int:
+    """The build itself. `staging` already exists; its lifetime is the caller's."""
     store = ctx["store"]
     product = ctx["product"]
     product_key = ctx["product_key"]
@@ -1721,14 +1807,6 @@ def perform_release(args, ctx) -> int:
     source_tree = ctx["source_tree"]
     environment = ctx["environment"]
 
-    staging = store / product / (".staging-%s" % ctx["operation_id"])
-    # The guard in prepare() covers --store and its ancestors, but the real output
-    # ancestor is <store>/<product>, which mkdir(parents=True) traverses WITHOUT
-    # complaint when it already exists as a junction -- silently redirecting every
-    # release of that product. Section 6.1 says "reject linked/reparse-point output
-    # ancestors", so grade the actual output ancestor, not just the argument.
-    assert_no_linked_ancestor(store / product, "the output directory <store>/%s" % product)
-    staging.mkdir(parents=True, exist_ok=False)
     (staging / "checks").mkdir(parents=True, exist_ok=True)
     (staging / "verify-artifacts.py").write_text(
         VERIFY_ARTIFACTS_SOURCE, encoding="utf-8", newline="\n")
@@ -1883,7 +1961,7 @@ def perform_release(args, ctx) -> int:
     if leaks:
         raise ExecutionError(
             "a machine-specific absolute path reached a PUBLIC artifact (%s); refusing "
-            "to retain it. Staged output left at '%s'." % (", ".join(leaks), staging))
+            "to retain it" % ", ".join(leaks))
 
     # ---- publish: one rename of a COMPLETE directory, or retain as an attempt.
     retain_as_release = (qualification == "QUALIFIED"
@@ -1896,9 +1974,10 @@ def perform_release(args, ctx) -> int:
             if final.exists():
                 raise InputError(
                     "COLLISION: '%s' appeared while this release was being staged; a "
-                    "retained release is never overwritten. Staged output kept at '%s'."
-                    % (final, staging))
-            raise ExecutionError("could not publish '%s' -> '%s': %s" % (staging, final, exc))
+                    "retained release is never overwritten, so this run's partial build "
+                    "is kept instead and its path is printed with this failure." % final)
+            raise ExecutionError("could not publish this run's staged build to '%s': %s"
+                                 % (final, exc))
         ctx["result_dir"] = final
         ctx["result_kind"] = "release"
     else:

@@ -376,6 +376,62 @@ def test_private_path_detector_reds_on_a_planted_path(tmp_path):
     assert br.scan_private_paths([("clean.json", clean)]) == []
 
 
+def test_the_private_path_detector_also_catches_posix_home_paths(tmp_path):
+    """The Windows drive-letter shape is not the only way a home path leaks.
+
+    Only a `toolkit` run requires `powershell` on PATH; a `lab` run has no such
+    precondition and can legitimately be cut from a non-Windows machine, where
+    the machine-specific home path in release.json / release-notes.md /
+    packet.json / receipt.json is spelled `/home/<user>/...` or, on macOS,
+    `/Users/<name>/...`. Both must red the same gate the Windows spelling does.
+    """
+    posix = tmp_path / "record.json"
+    posix.write_text('{"argv": ["/home/someone/bin/python"]}\n', encoding="utf-8")
+    assert br.scan_private_paths([("record.json", posix)]) == [
+        "record.json:1", "record.json:<json-value>"], (
+        "a VALID JSON document is scanned twice -- line by line and again over its "
+        "parsed string values -- so a POSIX home path is reported by both passes")
+
+    mac = tmp_path / "mac.json"
+    mac.write_text('{"cwd": "/Users/someone/build"}\n', encoding="utf-8")
+    assert br.scan_private_paths([("mac.json", mac)]) == [
+        "mac.json:1", "mac.json:<json-value>"]
+
+    nested = tmp_path / "nested.json"
+    nested.write_text('{"note": "resolved from file:///home/someone/x"}\n',
+                      encoding="utf-8")
+    assert br.scan_private_paths([("nested.json", nested)]) == [
+        "nested.json:1", "nested.json:<json-value>"]
+
+
+@pytest.mark.parametrize("value", [
+    "docs/Users/readme.md",
+    "_shared/home/notes.md",
+    "https://example.com/Users/octocat",
+    "https://example.com/home/index.html",
+    "/home/<user>/release-store",
+    "/Users/<name>/release-store",
+    "/opt/build/checkout",
+    "/etc/profile.d/x.sh",
+    "<source-checkout>/tools/release.ps1",
+    "dist/claude/SKILL.md",
+])
+def test_the_private_path_detector_does_not_fire_on_a_legitimate_string(tmp_path, value):
+    """Widening a leak scanner is only safe while its false-positive set stays EMPTY.
+
+    Every string here either legitimately CONTAINS `/Users/` or `/home/` without
+    being an absolute home path (a repo-relative path, a URL), or is a value a
+    real record carries (a documented placeholder form, a POSIX-absolute path
+    that is not a home, a path token, a release-relative artifact path). A
+    detector that reds on one of these would refuse to retain honest releases,
+    which is how a safety gate gets switched off.
+    """
+    clean = tmp_path / "clean.json"
+    clean.write_text(json.dumps({"value": value}) + "\n", encoding="utf-8")
+    assert br.scan_private_paths([("clean.json", clean)]) == [], (
+        "the detector fired on a legitimate string")
+
+
 def test_nonexistent_source_root_is_an_input_error(tmp_path):
     result = _release("lab", tmp_path / "nope", "HEAD", "v1", tmp_path / "store")
     assert result.returncode == 2, result.stdout + result.stderr
@@ -849,6 +905,95 @@ def test_a_retry_allocates_a_new_attempt_and_preserves_the_previous_one(
 
 
 # --------------------------------------------------------------------------- #
+# An ABORT mid-build is a different path from a gate that ran and failed
+# --------------------------------------------------------------------------- #
+
+def test_a_gate_that_exceeds_its_ceiling_is_an_execution_failure(tmp_path):
+    """`run_gate`'s timeout branch -- one of the ways a run aborts mid-build.
+
+    Nothing reached this branch before: both failure tests in this file exercise
+    a gate that RUNS TO COMPLETION with a nonzero exit code, which is the
+    qualification-failure path, not the abort path.
+    """
+    tokenizer = br.PathTokenizer()
+    with pytest.raises(br.ExecutionError) as excinfo:
+        br.run_gate("slow-gate", [sys.executable, "-c", "import time; time.sleep(120)"],
+                    tmp_path, tmp_path, tmp_path, tokenizer, 2)
+    assert "exceeded its 2s ceiling" in str(excinfo.value)
+    assert not (tmp_path / "checks").exists(), (
+        "a gate that never finished must not leave evidence claiming an exit code")
+
+
+def test_a_gate_that_cannot_be_launched_is_an_execution_failure(tmp_path):
+    """`run_gate`'s launch-failure branch, the other same-shaped abort."""
+    tokenizer = br.PathTokenizer()
+    with pytest.raises(br.ExecutionError) as excinfo:
+        br.run_gate("unlaunchable", [str(tmp_path / "no-such-tool.exe"), "--version"],
+                    tmp_path, tmp_path, tmp_path, tokenizer, 60)
+    assert "could not be launched" in str(excinfo.value)
+    assert not (tmp_path / "checks").exists()
+
+
+def test_a_run_that_aborts_mid_build_retains_and_names_the_partial_stage(
+        tmp_path_factory, tmp_path):
+    """Exit 1 from an ABORT must still retain diagnostics and PRINT their path.
+
+    A toolkit source with no `tools/release.ps1` raises out of the middle of the
+    build -- after the source gate has already run and written its evidence, and
+    before any record, notes or SHA256SUMS exist. There is no complete payload to
+    file under `.attempts/`, so the partial build is retained under `.aborted/`
+    and named in the output. Left unhandled it was an unreferenced
+    `.staging-<uuid>` directory that nothing printed and nothing cleaned, while
+    the runbook claimed every exit 1 retains its diagnostics and prints them.
+    """
+    if PWSH is None:
+        pytest.skip("powershell is not available on PATH")
+    root, commit = _make_repo(tmp_path_factory.mktemp("kit-no-entry") / "kit", {
+        "README.md": "# kit\n", "tests/test_ok.py": TRIVIAL_TEST})
+    store = tmp_path / "store"
+    result = _release("toolkit", root, commit, "v0.1.0-baseline.1", store)
+    output = result.stdout + result.stderr
+    assert result.returncode == 1, output
+    assert "no tools/release.ps1" in output, output
+
+    aborted = sorted(p for p in (store / ".aborted").iterdir() if p.is_dir())
+    assert len(aborted) == 1, aborted
+    assert str(aborted[0]) in output, (
+        "an unnamed retained directory is a leak, not a diagnostic")
+    assert (aborted[0] / "source.zip").is_file(), (
+        "the partial build keeps the archive it had already written")
+    assert (aborted[0] / "checks" / "source-pytest.txt").is_file(), (
+        "the gate evidence produced before the abort is retained")
+    assert not (aborted[0] / "release.json").exists(), (
+        "a partial build must not be dressed up as a complete one")
+    assert not (store / "skill-mesh" / "v0.1.0-baseline.1").exists(), (
+        "an aborted run must not reserve the version name")
+    assert not _attempt_dirs(store), (
+        "an attempt is a COMPLETE payload; a partial build is not one")
+    assert not [p for p in (store / "skill-mesh").iterdir()
+                if p.name.startswith(".staging-")], (
+        "the staging directory was left behind unreferenced")
+
+
+def test_a_second_aborted_run_preserves_the_first_partial_build(
+        tmp_path_factory, tmp_path):
+    """Nothing is deleted automatically -- including a previous abort's evidence."""
+    if PWSH is None:
+        pytest.skip("powershell is not available on PATH")
+    root, commit = _make_repo(tmp_path_factory.mktemp("kit-no-entry2") / "kit", {
+        "README.md": "# kit\n", "tests/test_ok.py": TRIVIAL_TEST})
+    store = tmp_path / "store"
+    assert _release("toolkit", root, commit, "v0.1.0-baseline.1", store).returncode == 1
+    first = sorted(p for p in (store / ".aborted").iterdir() if p.is_dir())[0]
+    fingerprint = br.sha256_file(first / "source.zip")
+    assert _release("toolkit", root, commit, "v0.1.0-baseline.1", store).returncode == 1
+    kept = sorted(p for p in (store / ".aborted").iterdir() if p.is_dir())
+    assert len(kept) == 2, "a retry did not allocate its own aborted directory"
+    assert br.sha256_file(first / "source.zip") == fingerprint, (
+        "a retry disturbed the previous abort's retained bytes")
+
+
+# --------------------------------------------------------------------------- #
 # Toolkit: the existing toolchain, all profiles, real artifact verification
 # --------------------------------------------------------------------------- #
 
@@ -1052,6 +1197,25 @@ def test_proofs_carrying_an_absolute_user_path_is_an_input_error(lab_repo, tmp_p
     result = _release("lab", root, commit, "v1", tmp_path / "store", proofs=proofs)
     assert result.returncode == 2
     assert "absolute user path" in result.stderr
+
+
+@pytest.mark.parametrize("planted", ["/home/someone/session", "/Users/someone/session"])
+def test_proofs_carrying_a_posix_home_path_is_an_input_error(lab_repo, tmp_path, planted):
+    """The widened detector, reached through the PRODUCTION entry point.
+
+    The unit test above grades `scan_private_paths`; this one proves the same
+    widening is what `load_proofs` actually applies when a real invocation hands
+    it a document. release.json is public whichever way the host spells a home
+    directory, so the refusal is the same.
+    """
+    root, commit = lab_repo
+    row = _review_proof(commit, conversation_id=planted)
+    proofs = _write_proofs(tmp_path / "proofs", [row])
+    result = _release("lab", root, commit, "v1", tmp_path / "store", proofs=proofs)
+    assert result.returncode == 2, result.stdout + result.stderr
+    assert "absolute user path" in result.stderr
+    assert not (tmp_path / "store" / "skill-mesh-lab").exists(), (
+        "a refused proofs document must not leave a product directory behind")
 
 
 @pytest.mark.parametrize("cwd", ["/opt/build/checkout", "D" + ":/build/checkout"])
@@ -1293,6 +1457,101 @@ def test_a_consistent_tripwire_result_upgrades_nothing_on_its_own():
     del row["attested_by"]
     assert row["evidence_consistency"] == "consistent"
     assert br.review_qualifies(row, "a" * 40)[0] is False
+
+
+def test_an_omitted_cross_family_key_never_qualifies():
+    """OMITTED is not a softer FALSE: the charter guard fails closed on SILENCE.
+
+    `cross_family` is OPTIONAL in the proofs schema -- it is absent from
+    `_REVIEW_KEYS` and `load_proofs` never requires it -- so a caller who simply
+    leaves the field out reaches `review_qualifies` with `None`, not `False`.
+    That is the ONLY input on which `is not True` and `== False` differ, and it is
+    a plausible operator mistake rather than a contrived one, which is why the
+    guard is written the way it is: narrowing the comparison would make the
+    charter's central invariant optional-by-omission.
+
+    Calibrated on the key alone -- the identical row WITH `cross_family: True`
+    qualifies, so the refusal is attributable to the missing claim and to nothing
+    else in the row -- and the explicit-false arm is asserted alongside it so a
+    pass here can never come from the guard having been deleted outright.
+    """
+    green = _qualifying_row("a" * 40)
+    assert br.review_qualifies(green, "a" * 40)[0] is True, "green arm of the calibration"
+
+    silent = _qualifying_row("a" * 40)
+    del silent["cross_family"]
+    assert "cross_family" not in silent, "the key must be ABSENT, not false"
+    ok, why = br.review_qualifies(silent, "a" * 40)
+    assert ok is False, "a review that makes no cross-family claim qualified anyway"
+    assert "cross_family" in why
+
+    explicit = _qualifying_row("a" * 40, cross_family=False)
+    assert br.review_qualifies(explicit, "a" * 40)[0] is False, (
+        "and an explicit false must keep refusing too")
+
+
+def test_an_omitted_cross_family_key_leaves_the_tripwire_silent(tmp_path):
+    """Proves the omitted row REACHES the charter guard instead of an earlier one.
+
+    `review_claim_needles` grades the two host families only when the row CLAIMS
+    them, so a row that omits `cross_family` is graded against one claim fewer
+    and its evidence still reads `consistent`. That is exactly what makes the
+    test above meaningful: the omission has to be refused by the cross-family
+    guard in `review_qualifies`, not incidentally by a tripwire firing for an
+    unrelated reason.
+    """
+    row = _review_proof("a" * 40)
+    del row["cross_family"]
+    labels = dict(br.review_claim_needles(row))
+    for family in br.CROSS_FAMILY_TOKENS:
+        assert "the %s host family" % family not in labels
+
+    evidence = tmp_path / "review-0001.md"
+    evidence.write_text(_attestation(row), encoding="utf-8", newline="\n")
+    assert br.check_evidence_consistency(row, evidence)[0] == "consistent", (
+        "the tripwire, not the charter guard, would be doing the refusing")
+
+
+def test_an_omitted_cross_family_key_is_only_incomplete_end_to_end(lab_repo, tmp_path):
+    """The same omission through the PRODUCTION path, CALIBRATED on the key alone.
+
+    Both arms attach a review with `--proofs` and name a party with
+    `--attest-reviews`; the ONLY difference is whether the row carries
+    `cross_family`. The red arm additionally asserts `attested_by` present and
+    `evidence_consistency == "consistent"`, so the INCOMPLETE verdict is provably
+    the cross-family guard rather than the attestation requirement or the
+    tripwire -- and the record keeps the claim as an explicit `null`.
+    """
+    root, commit = lab_repo
+
+    silent_row = _review_proof(commit)
+    del silent_row["cross_family"]
+    silent_store = tmp_path / "silent-store"
+    silent_proofs = _write_proofs(tmp_path / "silent-proofs", [silent_row])
+    silent = _release("lab", root, commit, "v0.1.0-experimental.1", silent_store,
+                      proofs=silent_proofs, attest=ATTESTING_PARTY)
+    assert silent.returncode == 0, silent.stdout + silent.stderr
+    silent_dir = silent_store / "skill-mesh-lab" / "v0.1.0-experimental.1"
+    silent_record = _record(silent_dir)
+    review = silent_record["reviews"][0]
+    assert review["attested_by"] == ATTESTING_PARTY, "the attestation IS present"
+    assert review["evidence_consistency"] == "consistent", "the tripwire IS silent"
+    assert review["cross_family"] is None, (
+        "an unmade claim must be recorded as null, never defaulted to a claim")
+    assert silent_record["qualification"] == "INCOMPLETE", (
+        "a review that never claimed cross-family qualified the release")
+    assert any("cross_family" in reason
+               for reason in silent_record["qualification_reasons"])
+    assert (silent_dir / "source.zip").is_file(), "the archive is retained regardless"
+
+    claimed_store = tmp_path / "claimed-store"
+    claimed_proofs = _write_proofs(tmp_path / "claimed-proofs", [_review_proof(commit)])
+    claimed = _release("lab", root, commit, "v0.1.0-experimental.1", claimed_store,
+                       proofs=claimed_proofs, attest=ATTESTING_PARTY)
+    assert claimed.returncode == 0, claimed.stdout + claimed.stderr
+    claimed_record = _record(claimed_store / "skill-mesh-lab" / "v0.1.0-experimental.1")
+    assert claimed_record["qualification"] == "QUALIFIED", (
+        "green arm of the calibration: %s" % claimed_record["qualification_reasons"])
 
 
 # --------------------------------------------------------------------------- #
@@ -1659,6 +1918,8 @@ def test_the_attestation_is_published_on_the_review_row_in_the_notes(lab_repo, t
     ("x" * 150, "longer than"),
     ("<accountable party>", "unresolved placeholder"),
     ("C" + ":/Users/someone/notes", "absolute user path"),
+    ("/home/someone/notes", "absolute user path"),
+    ("/Users/someone/notes", "absolute user path"),
 ])
 def test_a_malformed_attestation_name_is_an_input_error(lab_repo, tmp_path, attest,
                                                         expected):
@@ -1801,7 +2062,7 @@ def test_runbook_exists_and_covers_the_operator_path():
     for token in ("tools/baseline_release.py", "--source-root", "--source-commit",
                   "--version", "--store", "--python-exe", "--proofs",
                   "--attest-reviews", "attested_by", "evidence_consistency",
-                  "Exit code", "verify-artifacts.py", ".attempts"):
+                  "Exit code", "verify-artifacts.py", ".attempts", ".aborted"):
         assert token in text, "the runbook never mentions %s" % token
     assert br.PRIVATE_PATH_RE.search(text) is None, (
         "the runbook carries an absolute user path; use placeholders")

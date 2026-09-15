@@ -272,8 +272,8 @@ Verdict: PASS
 | Code | Meaning | What to do |
 |---|---|---|
 | `0` | The requested operation completed. The record may still contain **explicit missing evidence** — retaining an explicitly `INCOMPLETE` lab archive is a success and makes no qualification claim. | Read `qualification` in the printed record. |
-| `2` | **Bad input or precondition failure.** Placeholder path, unsafe `--version`, unresolvable commit, store inside the source root, junction on an output ancestor, malformed `--proofs`, or a **release-ID collision** (the ID is retained with different recorded inputs). | Fix the input, or allocate a new version. Nothing was written. |
-| `1` | **Execution or IO failure — including qualification failure.** The diagnostics are retained and their paths are printed. Also covers damaged retained bytes found while verifying. | Go to section 8. |
+| `2` | **Bad input or precondition failure.** Placeholder path, unsafe `--version`, unresolvable commit, store inside the source root, junction on an output ancestor, malformed `--proofs`, or a **release-ID collision** (the ID is retained with different recorded inputs). | Fix the input, or allocate a new version. No retained release is created or changed. Every such refusal happens before anything is built, with one exception: a collision that surfaces only while publishing keeps its partial build and prints that path. |
+| `1` | **Execution or IO failure — including qualification failure.** Whatever was built is retained and its path printed: a qualification failure keeps the **complete** payload under `.attempts/<uuid>/`, and a run that aborts mid-build (a gate exceeded its ceiling or could not be launched, the pinned source has no `release.ps1`, the retained manifest is not a faithful copy, a public artifact would have carried a machine path) keeps the **partial** stage under `.aborted/<uuid>/`. Also covers damaged retained bytes found while verifying. | Go to section 8. |
 
 Qualification values: `QUALIFIED`, `INCOMPLETE` (a required gate or proof is missing),
 `BLOCKED` (a gate ran and failed). A missing or failed gate **can never** produce
@@ -303,7 +303,9 @@ section 4.1.
   public/packet.json             what may be published, and what may not
   CHECKSUMS.txt                  toolkit only: release.ps1's ORIGINAL normalized manifest
   dist/{claude,gpt,codex}/       toolkit only: the built profiles
-<store>/.attempts/<uuid>/        a retained qualification FAILURE
+<store>/.attempts/<uuid>/        a retained qualification FAILURE (COMPLETE payload)
+<store>/.aborted/<uuid>/         a retained PARTIAL build from a run that aborted
+                                 mid-build; it may have no release.json
 <store>/.work/<uuid>/            scratch; removed once the payload is safely retained
 ```
 
@@ -391,6 +393,23 @@ exiting nonzero.
 5. **Nothing is deleted automatically, ever.** Prune attempts by hand, deliberately,
    and only after their evidence has been read.
 
+### A run that aborted mid-build
+
+A qualification failure produces a **complete** payload. A run that aborts before it
+gets that far — a gate exceeded its time ceiling or could not be launched, the
+pinned source has no `tools/release.ps1`, the retained `CHECKSUMS.txt` is not a
+faithful copy of the manifest `release.ps1` wrote, or a public artifact would have
+carried a machine-specific absolute path — has no such payload. Whatever had been
+built is moved to `<store>/.aborted/<uuid>/`, and **that path is printed with the
+failure**.
+
+Read it as **partial**, not as an attempt. It may have no `release.json`, no
+`release-notes.md` and no `SHA256SUMS` — those are written last. What it does carry
+is `source.zip` and every `checks/` evidence file the run had already produced, which
+is the part the error message alone cannot give you. Nothing is deleted, no version
+name is reserved, and the fix is the same as for an attempt: repair the cause at its
+source and re-run.
+
 Common causes, in the order they usually appear:
 
 | Symptom | Cause |
@@ -398,6 +417,7 @@ Common causes, in the order they usually appear:
 | `qualification=BLOCKED`, `source-pytest` exit nonzero | the pinned source's own suite is red. The archive is still retained. |
 | `qualification=BLOCKED`, `staged-release` exit nonzero | `release.ps1` aborted — usually its package-integrity phase. Its evidence file carries the failing output. |
 | `qualification=INCOMPLETE`, all gates exit 0 | no qualifying cross-family review is attached. Attach one with `--proofs`. |
+| exit `1`, no `qualification=` line, an `.aborted/<uuid>` path printed | the run aborted mid-build. Read `checks/` inside that directory. |
 | `qualification=INCOMPLETE`, a review IS attached, `attested_by` is `null` | `--attest-reviews` was not given. Re-run with it, naming the accountable party. Section 4.1. |
 | `qualification=INCOMPLETE`, a review IS attached, `evidence_consistency` is `unstated` | the evidence document omits a claim the row makes. `known_gaps` names each one; fix the document, not the JSON. Section 4.1. |
 | `qualification=INCOMPLETE`, a review IS attached, `evidence_consistency` is `contradicted` | the evidence document **denies** a claim the row makes. Read the document — the row and the review disagree about what happened. No flag overrides this. Section 4.1. |
@@ -429,7 +449,11 @@ description, not an action: `publication_status` is always `NOT_PUBLISHED`.
   needed.
 
 Before writing anything, the tool scans the generated public text artifacts for
-machine-specific absolute paths and refuses to retain the release if one is found.
+machine-specific absolute paths — a Windows drive-letter home path in either
+separator, and the POSIX `/home/<user>/…` and `/Users/<name>/…` spellings, because
+only a `toolkit` run requires PowerShell and a `lab` run can therefore be cut off
+Windows — and refuses to retain the release if one is found. The documented
+placeholder forms stay legal.
 Archive member contents and `dist/` bodies are not re-scanned here; they are gated
 upstream by this repository's own committed-path gate in
 `tests/package-integrity/test_manifest_contract.py`.
