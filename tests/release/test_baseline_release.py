@@ -1,0 +1,1826 @@
+"""Gate for tools/baseline_release.py (Phase BR, Step 147).
+
+HERMETIC AND FAST BY CONSTRUCTION. Every release in this file is cut from a TINY
+SYNTHETIC git repository created inside `tmp_path_factory`, carrying its own
+two-line `tests/test_ok.py` and -- for the toolkit shape -- its own stand-in
+`tools/release.ps1`. Nothing here touches this repository's own git state, its
+real `tools/release.ps1`, the real lab checkout, a consumer home, or the
+network, and nothing here runs the multi-hour repo-root suite.
+
+Why a stand-in `release.ps1` is the RIGHT fixture rather than a shortcut: the
+tool under test invokes `tools/release.ps1` FROM THE DISPOSABLE CHECKOUT OF THE
+PINNED COMMIT, never from this repository. So a synthetic source repo that ships
+its own `tools/release.ps1` exercises the real producer->consumer relationship
+(the tool launches the pinned source's release entry with real flags, and
+consumes the `dist/` + `CHECKSUMS.txt` pair it produces) at a cost of about one
+second. Wiring the REAL release entry in here would test `release.ps1` -- which
+`tests/release/test_release_script.py` already does, end to end -- not the
+orchestration this file exists to grade.
+
+Sibling-suite conventions are followed deliberately: shell out via subprocess,
+skip cleanly when `powershell`/`git` are absent, and drive the CLI as an
+operator would (argument arrays, never a shell string).
+"""
+
+import importlib.util
+import json
+import re
+import shutil
+import subprocess
+import sys
+import zipfile
+from pathlib import Path
+
+import pytest
+
+PWSH = shutil.which("powershell")
+GIT = shutil.which("git")
+REPO_ROOT = Path(__file__).resolve().parents[2]
+TOOL = REPO_ROOT / "tools" / "baseline_release.py"
+
+pytestmark = [
+    pytest.mark.skipif(GIT is None, reason="git is not available on PATH"),
+]
+
+# Loaded by path rather than `from tools import ...`: this file must grade the
+# module regardless of which directory pytest was invoked from.
+_spec = importlib.util.spec_from_file_location("baseline_release_under_test", TOOL)
+br = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(br)
+
+
+# --------------------------------------------------------------------------- #
+# Fixture scaffolding
+# --------------------------------------------------------------------------- #
+
+TRIVIAL_TEST = "def test_ok():\n    assert True\n"
+FAILING_TEST = "def test_planted_failure():\n    assert False, 'planted'\n"
+
+# A stand-in for the pinned source's own release entry. It mirrors the REAL
+# interface (`-StageDir`, `-SourceRoot`, `-Provider`, `-PythonExe`) and the real
+# OUTPUT CONTRACT (`<stage>/dist/<profile>/` plus a normalized `CHECKSUMS.txt`
+# over dist/), which is the whole surface the tool under test consumes.
+# `.Replace([char]92, [char]47)` rather than `-replace` keeps this fixture free
+# of regex backslash escaping.
+FAKE_RELEASE_PS1 = """[CmdletBinding()]
+param(
+    [string]$StageDir = '',
+    [string]$SourceRoot = '',
+    [ValidateSet('claude','gpt','codex','both','all')]
+    [string]$Provider = 'both',
+    [string]$PythonExe = 'python'
+)
+Set-StrictMode -Version Latest
+$ErrorActionPreference = 'Stop'
+New-Item -ItemType Directory -Path $StageDir -Force | Out-Null
+$dist = Join-Path $StageDir 'dist'
+$enc = New-Object System.Text.UTF8Encoding($false)
+foreach ($p in @('claude','gpt','codex')) {
+    $d = Join-Path $dist $p
+    New-Item -ItemType Directory -Path $d -Force | Out-Null
+    [System.IO.File]::WriteAllText((Join-Path $d 'SKILL.md'), "# fake $p profile", $enc)
+}
+$lines = New-Object System.Collections.Generic.List[string]
+foreach ($f in (Get-ChildItem -LiteralPath $dist -Recurse -File | Sort-Object -Property FullName)) {
+    $h = (Get-FileHash -LiteralPath $f.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+    $rel = $f.FullName.Substring($StageDir.Length).TrimStart([char]92, [char]47)
+    $rel = $rel.Replace([char]92, [char]47)
+    $lines.Add("$h  $rel")
+}
+$body = (([string[]]$lines) -join "`n") + "`n"
+[System.IO.File]::WriteAllText((Join-Path $StageDir 'CHECKSUMS.txt'), $body, $enc)
+exit 0
+"""
+
+FAILING_RELEASE_PS1 = """[CmdletBinding()]
+param(
+    [string]$StageDir = '',
+    [string]$SourceRoot = '',
+    [ValidateSet('claude','gpt','codex','both','all')]
+    [string]$Provider = 'both',
+    [string]$PythonExe = 'python'
+)
+Write-Error 'planted release failure'
+exit 1
+"""
+
+
+def _git(args, cwd):
+    return subprocess.run(["git", *args], cwd=str(cwd), capture_output=True,
+                          text=True, check=True)
+
+
+def _make_repo(root: Path, files):
+    root.mkdir(parents=True, exist_ok=True)
+    for rel, text in files.items():
+        target = root / rel
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(text, encoding="utf-8", newline="\n")
+    _git(["init", "-q", "-b", "main"], root)
+    _git(["config", "user.email", "t@example.com"], root)
+    _git(["config", "user.name", "test"], root)
+    _git(["config", "core.autocrlf", "false"], root)
+    _git(["config", "commit.gpgsign", "false"], root)
+    _git(["add", "-A"], root)
+    _git(["commit", "-q", "--no-verify", "-m", "init"], root)
+    return root, _git(["rev-parse", "HEAD"], root).stdout.strip()
+
+
+def _cli(*args, timeout=900):
+    return subprocess.run(
+        [sys.executable, str(TOOL), *[str(a) for a in args]],
+        cwd=str(REPO_ROOT), capture_output=True, text=True,
+        encoding="utf-8", errors="replace", timeout=timeout,
+    )
+
+
+def _release(product, source_root, commit, version, store, proofs=None, attest=None):
+    args = [product, "--source-root", source_root, "--source-commit", commit,
+            "--version", version, "--store", store, "--python-exe", sys.executable]
+    if proofs is not None:
+        args += ["--proofs", proofs]
+    if attest is not None:
+        args += ["--attest-reviews", attest]
+    return _cli(*args)
+
+
+def _record(release_dir: Path):
+    return json.loads((release_dir / "release.json").read_text(encoding="utf-8"))
+
+
+def _attempt_dirs(store: Path):
+    attempts = store / ".attempts"
+    return sorted(p for p in attempts.iterdir() if p.is_dir()) if attempts.is_dir() else []
+
+
+def _review_proof(commit, **overrides):
+    row = {
+        "source_commit": commit,
+        "requested_model": "gpt-5.1-codex",
+        "resolved_model": "gpt-5.1-codex",
+        "resolution_status": "observed",
+        "identity_waiver": None,
+        "conversation_id": "review-0001",
+        "independent": True,
+        "verdict": "PASS",
+        "evidence": "review-0001.md",
+        "cross_family": True,
+    }
+    row.update(overrides)
+    return row
+
+
+#: The name an operator passes to --attest-reviews. The attestation is a
+#: SEPARATE CLI act, never a --proofs field, so no fixture can carry it forward.
+ATTESTING_PARTY = "A. Operator (release owner)"
+
+# The shape of a real review evidence document. Every claim the row makes is
+# stated here, so the NEGATIVE-ONLY evidence-consistency tripwire stays silent.
+# Silence is not corroboration: it upgrades nothing on its own, and a review
+# still qualifies only through the separate --attest-reviews act. A generic
+# one-liner is deliberately not even consistent -- see
+# test_a_forged_proofs_row_with_unrelated_evidence_never_qualifies.
+REVIEW_ATTESTATION = """# Representative cross-family review
+
+Source commit reviewed : {source_commit}
+Conversation id        : {conversation_id}
+Reviewing host family  : Codex CLI
+Counterpart host family: Claude Code
+Requested model        : {requested_model}
+Resolved model identity: {resolved_model}
+Resolution status      : {resolution_status}
+Identity waiver        : {identity_waiver}
+
+This review was conducted independent of the implementation.
+
+Verdict: {verdict}
+"""
+
+GENERIC_EVIDENCE = "PASS -- representative cross-family review\n"
+
+# The round-2 bypass, VERBATIM. A plausible paste of a FAILING review's
+# transcript: every claimed token (commit, conversation id, model, 'independent',
+# 'PASS', both host families) is present as a standalone word, so the round-1
+# presence-only matcher graded it 'corroborated' and it reached QUALIFIED. It is
+# pinned here as the known-garbage anchor for the tripwire and, more importantly,
+# as proof that the *attested* design refuses it -- read by a human this document
+# plainly says the review failed.
+ROUND2_BYPASS_ROW = {
+    "conversation_id": "conv-777",
+    "requested_model": "gpt-5-codex",
+    "resolved_model": "gpt-5-codex",
+}
+ROUND2_BYPASS_EVIDENCE = (
+    "Transcript for conversation conv-777 reviewing commit {source_commit}.\n"
+    "Resolved model: gpt-5-codex. Hosts consulted: claude, codex.\n"
+    "This review was NOT independent, NOT cross-family, and the verdict is "
+    "NOT PASS -- it FAILED.\n"
+)
+
+
+def _attestation(row):
+    fields = {key: ("" if row.get(key) is None else row.get(key, ""))
+              for key in ("source_commit", "conversation_id", "requested_model",
+                          "resolved_model", "resolution_status", "identity_waiver",
+                          "verdict")}
+    return REVIEW_ATTESTATION.format(**fields)
+
+
+def _write_proofs(directory: Path, rows, evidence_names=None, body=None):
+    """Write one evidence document per review row, plus the proofs.json.
+
+    `evidence_names` overrides which files are written (pass `()` for none, to
+    exercise the missing-evidence path); `body` overrides their CONTENT, which is
+    how the forgery anchors plant an unrelated document.
+    """
+    directory.mkdir(parents=True, exist_ok=True)
+    if evidence_names is None:
+        evidence_names = [row["evidence"] for row in rows]
+    for name in evidence_names:
+        row = next((r for r in rows if r.get("evidence") == name), None)
+        if body is not None:
+            text = body
+        elif row is not None:
+            text = _attestation(row)
+        else:
+            text = GENERIC_EVIDENCE
+        (directory / name).write_text(text, encoding="utf-8", newline="\n")
+    path = directory / "proofs.json"
+    path.write_text(json.dumps({"checks": [], "reviews": rows}, indent=2),
+                    encoding="utf-8", newline="\n")
+    return path
+
+
+# --------------------------------------------------------------------------- #
+# Module-scoped fixtures -- each real release is cut exactly once
+# --------------------------------------------------------------------------- #
+
+@pytest.fixture(scope="module")
+def lab_repo(tmp_path_factory):
+    return _make_repo(tmp_path_factory.mktemp("lab-src") / "lab",
+                      {"README.md": "# lab\n", "tests/test_ok.py": TRIVIAL_TEST})
+
+
+@pytest.fixture(scope="module")
+def kit_repo(tmp_path_factory):
+    return _make_repo(tmp_path_factory.mktemp("kit-src") / "kit", {
+        "README.md": "# kit\n",
+        "tests/test_ok.py": TRIVIAL_TEST,
+        "tools/release.ps1": FAKE_RELEASE_PS1,
+    })
+
+
+@pytest.fixture(scope="module")
+def lab_release(lab_repo, tmp_path_factory):
+    root, commit = lab_repo
+    store = tmp_path_factory.mktemp("lab-store")
+    result = _release("lab", root, commit, "v0.1.0-experimental.1", store)
+    return store, store / "skill-mesh-lab" / "v0.1.0-experimental.1", result, commit
+
+
+@pytest.fixture(scope="module")
+def kit_qualified(kit_repo, tmp_path_factory):
+    if PWSH is None:
+        pytest.skip("powershell is not available on PATH")
+    root, commit = kit_repo
+    store = tmp_path_factory.mktemp("kit-store")
+    proofs = _write_proofs(tmp_path_factory.mktemp("kit-proofs"), [_review_proof(commit)])
+    result = _release("toolkit", root, commit, "v0.1.0-baseline.1", store, proofs=proofs,
+                      attest=ATTESTING_PARTY)
+    return store, store / "skill-mesh" / "v0.1.0-baseline.1", result, commit
+
+
+@pytest.fixture(scope="module")
+def kit_unqualified(kit_repo, tmp_path_factory):
+    """Every gate green, but no cross-family review attached."""
+    if PWSH is None:
+        pytest.skip("powershell is not available on PATH")
+    root, commit = kit_repo
+    store = tmp_path_factory.mktemp("kit-store-noreview")
+    result = _release("toolkit", root, commit, "v0.1.0-baseline.1", store)
+    return store, result, commit
+
+
+# --------------------------------------------------------------------------- #
+# Tooling presence + CLI surface
+# --------------------------------------------------------------------------- #
+
+def test_tool_exists():
+    assert TOOL.is_file(), "missing %s" % TOOL
+
+
+def test_help_works_and_documents_the_contract():
+    result = _cli("--help", timeout=120)
+    assert result.returncode == 0, result.stderr
+    for token in ("--source-root", "--source-commit", "--version", "--store",
+                  "--python-exe", "--proofs", "--attest-reviews", "toolkit", "lab"):
+        assert token in result.stdout, "--help does not mention %s" % token
+
+
+def test_unknown_product_is_rejected():
+    assert _cli("desktop", "--source-root", ".", "--source-commit", "HEAD",
+                "--version", "v1", "--store", ".", "--python-exe", sys.executable,
+                timeout=120).returncode != 0
+
+
+def test_missing_required_flag_is_rejected():
+    assert _cli("lab", "--source-root", ".", timeout=120).returncode != 0
+
+
+# --------------------------------------------------------------------------- #
+# Input validation (no subprocess work reached)
+# --------------------------------------------------------------------------- #
+
+@pytest.mark.parametrize("version", [
+    "v0.1.0-baseline.1", "1", "a_b", "V1.2.3", "x.y-z_0",
+])
+def test_version_accepts_one_safe_segment(version):
+    assert br.validate_version(version) == version
+
+
+@pytest.mark.parametrize("version", [
+    "..", ".", "../evil", "a/b", "a\\b", "C:", ".hidden", "-lead", "", "  ",
+    "con", "NUL", "lpt1", "<version>", "$v", "x" * 200,
+])
+def test_version_rejects_unsafe_or_placeholder_segments(version):
+    with pytest.raises(br.InputError):
+        br.validate_version(version)
+
+
+@pytest.mark.parametrize("value", [
+    "$toolkitRoot", "${store}", "<release-store>", "%USERPROFILE%", "",
+    "path/to/store", "C:/placeholder/store", "...",
+])
+def test_placeholder_values_are_refused(value):
+    with pytest.raises(br.InputError):
+        br.reject_placeholder(value, "--store")
+
+
+def test_products_map_is_exact():
+    assert br.PRODUCTS == {"toolkit": "skill-mesh", "lab": "skill-mesh-lab"}
+
+
+def test_private_path_detector_reds_on_a_planted_path(tmp_path):
+    """Red-on-garbage anchor for the public-artifact sanitization gate.
+
+    Built at runtime: this file is itself swept by the repository's committed
+    absolute-path gate, so it must not carry a literal instance of the pattern.
+    """
+    sep = chr(92)
+    planted = tmp_path / "record.json"
+    planted.write_text('{"argv": ["C:%sUsers%ssomeone%spy.exe"]}\n' % (sep, sep, sep),
+                       encoding="utf-8")
+    assert br.scan_private_paths([("record.json", planted)]) == ["record.json:1"]
+    clean = tmp_path / "clean.json"
+    clean.write_text('{"argv": ["<python-exe>", "-m", "pytest"]}\n', encoding="utf-8")
+    assert br.scan_private_paths([("clean.json", clean)]) == []
+
+
+def test_nonexistent_source_root_is_an_input_error(tmp_path):
+    result = _release("lab", tmp_path / "nope", "HEAD", "v1", tmp_path / "store")
+    assert result.returncode == 2, result.stdout + result.stderr
+
+
+def test_non_git_source_root_is_an_input_error(tmp_path):
+    plain = tmp_path / "plain"
+    plain.mkdir()
+    result = _release("lab", plain, "HEAD", "v1", tmp_path / "store")
+    assert result.returncode == 2
+    assert "not a git working tree" in result.stderr
+
+
+def test_unresolvable_commit_is_an_input_error(lab_repo, tmp_path):
+    root, _ = lab_repo
+    result = _release("lab", root, "0" * 40, "v1", tmp_path / "store")
+    assert result.returncode == 2
+    assert "cannot resolve" in result.stderr
+
+
+def test_store_inside_the_source_root_is_refused(lab_repo, tmp_path):
+    """The working source is read-only to this tool, so the store may not live in it."""
+    root, commit = lab_repo
+    result = _release("lab", root, commit, "v1", root / "releases")
+    assert result.returncode == 2
+    assert "inside --source-root" in result.stderr
+    assert not (root / "releases").exists(), "the refused store was created anyway"
+
+
+def test_linked_store_ancestor_is_refused(lab_repo, tmp_path):
+    """A junction on an output ancestor redirects the leaf; refuse it outright."""
+    real = tmp_path / "real"
+    real.mkdir()
+    link = tmp_path / "linked"
+    made = subprocess.run(["cmd", "/c", "mklink", "/J", str(link), str(real)],
+                          capture_output=True, text=True)
+    if made.returncode != 0 or not link.exists():
+        pytest.skip("could not create a junction on this machine")
+    root, commit = lab_repo
+    result = _release("lab", root, commit, "v1", link / "store")
+    assert result.returncode == 2, result.stdout + result.stderr
+    assert "reparse point" in result.stderr
+
+
+def test_a_linked_product_directory_inside_a_real_store_is_refused(lab_repo, tmp_path):
+    """The REAL output ancestor is <store>/<product>, not the --store argument.
+
+    `staging.mkdir(parents=True)` traverses an existing junction at
+    <store>/<product> without complaint, so a junction planted there before the
+    first release of that product would silently redirect every later one. The
+    --store guard cannot see it: --store itself is a real directory here.
+    """
+    store = tmp_path / "store"
+    store.mkdir()
+    elsewhere = tmp_path / "elsewhere"
+    elsewhere.mkdir()
+    link = store / "skill-mesh-lab"
+    made = subprocess.run(["cmd", "/c", "mklink", "/J", str(link), str(elsewhere)],
+                          capture_output=True, text=True)
+    if made.returncode != 0 or not link.exists():
+        pytest.skip("could not create a junction on this machine")
+    root, commit = lab_repo
+    result = _release("lab", root, commit, "v0.1.0-experimental.1", store)
+    assert result.returncode == 2, result.stdout + result.stderr
+    assert "reparse point" in (result.stdout + result.stderr)
+    assert not any(elsewhere.iterdir()), (
+        "the release was written through the junction anyway")
+
+
+# --------------------------------------------------------------------------- #
+# Lab: source-only archive, explicitly INCOMPLETE, exit 0
+# --------------------------------------------------------------------------- #
+
+def test_lab_incomplete_archive_is_retained_with_exit_zero(lab_release):
+    _, release_dir, result, _ = lab_release
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert release_dir.is_dir()
+    record = _record(release_dir)
+    assert record["qualification"] == "INCOMPLETE", (
+        "an explicitly incomplete lab archive is a successful retention, and it "
+        "makes no qualification claim")
+    assert record["product"] == "skill-mesh-lab"
+    assert record["providers"] == [], "the lab archive is source-only"
+
+
+def test_lab_release_layout(lab_release):
+    _, release_dir, _, _ = lab_release
+    for name in ("source.zip", "release.json", "SHA256SUMS", "release-notes.md",
+                 "receipt.json", "public/packet.json", "verify-artifacts.py",
+                 "checks/source-pytest.txt"):
+        assert (release_dir / name).is_file(), "missing %s" % name
+    assert not (release_dir / "dist").exists(), "the lab archive must package no profile"
+    assert not (release_dir / "CHECKSUMS.txt").exists()
+
+
+def test_record_carries_every_required_schema_v1_field(lab_release):
+    _, release_dir, _, commit = lab_release
+    record = _record(release_dir)
+    required = ("schema_version", "product", "version", "source_commit", "source_tree",
+                "builder_commit", "created_at", "predecessor", "qualification",
+                "providers", "artifacts", "environment", "checks", "reviews",
+                "known_gaps", "dependencies")
+    missing = [field for field in required if field not in record]
+    assert not missing, "release.json is missing %s" % missing
+    assert record["schema_version"] == 1
+    assert record["qualification"] in br.QUALIFICATION_VALUES
+    assert record["predecessor"] is None
+    assert record["source_commit"] == commit
+    for field in ("source_commit", "source_tree", "builder_commit"):
+        assert br.FULL_OID_RE.match(record[field]), "%s is not a full lowercase oid" % field
+    assert all(isinstance(v, str) for v in record["environment"].values())
+    for key in ("os", "powershell", "git", "python", "pytest", "pyyaml",
+                "markdown-it-py", "jsonschema"):
+        assert key in record["environment"], "environment lacks %s" % key
+
+
+def test_builder_commit_is_recorded_separately_from_the_source_commit(lab_release):
+    _, release_dir, _, commit = lab_release
+    record = _record(release_dir)
+    builder = subprocess.run(["git", "rev-parse", "HEAD"], cwd=str(REPO_ROOT),
+                             capture_output=True, text=True, check=True).stdout.strip()
+    assert record["builder_commit"] == builder
+    assert record["builder_commit"] != record["source_commit"], (
+        "the helper's own commit and the product's selected commit are never conflated")
+    assert record["source_commit"] == commit
+
+
+def test_known_gaps_and_dependencies_are_explicit(lab_release):
+    _, release_dir, _, _ = lab_release
+    record = _record(release_dir)
+    assert record["known_gaps"], "known_gaps is empty without inspection"
+    assert record["dependencies"], "dependencies is empty without inspection"
+    blob = " ".join(record["known_gaps"]).lower()
+    assert "native host acceptance" in blob
+    assert "cross-family review" in blob
+    joined = " ".join(record["dependencies"])
+    assert "pytest" in joined and "git" in joined
+
+
+def test_artifacts_exclude_the_record_and_the_sums_file(lab_release):
+    _, release_dir, _, _ = lab_release
+    record = _record(release_dir)
+    paths = {entry["path"] for entry in record["artifacts"]}
+    assert "release.json" not in paths and "SHA256SUMS" not in paths, (
+        "the record and SHA256SUMS are excluded to avoid recursive hashing")
+    assert "source.zip" in paths
+    for entry in record["artifacts"]:
+        assert br.SHA256_RE.match(entry["sha256"]), entry
+        assert not entry["path"].startswith("/") and ".." not in entry["path"].split("/")
+        assert br.sha256_file(release_dir / entry["path"]) == entry["sha256"]
+
+
+def test_sha256sums_covers_the_record_and_verifies(lab_release):
+    _, release_dir, _, _ = lab_release
+    lines = (release_dir / "SHA256SUMS").read_text(encoding="utf-8").splitlines()
+    listed = {line.split("  ", 1)[1] for line in lines if line.strip()}
+    assert "release.json" in listed, "SHA256SUMS must cover the record"
+    assert "SHA256SUMS" not in listed, "SHA256SUMS must not hash itself"
+    for line in lines:
+        digest, _, rel = line.partition("  ")
+        assert br.sha256_file(release_dir / rel) == digest
+
+
+def test_retained_verifier_reopens_the_release_and_reds_on_a_flipped_byte(
+        lab_release, tmp_path):
+    """The reopen path an operator actually runs, plus its red-on-garbage anchor."""
+    _, release_dir, _, _ = lab_release
+    copy = tmp_path / "reopened"
+    shutil.copytree(release_dir, copy)
+    verifier = [sys.executable, str(copy / "verify-artifacts.py"),
+                "SHA256SUMS", "."]
+    good = subprocess.run(verifier, cwd=str(copy), capture_output=True, text=True)
+    assert good.returncode == 0, good.stdout + good.stderr
+
+    notes = copy / "release-notes.md"
+    notes.write_bytes(notes.read_bytes() + b"tamper\n")
+    bad = subprocess.run(verifier, cwd=str(copy), capture_output=True, text=True)
+    assert bad.returncode == 1, "the verifier passed over a flipped byte"
+    assert "MISMATCH" in bad.stdout
+
+
+def test_source_zip_extracted_contents_match_the_pinned_tracked_files(
+        lab_release, lab_repo):
+    """Names AND BYTES. The contract clause is about extracted CONTENTS.
+
+    A name-only assertion cannot see a compression or encoding fault that
+    corrupts a member's body while the file list stays perfect, so this compares
+    every member's bytes to the pinned source they were archived from -- the full
+    producer -> consumer round trip -- and pins the two known bodies literally so
+    a bug shared by both sides of the comparison cannot cancel itself out.
+    """
+    root, _ = lab_repo
+    _, release_dir, _, _ = lab_release
+    with zipfile.ZipFile(release_dir / "source.zip") as zf:
+        names = sorted(n for n in zf.namelist() if not n.endswith("/"))
+        assert names == ["README.md", "tests/test_ok.py"]
+        assert ".git/config" not in names, "VCS internals must never enter the archive"
+        assert zf.read("README.md") == b"# lab\n"
+        assert zf.read("tests/test_ok.py") == TRIVIAL_TEST.encode("utf-8")
+        for name in names:
+            assert zf.read(name) == (root / name).read_bytes(), (
+                "archived member %r does not reproduce the pinned file byte-for-byte"
+                % name)
+
+
+def test_public_packet_excludes_private_evidence(lab_release):
+    _, release_dir, _, _ = lab_release
+    packet = json.loads((release_dir / "public" / "packet.json").read_text(encoding="utf-8"))
+    assert packet["publication_status"] == "NOT_PUBLISHED"
+    excluded = {row["path"] for row in packet["exclude"]}
+    for private in ("checks/", "reviews/", "proofs/", "receipt.json"):
+        assert private in excluded, "%s must not be publishable" % private
+    assert "source.zip" in packet["include"] and "release.json" in packet["include"]
+    assert all(row["reason"].strip() for row in packet["exclude"])
+
+
+def test_every_file_the_notes_tell_a_consumer_to_run_is_publishable(lab_release):
+    """The packet may not contradict the notes it publishes alongside.
+
+    release-notes.md is publishable and tells its reader to run a verifier. A
+    recipient of the published subset has only what `include` names, so every
+    script the notes invoke must be in that set and outside every excluded
+    prefix -- otherwise the packet describes an instruction nobody can follow.
+    """
+    _, release_dir, _, _ = lab_release
+    packet = json.loads((release_dir / "public" / "packet.json").read_text(encoding="utf-8"))
+    notes = (release_dir / "release-notes.md").read_text(encoding="utf-8")
+    invoked = set(re.findall(r"^python (\S+\.py)\b", notes, flags=re.MULTILINE))
+    assert invoked, "the notes no longer tell a consumer how to verify anything"
+    excluded = [row["path"] for row in packet["exclude"]]
+    for script in invoked:
+        assert (release_dir / script).is_file(), "the notes invoke a missing %s" % script
+        assert script in packet["include"], (
+            "release-notes.md tells a consumer to run %s, which the packet does not "
+            "publish" % script)
+        for prefix in excluded:
+            hidden = (script == prefix
+                      or (prefix.endswith("/") and script.startswith(prefix)))
+            assert not hidden, (
+                "%s is invoked by the published notes but hidden by exclude %r"
+                % (script, prefix))
+
+
+def test_caller_controlled_review_text_cannot_restructure_the_public_notes(
+        lab_repo, tmp_path):
+    """A '|' in attested text may not open a new cell in the published table."""
+    root, commit = lab_repo
+    row = _review_proof(commit, conversation_id="rev|0002",
+                        resolution_status="observed | injected | cells")
+    proofs = _write_proofs(tmp_path / "proofs", [row])
+    store = tmp_path / "store"
+    result = _release("lab", root, commit, "v0.1.0-experimental.1", store, proofs=proofs)
+    assert result.returncode == 0, result.stdout + result.stderr
+    notes = (store / "skill-mesh-lab" / "v0.1.0-experimental.1"
+             / "release-notes.md").read_text(encoding="utf-8")
+    header = [line for line in notes.splitlines() if line.startswith("| Review |")][0]
+    body = [line for line in notes.splitlines() if "injected" in line][0]
+    assert "\\|" in body, "a caller-supplied pipe reached the table unescaped"
+    unescaped = lambda line: line.count("|") - line.count("\\|")
+    assert unescaped(body) == unescaped(header), (
+        "attested text changed the table's cell count:\n%s\n%s" % (header, body))
+
+
+def test_markdown_inlining_neutralizes_cell_and_code_span_breakers():
+    assert br.md_inline("a|b") == "a\\|b"
+    assert br.md_inline("one\ntwo\r\nthree") == "one two three"
+    assert br.md_code("x`y|z") == "`x'y\\|z`"
+
+
+def test_generated_public_text_carries_no_machine_specific_path(lab_release):
+    _, release_dir, _, _ = lab_release
+    hits = br.scan_private_paths([
+        (name, release_dir / name)
+        for name in ("release.json", "release-notes.md", "public/packet.json",
+                     "receipt.json")
+    ])
+    assert hits == [], "a machine-specific absolute path reached a public artifact: %s" % hits
+
+
+def test_recorded_argv_is_tokenized_and_cwd_is_relative(lab_release):
+    _, release_dir, _, _ = lab_release
+    record = _record(release_dir)
+    gate = [row for row in record["checks"] if row["name"] == "source-pytest"][0]
+    assert gate["argv"] == ["<python-exe>", "-m", "pytest"]
+    assert gate["cwd"] == "."
+    assert gate["exit_code"] == 0
+    assert gate["evidence"] == "checks/source-pytest.txt"
+    assert gate["execution"] == "native"
+    assert "<python-exe>" in record["path_tokens"]
+
+
+def test_receipt_records_argv_time_exit_and_evidence(lab_release):
+    _, release_dir, _, _ = lab_release
+    receipt = json.loads((release_dir / "receipt.json").read_text(encoding="utf-8"))
+    for field in ("argv", "started_at", "recorded_at", "exit_code", "evidence",
+                  "operation_id", "release_id"):
+        assert field in receipt, "receipt lacks %s" % field
+    assert receipt["exit_code"] == 0
+    assert "checks/source-pytest.txt" in receipt["evidence"]
+
+
+def test_working_source_is_unchanged_by_a_release(lab_release, lab_repo):
+    root, commit = lab_repo
+    _, release_dir, _, _ = lab_release
+    assert _git(["rev-parse", "HEAD"], root).stdout.strip() == commit
+    assert _git(["status", "--porcelain"], root).stdout.strip() == "", (
+        "the tool wrote into the working source; it is read-only to this tool")
+    assert not (root / ".work").exists()
+
+
+def test_work_directory_is_cleaned_up(lab_release):
+    store, _, _, _ = lab_release
+    work = store / ".work"
+    assert not work.exists() or not any(work.iterdir()), (
+        "the disposable checkout/stage workspace was left behind")
+
+
+# --------------------------------------------------------------------------- #
+# Repeated request: verify, or refuse. Never overwrite.
+# --------------------------------------------------------------------------- #
+
+def test_repeated_identical_request_verifies_without_overwriting(lab_release, lab_repo):
+    store, release_dir, _, commit = lab_release
+    root, _ = lab_repo
+    before = {rel: br.sha256_file(release_dir / rel)
+              for rel in br.iter_files(release_dir)}
+    result = _release("lab", root, commit, "v0.1.0-experimental.1", store)
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "VERIFIED" in result.stdout
+    after = {rel: br.sha256_file(release_dir / rel)
+             for rel in br.iter_files(release_dir)}
+    assert before == after, "a repeated request rewrote a retained release"
+
+
+def test_repeated_request_with_a_different_commit_refuses_as_a_collision(
+        lab_release, lab_repo, tmp_path):
+    store, release_dir, _, _ = lab_release
+    root, _ = lab_repo
+    mutated = tmp_path / "mutated"
+    shutil.copytree(root, mutated)
+    (mutated / "README.md").write_text("# lab changed\n", encoding="utf-8", newline="\n")
+    _git(["add", "-A"], mutated)
+    _git(["commit", "-q", "--no-verify", "-m", "second"], mutated)
+    second = _git(["rev-parse", "HEAD"], mutated).stdout.strip()
+
+    before = br.sha256_file(release_dir / "release.json")
+    result = _release("lab", mutated, second, "v0.1.0-experimental.1", store)
+    assert result.returncode == 2, result.stdout + result.stderr
+    assert "COLLISION" in result.stderr
+    assert br.sha256_file(release_dir / "release.json") == before, (
+        "a refused collision still modified the retained release")
+
+
+def test_damaged_retained_bytes_are_reported_as_an_execution_failure(
+        lab_release, lab_repo, tmp_path):
+    store, release_dir, _, commit = lab_release
+    root, _ = lab_repo
+    damaged_store = tmp_path / "damaged-store"
+    shutil.copytree(store, damaged_store)
+    target = damaged_store / "skill-mesh-lab" / "v0.1.0-experimental.1" / "release-notes.md"
+    target.write_bytes(target.read_bytes() + b"tamper\n")
+    result = _release("lab", root, commit, "v0.1.0-experimental.1", damaged_store)
+    assert result.returncode == 1, result.stdout + result.stderr
+    assert "do not verify" in result.stderr
+
+
+def test_tampered_archive_content_is_caught_even_when_every_hash_agrees(
+        lab_release, lab_repo, tmp_path):
+    """Red-on-garbage anchor for the EXTRACTED-CONTENTS detector itself.
+
+    `test_damaged_retained_bytes_...` trips the SHA256SUMS check and returns
+    before the content comparison ever runs, so that detector had no test able to
+    make it fail -- and a detector nothing can red is not known to work. Here the
+    archive's member body is rewritten and the record plus SHA256SUMS are made
+    self-consistent again, so every earlier check passes by construction and the
+    ONLY thing left that can fire is the comparison against a fresh checkout.
+
+    The calibration is the retained verifier's own exit 0 on the tampered store:
+    it proves the hash layer really is satisfied, so the exit 1 below is
+    attributable to the content detector and to nothing else.
+    """
+    store, _, _, commit = lab_release
+    root, _ = lab_repo
+    forged_store = tmp_path / "forged-store"
+    shutil.copytree(store, forged_store)
+    forged = forged_store / "skill-mesh-lab" / "v0.1.0-experimental.1"
+
+    archive = forged / "source.zip"
+    with zipfile.ZipFile(archive) as zf:
+        members = [(info, zf.read(info.filename)) for info in zf.infolist()]
+    with zipfile.ZipFile(archive, "w", zipfile.ZIP_DEFLATED) as zf:
+        for info, data in members:
+            if info.filename == "README.md":
+                data = b"# lab (content swapped after retention)\n"
+            zf.writestr(info, data)
+    assert sorted(info.filename for info, _ in members) == [
+        "README.md", "tests/test_ok.py"], "the member LIST must be unchanged"
+
+    record = _record(forged)
+    for entry in record["artifacts"]:
+        entry["sha256"] = br.sha256_file(forged / entry["path"])
+    (forged / "release.json").write_text(
+        json.dumps(record, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8", newline="\n")
+    br.write_sha256sums(forged, record["artifacts"] + [
+        {"path": "release.json", "sha256": br.sha256_file(forged / "release.json")}])
+
+    calibration = subprocess.run(
+        [sys.executable, str(forged / "verify-artifacts.py"), "SHA256SUMS", "."],
+        cwd=str(forged), capture_output=True, text=True)
+    assert calibration.returncode == 0, (
+        "the anchor is miscalibrated: the hash layer is already red, so a failure "
+        "below would not be attributable to the content detector\n"
+        + calibration.stdout + calibration.stderr)
+
+    result = _release("lab", root, commit, "v0.1.0-experimental.1", forged_store)
+    assert result.returncode == 1, result.stdout + result.stderr
+    assert "EXTRACTED CONTENTS do not match" in result.stderr, result.stderr
+    assert "README.md" in result.stderr, (
+        "the message must name the differing member: %s" % result.stderr)
+
+
+def test_predecessor_names_the_previous_release_of_the_same_product(lab_release, lab_repo):
+    store, _, _, commit = lab_release
+    root, _ = lab_repo
+    result = _release("lab", root, commit, "v0.1.0-experimental.2", store)
+    assert result.returncode == 0, result.stdout + result.stderr
+    record = _record(store / "skill-mesh-lab" / "v0.1.0-experimental.2")
+    assert record["predecessor"] == "skill-mesh-lab/v0.1.0-experimental.1"
+
+
+# --------------------------------------------------------------------------- #
+# Lab: a FAILED gate is BLOCKED and keeps the source archive
+# --------------------------------------------------------------------------- #
+
+def test_failed_source_suite_is_blocked_and_still_keeps_the_archive(
+        tmp_path_factory, tmp_path):
+    root, commit = _make_repo(tmp_path_factory.mktemp("lab-red") / "lab", {
+        "README.md": "# lab\n", "tests/test_red.py": FAILING_TEST})
+    store = tmp_path / "store"
+    result = _release("lab", root, commit, "v0.1.0-experimental.1", store)
+    assert result.returncode == 1, result.stdout + result.stderr
+    assert not (store / "skill-mesh-lab" / "v0.1.0-experimental.1").exists(), (
+        "a failed qualification must not reserve the version name")
+    attempts = _attempt_dirs(store)
+    assert len(attempts) == 1, attempts
+    record = _record(attempts[0])
+    assert record["qualification"] == "BLOCKED"
+    assert (attempts[0] / "source.zip").is_file(), (
+        "a failed gate keeps the source archive")
+    assert (attempts[0] / "checks" / "source-pytest.txt").is_file()
+    assert str(attempts[0]) in result.stdout, (
+        "a qualification failure must print its retained diagnostic paths")
+
+
+def test_a_retry_allocates_a_new_attempt_and_preserves_the_previous_one(
+        tmp_path_factory, tmp_path):
+    root, commit = _make_repo(tmp_path_factory.mktemp("lab-red2") / "lab", {
+        "README.md": "# lab\n", "tests/test_red.py": FAILING_TEST})
+    store = tmp_path / "store"
+    first = _release("lab", root, commit, "v0.1.0-experimental.1", store)
+    assert first.returncode == 1
+    kept = _attempt_dirs(store)[0]
+    fingerprint = br.sha256_file(kept / "release.json")
+    second = _release("lab", root, commit, "v0.1.0-experimental.1", store)
+    assert second.returncode == 1
+    attempts = _attempt_dirs(store)
+    assert len(attempts) == 2, "a retry did not allocate a new attempt"
+    assert br.sha256_file(kept / "release.json") == fingerprint, (
+        "a retry disturbed the previous attempt's evidence")
+
+
+# --------------------------------------------------------------------------- #
+# Toolkit: the existing toolchain, all profiles, real artifact verification
+# --------------------------------------------------------------------------- #
+
+def test_toolkit_release_runs_the_pinned_sources_release_entry(kit_qualified):
+    store, release_dir, result, _ = kit_qualified
+    assert result.returncode == 0, result.stdout + result.stderr
+    record = _record(release_dir)
+    assert record["product"] == "skill-mesh"
+    assert record["providers"] == ["claude", "codex", "gpt"], record["providers"]
+    for provider in br.TOOLKIT_PROVIDERS:
+        assert (release_dir / "dist" / provider).is_dir()
+    assert (release_dir / "CHECKSUMS.txt").is_file(), (
+        "the ORIGINAL normalized manifest produced by release.ps1 must be retained")
+
+
+def test_toolkit_qualification_requires_all_four_gates(kit_qualified):
+    _, release_dir, _, commit = kit_qualified
+    record = _record(release_dir)
+    assert record["qualification"] == "QUALIFIED", record["qualification_reasons"]
+    names = {row["name"] for row in record["checks"] if row["execution"] == "native"}
+    assert {"source-pytest", "staged-release", "artifact-verification"} <= names
+    assert all(row["exit_code"] == 0 for row in record["checks"]
+               if row["execution"] == "native")
+    assert record["reviews"] and record["reviews"][0]["verdict"] == "PASS"
+    assert record["reviews"][0]["source_commit"] == commit
+    assert record["reviews"][0]["evidence"].startswith("reviews/")
+    assert (release_dir / record["reviews"][0]["evidence"]).is_file()
+
+
+def test_checksums_txt_is_a_separate_manifest_from_the_raw_artifact_hashes(kit_qualified):
+    """Normalized payload checksums and raw whole-file hashes are separate concepts.
+
+    CHECKSUMS.txt is the manifest release.ps1 produced over dist/, retained
+    verbatim. release.json's `artifacts` is a RAW whole-file hash over every
+    retained byte -- a wider set that includes CHECKSUMS.txt itself, which the
+    normalized manifest can never cover.
+    """
+    _, release_dir, _, _ = kit_qualified
+    listed = {}
+    for line in (release_dir / "CHECKSUMS.txt").read_text(encoding="utf-8").splitlines():
+        if not line.strip() or line.startswith("#"):
+            continue
+        digest, _, rel = line.partition("  ")
+        listed[rel.strip()] = digest.strip()
+    assert listed and all(rel.startswith("dist/") for rel in listed), listed
+    assert "CHECKSUMS.txt" not in listed, "the normalized manifest never hashes itself"
+
+    record = _record(release_dir)
+    artifacts = {entry["path"]: entry["sha256"] for entry in record["artifacts"]}
+    assert "CHECKSUMS.txt" in artifacts, (
+        "the normalized manifest is itself a raw-hashed retained artifact")
+    assert set(listed) < set(artifacts), (
+        "every normalized dist/ entry is also raw-hashed, and the raw set is wider")
+    for rel, digest in listed.items():
+        assert artifacts[rel] == digest, (
+            "a dist/ artifact was altered between release.ps1 and retention: %s" % rel)
+
+
+def test_artifact_verification_grades_the_retained_bytes_not_the_scratch_stage(
+        kit_qualified, tmp_path):
+    """The gate must verify what is KEPT, against the manifest release.ps1 produced.
+
+    `artifacts` and `SHA256SUMS` are computed FROM the retained copy, so they can
+    only ever agree with it -- a fault between the release stage and the retained
+    directory is invisible to them, and the stage itself is deleted at exit so
+    nothing re-checks it later. Only a gate that re-hashes the RETAINED dist/
+    against release.ps1's own CHECKSUMS.txt can see that class of fault.
+
+    So: the recorded gate is pinned to the retained tree, then replayed exactly as
+    recorded (green), then replayed against a copy carrying the corruption it
+    exists to catch (red). The same command is also what the notes hand a
+    consumer, so this grades the published verification path too.
+    """
+    _, release_dir, _, _ = kit_qualified
+    record = _record(release_dir)
+    gate = [row for row in record["checks"] if row["name"] == "artifact-verification"][0]
+    assert gate["exit_code"] == 0
+    assert gate["execution"] == "native"
+    assert gate["cwd"] == "<release-dir>", (
+        "the gate must run in the retained release, not in the scratch stage that "
+        "is rmtree'd at exit: %s" % gate["cwd"])
+    assert gate["argv"][1:4] == ["verify-artifacts.py", "CHECKSUMS.txt", "."], gate["argv"]
+    assert "<stage-dir>" not in " ".join(gate["argv"]), (
+        "verifying the pre-copy stage originals certifies bytes nobody retains")
+
+    replay = [sys.executable] + gate["argv"][1:]
+    good = subprocess.run(replay, cwd=str(release_dir), capture_output=True, text=True)
+    assert good.returncode == 0, good.stdout + good.stderr
+
+    copy = tmp_path / "copy-fault"
+    shutil.copytree(release_dir, copy)
+    victim = copy / "dist" / "claude" / "SKILL.md"
+    victim.write_bytes(victim.read_bytes() + b"corrupted between stage and store\n")
+    bad = subprocess.run(replay, cwd=str(copy), capture_output=True, text=True)
+    assert bad.returncode == 1, (
+        "the gate passed over a retained artifact that no longer matches the "
+        "manifest release.ps1 produced\n" + bad.stdout + bad.stderr)
+    assert "MISMATCH" in bad.stdout
+
+
+def test_toolkit_without_a_cross_family_review_is_never_qualified(kit_unqualified):
+    """All gates green is NOT enough: the charter invariant is not softened."""
+    store, result, _ = kit_unqualified
+    assert result.returncode == 1, result.stdout + result.stderr
+    assert not (store / "skill-mesh" / "v0.1.0-baseline.1").exists()
+    attempts = _attempt_dirs(store)
+    assert len(attempts) == 1
+    record = _record(attempts[0])
+    assert record["qualification"] == "INCOMPLETE"
+    assert any("cross-family review" in reason for reason in record["qualification_reasons"])
+    assert all(row["exit_code"] == 0 for row in record["checks"]), (
+        "the gates were green; only the review was missing")
+    assert (attempts[0] / "source.zip").is_file()
+    assert (attempts[0] / "dist" / "claude").is_dir()
+
+
+def test_failed_release_entry_is_blocked_and_keeps_the_source_archive(
+        tmp_path_factory, tmp_path):
+    if PWSH is None:
+        pytest.skip("powershell is not available on PATH")
+    root, commit = _make_repo(tmp_path_factory.mktemp("kit-red") / "kit", {
+        "README.md": "# kit\n",
+        "tests/test_ok.py": TRIVIAL_TEST,
+        "tools/release.ps1": FAILING_RELEASE_PS1,
+    })
+    store = tmp_path / "store"
+    proofs = _write_proofs(tmp_path / "proofs", [_review_proof(commit)])
+    result = _release("toolkit", root, commit, "v0.1.0-baseline.1", store, proofs=proofs)
+    assert result.returncode == 1, result.stdout + result.stderr
+    assert not (store / "skill-mesh" / "v0.1.0-baseline.1").exists()
+    attempt = _attempt_dirs(store)[0]
+    record = _record(attempt)
+    assert record["qualification"] == "BLOCKED", record["qualification_reasons"]
+    assert record["providers"] == []
+    assert (attempt / "source.zip").is_file(), "a failed gate keeps the source archive"
+    assert (attempt / "checks" / "staged-release.txt").is_file()
+
+
+def test_source_checks_are_recorded_independently_of_packaging_success(
+        tmp_path_factory, tmp_path):
+    """The root suite result is retained even when packaging never produced a profile."""
+    if PWSH is None:
+        pytest.skip("powershell is not available on PATH")
+    root, commit = _make_repo(tmp_path_factory.mktemp("kit-red2") / "kit", {
+        "README.md": "# kit\n",
+        "tests/test_ok.py": TRIVIAL_TEST,
+        "tools/release.ps1": FAILING_RELEASE_PS1,
+    })
+    store = tmp_path / "store"
+    result = _release("toolkit", root, commit, "v0.1.0-baseline.1", store)
+    assert result.returncode == 1
+    record = _record(_attempt_dirs(store)[0])
+    source_gate = [row for row in record["checks"] if row["name"] == "source-pytest"][0]
+    assert source_gate["exit_code"] == 0, (
+        "the source check must be recorded even though packaging failed")
+    assert source_gate["source_commit"] == commit
+
+
+# --------------------------------------------------------------------------- #
+# Proof imports: bind, mark, never silently drop
+# --------------------------------------------------------------------------- #
+
+def test_malformed_proofs_file_is_an_input_error(lab_repo, tmp_path):
+    root, commit = lab_repo
+    bad = tmp_path / "proofs.json"
+    bad.write_text("{not json", encoding="utf-8")
+    result = _release("lab", root, commit, "v1", tmp_path / "store", proofs=bad)
+    assert result.returncode == 2
+    assert "not valid JSON" in result.stderr
+
+
+def test_proofs_with_an_unknown_top_level_key_is_an_input_error(lab_repo, tmp_path):
+    root, commit = lab_repo
+    bad = tmp_path / "proofs.json"
+    bad.write_text(json.dumps({"reviews": [], "verdicts": []}), encoding="utf-8")
+    result = _release("lab", root, commit, "v1", tmp_path / "store", proofs=bad)
+    assert result.returncode == 2
+    assert "unknown top-level key" in result.stderr
+
+
+def test_proofs_missing_a_required_review_field_is_an_input_error(lab_repo, tmp_path):
+    root, commit = lab_repo
+    row = _review_proof(commit)
+    del row["conversation_id"]
+    proofs = _write_proofs(tmp_path / "proofs", [row])
+    result = _release("lab", root, commit, "v1", tmp_path / "store", proofs=proofs)
+    assert result.returncode == 2
+    assert "is missing conversation_id" in result.stderr
+
+
+def test_proofs_carrying_an_absolute_user_path_is_an_input_error(lab_repo, tmp_path):
+    """release.json is public, so a proof may not smuggle a machine path into it.
+
+    Built at runtime: this file is itself swept by the repository's committed
+    absolute-path gate, so it must not carry a literal instance of the pattern.
+    """
+    drive = "C" + ":"
+    root, commit = lab_repo
+    row = _review_proof(commit, conversation_id=drive + "/Users/someone/session")
+    proofs = _write_proofs(tmp_path / "proofs", [row])
+    result = _release("lab", root, commit, "v1", tmp_path / "store", proofs=proofs)
+    assert result.returncode == 2
+    assert "absolute user path" in result.stderr
+
+
+@pytest.mark.parametrize("cwd", ["/opt/build/checkout", "D" + ":/build/checkout"])
+def test_an_absolute_check_cwd_in_proofs_is_an_input_error(lab_repo, tmp_path, cwd):
+    """A recorded cwd is relative to the disposable checkout; an absolute one is refused.
+
+    Deliberately NOT a home path: that would be caught one layer earlier by the
+    public-artifact scan, and this test targets `reject_absolute` itself. Both
+    POSIX-absolute and drive-absolute forms are covered.
+    """
+    root, commit = lab_repo
+    check = {"argv": ["python", "-m", "pytest"], "exit_code": 0,
+             "cwd": cwd, "source_commit": commit,
+             "evidence": "check-0000.txt"}
+    directory = tmp_path / "proofs"
+    directory.mkdir(parents=True, exist_ok=True)
+    (directory / "check-0000.txt").write_text("ok\n", encoding="utf-8", newline="\n")
+    path = directory / "proofs.json"
+    path.write_text(json.dumps({"checks": [check], "reviews": []}, indent=2),
+                    encoding="utf-8", newline="\n")
+    result = _release("lab", root, commit, "v1", tmp_path / "store", proofs=path)
+    assert result.returncode == 2, result.stdout + result.stderr
+    assert "checks[0].cwd" in result.stderr
+
+
+def test_an_unresolvable_python_exe_is_an_input_error(lab_repo, tmp_path):
+    root, commit = lab_repo
+    result = _cli("lab", "--source-root", root, "--source-commit", commit,
+                  "--version", "v1", "--store", tmp_path / "store",
+                  "--python-exe", "no-such-interpreter-9f3a", timeout=180)
+    assert result.returncode == 2, result.stdout + result.stderr
+    assert "was not found" in result.stderr
+
+
+def test_a_version_directory_without_a_record_is_an_input_error(lab_repo, tmp_path):
+    """A half-written or foreign directory is a collision, never a place to write."""
+    root, commit = lab_repo
+    store = tmp_path / "store"
+    squatter = store / "skill-mesh-lab" / "v0.1.0-experimental.1"
+    squatter.mkdir(parents=True)
+    (squatter / "stray.txt").write_text("not a release\n", encoding="utf-8", newline="\n")
+    result = _release("lab", root, commit, "v0.1.0-experimental.1", store)
+    assert result.returncode == 2, result.stdout + result.stderr
+    assert "carries no release.json" in result.stderr
+    assert (squatter / "stray.txt").is_file(), "the foreign directory was disturbed"
+
+
+def test_missing_proof_evidence_is_recorded_as_incomplete_not_dropped(lab_repo, tmp_path):
+    root, commit = lab_repo
+    proofs = _write_proofs(tmp_path / "proofs",
+                           [_review_proof(commit, evidence="absent.md")],
+                           evidence_names=())
+    store = tmp_path / "store"
+    result = _release("lab", root, commit, "v0.1.0-experimental.1", store, proofs=proofs)
+    assert result.returncode == 0, result.stdout + result.stderr
+    record = _record(store / "skill-mesh-lab" / "v0.1.0-experimental.1")
+    assert record["qualification"] == "INCOMPLETE"
+    assert len(record["reviews"]) == 1, "the unresolvable row was silently dropped"
+    assert record["reviews"][0]["import_status"] == "missing-evidence"
+    assert any("could not be resolved" in gap for gap in record["known_gaps"])
+
+
+def test_proof_bound_to_another_source_commit_is_marked_and_never_relabelled(
+        lab_repo, tmp_path):
+    root, commit = lab_repo
+    other = "b" * 40
+    proofs = _write_proofs(tmp_path / "proofs", [_review_proof(commit, source_commit=other)])
+    store = tmp_path / "store"
+    result = _release("lab", root, commit, "v0.1.0-experimental.1", store, proofs=proofs)
+    assert result.returncode == 0, result.stdout + result.stderr
+    record = _record(store / "skill-mesh-lab" / "v0.1.0-experimental.1")
+    assert record["qualification"] == "INCOMPLETE", (
+        "historical proof must never be relabelled as current-source proof")
+    assert record["reviews"][0]["source_commit"] == other
+    assert record["reviews"][0]["import_status"] == "source-mismatch"
+    assert any("never relabelled" in gap for gap in record["known_gaps"])
+
+
+def test_imported_check_evidence_is_copied_in_and_marked_as_imported(lab_repo, tmp_path):
+    root, commit = lab_repo
+    proof_dir = tmp_path / "proofs"
+    proof_dir.mkdir()
+    (proof_dir / "old-run.txt").write_text("historical run output\n", encoding="utf-8")
+    (proof_dir / "proofs.json").write_text(json.dumps({
+        "checks": [{
+            "argv": ["<python-exe>", "-m", "pytest"],
+            "exit_code": 0,
+            "cwd": ".",
+            "source_commit": commit,
+            "evidence": "old-run.txt",
+            "name": "historical-pytest",
+        }],
+        "reviews": [],
+    }), encoding="utf-8")
+    store = tmp_path / "store"
+    result = _release("lab", root, commit, "v0.1.0-experimental.1", store,
+                      proofs=proof_dir / "proofs.json")
+    assert result.returncode == 0, result.stdout + result.stderr
+    release_dir = store / "skill-mesh-lab" / "v0.1.0-experimental.1"
+    record = _record(release_dir)
+    imported = [row for row in record["checks"] if row["execution"] == "imported"]
+    assert len(imported) == 1
+    assert imported[0]["import_status"] == "imported"
+    assert (release_dir / imported[0]["evidence"]).is_file(), (
+        "imported evidence must be copied in for local recovery")
+    native = [row for row in record["checks"] if row["execution"] == "native"]
+    assert native, "an import must never displace the natively executed gate"
+
+
+def _qualifying_row(commit, **overrides):
+    """A row that has already been imported, cleared the tripwire, AND is attested.
+
+    All three are separately required: `import_status` proves the evidence
+    resolved, `evidence_consistency` is the NEGATIVE-ONLY tripwire (its
+    "consistent" value upgrades nothing by itself), and `attested_by` is the only
+    POSITIVE signal -- the separate `--attest-reviews` act.
+    """
+    row = _review_proof(commit, **overrides)
+    row["import_status"] = "imported"
+    row["evidence_consistency"] = "consistent"
+    row["attested_by"] = ATTESTING_PARTY
+    return row
+
+
+@pytest.mark.parametrize("override, expectation", [
+    ({"independent": False}, "not marked independent"),
+    ({"verdict": "FAIL"}, "not PASS"),
+    ({"cross_family": False}, "cross_family"),
+    ({"resolved_model": None, "identity_waiver": None}, "identity_waiver"),
+    ({"resolution_status": " "}, "resolution_status"),
+    ({"source_commit": "b" * 40}, "binds a different source commit"),
+    ({"conversation_id": "   "}, "carries no conversation_id"),
+])
+def test_a_review_missing_a_charter_element_does_not_qualify(override, expectation):
+    row = _qualifying_row("a" * 40, **override)
+    ok, why = br.review_qualifies(row, "a" * 40)
+    assert ok is False
+    assert expectation in why
+
+
+def test_a_complete_review_qualifies():
+    ok, why = br.review_qualifies(_qualifying_row("a" * 40), "a" * 40)
+    assert ok is True, why
+
+
+def test_a_named_identity_waiver_substitutes_for_an_observed_resolved_model():
+    """The charter's 'any waiver is explicit and named' escape hatch, on its TRUE side.
+
+    `review_qualifies` encodes identity as `resolved_model OR identity_waiver`.
+    Every other row in this file takes the resolved_model disjunct, so without
+    this case the waiver disjunct is 0%-covered on the side that matters: an `or`
+    flipped to an `and`, or the waiver branch dropped, would still pass.
+    Calibrated against its own neighbours -- BOTH absent must still refuse, so a
+    pass here cannot come from the guard having been removed altogether.
+    """
+    waived = _qualifying_row("a" * 40, resolved_model=None,
+                             identity_waiver="waived: host reports no model id (J. Owner)")
+    ok, why = br.review_qualifies(waived, "a" * 40)
+    assert ok is True, why
+
+    neither = _qualifying_row("a" * 40, resolved_model=None, identity_waiver=None)
+    refused, why = br.review_qualifies(neither, "a" * 40)
+    assert refused is False and "identity_waiver" in why, (
+        "the identity guard must still refuse when neither disjunct is present")
+
+
+def test_the_named_waiver_is_the_claim_the_tripwire_grades(tmp_path):
+    """The waiver branch of `review_claim_needles`, on its TRUE side.
+
+    With no resolved model, the needle set must carry the NAMED WAIVER instead --
+    otherwise a waived row would be graded against one claim fewer than it makes.
+    """
+    row = _review_proof("a" * 40, resolved_model=None,
+                        identity_waiver="waived-by-j-owner")
+    labels = dict(br.review_claim_needles(row))
+    assert labels.get("the named identity waiver") == "waived-by-j-owner"
+    assert "the resolved model identity" not in labels
+
+    evidence = tmp_path / "review-0001.md"
+    evidence.write_text(_attestation(row), encoding="utf-8", newline="\n")
+    assert br.check_evidence_consistency(row, evidence)[0] == "consistent"
+
+    silent = tmp_path / "silent.md"
+    silent.write_text(_attestation(row).replace("waived-by-j-owner", ""),
+                      encoding="utf-8", newline="\n")
+    status, why = br.check_evidence_consistency(row, silent)
+    assert status == "unstated" and "the named identity waiver" in why, (
+        "a document that never names the waiver must not read as consistent")
+
+
+@pytest.mark.parametrize("consistency", [None, "unstated", "contradicted", "no-evidence",
+                                         "evidence-unreadable"])
+def test_a_review_the_tripwire_fired_on_never_qualifies(consistency):
+    """Fail-closed, including when the field is absent entirely.
+
+    The tripwire is negative-only, so this is the direction it is allowed to
+    decide: any value other than "consistent" -- and an unknown/absent value --
+    blocks, even with the attestation present.
+    """
+    row = _qualifying_row("a" * 40)
+    if consistency is None:
+        del row["evidence_consistency"]
+    else:
+        row["evidence_consistency"] = consistency
+    assert row["attested_by"], "the attestation is present; the tripwire is what refuses"
+    ok, why = br.review_qualifies(row, "a" * 40)
+    assert ok is False
+    assert "not stated by, the evidence it cites" in why
+
+
+@pytest.mark.parametrize("attested_by", [None, "", "   "])
+def test_a_review_nobody_attested_never_qualifies(attested_by):
+    """The positive signal is the NAMED ACT, and nothing else can stand in for it.
+
+    Calibrated: the identical row WITH a name qualifies, so the refusal is
+    attributable to the missing attestation and to nothing else in the row.
+    """
+    row = _qualifying_row("a" * 40)
+    assert br.review_qualifies(row, "a" * 40)[0] is True, "green arm of the calibration"
+
+    if attested_by is None:
+        del row["attested_by"]
+    else:
+        row["attested_by"] = attested_by
+    ok, why = br.review_qualifies(row, "a" * 40)
+    assert ok is False
+    assert "--attest-reviews" in why and "attested_by" in why
+
+
+def test_a_consistent_tripwire_result_upgrades_nothing_on_its_own():
+    """The governing invariant, asserted directly.
+
+    "consistent" is the BEST result the text comparison can produce, and it is
+    still not a positive signal: a row carrying it, with every charter element
+    green, is refused until a named party attests. Anything else would be the
+    round-1 design -- one author's self-consistency promoted to verification.
+    """
+    row = _qualifying_row("a" * 40)
+    del row["attested_by"]
+    assert row["evidence_consistency"] == "consistent"
+    assert br.review_qualifies(row, "a" * 40)[0] is False
+
+
+# --------------------------------------------------------------------------- #
+# The evidence-consistency tripwire -- NEGATIVE ONLY
+#
+# Both the --proofs row and the document it cites are authored by the same
+# caller, so comparing them can FALSIFY a claim and can never establish one.
+# Every test below therefore asserts one of two things: that a falsification is
+# caught, or that a clean comparison still does not qualify anything.
+# --------------------------------------------------------------------------- #
+
+def test_the_tripwire_is_silent_when_the_evidence_states_every_claim(tmp_path):
+    row = _review_proof("a" * 40)
+    evidence = tmp_path / "review-0001.md"
+    evidence.write_text(_attestation(row), encoding="utf-8", newline="\n")
+    status, why = br.check_evidence_consistency(row, evidence)
+    assert status == "consistent", why
+    assert "establishes nothing on its own" in why, (
+        "the recorded reason must not read as corroboration")
+
+
+@pytest.mark.parametrize("drop, missing", [
+    ("{source_commit}", "the source commit it reviewed"),
+    ("{conversation_id}", "its conversation id"),
+    ("Verdict: {verdict}", "its verdict"),
+    ("{resolved_model}", "the resolved model identity"),
+    ("independent", "its independence"),
+    ("Claude Code", "the claude host family"),
+    ("Codex CLI", "the codex host family"),
+])
+def test_a_claim_the_evidence_does_not_state_is_unstated(tmp_path, drop, missing):
+    """One claim removed at a time -- each is separately load-bearing.
+
+    Nothing else changes, so a PASS here cannot come from the document being
+    broken in general; it comes from exactly the claim that was taken out. The
+    model ids are deliberately distinct from each other and from both family
+    names, so no axis can be satisfied by another axis's text.
+    """
+    row = _review_proof("a" * 40, requested_model="requested-model-a",
+                        resolved_model="resolved-model-b")
+    body = REVIEW_ATTESTATION.replace(drop, "")
+    evidence = tmp_path / "review-0001.md"
+    evidence.write_text(body.format(**{
+        key: ("" if row.get(key) is None else row.get(key, ""))
+        for key in ("source_commit", "conversation_id", "requested_model",
+                    "resolved_model", "resolution_status", "identity_waiver",
+                    "verdict")}), encoding="utf-8", newline="\n")
+    status, why = br.check_evidence_consistency(row, evidence)
+    assert status == "unstated", why
+    assert missing in why
+
+
+def test_the_generic_placeholder_evidence_is_not_consistent(tmp_path):
+    """The exact one-liner a caller would hand-write, refused on its content."""
+    row = _review_proof("a" * 40)
+    evidence = tmp_path / "review-0001.md"
+    evidence.write_text(GENERIC_EVIDENCE, encoding="utf-8", newline="\n")
+    status, why = br.check_evidence_consistency(row, evidence)
+    assert status == "unstated", why
+    assert "the source commit it reviewed" in why
+
+
+def test_absent_and_unreadable_evidence_are_both_fail_closed(tmp_path):
+    row = _review_proof("a" * 40)
+    assert br.check_evidence_consistency(row, None)[0] == "no-evidence"
+    assert br.check_evidence_consistency(row, tmp_path / "absent.md")[0] == "no-evidence"
+    binary = tmp_path / "review-0001.md"
+    binary.write_bytes(b"\xff\xfe\x00\x01 not utf-8 text \xff")
+    assert br.check_evidence_consistency(row, binary)[0] == "evidence-unreadable"
+
+
+def test_the_consistency_vocabulary_is_closed_and_every_value_is_reachable(tmp_path):
+    """No status escapes the published vocabulary, and none of it is dead wording."""
+    row = _review_proof("a" * 40)
+    good = tmp_path / "good.md"
+    good.write_text(_attestation(row), encoding="utf-8", newline="\n")
+    generic = tmp_path / "generic.md"
+    generic.write_text(GENERIC_EVIDENCE, encoding="utf-8", newline="\n")
+    denied = tmp_path / "denied.md"
+    denied.write_text(_attestation(row).replace(
+        "This review was conducted independent of the implementation.",
+        "This review was NOT independent of the implementation."),
+        encoding="utf-8", newline="\n")
+    binary = tmp_path / "binary.md"
+    binary.write_bytes(b"\xff\xfe\x00\x01")
+    observed = {br.check_evidence_consistency(row, path)[0]
+                for path in (good, generic, denied, binary, None, tmp_path / "absent.md")}
+    assert observed == set(br.EVIDENCE_CONSISTENCY_VALUES), observed
+    assert "corroborated" not in br.EVIDENCE_CONSISTENCY_VALUES, (
+        "the record must never claim a word the tool cannot earn")
+
+
+def test_the_tripwire_is_token_matched_not_substring_matched(tmp_path):
+    """'bypassed' is not a PASS verdict, and a narrower model id is another model."""
+    row = _review_proof("a" * 40, resolved_model="claude-opus-4.5")
+    evidence = tmp_path / "review-0001.md"
+    body = _attestation(_review_proof("a" * 40, resolved_model="claude-opus-4"))
+    evidence.write_text(body.replace("Verdict: PASS", "Verdict: bypassed"),
+                        encoding="utf-8", newline="\n")
+    status, why = br.check_evidence_consistency(row, evidence)
+    assert status == "unstated", why
+    assert "its verdict" in why, "'bypassed' must not satisfy a claimed PASS verdict"
+    assert "the resolved model identity" in why, (
+        "a document naming a different model must not read as consistent with this one")
+
+
+def test_the_round_2_bypass_document_is_caught_by_the_tripwire(tmp_path):
+    """CALIBRATED against the executed round-2 bypass, from ONE fixture.
+
+    Green arm: the row and a document that states its claims -> consistent.
+    Red arm: the SAME row, and the verbatim document round 2 used to reach
+    QUALIFIED through the presence-only matcher -> contradicted, naming the
+    claims the document denies. Nothing but the document body differs, so the
+    red arm is attributable to the document and the test is demonstrably able
+    to fail.
+    """
+    row = _review_proof("a" * 40, **ROUND2_BYPASS_ROW)
+
+    green = tmp_path / "green.md"
+    green.write_text(_attestation(row), encoding="utf-8", newline="\n")
+    assert br.check_evidence_consistency(row, green)[0] == "consistent", (
+        "green arm of the calibration: the fixture must be able to pass")
+
+    red = tmp_path / "red.md"
+    red.write_text(ROUND2_BYPASS_EVIDENCE.format(source_commit=row["source_commit"]),
+                   encoding="utf-8", newline="\n")
+    text = red.read_text(encoding="utf-8")
+    for token in ("NOT independent", "NOT cross-family", "NOT PASS -- it FAILED"):
+        assert token in text, "the pinned bypass document lost %r" % token
+    for needle in (row["source_commit"], "conv-777", "gpt-5-codex", "claude",
+                   "codex", "independent", "PASS"):
+        assert br._states(text.lower(), needle), (
+            "the bypass only works because %r IS present as a token; a document "
+            "missing it would be caught as merely unstated instead" % needle)
+
+    status, why = br.check_evidence_consistency(row, red)
+    assert status == "contradicted", why
+    assert "its independence" in why and "its verdict" in why, why
+
+
+def test_a_negation_elsewhere_in_the_document_does_not_trip_the_wire(tmp_path):
+    """The tripwire is clause-scoped, so a clean review does not read as denied.
+
+    Real review prose carries negations ("no blocking defects were found"). Were
+    the wire document-scoped it would fire on every honest document, and an
+    always-red tripwire is the same as no tripwire.
+    """
+    row = _review_proof("a" * 40)
+    evidence = tmp_path / "review-0001.md"
+    evidence.write_text(
+        _attestation(row).replace(
+            "Verdict: PASS",
+            "No blocking defects were found and nothing was waived. Verdict: PASS"),
+        encoding="utf-8", newline="\n")
+    status, why = br.check_evidence_consistency(row, evidence)
+    assert status == "consistent", why
+
+
+def test_the_tripwire_is_not_claimed_to_be_a_negation_detector():
+    """The module says out loud what its own tripwire cannot do.
+
+    An incomplete detector is only safe while nothing treats a miss as a pass.
+    That safety rests on the docstring's stated contract plus `review_qualifies`
+    requiring the attestation, so the statement is load-bearing and pinned.
+    """
+    doc = br.__doc__
+    assert "NEGATIVE-ONLY" in doc
+    assert "upgrades NOTHING on its own" in doc
+    assert "falls through to the attestation requirement" in doc
+    assert "a named party can still attest a review that" in doc, (
+        "the module must state plainly what it gives up")
+
+
+def test_a_forged_proofs_row_with_unrelated_evidence_never_qualifies(lab_repo, tmp_path):
+    """The evidence-forgery scenario, end to end -- WITH the attestation present.
+
+    A hand-written proofs row that claims independence, a PASS verdict,
+    cross-family coverage and a resolved model -- pointed at a file that says
+    none of it, and attested by a named party anyway. The attestation is the
+    POSITIVE signal, but it cannot outrank a falsification: the tripwire fires,
+    the row is still RECORDED and marked (never silently dropped), it is named in
+    known_gaps, and it cannot carry the release to QUALIFIED.
+    """
+    root, commit = lab_repo
+    proofs = _write_proofs(tmp_path / "proofs", [_review_proof(commit)],
+                           body="unrelated notes, nothing to do with a review\n")
+    store = tmp_path / "store"
+    result = _release("lab", root, commit, "v0.1.0-experimental.1", store, proofs=proofs,
+                      attest=ATTESTING_PARTY)
+    assert result.returncode == 0, result.stdout + result.stderr
+    record = _record(store / "skill-mesh-lab" / "v0.1.0-experimental.1")
+    assert record["qualification"] == "INCOMPLETE", (
+        "a falsified claim must never reach QUALIFIED, attested or not")
+    assert len(record["reviews"]) == 1, "the forged row was silently dropped"
+    assert record["reviews"][0]["import_status"] == "imported", (
+        "the evidence file resolved; it is its CONTENT the tripwire refuses")
+    assert record["reviews"][0]["evidence_consistency"] == "unstated"
+    assert record["reviews"][0]["attested_by"] == ATTESTING_PARTY, (
+        "the attestation is recorded even when the tripwire refuses the row")
+    assert any("evidence-consistency tripwire" in gap for gap in record["known_gaps"])
+    assert any("not stated by, the evidence it cites" in reason
+               for reason in record["qualification_reasons"])
+    assert (store / "skill-mesh-lab" / "v0.1.0-experimental.1" / "source.zip").is_file(), (
+        "falsified evidence still keeps the archive")
+
+
+def test_a_toolkit_release_with_forged_review_evidence_is_not_qualified(
+        kit_repo, tmp_path):
+    """Every required gate green, review evidence unrelated: still not QUALIFIED.
+
+    This is the gate the charter exists to protect -- the toolkit is the product
+    whose QUALIFIED claim would be published -- so it is proven on the toolkit
+    path, not only on the cheaper lab one. The attestation is supplied, so the
+    refusal is the tripwire's and not a missing flag's.
+    """
+    if PWSH is None:
+        pytest.skip("powershell is not available on PATH")
+    root, commit = kit_repo
+    proofs = _write_proofs(tmp_path / "proofs", [_review_proof(commit)],
+                           body="unrelated notes, nothing to do with a review\n")
+    store = tmp_path / "store"
+    result = _release("toolkit", root, commit, "v0.1.0-baseline.1", store, proofs=proofs,
+                      attest=ATTESTING_PARTY)
+    assert result.returncode == 1, result.stdout + result.stderr
+    assert not (store / "skill-mesh" / "v0.1.0-baseline.1").exists(), (
+        "a forged review must not reserve the version name")
+    record = _record(_attempt_dirs(store)[0])
+    assert record["qualification"] == "INCOMPLETE", record["qualification_reasons"]
+    assert all(row["exit_code"] == 0 for row in record["checks"]
+               if row["execution"] == "native"), (
+        "the gates were green; only the review evidence failed the tripwire")
+    assert record["reviews"][0]["evidence_consistency"] == "unstated"
+    assert record["reviews"][0]["attested_by"] == ATTESTING_PARTY
+
+
+def test_the_round_2_bypass_cannot_reach_qualified_end_to_end(lab_repo, tmp_path):
+    """CALIBRATED, end to end, from ONE fixture: the row, the flag, two documents.
+
+    GREEN arm -- the row, a document that states its claims, and
+    `--attest-reviews` -- reaches QUALIFIED. That is what makes the RED arm
+    meaningful: the release path is demonstrably able to qualify here, so the red
+    arm's INCOMPLETE is attributable to the evidence document alone.
+
+    RED arm -- the identical row and flag, pointed at the verbatim document round
+    2 used to defeat the presence-only matcher. Read by a human it says the
+    review was not independent, not cross-family, and FAILED. It must not
+    qualify, and everything must still be retained and marked.
+    """
+    root, commit = lab_repo
+    row = _review_proof(commit, **ROUND2_BYPASS_ROW)
+
+    green_store = tmp_path / "green-store"
+    green_proofs = _write_proofs(tmp_path / "green-proofs", [dict(row)])
+    green = _release("lab", root, commit, "v0.1.0-experimental.1", green_store,
+                     proofs=green_proofs, attest=ATTESTING_PARTY)
+    assert green.returncode == 0, green.stdout + green.stderr
+    green_record = _record(green_store / "skill-mesh-lab" / "v0.1.0-experimental.1")
+    assert green_record["qualification"] == "QUALIFIED", (
+        "green arm of the calibration: %s" % green_record["qualification_reasons"])
+
+    red_store = tmp_path / "red-store"
+    red_proofs = _write_proofs(
+        tmp_path / "red-proofs", [dict(row)],
+        body=ROUND2_BYPASS_EVIDENCE.format(source_commit=commit))
+    red = _release("lab", root, commit, "v0.1.0-experimental.1", red_store,
+                   proofs=red_proofs, attest=ATTESTING_PARTY)
+    assert red.returncode == 0, red.stdout + red.stderr
+    red_record = _record(red_store / "skill-mesh-lab" / "v0.1.0-experimental.1")
+    assert red_record["qualification"] == "INCOMPLETE", (
+        "a document that says the review FAILED reached QUALIFIED")
+    review = red_record["reviews"][0]
+    assert review["evidence_consistency"] == "contradicted"
+    assert review["import_status"] == "imported", "nothing was silently dropped"
+    assert review["attested_by"] == ATTESTING_PARTY
+    assert (red_store / "skill-mesh-lab" / "v0.1.0-experimental.1"
+            / review["evidence"]).is_file(), "the cited document is retained verbatim"
+    assert any("DENIES" in gap for gap in red_record["known_gaps"])
+
+
+# --------------------------------------------------------------------------- #
+# The attestation act -- the one POSITIVE signal on the review path
+# --------------------------------------------------------------------------- #
+
+def test_without_the_attestation_act_a_perfect_review_is_only_incomplete(
+        lab_repo, tmp_path):
+    """CALIBRATED on the flag alone, from ONE fixture.
+
+    Same repo, same row, same evidence document, same store layout -- the ONLY
+    difference between the two arms is `--attest-reviews`. Without it the release
+    is INCOMPLETE with the archive retained, the row retained and marked, and a
+    reason naming the missing act; with it the row records `attested_by` and the
+    release qualifies.
+    """
+    root, commit = lab_repo
+    rows = [_review_proof(commit)]
+
+    bare_store = tmp_path / "bare-store"
+    bare_proofs = _write_proofs(tmp_path / "bare-proofs", rows)
+    bare = _release("lab", root, commit, "v0.1.0-experimental.1", bare_store,
+                    proofs=bare_proofs)
+    assert bare.returncode == 0, bare.stdout + bare.stderr
+    bare_dir = bare_store / "skill-mesh-lab" / "v0.1.0-experimental.1"
+    bare_record = _record(bare_dir)
+    assert bare_record["qualification"] == "INCOMPLETE"
+    review = bare_record["reviews"][0]
+    assert review["attested_by"] is None, "no flag, no attestation -- and it is explicit"
+    assert review["evidence_consistency"] == "consistent", (
+        "the tripwire is silent here; the ONLY thing missing is the named act")
+    assert review["import_status"] == "imported", "the row is retained and marked"
+    assert (bare_dir / "source.zip").is_file(), "the archive is retained"
+    assert (bare_dir / review["evidence"]).is_file(), "the evidence is retained"
+    assert any("--attest-reviews" in gap for gap in bare_record["known_gaps"])
+    assert any("--attest-reviews" in reason
+               for reason in bare_record["qualification_reasons"])
+
+    named_store = tmp_path / "named-store"
+    named_proofs = _write_proofs(tmp_path / "named-proofs", rows)
+    named = _release("lab", root, commit, "v0.1.0-experimental.1", named_store,
+                     proofs=named_proofs, attest=ATTESTING_PARTY)
+    assert named.returncode == 0, named.stdout + named.stderr
+    named_record = _record(named_store / "skill-mesh-lab" / "v0.1.0-experimental.1")
+    assert named_record["reviews"][0]["attested_by"] == ATTESTING_PARTY
+    assert named_record["qualification"] == "QUALIFIED", (
+        "green arm of the calibration: %s" % named_record["qualification_reasons"])
+
+
+def test_the_attestation_cannot_be_carried_by_the_proofs_document(lab_repo, tmp_path):
+    """A reused proofs file may never smuggle the attestation forward.
+
+    The act is a CLI flag precisely so that re-running a historical proofs JSON
+    cannot silently re-attest it. A row that writes `attested_by` itself must be
+    ignored, not honoured.
+    """
+    root, commit = lab_repo
+    row = _review_proof(commit)
+    row["attested_by"] = "somebody who never ran this"
+    proofs = _write_proofs(tmp_path / "proofs", [row])
+    store = tmp_path / "store"
+    result = _release("lab", root, commit, "v0.1.0-experimental.1", store, proofs=proofs)
+    assert result.returncode == 0, result.stdout + result.stderr
+    record = _record(store / "skill-mesh-lab" / "v0.1.0-experimental.1")
+    assert record["reviews"][0]["attested_by"] is None, (
+        "a --proofs field was promoted into the attestation")
+    assert record["qualification"] == "INCOMPLETE"
+
+
+def test_the_attestation_is_published_on_the_review_row_in_the_notes(lab_repo, tmp_path):
+    """The public notes must name the accountable party, or QUALIFIED is unreadable."""
+    root, commit = lab_repo
+    proofs = _write_proofs(tmp_path / "proofs", [_review_proof(commit)])
+    store = tmp_path / "store"
+    result = _release("lab", root, commit, "v0.1.0-experimental.1", store, proofs=proofs,
+                      attest=ATTESTING_PARTY)
+    assert result.returncode == 0, result.stdout + result.stderr
+    notes = (store / "skill-mesh-lab" / "v0.1.0-experimental.1"
+             / "release-notes.md").read_text(encoding="utf-8")
+    assert "Attested by" in notes, "the notes hide who stands behind the review"
+    assert ATTESTING_PARTY in notes
+    assert "does not run or verify a cross-family review" in notes, (
+        "the notes must not let a reader mistake attestation for verification")
+
+
+@pytest.mark.parametrize("attest, expected", [
+    ("x" * 150, "longer than"),
+    ("<accountable party>", "unresolved placeholder"),
+    ("C" + ":/Users/someone/notes", "absolute user path"),
+])
+def test_a_malformed_attestation_name_is_an_input_error(lab_repo, tmp_path, attest,
+                                                        expected):
+    """The name is PUBLISHED, so it is bounded like every other public caller string.
+
+    The absolute-path case is refused UP FRONT (exit 2), not at the end-of-run
+    leak guard: reaching that one would mean paying for a whole release first.
+    """
+    root, commit = lab_repo
+    proofs = _write_proofs(tmp_path / "proofs", [_review_proof(commit)])
+    result = _release("lab", root, commit, "v0.1.0-experimental.1", tmp_path / "store",
+                      proofs=proofs, attest=attest)
+    assert result.returncode == 2, result.stdout + result.stderr
+    assert expected in (result.stdout + result.stderr)
+    assert not (tmp_path / "store").exists(), "the refused run wrote a store anyway"
+
+
+def test_attesting_without_any_attached_review_is_an_input_error(lab_repo, tmp_path):
+    """Naming a party for evidence that was never attached is a mistake, not a pass."""
+    root, commit = lab_repo
+    result = _release("lab", root, commit, "v0.1.0-experimental.1", tmp_path / "store",
+                      attest=ATTESTING_PARTY)
+    assert result.returncode == 2, result.stdout + result.stderr
+    assert "--attest-reviews was given without --proofs" in (result.stdout + result.stderr)
+
+
+# --------------------------------------------------------------------------- #
+# Evidence-path safety inside the proof importer
+# --------------------------------------------------------------------------- #
+
+@pytest.mark.parametrize("rel", ["../outside.md", "a/../../outside.md", "/etc/passwd",
+                                 "C" + ":/Users/someone/evidence.md"])
+def test_an_unsafe_evidence_path_is_refused_by_the_importer(tmp_path, rel):
+    """Defence in depth: load_proofs rejects these at parse time, but the copier
+    must never resolve one on its own if it is ever called from elsewhere."""
+    proofs_dir = tmp_path / "proofs"
+    proofs_dir.mkdir()
+    (tmp_path / "outside.md").write_text("secret\n", encoding="utf-8")
+    relpath, status = br._import_evidence(proofs_dir, rel, tmp_path / "dest", 0)
+    assert relpath is None
+    assert status == "unsafe-evidence-path"
+    assert not (tmp_path / "dest").exists(), "nothing may be copied for a refused path"
+
+
+def test_evidence_reached_through_a_link_out_of_the_proofs_directory_is_refused(tmp_path):
+    """A name that is contained but RESOLVES outside is the traversal that matters."""
+    proofs_dir = tmp_path / "proofs"
+    proofs_dir.mkdir()
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    (outside / "evidence.md").write_text("private material\n", encoding="utf-8")
+    link = proofs_dir / "linked"
+    made = subprocess.run(["cmd", "/c", "mklink", "/J", str(link), str(outside)],
+                          capture_output=True, text=True)
+    if made.returncode != 0 or not link.exists():
+        try:
+            link.symlink_to(outside, target_is_directory=True)
+        except (OSError, NotImplementedError):
+            pytest.skip("could not create a link on this machine")
+    relpath, status = br._import_evidence(proofs_dir, "linked/evidence.md",
+                                          tmp_path / "dest", 0)
+    assert relpath is None
+    assert status == "evidence-escapes-proofs-directory"
+    assert not (tmp_path / "dest").exists(), "nothing may be copied for an escaping path"
+
+
+# --------------------------------------------------------------------------- #
+# Qualification arithmetic (pure, no subprocess)
+# --------------------------------------------------------------------------- #
+
+def _native(name, exit_code):
+    return {"name": name, "execution": "native", "exit_code": exit_code,
+            "evidence": "checks/%s.txt" % name}
+
+
+def test_a_failed_gate_is_blocked_never_qualified():
+    checks = [_native("source-pytest", 1)]
+    verdict, reasons = br.compute_qualification("lab", checks, [], "a" * 40)
+    assert verdict == "BLOCKED"
+    assert any("exited 1" in reason for reason in reasons)
+
+
+def test_a_missing_gate_is_incomplete_never_qualified():
+    checks = [_native("source-pytest", 0)]
+    verdict, _ = br.compute_qualification("toolkit", checks, [], "a" * 40)
+    assert verdict == "INCOMPLETE", "a missing toolkit gate must not produce QUALIFIED"
+
+
+def test_all_gates_plus_a_charter_review_is_qualified():
+    commit = "a" * 40
+    checks = [_native(name, 0) for name in
+              ("source-pytest", "staged-release", "artifact-verification")]
+    verdict, reasons = br.compute_qualification(
+        "toolkit", checks, [_qualifying_row(commit)], commit)
+    assert verdict == "QUALIFIED", reasons
+
+
+def test_a_falsified_review_leaves_a_fully_green_toolkit_incomplete():
+    """The arithmetic counterpart of the forgery anchor: green gates are not enough."""
+    commit = "a" * 40
+    checks = [_native(name, 0) for name in
+              ("source-pytest", "staged-release", "artifact-verification")]
+    row = _qualifying_row(commit)
+    row["evidence_consistency"] = "contradicted"
+    verdict, reasons = br.compute_qualification("toolkit", checks, [row], commit)
+    assert verdict == "INCOMPLETE"
+    assert any("not stated by, the evidence it cites" in reason for reason in reasons)
+
+
+def test_an_unattested_review_leaves_a_fully_green_toolkit_incomplete():
+    """Green gates plus a silent tripwire still do not qualify without the named act."""
+    commit = "a" * 40
+    checks = [_native(name, 0) for name in
+              ("source-pytest", "staged-release", "artifact-verification")]
+    row = _qualifying_row(commit)
+    row["attested_by"] = None
+    verdict, reasons = br.compute_qualification("toolkit", checks, [row], commit)
+    assert verdict == "INCOMPLETE"
+    assert any("--attest-reviews" in reason for reason in reasons)
+
+
+def test_exit_code_policy():
+    assert br.release_exit_code("lab", "INCOMPLETE") == 0, (
+        "retaining an explicitly incomplete lab archive is a success")
+    assert br.release_exit_code("lab", "QUALIFIED") == 0
+    assert br.release_exit_code("lab", "BLOCKED") == 1
+    assert br.release_exit_code("toolkit", "QUALIFIED") == 0
+    assert br.release_exit_code("toolkit", "INCOMPLETE") == 1
+    assert br.release_exit_code("toolkit", "BLOCKED") == 1
+
+
+# --------------------------------------------------------------------------- #
+# Runbook
+# --------------------------------------------------------------------------- #
+
+def test_runbook_exists_and_covers_the_operator_path():
+    runbook = REPO_ROOT / "documentation" / "baseline-release-runbook.md"
+    assert runbook.is_file(), "missing %s" % runbook
+    text = runbook.read_text(encoding="utf-8")
+    for token in ("tools/baseline_release.py", "--source-root", "--source-commit",
+                  "--version", "--store", "--python-exe", "--proofs",
+                  "--attest-reviews", "attested_by", "evidence_consistency",
+                  "Exit code", "verify-artifacts.py", ".attempts"):
+        assert token in text, "the runbook never mentions %s" % token
+    assert br.PRIVATE_PATH_RE.search(text) is None, (
+        "the runbook carries an absolute user path; use placeholders")
+
+
+def test_the_runbook_does_not_over_claim_what_the_tool_establishes():
+    """The docs must say what the tool does NOT do, or an operator will assume it does.
+
+    An honest tool paired with documentation that implies verification is still
+    an over-claim -- the reader acts on the documentation. Both halves are
+    asserted: the disclaimed capability, and the word the record deliberately
+    stopped using.
+    """
+    text = (REPO_ROOT / "documentation" / "baseline-release-runbook.md").read_text(
+        encoding="utf-8")
+    assert "ATTESTED, not verified" in text
+    for claim in ("does not run, and cannot verify, a cross-family review",
+                  "negative-only", "upgrades nothing on its own",
+                  "can still attest a review that did not happen"):
+        assert claim in text, "the runbook never states %r" % claim
+    assert "corroborat" not in text.lower(), (
+        "the runbook still uses the word the record stopped claiming")
