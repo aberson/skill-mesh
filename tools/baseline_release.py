@@ -43,9 +43,11 @@ EXIT CODES
     2  bad input or a precondition failure (bad flag, placeholder path, unsafe
        version, unresolvable commit, malformed proofs, release-ID collision).
     1  execution or IO failure -- including a QUALIFICATION FAILURE. Whatever was
-       built is RETAINED and NAMED on the way out: a failed qualification prints
-       its COMPLETE `.attempts/<uuid>/` directory and receipt paths, and a run
-       that aborts mid-build prints the PARTIAL stage kept at `.aborted/<uuid>/`.
+       built is RETAINED and NAMED on the way out, in the directory its CONTENTS
+       belong in: a COMPLETE payload (a failed qualification, or a build that lost
+       its version name) under `.attempts/<uuid>/`, a PARTIAL build under
+       `.aborted/<uuid>/`, and if neither move is possible, the staging directory
+       under its own name. One of those paths is printed with every such failure.
 
 STORE LAYOUT
 ------------
@@ -70,19 +72,26 @@ STORE LAYOUT
         CHECKSUMS.txt                   toolkit only -- the ORIGINAL normalized
                                         manifest produced by release.ps1
         dist/{claude,gpt,codex}/        toolkit only -- the built profiles
-    <store>/.attempts/<uuid>/           a qualification FAILURE, retained whole.
-                                        It does NOT reserve the version name; a
-                                        retry allocates a new attempt and never
-                                        disturbs this one. Nothing is ever
-                                        deleted automatically.
-    <store>/.aborted/<uuid>/            the PARTIAL build of a run that aborted
-                                        before it could publish or retain an
-                                        attempt. NOT a release and NOT an attempt:
-                                        it may have no release.json. Its path is
-                                        printed with the failure; nothing is ever
-                                        deleted automatically.
+    <store>/.attempts/<uuid>/           a COMPLETE payload that was not published
+                                        -- a qualification failure, or a build
+                                        that finished and then could not take its
+                                        version name. It does NOT reserve the
+                                        version name; a retry allocates a new
+                                        attempt and never disturbs this one.
+                                        Nothing is ever deleted automatically.
+    <store>/.aborted/<uuid>/            a PARTIAL build: the run failed before the
+                                        payload was finished. NOT a release and
+                                        NOT an attempt: it may have no
+                                        release.json. Its path is printed with the
+                                        failure; nothing is ever deleted
+                                        automatically.
     <store>/<product>/.staging-<uuid>/  build scratch, published by ONE rename
     <store>/.work/<uuid>/               disposable checkout + release stage
+
+Which of the two retention directories a failed run lands in is decided by what
+the stage CONTAINS (stage_bucket), read off the disk -- never by which exception
+was in flight. If neither move is possible the payload keeps its staging path, and
+that path is printed with the same description of what it holds.
 
 THREE CHECKSUM CONCEPTS, DELIBERATELY SEPARATE
 ----------------------------------------------
@@ -192,6 +201,7 @@ import os
 import platform
 import re
 import shutil
+import signal
 import stat
 import subprocess
 import sys
@@ -256,23 +266,33 @@ RESERVED_SEGMENTS = frozenset(
 #:
 #: The lookbehind is what keeps the POSIX branch off a string that merely CONTAINS
 #: the segment: a repo-relative `docs/Users/x` and a URL
-#: `https://example.com/Users/octocat` are preceded by a path character, while a
-#: genuinely absolute `/home/...` is preceded by nothing, a quote, a space or a
-#: separator.
+#: `https://example.com/Users/octocat` are preceded by a path character, while in
+#: every shape this gate has been measured against -- the red set in
+#: tests/release/test_baseline_release.py -- a genuinely absolute `/home/...` is
+#: preceded by nothing, a quote, a space, a separator or a redirect.
 #:
-#: The lookbehind does NOT cover this tool's own recorded spelling, and is
-#: deliberately not widened to: a record writes a path as `<token>/tail`
-#: (PATH_TOKEN_DOC below) and every token closes with `>`, so `<store>/home/x` --
-#: a perfectly safe relative tail under a token root -- reads to this pattern as
-#: an absolute POSIX home. Adding `>` to the excluded class would fix that by
-#: also exempting the shell-redirect spelling `>/home/someone/log`, buying a
-#: false NEGATIVE in captured text to pay for a false positive. So the token
-#: convention is normalized OUT of the text BEFORE the pattern is applied.
+#: KNOWN FALSE POSITIVE, ACCEPTED DELIBERATELY. This tool's own records spell a
+#: path as `<token>/tail` (PATH_TOKEN_DOC below) and every token closes with `>`,
+#: which is not in the excluded class -- so `<store>/home/x`, a relative tail
+#: under a token root, reads here as an absolute POSIX home and is REFUSED. Two
+#: exemptions were measured and both buy a false NEGATIVE, which a fail-closed
+#: gate may not have:
 #:
-#: APPLY THIS PATTERN THROUGH contains_private_path(), NOT DIRECTLY. That helper
-#: is the one predicate that does the normalization, and every caller in this
-#: module uses it. Matching this regex against raw text that may carry a
-#: documented token is exactly the shape that refuses an honest release.
+#:   * adding `>` to the excluded class also exempts the shell-redirect spelling
+#:     `>/home/someone/log`;
+#:   * substituting the documented tokens out before matching (the shape this
+#:     file carried into Step 147's review round 2) exempts a caller-supplied
+#:     `<source-checkout>/home/<user>/leak` exactly as readily -- a `--proofs`
+#:     field and a tool-emitted argv entry are the SAME BYTES, so no textual rule
+#:     can separate them. Measured: 3 real leaks passed, in a red set of 13.
+#:
+#: A false positive costs one refused run with a legible message; a false
+#: negative publishes a machine-specific path and the gate says nothing. So the
+#: false positive is KEPT, and the runbook documents it (section 9) with its
+#: workaround. Do not close it by exempting a lexeme.
+#:
+#: APPLY THIS PATTERN THROUGH contains_private_path(), NOT DIRECTLY: that helper
+#: is the ONE predicate, and every caller in this module goes through it.
 PRIVATE_PATH_RE = re.compile(
     r"[A-Za-z]:[\\/]Users[\\/](?!<)"
     r"|(?<![A-Za-z0-9_.~%-])/(?:home|Users)/(?!<)"
@@ -324,6 +344,12 @@ TIMEOUT_PROBE = 300
 #: Bytes read per hashing chunk.
 _CHUNK = 1 << 20
 
+#: What _kill_process_tree sends to a timed-out child's PROCESS GROUP on POSIX.
+#: SIGKILL wherever it exists, which is every POSIX host; the fallback is here
+#: only so this module imports and stays testable on Windows, where the branch
+#: that reads it is not taken (`taskkill /T` covers that side).
+_GROUP_KILL_SIGNAL = getattr(signal, "SIGKILL", signal.SIGTERM)
+
 PATH_TOKEN_DOC = {
     "<python-exe>": "the interpreter supplied by --python-exe; its VERSION is recorded in environment.python",
     "<powershell>": "the Windows PowerShell 5.1 host; its VERSION is recorded in environment.powershell",
@@ -335,20 +361,10 @@ PATH_TOKEN_DOC = {
     "<proofs>": "the --proofs file supplied by the caller",
 }
 
-#: The documented tokens as a pattern, DERIVED from PATH_TOKEN_DOC rather than
-#: re-listed: a token added there is exempted by contains_private_path() the same
-#: day, with no second list to keep in sync. Longest first so one token can never
-#: be matched as a prefix of another.
-_PATH_TOKEN_RE = re.compile(
-    "|".join(re.escape(token)
-             for token in sorted(PATH_TOKEN_DOC, key=len, reverse=True)))
-
-#: What a token is replaced by before the leak scan. Alphanumeric on purpose: it
-#: lands in PRIVATE_PATH_RE's excluded lookbehind class, so `<store>/home/x`
-#: becomes `t/home/x` and reads as the repo-relative tail it actually is. It
-#: contains no separator, no `>` and neither `home` nor `Users`, so it can
-#: neither create a match nor hide one.
-_PATH_TOKEN_SENTINEL = "t"
+#: A documented token is NOT exempt from the leak scan. See PRIVATE_PATH_RE's
+#: "KNOWN FALSE POSITIVE" note above: the exemption was implemented, measured,
+#: and removed because it let a caller-supplied path through the one gate that
+#: exists to stop it.
 
 CHECKSUM_SEMANTICS = {
     "artifacts": "raw SHA-256 over each retained file's bytes; excludes release.json and SHA256SUMS to avoid recursive hashing",
@@ -441,10 +457,12 @@ def md_inline(value, code: bool = False) -> str:
 
     Emphasis markers and backticks are deliberately NOT escaped in plain-text
     mode: this path also carries this module's OWN prose, which uses them
-    intentionally. That makes plain-text mode a path for AUTHORED prose and for
-    closed-vocabulary or machine-measured values ONLY -- never for caller text.
-    Anything the caller supplied takes one of the two neutralizing paths instead,
-    and which one depends on how it ARRIVES at the sink:
+    intentionally. So plain-text mode is for AUTHORED prose, tool-set enums and
+    VALIDATED machine-typed values (a bool that load_proofs already type-checked)
+    -- it carries no free-form caller string today. Read that as a CONVENTION the
+    render sites keep, NOT as a mechanism this function enforces: md_inline()
+    cannot tell where its argument came from. The mechanism lives one level up,
+    and which one applies depends on how a caller value ARRIVES at the sink:
 
     * md_code() -- the value is still intact and separately addressable when the
       sink sees it (a table cell). A CommonMark renderer escapes a code span's
@@ -456,6 +474,10 @@ def md_inline(value, code: bool = False) -> str:
 
     CODE-SPAN MODE (`code=True`) escapes nothing except the backtick and the
     pipe, because entity text inside a code span would render as the entity.
+
+    SCOPE: all three of these helpers neutralize MARKDOWN. None of them grades
+    whether the text can be ENCODED -- that is reject_unencodable()'s job at the
+    caller boundary -- and none of them is a private-path check.
     """
     text = str(value)
     for ws in ("\r\n", "\r", "\n", "\t"):
@@ -513,6 +535,12 @@ def md_untrusted(value) -> str:
     while under-escaping is the defect itself -- caller text restructuring the
     "why this release is not QUALIFIED" disclosure that this tool exists to
     publish honestly.
+
+    WHAT IT DOES NOT DO: it neutralizes Markdown STRUCTURE. It does not shorten,
+    redact or sanitize the text's CONTENT, it does not check the text for a
+    machine-specific path (contains_private_path and the end-of-run scan do
+    that), and it does not check that the text is encodable (reject_unencodable
+    does that, at the caller boundary).
     """
     text = str(value)
     for ws in ("\r\n", "\r", "\n", "\t"):
@@ -541,12 +569,31 @@ def _kill_process_tree(proc) -> None:
     timeout can leave that grandchild alive, holding open file handles inside the
     disposable checkout that `remove_disposable_workspace` then cannot clear --
     its retry/chmod loop cannot force-close a handle a live process still holds.
+
+    One mechanism per platform, because only a `toolkit` run requires PowerShell
+    and a `lab` run can legitimately be cut on a non-Windows machine:
+
+      * Windows -- `taskkill /T /F`, which walks the child's descendant tree;
+      * POSIX -- SIGKILL to the child's PROCESS GROUP. run() starts every child
+        in a new session there, so the child leads a group of its own and that
+        group holds the descendants it did not itself detach.
+
+    BOUNDED on both, and deliberately not claimed as total: a descendant that has
+    left the tree (Windows) or called setsid/setpgid for itself (POSIX) is
+    outside what either mechanism reaches. Nothing in a retained release depends
+    on this working -- remove_disposable_workspace warns rather than failing when
+    scratch survives.
     """
     if os.name == "nt":
         try:
             subprocess.run(["taskkill", "/T", "/F", "/PID", str(proc.pid)],
                            capture_output=True, timeout=60)
         except (OSError, subprocess.SubprocessError):
+            pass
+    else:
+        try:
+            os.killpg(os.getpgid(proc.pid), _GROUP_KILL_SIGNAL)
+        except (OSError, AttributeError):
             pass
     try:
         proc.kill()
@@ -569,7 +616,13 @@ def run(argv, cwd=None, timeout=None):
     be read back out of the evidence file. The declared encoding stays UTF-8 on
     purpose -- guessing the console codepage instead would silently mojibake
     genuinely-UTF-8 output, trading a visible escape for an invisible corruption.
+
+    On POSIX the child is started in a NEW SESSION so it leads its own process
+    group, which is what gives _kill_process_tree a group to signal on a timeout.
+    The kwarg is POSIX-only and is not passed on Windows at all, so Windows
+    behaviour here is byte-for-byte what it was; `taskkill /T` covers that side.
     """
+    session = {} if os.name == "nt" else {"start_new_session": True}
     proc = subprocess.Popen(
         [str(a) for a in argv],
         cwd=str(cwd) if cwd is not None else None,
@@ -577,6 +630,7 @@ def run(argv, cwd=None, timeout=None):
         stderr=subprocess.PIPE,
         encoding="utf-8",
         errors="backslashreplace",
+        **session
     )
     try:
         stdout, stderr = proc.communicate(timeout=timeout)
@@ -624,7 +678,52 @@ def assert_no_linked_ancestor(path: Path, label: str) -> None:
                 )
 
 
+def reject_unencodable(value, label: str) -> str:
+    """Refuse caller text that UTF-8 cannot encode. Returns the value.
+
+    Every artifact this tool writes is written as UTF-8, so a string UTF-8
+    cannot encode is not a rendering problem -- it is a value that CANNOT be
+    published. The reachable case is a lone UTF-16 surrogate: `json.loads`
+    accepts a `\\udNNN` escape in any `--proofs` string field and materializes a
+    real lone-surrogate `str`, and on POSIX `sys.argv` produces one for any
+    undecodable argument byte (surrogateescape). Neither md_untrusted(),
+    md_code() nor md_inline() removes it -- they neutralize MARKDOWN, not
+    encodability -- so without this the value reaches `write_text` and the
+    UnicodeEncodeError escapes as a traceback, taking the documented {0,1,2}
+    exit-code contract with it.
+
+    Refusing at the boundary rather than transcoding at the sink is the honest
+    choice: this tool RECORDS what the caller supplied, and silently replacing a
+    character with U+FFFD would publish something the caller did not write.
+
+    SCOPE, stated exactly: the two CALLER boundaries call this -- every element
+    of the invocation argv, and every string in the `--proofs` document. Text
+    this tool captures rather than receives cannot carry a surrogate (`run()`
+    decodes with `errors="backslashreplace"`, which emits ASCII, and every file
+    read is strict UTF-8). Text the FILESYSTEM supplies is not covered: a
+    filename can carry a surrogate on either platform, and that case is handled
+    only by main()'s UnicodeError clause -- exit 1 with a message, not a
+    traceback.
+    """
+    try:
+        str(value).encode("utf-8")
+    except UnicodeEncodeError as exc:
+        raise InputError(
+            "%s carries a character UTF-8 cannot encode at position %d (%s). Every "
+            "artifact this tool writes is UTF-8, so the value could not be published "
+            "as given; supply text this tool can record verbatim."
+            % (label, exc.start, exc.reason))
+    return value
+
+
 def reject_placeholder(value: str, label: str) -> str:
+    """Refuse an obviously unresolved placeholder value. Returns the value.
+
+    An operator who pastes a runbook line without resolving its variables must be
+    refused rather than acted on -- PLACEHOLDER_PATTERNS names each shape and the
+    message says which one fired. This grades the literal spelling only; it makes
+    no claim that a value which passes is usable.
+    """
     for pattern, why in PLACEHOLDER_PATTERNS:
         if pattern.search(value or ""):
             raise InputError(
@@ -635,6 +734,13 @@ def reject_placeholder(value: str, label: str) -> str:
 
 
 def validate_version(version: str) -> str:
+    """Refuse a `--version` that is not ONE safe path segment. Returns it.
+
+    The value becomes a directory name under the store, so it is held to
+    VERSION_RE (which rejects traversal, separators, drive letters and leading
+    punctuation by construction), a length ceiling, and the Windows reserved
+    device names that are unusable as a directory name whatever their spelling.
+    """
     reject_placeholder(version, "--version")
     if len(version) > VERSION_MAX_LEN:
         raise InputError("--version is longer than %d characters" % VERSION_MAX_LEN)
@@ -703,20 +809,31 @@ def walk_strings(obj):
 def contains_private_path(text) -> bool:
     """True when `text` carries a machine-specific absolute user path.
 
-    THE one predicate. PRIVATE_PATH_RE is never applied directly, because this
-    tool's own records spell a path as `<token>/tail` and a token closes with
-    `>` -- a character the pattern's lookbehind cannot exempt without also
-    exempting a shell redirect. So the documented tokens are substituted out
-    first, and what remains is graded as the relative tail it actually is.
+    THE one predicate: PRIVATE_PATH_RE applied directly, with no exemption and
+    no normalization. Every caller in this module goes through here, so "does
+    this text leak" has one owner and one answer.
 
-    The substitution can neither create nor hide a hit: no documented token
-    contains a separator, `home` or `Users`, and the sentinel is a single
-    alphanumeric. A real leak ADJACENT to a token still reds -- the Windows
-    branch has no lookbehind at all, and a POSIX home following a token is, by
-    the tokenization's own construction, a relative segment under that root.
+    FAIL-CLOSED, and what that costs. A string of the form `<token>/home/...` or
+    `<token>/Users/...` reds, even though this tool's own tokenizer can emit
+    exactly that shape for a product whose top-level directory is named `home`
+    or `Users`. That is a known false positive, accepted deliberately: the SAME
+    bytes are how a `--proofs` field smuggles a real absolute path past a gate
+    that exempts the token, so there is no textual rule that admits one and
+    refuses the other. See PRIVATE_PATH_RE's "KNOWN FALSE POSITIVE" note for the
+    measurement, and runbook section 9 for the operator-facing workaround.
+
+    What this does NOT establish: it grades the ABSOLUTE-USER-PATH shapes in
+    PRIVATE_PATH_RE and nothing else. It is not a general sanitizer, and a
+    machine-specific string that is not one of those shapes passes it.
     """
-    return PRIVATE_PATH_RE.search(
-        _PATH_TOKEN_RE.sub(_PATH_TOKEN_SENTINEL, str(text))) is not None
+    return PRIVATE_PATH_RE.search(str(text)) is not None
+
+
+#: The locator suffix that marks an artifact this gate could not READ, as
+#: opposed to one it read and found a path in. ONE definition: scan_private_paths
+#: writes it and _build_and_publish partitions on it, so the two can never drift
+#: into describing a fault as a leak.
+UNGRADED_MARK = ":<unreadable>"
 
 
 def scan_private_paths(paths):
@@ -727,12 +844,15 @@ def scan_private_paths(paths):
     so `C:\\Users\\...` reads as `C:\\\\Users` in the raw bytes and a line scan
     alone would miss exactly the Windows spelling this gate exists to catch.
 
-    FAILS CLOSED ON AN UNREADABLE FILE. This is the last gate before a release is
-    retained, and every file it is handed was written moments earlier by this
-    same process, so one that cannot be read is a FAULT -- reported as a hit,
-    never passed over as clean. Treating it as clean would let a real leak inside
-    a transiently locked file (an antivirus handle, a disk hiccup) through the
-    one check that exists to stop it.
+    FAILS CLOSED ON AN UNREADABLE FILE, AND SAYS SO. This is the last gate before
+    a release is retained, and every file it is handed was written moments
+    earlier by this same process, so one that cannot be read is a FAULT.
+    Returning it as clean would let a real leak inside a transiently locked file
+    (an antivirus handle, a disk hiccup) through the one check that exists to
+    stop it. It is therefore returned in the same list -- but with the
+    UNGRADED_MARK suffix rather than a line number, because "a path leaked" and
+    "a file could not be read back" are different faults with different operator
+    responses, and the caller reports them as different sentences.
 
     An UNPARSABLE `.json` is deliberately NOT a hit. Only the second pass is
     lost, the raw line scan still graded the same bytes, and these documents are
@@ -744,7 +864,7 @@ def scan_private_paths(paths):
         try:
             text = Path(path).read_text(encoding="utf-8")
         except (OSError, UnicodeDecodeError):
-            hits.append("%s:<unreadable>" % label)
+            hits.append("%s%s" % (label, UNGRADED_MARK))
             continue
         for lineno, line in enumerate(text.splitlines(), 1):
             if contains_private_path(line):
@@ -759,6 +879,33 @@ def scan_private_paths(paths):
                     hits.append("%s:<json-value>" % label)
                     break
     return hits
+
+
+def describe_scan_findings(findings):
+    """One failure message for a public-artifact scan, or None when it passed.
+
+    TWO DIFFERENT FAULTS, SAID AS TWO DIFFERENT SENTENCES. Both are fail-closed
+    and both abort the run, but they send an operator to different places: "a
+    path leaked" means read the record and fix what produced the value, while "an
+    artifact could not be read back" means a lock or an IO fault and the record
+    is very likely fine. Naming a lock as a leak points them at the wrong cause,
+    and the second is a realistic Windows occurrence right after a multi-hundred
+    file copy.
+    """
+    if not findings:
+        return None
+    ungraded = [hit for hit in findings if hit.endswith(UNGRADED_MARK)]
+    leaks = [hit for hit in findings if not hit.endswith(UNGRADED_MARK)]
+    parts = []
+    if leaks:
+        parts.append("a machine-specific absolute path reached a PUBLIC artifact (%s)"
+                     % ", ".join(leaks))
+    if ungraded:
+        parts.append("a PUBLIC artifact written moments ago could not be read back and "
+                     "graded (%s) -- that is a FAULT, not a leak finding, and this gate "
+                     "treats an ungraded artifact as failing"
+                     % ", ".join(hit[:-len(UNGRADED_MARK)] for hit in ungraded))
+    return "; ".join(parts) + "; refusing to retain this build"
 
 
 # --------------------------------------------------------------------------- #
@@ -802,6 +949,13 @@ class PathTokenizer:
 
 
 def _looks_like_path(value: str) -> bool:
+    """True for the ABSOLUTE spellings PathTokenizer is willing to normalize.
+
+    A cheap pre-filter, not a path validator: `os.path.abspath` on a relative
+    argv entry would resolve it against this process's cwd and invent a machine
+    path that was never in the argument. So only a drive letter, a leading `/`
+    and a UNC `\\\\` are considered; everything else is left exactly as given.
+    """
     if len(value) > 1 and value[1] == ":":
         return True
     return value.startswith("/") or value.startswith("\\\\")
@@ -812,6 +966,12 @@ def _looks_like_path(value: str) -> bool:
 # --------------------------------------------------------------------------- #
 
 def git_exe() -> str:
+    """The resolved `git` executable. Raises InputError when it is not on PATH.
+
+    A precondition failure, not an execution failure: commit resolution and
+    release staging are both git-driven, so a missing git means the request
+    cannot be attempted at all.
+    """
     found = shutil.which("git")
     if not found:
         raise InputError("git is not on PATH; source resolution and staging require it")
@@ -819,6 +979,14 @@ def git_exe() -> str:
 
 
 def git(args, cwd, *, check=True, timeout=TIMEOUT_GIT):
+    """Run one git command under TIMEOUT_GIT. Returns the CompletedProcess.
+
+    With `check=True` (the default) a nonzero exit raises ExecutionError naming
+    the command, the directory, the code and the first 400 characters of its
+    output. With `check=False` the result is returned unjudged and the caller
+    reads `returncode` itself. A timeout raises subprocess.TimeoutExpired, which
+    main() converts to exit 1 -- this wrapper does not convert it.
+    """
     result = run([git_exe(), *args], cwd=cwd, timeout=timeout)
     if check and result.returncode != 0:
         raise ExecutionError(
@@ -830,6 +998,12 @@ def git(args, cwd, *, check=True, timeout=TIMEOUT_GIT):
 
 
 def git_out(args, cwd, *, timeout=TIMEOUT_GIT) -> str:
+    """git() for a command read for its OUTPUT: the stripped stdout string.
+
+    Always checked -- a caller that wants the text wants it only when the command
+    succeeded -- so this raises ExecutionError on a nonzero exit rather than
+    returning an empty string that reads like a legitimate answer.
+    """
     return git(args, cwd, timeout=timeout).stdout.strip()
 
 
@@ -1087,16 +1261,20 @@ def load_proofs(proofs_path: Path) -> dict:
     except ValueError as exc:
         raise InputError("--proofs '%s' is not valid JSON: %s" % (proofs_path, exc))
     _require_mapping(data, "the proofs document")
-    # Through contains_private_path, never the raw pattern: a historical proofs
-    # document copied forward from a prior release.json carries this tool's own
-    # `<token>/tail` argv spelling, and grading that as a leak would refuse an
-    # already-sanitized proof at exit 2.
+    # The document was decoded as strict UTF-8, but json.loads turns a `\udNNN`
+    # escape into a real lone surrogate, which no later sink removes. This is one
+    # of the two caller boundaries reject_unencodable() names.
+    for index, value in enumerate(walk_strings(data)):
+        reject_unencodable(value, "--proofs '%s' (string #%d)" % (proofs_path, index))
     if contains_private_path(raw) or any(
             contains_private_path(value) for value in walk_strings(data)):
         raise InputError(
             "--proofs '%s' carries an absolute user path. release.json is a PUBLIC "
-            "artifact, so proof rows must use relative evidence paths and the "
-            "documented argv placeholder tokens." % proofs_path)
+            "artifact, so proof rows must use relative evidence paths -- and note "
+            "that a documented argv token is NOT an exemption: a `<token>/home/...` "
+            "or `<token>/Users/...` spelling is refused too, because a real leak "
+            "written that way is the same bytes. Runbook section 9 has the "
+            "workaround." % proofs_path)
 
     unknown = set(data) - {"checks", "reviews", "environment"}
     if unknown:
@@ -1882,60 +2060,78 @@ def baseline_gaps(product_key: str):
     return gaps
 
 
-def retain_completed_attempt(store: Path, operation_id: str, staging: Path) -> Path:
-    """Move a COMPLETE staged payload to `<store>/.attempts/<id>` and name it.
+#: The artifact whose presence marks a staged build as a COMPLETE payload. It is
+#: written second-to-last (only SHA256SUMS follows), after the notes, the
+#: receipt, the packet and every evidence file, so a stage that has it has
+#: everything before it too.
+STAGE_COMPLETION_MARKER = "release.json"
 
-    The `.attempts/` vs `.aborted/` split describes what the directory CONTAINS,
-    not which error routed it there: `.attempts/` holds a complete payload
-    (record, notes, receipt and every evidence file) and `.aborted/` a partial
-    build that may have no release.json at all -- see retain_aborted_stage. Both
-    of this module's complete-payload outcomes come through here (a qualification
-    failure, and a publish-time name collision), so an operator reading either
-    message is told the truth about what is on disk.
+
+def stage_bucket(staging: Path):
+    """(store subdirectory, kind) that `staging`'s CONTENTS belong in.
+
+    The ONE place the `.attempts/` vs `.aborted/` question is answered, so the
+    split describes what a directory CONTAINS rather than which error routed the
+    run there:
+
+      * `.attempts/` -- a COMPLETE payload: record, notes, receipt, SHA256SUMS
+        and every evidence file;
+      * `.aborted/`  -- a PARTIAL build, which may have no release.json at all.
+
+    Read off the disk, not inferred from the exception in flight: an error raised
+    AFTER the payload was finished (a failed rename, a collision, an unwritable
+    store) leaves a complete payload behind, and filing that under `.aborted/`
+    would misdescribe it to the operator who has to read it.
     """
-    attempt = store / ".attempts" / operation_id
-    attempt.parent.mkdir(parents=True, exist_ok=True)
-    try:
-        os.rename(staging, attempt)
-    except OSError as exc:
-        raise ExecutionError("could not retain the completed build at '%s': %s"
-                             % (attempt, exc))
-    return attempt
+    if (staging / STAGE_COMPLETION_MARKER).is_file():
+        return ".attempts", "attempt"
+    return ".aborted", "aborted"
 
 
-def retain_aborted_stage(store: Path, operation_id: str, staging: Path):
-    """Keep and NAME the partial stage of a run that aborted mid-build.
+def retain_failed_stage(store: Path, operation_id: str, staging: Path):
+    """Move a stage this run could not publish into the directory it belongs in.
 
-    A qualification FAILURE is a COMPLETE payload -- record, notes, receipt and
-    every evidence file -- and lands in `.attempts/`. A run that aborts part-way
-    (a gate exceeded its ceiling or could not be launched, the pinned source has
-    no release.ps1, the retained manifest is not a faithful copy, a public
-    artifact would have carried a machine path) has no such payload: there may be
-    no release.json at all. Filing that under `.attempts/` would misdescribe it,
-    so it is retained under its own name instead. Nothing is deleted.
-
-    Never raises: it runs on the way OUT of a failure, and a second failure here
-    must not replace the first one's message. If the move itself fails, the
-    stage's own path is still the honest answer.
+    Returns `(path, kind)` with `kind` from stage_bucket(). Raises ExecutionError
+    when the move itself fails -- use retain_failed_stage_quietly() on an
+    already-failing path, where a second error must not replace the first.
     """
-    if not staging.is_dir():
-        return None
-    target = store / ".aborted" / operation_id
+    bucket, kind = stage_bucket(staging)
+    target = store / bucket / operation_id
     try:
         target.parent.mkdir(parents=True, exist_ok=True)
         os.rename(staging, target)
-        return target
-    except OSError:
-        return staging
+    except OSError as exc:
+        raise ExecutionError("could not retain this run's build at '%s': %s"
+                             % (target, exc))
+    return target, kind
+
+
+def retain_failed_stage_quietly(store: Path, operation_id: str, staging: Path):
+    """retain_failed_stage() for the way OUT of a failure. Never raises.
+
+    Returns `(path, kind)`: the moved directory when the move worked, otherwise
+    the staging directory itself -- its own path is still the honest answer, and
+    a second failure here must not replace the first one's message. `kind` still
+    describes the CONTENTS either way, so the caller can say truthfully what is
+    at that path. `(None, None)` when there is nothing left to retain.
+    """
+    if not staging.is_dir():
+        return None, None
+    _, kind = stage_bucket(staging)
+    try:
+        return retain_failed_stage(store, operation_id, staging)
+    except ExecutionError:
+        return staging, kind
 
 
 def perform_release(args, ctx) -> int:
     """Build, qualify, retain. Returns the process exit code.
 
-    Owns the staging directory's LIFETIME. Anything that aborts between its
-    creation and the publish/attempt rename leaves a partial build, which is
-    retained at `<store>/.aborted/<uuid>/` and printed -- never left behind as an
-    unreferenced scratch directory that nothing names.
+    Owns the staging directory's LIFETIME. Anything that escapes the build is
+    retained and PRINTED rather than left behind as an unreferenced scratch
+    directory that nothing names -- filed by what the stage CONTAINS
+    (stage_bucket), so a failure that strikes after the payload was finished
+    still lands in `.attempts/`, not in `.aborted/`.
     """
     store = ctx["store"]
     product = ctx["product"]
@@ -1951,12 +2147,17 @@ def perform_release(args, ctx) -> int:
     try:
         return _build_and_publish(args, ctx, staging)
     except BaseException:
-        kept = retain_aborted_stage(store, ctx["operation_id"], staging)
+        kept, kind = retain_failed_stage_quietly(store, ctx["operation_id"], staging)
         if kept is not None:
-            print("baseline-release: the run aborted before anything was retained; the "
-                  "PARTIAL build is kept at '%s' and nothing is deleted automatically. "
-                  "It is neither a release nor an attempt -- it may be missing "
-                  "release.json and everything written after the failure." % kept,
+            print("baseline-release: the run failed before it could publish. What it "
+                  "built is kept at '%s' and nothing is deleted automatically. %s"
+                  % (kept,
+                     "That directory holds a COMPLETE payload -- record, notes, receipt "
+                     "and every evidence file -- so it is an ATTEMPT, not an aborted "
+                     "partial build." if kind == "attempt" else
+                     "That directory holds a PARTIAL build: it is neither a release nor "
+                     "an attempt, and it may be missing release.json and everything "
+                     "written after the failure."),
                   file=sys.stderr)
         raise
 
@@ -2120,13 +2321,11 @@ def _build_and_publish(args, ctx, staging: Path) -> int:
     write_sha256sums(staging, record["artifacts"] + [{
         "path": "release.json", "sha256": sha256_file(staging / "release.json")}])
 
-    leaks = scan_private_paths([
+    problem = describe_scan_findings(scan_private_paths([
         (name, staging.joinpath(*name.split("/"))) for name in PUBLIC_SCANNED_ARTIFACTS
-    ])
-    if leaks:
-        raise ExecutionError(
-            "a machine-specific absolute path reached a PUBLIC artifact (%s); refusing "
-            "to retain it" % ", ".join(leaks))
+    ]))
+    if problem:
+        raise ExecutionError(problem)
 
     # ---- publish: one rename of a COMPLETE directory, or retain as an attempt.
     retain_as_release = (qualification == "QUALIFIED"
@@ -2138,19 +2337,19 @@ def _build_and_publish(args, ctx, staging: Path) -> int:
         except OSError as exc:
             if final.exists():
                 # `staging` holds a COMPLETE payload here -- everything above
-                # finished writing before the rename was attempted -- so it is
-                # filed as an ATTEMPT, never as an aborted partial build. Moving
-                # it also empties `staging`, so perform_release's abort handler
-                # finds nothing left to file under `.aborted/` and stays silent.
-                # If the move itself fails, the stage's own path is the honest
-                # answer, exactly as in retain_aborted_stage.
+                # finished writing before the rename was attempted -- so
+                # stage_bucket files it as an ATTEMPT. Moving it also empties
+                # `staging`, so perform_release's failure handler finds nothing
+                # left to retain and stays silent. If the move itself fails, the
+                # stage's own path is the honest answer, and the handler will
+                # print it with the right description.
                 try:
-                    kept = retain_completed_attempt(store, ctx["operation_id"], staging)
+                    kept, kind = retain_failed_stage(store, ctx["operation_id"], staging)
                 except ExecutionError:
                     kept = staging
                 else:
                     ctx["result_dir"] = kept
-                    ctx["result_kind"] = "attempt"
+                    ctx["result_kind"] = kind
                 raise InputError(
                     "COLLISION: '%s' appeared while this release was being staged; a "
                     "retained release is never overwritten, so this run's COMPLETE "
@@ -2161,9 +2360,13 @@ def _build_and_publish(args, ctx, staging: Path) -> int:
         ctx["result_dir"] = final
         ctx["result_kind"] = "release"
     else:
-        attempt = retain_completed_attempt(store, ctx["operation_id"], staging)
-        ctx["result_dir"] = attempt
-        ctx["result_kind"] = "attempt"
+        # The COMMON path: every INCOMPLETE/BLOCKED release comes through here
+        # with a complete payload. A failed move raises, and perform_release's
+        # handler then files the payload by its CONTENTS through the same
+        # stage_bucket -- so it can never be misfiled as an aborted build.
+        kept, kind = retain_failed_stage(store, ctx["operation_id"], staging)
+        ctx["result_dir"] = kept
+        ctx["result_kind"] = kind
 
     ctx["record"] = record
     return exit_code
@@ -2284,6 +2487,11 @@ def prepare(args, invocation_argv):
     """Validate every input and resolve every precondition. Raises InputError."""
     product_key = args.product
     product = PRODUCTS[product_key]
+    # The FIRST caller boundary (load_proofs is the other): the whole invocation
+    # argv is recorded in receipt.json, and on POSIX an undecodable argument byte
+    # arrives as a lone surrogate. Grade it before anything is built.
+    for index, item in enumerate(invocation_argv):
+        reject_unencodable(item, "argv[%d]" % index)
     args.version = validate_version(args.version)
 
     reject_placeholder(args.source_root, "--source-root")
@@ -2503,6 +2711,17 @@ def main(argv=None) -> int:
         return EXIT_EXEC
     except OSError as exc:
         print("baseline-release: ERROR (io): %s" % exc, file=sys.stderr)
+        return EXIT_EXEC
+    except UnicodeError as exc:
+        # UnicodeEncodeError is a ValueError, NOT an OSError, so without this
+        # clause it escapes every handler above as a raw traceback and takes the
+        # documented {0,1,2} exit-code contract with it. reject_unencodable()
+        # refuses the two CALLER boundaries up front at exit 2; this clause is
+        # for what that cannot reach -- a filesystem-supplied name carrying a
+        # surrogate. It does not neutralize anything: it makes the failure
+        # legible and keeps the exit code honest.
+        print("baseline-release: ERROR (encoding): %s. Every artifact this tool "
+              "writes is UTF-8; nothing was published." % exc, file=sys.stderr)
         return EXIT_EXEC
     except subprocess.SubprocessError as exc:
         # TimeoutExpired is a SubprocessError, NOT an OSError, so without this

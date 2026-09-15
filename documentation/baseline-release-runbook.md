@@ -140,7 +140,13 @@ Rules the import enforces, and why:
 
 - **A proofs document may not carry an absolute user path.** `release.json` is a public
   artifact. Use relative evidence paths and the documented argv placeholder tokens.
-  A violation is exit 2.
+  A violation is exit 2. A leading token is **not** an exemption: a token followed
+  immediately by a `home/` or `Users/` segment is refused too, for the reason given
+  in section 9.
+- **A proofs document may not carry text UTF-8 cannot encode.** A `\udNNN` escape in
+  any string field survives `json.loads` as a lone surrogate, which no artifact this
+  tool writes can hold. It is refused by name and position at exit 2 rather than
+  silently transcoded — this tool records what you supplied, verbatim or not at all.
 - **A structurally malformed document is exit 2** (bad JSON, unknown top-level key,
   missing required row field, wrong type). That is bad input, not missing evidence.
 - **A row whose evidence file cannot be resolved, or whose `source_commit` does not
@@ -272,8 +278,8 @@ Verdict: PASS
 | Code | Meaning | What to do |
 |---|---|---|
 | `0` | The requested operation completed. The record may still contain **explicit missing evidence** — retaining an explicitly `INCOMPLETE` lab archive is a success and makes no qualification claim. | Read `qualification` in the printed record. |
-| `2` | **Bad input or precondition failure.** Placeholder path, unsafe `--version`, unresolvable commit, store inside the source root, junction on an output ancestor, malformed `--proofs`, or a **release-ID collision** (the ID is retained with different recorded inputs). | Fix the input, or allocate a new version. No retained release is created or changed. Every such refusal happens before anything is built, with one exception: a collision that surfaces only while publishing keeps its partial build and prints that path. |
-| `1` | **Execution or IO failure — including qualification failure.** Whatever was built is retained and its path printed: a qualification failure keeps the **complete** payload under `.attempts/<uuid>/`, and a run that aborts mid-build (a gate exceeded its ceiling or could not be launched, the pinned source has no `release.ps1`, the retained manifest is not a faithful copy, a public artifact would have carried a machine path) keeps the **partial** stage under `.aborted/<uuid>/`. Also covers damaged retained bytes found while verifying. | Go to section 8. |
+| `2` | **Bad input or precondition failure.** Placeholder path, unsafe `--version`, unresolvable commit, store inside the source root, junction on an output ancestor, malformed `--proofs`, or a **release-ID collision** (the ID is retained with different recorded inputs). | Fix the input, or allocate a new version. No retained release is created or changed. Every such refusal happens before anything is built, with one exception: a collision that surfaces only while publishing keeps its **complete** payload under `.attempts/<uuid>/` and prints that path. |
+| `1` | **Execution or IO failure — including qualification failure.** Whatever was built is retained and its path printed, in the directory its **contents** belong in: a **complete** payload (a qualification failure, a build that finished and lost its version name, or a leak-gate refusal — the scan runs last, after the record is written) under `.attempts/<uuid>/`; a **partial** build (a gate exceeded its ceiling or could not be launched, the pinned source has no `release.ps1`, the retained manifest is not a faithful copy) under `.aborted/<uuid>/`; and if neither move is possible, the staging directory under its own name. Also covers damaged retained bytes found while verifying, and text this tool cannot encode as UTF-8. | Go to section 8. |
 
 Qualification values: `QUALIFIED`, `INCOMPLETE` (a required gate or proof is missing),
 `BLOCKED` (a gate ran and failed). A missing or failed gate **can never** produce
@@ -303,9 +309,12 @@ section 4.1.
   public/packet.json             what may be published, and what may not
   CHECKSUMS.txt                  toolkit only: release.ps1's ORIGINAL normalized manifest
   dist/{claude,gpt,codex}/       toolkit only: the built profiles
-<store>/.attempts/<uuid>/        a retained qualification FAILURE (COMPLETE payload)
-<store>/.aborted/<uuid>/         a retained PARTIAL build from a run that aborted
-                                 mid-build; it may have no release.json
+<store>/.attempts/<uuid>/        a retained COMPLETE payload that was not published
+                                 (a qualification failure, or a build that lost its
+                                 version name to another process)
+<store>/.aborted/<uuid>/         a retained PARTIAL build from a run that failed
+                                 before the payload was finished; it may have no
+                                 release.json
 <store>/.work/<uuid>/            scratch; removed once the payload is safely retained
 ```
 
@@ -398,16 +407,27 @@ exiting nonzero.
 A qualification failure produces a **complete** payload. A run that aborts before it
 gets that far — a gate exceeded its time ceiling or could not be launched, the
 pinned source has no `tools/release.ps1`, the retained `CHECKSUMS.txt` is not a
-faithful copy of the manifest `release.ps1` wrote, or a public artifact would have
-carried a machine-specific absolute path — has no such payload. Whatever had been
-built is moved to `<store>/.aborted/<uuid>/`, and **that path is printed with the
-failure**.
+faithful copy of the manifest `release.ps1` wrote — has no such payload. Whatever had
+been built is moved to `<store>/.aborted/<uuid>/`, and **that path is printed with
+the failure**.
 
-The split is about what the directory **contains**, not which error routed it there.
-A build that finished and then lost a race for its version directory — another
-process created `<store>/<product>/<version>` while this run was staging — is a
-COMPLETE payload, so it is filed under `.attempts/` and its path is printed with the
-collision, never under `.aborted/`.
+A **leak-gate** refusal is not in that list, and this is worth knowing before you go
+looking in the wrong directory: the scan is the last thing that runs, after the
+record, the notes, the receipt and `SHA256SUMS` are all written, so its payload is
+COMPLETE and lands under `.attempts/` — with everything you need to read to find the
+offending value.
+
+The split is about what the directory **contains**, not which error routed it there,
+and the tool decides it by looking for `release.json` on disk rather than by reading
+the error in flight. So a build that finished and then lost a race for its version
+directory — another process created `<store>/<product>/<version>` while this run was
+staging — is a COMPLETE payload, and is filed under `.attempts/`.
+
+If **neither** move is possible — the store subdirectory is itself unwritable, or a
+leftover directory already holds this run's id — nothing is discarded: the payload
+keeps its own `<store>/<product>/.staging-<uuid>/` path, and that path is printed
+with the same description of what it holds. A complete payload is therefore reported
+accurately in all three cases rather than being announced as a partial build.
 
 Read an `.aborted/` directory as **partial**, not as an attempt. It may have no `release.json`, no
 `release-notes.md` and no `SHA256SUMS` — those are written last. What it does carry
@@ -423,7 +443,10 @@ Common causes, in the order they usually appear:
 | `qualification=BLOCKED`, `source-pytest` exit nonzero | the pinned source's own suite is red. The archive is still retained. |
 | `qualification=BLOCKED`, `staged-release` exit nonzero | `release.ps1` aborted — usually its package-integrity phase. Its evidence file carries the failing output. |
 | `qualification=INCOMPLETE`, all gates exit 0 | no qualifying cross-family review is attached. Attach one with `--proofs`. |
-| exit `1`, no `qualification=` line, an `.aborted/<uuid>` path printed | the run aborted mid-build. Read `checks/` inside that directory. |
+| exit `1`, no `qualification=` line, an `.aborted/<uuid>` path printed | the run failed before the payload was finished. Read `checks/` inside that directory. |
+| exit `1`, `a machine-specific absolute path reached a PUBLIC artifact` | the leak gate found a path in a generated artifact. The message names the artifact and line. Section 9, including the token false positive. |
+| exit `1`, `could not be read back and graded` | the leak gate could **not read** an artifact this run had just written — a lock or an IO fault, **not** a leak finding. Retry; if it repeats, the store path is the suspect. |
+| exit `2`, `carries a character UTF-8 cannot encode` | a `--proofs` string, or an argument, holds a lone surrogate. Fix the value; nothing was built. |
 | `qualification=INCOMPLETE`, a review IS attached, `attested_by` is `null` | `--attest-reviews` was not given. Re-run with it, naming the accountable party. Section 4.1. |
 | `qualification=INCOMPLETE`, a review IS attached, `evidence_consistency` is `unstated` | the evidence document omits a claim the row makes. `known_gaps` names each one; fix the document, not the JSON. Section 4.1. |
 | `qualification=INCOMPLETE`, a review IS attached, `evidence_consistency` is `contradicted` | the evidence document **denies** a claim the row makes. Read the document — the row and the review disagree about what happened. No flag overrides this. Section 4.1. |
@@ -459,11 +482,44 @@ machine-specific absolute paths — a Windows drive-letter home path in either
 separator, and the POSIX `/home/<user>/…` and `/Users/<name>/…` spellings, because
 only a `toolkit` run requires PowerShell and a `lab` run can therefore be cut off
 Windows — and refuses to retain the release if one is found. The documented
-placeholder forms stay legal, and so does this tool's own `<token>/tail` argv
-spelling: the recorded tokens are substituted out before the scan, so a historical
-proofs document copied forward from a prior `release.json` is never mistaken for a
-leak. An artifact that cannot be read counts as a hit — this is the last gate before
-a release is kept, so it fails closed rather than treating an ungraded file as clean.
+placeholder forms (`/home/<user>/…`, `C:/Users/<user>/…`) stay legal.
+
+The same scan runs over a `--proofs` document at ingestion, where a hit is exit 2.
+
+**This gate fails closed, and that has a price. Read this before filing a bug
+against it.** An artifact the tool cannot read back counts as a failure — it is the
+last gate before a release is kept, so an ungraded file is never treated as clean.
+The run says which of the two happened: a path that leaked, or a file that could not
+be read. And a documented argv token is **not** an exemption:
+
+| String | Verdict |
+|---|---|
+| `<source-checkout>/tools/release.ps1` | clean — no `home`/`Users` segment |
+| `<store>/home/<app>/main.py` | **refused** — an honest relative tail under a token root |
+| `<source-checkout>/home/<someone>/leak` | **refused** — a real path spelled with a token prefix |
+
+(Rows 2 and 3 are written with a placeholder in the third segment so that *this
+document* passes the same scan. Replace the placeholder with a concrete segment and
+the two are indistinguishable: a `--proofs` field and a tool-emitted `argv` entry are
+the same bytes once written.)
+
+So no rule that admits row 2 can refuse row 3 — and admitting row 3 publishes a
+machine-specific path while the gate reports the release clean. A release refused for
+row 2 costs one run and prints why; a release published for row 3 costs the leak this
+tool exists to prevent. So row 2 is refused deliberately.
+
+**Known limitation, and the workaround.** If the product being released has a
+top-level directory named `home` or `Users`, a recorded `argv`/`cwd` entry pointing
+into it — a token followed immediately by that segment — reads as a leak and aborts
+the run at exit 1, and a historical `--proofs` document carrying that spelling is
+refused at exit 2.
+Neither is a defect report. Either rewrite that one recorded entry to a form that
+does not begin the tail with `home/` or `Users/` (a `--proofs` document is yours to
+edit — it is evidence you are attaching, not a retained record), or, if the entry is
+generated rather than supplied, invoke the gate from a directory layout that does not
+produce it. Do **not** "fix" this by exempting the token: that exemption existed, was
+measured, and let 3 of 13 real leaks through.
+
 Archive member contents and `dist/` bodies are not re-scanned here; they are gated
 upstream by this repository's own committed-path gate in
 `tests/package-integrity/test_manifest_contract.py`.

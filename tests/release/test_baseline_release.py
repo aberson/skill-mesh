@@ -411,30 +411,24 @@ def test_the_private_path_detector_also_catches_posix_home_paths(tmp_path):
     "https://example.com/home/index.html",
     "/home/<user>/release-store",
     "/Users/<name>/release-store",
+    # ONE representative of the class that carries neither segment at all. The
+    # other three this list used to hold ('/etc/profile.d/x.sh',
+    # '<source-checkout>/tools/release.ps1', 'dist/claude/SKILL.md') sat at the
+    # same distance from the decision boundary and discriminated nothing extra.
     "/opt/build/checkout",
-    "/etc/profile.d/x.sh",
-    "<source-checkout>/tools/release.ps1",
-    "dist/claude/SKILL.md",
-    # A documented token followed IMMEDIATELY by a `home`/`Users` segment. This
-    # is the tool's own recorded argv spelling over a product whose top-level
-    # directory is named `home` or `Users` (a web app's home routes, a CRM's
-    # Users module) -- a relative tail under a token root, not an absolute home.
-    # The lookbehind alone cannot see that, because every token closes with `>`.
-    "<source-checkout>/home/build.py",
-    "<source-checkout>/Users/profile.py",
-    "<release-dir>/home/index.html",
-    "<store>/Users/records.json",
-    "<stage-dir>/home/app/main.py",
 ])
 def test_the_private_path_detector_does_not_fire_on_a_legitimate_string(tmp_path, value):
-    """Widening a leak scanner is only safe while its false-positive set stays EMPTY.
+    """The false-POSITIVE side of the two-sided measurement.
 
     Every string here either legitimately CONTAINS `/Users/` or `/home/` without
     being an absolute home path (a repo-relative path, a URL), or is a value a
     real record carries (a documented placeholder form, a POSIX-absolute path
-    that is not a home, a path token, a release-relative artifact path). A
-    detector that reds on one of these would refuse to retain honest releases,
-    which is how a safety gate gets switched off.
+    that is not a home). A detector that reds on one of these would refuse
+    honest releases for no safety gain.
+
+    NOTE the shape this list deliberately does NOT contain: `<token>/home/...`.
+    That one IS refused, on purpose -- see the red list below and
+    test_a_token_prefix_is_not_an_exemption_from_the_leak_gate.
     """
     clean = tmp_path / "clean.json"
     clean.write_text(json.dumps({"value": value}) + "\n", encoding="utf-8")
@@ -442,10 +436,19 @@ def test_the_private_path_detector_does_not_fire_on_a_legitimate_string(tmp_path
         "the detector fired on a legitimate string")
 
 
-# The OTHER side of the same measurement. Exempting the token convention is only
-# safe while these still red -- and the obvious patch (adding `>` to the
-# lookbehind's excluded class) would silently turn the first two green, buying a
-# false NEGATIVE in captured shell output to pay for the false positive above.
+#: A real Windows home path, assembled at runtime: this file is itself swept by
+#: the repository's committed absolute-path gate, so it must carry no literal.
+_WIN_LEAK = "C:%sUsers%ssomeone%ssecret.txt" % ((chr(92),) * 3)
+
+# The OTHER side of the same measurement, and the side that decides the design.
+# A leak scanner is a FAIL-CLOSED gate: a false positive costs one refused run
+# with a legible message, a false negative publishes a machine path while the
+# gate reports clean. So every one of these must red, INCLUDING the ones spelled
+# with a documented token in front -- a `--proofs` field and a tool-emitted argv
+# entry are the same bytes, so no textual rule can admit one and refuse the
+# other. Both previously-tried exemptions are pinned here as garbage anchors:
+# adding `>` to the lookbehind's excluded class would green rows 1-2, and
+# substituting the tokens out (the shape review round 2 found) greens rows 7-10.
 @pytest.mark.parametrize("value", [
     ">/home/someone/build.log",
     "2>/Users/someone/err.log",
@@ -453,50 +456,59 @@ def test_the_private_path_detector_does_not_fire_on_a_legitimate_string(tmp_path
     "/Users/someone/build",
     "resolved from file:///home/someone/x",
     "<not-a-documented-token>/home/someone/x",
+    "<source-checkout>/home/attacker/leak",
+    "<store>/Users/someone/secret.txt",
+    "<proofs>/home/attacker/x",
+    "<store>" + _WIN_LEAK,
+    _WIN_LEAK,
 ])
 def test_the_private_path_detector_still_reds_on_a_real_leak(tmp_path, value):
-    """Red-on-garbage anchor for the token exemption.
-
-    A shell redirect writes `>` immediately before an absolute path, which is the
-    exact character every documented token ends with -- so the exemption has to
-    be keyed on the TOKENS, not on the character. The last case proves it is:
-    an angle-bracketed word that is NOT in PATH_TOKEN_DOC buys nothing.
-    """
+    """Red-on-garbage anchor for the leak gate, token-prefixed cases included."""
     planted = tmp_path / "record.json"
     planted.write_text(json.dumps({"value": value}) + "\n", encoding="utf-8")
     assert br.scan_private_paths([("record.json", planted)]), (
         "the detector no longer reds on a real machine-specific path")
 
 
-def test_the_token_exemption_is_derived_from_the_documented_token_list():
-    """One source of truth: a token added to PATH_TOKEN_DOC is exempt that day.
+def test_a_token_prefix_is_not_an_exemption_from_the_leak_gate():
+    """The decision, pinned: no lexeme is exempt from this predicate.
 
-    A hand-maintained second list is a false green waiting to happen -- the
-    tokens and their exemption would drift apart with nothing to notice. This
-    also pins the two properties that make the substitution safe: no documented
-    token is itself a leak, and none of them contains the segment the POSIX
-    branch looks for.
+    Review round 1 read `<store>/home/x` as a false positive and round 2 read the
+    exemption that closed it as a false negative. They are the SAME STRING SHAPE,
+    so the tie is broken by the gate's direction rather than by a cleverer
+    pattern: `product-charter.md` treats an uncertain verdict as unable to
+    advance, so the scanner refuses. This test fails the moment any exemption --
+    a token substitution, a widened character class, a provenance guess -- is
+    reintroduced, which is exactly the oscillation it exists to stop.
     """
     for token in br.PATH_TOKEN_DOC:
-        assert br._PATH_TOKEN_RE.fullmatch(token), (
-            "%s is documented but not exempted by the scan predicate" % token)
-        assert br.PRIVATE_PATH_RE.search(token) is None, (
+        assert br.contains_private_path("%s/home/someone/x" % token), (
+            "%s/home/... is exempt again; a caller-supplied leak spelled that "
+            "way now passes the one gate that exists to stop it" % token)
+        assert br.contains_private_path("%s/Users/someone/x" % token), (
+            "%s/Users/... is exempt again" % token)
+        # A token on its own is not a path and must stay clean, or every record
+        # this tool writes would refuse itself.
+        assert not br.contains_private_path(token), (
             "%s is itself read as a machine path" % token)
-        assert "home" not in token and "Users" not in token, (
-            "%s carries the segment the scanner looks for, so substituting it "
-            "out could hide a leak" % token)
-    assert br.PRIVATE_PATH_RE.search(br._PATH_TOKEN_SENTINEL) is None
-    assert br._PATH_TOKEN_SENTINEL.isalnum(), (
-        "the sentinel must land in the lookbehind's excluded class")
+        assert not br.contains_private_path("%s/tools/release.ps1" % token)
+    assert not hasattr(br, "_PATH_TOKEN_RE"), (
+        "the token-substitution exemption is back; see this test's docstring")
 
 
-def test_a_tokenized_historical_proof_is_accepted_not_refused(lab_repo, tmp_path):
-    """The reachable half of the false positive: exit 2 on an honest document.
+def test_a_tokenized_historical_proof_is_refused_with_a_legible_message(lab_repo, tmp_path):
+    """The DOCUMENTED COST of failing closed, asserted rather than hidden.
 
-    A `--proofs` document is explicitly meant to carry evidence forward from a
-    prior release's own `release.json`, whose `checks[].argv` entries are already
-    tokenized. If the pinned source has a top-level directory named `home` or
-    `Users`, that already-sanitized record must import, not be refused as a leak.
+    A `--proofs` document may carry evidence forward from a prior release's own
+    `release.json`, whose `checks[].argv` entries are tokenized. If the pinned
+    product has a top-level directory named `home` or `Users`, that spelling is
+    indistinguishable from a real absolute path written with a token in front, so
+    it is REFUSED at exit 2 -- and the message has to say so well enough for an
+    operator to act, because the runbook (section 9) promises exactly that.
+
+    The behaviour is deliberate. If this test ever needs `returncode == 0`, the
+    gate has been reopened; read
+    test_a_token_prefix_is_not_an_exemption_from_the_leak_gate first.
     """
     root, commit = lab_repo
     proof_dir = tmp_path / "proofs"
@@ -516,14 +528,15 @@ def test_a_tokenized_historical_proof_is_accepted_not_refused(lab_repo, tmp_path
     store = tmp_path / "store"
     result = _release("lab", root, commit, "v0.1.0-experimental.1", store,
                       proofs=proof_dir / "proofs.json")
-    assert result.returncode == 0, (
-        "a tokenized historical proof was refused as a leak:\n%s"
+    assert result.returncode == 2, (
+        "a token-prefixed home path must be refused as bad input:\n%s"
         % (result.stdout + result.stderr))
-    record = _record(store / "skill-mesh-lab" / "v0.1.0-experimental.1")
-    imported = [row for row in record["checks"] if row["execution"] == "imported"]
-    assert len(imported) == 1, "the tokenized row never imported"
-    assert "<source-checkout>/home/tests" in imported[0]["argv"], (
-        "the tokenized argv was rewritten on the way in")
+    message = result.stdout + result.stderr
+    assert "absolute user path" in message
+    assert "NOT an exemption" in message, (
+        "the refusal must tell the operator that the token did not exempt it")
+    assert "section 9" in message, "the refusal must point at the workaround"
+    assert not (store / "skill-mesh-lab").exists(), "nothing may be built on exit 2"
 
 
 def test_the_leak_gate_fails_closed_on_an_artifact_it_cannot_grade(tmp_path):
@@ -554,6 +567,65 @@ def test_the_leak_gate_fails_closed_on_an_artifact_it_cannot_grade(tmp_path):
     broken = tmp_path / "broken.json"
     broken.write_text("{not json at all\n", encoding="utf-8")
     assert br.scan_private_paths([("broken.json", broken)]) == []
+
+
+def test_a_leak_and_an_ungraded_artifact_are_reported_as_different_faults():
+    """Failing closed is right; describing a lock as a leak is not.
+
+    Both outcomes abort the run. They send an operator to different places: a
+    leak means read the record and fix what produced the value, an unreadable
+    artifact means a lock or an IO fault and the record is probably fine.
+    """
+    assert br.describe_scan_findings([]) is None
+
+    leak = br.describe_scan_findings(["release.json:12"])
+    assert "machine-specific absolute path" in leak
+    assert "could not be read back" not in leak
+
+    ungraded = br.describe_scan_findings(["receipt.json" + br.UNGRADED_MARK])
+    assert "could not be read back" in ungraded
+    assert "FAULT, not a leak finding" in ungraded
+    assert "machine-specific absolute path" not in ungraded, (
+        "an unreadable artifact was announced to the operator as a leak")
+    assert "receipt.json" in ungraded and br.UNGRADED_MARK not in ungraded, (
+        "the message should name the artifact, not echo the internal marker")
+
+    both = br.describe_scan_findings(["release.json:12",
+                                      "receipt.json" + br.UNGRADED_MARK])
+    assert "machine-specific absolute path" in both and "could not be read back" in both
+
+
+def test_an_ungraded_public_artifact_aborts_the_release_end_to_end(
+        lab_repo, tmp_path, monkeypatch, capsys):
+    """The same distinction, through the PRODUCTION entry point.
+
+    The scanned-artifact list is the injection point: adding a name the stage
+    does not carry makes the REAL scanner hit a REAL unreadable file, so the
+    producer -> consumer round trip is exercised rather than stubbed.
+    """
+    root, commit = lab_repo
+    monkeypatch.setattr(br, "PUBLIC_SCANNED_ARTIFACTS",
+                        br.PUBLIC_SCANNED_ARTIFACTS + ("public/not-written.json",))
+    store = tmp_path / "store"
+    code = br.main(["lab", "--source-root", str(root), "--source-commit", commit,
+                    "--version", "v0.1.0-experimental.1", "--store", str(store),
+                    "--python-exe", sys.executable])
+    err = capsys.readouterr().err
+    assert code == br.EXIT_EXEC, err
+    assert "could not be read back and graded" in err, err
+    assert "public/not-written.json" in err, err
+    assert "machine-specific absolute path" not in err, (
+        "an artifact that could not be read was reported as a leak")
+    assert not (store / "skill-mesh-lab" / "v0.1.0-experimental.1").exists(), (
+        "the gate must fail closed -- nothing is retained as a release")
+    # And where the payload went, because the runbook's exit-1 table says so:
+    # the scan is the LAST step, after release.json and SHA256SUMS are written,
+    # so its refusal leaves a COMPLETE payload -- an attempt, not an abort.
+    attempts = _attempt_dirs(store)
+    assert len(attempts) == 1 and (attempts[0] / "release.json").is_file(), (
+        "a leak-gate refusal is a complete payload and belongs in .attempts/")
+    aborted = store / ".aborted"
+    assert not aborted.is_dir() or not list(aborted.iterdir())
 
 
 def test_the_packet_describes_exactly_the_artifacts_that_were_scanned(lab_release):
@@ -1407,6 +1479,119 @@ def test_a_publish_collision_files_a_complete_payload_as_an_attempt(
         "the operator is still told to expect a partial build")
 
 
+def _blocked_lab(tmp_path_factory, name):
+    """A lab source whose own suite is red -- so the run takes the ATTEMPT path.
+
+    A green lab release is retained as a release (INCOMPLETE lab is exit 0), so a
+    red suite is what routes a run through the non-QUALIFIED retention branch,
+    which is the COMMON one: every INCOMPLETE/BLOCKED release comes through it.
+    """
+    return _make_repo(tmp_path_factory.mktemp(name) / "lab", {
+        "README.md": "# lab\n", "tests/test_red.py": FAILING_TEST})
+
+
+def test_a_failed_attempt_rename_still_files_the_complete_payload_as_an_attempt(
+        tmp_path_factory, tmp_path, monkeypatch, capsys):
+    """The COMMON retention path, when its move fails once.
+
+    The publish-collision branch was taught to keep a complete payload out of
+    `.aborted/`; this is the other, far more frequent branch -- every
+    INCOMPLETE/BLOCKED release -- where a transient rename failure (an antivirus
+    handle, a stale leftover directory, WinError 183) used to drop the run into
+    perform_release's catch-all and file a payload with release.json, notes,
+    receipt and SHA256SUMS under `.aborted/`, the one directory documented as
+    "may have no release.json at all".
+
+    The fix is the funnel, not the branch: whichever route reaches it, the
+    destination is chosen by reading `release.json` off the stage.
+    """
+    root, commit = _blocked_lab(tmp_path_factory, "lab-attempt-race")
+    store = tmp_path / "store"
+    real_rename = br.os.rename
+    failures = {"n": 0}
+
+    def flaky_rename(src, dst):
+        if ".attempts" in str(dst) and failures["n"] == 0:
+            failures["n"] += 1
+            raise OSError(183, "simulated transient lock on the attempts subtree")
+        return real_rename(src, dst)
+
+    monkeypatch.setattr(br.os, "rename", flaky_rename)
+    code = br.main(["lab", "--source-root", str(root), "--source-commit", commit,
+                    "--version", "v0.1.0-experimental.1", "--store", str(store),
+                    "--python-exe", sys.executable])
+    err = capsys.readouterr().err
+
+    assert failures["n"] == 1, "the flaky rename never fired; the test proved nothing"
+    assert code == br.EXIT_EXEC, err
+    aborted = store / ".aborted"
+    assert not aborted.is_dir() or not list(aborted.iterdir()), (
+        "a COMPLETE payload was filed as an aborted partial build")
+    attempts = _attempt_dirs(store)
+    assert len(attempts) == 1, "the complete payload was not re-filed as an attempt"
+    for name in ("release.json", "release-notes.md", "SHA256SUMS", "source.zip",
+                 "receipt.json"):
+        assert (attempts[0] / name).is_file(), (
+            "the retained attempt is missing %s, so it was not complete" % name)
+    assert str(attempts[0]) in err, "the retained payload's path was not printed"
+    assert "COMPLETE" in err and "PARTIAL" not in err
+
+
+def test_a_complete_payload_is_never_announced_as_partial_when_no_move_succeeds(
+        tmp_path_factory, tmp_path, monkeypatch, capsys):
+    """The harsher case: BOTH moves fail, so nothing can leave the stage.
+
+    Reported honestly rather than quietly: the payload keeps its staging path,
+    that path is printed, and it is described as COMPLETE -- because it is. The
+    invariant the runbook states is about `.aborted/`, and it holds here too:
+    nothing was filed there.
+    """
+    root, commit = _blocked_lab(tmp_path_factory, "lab-attempt-stuck")
+    store = tmp_path / "store"
+    real_rename = br.os.rename
+
+    def never_attempts(src, dst):
+        if ".attempts" in str(dst):
+            raise OSError(183, "simulated persistent lock on the attempts subtree")
+        return real_rename(src, dst)
+
+    monkeypatch.setattr(br.os, "rename", never_attempts)
+    code = br.main(["lab", "--source-root", str(root), "--source-commit", commit,
+                    "--version", "v0.1.0-experimental.1", "--store", str(store),
+                    "--python-exe", sys.executable])
+    err = capsys.readouterr().err
+
+    assert code == br.EXIT_EXEC, err
+    aborted = store / ".aborted"
+    assert not aborted.is_dir() or not list(aborted.iterdir()), (
+        "a COMPLETE payload was filed as an aborted partial build")
+    assert not _attempt_dirs(store), "the attempts move was supposed to keep failing"
+    stages = [p for p in (store / "skill-mesh-lab").iterdir()
+              if p.name.startswith(".staging-")]
+    assert len(stages) == 1, stages
+    assert (stages[0] / "release.json").is_file(), "the payload is complete on disk"
+    assert str(stages[0]) in err, "the surviving stage's path was not printed"
+    assert "COMPLETE" in err and "PARTIAL" not in err, (
+        "a complete payload was announced to the operator as a partial build")
+
+
+def test_the_retention_bucket_is_read_off_the_stage_not_from_the_error(tmp_path):
+    """One decision function, so every route into the two directories agrees.
+
+    Field-agnostic on purpose: it grades stage_bucket() by CONTENTS, so a future
+    caller that files a stage through some third route inherits the invariant
+    without this test naming that route.
+    """
+    partial = tmp_path / "partial"
+    (partial / "checks").mkdir(parents=True)
+    assert br.stage_bucket(partial) == (".aborted", "aborted")
+
+    complete = tmp_path / "complete"
+    complete.mkdir()
+    (complete / br.STAGE_COMPLETION_MARKER).write_text("{}", encoding="utf-8")
+    assert br.stage_bucket(complete) == (".attempts", "attempt")
+
+
 # --------------------------------------------------------------------------- #
 # Toolkit: the existing toolchain, all profiles, real artifact verification
 # --------------------------------------------------------------------------- #
@@ -1630,6 +1815,86 @@ def test_proofs_carrying_a_posix_home_path_is_an_input_error(lab_repo, tmp_path,
     assert "absolute user path" in result.stderr
     assert not (tmp_path / "store" / "skill-mesh-lab").exists(), (
         "a refused proofs document must not leave a product directory behind")
+
+
+def test_a_lone_surrogate_in_proofs_is_refused_at_the_boundary(lab_repo, tmp_path):
+    """Text UTF-8 cannot encode is refused as INPUT, not discovered at a sink.
+
+    `json.loads` turns a `\\udNNN` escape in any `--proofs` string field into a
+    real lone surrogate. No markdown neutralizer removes one -- md_untrusted,
+    md_code and md_inline escape STRUCTURE, not encodability -- so it used to
+    reach `release-notes.md`'s `write_text` and raise UnicodeEncodeError, which
+    is a ValueError and therefore caught by none of main()'s handlers: a raw
+    traceback, and the documented {0,1,2} exit-code contract gone with it.
+
+    Refused rather than transcoded on purpose: this tool records what the caller
+    supplied, and silently substituting U+FFFD would publish something else.
+    """
+    root, commit = lab_repo
+    proof_dir = tmp_path / "proofs"
+    proof_dir.mkdir()
+    (proof_dir / "review-0001.md").write_text(GENERIC_EVIDENCE, encoding="utf-8")
+    # Written as a JSON ESCAPE in the raw bytes -- the file itself stays valid
+    # UTF-8, which is exactly why the boundary has to look at the PARSED values.
+    (proof_dir / "proofs.json").write_text(
+        json.dumps({"checks": [], "reviews": [_review_proof(commit)]}).replace(
+            '"PASS"', '"PASS\\ud800"'),
+        encoding="utf-8", newline="\n")
+    result = _release("lab", root, commit, "v1", tmp_path / "store",
+                      proofs=proof_dir / "proofs.json")
+    output = result.stdout + result.stderr
+    assert result.returncode == 2, output
+    assert "UTF-8 cannot encode" in output, output
+    assert "Traceback" not in output, "the exit-code contract leaked a traceback"
+    assert not (tmp_path / "store" / "skill-mesh-lab").exists()
+
+
+def test_the_unencodable_boundary_also_covers_the_invocation_argv(
+        lab_repo, tmp_path, capsys):
+    """The OTHER caller boundary. Driven in-process: a surrogate cannot survive
+    a subprocess argument list, which is precisely why the check has to sit in
+    `prepare` rather than in the shell.
+
+    On POSIX `sys.argv` yields a lone surrogate for any undecodable argument
+    byte (surrogateescape), and the whole invocation argv is recorded in
+    `receipt.json`. The refusal names WHICH argument, before anything is built.
+    """
+    root, commit = lab_repo
+    store = tmp_path / "store"
+    code = br.main(["lab", "--source-root", str(root), "--source-commit", commit,
+                    "--version", "v1", "--store", str(store),
+                    "--python-exe", sys.executable,
+                    "--attest-reviews", "A. Operator \ud800"])
+    err = capsys.readouterr().err
+    assert code == br.EXIT_INPUT, err
+    assert "UTF-8 cannot encode" in err and "argv[" in err, err
+    assert not store.exists() or not any(store.iterdir()), (
+        "nothing may be built before the boundary check runs"
+    )
+
+
+def test_the_unencodable_check_is_scoped_honestly():
+    """What reject_unencodable() does and does not reach, asserted not assumed.
+
+    It guards the two CALLER boundaries. Text this tool CAPTURES cannot carry a
+    surrogate: `run()` decodes with `errors="backslashreplace"`, which emits
+    ASCII. Filesystem-supplied names are NOT covered, and nothing claims they
+    are -- main()'s UnicodeError clause turns that residue into exit 1 with a
+    message instead of a traceback, which is why that clause has to exist.
+    """
+    with pytest.raises(br.InputError) as caught:
+        br.reject_unencodable("ok-\ud800-tail", "argv[7]")
+    assert "argv[7]" in str(caught.value)
+    assert "UTF-8 cannot encode" in str(caught.value)
+    assert br.reject_unencodable("plain ascii", "argv[0]") == "plain ascii"
+    assert br.reject_unencodable("café \U0001f600", "argv[1]"), (
+        "ordinary non-ASCII text is encodable and must not be refused")
+    assert "\\ud800" in "x\ud800".encode("utf-8", "backslashreplace").decode("ascii"), (
+        "run()'s decoder emits an ASCII escape, so captured output cannot carry one")
+    assert issubclass(UnicodeEncodeError, UnicodeError)
+    assert not issubclass(UnicodeEncodeError, OSError), (
+        "the dedicated UnicodeError clause in main() is what keeps this exit "
+        "code honest; OSError would not catch it")
 
 
 @pytest.mark.parametrize("cwd", ["/opt/build/checkout", "D" + ":/build/checkout"])
@@ -2496,6 +2761,94 @@ def test_a_stalled_subprocess_keeps_the_documented_exit_code_contract(
         "a stalled subprocess did not produce the documented error line:\n%s" % err)
 
 
+class _FakeProc:
+    """Enough of a Popen for the timeout-kill path. Records what was called."""
+
+    def __init__(self):
+        self.pid = 4242
+        self.killed = False
+        self.waited = False
+
+    def kill(self):
+        self.killed = True
+
+    def wait(self, timeout=None):
+        self.waited = True
+
+
+def test_the_timeout_kill_reaches_descendants_on_both_platforms(monkeypatch):
+    """A `lab` release can legitimately run off Windows, so both branches matter.
+
+    `taskkill /T` is Windows-only; on POSIX a plain `proc.kill()` signals the
+    direct child and leaves the grandchild (`release.ps1` -> `python -m pytest`,
+    or pytest's own xdist workers) holding handles inside the disposable
+    checkout. The POSIX answer is SIGKILL to the child's process group, which
+    `run()` makes meaningful by starting each child in a new session.
+
+    Bounded, not total, and not claimed as total: a descendant that has left the
+    tree or called setsid for itself is outside both mechanisms.
+    """
+    proc = _FakeProc()
+    signalled = []
+    monkeypatch.setattr(br.os, "name", "posix", raising=False)
+    monkeypatch.setattr(br.os, "getpgid", lambda pid: pid, raising=False)
+    monkeypatch.setattr(br.os, "killpg",
+                        lambda pgid, sig: signalled.append((pgid, sig)), raising=False)
+    monkeypatch.setattr(br.subprocess, "run", _never_called)
+    br._kill_process_tree(proc)
+    if hasattr(br.signal, "SIGKILL"):   # true on every POSIX host, false here
+        assert br._GROUP_KILL_SIGNAL is br.signal.SIGKILL
+    assert signalled == [(4242, br._GROUP_KILL_SIGNAL)], (
+        "the POSIX branch signalled only the direct child")
+    assert proc.killed and proc.waited, "the direct child must still be killed and reaped"
+
+    taskkilled = []
+    monkeypatch.setattr(br.os, "name", "nt", raising=False)
+    monkeypatch.setattr(br.subprocess, "run",
+                        lambda argv, **kw: taskkilled.append(list(argv)))
+    monkeypatch.setattr(br.os, "killpg", _never_called, raising=False)
+    br._kill_process_tree(_FakeProc())
+    assert taskkilled and taskkilled[0][:3] == ["taskkill", "/T", "/F"], taskkilled
+
+
+def _never_called(*_args, **_kwargs):
+    raise AssertionError("the wrong platform branch was taken")
+
+
+def test_run_starts_posix_children_in_their_own_session(monkeypatch):
+    """The kwarg that makes the POSIX group kill mean anything.
+
+    Asserted in both directions: it is passed on POSIX, and it is NOT passed on
+    Windows -- `start_new_session` is a POSIX-only argument, so the Windows path
+    has to stay byte-for-byte what it was.
+    """
+    seen = {}
+
+    class _Recorder:
+        args = ["x"]
+        returncode = 0
+
+        def __init__(self, argv, **kwargs):
+            seen.update(kwargs)
+
+        def communicate(self, timeout=None):
+            return "", ""
+
+    monkeypatch.setattr(br.subprocess, "Popen", _Recorder)
+    monkeypatch.setattr(br.os, "name", "posix", raising=False)
+    br.run(["anything"])
+    assert seen.get("start_new_session") is True, (
+        "a POSIX child does not lead its own process group, so the group kill "
+        "would signal this process's group instead of the child's")
+
+    seen.clear()
+    monkeypatch.setattr(br.os, "name", "nt", raising=False)
+    br.run(["anything"])
+    assert "start_new_session" not in seen, (
+        "start_new_session is POSIX-only; passing it on Windows is a new failure "
+        "mode on the platform this toolkit actually ships on")
+
+
 # --------------------------------------------------------------------------- #
 # Runbook
 # --------------------------------------------------------------------------- #
@@ -2530,3 +2883,473 @@ def test_the_runbook_does_not_over_claim_what_the_tool_establishes():
         assert claim in text, "the runbook never states %r" % claim
     assert "corroborat" not in text.lower(), (
         "the runbook still uses the word the record stopped claiming")
+
+
+# --------------------------------------------------------------------------- #
+# The claims inventory
+#
+# One defect shape was flagged in three consecutive review rounds of this step,
+# each time at a different location -- a docstring, a regex comment, and the
+# operator runbook: PROSE ASSERTING A PROTECTION THE CODE DOES NOT PROVIDE.
+# Patching the named sentence each time is what produced the pattern, so the
+# sentences are enumerated instead, and the enumeration is what a test grades.
+#
+# WHAT THIS GUARD IS, EXACTLY -- read before trusting it:
+#
+#   It DOES assert that every guarantee-bearing sentence in the module's
+#   docstrings/comments and in the runbook appears in the inventory below with a
+#   disposition somebody chose, and that a disposition claiming test coverage
+#   names a test function that exists in this file.
+#
+#   It DOES NOT assert that every guarantee is tested, and it does not read the
+#   sentences for truth. A machine cannot do either. What it buys is that a NEW
+#   or REWORDED guarantee cannot land silently: the extraction reds until its
+#   sentence is dispositioned, which is the review step that was being skipped.
+#
+# Adding a guarantee therefore costs one inventory line. That is the point.
+# --------------------------------------------------------------------------- #
+
+#: What a sentence has to contain to be treated as a guarantee. Deliberately
+#: small and literal -- this is a trigger for human review, not a semantic model.
+CLAIM_WORDS = re.compile(
+    r"(?i)\b(never|always|cannot|can neither|impossible|guarantee[ds]?)\b")
+
+_SENTENCE_SPLIT = re.compile(r"(?<=[.!?])\s+")
+
+
+def _sentences(block):
+    """A normalized text block split into sentences."""
+    return [s.strip() for s in _SENTENCE_SPLIT.split(re.sub(r"\s+", " ", block).strip())
+            if s.strip()]
+
+
+def _markdown_blocks(text):
+    """Prose blocks of a markdown document: fenced code excluded.
+
+    A block ends at a blank line, and a table row, a list item and a heading each
+    START one -- so an unrelated edit three paragraphs away cannot renumber or
+    re-fuse the sentence keys in the inventory.
+    """
+    blocks, current, fenced = [], [], False
+    for line in text.splitlines():
+        if line.lstrip().startswith("```"):
+            fenced = not fenced
+            if current:
+                blocks.append(" ".join(current))
+                current = []
+            continue
+        if fenced:
+            continue
+        stripped = line.strip()
+        starts_block = (not stripped or stripped.startswith("|")
+                        or stripped.startswith("#")
+                        or re.match(r"^([-*+]|\d+\.)\s", stripped))
+        if starts_block and current:
+            blocks.append(" ".join(current))
+            current = []
+        if stripped:
+            current.append(stripped)
+    if current:
+        blocks.append(" ".join(current))
+    return blocks
+
+
+def _python_blocks(text):
+    """Docstrings (module, class, function) plus contiguous `#` comment blocks."""
+    import ast
+
+    blocks = []
+    for node in ast.walk(ast.parse(text)):
+        if isinstance(node, (ast.Module, ast.ClassDef, ast.FunctionDef,
+                             ast.AsyncFunctionDef)):
+            doc = ast.get_docstring(node)
+            if doc:
+                blocks.extend(p for p in doc.split("\n\n") if p.strip())
+    run = []
+    for line in text.splitlines():
+        stripped = line.strip()
+        if stripped.startswith("#"):
+            run.append(stripped.lstrip("#:").strip())
+        elif run:
+            blocks.append(" ".join(run))
+            run = []
+    if run:
+        blocks.append(" ".join(run))
+    return blocks
+
+
+def extract_claims():
+    """Every guarantee-bearing sentence in the two claim-bearing artifacts.
+
+    Returns a list of (source, sentence). The predicate is FIELD-AGNOSTIC: it
+    names no line, no section and no function, so a guarantee added anywhere in
+    either file is picked up without this test being taught about it.
+    """
+    runbook = (REPO_ROOT / "documentation" / "baseline-release-runbook.md").read_text(
+        encoding="utf-8")
+    module = TOOL.read_text(encoding="utf-8")
+    claims = []
+    for source, blocks in (("runbook", _markdown_blocks(runbook)),
+                           ("module", _python_blocks(module))):
+        for block in blocks:
+            for sentence in _sentences(block):
+                if CLAIM_WORDS.search(sentence):
+                    claims.append((source, sentence))
+    return claims
+
+
+#: Closed disposition vocabulary.
+#:   test:<name>        a test in THIS file would red if the claim became false
+#:   enforced-untested  the code enforces it structurally; no test isolates it
+#:   descriptive        not a behavioural guarantee about this tool (a design
+#:                      note, a statement about a third party, a restatement)
+CLAIM_DISPOSITIONS = {
+    # runbook
+    "- **run, or verify, a review.** It **does not run, and cannot verify, a cross-family review.** The product charter's release invariant — at least one real representative cross-family review — is satisfied by attaching that review through `--proofs` **and** naming an accountable party with `--attest-reviews`.":
+        'test:test_the_runbook_does_not_over_claim_what_the_tool_establishes',
+    # runbook
+    'Native host acceptance (an observed Claude Code or Codex CLI session) is a different evidence class and is never inferred from a green suite.':
+        'test:test_toolkit_without_a_cross_family_review_is_never_qualified',
+    # runbook
+    'The tool never invents one.':
+        'test:test_missing_required_flag_is_rejected',
+    # runbook
+    'A repeated request either verifies or refuses; it never overwrites.':
+        'test:test_repeated_identical_request_verifies_without_overwriting',
+    # runbook
+    '**That command alone cannot reach `QUALIFIED`**, and it is not meant to — it records the gates it executed.':
+        'test:test_toolkit_without_a_cross_family_review_is_never_qualified',
+    # runbook
+    'The lab archive is **source-only**: `providers` is empty, no `dist/` and no `CHECKSUMS.txt` are produced, and the lab repository is never edited — not its code, its index, its plan, or its acceptance records.':
+        'test:test_working_source_is_unchanged_by_a_release',
+    # runbook
+    '- **A proofs document may not carry text UTF-8 cannot encode.** A `\\udNNN` escape in any string field survives `json.loads` as a lone surrogate, which no artifact this tool writes can hold.':
+        'test:test_a_lone_surrogate_in_proofs_is_refused_at_the_boundary',
+    # runbook
+    "- **A row whose evidence file cannot be resolved, or whose `source_commit` does not bind to this release's source, is still RECORDED** — marked with an `import_status` and listed in `known_gaps`.":
+        'test:test_missing_proof_evidence_is_recorded_as_incomplete_not_dropped',
+    # runbook
+    'It never counts toward qualification and is never silently dropped.':
+        'test:test_missing_proof_evidence_is_recorded_as_incomplete_not_dropped',
+    # runbook
+    'Historical proof is never relabelled as current-source proof.':
+        'test:test_proof_bound_to_another_source_commit_is_marked_and_never_relabelled',
+    # runbook
+    '- **An import binds its own source and environment.** It never implies that anything executed natively during this run.':
+        'test:test_imported_check_evidence_is_copied_in_and_marked_as_imported',
+    # runbook
+    'The attestation is a CLI act so that reusing a historical proofs file can never carry it forward silently.':
+        'test:test_the_attestation_cannot_be_carried_by_the_proofs_document',
+    # runbook
+    '### What the tool cannot do, stated plainly':
+        'descriptive',
+    # runbook
+    'The cross-family review is the **only** required element this tool cannot execute.':
+        'descriptive',
+    # runbook
+    "It is not, and cannot be made into, verification: a presence-only matcher is defeated by a verbatim paste of a *failing* review's transcript, in which every claimed word is present and every one of them is negated — and the bypass family (negation, quotation, rebuttal, sarcasm) is unbounded, because the reader is reading bytes the caller wrote.":
+        'descriptive',
+    # runbook
+    '- It is a **CLI flag, never a `--proofs` field**, so re-running a historical proofs document cannot silently re-attest it.':
+        'test:test_the_attestation_cannot_be_carried_by_the_proofs_document',
+    # runbook
+    '- Giving it **needs `--proofs`**; it is ignored on a repeated request that only verifies an already-retained release, because a retained record is never rewritten.':
+        'enforced-untested',
+    # runbook
+    'What this gives up, stated plainly: **a named party can still attest a review that did not happen.** The tool never had the power to catch that; it only had the appearance of it.':
+        'descriptive',
+    # runbook
+    'Consistency can be locally **falsified**; it can never be locally established.':
+        'descriptive',
+    # runbook
+    'A miss is safe precisely because `consistent` upgrades nothing on its own: it falls through to the `--attest-reviews` requirement, so the tripwire can never manufacture a `QUALIFIED`.':
+        'test:test_a_consistent_tripwire_result_upgrades_nothing_on_its_own',
+    # runbook
+    'Also covers damaged retained bytes found while verifying, and text this tool cannot encode as UTF-8.':
+        'test:test_damaged_retained_bytes_are_reported_as_an_execution_failure',
+    # runbook
+    'A missing or failed gate **can never** produce `QUALIFIED`, and in every case the source archive is still retained.':
+        'test:test_a_failed_gate_is_blocked_never_qualified',
+    # runbook
+    'The payload is built in a unique sibling staging directory and published by **one rename of the complete directory**, so a release directory is never observed half-built.':
+        'enforced-untested',
+    # runbook
+    'The invocation itself always uses the real paths.':
+        'enforced-untested',
+    # runbook
+    'It is recorded **separately** from `source_commit`, the product commit being released, and the two are never conflated.':
+        'test:test_builder_commit_is_recorded_separately_from_the_source_commit',
+    # runbook
+    'A repeated request never overwrites and never rebuilds the distribution; it re-resolves the commit, re-creates the disposable checkout, and then:':
+        'test:test_repeated_identical_request_verifies_without_overwriting',
+    # runbook
+    '**The version name is NOT reserved.** A failed attempt never creates `<store>/<product>/<version>/`.':
+        'test:test_failed_source_suite_is_blocked_and_still_keeps_the_archive',
+    # runbook
+    'What it does carry is `source.zip` and every `checks/` evidence file the run had already produced, which is the part the error message alone cannot give you.':
+        'descriptive',
+    # runbook
+    '| exit `2`, `carries a character UTF-8 cannot encode` | a `--proofs` string, or an argument, holds a lone surrogate.':
+        'test:test_a_lone_surrogate_in_proofs_is_refused_at_the_boundary',
+    # runbook
+    'It is a description, not an action: `publication_status` is always `NOT_PUBLISHED`.':
+        'test:test_public_packet_excludes_private_evidence',
+    # runbook
+    '- **Never publishable**: `checks/` (captured run output carries machine-specific absolute paths), `reviews/` and `proofs/` (imported private evidence), `receipt.json` (a private run record), and `public/` itself.':
+        'test:test_public_packet_excludes_private_evidence',
+    # runbook
+    'Private consumer backups and raw host records are out of scope entirely — they are never inputs.':
+        'descriptive',
+    # runbook
+    '- **Secrets and credentials are never inputs and are never recorded.** Dependency names and authentication prerequisites are all the release notes carry — for the toolkit, that is `gh auth login` for GitHub Copilot CLI, with no `OPENAI_API_KEY` used or needed.':
+        'descriptive',
+    # runbook
+    'Read this before filing a bug against it.** An artifact the tool cannot read back counts as a failure — it is the last gate before a release is kept, so an ungraded file is never treated as clean.':
+        'test:test_the_leak_gate_fails_closed_on_an_artifact_it_cannot_grade',
+    # module
+    'This module orchestrates, records, and retains; it never re-implements a gate and never publishes.':
+        'descriptive',
+    # module
+    'Native host acceptance (an observed Claude Code / Codex CLI session) is a different evidence class and is never inferred from a green suite.':
+        'test:test_imported_check_evidence_is_copied_in_and_marked_as_imported',
+    # module
+    '* It does not run, and cannot verify, a cross-family review.':
+        'descriptive',
+    # module
+    'Absent either, a release CANNOT reach QUALIFIED, no matter how green the suites are.':
+        'test:test_a_review_nobody_attested_never_qualifies',
+    # module
+    'STORE LAYOUT ------------ <store>/<product>/<version>/ a retained release ("release ID" = "<product>/<version>", allocated by the caller, never by this tool) source.zip pinned source payload (git-tracked files of the pinned commit) release.json the record; schema_version 1 SHA256SUMS raw SHA-256 over every retained file except itself (so it covers release.json) release-notes.md sanitized, public-safe notes verify-artifacts.py the retained verifier.':
+        'descriptive',
+    # module
+    "At the release ROOT and PUBLISHABLE, because the notes tell a recipient of the published subset to run it -- `checks/` is private, so the verifier cannot live there receipt.json this operation's argv/time/exit/evidence checks/ raw host run evidence (private) reviews/, proofs/ imported evidence (private; never public) public/packet.json what may be published, and what may not CHECKSUMS.txt toolkit only -- the ORIGINAL normalized manifest produced by release.ps1 dist/{claude,gpt,codex}/ toolkit only -- the built profiles <store>/.attempts/<uuid>/ a COMPLETE payload that was not published -- a qualification failure, or a build that finished and then could not take its version name.":
+        'descriptive',
+    # module
+    'It does NOT reserve the version name; a retry allocates a new attempt and never disturbs this one.':
+        'test:test_a_retry_allocates_a_new_attempt_and_preserves_the_previous_one',
+    # module
+    'Which of the two retention directories a failed run lands in is decided by what the stage CONTAINS (stage_bucket), read off the disk -- never by which exception was in flight.':
+        'test:test_the_retention_bucket_is_read_off_the_stage_not_from_the_error',
+    # module
+    'REPEATED REQUESTS (this is also the reopen / re-verify path) ------------------------------------------------------------ A second invocation naming an existing release ID never overwrites it.':
+        'test:test_repeated_identical_request_verifies_without_overwriting',
+    # module
+    "It never converts one author's self-consistency into a verification.":
+        'descriptive',
+    # module
+    'Every native gate already obeys it: a required gate counts only when THIS process executed it (`execution == "native"`), an import is hardcoded to `execution: "imported"` and can never satisfy one, and a measured environment always beats an imported claim about it.':
+        'test:test_imported_check_evidence_is_copied_in_and_marked_as_imported',
+    # module
+    'The cross-family review is the ONE required element this tool cannot execute.':
+        'descriptive',
+    # module
+    "A token match across them therefore measures the self-consistency of one author's story; it is not, and cannot be made into, verification.":
+        'descriptive',
+    # module
+    'a CLI flag, deliberately NOT a `--proofs` field, so that reusing a historical proofs file can never silently carry the attestation forward.':
+        'test:test_the_attestation_cannot_be_carried_by_the_proofs_document',
+    # module
+    'Consistency can be locally FALSIFIED, never locally established.':
+        'descriptive',
+    # module
+    "Being negative-only is what makes the tripwire's incompleteness safe: a miss falls through to the attestation requirement, so it can never manufacture a QUALIFIED.":
+        'test:test_a_consistent_tripwire_result_upgrades_nothing_on_its_own',
+    # module
+    'The tool never had the power to catch that; it only had the appearance of it.':
+        'descriptive',
+    # module
+    "It is recorded separately from `source_commit` (the product commit being released) and the two are never conflated -- releasing the toolkit from its own repository makes them coincidentally equal only when the caller pins this repository's HEAD.":
+        'test:test_builder_commit_is_recorded_separately_from_the_source_commit',
+    # module
+    'Read that as a CONVENTION the render sites keep, NOT as a mechanism this function enforces: md_inline() cannot tell where its argument came from.':
+        'descriptive',
+    # module
+    "A CommonMark renderer escapes a code span's content, and swapping the backtick means the span cannot be broken open to escape it.":
+        'test:test_an_unpaired_caller_backtick_cannot_open_a_code_span_in_the_notes',
+    # module
+    'By then there is no "value" left to route through md_code() -- only a sentence -- so a sink physically cannot know which substring the caller wrote.':
+        'descriptive',
+    # module
+    'Best effort, never raises.':
+        'enforced-untested',
+    # module
+    '`release.ps1` spawns `python -m pytest` as a GRANDchild, so killing the powershell host on timeout can leave that grandchild alive, holding open file handles inside the disposable checkout that `remove_disposable_workspace` then cannot clear -- its retry/chmod loop cannot force-close a handle a live process still holds.':
+        'descriptive',
+    # module
+    'Never a shell string, never shell=True.':
+        'enforced-untested',
+    # module
+    'Refuse caller text that UTF-8 cannot encode.':
+        'test:test_the_unencodable_check_is_scoped_honestly',
+    # module
+    'Every artifact this tool writes is written as UTF-8, so a string UTF-8 cannot encode is not a rendering problem -- it is a value that CANNOT be published.':
+        'descriptive',
+    # module
+    'Text this tool captures rather than receives cannot carry a surrogate (`run()` decodes with `errors="backslashreplace"`, which emits ASCII, and every file read is strict UTF-8).':
+        'test:test_the_unencodable_check_is_scoped_honestly',
+    # module
+    'A recorded path must never be machine-specific.':
+        'test:test_recorded_argv_is_tokenized_and_cwd_is_relative',
+    # module
+    'This is the last gate before a release is retained, and every file it is handed was written moments earlier by this same process, so one that cannot be read is a FAULT.':
+        'test:test_the_leak_gate_fails_closed_on_an_artifact_it_cannot_grade',
+    # module
+    'Only the second pass is lost, the raw line scan still graded the same bytes, and these documents are written by `json.dumps` -- so the reachable case is not a corrupt artifact but a caller handing this function a file that was never JSON.':
+        'test:test_the_leak_gate_fails_closed_on_an_artifact_it_cannot_grade',
+    # module
+    'The real invocation always uses the real paths; only the RECORD is tokenized.':
+        'enforced-untested',
+    # module
+    "Longest path first, so '<work>/checkout/tools' never wins over '<work>/checkout'.":
+        'enforced-untested',
+    # module
+    "A cheap pre-filter, not a path validator: `os.path.abspath` on a relative argv entry would resolve it against this process's cwd and invent a machine path that was never in the argument.":
+        'descriptive',
+    # module
+    'A precondition failure, not an execution failure: commit resolution and release staging are both git-driven, so a missing git means the request cannot be attempted at all.':
+        'descriptive',
+    # module
+    'Always checked -- a caller that wants the text wants it only when the command succeeded -- so this raises ExecutionError on a nonzero exit rather than returning an empty string that reads like a legitimate answer.':
+        'enforced-untested',
+    # module
+    'Unknown is spelled out, never silently omitted.':
+        'enforced-untested',
+    # module
+    "A row whose evidence file is missing, or whose source id does not bind to this release's source commit, is imported and MARKED -- never silently dropped, and never counted toward qualification.":
+        'test:test_missing_proof_evidence_is_recorded_as_incomplete_not_dropped',
+    # module
+    'It is never read from the proofs document, so a reused historical proofs file can never carry an attestation forward on its own.':
+        'test:test_the_attestation_cannot_be_carried_by_the_proofs_document',
+    # module
+    'A hit is a real falsification and is fail-closed; a MISS is safe, because consistency alone never qualifies a review (the `--attest-reviews` act does).':
+        'test:test_a_consistent_tripwire_result_upgrades_nothing_on_its_own',
+    # module
+    'Read the module docstring first: both the row and the document are authored by the same caller, so comparing them cannot corroborate either.':
+        'descriptive',
+    # module
+    'The charter invariant, spelled out and never softened.':
+        'descriptive',
+    # module
+    'Never overwrites, never rebuilds.':
+        'test:test_repeated_identical_request_verifies_without_overwriting',
+    # module
+    'Never raises.':
+        'test:test_a_complete_payload_is_never_announced_as_partial_when_no_move_succeeds',
+    # module
+    'A missing or failed gate can never produce QUALIFIED.':
+        'test:test_a_missing_gate_is_incomplete_never_qualified',
+    # module
+    'An operator who pastes the runbook line without resolving its variables must be refused, never acted on.':
+        'test:test_placeholder_values_are_refused',
+    # module
+    'ONE list: `_build_and_publish` scans exactly these and `build_public_packet` publishes exactly this as `sanitization.scanned`, so the packet can never misdescribe what was actually graded.':
+        'test:test_the_packet_describes_exactly_the_artifacts_that_were_scanned',
+    # module
+    'Generous ceilings so a real release is never cut short.':
+        'descriptive',
+    # module
+    'Tests never reach them.':
+        'descriptive',
+    # module
+    'The word is "consistent", never "corroborated", because a comparison between two documents the same caller wrote cannot corroborate either one.':
+        'descriptive',
+    # module
+    'Verdict: PASS") cannot trip it.':
+        'descriptive',
+    # module
+    'This list is not, and is not trying to be, a natural-language negation detector -- see the module docstring: a miss falls through to the `--attest-reviews` requirement and can never manufacture a QUALIFIED, so completeness is not what makes it useful.':
+        'test:test_the_tripwire_is_not_claimed_to_be_a_negation_detector',
+    # module
+    "CommonMark backslash-escapes any ASCII punctuation, so one backslash neutralizes each of them: '\\\\' (an escape a caller would otherwise be able to forge), '`' (code span), '*' and '_' (emphasis), '[' and ']' (link/image), '|' (table cell), '~' (GFM strikethrough) and '#' (an ATX heading, reachable only if caller text ever leads a bullet -- cheap insurance rather than a claim that it cannot).":
+        'descriptive',
+    # module
+    "ONE pass over the characters, never chained replaces: a second pass would re-escape the backslashes the first one wrote, turning '\\[' into a literal backslash followed by a LIVE '['.":
+        'test:test_md_untrusted_escapes_every_inline_construct_opener',
+    # module
+    'ONE definition: scan_private_paths writes it and _build_and_publish partitions on it, so the two can never drift into describing a fault as a leak.':
+        'test:test_a_leak_and_an_ungraded_artifact_are_reported_as_different_faults',
+    # module
+    "Every caller-controlled cell is rendered in a CODE SPAN, not as plain cell text: a code span's content is escaped by any CommonMark renderer, and md_code() swaps the backtick so the span cannot be broken open.":
+        'test:test_an_unpaired_caller_backtick_cannot_open_a_code_span_in_the_notes',
+    # module
+    "The manifest is the one thing the gate below cannot grade, because it IS the gate's reference.":
+        'descriptive',
+    # module
+    'Never softened, never inferred.':
+        'descriptive',
+    # module
+    "A failed move raises, and perform_release's handler then files the payload by its CONTENTS through the same stage_bucket -- so it can never be misfiled as an aborted build.":
+        'test:test_a_failed_attempt_rename_still_files_the_complete_payload_as_an_attempt',
+    # module
+    'reject_unencodable() refuses the two CALLER boundaries up front at exit 2; this clause is for what that cannot reach -- a filesystem-supplied name carrying a surrogate.':
+        'test:test_the_unencodable_check_is_scoped_honestly',
+}
+
+
+#: Anti-vacuity floors. An extraction that silently stopped finding anything
+#: would agree with an empty inventory and pass -- these make that a red.
+CLAIM_FLOOR = {"runbook": 25, "module": 45}
+
+_DISPOSITIONS = ("enforced-untested", "descriptive")
+
+
+def test_every_guarantee_in_the_tool_and_the_runbook_is_dispositioned():
+    """The guard against the one defect shape this step kept re-introducing.
+
+    Read the section header above for what this does and does not establish. In
+    short: it cannot tell whether a sentence is TRUE, so it does not pretend to.
+    It makes a new or reworded guarantee impossible to land without somebody
+    writing down what backs it -- which is the step that kept being skipped.
+    """
+    claims = extract_claims()
+    found = {}
+    for source, sentence in claims:
+        assert sentence not in found or found[sentence] == source, (
+            "the same sentence appears in both artifacts; the inventory is keyed "
+            "by sentence, so one of them has to be reworded: %r" % sentence)
+        found[sentence] = source
+
+    for source, floor in CLAIM_FLOOR.items():
+        count = sum(1 for src, _ in claims if src == source)
+        assert count >= floor, (
+            "only %d guarantee sentences were extracted from the %s (floor %d). "
+            "Either the extraction broke -- in which case this whole test is "
+            "vacuous -- or a large amount of prose was deleted."
+            % (count, source, floor))
+
+    extracted = set(found)
+    inventoried = set(CLAIM_DISPOSITIONS)
+    undocumented = sorted(extracted - inventoried)
+    assert not undocumented, (
+        "%d guarantee-bearing sentence(s) are not in CLAIM_DISPOSITIONS. Check "
+        "each against what the code ACTUALLY does, then add it with a "
+        "disposition -- do not add it unread, and prefer narrowing the sentence "
+        "to widening the code:\n  - %s"
+        % (len(undocumented), "\n  - ".join(undocumented)))
+    stale = sorted(inventoried - extracted)
+    assert not stale, (
+        "%d inventoried claim(s) no longer appear in either artifact. If the "
+        "sentence was reworded, re-read it and re-key the entry; if it was "
+        "deleted, delete the entry:\n  - %s" % (len(stale), "\n  - ".join(stale)))
+
+
+def test_every_claim_that_says_it_has_a_test_names_a_real_one():
+    """A disposition is only worth its word if the test it names exists.
+
+    This is the half of the guard that IS mechanical: a `test:` disposition
+    pointing at a renamed or deleted test is caught here rather than read as
+    coverage. It does not verify that the named test actually grades the claim
+    -- no machine can -- so a mapping still has to be read by a reviewer.
+    """
+    defined = {name for name in globals() if name.startswith("test_")}
+    for sentence, disposition in sorted(CLAIM_DISPOSITIONS.items()):
+        if disposition.startswith("test:"):
+            named = disposition[len("test:"):]
+            assert named in defined, (
+                "claim %r is dispositioned to %r, which is not a test in this "
+                "file" % (sentence[:80], named))
+        else:
+            assert disposition in _DISPOSITIONS, (
+                "claim %r carries an unknown disposition %r; the vocabulary is "
+                "test:<name>, %s" % (sentence[:80], disposition,
+                                     ", ".join(_DISPOSITIONS)))
