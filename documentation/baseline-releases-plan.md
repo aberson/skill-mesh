@@ -363,7 +363,7 @@ dispatch the old build-phase as the lab development procedure.
 ### Step 147: Qualify and retain the first toolkit baseline release
 - **Problem:** Turn the retained toolkit source into an identifiable release using the existing toolchain.
 - **Type:** code
-- **Status:** PENDING
+- **Status:** BLOCKED (2026-09-15)
 - **Issue:** #207
 - **Flags:** --reviewers deep --isolation worktree
 - **Files:** `tools/baseline_release.py` (new); `documentation/baseline-release-runbook.md` (new); `tests/release/test_baseline_release.py` (new). Read/reuse `tools/release.ps1`, `tools/build-distributions.ps1`, `documentation/product-charter.md`; preserve their interfaces.
