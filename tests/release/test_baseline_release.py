@@ -415,6 +415,16 @@ def test_the_private_path_detector_also_catches_posix_home_paths(tmp_path):
     "/etc/profile.d/x.sh",
     "<source-checkout>/tools/release.ps1",
     "dist/claude/SKILL.md",
+    # A documented token followed IMMEDIATELY by a `home`/`Users` segment. This
+    # is the tool's own recorded argv spelling over a product whose top-level
+    # directory is named `home` or `Users` (a web app's home routes, a CRM's
+    # Users module) -- a relative tail under a token root, not an absolute home.
+    # The lookbehind alone cannot see that, because every token closes with `>`.
+    "<source-checkout>/home/build.py",
+    "<source-checkout>/Users/profile.py",
+    "<release-dir>/home/index.html",
+    "<store>/Users/records.json",
+    "<stage-dir>/home/app/main.py",
 ])
 def test_the_private_path_detector_does_not_fire_on_a_legitimate_string(tmp_path, value):
     """Widening a leak scanner is only safe while its false-positive set stays EMPTY.
@@ -430,6 +440,137 @@ def test_the_private_path_detector_does_not_fire_on_a_legitimate_string(tmp_path
     clean.write_text(json.dumps({"value": value}) + "\n", encoding="utf-8")
     assert br.scan_private_paths([("clean.json", clean)]) == [], (
         "the detector fired on a legitimate string")
+
+
+# The OTHER side of the same measurement. Exempting the token convention is only
+# safe while these still red -- and the obvious patch (adding `>` to the
+# lookbehind's excluded class) would silently turn the first two green, buying a
+# false NEGATIVE in captured shell output to pay for the false positive above.
+@pytest.mark.parametrize("value", [
+    ">/home/someone/build.log",
+    "2>/Users/someone/err.log",
+    "/home/someone/x",
+    "/Users/someone/build",
+    "resolved from file:///home/someone/x",
+    "<not-a-documented-token>/home/someone/x",
+])
+def test_the_private_path_detector_still_reds_on_a_real_leak(tmp_path, value):
+    """Red-on-garbage anchor for the token exemption.
+
+    A shell redirect writes `>` immediately before an absolute path, which is the
+    exact character every documented token ends with -- so the exemption has to
+    be keyed on the TOKENS, not on the character. The last case proves it is:
+    an angle-bracketed word that is NOT in PATH_TOKEN_DOC buys nothing.
+    """
+    planted = tmp_path / "record.json"
+    planted.write_text(json.dumps({"value": value}) + "\n", encoding="utf-8")
+    assert br.scan_private_paths([("record.json", planted)]), (
+        "the detector no longer reds on a real machine-specific path")
+
+
+def test_the_token_exemption_is_derived_from_the_documented_token_list():
+    """One source of truth: a token added to PATH_TOKEN_DOC is exempt that day.
+
+    A hand-maintained second list is a false green waiting to happen -- the
+    tokens and their exemption would drift apart with nothing to notice. This
+    also pins the two properties that make the substitution safe: no documented
+    token is itself a leak, and none of them contains the segment the POSIX
+    branch looks for.
+    """
+    for token in br.PATH_TOKEN_DOC:
+        assert br._PATH_TOKEN_RE.fullmatch(token), (
+            "%s is documented but not exempted by the scan predicate" % token)
+        assert br.PRIVATE_PATH_RE.search(token) is None, (
+            "%s is itself read as a machine path" % token)
+        assert "home" not in token and "Users" not in token, (
+            "%s carries the segment the scanner looks for, so substituting it "
+            "out could hide a leak" % token)
+    assert br.PRIVATE_PATH_RE.search(br._PATH_TOKEN_SENTINEL) is None
+    assert br._PATH_TOKEN_SENTINEL.isalnum(), (
+        "the sentinel must land in the lookbehind's excluded class")
+
+
+def test_a_tokenized_historical_proof_is_accepted_not_refused(lab_repo, tmp_path):
+    """The reachable half of the false positive: exit 2 on an honest document.
+
+    A `--proofs` document is explicitly meant to carry evidence forward from a
+    prior release's own `release.json`, whose `checks[].argv` entries are already
+    tokenized. If the pinned source has a top-level directory named `home` or
+    `Users`, that already-sanitized record must import, not be refused as a leak.
+    """
+    root, commit = lab_repo
+    proof_dir = tmp_path / "proofs"
+    proof_dir.mkdir()
+    (proof_dir / "old-run.txt").write_text("historical run output\n", encoding="utf-8")
+    (proof_dir / "proofs.json").write_text(json.dumps({
+        "checks": [{
+            "argv": ["<python-exe>", "-m", "pytest", "<source-checkout>/home/tests"],
+            "exit_code": 0,
+            "cwd": "<source-checkout>/Users",
+            "source_commit": commit,
+            "evidence": "old-run.txt",
+            "name": "historical-pytest",
+        }],
+        "reviews": [],
+    }), encoding="utf-8")
+    store = tmp_path / "store"
+    result = _release("lab", root, commit, "v0.1.0-experimental.1", store,
+                      proofs=proof_dir / "proofs.json")
+    assert result.returncode == 0, (
+        "a tokenized historical proof was refused as a leak:\n%s"
+        % (result.stdout + result.stderr))
+    record = _record(store / "skill-mesh-lab" / "v0.1.0-experimental.1")
+    imported = [row for row in record["checks"] if row["execution"] == "imported"]
+    assert len(imported) == 1, "the tokenized row never imported"
+    assert "<source-checkout>/home/tests" in imported[0]["argv"], (
+        "the tokenized argv was rewritten on the way in")
+
+
+def test_the_leak_gate_fails_closed_on_an_artifact_it_cannot_grade(tmp_path):
+    """An unreadable artifact is a FAULT, never a clean one.
+
+    scan_private_paths is the last gate before a release is retained, and every
+    file it is handed was written moments earlier by the same process. Skipping
+    one that cannot be read would let a real leak inside a transiently locked
+    file (an antivirus handle, a disk hiccup) pass the one check that exists to
+    stop it -- a silent fail-OPEN on the safety-critical path.
+    """
+    missing = tmp_path / "gone.json"
+    assert br.scan_private_paths([("gone.json", missing)]) == ["gone.json:<unreadable>"]
+
+    # A directory where a file is expected: read_text raises OSError, same class
+    # of fault as a lock, without depending on filesystem permissions.
+    as_dir = tmp_path / "adir.json"
+    as_dir.mkdir()
+    assert br.scan_private_paths([("adir.json", as_dir)]) == ["adir.json:<unreadable>"]
+
+    undecodable = tmp_path / "bytes.md"
+    undecodable.write_bytes(b"\xff\xfe\x00 not utf-8 \xc3\x28")
+    assert br.scan_private_paths([("bytes.md", undecodable)]) == ["bytes.md:<unreadable>"]
+
+    # Scoped deliberately: an UNPARSABLE .json is not a hit. Only the second pass
+    # is lost, the raw line scan still graded the same bytes, and the artifacts
+    # this gate is handed in production are written by json.dumps.
+    broken = tmp_path / "broken.json"
+    broken.write_text("{not json at all\n", encoding="utf-8")
+    assert br.scan_private_paths([("broken.json", broken)]) == []
+
+
+def test_the_packet_describes_exactly_the_artifacts_that_were_scanned(lab_release):
+    """The packet's `sanitization.scanned` must describe what was really graded.
+
+    The published field and the scan call site were two verbatim copies of one
+    4-item list, which drift the first time an artifact is added to only one of
+    them -- the packet would then misdescribe the sanitization a consumer is
+    relying on. Graded end to end against a real release: the published field,
+    the single owner, and the files that actually exist must all agree.
+    """
+    _, release_dir, _, _ = lab_release
+    packet = json.loads((release_dir / "public" / "packet.json").read_text(encoding="utf-8"))
+    assert packet["sanitization"]["scanned"] == list(br.PUBLIC_SCANNED_ARTIFACTS)
+    for name in br.PUBLIC_SCANNED_ARTIFACTS:
+        assert (release_dir / name).is_file(), (
+            "the packet claims %s was scanned, but the release has no such file" % name)
 
 
 def test_nonexistent_source_root_is_an_input_error(tmp_path):
@@ -699,6 +840,231 @@ def test_markdown_inlining_neutralizes_cell_and_code_span_breakers():
     assert br.md_inline("a|b") == "a\\|b"
     assert br.md_inline("one\ntwo\r\nthree") == "one two three"
     assert br.md_code("x`y|z") == "`x'y\\|z`"
+
+
+def test_md_untrusted_escapes_every_inline_construct_opener():
+    """The mixed-trust channel's neutralizer, graded character by character.
+
+    `md_inline` plain mode is for AUTHORED prose and deliberately leaves the
+    backtick and the emphasis markers live; `md_untrusted` is the path for a
+    sentence that has already had caller text fused into it, so nothing that can
+    open an inline construct may survive.
+    """
+    for ch in "\\`*_[]|~#":
+        assert br.md_untrusted("a%sb" % ch) == "a\\%sb" % ch, (
+            "%r can open an inline construct and was not escaped" % ch)
+    assert br.md_untrusted("<b>&amp;</b>") == "&lt;b&gt;&amp;amp;&lt;/b&gt;"
+    assert br.md_untrusted("one\ntwo\r\nthree\tfour") == "one two three four"
+    # ONE pass, not chained replaces: a second pass over its own output would
+    # turn the escape `\[` into a literal backslash followed by a LIVE `[`.
+    assert br.md_untrusted("a\\[b") == "a\\\\\\[b"
+    # And md_inline is unchanged -- authored prose keeps its formatting.
+    assert br.md_inline("a`b*c") == "a`b*c"
+
+
+#: A token that appears in no authored string, so its presence in a rendered
+#: bullet proves the caller's text actually reached the channel.
+_MARKER = "zqsentinel"
+
+#: The payload shapes. Split by the CONSTRAINT each field imposes, not by
+#: producer: a filename has to be creatable on Windows, an evidence-stated claim
+#: has to survive verbatim into the evidence document, and the rest is free.
+_PAYLOAD = {
+    # Everything CommonMark can act on, on one line.
+    "inline": "%s `code` *em* _em_ [l](u) | pipe ~s~ # h <b>raw</b> & amp \\ esc" % _MARKER,
+    # The same, plus the line break a bullet must survive.
+    "multiline": "%s `code` *em* [l](u) | pipe <b>raw</b>\nsecond line" % _MARKER,
+    # Windows-legal filename characters only -- this one is really created.
+    "file": "%s-`code`-[l]-~s~-#h-&amp.txt" % _MARKER,
+    "file2": "%s-`review`-[l]-~s~.md" % _MARKER,
+    # Never created, so it may carry every metacharacter.
+    "path": "%s-`missing`-*[gone]*.txt" % _MARKER,
+    # A mismatching source id whose FIRST TWELVE characters -- all the message
+    # embeds -- already carry a backtick and an emphasis marker.
+    "commit": "`%s*_[]0000000000000000000" % _MARKER,
+    "envkey": "%s-`key`-*k*" % _MARKER,
+    "envval": "%s-`val`-*v*" % _MARKER,
+    # Stated verbatim by the evidence document, so it must stay single-line.
+    "verdict": "NEEDS-WORK %s `code` *em* [l](u) ~s~ & amp" % _MARKER,
+}
+
+#: The control. Same fields, same producers, no Markdown metacharacter anywhere.
+_BENIGN = {
+    "inline": "%s plain argv text" % _MARKER,
+    "multiline": "%s plain gate name" % _MARKER,
+    "file": "%s-plain-check.txt" % _MARKER,
+    "file2": "%s-plain-review.md" % _MARKER,
+    "path": "%s-plain-missing.txt" % _MARKER,
+    "commit": "d%s000000000000000000000" % _MARKER,
+    "envkey": "%s-plain-key" % _MARKER,
+    "envval": "%s-plain-val" % _MARKER,
+    "verdict": "NEEDS-WORK %s plain" % _MARKER,
+}
+
+
+def _build_injection_proofs(directory: Path, commit: str, values) -> Path:
+    """A proofs document that drives EVERY producer of the reasons/gaps channel.
+
+    One row per producer shape, so the control run and the payload run fire the
+    same set of messages and differ only in the caller-supplied characters:
+
+    * a failing check whose evidence RESOLVES -- the failed-gate reason, which
+      embeds both `checks[].name` (optional, never type- or content-validated)
+      and the evidence locator in one sentence;
+    * a check whose evidence does NOT resolve and whose source id mismatches --
+      the argv/evidence gap and the source-mismatch gap;
+    * a review with the same two problems -- their review-side counterparts;
+    * a review that is complete, consistent, attested and bound to this source,
+      so `review_qualifies` runs all the way down to the verdict message;
+    * an environment key this run did not measure, and a declared value for one
+      it did -- the two environment-mismatch gaps.
+    """
+    directory.mkdir(parents=True, exist_ok=True)
+    (directory / values["file"]).write_text("historical run output\n",
+                                            encoding="utf-8", newline="\n")
+    review_ok = _review_proof(
+        commit, verdict=values["verdict"], evidence=values["file2"],
+        requested_model="req-%s" % values["inline"],
+        resolved_model="res-%s" % values["inline"],
+        resolution_status="status-%s" % values["inline"],
+        conversation_id="conv-%s" % values["inline"])
+    (directory / values["file2"]).write_text(_attestation(review_ok),
+                                             encoding="utf-8", newline="\n")
+    review_broken = _review_proof(commit, source_commit=values["commit"],
+                                  evidence=values["path"],
+                                  conversation_id="conv-broken-%s" % values["inline"])
+    document = {
+        "checks": [
+            {"argv": ["<python-exe>", "-m", "pytest", values["inline"]],
+             "exit_code": 1, "cwd": ".", "source_commit": commit,
+             "evidence": values["file"], "name": values["multiline"]},
+            {"argv": [values["inline"], "--flag"], "exit_code": 0, "cwd": ".",
+             "source_commit": values["commit"], "evidence": values["path"],
+             "name": "second-%s" % values["inline"]},
+        ],
+        "reviews": [review_broken, review_ok],
+        "environment": {values["envkey"]: values["envval"],
+                        "python": values["envval"]},
+    }
+    path = directory / "proofs.json"
+    path.write_text(json.dumps(document, indent=2), encoding="utf-8", newline="\n")
+    return path
+
+
+def _notes_from_proofs(root, commit, store: Path, proofs: Path):
+    """Cut one real release from `proofs` and return (notes text, record).
+
+    The construction includes a FAILED gate, so the run is BLOCKED and its
+    complete payload is retained under `.attempts/` rather than published.
+    """
+    result = _release("lab", root, commit, "v0.1.0-experimental.1", store,
+                      proofs=proofs, attest=ATTESTING_PARTY)
+    assert result.returncode in (0, 1), result.stdout + result.stderr
+    attempts = _attempt_dirs(store)
+    assert len(attempts) == 1, "expected exactly one retained attempt, got %s" % attempts
+    return ((attempts[0] / "release-notes.md").read_text(encoding="utf-8"),
+            _record(attempts[0]))
+
+
+def _token_structure(md, text: str):
+    """The document's SHAPE: every block token, and every inline child's type.
+
+    Deliberately excludes content. Caller text is allowed to change what a bullet
+    says; it may never change which tokens the document is made of.
+    """
+    shape = []
+    for token in md.parse(text):
+        shape.append(("block", token.type, token.tag, token.nesting))
+        if token.type == "inline":
+            for child in token.children or []:
+                shape.append(("inline", child.type, child.tag))
+    return shape
+
+
+def test_caller_text_cannot_alter_the_parsed_structure_of_the_public_notes(
+        lab_repo, tmp_path):
+    """The channel-level regression gate for the reasons/gaps mixed-trust channel.
+
+    THE PREDICATE IS FIELD-AGNOSTIC ON PURPOSE. A sentinel payload carrying every
+    Markdown metacharacter is planted in EVERY caller-controlled `--proofs` field,
+    arranged to drive every producer that fuses caller text into a qualification
+    reason or a known gap; a control run supplies benign values in the same
+    fields. Then both `release-notes.md` files are PARSED with markdown-it-py --
+    a real CommonMark implementation, because a hand-rolled scanner would only be
+    this repository's model of CommonMark -- and the two token structures must be
+    identical. Caller text may change what a bullet SAYS; it may never change
+    what the document IS.
+
+    That is the property a fourth review round cannot be relied on to re-check:
+    a producer added later, embedding a field nobody listed here, reds this test
+    without the test naming the site. Two earlier line-scoped fixes did not hold
+    precisely because the producer set is open-ended.
+    """
+    markdown_it = pytest.importorskip(
+        "markdown_it",
+        reason="markdown-it-py is this repository's pinned CommonMark parser")
+    root, commit = lab_repo
+
+    payload_proofs = _build_injection_proofs(tmp_path / "payload", commit, _PAYLOAD)
+    benign_proofs = _build_injection_proofs(tmp_path / "benign", commit, _BENIGN)
+
+    notes_payload, record_payload = _notes_from_proofs(
+        root, commit, tmp_path / "store-payload", payload_proofs)
+    notes_control, _ = _notes_from_proofs(
+        root, commit, tmp_path / "store-benign", benign_proofs)
+
+    # ---- the run must not be vacuous: prove the payload really reached the
+    # channel, in every producer shape, before grading how it rendered.
+    channel = list(record_payload["qualification_reasons"]) + list(
+        record_payload["known_gaps"])
+    carrying = [text for text in channel if _MARKER in text]
+    assert len(carrying) >= 8, (
+        "the construction drove only %d producers; the payload never reached the "
+        "channel in enough shapes to grade it:\n%s"
+        % (len(carrying), "\n".join(channel)))
+    for shape in ("could not be resolved", "binds source_commit",
+                  "which this run did not measure", "but this run measured",
+                  "does not satisfy the charter invariant", "exited 1"):
+        assert any(shape in text for text in channel), (
+            "no message of the shape %r fired, so that producer is untested:\n%s"
+            % (shape, "\n".join(channel)))
+    assert any("`" in text for text in carrying), (
+        "the payload lost its backtick before reaching the channel")
+
+    # ---- and the notes must still SAY it, escaped rather than dropped.
+    assert _MARKER in notes_payload, "the payload was silently dropped from the notes"
+
+    md = markdown_it.MarkdownIt("commonmark").enable("table")
+    assert _token_structure(md, notes_payload) == _token_structure(md, notes_control), (
+        "caller-controlled --proofs text changed the PARSED structure of the "
+        "public release notes")
+
+
+def test_an_unpaired_caller_backtick_cannot_open_a_code_span_in_the_notes():
+    """The narrow, executed repro this gate grew out of, kept as its anchor.
+
+    `compute_qualification`'s failed-gate message embeds TWO caller-controlled
+    values -- `checks[].name` (optional, and never type- or content-validated)
+    and the evidence locator -- in one sentence. A backtick in each pairs across
+    the authored text between them, so the exit code and the evidence path a
+    reader needs are swallowed into a code span. Measured before the fix as
+    text/code_inline/text against a control's single text token.
+    """
+    markdown_it = pytest.importorskip("markdown_it")
+    md = markdown_it.MarkdownIt("commonmark")
+
+    def structure(name, evidence):
+        _, reasons = br.compute_qualification(
+            "lab", [{"name": name, "exit_code": 1, "evidence": evidence,
+                     "execution": "imported", "import_status": "imported"}], [], "a" * 40)
+        bullet = "* %s\n" % br.md_untrusted(reasons[0])
+        return [child.type
+                for token in md.parse(bullet) if token.type == "inline"
+                for child in (token.children or [])]
+
+    assert structure("gate-`x", "proofs/00-`run.txt") == structure(
+        "gate-xx", "proofs/00-run.txt") == ["text"], (
+        "a caller backtick reopened a code span in a qualification reason")
 
 
 def test_generated_public_text_carries_no_machine_specific_path(lab_release):
@@ -991,6 +1357,54 @@ def test_a_second_aborted_run_preserves_the_first_partial_build(
     assert len(kept) == 2, "a retry did not allocate its own aborted directory"
     assert br.sha256_file(first / "source.zip") == fingerprint, (
         "a retry disturbed the previous abort's retained bytes")
+
+
+def test_a_publish_collision_files_a_complete_payload_as_an_attempt(
+        lab_repo, tmp_path, monkeypatch, capsys):
+    """`.attempts/` vs `.aborted/` describes the CONTENTS, not the error.
+
+    Losing the race for a version directory happens AFTER the build finished:
+    record, notes, receipt, SHA256SUMS and every evidence file are already
+    written when the rename is attempted. Filing that under `.aborted/` would
+    tell an operator to expect a directory that "may have no release.json" while
+    a complete one is sitting there.
+
+    Driven in-process because the race cannot be provoked from outside: the
+    version directory has to appear BETWEEN the pre-flight check and the publish
+    rename, which is exactly what the patched rename simulates.
+    """
+    root, commit = lab_repo
+    store = tmp_path / "store"
+    final = store / "skill-mesh-lab" / "v0.1.0-experimental.1"
+    real_rename = br.os.rename
+
+    def racing_rename(src, dst):
+        if Path(dst) == final:
+            Path(dst).mkdir(parents=True, exist_ok=True)   # the other process won
+            raise FileExistsError(17, "simulated concurrent creation", str(dst))
+        return real_rename(src, dst)
+
+    monkeypatch.setattr(br.os, "rename", racing_rename)
+    code = br.main(["lab", "--source-root", str(root), "--source-commit", commit,
+                    "--version", "v0.1.0-experimental.1", "--store", str(store),
+                    "--python-exe", sys.executable])
+    err = capsys.readouterr().err
+
+    assert code == br.EXIT_INPUT, err
+    aborted = store / ".aborted"
+    assert not aborted.is_dir() or not list(aborted.iterdir()), (
+        "a COMPLETE payload was filed as an aborted partial build")
+    attempts = _attempt_dirs(store)
+    assert len(attempts) == 1, "the complete payload was not retained as an attempt"
+    for name in ("release.json", "release-notes.md", "SHA256SUMS", "source.zip",
+                 "receipt.json"):
+        assert (attempts[0] / name).is_file(), (
+            "the retained attempt is missing %s, so it was not complete" % name)
+    assert "COLLISION" in err and "COMPLETE" in err
+    assert str(attempts[0]) in err, (
+        "the failure message does not name where the complete build was kept")
+    assert "partial" not in err.lower(), (
+        "the operator is still told to expect a partial build")
 
 
 # --------------------------------------------------------------------------- #
@@ -2049,6 +2463,37 @@ def test_exit_code_policy():
     assert br.release_exit_code("toolkit", "QUALIFIED") == 0
     assert br.release_exit_code("toolkit", "INCOMPLETE") == 1
     assert br.release_exit_code("toolkit", "BLOCKED") == 1
+
+
+def test_a_stalled_subprocess_keeps_the_documented_exit_code_contract(
+        lab_repo, tmp_path, monkeypatch, capsys):
+    """A timeout must not escape as a traceback and take the contract with it.
+
+    The premise is a stdlib fact worth pinning, because it is the whole bug:
+    `subprocess.TimeoutExpired` is a `SubprocessError`, NOT an `OSError`, so the
+    io handler never saw it. `run_gate()` converts its own timeout; the
+    environment probes and every `git()` call do not, and requiring each new call
+    site to remember is how this reappears. One clause at the top catches the
+    class once.
+    """
+    assert not issubclass(subprocess.TimeoutExpired, OSError), (
+        "the premise changed: TimeoutExpired is now an OSError")
+    assert issubclass(subprocess.TimeoutExpired, subprocess.SubprocessError)
+
+    root, commit = lab_repo
+
+    def stalled(*_args, **_kwargs):
+        raise subprocess.TimeoutExpired(cmd=["git", "rev-parse"], timeout=br.TIMEOUT_GIT)
+
+    monkeypatch.setattr(br, "capture_environment", stalled)
+    code = br.main(["lab", "--source-root", str(root), "--source-commit", commit,
+                    "--version", "v0.1.0-experimental.1",
+                    "--store", str(tmp_path / "store"), "--python-exe", sys.executable])
+    err = capsys.readouterr().err
+
+    assert code == br.EXIT_EXEC, err
+    assert any(line.startswith("baseline-release: ERROR") for line in err.splitlines()), (
+        "a stalled subprocess did not produce the documented error line:\n%s" % err)
 
 
 # --------------------------------------------------------------------------- #

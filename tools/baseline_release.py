@@ -259,6 +259,20 @@ RESERVED_SEGMENTS = frozenset(
 #: `https://example.com/Users/octocat` are preceded by a path character, while a
 #: genuinely absolute `/home/...` is preceded by nothing, a quote, a space or a
 #: separator.
+#:
+#: The lookbehind does NOT cover this tool's own recorded spelling, and is
+#: deliberately not widened to: a record writes a path as `<token>/tail`
+#: (PATH_TOKEN_DOC below) and every token closes with `>`, so `<store>/home/x` --
+#: a perfectly safe relative tail under a token root -- reads to this pattern as
+#: an absolute POSIX home. Adding `>` to the excluded class would fix that by
+#: also exempting the shell-redirect spelling `>/home/someone/log`, buying a
+#: false NEGATIVE in captured text to pay for a false positive. So the token
+#: convention is normalized OUT of the text BEFORE the pattern is applied.
+#:
+#: APPLY THIS PATTERN THROUGH contains_private_path(), NOT DIRECTLY. That helper
+#: is the one predicate that does the normalization, and every caller in this
+#: module uses it. Matching this regex against raw text that may carry a
+#: documented token is exactly the shape that refuses an honest release.
 PRIVATE_PATH_RE = re.compile(
     r"[A-Za-z]:[\\/]Users[\\/](?!<)"
     r"|(?<![A-Za-z0-9_.~%-])/(?:home|Users)/(?!<)"
@@ -286,6 +300,12 @@ PLACEHOLDER_PATTERNS = (
 PUBLIC_INCLUDE_COMMON = ("source.zip", "release.json", "SHA256SUMS", "release-notes.md",
                          "verify-artifacts.py")
 PUBLIC_INCLUDE_TOOLKIT = ("CHECKSUMS.txt", "dist/")
+#: The generated public text artifacts the leak scanner covers, release-relative.
+#: ONE list: `_build_and_publish` scans exactly these and `build_public_packet`
+#: publishes exactly this as `sanitization.scanned`, so the packet can never
+#: misdescribe what was actually graded.
+PUBLIC_SCANNED_ARTIFACTS = ("release.json", "release-notes.md",
+                            "public/packet.json", "receipt.json")
 PUBLIC_EXCLUDE = (
     ("checks/", "raw host run records -- captured stdout/stderr carries machine-specific absolute paths"),
     ("reviews/", "imported review evidence -- private review material, kept local"),
@@ -314,6 +334,21 @@ PATH_TOKEN_DOC = {
     "<store>": "the release store root",
     "<proofs>": "the --proofs file supplied by the caller",
 }
+
+#: The documented tokens as a pattern, DERIVED from PATH_TOKEN_DOC rather than
+#: re-listed: a token added there is exempted by contains_private_path() the same
+#: day, with no second list to keep in sync. Longest first so one token can never
+#: be matched as a prefix of another.
+_PATH_TOKEN_RE = re.compile(
+    "|".join(re.escape(token)
+             for token in sorted(PATH_TOKEN_DOC, key=len, reverse=True)))
+
+#: What a token is replaced by before the leak scan. Alphanumeric on purpose: it
+#: lands in PRIVATE_PATH_RE's excluded lookbehind class, so `<store>/home/x`
+#: becomes `t/home/x` and reads as the repo-relative tail it actually is. It
+#: contains no separator, no `>` and neither `home` nor `Users`, so it can
+#: neither create a match nor hide one.
+_PATH_TOKEN_SENTINEL = "t"
 
 CHECKSUM_SEMANTICS = {
     "artifacts": "raw SHA-256 over each retained file's bytes; excludes release.json and SHA256SUMS to avoid recursive hashing",
@@ -406,9 +441,18 @@ def md_inline(value, code: bool = False) -> str:
 
     Emphasis markers and backticks are deliberately NOT escaped in plain-text
     mode: this path also carries this module's OWN prose, which uses them
-    intentionally, and their worst case is a cosmetic formatting slip. A
-    caller-controlled VALUE never takes this path -- values go through md_code(),
-    where a CommonMark renderer escapes the span's whole content.
+    intentionally. That makes plain-text mode a path for AUTHORED prose and for
+    closed-vocabulary or machine-measured values ONLY -- never for caller text.
+    Anything the caller supplied takes one of the two neutralizing paths instead,
+    and which one depends on how it ARRIVES at the sink:
+
+    * md_code() -- the value is still intact and separately addressable when the
+      sink sees it (a table cell). A CommonMark renderer escapes a code span's
+      whole content.
+    * md_untrusted() -- the value was already fused into an authored sentence by
+      %-formatting before the sink saw it (the qualification_reasons/known_gaps
+      channel). There is no "value" left to wrap, so the whole sentence is
+      treated as untrusted.
 
     CODE-SPAN MODE (`code=True`) escapes nothing except the backtick and the
     pipe, because entity text inside a code span would render as the entity.
@@ -426,11 +470,67 @@ def md_inline(value, code: bool = False) -> str:
 def md_code(value) -> str:
     """A caller-controlled value rendered inside a code span.
 
-    The neutralizer of choice for anything the caller supplied: a CommonMark
-    renderer escapes a code span's content, and swapping the backtick means the
-    span cannot be broken open to escape it.
+    The neutralizer for a caller value that reaches the sink INTACT -- a table
+    cell, where the sink still knows which string came from `--proofs`. A
+    CommonMark renderer escapes a code span's content, and swapping the backtick
+    means the span cannot be broken open to escape it.
     """
     return "`%s`" % md_inline(value, code=True)
+
+
+#: Everything that can OPEN an inline construct in the untrusted channel once
+#: `&`, `<` and `>` have already become entities. CommonMark backslash-escapes
+#: any ASCII punctuation, so one backslash neutralizes each of them:
+#: '\\' (an escape a caller would otherwise be able to forge), '`' (code span),
+#: '*' and '_' (emphasis), '[' and ']' (link/image), '|' (table cell), '~' (GFM
+#: strikethrough) and '#' (an ATX heading, reachable only if caller text ever
+#: leads a bullet -- cheap insurance rather than a claim that it cannot).
+_MD_UNTRUSTED_ESCAPES = frozenset("\\`*_[]|~#")
+
+
+def md_untrusted(value) -> str:
+    """Neutralize a MIXED-TRUST sentence for a Markdown bullet.
+
+    `qualification_reasons` and `known_gaps` are the one channel where authored
+    prose and caller-supplied `--proofs` text are FUSED into a single sentence by
+    %-formatting, at the producer, long before a sink sees them. By then there is
+    no "value" left to route through md_code() -- only a sentence -- so a sink
+    physically cannot know which substring the caller wrote. Two earlier
+    line-scoped fixes neutralized individual sinks where the value DID still
+    arrive intact; the defect kept reappearing because the producer set is
+    open-ended and every new reason or gap message silently extends it.
+
+    So this answers at the channel instead: the WHOLE sentence is untrusted.
+    Everything md_inline() plain mode does, plus a backslash escape on every
+    character that could open an inline construct. No per-site judgment is left
+    to get wrong, and a producer added later is covered the day it is written.
+
+    THE CHANNEL'S CONTRACT, stated once, here: a qualification reason or a known
+    gap is PLAIN TEXT. Markdown formatting is not available in it -- an authored
+    backtick or asterisk in one of these messages renders as that literal
+    character, so write them with plain quotes. That cost is the safe direction:
+    over-escaping puts a cosmetic backslash in the SOURCE and renders correctly,
+    while under-escaping is the defect itself -- caller text restructuring the
+    "why this release is not QUALIFIED" disclosure that this tool exists to
+    publish honestly.
+    """
+    text = str(value)
+    for ws in ("\r\n", "\r", "\n", "\t"):
+        text = text.replace(ws, " ")
+    # Entities first, and in this order: raw HTML, autolinks and a leading
+    # blockquote marker are all neutralized, and a recorded token such as
+    # <release-dir> renders as its literal text instead of being swallowed as an
+    # unknown tag. The '&' introduced by '&lt;'/'&gt;' must not be re-encoded.
+    text = text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+    # ONE pass over the characters, never chained replaces: a second pass would
+    # re-escape the backslashes the first one wrote, turning '\[' into a literal
+    # backslash followed by a LIVE '['.
+    out = []
+    for ch in text:
+        if ch in _MD_UNTRUSTED_ESCAPES:
+            out.append("\\")
+        out.append(ch)
+    return "".join(out)
 
 
 def _kill_process_tree(proc) -> None:
@@ -600,6 +700,25 @@ def walk_strings(obj):
             yield from walk_strings(item)
 
 
+def contains_private_path(text) -> bool:
+    """True when `text` carries a machine-specific absolute user path.
+
+    THE one predicate. PRIVATE_PATH_RE is never applied directly, because this
+    tool's own records spell a path as `<token>/tail` and a token closes with
+    `>` -- a character the pattern's lookbehind cannot exempt without also
+    exempting a shell redirect. So the documented tokens are substituted out
+    first, and what remains is graded as the relative tail it actually is.
+
+    The substitution can neither create nor hide a hit: no documented token
+    contains a separator, `home` or `Users`, and the sentinel is a single
+    alphanumeric. A real leak ADJACENT to a token still reds -- the Windows
+    branch has no lookbehind at all, and a POSIX home following a token is, by
+    the tokenization's own construction, a relative segment under that root.
+    """
+    return PRIVATE_PATH_RE.search(
+        _PATH_TOKEN_RE.sub(_PATH_TOKEN_SENTINEL, str(text))) is not None
+
+
 def scan_private_paths(paths):
     """Return ['<label>:<lineno>'] for every machine-specific absolute path found.
 
@@ -607,15 +726,28 @@ def scan_private_paths(paths):
     string values. The second pass is not redundant -- JSON escapes a backslash,
     so `C:\\Users\\...` reads as `C:\\\\Users` in the raw bytes and a line scan
     alone would miss exactly the Windows spelling this gate exists to catch.
+
+    FAILS CLOSED ON AN UNREADABLE FILE. This is the last gate before a release is
+    retained, and every file it is handed was written moments earlier by this
+    same process, so one that cannot be read is a FAULT -- reported as a hit,
+    never passed over as clean. Treating it as clean would let a real leak inside
+    a transiently locked file (an antivirus handle, a disk hiccup) through the
+    one check that exists to stop it.
+
+    An UNPARSABLE `.json` is deliberately NOT a hit. Only the second pass is
+    lost, the raw line scan still graded the same bytes, and these documents are
+    written by `json.dumps` -- so the reachable case is not a corrupt artifact
+    but a caller handing this function a file that was never JSON.
     """
     hits = []
     for label, path in paths:
         try:
             text = Path(path).read_text(encoding="utf-8")
         except (OSError, UnicodeDecodeError):
+            hits.append("%s:<unreadable>" % label)
             continue
         for lineno, line in enumerate(text.splitlines(), 1):
-            if PRIVATE_PATH_RE.search(line):
+            if contains_private_path(line):
                 hits.append("%s:%d" % (label, lineno))
         if str(path).lower().endswith(".json"):
             try:
@@ -623,7 +755,7 @@ def scan_private_paths(paths):
             except ValueError:
                 continue
             for value in walk_strings(document):
-                if PRIVATE_PATH_RE.search(value):
+                if contains_private_path(value):
                     hits.append("%s:<json-value>" % label)
                     break
     return hits
@@ -955,8 +1087,12 @@ def load_proofs(proofs_path: Path) -> dict:
     except ValueError as exc:
         raise InputError("--proofs '%s' is not valid JSON: %s" % (proofs_path, exc))
     _require_mapping(data, "the proofs document")
-    if PRIVATE_PATH_RE.search(raw) or any(
-            PRIVATE_PATH_RE.search(value) for value in walk_strings(data)):
+    # Through contains_private_path, never the raw pattern: a historical proofs
+    # document copied forward from a prior release.json carries this tool's own
+    # `<token>/tail` argv spelling, and grading that as a leak would refuse an
+    # already-sanitized proof at exit 2.
+    if contains_private_path(raw) or any(
+            contains_private_path(value) for value in walk_strings(data)):
         raise InputError(
             "--proofs '%s' carries an absolute user path. release.json is a PUBLIC "
             "artifact, so proof rows must use relative evidence paths and the "
@@ -1280,10 +1416,12 @@ def review_qualifies(row: dict, source_commit: str):
                        "(%s); a falsified claim is recorded, never counted"
                        % (row.get("evidence_consistency") or "not checked"))
     if not str(row.get("attested_by") or "").strip():
+        # Plain quotes, no backticks: this string is a qualification REASON, and
+        # that channel is plain text by contract (see md_untrusted).
         return False, ("carries no named attestation. This tool cannot verify that a "
                        "cross-family review happened -- the row and its evidence are "
                        "both caller-authored -- so qualification requires the separate "
-                       "act `--attest-reviews \"<accountable party>\"`, recorded as "
+                       "act --attest-reviews \"<accountable party>\", recorded as "
                        "attested_by")
     if row["source_commit"].lower() != source_commit:
         return False, "binds a different source commit"
@@ -1463,7 +1601,7 @@ def build_public_packet(release_dir: Path, record: dict, product_key: str, gaps)
             "output carries machine-specific absolute paths."),
         "sanitization": {
             "rule": "no machine-specific absolute user path may appear in a published text artifact",
-            "scanned": ["release.json", "release-notes.md", "public/packet.json", "receipt.json"],
+            "scanned": list(PUBLIC_SCANNED_ARTIFACTS),
             "not_scanned": [
                 "source.zip member CONTENTS -- gated upstream by the source repository's "
                 "own committed-path gate (tests/package-integrity/test_manifest_contract.py)",
@@ -1526,8 +1664,12 @@ def render_release_notes(record: dict, product_key: str) -> str:
         add("")
         add("Reasons this release is `%s`:" % record["qualification"])
         add("")
+        # md_untrusted, NOT md_inline: reasons and gaps are the one MIXED-TRUST
+        # channel -- caller `--proofs` text is fused into authored prose at the
+        # producer, so provenance is gone by the time it arrives here. See
+        # md_untrusted() for the channel's contract.
         for reason in record["qualification_reasons"]:
-            add("* %s" % md_inline(reason))
+            add("* %s" % md_untrusted(reason))
     add("")
     add("## Gates recorded")
     add("")
@@ -1580,8 +1722,11 @@ def render_release_notes(record: dict, product_key: str) -> str:
     add("")
     add("## Known gaps")
     add("")
+    # The same MIXED-TRUST channel as qualification_reasons above -- and it also
+    # carries every reason verbatim, because a non-QUALIFIED run extends gaps
+    # with them.
     for gap in record["known_gaps"]:
-        add("* %s" % md_inline(gap))
+        add("* %s" % md_untrusted(gap))
     add("")
     add("## Verify the retained bytes")
     add("")
@@ -1737,6 +1882,27 @@ def baseline_gaps(product_key: str):
     return gaps
 
 
+def retain_completed_attempt(store: Path, operation_id: str, staging: Path) -> Path:
+    """Move a COMPLETE staged payload to `<store>/.attempts/<id>` and name it.
+
+    The `.attempts/` vs `.aborted/` split describes what the directory CONTAINS,
+    not which error routed it there: `.attempts/` holds a complete payload
+    (record, notes, receipt and every evidence file) and `.aborted/` a partial
+    build that may have no release.json at all -- see retain_aborted_stage. Both
+    of this module's complete-payload outcomes come through here (a qualification
+    failure, and a publish-time name collision), so an operator reading either
+    message is told the truth about what is on disk.
+    """
+    attempt = store / ".attempts" / operation_id
+    attempt.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        os.rename(staging, attempt)
+    except OSError as exc:
+        raise ExecutionError("could not retain the completed build at '%s': %s"
+                             % (attempt, exc))
+    return attempt
+
+
 def retain_aborted_stage(store: Path, operation_id: str, staging: Path):
     """Keep and NAME the partial stage of a run that aborted mid-build.
 
@@ -1875,7 +2041,9 @@ def _build_and_publish(args, ctx, staging: Path) -> int:
 
         missing_profiles = [p for p in TOOLKIT_PROVIDERS if p not in providers]
         if missing_profiles:
-            gaps.append("Packaged profiles are %s; %s missing from a `-Provider all` "
+            # Plain quotes, no backticks: this is a known GAP, and that channel
+            # is plain text by contract (see md_untrusted).
+            gaps.append("Packaged profiles are %s; %s missing from a '-Provider all' "
                         "release." % (providers or "none", ", ".join(missing_profiles)))
 
     for row in checks:
@@ -1953,10 +2121,7 @@ def _build_and_publish(args, ctx, staging: Path) -> int:
         "path": "release.json", "sha256": sha256_file(staging / "release.json")}])
 
     leaks = scan_private_paths([
-        ("release.json", staging / "release.json"),
-        ("release-notes.md", staging / "release-notes.md"),
-        ("public/packet.json", staging / "public" / "packet.json"),
-        ("receipt.json", staging / "receipt.json"),
+        (name, staging.joinpath(*name.split("/"))) for name in PUBLIC_SCANNED_ARTIFACTS
     ])
     if leaks:
         raise ExecutionError(
@@ -1972,22 +2137,31 @@ def _build_and_publish(args, ctx, staging: Path) -> int:
             os.rename(staging, final)
         except OSError as exc:
             if final.exists():
+                # `staging` holds a COMPLETE payload here -- everything above
+                # finished writing before the rename was attempted -- so it is
+                # filed as an ATTEMPT, never as an aborted partial build. Moving
+                # it also empties `staging`, so perform_release's abort handler
+                # finds nothing left to file under `.aborted/` and stays silent.
+                # If the move itself fails, the stage's own path is the honest
+                # answer, exactly as in retain_aborted_stage.
+                try:
+                    kept = retain_completed_attempt(store, ctx["operation_id"], staging)
+                except ExecutionError:
+                    kept = staging
+                else:
+                    ctx["result_dir"] = kept
+                    ctx["result_kind"] = "attempt"
                 raise InputError(
                     "COLLISION: '%s' appeared while this release was being staged; a "
-                    "retained release is never overwritten, so this run's partial build "
-                    "is kept instead and its path is printed with this failure." % final)
+                    "retained release is never overwritten, so this run's COMPLETE "
+                    "build (record, notes, receipt and every evidence file) is kept "
+                    "at '%s' instead and nothing is deleted." % (final, kept))
             raise ExecutionError("could not publish this run's staged build to '%s': %s"
                                  % (final, exc))
         ctx["result_dir"] = final
         ctx["result_kind"] = "release"
     else:
-        attempt = store / ".attempts" / ctx["operation_id"]
-        attempt.parent.mkdir(parents=True, exist_ok=True)
-        try:
-            os.rename(staging, attempt)
-        except OSError as exc:
-            raise ExecutionError("could not retain the failed attempt at '%s': %s"
-                                 % (attempt, exc))
+        attempt = retain_completed_attempt(store, ctx["operation_id"], staging)
         ctx["result_dir"] = attempt
         ctx["result_kind"] = "attempt"
 
@@ -2128,7 +2302,9 @@ def prepare(args, invocation_argv):
         # The name is PUBLISHED on every review row, so it is held to the same
         # standard as a proofs field. The end-of-run leak guard would also catch
         # this, but only after the full slow release -- refuse it up front.
-        if PRIVATE_PATH_RE.search(args.attest_reviews):
+        # One owner for "does this text leak" (reject_placeholder above already
+        # refuses '<' and '>' here, so no documented token can reach this call).
+        if contains_private_path(args.attest_reviews):
             raise InputError(
                 "--attest-reviews carries an absolute user path. It is recorded on a "
                 "PUBLIC review row as attested_by, so it must name a party, not a "
@@ -2327,6 +2503,17 @@ def main(argv=None) -> int:
         return EXIT_EXEC
     except OSError as exc:
         print("baseline-release: ERROR (io): %s" % exc, file=sys.stderr)
+        return EXIT_EXEC
+    except subprocess.SubprocessError as exc:
+        # TimeoutExpired is a SubprocessError, NOT an OSError, so without this
+        # clause it escapes every handler above as a raw traceback and takes the
+        # documented {0,1,2} exit-code contract with it. run_gate() converts its
+        # OWN timeout to an ExecutionError, and nothing else does: capture_
+        # environment's powershell/git/python probes and every git() call run
+        # under their own ceilings with no conversion. Catching the class once,
+        # here, is what stops that from being a thing each new call site has to
+        # remember.
+        print("baseline-release: ERROR (subprocess): %s" % exc, file=sys.stderr)
         return EXIT_EXEC
     finally:
         if work is not None and work.is_dir():

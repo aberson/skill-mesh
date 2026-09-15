@@ -403,7 +403,13 @@ carried a machine-specific absolute path — has no such payload. Whatever had b
 built is moved to `<store>/.aborted/<uuid>/`, and **that path is printed with the
 failure**.
 
-Read it as **partial**, not as an attempt. It may have no `release.json`, no
+The split is about what the directory **contains**, not which error routed it there.
+A build that finished and then lost a race for its version directory — another
+process created `<store>/<product>/<version>` while this run was staging — is a
+COMPLETE payload, so it is filed under `.attempts/` and its path is printed with the
+collision, never under `.aborted/`.
+
+Read an `.aborted/` directory as **partial**, not as an attempt. It may have no `release.json`, no
 `release-notes.md` and no `SHA256SUMS` — those are written last. What it does carry
 is `source.zip` and every `checks/` evidence file the run had already produced, which
 is the part the error message alone cannot give you. Nothing is deleted, no version
@@ -448,12 +454,16 @@ description, not an action: `publication_status` is always `NOT_PUBLISHED`.
   that is `gh auth login` for GitHub Copilot CLI, with no `OPENAI_API_KEY` used or
   needed.
 
-Before writing anything, the tool scans the generated public text artifacts for
+Before retaining anything, the tool scans the generated public text artifacts for
 machine-specific absolute paths — a Windows drive-letter home path in either
 separator, and the POSIX `/home/<user>/…` and `/Users/<name>/…` spellings, because
 only a `toolkit` run requires PowerShell and a `lab` run can therefore be cut off
 Windows — and refuses to retain the release if one is found. The documented
-placeholder forms stay legal.
+placeholder forms stay legal, and so does this tool's own `<token>/tail` argv
+spelling: the recorded tokens are substituted out before the scan, so a historical
+proofs document copied forward from a prior `release.json` is never mistaken for a
+leak. An artifact that cannot be read counts as a hit — this is the last gate before
+a release is kept, so it fails closed rather than treating an ungraded file as clean.
 Archive member contents and `dist/` bodies are not re-scanned here; they are gated
 upstream by this repository's own committed-path gate in
 `tests/package-integrity/test_manifest_contract.py`.
