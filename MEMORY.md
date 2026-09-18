@@ -1,5 +1,13 @@
 # Skill Mesh project memory
 
+## Afterparty feature boundary
+
+- [Phase AP design](documentation/user-afterparty-effectiveness-plan.md) owns the
+  four afterparty improvements and their acceptance; `plan.md` owns current status.
+- Step 130 is the automated implementation span. Step 131 is attended installed
+  Codex acceptance and stays outside the automated goal. Preserve child gates,
+  truthful outcome attribution, and fresh per-item worktree safety checks.
+
 ## Durable status
 
 - Phase IS C2V is sealed at `09e7f4d`; C2A is sealed at `2f6c7b8`. Phase RD now owns the

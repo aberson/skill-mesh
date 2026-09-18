@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>user-afterparty effectiveness — implementation proposal</title>
+<style>
+:root{color-scheme:light;--bg:#f4f5f2;--paper:#fff;--ink:#1e2d2d;--muted:#526563;--line:#d6dfdc;--accent:#145f55;--soft:#e8f3ee;--default:#edf0fa;--default-ink:#3e4e8b}
+[data-theme=dark]{color-scheme:dark;--bg:#14201f;--paper:#1b2c29;--ink:#edf5f1;--muted:#b1c5bd;--line:#40554d;--accent:#9bd7bf;--soft:#24473b;--default:#303b5b;--default-ink:#c2cffa}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 system-ui,-apple-system,"Segoe UI",sans-serif}main{max-width:1040px;margin:auto;padding:42px 30px 60px}header{border-bottom:2px solid var(--accent);padding-bottom:30px}.eyebrow{font-size:.78rem;letter-spacing:.12em;text-transform:uppercase;font-weight:700;color:var(--accent)}h1{font-size:clamp(2rem,5vw,3.1rem);line-height:1.15;max-width:800px;margin:14px 0}h2{font-size:1.45rem;margin:34px 0 12px}h3{font-size:1.05rem;margin:0 0 6px}p{margin:8px 0 14px}.lead{font-size:1.2rem;max-width:830px}.muted,small{color:var(--muted)}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.card,.callout{background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:20px}.callout{background:var(--soft);margin-top:18px}.pill{display:inline-block;font-size:.76rem;font-weight:750;padding:2px 9px;border-radius:20px;background:var(--soft);color:var(--accent);margin-right:7px}.default{background:var(--default);color:var(--default-ink)}table{width:100%;border-collapse:collapse;background:var(--paper);margin:12px 0}th,td{text-align:left;vertical-align:top;border-bottom:1px solid var(--line);padding:13px 12px}th{font-size:.84rem;color:var(--muted)}td:first-child{white-space:nowrap}code{font:.88em/1.6 ui-monospace,Consolas,monospace;overflow-wrap:anywhere}a{color:var(--accent);text-underline-offset:3px}button{float:right;background:var(--paper);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:8px 12px;cursor:pointer;font:inherit;font-size:.8rem}button:focus-visible,a:focus-visible{outline:3px solid var(--accent);outline-offset:4px}.timeline{counter-reset:step;list-style:none;padding:0}.timeline li{margin:14px 0;padding:20px;border-left:4px solid var(--accent);background:var(--paper)}ul{padding-left:22px}footer{margin-top:32px;border-top:1px solid var(--line);padding-top:16px;font-size:.88rem}@media(max-width:640px){main{padding:24px 16px}.grid{grid-template-columns:1fr}table{font-size:.88rem}th,td{padding:10px 7px}}
+@media print{@page{margin:14mm}:root,[data-theme=light],[data-theme=dark]{color-scheme:light;--bg:#fff;--paper:#fff;--ink:#1e2d2d;--muted:#526563;--line:#d6dfdc;--accent:#145f55;--soft:#e8f3ee;--default:#edf0fa;--default-ink:#3e4e8b}*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}body{font-size:10pt}main{max-width:none;padding:0}button{display:none}h1{font-size:26pt}h2,h3{break-after:avoid}.card,.callout,tr,.timeline li{break-inside:avoid}thead{display:table-header-group}a{color:var(--ink)}.grid{gap:10px}footer{break-inside:avoid}}
+</style>
+</head>
+<body>
+<main>
+<header>
+<button type="button" id="theme" aria-label="Switch light or dark theme">Light / dark</button>
+<div class="eyebrow">Skill Mesh · maintenance proposal · publication 3 · 17 September 2026</div>
+<h1>Make the next afterparty easier to assess.</h1>
+<p class="lead">Capture what changed, keep unresolved work visible, show coverage limits early, and avoid measuring worktrees that cannot be reclaimed.</p>
+<p class="muted">Phase AP prepared · Steps 130–131 · issues #215 / #216 / #217 synchronized; implementation has not started.</p>
+</header>
+
+<section aria-labelledby="heard">
+<h2 id="heard">What I heard</h2>
+<p>You accepted the review-based recommendations and asked for a feature plan. The first delivery should fix the reporting and follow-through gaps exposed by the real sweep while keeping the existing scope controls and approval boundaries.</p>
+<div class="grid">
+<article class="card"><h3>Before / after, at the right boundary</h3><p>Take small direct measurements when afterparty starts and ends. Keep selected feedback files, the memory index and long-form lessons separate. Later wrap changes get their own attribution.</p></article>
+<article class="card"><h3>Findings survive the next run</h3><p>Carry the finding, evidence, owner, disposition and revisit trigger. A targeted run keeps skipped-item findings visible without scanning those items.</p></article>
+<article class="card"><h3>Coverage is visible at entry</h3><p>Distinguish known available, known unavailable and unprobed capabilities. A missing child remains a visible gap while supported work continues.</p></article>
+<article class="card"><h3>Inspect metadata before size</h3><p>Only plausible orphan candidates receive recursive size measurement. Fresh liveness checks and per-item approval still govern any removal.</p></article>
+</div>
+</section>
+
+<section aria-labelledby="shape">
+<h2 id="shape">Why this shape</h2>
+<p>The reviewed memory selection went from 135 lines to 136 during afterparty, then to 87 after a later wrap. Useful corrections happened, but that later shrink was not an afterparty result. Forty worktree candidates had live metadata, so recursive sizing could not inform an orphan-removal action.</p>
+<p class="muted">These are bounded September observations; the original memory baseline was reconstructed. They do not establish prompt-token, cost or speed savings.</p>
+<div class="callout">Use the existing core, provider adapters, report area and installer. No new runtime, dashboard, queue, cache or child-skill engine is needed.</div>
+</section>
+
+<section aria-labelledby="delivery">
+<h2 id="delivery">Delivery sequence</h2>
+<ol class="timeline">
+<li><span class="pill default">Step 130 · code</span><h3>Implement and prepare acceptance</h3><p>Update the shared contract and all three host adapters. Add small acceptance fixtures and a ready-to-run brief. Preserve gates; explicitly forward the tier skills’ existing dry-run flags. Build, rehearse installation, run the full repository gate and pass deep code review.</p><small>Produces source and prepared acceptance materials. Green builds establish distribution integrity, not observed host effectiveness.</small></li>
+<li><span class="pill default">Step 131 · operator</span><h3>Observe the installed Codex behavior</h3><p>Verify the actual discovered profile against the tested release in a fresh session. Run the prepared representative sweep, carry-forward sequence and negative cases. Record truthful outcomes, gaps and evidence.</p><small>Produces observations and a verdict. The feature is delivered only after this step passes. No fixture or operational-document authoring is assigned to the operator.</small></li>
+</ol>
+<p><strong>Afterwards:</strong> preparation is complete. From Skill Mesh, execute <code>build-phase --plan documentation/user-afterparty-effectiveness-plan.md --steps 130</code>, then stop before attended Step 131. Track <a href="https://github.com/aberson/skill-mesh/issues/215">umbrella #215</a>, <a href="https://github.com/aberson/skill-mesh/issues/216">implementation #216</a> and <a href="https://github.com/aberson/skill-mesh/issues/217">acceptance #217</a>.</p>
+<p class="muted">This queued feature does not resume or advance the separate M1 ordinary-build milestone.</p>
+</section>
+
+<section aria-labelledby="picks">
+<h2 id="picks">Operator choices</h2>
+<p id="P1"><span class="pill">P1</span>Plan implementation based on the effectiveness review.</p>
+<p id="P2"><span class="pill">P2</span>Use the seed’s four-change first delivery, preserving current sweep scope and child gates.</p>
+</section>
+
+<section aria-labelledby="defaults">
+<h2 id="defaults">Agent defaults you can change</h2>
+<table>
+<thead><tr><th>ID</th><th>What / why</th><th>Tweak axis</th></tr></thead>
+<tbody>
+<tr id="D1"><td><span class="pill default">D1</span></td><td>Keep behavior in the existing core and three adapters; add only repository acceptance materials. This avoids creating a second hygiene engine or package-resource workflow.</td><td>Amount of preparation material.</td></tr>
+<tr id="D2"><td><span class="pill default">D2</span></td><td>One versioned local Markdown record per normal run, with unique identity and safe updates. Dry-run prints only. This supports continuity without a new queue.</td><td>Report detail and layout.</td></tr>
+<tr id="D3"><td><span class="pill default">D3</span></td><td>Selected-file lines, normalized characters and byte hashes at entry/exit. This makes attribution checkable without implying prompt-token savings.</td><td>Which inexpensive measures are useful.</td></tr>
+<tr id="D4"><td><span class="pill default">D4</span></td><td>One implementation step with deep code review, then one attended acceptance step. New persisted findings feed later runs, and worktree instructions sit beside destructive safeguards.</td><td>Step split and acceptance depth; required gates still apply.</td></tr>
+<tr id="D5"><td><span class="pill default">D5</span></td><td>Build all three providers; verify live behavior in Codex on the tested release after an installation rehearsal. This grounds the claim in the host used for the reviewed sweep.</td><td>Additional host acceptance as a separate scope.</td></tr>
+</tbody>
+</table>
+</section>
+
+<section aria-labelledby="excluded">
+<h2 id="excluded">Not in this delivery</h2>
+<p>No change to the bare/full sweep or monthly schedule. No automatic routing installation, cleanup of earlier nominations, memory-sync redesign, scan cache, portable context-slim implementation, or mandatory reviewer on every future sweep.</p>
+</section>
+
+<section aria-labelledby="risks">
+<h2 id="risks">What the acceptance must catch</h2>
+<ul>
+<li>A completed scan must remain distinguishable from applied cleanup, with unknown counts never invented as zero.</li>
+<li>Old, interrupted, conflicting and skipped-item findings must remain visible with their actual evidence strength.</li>
+<li>Dry-run must leave task outputs untouched; live worktrees must receive no recursive size walk.</li>
+<li>An installed older profile, unavailable required observation, failed full test gate or ownership conflict cannot be reported as acceptance.</li>
+</ul>
+<p class="muted">The full repository test gate is slow. This plan does not waive it. One successful observed run will not prove general cost or behavior improvement, and no savings percentage is promised.</p>
+</section>
+
+<footer>
+<p><strong>Feedback:</strong> use <code>D2 -&gt; your requested change</code>, or refer to P1/P2 if the scope was misread. Silence leaves these defaults in place; it does not establish that anything was built.</p>
+<p><strong>Source of truth:</strong> <a href="user-afterparty-effectiveness-plan.md">implementation plan</a> · <a href="findings/user-afterparty-effectiveness-plan-review-2026-09-17.md">technical plan review</a> · <a href="../plan.md">Skill Mesh entry plan</a>.</p>
+<p>Self-contained file. Open in a browser to read; Print → Save as PDF uses the light print layout.</p>
+</footer>
+</main>
+<script>document.getElementById('theme').addEventListener('click',function(){document.documentElement.dataset.theme=document.documentElement.dataset.theme==='dark'?'light':'dark';});</script>
+</body>
+</html>

@@ -20,6 +20,25 @@ distribution, and both changed cores matched their recorded ownership hashes.
 The full repository-root suite was not run for this maintenance change; no numbered
 M1 or Phase CL step is advanced by this validation.
 
+## Queued maintenance — user-afterparty effectiveness (2026-09-17)
+
+**Objective:** report attributable hygiene outcomes, carry unresolved findings,
+surface capability limits early, and size only plausible orphan worktrees.
+The [feature plan](documentation/user-afterparty-effectiveness-plan.md) reserves
+Steps **130–131**: implementation (#216), then installed Codex acceptance (#217),
+under umbrella #215. Both are TODO. Issue synchronization is complete; execution
+has not started. This is a separate queued feature and does not advance or resume
+the M1 work below.
+
+Planning checks: [technical review](documentation/findings/user-afterparty-effectiveness-plan-review-2026-09-17.md)
+has no unresolved findings; [plan-wrap](documentation/findings/user-afterparty-effectiveness-plan-wrap-2026-09-17.md)
+is READY. [Proposal publication 3](documentation/user-afterparty-effectiveness-proposal.html)
+records operator choices and agent defaults.
+
+The [preparation receipt](documentation/findings/user-afterparty-effectiveness-expedite-2026-09-17.md)
+records issue mapping and the Step 130-only automated handoff. The implementation
+and full test gate are pending; Step 131 remains attended acceptance.
+
 ## Codex ordinary build milestone (approved 2026-09-09; clarified 2026-09-10)
 
 **Objective:** installed Codex completes a real ordinary full-review build with
