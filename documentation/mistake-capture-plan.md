@@ -12,6 +12,8 @@ Proposal: [mistake-capture-proposal.html](mistake-capture-proposal.html)
 
 Preparation checks: [plan-review](findings/mistake-capture-plan-review-2026-09-19.md) → [plan-redline](mistake-capture-proposal.html) → [plan-wrap](findings/mistake-capture-plan-wrap-2026-09-19.md). Their verdicts concern the executable specification; queue entry, review capability and implementation gates remain separate.
 
+Tracking: [Phase LH #218](https://github.com/aberson/skill-mesh/issues/218), implementation [#219](https://github.com/aberson/skill-mesh/issues/219), attended acceptance [#220](https://github.com/aberson/skill-mesh/issues/220). [Preparation receipt](findings/mistake-capture-preparation-2026-09-19.md) records checks and the guarded next action.
+
 Estimated implementation effort: **1–2 active workdays plus required gates and attended acceptance**. Stop scope growth if implementation requires new dependencies, an installer/resource-topology change, workspace hooks or evaluator work. Return a concrete follow-up instead.
 
 ## 2. Existing Context
@@ -140,7 +142,7 @@ LH-D6: one implementation step and one attended acceptance step. One complete re
 - **Problem:** In-session mistakes can disappear without a commit, and equal HEAD currently suppresses the scan.
 - **Type:** code
 - **Status:** TODO
-- **Issue:** #
+- **Issue:** #219
 - **Flags:** --reviewers deep --isolation worktree
 - **Files:** canonical lesson-harvest core and all three adapters; new _shared/lesson_observations.py; new tests/package-integrity/test_lesson_observations.py; tests/distributions/test_distributions.py; new documentation/mistake-capture-acceptance.md. Preserve builder, manifest, installer, hooks, AP and other skills.
 - **Existing context:** sections 2–5 define the new helper and existing source/consumer seams. Follow the catalog lifecycle as an UPDATE with empty resource_paths; a discovered package-local asset need takes its existing stop.
@@ -154,7 +156,7 @@ LH-D6: one implementation step and one attended acceptance step. One complete re
 - **Problem:** Source and helper tests cannot prove a native host loads the revised contract and keeps evidence/dry-run boundaries.
 - **Type:** operator
 - **Status:** TODO
-- **Issue:** #
+- **Issue:** #220
 - **Files:** consumes documentation/mistake-capture-acceptance.md and Step 153's exact generated artifact.
 - **Flags:** none — attended observation, not a code-review lane.
 - **Existing context:** Codex is the selected first runtime host; GPT remains build-only and Claude runtime parity is not claimed.

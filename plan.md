@@ -25,6 +25,9 @@ one attended step observes the generated skill in Codex. The
 [slice proposal](documentation/mistake-capture-proposal.html) records the new
 implementation defaults. Preparation proceeds while the accepted M1/AP queue is
 preserved. Implementation has not started; no earlier controller is restarted.
+Plan-review and plan-wrap passed. Tracking is Phase LH #218, Step 153/#219 and
+Step 154/#220, all open; see the
+[preparation receipt](documentation/findings/mistake-capture-preparation-2026-09-19.md).
 
 ## Maintenance — build retry budget (2026-09-14)
 
