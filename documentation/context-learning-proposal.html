@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Context continuity and learning — proposal 2</title>
+<style>
+:root { color-scheme: light dark; --bg:#f6f3ec; --paper:#fffdf8; --ink:#252b2b; --muted:#5c6460; --line:#d7d9cf; --accent:#235b4b; --wash:#e8efe6; --warn:#815c23; --max:1060px; }
+@media (prefers-color-scheme:dark) { :root { --bg:#161e1c; --paper:#1f2926; --ink:#e9ede6; --muted:#bbc5bf; --line:#425249; --accent:#9ed3b7; --wash:#2a3b32; --warn:#e5c585; } }
+* { box-sizing:border-box; }
+body { margin:0; background:var(--bg); color:var(--ink); font:16px/1.65 system-ui,-apple-system,"Segoe UI",sans-serif; }
+main { max-width:var(--max); margin:auto; padding:48px 28px 70px; }
+header { border-top:5px solid var(--accent); padding-top:28px; }
+h1 { max-width:850px; font-size:clamp(2.1rem,5vw,3.5rem); line-height:1.12; letter-spacing:-.035em; margin:12px 0 22px; }
+h2 { font-size:1.65rem; line-height:1.25; margin:42px 0 18px; }
+h3 { font-size:1.05rem; line-height:1.35; margin:0 0 10px; }
+p { margin:0 0 15px; }
+a { color:var(--accent); text-underline-offset:3px; }
+.eyebrow { color:var(--accent); text-transform:uppercase; letter-spacing:.11em; font-weight:700; font-size:.78rem; }
+.lede { max-width:840px; font-size:1.24rem; }
+.muted, small { color:var(--muted); }
+.notice { border-left:4px solid var(--warn); padding:15px 20px; background:var(--paper); margin:24px 0; }
+.grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; }
+.card { padding:22px; background:var(--paper); border:1px solid var(--line); border-radius:10px; break-inside:avoid; }
+.card p:last-child { margin-bottom:0; }
+.tag { display:inline-block; font-size:.75rem; font-weight:750; padding:2px 8px; margin:0 7px 8px 0; border:1px solid var(--line); border-radius:4px; color:var(--accent); }
+.flow { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; margin:24px 0; }
+.flow div { padding:18px 16px; background:var(--wash); border:1px solid var(--line); border-radius:8px; }
+.flow strong { display:block; margin-bottom:5px; }
+.flow span { display:block; color:var(--muted); font-size:.9rem; }
+table { width:100%; border-collapse:collapse; margin:15px 0 20px; font-size:.93rem; }
+th,td { text-align:left; vertical-align:top; border-bottom:1px solid var(--line); padding:12px 10px; }
+th { background:var(--wash); font-weight:700; }
+tr { break-inside:avoid; }
+code { font-size:.9em; font-family:Consolas,monospace; overflow-wrap:anywhere; }
+.timeline { border-left:2px solid var(--line); padding-left:24px; }
+.phase { position:relative; padding:0 0 24px; }
+.phase:before { content:""; position:absolute; left:-31px; top:7px; width:12px; height:12px; background:var(--accent); border-radius:50%; }
+nav { display:flex; flex-wrap:wrap; gap:10px 20px; padding:14px 0; border-bottom:1px solid var(--line); }
+footer { border-top:1px solid var(--line); margin-top:35px; padding-top:20px; font-size:.88rem; }
+ul { padding-left:22px; }
+li { margin:6px 0; }
+@media(max-width:700px) { main { padding:28px 18px; } .grid,.flow { grid-template-columns:1fr; } table { font-size:.82rem; } th,td { padding:10px 6px; } }
+@media print {
+ @page { margin:14mm; }
+ :root { color-scheme:light; --bg:#fff; --paper:#fff; --ink:#202626; --muted:#525b56; --line:#cdd4cb; --accent:#235b4b; --wash:#e8efe6; --warn:#815c23; }
+ * { -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important; }
+ body { font-size:10pt; } main { max-width:none; padding:0; } h1 { font-size:29pt; } h2 { margin-top:24px; font-size:17pt; } h1,h2,h3 { break-after:avoid; }
+ header,.card,.notice,.flow,.phase,tr { break-inside:avoid; } thead { display:table-header-group; } nav { display:none; }
+ .grid { gap:10px; } .card { padding:13px; } a { color:var(--accent); } footer { font-size:8.5pt; }
+}
+
+a:focus-visible { outline:3px solid var(--accent); outline-offset:4px; }
+.table-scroll { overflow-x:auto; } caption { text-align:left; font-weight:700; margin-bottom:10px; }
+[id] { scroll-margin-top:20px; }
+</style>
+</head>
+<body>
+<main>
+<header>
+<div class="eyebrow">Skill Mesh + Dev Observatory · 19 September 2026 · Publication 2</div>
+<h1>Smaller projects.<br>Useful learning sooner.</h1>
+<p class="lede">Reuse M1 for reliable resume. Deliver explicit mistake capture and harvesting first, then qualify one automatic isolated trial.</p>
+<p class="muted">Revised after user-fermize and the independent adversarial scope review. The <a href="context-learning-plan.md">Markdown plan</a> remains the source of truth.</p>
+<div class="notice"><strong>First new value: 1–2 active workdays, plus required gates.</strong><br>This estimate covers capture/harvest once scheduled. It excludes existing M1 work, evaluator adapters and optional follow-ups. The previous 9–17-day chain is withdrawn.</div>
+<nav aria-label="Proposal sections"><a href="#heard">What I heard</a><a href="#timeline">Five projects</a><a href="#picked">Your choices</a><a href="#defaults">Defaults to adjust</a><a href="#risks">Limits</a><a href="#feedback">Give feedback</a></nav>
+</header>
+
+<section id="heard">
+<h2>What I heard</h2>
+<p>You want fewer context losses and repeated mistakes first, with skill improvements automatically trialed in isolation before you review them. You asked for smaller projects, less unnecessary engineering/testing, and a clear fit with the builds already underway.</p>
+<p>This revision incorporates that direction. It retains all six investigations while removing their earlier dependency chain.</p>
+</section>
+
+<section id="shape">
+<h2>Why this shape</h2>
+<div class="grid">
+<article class="card"><h3>Reuse the known work</h3><p>M1 Step 127 already owns durable checkpoint selection. AP already owns hygiene attribution. CL already owns canonical skill mutation. Each keeps its current contract.</p></article>
+<article class="card"><h3>Keep the unknown visible</h3><p>Codex's evolve adapter does not map the scoring workflow. Qualify one real independent route before estimating its integration. Isolated agents alone do not prove it.</p></article>
+<article class="card"><h3>Cut prerequisites</h3><p>Capture does not need a new checkpoint journal, section parser, transcript collector, runtime package or dashboard.</p></article>
+<article class="card"><h3>Prove the behavior</h3><p>Use named failure cases and one complete observed cycle. Preserve repository gates and independent grading; remove arbitrary day/session/run quotas.</p></article>
+</div>
+</section>
+
+<section id="timeline">
+<h2>Five smaller projects</h2>
+<p>The proposed queue preserves M1/AP. Capture is technically independent of both. Optional work can ship separately; these estimates are not a summed delivery commitment.</p>
+<div class="timeline">
+<article class="phase"><span class="tag">1 · Existing M1</span><h3>Reliable resume</h3><p>Use Steps 127–129 after M1's existing prerequisites. Keep the intended checkpoint, next command and wait state. Separately assess any remaining default-hook foreign-session fallback.</p><p><strong>Time:</strong> existing M1 schedule; no new estimate or restart.</p><p><strong>Afterwards:</strong> use <code>task-handoff --resume-from</code> through M1's approved route and acceptance procedure. No new storage engine.</p></article>
+<article class="phase"><span class="tag">2 · First new value</span><h3>Capture and harvest mistakes</h3><p>Explicit receipt-backed observations enter existing five-store deduplication even without a new commit. Preview stays read-only.</p><p><strong>Time:</strong> 1–2 active workdays plus review, full test gate and installed-host acceptance.</p><p><strong>Afterwards, once built:</strong> <code>/lesson-harvest --dry-run</code> shows verified/codified/unsupported findings. The capture command is frozen in this slice's executable plan.</p></article>
+<article class="phase"><span class="tag">3 · Capability first</span><h3>One automatic isolated trial</h3><p>One canonical candidate, baseline comparison, separate grader and review bundle. No improvement or inconclusive evidence is a valid outcome.</p><p><strong>Time:</strong> half-day route investigation; provisionally 1–2 further active days plus gates only if a working route exists. Adapter work needs a separate estimate.</p><p><strong>Afterwards:</strong> review the exact candidate/evidence. Use the existing catalog lifecycle for any approved promotion; there is no automatic install.</p></article>
+<article class="phase"><span class="tag">4 · Independent maintenance</span><h3>Reproducible Python tooling</h3><p>One development pyproject/lock and thin PowerShell launcher for existing scripts. Preserve Markdown skill discovery and existing distribution architecture.</p><p><strong>Time:</strong> 0.5–1 active day plus gates.</p><p><strong>Afterwards, once adopted:</strong> <code>uv run --locked python -m pytest</code> must preserve the full root collection and gate meaning.</p></article>
+<article class="phase"><span class="tag">5 · Optional follow-ups</span><h3>Section history and Observatory visibility</h3><p>Pilot section tombstones only after a demonstrated history failure. Independently export a sanitized generic summary once there is a useful saved result.</p><p><strong>Time:</strong> section history unestimated until needed; summary-only work provisionally 0.5–1 active day plus checks.</p><p><strong>Afterwards:</strong> inspect current-view replay or the existing Observatory artifact view, according to the follow-up chosen.</p></article>
+</div>
+<div class="notice"><strong>Preparation before build:</strong> use <code>/plan-feature</code> for the selected narrow slice, then <code>/plan-review → /plan-redline → /plan-wrap</code>. Reconcile numbers before <code>/repo-sync</code>. This portfolio is not a <code>/build-phase</code> input.</div>
+<div class="table-scroll">
+<table><caption>How this folds into current Skill Mesh builds</caption><thead><tr><th scope="col">Build</th><th scope="col">Relationship</th></tr></thead><tbody>
+<tr><th scope="row">M1 · 126–129</th><td>Reuse checkpoint work; preserve current candidate, gate, iteration budget and accepted continuation.</td></tr>
+<tr><th scope="row">AP · 130–131</th><td>Keep prepared scope. Later reference learning results through its report contract; dry-run cannot start trials.</td></tr>
+<tr><th scope="row">CL</th><td>Follow canonical ownership/provider rules. Step 114 guards legacy mutation; complete evaluator retargeting is excluded.</td></tr>
+<tr><th scope="row">Dev Observatory</th><td>Read a saved generic summary later. No scheduler, trial controller or dashboard engine.</td></tr>
+</tbody></table>
+</div>
+<p>See the <a href="context-learning/workflows.md">before/after workflows</a> and <a href="context-learning/plan-interactions.md">full build mapping</a>.</p>
+</section>
+
+<section id="picked">
+<h2>Your choices</h2>
+<div class="grid">
+<article class="card" id="P1"><span class="tag">P1 · Operator-picked</span><h3>Investigate all six suggestions</h3><p>Provide a plan, timeline, workflow comparison and explicit Skill Mesh/Observatory fit.</p></article>
+<article class="card" id="P2"><span class="tag">P2 · Operator-picked</span><h3>Context and repeated mistakes first</h3><p>Prioritize reliable continuation and useful learning over broader infrastructure.</p></article>
+<article class="card" id="P3"><span class="tag">P3 · Operator-picked</span><h3>Automatic isolated trials before review</h3><p>Project 3 retains this outcome, with capability qualification and independent evidence.</p></article>
+<article class="card" id="P4"><span class="tag">P4 · Operator-picked · Added</span><h3>Incorporate the smaller-project rescope</h3><p>You accepted the user-fermize/adversarial direction and asked for this revised plan-redline. Newly specified details remain defaults below.</p></article>
+</div>
+</section>
+
+<section id="defaults">
+<h2>Agent defaults you can adjust</h2>
+<p>Start with <a href="#D9">D9: queue</a>, <a href="#D4">D4: trial bounds</a>, and <a href="#D6">D6: collection automation</a>. P1–P3 and D1–D8 keep their original IDs; changed choices are marked. P4, D9 and D10 are appended.</p>
+<div class="grid"><article class="card" id="D1"><span class="tag">D1 · Agent default</span><span class="muted">Changed 19 September</span><h3>Capture first; reuse M1 for resume</h3><p><strong>What:</strong> The first new deliverable is explicit capture and unchanged-HEAD harvesting.</p><p><strong>Why:</strong> M1 already owns the checkpoint fix; a new journal would delay useful learning.</p><p><strong>Tweak:</strong> Change the first new deliverable.</p></article>
+<article class="card" id="D2"><span class="tag">D2 · Agent default</span><span class="muted">Changed 19 September</span><h3>Separate Python maintenance</h3><p><strong>What:</strong> One uv development project and a thin PowerShell launcher for existing scripts.</p><p><strong>Why:</strong> Dependency hygiene can ship independently; runtime packaging is a different scope.</p><p><strong>Tweak:</strong> Schedule this maintenance earlier or later.</p></article>
+<article class="card" id="D3"><span class="tag">D3 · Agent default</span><span class="muted">Changed 19 September</span><h3>Defer the checkpoint journal</h3><p><strong>What:</strong> Assess the residual foreign-session fallback after M1 reconciliation; add history only for a reproduced need.</p><p><strong>Why:</strong> Explicit selection and default hook behavior are distinct paths; neither requires a general store rewrite.</p><p><strong>Tweak:</strong> Prioritize a reproduced hook defect separately.</p></article>
+<article class="card" id="D4"><span class="tag">D4 · Agent default</span><span class="muted">Changed 19 September</span><h3>Qualify one trial route first</h3><p><strong>What:</strong> One candidate at a time, independent scoring, risk-selected cases and a finite per-run cap.</p><p><strong>Why:</strong> Codex has no mapped scoring workflow today. Fixed run quotas do not prove capability or improvement.</p><p><strong>Tweak:</strong> Set the first batch's time/cost cap or change the qualification scope.</p></article>
+<article class="card" id="D5"><span class="tag">D5 · Agent default</span><span class="muted">Changed 19 September</span><h3>Retire the injection budget</h3><p><strong>What:</strong> No 8,000-character injector change in the first slice.</p><p><strong>Why:</strong> There is no new context projector to tune.</p><p><strong>Tweak:</strong> Revisit a measured context-size problem later.</p></article>
+<article class="card" id="D6"><span class="tag">D6 · Agent default</span><span class="muted">Changed 19 September</span><h3>Explicit capture before collection automation</h3><p><strong>What:</strong> Use an explicit receipt and existing harvest entry point. Later, a non-dry-run handoff may launch qualified trials; AP reports results.</p><p><strong>Why:</strong> This delivers durable observations without requiring transcript access or a new scheduler.</p><p><strong>Tweak:</strong> Add automatic transcript collection as a later project.</p></article>
+<article class="card" id="D7"><span class="tag">D7 · Agent default</span><span class="muted">Changed 19 September</span><h3>Visibility follows useful evidence</h3><p><strong>What:</strong> Export a sanitized summary only when capture or trials produce a useful saved result.</p><p><strong>Why:</strong> Observatory already reads generic artifacts; it need not control the learning loop.</p><p><strong>Tweak:</strong> Choose which saved outcomes deserve visibility.</p></article>
+<article class="card" id="D8"><span class="tag">D8 · Agent default</span><span class="muted">Retained</span><h3>Keep existing build authority</h3><p><strong>What:</strong> Preserve M1/AP/CL contracts and prepare executable slices within their owning repositories.</p><p><strong>Why:</strong> The revised portfolio must not rewrite accepted gates or preserved work.</p><p><strong>Tweak:</strong> Change a future slice's ownership explicitly.</p></article>
+<article class="card" id="D9"><span class="tag">D9 · Agent default</span><span class="muted">New default</span><h3>Preserve the queue</h3><p><strong>What:</strong> Keep M1 and prepared AP work in place; prepare capture/harvest as the next separate learning follow-up.</p><p><strong>Why:</strong> This is queue preference, not a technical dependency on AP or M1.</p><p><strong>Tweak:</strong> Prepare capture alongside AP, or change its later queue position.</p></article>
+<article class="card" id="D10"><span class="tag">D10 · Agent default</span><span class="muted">New default</span><h3>Small private observation files</h3><p><strong>What:</strong> Immutable Markdown observations use stable IDs, linked corrections, explicit receipts and independent harvest progress.</p><p><strong>Why:</strong> Separate files avoid a shared append log and preserve evidence without a checkpoint database.</p><p><strong>Tweak:</strong> Change the record/storage contract during slice preparation.</p></article></div>
+</section>
+
+<section id="not-v1">
+<h2>Not in the first slice</h2>
+<ul><li>Checkpoint journal, universal Markdown section database or new context injector.</li><li>Automatic transcript watcher, compaction-hook collection or new scheduler.</li><li>Per-skill Python packaging, installer redesign or revival of the parked production split.</li><li>Observatory engine changes, mandatory winner, automatic promotion or fixed multi-day soak.</li></ul>
+<p>Review still follows actual risk. Full repository/provider gates and real-host acceptance remain; changed hooks retain smoke/self-test.</p>
+</section>
+
+<section id="risks">
+<h2>What still needs proof</h2>
+<ul>
+<li><strong>Build preparation:</strong> the capture slice needs exact marker/command/path bounds and numbered implementation/acceptance steps. The portfolio is reviewable, not directly executable.</li>
+<li><strong>Evaluator capability:</strong> a real independent route is unqualified. An unavailable result preserves the value of capture and triggers separate adapter scoping.</li>
+<li><strong>Coverage:</strong> explicit capture misses unreported mistakes. Marker counts do not measure an error rate.</li>
+<li><strong>Resume:</strong> M1's explicit selection does not certify every default hook path.</li>
+<li><strong>Evidence:</strong> keep private records minimal. Tombstones do not erase retained bytes.</li>
+</ul>
+<p><a href="findings/context-learning-plan-review-2026-09-19.md">Technical review</a> · <a href="findings/context-learning-plan-wrap-2026-09-19.md">Fresh-context check</a>. Both distinguish scope review from executable build readiness.</p>
+</section>
+
+<footer id="feedback">
+<h2>Give feedback by decision ID</h2>
+<p><code>D9 → prepare capture alongside AP</code><br><code>D4 → cap the first trial at 30 minutes</code><br><code>D6 → keep transcript collection deferred</code></p>
+<p>Decisions remain editable without renumbering. Silence leaves these defaults in the plan; it does not start implementation.</p>
+<p>Sources: <a href="context-learning-plan.md">canonical portfolio plan</a> · <a href="context-learning/timeline.md">timeline</a> · <a href="context-learning/workflows.md">workflows</a> · <a href="context-learning/plan-interactions.md">build interactions</a> · <a href="context-learning/investigations.md">six dated investigations</a>.</p>
+</footer>
+</main>
+</body>
+</html>

@@ -1,5 +1,31 @@
 # Skill Mesh plan
 
+## Revised proposal — context continuity and learning (2026-09-19)
+
+**Objective:** reduce context loss and repeated mistakes, then automatically trial
+candidate skill changes in isolation before review. The operator selected those
+priorities and accepted the smaller-project/adversarial rescope.
+The [revised plan](documentation/context-learning-plan.md) and
+[proposal publication 2](documentation/context-learning-proposal.html) separate
+existing M1 resume work, capture/harvest, qualified isolated trials, independent
+Python tooling, and optional section history/Observatory visibility. First new
+value is capture/harvest: an estimated 1–2 active workdays plus required gates.
+The proposed queue preserves M1/AP; no implementation is started here. The old
+Steps 132–138 and 9–17-day chain are withdrawn, not an execution reservation.
+Prepare only the selected repository-scoped slice before issue synchronization.
+Current gates, installations, issue dispositions and preserved builds are unchanged.
+
+### Project 2 preparation — explicit mistake capture (2026-09-19)
+
+The operator asked to get started with the accepted smaller plan. The
+[Phase LH executable slice](documentation/mistake-capture-plan.md) reserves
+Steps **153–154** after checking 29 worktrees and the existing BR 147–152 range.
+One implementation step adds explicit capture and unchanged-HEAD harvesting;
+one attended step observes the generated skill in Codex. The
+[slice proposal](documentation/mistake-capture-proposal.html) records the new
+implementation defaults. Preparation proceeds while the accepted M1/AP queue is
+preserved. Implementation has not started; no earlier controller is restarted.
+
 ## Maintenance — build retry budget (2026-09-14)
 
 The operator requested more room for unattended repairs. The default in

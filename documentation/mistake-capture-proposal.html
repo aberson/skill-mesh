@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Explicit mistake capture — implementation proposal 1</title><style>
+:root { color-scheme: light dark; --bg:#f6f3ec; --paper:#fffdf8; --ink:#252b2b; --muted:#5c6460; --line:#d7d9cf; --accent:#235b4b; --wash:#e8efe6; --warn:#815c23; --max:1060px; }
+@media (prefers-color-scheme:dark) { :root { --bg:#161e1c; --paper:#1f2926; --ink:#e9ede6; --muted:#bbc5bf; --line:#425249; --accent:#9ed3b7; --wash:#2a3b32; --warn:#e5c585; } }
+* { box-sizing:border-box; }
+body { margin:0; background:var(--bg); color:var(--ink); font:16px/1.65 system-ui,-apple-system,"Segoe UI",sans-serif; }
+main { max-width:var(--max); margin:auto; padding:48px 28px 70px; }
+header { border-top:5px solid var(--accent); padding-top:28px; }
+h1 { max-width:850px; font-size:clamp(2.1rem,5vw,3.5rem); line-height:1.12; letter-spacing:-.035em; margin:12px 0 22px; }
+h2 { font-size:1.65rem; line-height:1.25; margin:42px 0 18px; }
+h3 { font-size:1.05rem; line-height:1.35; margin:0 0 10px; }
+p { margin:0 0 15px; }
+a { color:var(--accent); text-underline-offset:3px; }
+.eyebrow { color:var(--accent); text-transform:uppercase; letter-spacing:.11em; font-weight:700; font-size:.78rem; }
+.lede { max-width:840px; font-size:1.24rem; }
+.muted, small { color:var(--muted); }
+.notice { border-left:4px solid var(--warn); padding:15px 20px; background:var(--paper); margin:24px 0; }
+.grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; }
+.card { padding:22px; background:var(--paper); border:1px solid var(--line); border-radius:10px; break-inside:avoid; }
+.card p:last-child { margin-bottom:0; }
+.tag { display:inline-block; font-size:.75rem; font-weight:750; padding:2px 8px; margin:0 7px 8px 0; border:1px solid var(--line); border-radius:4px; color:var(--accent); }
+.flow { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; margin:24px 0; }
+.flow div { padding:18px 16px; background:var(--wash); border:1px solid var(--line); border-radius:8px; }
+.flow strong { display:block; margin-bottom:5px; }
+.flow span { display:block; color:var(--muted); font-size:.9rem; }
+table { width:100%; border-collapse:collapse; margin:15px 0 20px; font-size:.93rem; }
+th,td { text-align:left; vertical-align:top; border-bottom:1px solid var(--line); padding:12px 10px; }
+th { background:var(--wash); font-weight:700; }
+tr { break-inside:avoid; }
+code { font-size:.9em; font-family:Consolas,monospace; overflow-wrap:anywhere; }
+.timeline { border-left:2px solid var(--line); padding-left:24px; }
+.phase { position:relative; padding:0 0 24px; }
+.phase:before { content:""; position:absolute; left:-31px; top:7px; width:12px; height:12px; background:var(--accent); border-radius:50%; }
+nav { display:flex; flex-wrap:wrap; gap:10px 20px; padding:14px 0; border-bottom:1px solid var(--line); }
+footer { border-top:1px solid var(--line); margin-top:35px; padding-top:20px; font-size:.88rem; }
+ul { padding-left:22px; }
+li { margin:6px 0; }
+@media(max-width:700px) { main { padding:28px 18px; } .grid,.flow { grid-template-columns:1fr; } table { font-size:.82rem; } th,td { padding:10px 6px; } }
+@media print {
+ @page { margin:14mm; }
+ :root { color-scheme:light; --bg:#fff; --paper:#fff; --ink:#202626; --muted:#525b56; --line:#cdd4cb; --accent:#235b4b; --wash:#e8efe6; --warn:#815c23; }
+ * { -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important; }
+ body { font-size:10pt; } main { max-width:none; padding:0; } h1 { font-size:29pt; } h2 { margin-top:24px; font-size:17pt; } h1,h2,h3 { break-after:avoid; }
+ header,.card,.notice,.flow,.phase,tr { break-inside:avoid; } thead { display:table-header-group; } nav { display:none; }
+ .grid { gap:10px; } .card { padding:13px; } a { color:var(--accent); } footer { font-size:8.5pt; }
+}
+</style></head>
+<body><main><header><p class="eyebrow">Skill Mesh · Phase LH · 19 September 2026 · Publication 1</p>
+<h1>Keep the mistake.<br>Harvest it without a commit.</h1>
+<p class="lede">One small helper, one existing skill, two build steps. This is the first new slice from the accepted context-learning portfolio.</p>
+<p><strong>1–2 active workdays plus required gates and attended acceptance.</strong> Prepared for the accepted queue; implementation has not started.</p>
+</header>
+<section><h2>What I heard</h2><p>You accepted the smaller-project plan and asked to get started. Capture/harvest comes first among the new learning projects; automatic isolated trials remain a later, separately qualified slice.</p></section>
+<section><h2>Why this shape</h2><p>The existing distribution builder already ships root-shared Python helpers. A standard-library helper and an extension of lesson-harvest avoid a new skill, Python environment, installer or checkpoint system.</p><p>The adversarial pass removed a receipt lock and added stateless paging, correction-aware classification and private request-file handling.</p></section>
+<section><h2>Two steps</h2><div class="grid">
+<article class="card"><span class="tag">153 · Code</span><h3>Capture and unchanged-HEAD harvest</h3><p>Immutable private observations, evidence verification, five-store deduplication and read-only preview. Build all provider profiles; observe the real helper chain and pass required independent review/full gate.</p><p><strong>Afterwards:</strong> use <code>/lesson-harvest --record FILE --repo PATH</code> and <code>/lesson-harvest --dry-run --repo PATH</code>, with the prepared private request and target paths.</p></article>
+<article class="card"><span class="tag">154 · Attended</span><h3>Observe the installed Codex workflow</h3><p>Run the prepared procedure in a fresh real host using a disposable home. Capture, correct, replay and harvest without a commit. Confirm dry-run leaves state unchanged.</p><p><strong>Afterwards:</strong> record observed evidence and limitations. Live daily-profile adoption and evaluator activation are separate.</p></article>
+</div><p>Initial automated selection after queue/capability preflight: <code>/build-phase --plan documentation/mistake-capture-plan.md --steps 153</code>. Stop before Step 154.</p></section>
+<section><h2>Your choices</h2><div class="grid">
+<article class="card" id="LH-P1"><span class="tag">LH-P1 · Operator-picked</span><h3>Start the smaller plan</h3><p>Prepare capture/harvest first while preserving the accepted queue. Queue reordering remains the specific choice asked in this session.</p></article>
+<article class="card" id="LH-P2"><span class="tag">LH-P2 · Operator-picked</span><h3>Isolated trials before review</h3><p>Retained for the later trial project; capture does not wait for its evaluator.</p></article>
+</div></section>
+<section><h2>Implementation defaults</h2><div class="grid">
+<article class="card" id="LH-D1"><span class="tag">LH-D1</span><h3>Existing shared Python emitter</h3><p><strong>What:</strong> one standard-library helper. <strong>Why:</strong> the installed ownership/provenance path already exists. <strong>Tweak:</strong> revisit only if a concrete unsupported asset appears.</p></article>
+<article class="card" id="LH-D2"><span class="tag">LH-D2</span><h3>Git-private storage</h3><p><strong>What:</strong> observations and receipts in common Git metadata, with originating worktree identity. <strong>Why:</strong> local persistence without per-project ignore edits. <strong>Tweak:</strong> change scope/location explicitly.</p></article>
+<article class="card" id="LH-D3"><span class="tag">LH-D3</span><h3>Record mode on lesson-harvest</h3><p><strong>What:</strong> explicit opt-in capture. <strong>Why:</strong> no new catalog member or transcript collector. <strong>Tweak:</strong> add wider collection later from evidence.</p></article>
+<article class="card" id="LH-D4"><span class="tag">LH-D4</span><h3>Immutable receipts; one mutating harvester</h3><p><strong>What:</strong> atomic per-ID publication and stateless paging. <strong>Why:</strong> avoid lock recovery and a mutable cursor database. <strong>Tweak:</strong> concurrent PR coordination is a separate need.</p></article>
+<article class="card" id="LH-D5"><span class="tag">LH-D5</span><h3>Independent deep review for this change</h3><p><strong>What:</strong> qualify the existing Claude review route before implementation. <strong>Why:</strong> the change adds persistent records consumed by a skill. <strong>Tweak:</strong> another qualified route; no gate downgrade or self-grading.</p></article>
+<article class="card" id="LH-D6"><span class="tag">LH-D6</span><h3>Implementation, then real-host observation</h3><p><strong>What:</strong> Steps 153–154, one complete cycle and named failures. <strong>Why:</strong> helper tests do not prove host behavior. <strong>Tweak:</strong> host scope or acceptance cases, not arbitrary elapsed quotas.</p></article>
+</div></section>
+<section><h2>Not in this slice</h2><p>Hooks, global marker injection, transcripts, scheduling, uv, checkpoint journals, evaluators, automatic promotion, AP changes and Observatory registration. Existing M1/AP/CL and unmerged BR builds retain their scopes.</p></section>
+<section><h2>Risks and gates</h2><p>Explicit capture misses unreported errors. Corrective branches can conflict and must remain undecided. Concurrent candidate publication is unsupported. Dry-run cannot create a record/receipt, move a cursor or start a trial.</p><p>Codex deep review is not certified by this plan. Missing qualified review capability halts execution. Planning readiness is also not queue authorization or installed-host acceptance.</p><p><a href="findings/mistake-capture-plan-review-2026-09-19.md">Technical review</a> · <a href="findings/mistake-capture-plan-wrap-2026-09-19.md">Fresh-context check</a></p></section>
+<footer><h2>Feedback</h2><p><code>LH-D2 → keep observations separate by worktree</code> or <code>LH-D6 → change the first acceptance host</code>.</p><p><a href="mistake-capture-plan.md">Executable plan</a> · <a href="context-learning-plan.md">Portfolio</a> · <a href="context-learning-proposal.html">Accepted portfolio redline</a></p></footer>
+</main></body></html>
