@@ -29,6 +29,22 @@ Plan-review and plan-wrap passed. Tracking is Phase LH #218, Step 153/#219 and
 Step 154/#220, all open; see the
 [preparation receipt](documentation/findings/mistake-capture-preparation-2026-09-19.md).
 
+### Phase CD preparation — qualified Codex deep-review unblock (2026-09-19)
+
+The operator requested a Codex-native route so Phase LH Step 153 can remain on its
+required deep-review lane instead of waiting for the unavailable Claude quota. The
+[Phase CD plan](documentation/codex-deep-review-unblock-plan.md) is the separate
+reviewed restoration plan DS-D3 requires: it reserves Step **155** (source mapping,
+#222) and Step **156** (disposable installed-host proof, #223), under umbrella #221.
+Both are TODO. The plan-review and plan-wrap reports are
+[technical review](documentation/findings/codex-deep-review-unblock-plan-review-2026-09-19.md)
+and [wrap](documentation/findings/codex-deep-review-unblock-plan-wrap-2026-09-19.md).
+This preparation does not alter the historical DS-D3 record, does not claim ordinary
+Codex support, and does not change Phase LH's capture/harvest interface. Phase LH
+Step 153 remains unstarted and may resume only after Step 156 records successful
+native proof of the generated `build-phase -> build-step --reviewers deep -> review-deep`
+route.
+
 ## Maintenance — build retry budget (2026-09-14)
 
 The operator requested more room for unattended repairs. The default in
