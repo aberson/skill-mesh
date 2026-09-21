@@ -6,7 +6,13 @@
 
 This is Project 2 of the accepted [context-learning portfolio](context-learning-plan.md). It reserves **Steps 153–154**: one implementation slice, then attended Codex acceptance. The September 19 scan covered 29 Skill Mesh worktrees; other plans reserve through 152, including baseline releases (BR, Steps 147–152). The abandoned portfolio Steps 132–138 remain withdrawn.
 
-**Status:** prepared for the existing queue, not running. Preserve M1 (ordinary Codex build) and AP (user-afterparty effectiveness). Their controlling plans and preserved executions are unchanged. No automatic start is authorized by a ready planning verdict; this slice follows the accepted queue unless the operator moves it forward.
+**Status:** on 2026-09-21 the operator moved Step 153 forward through a fresh
+Claude Code deep-review route. Preserve M1 (ordinary Codex build) and
+AP (user-afterparty effectiveness); their controlling plans and preserved
+executions are unchanged. No automatic start follows from this planning verdict:
+the selected Claude route must pass its own capability preflight before
+implementation begins. Codex deep review remains an explicit unavailable route,
+not a fallback or a reason to downgrade the review.
 
 Proposal: [mistake-capture-proposal.html](mistake-capture-proposal.html)
 
@@ -131,7 +137,7 @@ LH-D3: add record mode to lesson-harvest instead of a new catalog skill. No rost
 
 LH-D4: immutable per-observation receipts avoid a shared mutable cursor/database. Atomic same-ID conflicts suffice for local persistence; normal candidate publication has one mutating harvester. Stateless pagination keeps later observations reachable without advancing preview state.
 
-LH-D5: route the implementation through independent deep review because it introduces persistent records consumed by a skill. This is a per-diff choice under review-deep's trigger owner, not a blanket portfolio gate. Prefer the existing Claude Code review route and check its real capability before starting the build. The Codex deep-review limitation remains explicit; missing qualification is a visible halt, not permission to downgrade.
+LH-D5: route the implementation through independent deep review because it introduces persistent records consumed by a skill. This is a per-diff choice under review-deep's trigger owner, not a blanket portfolio gate. The operator selected the existing Claude Code review route on 2026-09-21; check its real capability in a fresh Claude session before starting the build. The Codex deep-review limitation remains explicit; missing qualification is a visible halt, not permission to downgrade.
 
 LH-D6: one implementation step and one attended acceptance step. One complete real cycle plus named failure cases; no multi-day soak or arbitrary example quota.
 
@@ -165,7 +171,12 @@ LH-D6: one implementation step and one attended acceptance step. One complete re
 - **Depends on:** 153.
 - **Parallel-safe with:** none — observation must use the reviewed Step 153 artifact.
 
-Initial automated selection, after queue/capability preflight and issue synchronization: /build-phase --plan documentation/mistake-capture-plan.md --steps 153. Stop before 154. Do not insert a goal covering attended acceptance.
+Initial automated selection, after queue/Claude deep-review capability preflight
+and issue synchronization: `/build-phase --plan
+documentation/mistake-capture-plan.md --steps 153`. Start it in the selected
+fresh Claude Code session from a clean synchronized checkout; do not invoke it
+through the Codex deep-review adapter. Stop before 154. Do not insert a goal
+covering attended acceptance.
 
 ## 8. Risks and Open Questions
 
