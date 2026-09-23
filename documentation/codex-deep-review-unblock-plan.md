@@ -1,6 +1,19 @@
 # Phase CD — Codex code-deep review unblock plan
 
-**Status:** OPERATOR-STOPPED 2026-09-23. Step 155 is not DONE. Independent code review passed in amended round 2/3 and focused checks passed, but the single full-root test run was stopped by the operator after 101.7 minutes (27% last reported progress). The full gate is incomplete; no passing or failing test verdict is claimed. Reviewed commit `4a967f0` is preserved on the [paused candidate branch](https://github.com/aberson/skill-mesh/tree/paused/cd155-operator-stop-20260923) and in its local worktree. The earlier exhausted 3/3 attempt remains preserved. Step 156 is unstarted and the intended installed profile is unchanged. No further tests, qualification, installs or repairs are authorized without operator reconciliation. Phase CD #221, Step 155/#222 and Step 156/#223 retain their identities.
+**Status:** Step 155 source accepted under the bounded amendment below; Step 156's
+single installed-proof attempt is in progress. Main `2e7f325` contains the exact
+17 non-plan files from reviewed candidate `4a967f0`. The earlier source workflow's
+signed terminal PASS was not established; this is source acceptance under an
+explicit changed criterion, not a replayed workflow PASS. Installed capability
+still requires its own observed proof and normal activation.
+
+**Historical stop, 2026-09-23:** Independent code review passed in amended round
+2/3 and focused checks passed, but the full-root suite was operator-stopped after
+101.7 minutes (27% last reported progress). It remains INCOMPLETE/deferred, with
+no passing or failing test verdict. Reviewed `4a967f0` is preserved on the
+[paused candidate branch](https://github.com/aberson/skill-mesh/tree/paused/cd155-operator-stop-20260923)
+and in its local worktree. The earlier exhausted 3/3 attempt is also preserved.
+Phase CD #221, Step 155/#222 and Step 156/#223 retain their identities.
 
 **Bounded resumption amendment (2026-09-23):** The operator subsequently requested
 that Agent Advocate's build invocation become usable without repeating the testing
@@ -92,7 +105,7 @@ No new runtime helper, dependency, manifest record, or installer behavior is int
 
 - **Problem:** Codex `review-deep` refuses unconditionally although this host exposes an independently testable fresh-child and parent-authority contract.
 - **Type:** code
-- **Status:** TODO (operator-stopped 2026-09-23; not DONE)
+- **Status:** DONE (source accepted under CD-D5; full suite INCOMPLETE/deferred; no signed source-workflow PASS claimed)
 - **Issue:** #222
 - **Flags:** --reviewers code --isolation worktree --max-iter 3
 - **Files:** `skills/review-deep/providers/codex.md`; `skills/review-deep/providers/gpt.md`; `skills/review-deep/core.md`; `tools/build-distributions.ps1`; `tools/skill-mesh-provenance.ps1`; `tests/package-integrity/test_codex_capability_claims_honesty.py`; `tests/package-integrity/test_codex_agent_isolation_contract.py`; `tests/distributions/test_distributions.py`; `tests/package-integrity/test_skill_catalog_lifecycle.py` (only assertions affected by the explicit packaging exception); `documentation/providers/codex.md`; `documentation/providers/README.md`; `documentation/troubleshooting.md`; `documentation/architecture.md`; `documentation/skill-catalog-lifecycle.md`; `plan.md`; `documentation/codex-deep-review-unblock-acceptance.md`. Verify the four canonical helper/config source files, manifest, installer, standalone router and shared verdict helper remain unchanged.

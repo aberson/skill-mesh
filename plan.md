@@ -39,14 +39,17 @@ required deep-review lane instead of waiting for the unavailable Claude quota. T
 [Phase CD plan](documentation/codex-deep-review-unblock-plan.md) is the separate
 reviewed restoration plan DS-D3 requires: it reserves Step **155** (source mapping,
 #222) and Step **156** (disposable installed-host proof, #223), under umbrella #221.
-Step **155 is not DONE**. The operator stopped this run on 2026-09-23 after
+Step **155 source is accepted under the scoped CD-D5 exception** at `2e7f325`.
+Its 17 non-plan files match reviewed `4a967f0` exactly. This does not assert a
+signed source-workflow PASS; the prior run's terminal receipt remains stopped.
+The operator originally stopped this run on 2026-09-23 after
 independent code review passed in amended round 2/3 and focused checks passed.
 The single full-root test run was operator-stopped after **101.7 minutes**, with
 27% last reported progress; the gate is **incomplete**, with no passing or failing
 test verdict. Reviewed commit `4a967f0` is preserved on the
 [paused candidate branch](https://github.com/aberson/skill-mesh/tree/paused/cd155-operator-stop-20260923) and in its local worktree.
-The prior exhausted 3/3 attempt remains preserved. Step **156 is unstarted**;
-the intended installed profile was unchanged at that stop.
+The prior exhausted 3/3 attempt remains preserved. Step **156 is IN PROGRESS**
+under the single bounded attempt; the intended installed profile is unchanged.
 
 The operator subsequently requested that Agent Advocate's build invocation work
 without repeating the testing overrun. The bounded amendment in the Phase CD plan
@@ -54,8 +57,8 @@ reuses the unchanged reviewed candidate and focused evidence; it leaves the full
 suite INCOMPLETE/deferred under an explicit one-candidate validation exception.
 One 20-minute total installed-proof/profile-activation attempt is permitted. A
 failure stops that attempt without a repair/retest loop. Agent Advocate code work
-remains for a subsequent invocation. Current status is still pending acceptance
-and installed proof; the historical stop and both runs' consumed rounds remain.
+remains for a subsequent invocation. Installed proof and activation are still
+pending; the historical stop and both runs' consumed rounds remain.
 
 On 2026-09-23, the operator requested this recurring prerequisite
 be fixed before continuing Agent Advocate. The Phase CD amendment also covers
