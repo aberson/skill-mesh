@@ -244,12 +244,16 @@ its own reported result, never a silently degraded one.
   `required_tool_missing`; the child receives only symptom, repro, and bounded
   read-only primary-source scope. This repair does not silently generalize one
   proven mapping.
-- **`review-deep` has an unqualified code-only source mapping.** Phase CD is the
+- **`review-deep` has a host-conditioned code-only mapping.** Phase CD is the
   reviewed restoration plan required by DS-D3. The adapter requires fresh sibling
   dispatch in capacity-limited batches and the existing parent-only authority probes;
   unsupported or inconclusive hosts halt `required_tool_missing`. All six lenses,
   installed resources and the separate authenticated enclosing verdict must be proved
-  by Step 156 before any consumer relies on this route. Runtime/full review and
+  by Step 156 before any consumer relies on this route. On 2026-09-23, Step 156
+  proved the installed nested route on the observed Codex collaboration host and
+  verified the real profile's 129 owned files; see the
+  [qualification receipt](../findings/codex-deep-review-bounded-resumption-2026-09-23.md).
+  Each fresh consumer still performs its own capability preflight. Runtime/full review and
   installed calibration remain outside this qualification. See the
   [acceptance procedure](../codex-deep-review-unblock-acceptance.md).
 - **Visual verdicts are capability-conditioned, so `--ui` can degrade downstream.**

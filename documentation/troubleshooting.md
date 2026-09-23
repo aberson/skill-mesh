@@ -241,7 +241,7 @@ evidence neither for nor against an installed profile. Proof comes only from
 the discovery root -- the probe's `.agents/skills` report, or the
 `profiles.codex` block of `inspect-host-install.ps1`.
 
-## Codex review-deep remains unqualified pending installed proof
+## Codex review-deep requires the qualified installed route and session capabilities
 
 Phase CD is the reviewed restoration plan required by historical DS-D3. The
 code-only source mapping is capability-conditioned; it does not establish host
@@ -249,6 +249,14 @@ support. Step 156 must prove the fresh installed
 `build-phase -> build-step --reviewers deep -> review-deep` route, then refresh
 and verify the intended profile through the normal installer. Follow the
 [acceptance procedure](codex-deep-review-unblock-acceptance.md).
+
+Step 156 proved that nested route on the observed Codex collaboration host on
+2026-09-23, and all 129 real-profile files matched the qualified distribution.
+Launch its long-lived verifier with `exec_command` using `tty: true`; the default
+non-PTY invocation exited on stdin EOF before it could return a writable handle.
+See the [receipt](findings/codex-deep-review-bounded-resumption-2026-09-23.md) for
+the exact proof and interrupted-install cleanup limits. Fresh consumers still
+run their own capability preflight; a model label alone establishes no support.
 
 An ordinary Codex CLI without explicit fresh sibling dispatch and caller-scoped
 parent-only verdict authority still returns `required_tool_missing`. A failed or

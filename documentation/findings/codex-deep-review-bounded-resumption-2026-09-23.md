@@ -51,3 +51,56 @@ removed. Private failure evidence and distribution hashes remain under
 `.build-step/cd156-evidence-dace84f9bbaf45c99f781a575bd61796/`. The installed
 consumer profile remains unchanged, so Agent Advocate's Codex route is still
 blocked. No new repository tests ran during this bounded resumption.
+
+## Later operator-authorized Sol/Terra attempt: qualified and activated
+
+The operator explicitly approved the coordinator to run the corrected launcher,
+installed qualification/activation and then the preserved Agent Advocate build
+using Sol or Terra. Requested models were `gpt-5.6-sol` for the execution parent
+and developer and `gpt-5.6-terra` for fresh probes/reviewers. Host version was not
+reported; the demonstrated host is the active Codex collaboration environment on
+Windows with PowerShell 5.1, not an ordinary CLI support claim.
+
+The corrected `tty: true` launch returned the exact service-ready schema and a
+writable parent handle, accepted a protocol close request and exited 0 within
+the two-minute launch budget. The full installed capability probe then passed:
+calibrated conversation challenge v2, protected fields absent from fresh children,
+child rejection from the parent execution session, authenticated advancement,
+tamper rejection, per-open key rotation and cleanup.
+
+The actual installed `build-phase -> build-step --reviewers deep -> review-deep`
+fixture completed on source `d5a126f` (accepted source integration `2e7f325`). Its
+developer commit was `684be96`; the parent ran two stdlib unittest checks, both
+passed. All six fresh direct sibling lenses passed with no blocking findings.
+The installed canonical reducer produced PASS with the exact plan binding and no
+deferred UAT. After ship/worktree cleanup, the actual parent service classified
+ADVANCE; service cleanup/close and safe disposable-tree removal completed.
+
+- Audit SHA-256: `bbc06501fdc6d787a11605c43c92d096106b8bbf3bbfe969976d53b8797f3596`.
+- Frozen distribution manifest SHA-256: `43aee6f0cdd14a0a44c0ab6df04f835f023ac5542dc336eb54abe452b7cab7bc`.
+- Private evidence directory: `.build-step/cd156-evidence-28757aea11bf4d8f97120638af1dc0c7/`.
+
+Normal real-profile installation was invoked without force flags. Its combined
+command was interrupted at 22:13:43 UTC before the 22:14:30 work deadline; neither
+the inner installer's exit code nor success output was observed. The ledger had
+already published 129 owned files. At 22:15:47 UTC, a read-only post-interruption
+closeout checked the complete owned set and every file against both the ledger
+and the frozen qualified manifest: PASS in 0.046 seconds. This verifies actual
+installed state; it does not retroactively claim a captured installer exit 0.
+
+The interruption left a write-ahead record whose 129 post-states exactly matched
+the published ledger and current bytes. No installer process remained. Following
+the canonical `Test-InstallEntryEquals` authority comparison (owned paths/hashes;
+directory metadata is audit-only), closeout preserved a private copy and retired
+only that duplicate recovery record at 22:21:23 UTC. No payload or ledger rewrite,
+installer rerun, repository suite or new review campaign occurred. These cleanup
+times are explicitly outside the work deadline. The earlier incomplete attempts
+and source-suite result remain historical facts.
+
+The current installed code-only nested route is qualified and usable on this
+capable host. Agent Advocate's fresh consumer must load the installed bytes and
+run its own session capability preflight. Runtime/full, standalone entrypoints,
+other hosts, native discovery and product M1 acceptance are not proved by this
+fixture. Agent Advocate's separately authorized resume remains responsible for
+its preserved candidate, retry history, 90-minute phase bound and five-minute
+cumulative testing budget per step.

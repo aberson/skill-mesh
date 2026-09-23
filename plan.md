@@ -27,7 +27,8 @@ implementation defaults. Preparation proceeds while the accepted M1/AP queue is
 preserved. On 2026-09-21, the operator moved Step 153 forward on the
 already-declared Claude Code deep-review route: a fresh Claude preflight must
 qualify that route before implementation starts. Codex is not a fallback; its
-separate Phase CD qualification remains incomplete.
+separate Phase CD result below now qualifies one observed Codex nested route;
+each consumer still needs its own capability preflight.
 Plan-review and plan-wrap passed. Tracking is Phase LH #218, Step 153/#219 and
 Step 154/#220, all open; see the
 [preparation receipt](documentation/findings/mistake-capture-preparation-2026-09-19.md).
@@ -48,23 +49,23 @@ The single full-root test run was operator-stopped after **101.7 minutes**, with
 27% last reported progress; the gate is **incomplete**, with no passing or failing
 test verdict. Reviewed commit `4a967f0` is preserved on the
 [paused candidate branch](https://github.com/aberson/skill-mesh/tree/paused/cd155-operator-stop-20260923) and in its local worktree.
-The prior exhausted 3/3 attempt remains preserved. Step **156 is BLOCKED** after
-the single bounded attempt ended INCOMPLETE. Disposable generation, installation
-and 129-file ownership/hash comparison passed. The proof agent omitted `tty: true`
-when launching the verifier; it exited on closed stdin without a writable session.
-No fixture build or reviews started. This does not establish general host
-incapability. Services and the disposable tree were cleaned up; the intended
-installed profile is unchanged. The next-attempt launch correction is recorded
-in the Phase CD plan; no automatic retry is authorized by this receipt.
+The prior exhausted 3/3 attempt remains preserved. Step **156 is DONE** for the
+observed code-only nested route on this Codex collaboration host. After the first
+launch failed on closed stdin, the operator explicitly authorized Sol/Terra to
+continue with `tty: true`. The corrected launch and native capability probes
+passed; two fixture tests and all six fresh independent lenses passed; the
+installed reducer passed and the actual parent authenticated ADVANCE. The real
+profile now has 129 owned files matching the ledger and frozen qualified bytes.
 
-The operator subsequently requested that Agent Advocate's build invocation work
-without repeating the testing overrun. The bounded amendment in the Phase CD plan
-reuses the unchanged reviewed candidate and focused evidence; it leaves the full
-suite INCOMPLETE/deferred under an explicit one-candidate validation exception.
-One 20-minute total installed-proof/profile-activation attempt is permitted. A
-failure stops that attempt without a repair/retest loop. Agent Advocate code work
-remains for a subsequent invocation. Installed proof and activation are still
-incomplete; the historical stop and both runs' consumed rounds remain.
+The 22:14:30 UTC work deadline interrupted the combined installation command, so
+its exit code is unknown. Post-interruption closeout independently verified all
+129 files at 22:15:47 UTC and retired the completed transaction's duplicate
+recovery record at 22:21:23 UTC, preserving a private copy. No installer rerun,
+repository suite or new review cycle followed. Services and the disposable tree
+were cleaned. The [receipt](documentation/findings/codex-deep-review-bounded-resumption-2026-09-23.md)
+records the exact audit/manifest identities, deadline and later cleanup times.
+The historical full suite remains INCOMPLETE/deferred. Agent Advocate's separately
+authorized preserved-candidate resume is now underway with its own time bounds.
 
 On 2026-09-23, the operator requested this recurring prerequisite
 be fixed before continuing Agent Advocate. The Phase CD amendment also covers
