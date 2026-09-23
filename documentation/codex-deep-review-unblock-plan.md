@@ -1,20 +1,24 @@
 # Phase CD — Codex code-deep review unblock plan
 
-**Status:** BUILD READY — plan-review and plan-wrap passed on 2026-09-19; Phase CD #221, Step 155/#222, and Step 156/#223 are open; implementation remains unstarted.
+**Status:** AMENDED 2026-09-23 — implementation remains unstarted. Phase CD #221, Step 155/#222, and Step 156/#223 retain their identities. The September 19 review applies to the old scope; this amendment corrects installed-resource and concurrency assumptions before execution.
 
 ## 1. What This Feature Does
 
-Provide a capability-conditioned Codex mapping for the existing `review-deep` code lane so a host that proves fresh sibling dispatch and parent-only verdict authority can perform the six required independent lenses. This is the separate reviewed restoration plan required by DS-D3; it preserves the historical descope record, narrowly unblocks the Codex-native Phase LH Step 153 route only after Step 156, and does not revive the superseded two-host/runtime workflow or claim support on an ordinary Codex CLI host. A separately qualified Claude Code route may execute Step 153 without creating any Codex claim.
+Provide a capability-conditioned Codex mapping for the existing `review-deep` code lane so a host that proves fresh sibling dispatch and parent-only verdict authority can perform the six required independent lenses. The operator requested that this recurring prerequisite failure be addressed before continuing Agent Advocate. This remains the owning restoration plan required by DS-D3; reuse it rather than create another adapter in a consumer project. It unblocks capable Codex consumers, including Agent Advocate Steps 1/3 and Phase LH Step 153, only after actual installed-host proof. A separately qualified Claude route remains distinct.
+
+Proposal: [codex-deep-review-unblock-proposal.html](codex-deep-review-unblock-proposal.html)
 
 ## 2. Existing Context
 
-`skills/review-deep/core.md` owns the six-lens, evidence-backed, deterministic review contract. Its Codex adapter intentionally refuses every invocation today, even though the active build-step/build-phase adapters already define a tested capability-conditioned fresh-child and parent-private verdict-service contract. `review-deep`'s deterministic audit sidecar is not itself a signed build verdict: when the lane is invoked by build-phase, the existing parent-owned service authenticates the enclosing build-step verdict. `review-deep` already has its emitted calibration and script support assets through the existing manifest row; no asset or installer topology is needed for this scope.
+`skills/review-deep/core.md` owns the six-lens, evidence-backed, deterministic review contract. Its Codex adapter intentionally refuses every invocation today, even though build-step/build-phase already define a capability-conditioned fresh-child and parent-private verdict-service contract. `review-deep`'s deterministic audit sidecar is not a signed build verdict: build-phase's existing parent-owned service authenticates the enclosing build-step verdict.
+
+The September 23 source audit found two additional blockers. First, `support_assets` in the manifest describes legacy-to-canonical migration; the distribution builder does not emit those files. Both generated and installed review-deep packages contain only SKILL.md and core.md. Second, the core demands six reviewers in a single parallel batch, while the inspected host has four total agent slots. The repair must ship the code-lane helpers and permit capacity-limited batches without changing reviewer independence or lens completeness.
 
 ### Terms and existing contract
 
 - **Phase CD** means this narrowly-scoped Codex deep-review unblock phase. Its Step 155 and Step 156 numbers follow the active Phase LH range without changing Phase LH's product interface.
 - **DS-D3** is the operator-approved descope decision that left Codex `review-deep` fail-closed and requires a separate reviewed plan before restoring it; this plan is that proposal, not a rewrite of the historical record.
-- **Phase LH Step 153** is the current explicit mistake-capture implementation step. Its Codex `--reviewers deep` route is the consumer this plan may unblock only after the native proof in Step 156. A separately qualified Claude Code route is outside this Codex proof's dependency chain.
+- **Consumers** include Agent Advocate Steps 1/3 and Phase LH Step 153. Their required deep gates remain intact. A separately qualified Claude route is outside this Codex proof's dependency chain; model or host changes require existing authorization, not an automatic fallback.
 - **`build-phase`** orchestrates plan steps and supplies parent-private verdict authority; **`build-step`** performs a code step in a worktree and invokes the requested review lane. The acceptance route is therefore `build-phase -> build-step --reviewers deep -> review-deep`.
 - **`review-deep`** dispatches six isolated code lenses: correctness, bugs, security, test quality, style/conventions, and plan conformance. It aggregates their cited evidence into `.review-deep/<timestamp>.json`, whose relevant shape is a stable six-entry `lens_verdicts` list and an `aggregated_verdict` result. This audit file is deterministic but unsigned.
 - The enclosing build-step verdict is a different temporary sidecar, authenticated with an HMAC (a keyed integrity signature) retained by the build-phase parent service. The key, verdict path, run id, and service handle never enter lens prompts, arguments, files, logs, or reports.
@@ -36,32 +40,38 @@ Enclosing build-step verdict shape used by the parent service:
 
 ## 3. Scope
 
-In: code-only `review-deep` on a Codex host that passes the existing fresh-context/parent-authority probe; generated-profile coverage; a disposable installed-host qualification; and the documentation/tests that prevent capability claims from drifting. The source mapping remains unqualified until Step 156 records successful native proof.
+In: code-only `review-deep` on a Codex host that passes the existing fresh-context/parent-authority probe; explicit code-lane resource packaging; capacity-aware independent dispatch; generated-profile coverage; installed-host qualification; and normal Codex profile refresh after proof. The source mapping remains unqualified until Step 156 records successful native proof. This is the scoped packaging plan required by the catalog lifecycle's `PACKAGE_RESOURCE_PLAN_REQUIRED` boundary.
 
-Out: a provider-wide Codex-support claim, runtime/full review lanes, new package assets, manifest or installer changes, a real daily-profile install, Claude parity, model benchmarking, and any change to Phase LH's capture/harvest interface.
+Out: a provider-wide Codex-support claim, runtime/full review qualification, a general resource/plugin framework, new canonical helper code, manifest schema or installer redesign, Claude parity, model benchmarking, and any change to Phase LH's product interface. Existing in-repository calibration remains unchanged; this plan does not claim an installed calibration command.
 
 ## 4. Impact Analysis
 
 | File | Change type | Reason | Verified |
 |---|---|---|---|
 | `skills/review-deep/providers/codex.md` | modify | Replace the wrapper's unconditional DS-D3 refusal with a fail-closed mapping for a capable host. | Current adapter explicitly says it maps no fresh-context fan-out. |
-| `skills/review-deep/core.md` | verify unchanged | Keep host-specific orchestration in the Codex adapter; the core already requires six fresh-context lenses and deterministic aggregation. | The current core owns the needed review semantics and does not need a host-specific fallback. |
+| `skills/review-deep/providers/gpt.md` | modify resource reference only | Point installed readers at the emitted tier-map document without changing GPT gate behavior. | Line 9 reads the same tier-map resource; all-provider generation must not leave that reference stale. |
+| `skills/review-deep/core.md` | modify narrowly | Resolve resources from the loaded package, and allow available-slot batches of independent lenses. | Lines 5/104 bind a Claude root and a single six-agent batch; sections Model strategy, Aggregation and Tools consume the named resources. Severity and reducer semantics remain unchanged. |
+| `tools/build-distributions.ps1` | extend | Emit the existing code-lane resource closure for every generated provider that includes review-deep. | Current emission handles launcher/core, shared prose and the build verdict helper, but never consumes manifest support_assets as installed resources. |
+| `tools/skill-mesh-provenance.ps1` | extend shell syntax only | Keep the existing provenance block valid in an executable shell file and recognized by the existing installer. | Existing preamble recognition accepts Markdown, JS and Python placements only; the installer rejects unrecognized generated resources. No raw-JSON provenance protocol is introduced. |
+| `skills/review-deep/scripts/{aggregate.py,lint_prepass.sh,README.md}`, `skills/review-deep/config/model-tier-map.json` | verify source unchanged; emit derived resources | These four existing inputs are the explicit code-lane allowlist; the map emits as `config/model-tier-map.md` with a single fenced JSON payload. | Core sections Model strategy, Aggregation and Tools reference them; the map has no runtime machine consumer in this package. The existing snapshot drift tests remain intact. |
 | `tests/package-integrity/test_codex_capability_claims_honesty.py` | modify | Move `review-deep` from its special unconditional-refusal assertion to a capability-conditioned positive contract. | The test names `review-deep`'s DS-D3 halt as a pinned exception. |
 | `tests/package-integrity/test_codex_agent_isolation_contract.py` | extend | Prove the review-deep mapping cites and preserves the existing child-freshness and parent-authority boundary. | The current gate validates those boundaries for build-step/build-phase only. |
-| `tests/distributions/test_distributions.py` | extend | Assert that the emitted Codex review-deep entry point carries the qualified mapping and its existing support closure. | The suite already enumerates emitted `review-deep` packages. |
-| `documentation/providers/codex.md`, `documentation/providers/README.md`, `documentation/troubleshooting.md`, `plan.md` | modify | Replace the unconditional-halt wording with the precise source-mapping and qualification state: ordinary hosts still halt, and Phase LH remains blocked until Step 156 records native proof. | All currently document the unconditional halt. |
+| `tests/distributions/test_distributions.py` | extend | Exercise emitted helpers from installed paths, map parity and references, valid shell syntax/provenance, missing-resource negatives, and normal install/reinstall/uninstall ownership. | The suite already enumerates emitted packages and provenance; source-file existence alone cannot prove distribution closure or safe lifecycle handling. |
+| `documentation/providers/codex.md`, `documentation/providers/README.md`, `documentation/troubleshooting.md`, `documentation/architecture.md`, `documentation/skill-catalog-lifecycle.md`, `plan.md` | modify relevant current statements | Describe source mapping versus qualification, the narrow resource-packaging exception, and the continued unsupported-host outcome. | Architecture describes support_assets as migration ownership; the lifecycle guide currently says package-local support files are never emitted. Historical DS-D3 and historical review receipts remain unchanged. |
 | `documentation/codex-deep-review-unblock-acceptance.md` | create | Provide the exact disposable install and fresh-host proof used before Phase LH relies on the lane. | No narrow acceptance procedure exists for this scope. |
 
 ## 5. New Components
 
-No new runtime helper, dependency, package asset, manifest record, or installer behavior is introduced. The new acceptance document is an operator procedure, not a runtime artifact.
+No new runtime helper, dependency, manifest record, or installer behavior is introduced. Existing canonical resources are copied by the normal builder and owned by the existing install ledger. The acceptance document is authored during Step 155; Step 156 only executes it and records results.
 
 ## 6. Design Decisions
 
 1. **Reuse the existing capability boundary.** The Codex mapping may dispatch six direct, fresh sibling lenses only after the parent has passed the same no-history conversation challenge used by build-step/build-phase. A failed or inconclusive probe returns `required_tool_missing`.
 2. **Keep verdict authority in the parent.** Lenses write evidence/recommendations only; the review-deep parent runs the mechanical pre-pass and deterministic aggregator. When build-phase invokes the lane, its existing parent-only verdict service separately authenticates the enclosing build-step verdict. The review-deep audit sidecar is never represented as that signed verdict channel. Shared filesystem access is not treated as isolation.
 3. **Use a one-time ordinary code-review bootstrap.** The adapter that restores deep review cannot grade itself. Step 155 therefore uses the existing independent `--reviewers code` lane, with a fixed three-round limit; it is not a downgrade for Phase LH.
-4. **Qualify only a disposable installed host.** Step 156 proves the exact generated `build-phase -> build-step --reviewers deep -> review-deep` route in a new host session against a harmless temporary Git fixture. It separately checks the six-lens audit sidecar and the enclosing authenticated build-step verdict. It never changes a daily profile, and passing it establishes only this code-lane mapping.
+4. **Match scheduling to real capacity.** Retain all six distinct fresh sibling lenses, launched directly by the review parent with explicit no-history dispatch. Run as many as current slots permit, then launch fresh siblings for the remaining lenses. Every lens receives the same immutable diff/intent snapshot and its own lens instructions, never another lens's output or producer reasoning. Aggregate only after the full required set returns. Capacity changes scheduling, not gate strength; no new scheduler service is needed.
+5. **Ship a narrow resource closure.** The builder uses the four-input allowlist in section 4, with paths resolved and checked inside the canonical review-deep package. Missing resources fail the build; no arbitrary glob, out-of-tree lookup or consumer-file hand edit is allowed. Emit the map as Markdown with the existing provenance header and one fenced JSON object; parse it in tests and compare exactly with the source mapping. Update the core/GPT/Codex resource instructions to distinguish canonical JSON from the loaded package's Markdown representation. The standalone router continues reading its original root JSON unchanged. For `lint_prepass.sh`, preserve the shebang and wrap the existing verbatim provenance header in a quoted no-expansion shell no-op heredoc; extend the shared provenance emitter/recognizer together for that exact legal placement, including termination validation. Reject ordinary in-body quotations and malformed wrappers. Prove shell syntax, header recognition and normal ledger-owned install/reinstall/uninstall; provenance remains only one guard alongside path/ledger/current-byte checks. Runtime-only auth probing and calibration assets are not qualified by this change; in-repository source calibration remains unchanged.
+6. **Qualify generated bytes, then refresh normally.** Step 156 first installs into a disposable home and demonstrates the actual nested route in a fresh capable host. Prefer a safe snapshot of already pending useful work as the review subject; a tiny harmless fixture is acceptable solely to exercise the signed workflow boundary. No productivity benchmark is required. Check the six-lens audit and enclosing authenticated verdict separately. Then refresh the intended Codex profile through the normal installer, verify installed ownership/hashes, and require the next consumer session to load those bytes and perform its own session capability check. Preserve foreign/local changes; do not force overwrite or claim support on a host that fails the probe.
 
 ## 7. Build Steps
 
@@ -73,31 +83,34 @@ No new runtime helper, dependency, package asset, manifest record, or installer 
 - **Status:** TODO
 - **Issue:** #222
 - **Flags:** --reviewers code --isolation worktree --max-iter 3
-- **Files:** `skills/review-deep/providers/codex.md`; `tests/package-integrity/test_codex_capability_claims_honesty.py`; `tests/package-integrity/test_codex_agent_isolation_contract.py`; `tests/distributions/test_distributions.py`; `documentation/providers/codex.md`; `documentation/providers/README.md`; `documentation/troubleshooting.md`; `plan.md`; `documentation/codex-deep-review-unblock-acceptance.md`. Verify that `skills/review-deep/core.md`, the manifest, installer, and shared verdict helper remain unchanged.
-- **Produces:** A Codex adapter that dispatches all six code lenses as direct fresh siblings only after the inherited capability probe passes; emitted-profile and planted-negative tests; and a precise disposable-host acceptance procedure for the nested build-phase route.
-- **Done when:** The source and emitted adapter preserve parent-only aggregation authority; all six lens prompts are read-only and cannot see private verdict material; every missing, malformed, uncertain, incomplete, or unsupported state fails closed with `required_tool_missing` or `NEEDS-WORK`; the review-deep audit sidecar is kept distinct from build-phase's authenticated build-step verdict; documentation says the mapping remains unqualified until Step 156 and never claims provider-wide support; focused tests, all-provider builds, repository-root `python -m pytest`, and `git diff --check` pass for the exact candidate.
+- **Files:** `skills/review-deep/providers/codex.md`; `skills/review-deep/providers/gpt.md`; `skills/review-deep/core.md`; `tools/build-distributions.ps1`; `tools/skill-mesh-provenance.ps1`; `tests/package-integrity/test_codex_capability_claims_honesty.py`; `tests/package-integrity/test_codex_agent_isolation_contract.py`; `tests/distributions/test_distributions.py`; `tests/package-integrity/test_skill_catalog_lifecycle.py` (only assertions affected by the explicit packaging exception); `documentation/providers/codex.md`; `documentation/providers/README.md`; `documentation/troubleshooting.md`; `documentation/architecture.md`; `documentation/skill-catalog-lifecycle.md`; `plan.md`; `documentation/codex-deep-review-unblock-acceptance.md`. Verify the four canonical helper/config source files, manifest, installer, standalone router and shared verdict helper remain unchanged.
+- **Produces:** A Codex adapter that dispatches all six code lenses as direct fresh siblings after the inherited capability probe passes, using available-slot batches; generated code-lane resources with installed-path execution coverage; and the exact acceptance/install/resume procedure.
+- **Done when:** The source and emitted adapter preserve parent-only aggregation; all six lens prompts are read-only and receive no private verdict material or sibling findings; missing/duplicate/malformed/incomplete lens sets and unsupported capability fail closed; uncertainty follows the unchanged reducer and cannot become PASS; missing declared helper sources fail generation; emitted helpers execute outside the source checkout; installed map payload equals the source JSON and all three provider references resolve; shell syntax/provenance and normal install/reinstall/uninstall preserve ownership and refuse foreign edits; the unsigned audit remains distinct from the signed build-step verdict; documentation keeps the mapping unqualified until Step 156; focused tests, all-provider builds, repository-root `python -m pytest`, and `git diff --check` pass for the exact candidate. No live host claim comes from these static/mechanical checks.
 - **Depends on:** none
 
 <!-- autofix-applied: 2026-09-19 -->
-### Step 156: Qualify the generated Codex code-deep mapping in a disposable host
+### Step 156: Qualify and activate the generated Codex code-deep mapping
 
-- **Problem:** Source tests cannot prove a fresh installed Codex host loads the revised adapter or actually runs six isolated lenses.
+- **Problem:** Source tests cannot prove a fresh installed Codex host runs the complete review, and a working disposable copy does not repair the consumer's old profile.
 - **Type:** operator
 - **Status:** TODO
 - **Issue:** #223
 - **Files:** `documentation/codex-deep-review-unblock-acceptance.md` (read-only procedure); `plan.md` (qualified-state result only); and this plan's Step 156 status only.
-- **Produces:** A bounded acceptance verdict and sanitized evidence for the generated profile; no source or configuration artifacts.
-- **Done when:** The normal installer writes only to a disposable home, a new Codex session loads the generated build-phase entry point, and a harmless temporary-Git fixture plan completes `build-phase -> build-step --reviewers deep -> review-deep`: the capability probe passes; all six fresh code lenses run; review-deep writes its deterministic audit sidecar; and the enclosing parent writes an authenticated build-step verdict through the existing verdict service. Cleanup leaves the real profile untouched. Any unavailable model, child-dispatch defect, audit-sidecar defect, verdict-service/authentication defect, or incomplete lens set is recorded as incomplete rather than treated as support.
+- **Produces:** Observed verdict, sanitized evidence, and a normal installer refresh of the intended Codex profile after successful disposable proof; no source, helper, or runbook authorship.
+- **Done when:** A fresh capable host loads the generated disposable install and completes `build-phase -> build-step --reviewers deep -> review-deep`: the existing conversation and parent-authority probes pass; six distinct fresh lenses run in capacity-limited batches on identical review inputs; the packaged reducer writes its deterministic audit; the parent separately authenticates the enclosing build-step verdict. Then the normal installer refreshes the intended profile without overwriting foreign changes, and an ownership/hash check proves that profile contains the same qualified bytes. Record exactly which host/entry points were exercised and provide a fresh-session consumer resume prompt. Missing capability, incomplete lenses, invalid artifacts or installation conflicts leave the step incomplete; no switch to another host/model is implied.
 - **Depends on:** 155
 
 ## 8. Risks and Open Questions
 
 | Risk | Mitigation |
 |---|---|
-| The current session retains the old adapter | Require a fresh installed Codex session in Step 156; do not use a source edit as runtime proof. |
+| The current session retains the old adapter | Qualify a fresh installed session and verify the normal profile refresh; require consumer session preflight before resume. |
 | A host exposes child spawn but not parent-private verdict authority | Reuse the full capability probe and fail closed before lens dispatch. |
 | The new adapter self-certifies | Bootstrap Step 155 with the independent ordinary code-review lane and require fresh-host evidence afterward. |
 | Documentation overstates support | Keep the mapping host-conditioned and retain the ordinary-CLI `required_tool_missing` outcome. |
+| Six lenses exceed available slots | Explicit fresh-sibling batches, same sealed inputs, no cross-lens feedback, complete-set check before aggregation. |
+| Source helpers never reach installed package | Execute generated/installed helpers outside the source checkout; verify ledger ownership rather than source-file existence. |
+| Existing consumer work gets overwritten during unblock | Reconcile its worktree, latest review receipts and consumed rounds; preserve the candidate and resume its current repair, never restart or reset the budget. |
 
 ## 9. Testing, Setup, and First Run
 
@@ -111,4 +124,19 @@ Step 155 adds source, generated-distribution, and planted-negative coverage for 
 4. `python -m pytest`
 5. `git diff --check`
 
-The prepared acceptance document must give exact setup, fixture, invocation, evidence, and cleanup commands: create a temporary Git repository and disposable Codex home; install the generated Codex profile only into that home; start a new Codex session; invoke its `build-phase` entry point on a one-step harmless fixture plan that declares `--reviewers deep`; verify the six-lens review-deep audit sidecar and the distinct parent-authenticated build-step verdict; and remove only the disposable paths. Step 156 is the only Codex native-host proof. This feature is a one-shot invocation path, not a background or scheduled system; no soak phase is required. After Step 156 passes and `plan.md` records that qualified state, Phase LH may use the Codex route; it is not a gate on an independently qualified Claude Code execution of Step 153.
+The prepared acceptance document gives exact setup, subject-snapshot, invocation, evidence, profile-refresh and safe-cleanup commands. Follow the existing installer and ownership inspection interfaces, not guessed flags. The static negative cases cover missing support files and missing/duplicate lens results; actual host observation covers fresh siblings in batches and parent-only authority. Native acceptance does not require predetermined model findings, a long soak or a new benchmark project. Run the existing root suite once on the final code candidate for this step; ordinary focused checks are sufficient during repairs. Do not call a partial suite the DONE gate.
+
+After Step 156 passes, the consumer coordinator reloads the qualified profile, performs its session preflight and resumes the preserved candidate with its real retry history. Keep Agent Advocate's deep flags unchanged. This one-shot mapping repair does not start Phase LH or the broader Skill Mesh backlog, and cannot qualify an independently different host by analogy.
+
+## 10. Appendix
+
+### Decision Inventory
+
+| ID | P/D | Choice | Status |
+|---|---|---|---|
+| CD-P1 | P | Restore a Codex-native deep lane without downgrading consumer gates | existing approved Phase CD direction |
+| CD-P2 | P | Address recurring review unavailability before continuing Agent Advocate | requested 2026-09-23 |
+| CD-D1 | D | Reuse the existing capability probe and parent verdict service | retained |
+| CD-D2 | D | Permit fresh independent reviewer batches bounded by host capacity | selected 2026-09-23; six lenses retained |
+| CD-D3 | D | Emit four existing code-lane inputs through the normal builder; Markdown map and shell-safe provenance | selected 2026-09-23; scoped packaging exception, no JSON protocol or installer redesign |
+| CD-D4 | D | Disposable proof followed by normal profile refresh and consumer-session preflight | changed 2026-09-23 to repair the actual installed consumer |

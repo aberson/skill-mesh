@@ -39,9 +39,14 @@ required deep-review lane instead of waiting for the unavailable Claude quota. T
 [Phase CD plan](documentation/codex-deep-review-unblock-plan.md) is the separate
 reviewed restoration plan DS-D3 requires: it reserves Step **155** (source mapping,
 #222) and Step **156** (disposable installed-host proof, #223), under umbrella #221.
-Both are TODO. The plan-review and plan-wrap reports are
-[technical review](documentation/findings/codex-deep-review-unblock-plan-review-2026-09-19.md)
-and [wrap](documentation/findings/codex-deep-review-unblock-plan-wrap-2026-09-19.md).
+Both are TODO. On 2026-09-23, the operator requested this recurring prerequisite
+be fixed before continuing Agent Advocate. The Phase CD amendment also covers
+the verified missing installed code-lane resources, capacity-aware batches of
+six independent reviewers, and normal profile refresh after native proof. It
+keeps the existing issue/step identities and does not start the broader backlog.
+The amendment's [technical review](documentation/findings/codex-deep-review-unblock-plan-review-2026-09-23.md)
+and [wrap](documentation/findings/codex-deep-review-unblock-plan-wrap-2026-09-23.md)
+supersede the September 19 reports for future execution; those earlier receipts remain history.
 This preparation does not alter the historical DS-D3 record, does not claim ordinary
 Codex support, and does not change Phase LH's capture/harvest interface. Step 156
 remains the required native proof before Phase LH may use the generated Codex
