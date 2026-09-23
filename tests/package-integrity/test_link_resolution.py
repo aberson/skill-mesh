@@ -463,6 +463,12 @@ _DOTCLAUDE = "." + "claude"
 # `test_shipped_leaves_matches_a_real_build` compares this against a real build instead of
 # asserting the literal against itself.
 SHIPPED_LEAVES = ("SKILL.md", "core.md", "build_step_verdict.py")
+# Phase CD's reviewed exception is exact package-relative paths, not new leaf
+# names that every other skill would incorrectly be credited with shipping.
+REVIEW_DEEP_SHIPPED_RESOURCES = {
+    "scripts/aggregate.py", "scripts/lint_prepass.sh", "scripts/README.md",
+    "config/model-tier-map.md",
+}
 
 _LINK_RE = re.compile(r"\[[^\]]*\]\(([^)\s]+)")
 _BACKTICK_RE = re.compile(r"`([^`\n]+)`")
@@ -601,6 +607,8 @@ def ships_into_discovery_root(target):
     """
     parts = target.split("/")
     if parts[0] == "_shared":
+        return True
+    if parts[0] == "review-deep" and "/".join(parts[1:]) in REVIEW_DEEP_SHIPPED_RESOURCES:
         return True
     return len(parts) == 2 and parts[1] in SHIPPED_LEAVES
 
@@ -2362,6 +2370,10 @@ def test_shipped_shape_predicate_is_pinned():
     assert not ships_into_discovery_root("judge-ui/providers/claude.md")
     # the third leaf the builder emits, which an earlier two-item SHIPPED_LEAVES denied
     assert ships_into_discovery_root("build-step/build_step_verdict.py")
+    for resource in REVIEW_DEEP_SHIPPED_RESOURCES:
+        assert ships_into_discovery_root("review-deep/" + resource)
+        assert not ships_into_discovery_root("judge-ui/" + resource)
+    assert not ships_into_discovery_root("review-deep/scripts/auth_gate_probe.sh")
 
 
 def test_resolution_roots_are_pinned():
@@ -2555,7 +2567,11 @@ def test_shipped_leaves_matches_a_real_build(dist_root):
                 shared_seen[provider] = {p.name for p in skill_dir.rglob("*")
                                          if p.is_file()}
                 continue
-            names = {p.name for p in skill_dir.rglob("*") if p.is_file()}
+            paths = {p.relative_to(skill_dir).as_posix() for p in skill_dir.rglob("*") if p.is_file()}
+            if skill_dir.name == "review-deep":
+                assert REVIEW_DEEP_SHIPPED_RESOURCES <= paths
+                paths -= REVIEW_DEEP_SHIPPED_RESOURCES
+            names = paths
             unlisted = sorted(names - set(SHIPPED_LEAVES))
             assert not unlisted, (
                 f"{provider}/{skill_dir.name} contains {unlisted}, which SHIPPED_LEAVES "

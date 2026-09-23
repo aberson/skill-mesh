@@ -438,3 +438,128 @@ def test_c0r_inventory_gate_rejects_a_deleted_active_doc_surface():
     required = "`documentation/providers/codex.md`"
     assert required in text
     assert _c0r_inventory_defects(text.replace(required, "", 1))
+
+# Phase CD: source contract checks complement the executable installed-path gate.
+REVIEW_DEEP = REPO_ROOT / "skills/review-deep/providers/codex.md"
+ACCEPTANCE = REPO_ROOT / "documentation/codex-deep-review-unblock-acceptance.md"
+DEEP_REQUIREMENTS = {
+    "capability-probe": ("Conversation challenge v2", "Parent-state capability contract",
+                         "inconclusive", "required_tool_missing", "ordinary Codex CLI"),
+    "six-siblings": ('fork_turns="none"', "six distinct fresh sibling", "available-slot batches",
+                     "No reused child", "Never pass sibling findings or producer reasoning"),
+    "read-only": ("read-only", "recommendations only", "reject unexpected reviewer mutation", "not OS isolation"),
+    "parent-authority": ("complete raw lens set", "duplicate lens IDs", "alone invokes", "UNCERTAIN", "non-passing"),
+    "private-channel": ("Never pass", "verdict path", "run id", "HMAC key", "service handle", "unsigned"),
+    "plan-binding": ("same parent context", "resolved absolute plan path", "known phase step must never become null"),
+}
+
+
+def test_review_deep_preserves_fresh_siblings_and_parent_authority():
+    rows = _contract_rows(REVIEW_DEEP.read_text(encoding="utf-8"), "Code-lens capability mapping")
+    assert not _missing_tokens(rows, DEEP_REQUIREMENTS)
+
+
+@pytest.mark.parametrize("row,token", [(row, tokens[0]) for row, tokens in DEEP_REQUIREMENTS.items()])
+def test_review_deep_contract_rejects_removed_boundaries(row, token):
+    text = REVIEW_DEEP.read_text(encoding="utf-8")
+    assert token in text
+    rows = _contract_rows(text.replace(token, "removed-boundary"), "Code-lens capability mapping")
+    assert _missing_tokens(rows, DEEP_REQUIREMENTS)
+
+
+def _cd_status_defects(text):
+    section = _section(text, "Phase CD preparation — qualified Codex deep-review unblock (2026-09-19)", level=3)
+    normalized = " ".join(section.split("\n## ", 1)[0].split())
+    return [s for s in ("unqualified pending Step 156", "installed proof", "normal intended-profile refresh",
+                        "does not claim ordinary Codex support", "not a dependency of the separately qualified Claude Code route")
+            if s not in normalized]
+
+
+def test_cd_status_retains_the_pending_qualification_boundary():
+    text = (REPO_ROOT / "plan.md").read_text(encoding="utf-8")
+    assert not _cd_status_defects(text)
+    for phrase in ("unqualified pending Step 156", "does not claim ordinary\nCodex support"):
+        assert phrase in text
+        assert _cd_status_defects(text.replace(phrase, "qualified everywhere"))
+
+
+def _acceptance_block(language, marker):
+    import re
+    blocks = re.findall(r"```" + language + r"\n(.*?)\n```", ACCEPTANCE.read_text(encoding="utf-8"), re.S)
+    return next(block for block in blocks if marker in block)
+
+
+@pytest.mark.parametrize("reparse", [False, True])
+def test_cd_disposable_failure_restores_environment_and_contains_cleanup(tmp_path, reparse):
+    import json
+    import shutil
+    import subprocess
+    import tempfile
+    import uuid
+
+    powershell = shutil.which("powershell")
+    if not powershell:
+        pytest.skip("Windows PowerShell required")
+    root = Path(tempfile.gettempdir()) / ("cd156-" + uuid.uuid4().hex)
+    root.mkdir()
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    (outside / "keep.txt").write_text("untouched", encoding="utf-8")
+    script = tmp_path / "failure.ps1"
+    quote = lambda value: "'" + str(value).replace("'", "''") + "'"
+    junction = ""
+    if reparse:
+        junction = f"New-Item -ItemType Junction -Path (Join-Path $cdRoot 'link') -Target {quote(outside)} | Out-Null"
+    script.write_text(_acceptance_block("powershell", "# CD156 lifecycle") + f'''
+$ErrorActionPreference = 'Stop'
+$cdRoot = {quote(root)}
+$before = @{{}}
+foreach ($name in @('HOME','USERPROFILE','CODEX_HOME')) {{ $before[$name] = [Environment]::GetEnvironmentVariable($name, 'Process') }}
+try {{
+    Invoke-Cd156Disposable $cdRoot {{
+        {junction}
+        throw 'planted host failure'
+    }}
+    exit 9
+}} catch {{
+    $restored = $true
+    foreach ($name in $before.Keys) {{ if ([Environment]::GetEnvironmentVariable($name, 'Process') -ne $before[$name]) {{ $restored = $false }} }}
+    @{{restored=$restored; root_exists=(Test-Path -LiteralPath $cdRoot); error=$_.Exception.Message; jobs=@(Get-Job).Count}} | ConvertTo-Json -Compress
+    exit 1
+}}
+''', encoding="ascii")
+    try:
+        result = subprocess.run([powershell, "-NoProfile", "-File", str(script)], capture_output=True, text=True)
+        assert result.returncode == 1, result.stderr
+        observation = json.loads(result.stdout)
+        assert observation["restored"] is True
+        assert observation["jobs"] == 0
+        assert observation["root_exists"] is reparse
+        assert ("reparse entry" if reparse else "planted host failure") in observation["error"]
+        assert (outside / "keep.txt").read_text() == "untouched"
+    finally:
+        link = root / "link"
+        if link.exists():
+            # Remove the junction itself, never recurse through its target.
+            link.rmdir()
+        if root.exists():
+            root.rmdir()
+
+
+def test_cd_runbook_powershell_blocks_parse_and_fixture_plan_is_written(tmp_path):
+    import re
+    import shutil
+    import subprocess
+
+    powershell = shutil.which("powershell")
+    if not powershell:
+        pytest.skip("Windows PowerShell required")
+    blocks = re.findall(r"```powershell\n(.*?)\n```", ACCEPTANCE.read_text(encoding="utf-8"), re.S)
+    procedure = tmp_path / "procedure.ps1"
+    procedure.write_text("\n".join(blocks), encoding="ascii")
+    command = ("$tokens=$null; $errors=$null; "
+               f"$null=[Management.Automation.Language.Parser]::ParseFile('{procedure.as_posix()}',[ref]$tokens,[ref]$errors); "
+               "if ($errors.Count) { $errors | Out-String | Write-Output; exit 1 }; exit 0")
+    result = subprocess.run([powershell, "-NoProfile", "-Command", command], capture_output=True, text=True)
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "[IO.File]::WriteAllText((Join-Path $cdFixture 'proof-plan.md'), $cdPlan, $cdUtf8)" in procedure.read_text()

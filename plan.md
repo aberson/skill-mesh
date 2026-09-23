@@ -39,7 +39,11 @@ required deep-review lane instead of waiting for the unavailable Claude quota. T
 [Phase CD plan](documentation/codex-deep-review-unblock-plan.md) is the separate
 reviewed restoration plan DS-D3 requires: it reserves Step **155** (source mapping,
 #222) and Step **156** (disposable installed-host proof, #223), under umbrella #221.
-Both are TODO. On 2026-09-23, the operator requested this recurring prerequisite
+Neither is accepted yet. The prior Step 155 run exhausted 3/3 rounds and remains
+preserved; the materially amended run began on 2026-09-23 with its own bounded
+three-round budget. The code-only source mapping is unqualified pending Step 156,
+including installed proof and normal intended-profile refresh. On 2026-09-23, the
+operator requested this recurring prerequisite
 be fixed before continuing Agent Advocate. The Phase CD amendment also covers
 the verified missing installed code-lane resources, capacity-aware batches of
 six independent reviewers, and normal profile refresh after native proof. It
@@ -193,8 +197,10 @@ see the superseded-instruction banner below the Progress table.
 - **Track B — RD-lite, then the CRUD rail.** RD-lite (DS-D3, tracked on the re-scoped #177)
   restores the review-deep calibration corpus and in-repo calibration in one build-step,
   DONE-gated by the full repo-root pytest. Then Phase CL Steps 110–117 (#168–#175) build the
-  CRUD rail with `--reviewers code` per DS-D7(a). Codex review-deep stays a KNOWN GAP — an
-  honest fail-closed `required_tool_missing` halt; see `documentation/troubleshooting.md`.
+  CRUD rail with `--reviewers code` per DS-D7(a). Codex review-deep now has a code-only
+  source mapping under Phase CD, unqualified
+  pending Step 156 installed proof and profile refresh. Unsupported hosts retain the
+  fail-closed `required_tool_missing` halt; see `documentation/troubleshooting.md`.
 - **Track C — production/development split, parked (kept, not killed).** Per DS-D5 the Phase
   PROD MVP replan obligation is cut (#183 closed); the landed declarative Step 1 (#184 at
   `2e8e4f3`) stays on main as the seed and `tests/production-toolchain` runs in every DONE gate.

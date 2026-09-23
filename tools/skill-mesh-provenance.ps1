@@ -94,6 +94,23 @@ function Add-JsProvenance([string]$body, [string]$header) {
 # from swallowing an arbitrarily long document while it hunts for a terminator.
 $script:SKILL_MESH_HEADER_MAX_LINES = 16
 
+function Add-ShellProvenance([string]$body, [string]$header) {
+    # A quoted no-op heredoc preserves the header verbatim without expansion.
+    # Keep the executable shebang on line one. Accept only this fixed wrapper.
+    if ([string]::IsNullOrEmpty($header) -or
+        $header.Contains('SKILL_MESH_PROVENANCE_END')) {
+        throw 'skill-mesh-provenance: invalid shell provenance header'
+    }
+    $block = ": <<'SKILL_MESH_PROVENANCE_END'`n" + $header +
+             "`nSKILL_MESH_PROVENANCE_END`n`n"
+    if ($body.StartsWith('#!')) {
+        $nl = $body.IndexOf("`n")
+        if ($nl -lt 0) { return $body + "`n" + $block }
+        return $body.Substring(0, $nl + 1) + $block + $body.Substring($nl + 1)
+    }
+    return $block + $body
+}
+
 function Test-SkillMeshHeaderPreamble([string]$pre) {
     # Is $pre an EMITTER-LEGAL run of bytes in front of the header block?
     #
@@ -118,6 +135,8 @@ function Test-SkillMeshHeaderPreamble([string]$pre) {
     if ($frontmatter.Success -and $frontmatter.Length -eq $pre.Length) { return $true }
     # Add-JsProvenance: `/*` at the top, after a line-1 hashbang when there is one.
     if ([regex]::IsMatch($pre, '^(?:#![^\r\n]*\r?\n)?/\*\r?\n$')) { return $true }
+    # Add-ShellProvenance; Get-SkillMeshHeaderSpan also checks its terminator.
+    if ([regex]::IsMatch($pre, "^(?:#![^\r\n]*\r?\n)?: <<'SKILL_MESH_PROVENANCE_END'\r?\n$")) { return $true }
     # Add-PythonProvenance: inserted after the FIRST '"""', which that emitter
     # requires to start within the first 256 characters.
     if ([regex]::IsMatch($pre, '^(?:(?!""")[\s\S]){0,256}"""\r?\n$')) { return $true }
@@ -165,7 +184,16 @@ function Get-SkillMeshHeaderSpan([string]$text) {
                '|[^\r\n]*\r?\n' + $cont + '(?![ \t]*\r?\n)[^\r\n]*?-->)'
     $m = [regex]::Match($t, $pattern)
     while ($m.Success) {
-        if (Test-SkillMeshHeaderPreamble ($t.Substring(0, $m.Index))) {
+        $pre = $t.Substring(0, $m.Index)
+        $shellWrapper = [regex]::IsMatch($pre, "^(?:#![^\r\n]*\r?\n)?: <<'SKILL_MESH_PROVENANCE_END'\r?\n$")
+        # No whitespace, executable suffix, missing delimiter, or early heredoc end.
+        if ($shellWrapper -and (
+            $m.Value.Contains('SKILL_MESH_PROVENANCE_END') -or
+            -not [regex]::IsMatch($t.Substring($m.Index + $m.Length),
+                '^\r?\nSKILL_MESH_PROVENANCE_END\r?\n\r?\n'))) {
+            return $null
+        }
+        if (Test-SkillMeshHeaderPreamble $pre) {
             return [PSCustomObject]@{ start = ($m.Index + $delta); length = $m.Length }
         }
         $m = $m.NextMatch()

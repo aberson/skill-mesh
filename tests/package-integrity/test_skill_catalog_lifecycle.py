@@ -337,10 +337,9 @@ LOCKED_CLAIMS = (
      "skill's declared support assets, stops before writing with "
      "`PACKAGE_RESOURCE_PLAN_REQUIRED` and needs a scoped packaging plan "
      "first. The reason is concrete rather than procedural: the "
-     "distribution builder emits cores and adapters, so a package-local "
-     "script or template authored by a well-meaning creator would look "
-     "portable in the source tree and be silently absent from every "
-     "installed profile."),
+     "distribution builder emits cores and adapters by default; package-local "
+     "resources require an explicit reviewed emission path so they cannot "
+     "silently disappear from installed profiles."),
     ('fact 5 - the boundary rule', GUIDE_REL,
      "Canonical, generated, and consumer surfaces", 'paragraph',
      "Section 2 of [`architecture.md`](architecture.md) assigns exactly one "

@@ -2,9 +2,9 @@
 
 ## Provider-neutral host abstractions
 
-- Resolve supporting assets and relative script paths against `.claude/skills/review-deep/`; the canonical prose lives here while implementation assets remain with the compatibility launcher.
+- Resolve supporting assets against the loaded review-deep package directory containing `core.md`, never the project cwd or a different host's discovery root. Generated packages ship `scripts/aggregate.py`, `scripts/lint_prepass.sh`, `scripts/README.md`, and `<loaded-package>/config/model-tier-map.md`; canonical source uses `config/model-tier-map.json`. The Markdown map contains one fenced JSON payload with the same mapping. Missing required code-lane resources return `required_tool_missing`. Runtime auth probing and calibration resources are not installed by this closure; the calibration command below remains repository-only.
 - A named skill call means the host's skill-dispatch primitive. An isolated fresh-context task invocation means an isolated task/action invocation with fresh context and the requested capability tier. Provider wrappers map this role to their native APIs.
-- Model tier names in inherited procedures describe capability roles. Resolve them through `config/model-tier-map.json`; an unavailable required capability returns `required_tool_missing` rather than weakening a gate.
+- Model tier names in inherited procedures describe capability roles. Resolve them through the loaded package tier map described above; an unavailable required capability returns `required_tool_missing` rather than weakening a gate.
 - Never expose hidden chain-of-thought. Preserve only decisions, evidence, commands, structured artifacts, and operator-facing rationale required by this contract.
 
 ## Non-relaxable review invariants
@@ -101,7 +101,7 @@ plan-conformance lens.
 
 ## Reviewer lenses
 
-The skill spawns six fresh-context sub-agents, one per lens, **in a single parallel dispatch batch** (serial spawning only adds wall-clock for zero independence gain; independence comes from the context isolation below, not serial order; see `.claude/rules/subagent-economy.md`). Dispatch each lens with its table-assigned tier (§ Model-tier selection) — arms never inherit an escalated session (tier policy; see workspace conventions under `.claude/rules/`). Each lens is a
+The skill spawns six fresh-context sub-agents, one per lens, **in parallel batches bounded by available host slots**. The review parent directly launches every lens as a new sibling with explicit no-history dispatch. Complete each batch before freeing its slots for fresh siblings; never reuse or follow up a lens. All six receive the same immutable diff/intent/context snapshot plus their own lens instructions, never sibling findings or producer reasoning. Aggregate only after the complete required set returns; limited capacity changes scheduling, not independence or completeness. Dispatch each lens with its table-assigned tier (§ Model-tier selection) — arms never inherit an escalated session (tier policy; see workspace conventions under `.claude/rules/`). Each lens is a
 single-shot pass; iteration is the orchestrator's job (`/build-step --max-iter`).
 Each lens runs in isolation (no cross-lens chatter) so verdicts aren't biased
 by sibling findings (see `docs/investigations/review-agents/02-reviewer-dimensions.md`
@@ -580,7 +580,7 @@ rationale.
 | Correctness | `sonnet` tier | Diff-vs-intent comparison |
 
 Resolve tier names to provider model IDs at runtime via
-`config/model-tier-map.json`; do not hard-code provider-specific model
+the loaded package tier map described above; do not hard-code provider-specific model
 strings in this canonical core.
 
 The `Style` row corresponds to the `### Style and conventions lens` H3; for
@@ -598,7 +598,7 @@ per-invocation basis.
 - **Syntax:** `--model-override <lens>=<tier>` where `<lens>` is one of
   `style | test-quality | plan-conformance | bugs | security | correctness` and `<tier>`
   is one of `haiku | sonnet | opus`. Resolve these tier names through
-  `config/model-tier-map.json` at runtime.
+  the loaded package tier map at runtime.
 - **Repeatable:** the flag may be passed multiple times to override multiple
   lenses in one invocation (e.g., `--model-override bugs=opus --model-override correctness=opus`).
 - **Effect:** overrides the default tier for the named lens for THIS invocation

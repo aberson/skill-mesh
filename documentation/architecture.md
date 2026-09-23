@@ -113,6 +113,16 @@ rules, and the recovery rule for a mutation that fails after its first write are
 that same guide. Section 2's closing rule above — "There is no second canonical copy of any
 core, adapter, mapping, test, or doc" — is why this section cites it rather than copying it.
 
+Phase CD adds one reviewed emission exception for review-deep: the builder copies its
+existing aggregate, lint-prepass and scripts README resources, and renders its package
+JSON tier map as `<loaded-package>/config/model-tier-map.md` with one fenced JSON payload. The four
+inputs are an explicit contained allowlist, not a general manifest `support_assets`
+loader; `support_assets` retains its migration meaning. Shell output preserves its
+shebang and encloses the verbatim provenance header in a quoted no-op heredoc. Normal
+installer ownership and current-byte checks apply. Runtime/calibration resources and
+the standalone router's root JSON are unchanged. The source mapping remains unqualified
+until the Phase CD Step 156 installed-host proof and profile refresh.
+
 ## 3. Skill package shape
 
 Portable skill:
