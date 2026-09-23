@@ -39,7 +39,17 @@ required deep-review lane instead of waiting for the unavailable Claude quota. T
 [Phase CD plan](documentation/codex-deep-review-unblock-plan.md) is the separate
 reviewed restoration plan DS-D3 requires: it reserves Step **155** (source mapping,
 #222) and Step **156** (disposable installed-host proof, #223), under umbrella #221.
-Both are TODO. On 2026-09-23, the operator requested this recurring prerequisite
+Step **155 is not DONE**. The operator stopped this run on 2026-09-23 after
+independent code review passed in amended round 2/3 and focused checks passed.
+The single full-root test run was operator-stopped after **101.7 minutes**, with
+27% last reported progress; the gate is **incomplete**, with no passing or failing
+test verdict. Reviewed commit `4a967f0` is preserved on the
+[paused candidate branch](https://github.com/aberson/skill-mesh/tree/paused/cd155-operator-stop-20260923) and in its local worktree.
+The prior exhausted 3/3 attempt remains preserved. Step **156 is unstarted**;
+the intended installed profile is unchanged. No further tests, qualification,
+installs or repairs are authorized without operator reconciliation.
+
+On 2026-09-23, the operator requested this recurring prerequisite
 be fixed before continuing Agent Advocate. The Phase CD amendment also covers
 the verified missing installed code-lane resources, capacity-aware batches of
 six independent reviewers, and normal profile refresh after native proof. It

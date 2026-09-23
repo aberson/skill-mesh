@@ -1,6 +1,6 @@
 # Phase CD — Codex code-deep review unblock plan
 
-**Status:** AMENDED 2026-09-23 — implementation remains unstarted. Phase CD #221, Step 155/#222, and Step 156/#223 retain their identities. The September 19 review applies to the old scope; this amendment corrects installed-resource and concurrency assumptions before execution.
+**Status:** OPERATOR-STOPPED 2026-09-23. Step 155 is not DONE. Independent code review passed in amended round 2/3 and focused checks passed, but the single full-root test run was stopped by the operator after 101.7 minutes (27% last reported progress). The full gate is incomplete; no passing or failing test verdict is claimed. Reviewed commit `4a967f0` is preserved on the [paused candidate branch](https://github.com/aberson/skill-mesh/tree/paused/cd155-operator-stop-20260923) and in its local worktree. The earlier exhausted 3/3 attempt remains preserved. Step 156 is unstarted and the intended installed profile is unchanged. No further tests, qualification, installs or repairs are authorized without operator reconciliation. Phase CD #221, Step 155/#222 and Step 156/#223 retain their identities.
 
 ## 1. What This Feature Does
 
@@ -80,7 +80,7 @@ No new runtime helper, dependency, manifest record, or installer behavior is int
 
 - **Problem:** Codex `review-deep` refuses unconditionally although this host exposes an independently testable fresh-child and parent-authority contract.
 - **Type:** code
-- **Status:** TODO
+- **Status:** TODO (operator-stopped 2026-09-23; not DONE)
 - **Issue:** #222
 - **Flags:** --reviewers code --isolation worktree --max-iter 3
 - **Files:** `skills/review-deep/providers/codex.md`; `skills/review-deep/providers/gpt.md`; `skills/review-deep/core.md`; `tools/build-distributions.ps1`; `tools/skill-mesh-provenance.ps1`; `tests/package-integrity/test_codex_capability_claims_honesty.py`; `tests/package-integrity/test_codex_agent_isolation_contract.py`; `tests/distributions/test_distributions.py`; `tests/package-integrity/test_skill_catalog_lifecycle.py` (only assertions affected by the explicit packaging exception); `documentation/providers/codex.md`; `documentation/providers/README.md`; `documentation/troubleshooting.md`; `documentation/architecture.md`; `documentation/skill-catalog-lifecycle.md`; `plan.md`; `documentation/codex-deep-review-unblock-acceptance.md`. Verify the four canonical helper/config source files, manifest, installer, standalone router and shared verdict helper remain unchanged.
