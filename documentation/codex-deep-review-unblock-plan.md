@@ -1,11 +1,19 @@
 # Phase CD — Codex code-deep review unblock plan
 
 **Status:** Step 155 source accepted under the bounded amendment below; Step 156's
-single installed-proof attempt is in progress. Main `2e7f325` contains the exact
+single installed-proof attempt ended INCOMPLETE without retry. Main `2e7f325` contains the exact
 17 non-plan files from reviewed candidate `4a967f0`. The earlier source workflow's
 signed terminal PASS was not established; this is source acceptance under an
 explicit changed criterion, not a replayed workflow PASS. Installed capability
 still requires its own observed proof and normal activation.
+
+The attempt built all profiles, installed and hash-checked 129 files in a disposable
+Codex home, then stopped at verifier startup. The proof coordinator omitted
+`tty: true`; the ready service received closed stdin and exited 0 without a writable
+session handle. This is an invocation-lifetime failure, not proof of general host
+incapability. No fixture developer, lenses, audit or authenticated advancement ran.
+Owned services were gone and the disposable tree was safely removed. The live
+profile is unchanged. See the [bounded resumption receipt](findings/codex-deep-review-bounded-resumption-2026-09-23.md).
 
 **Historical stop, 2026-09-23:** Independent code review passed in amended round
 2/3 and focused checks passed, but the full-root suite was operator-stopped after
@@ -124,7 +132,7 @@ exception discoverable to the next coordinator.
 
 - **Problem:** Source tests cannot prove a fresh installed Codex host runs the complete review, and a working disposable copy does not repair the consumer's old profile.
 - **Type:** operator
-- **Status:** TODO
+- **Status:** BLOCKED (bounded attempt INCOMPLETE; initial verifier launch lacked a live stdin session; no retry or activation)
 - **Issue:** #223
 - **Files:** `documentation/codex-deep-review-unblock-acceptance.md` (read-only procedure); `plan.md` (qualified-state result only); and this plan's Step 156 status only.
 - **Produces:** Observed verdict, sanitized evidence, and a normal installer refresh of the intended Codex profile after successful disposable proof; no source, helper, or runbook authorship.
@@ -181,6 +189,13 @@ Step 156 follows the already-reviewed acceptance document's exact setup, native
 proof, evidence, normal installation and safe-cleanup commands under the single
 20-minute total deadline. It builds the distribution needed for that actual proof;
 it does not repeat distribution tests, the root suite, a soak or a benchmark.
+
+**Next-attempt launch correction:** A subsequent explicitly requested attempt must
+finish loading the installed contracts, then launch the required long-lived verifier
+through `exec_command` with `tty: true` and retain the returned parent-only session
+handle for `write_stdin`. The prior default `tty: false` invocation exited on EOF.
+This correction is unproven here and does not authorize an automatic retry. Keep
+all capability and signed-verdict probes, the six lenses and normal activation.
 
 After Step 156 passes, the consumer coordinator reloads the qualified profile, performs its session preflight and resumes the preserved candidate with its real retry history. Keep Agent Advocate's deep flags unchanged. This one-shot mapping repair does not start Phase LH or the broader Skill Mesh backlog, and cannot qualify an independently different host by analogy.
 
