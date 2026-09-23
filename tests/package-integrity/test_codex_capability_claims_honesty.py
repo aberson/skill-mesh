@@ -1435,7 +1435,7 @@ def test_the_conditioning_boundary_is_why_the_pins_are_not_the_whole_control():
     -- not this gate -- are the primary control on that track.
     """
     texts = _adapter_texts()
-    for name in (REVIEW_DEEP,) + WORKFLOW_PRIMITIVE_SKILLS:
+    for name in WORKFLOW_PRIMITIVE_SKILLS:
         for reopening in DOCUMENTED_CONDITIONING_MISSES:
             assert not _is_capability_conditioned(texts[name] + "\n" + reopening), (
                 f"{name}: this reopening is now SEEN by the predicate, so it is "
@@ -1755,47 +1755,21 @@ def test_the_fallback_polarity_gate_reds_on_the_one_word_inversion():
 # The one named exception
 # --------------------------------------------------------------------------- #
 
-def test_review_deep_keeps_its_unconditional_ds_d3_halt():
-    """`review-deep` is a NAMED accepted gap, not a defect to capability-gate.
+def _review_deep_defects(text):
+    required = ("unqualified\nuntil Step 156", "DS-D3",
+                "ordinary Codex CLI without these capabilities remains unsupported")
+    return ([token for token in required if token not in text]
+            + ([] if _is_capability_conditioned(text) else ["missing capability mapping"])
+            + ([] if _colocated_halt_lines(text) else ["missing dispatch halt"])
+            + _claim_sentences(text))
 
-    `documentation/descope-2026-09.md` decision DS-D3 accepts the codex deep lane
-    as a known gap, and `documentation/troubleshooting.md` documents the halt as
-    by design. Step 119 was allowed to correct the halt's stated REASON -- it
-    asserted a provider-wide constant -- and nothing else. So this pins both
-    directions: the reason no longer claims a host fact, and the halt is still
-    unconditional. Reopening a descoped track inside a wrapper edit is exactly
-    the change that must not pass silently.
-    """
+
+def test_review_deep_is_conditioned_under_the_reviewed_cd_plan():
+    assert not _review_deep_defects(_adapter_texts()[REVIEW_DEEP])
+
+
+def test_review_deep_keeps_a_concrete_unsupported_host_boundary():
     text = _adapter_texts()[REVIEW_DEEP]
-    lowered = text.lower()
-    assert _colocated_halt_lines(text), (
-        f"{REVIEW_DEEP} lost the fail-closed halt on its lens-dispatch line")
-    assert "halt visibly with `required_tool_missing`" in lowered
-    assert not _is_capability_conditioned(text), (
-        f"{REVIEW_DEEP}'s codex halt was made capability-conditioned. That "
-        "reopens the DS-D3 descoped track in a wrapper edit; restoring the codex "
-        "deep lane needs its own reviewed plan.")
-    assert "ds-d3" in lowered, (
-        f"{REVIEW_DEEP}'s halt must name the decision that accepts it, so the "
-        "reason stays a statement about the record rather than about the host.")
-    assert not _claim_sentences(text), (
-        f"{REVIEW_DEEP}'s halt reason drifted back to a provider-wide claim")
-
-
-def test_the_ds_d3_pin_reds_on_a_reworded_capability_conditioning():
-    """Anchor: the DS-D3 pin must survive a rewording, not just a copy-paste.
-
-    Pinning unconditionality on one literal phrase is a gate that any author
-    reopening the track defeats by accident. Both spellings below are mutations
-    of the real file, run through the real predicate.
-    """
-    original = _adapter_texts()[REVIEW_DEEP]
-    assert not _is_capability_conditioned(original)
-    for reopening in (
-            "A host that passes the contract may map the deep lenses onto "
-            "fresh siblings.",
-            "A host supplying an explicit no-history primitive may dispatch "
-            "each lens as an isolated child.",
-    ):
-        assert _is_capability_conditioned(original + "\n" + reopening), (
-            f"the DS-D3 pin does not see this reopening: {reopening!r}")
+    anchor = "ordinary Codex CLI without these capabilities remains unsupported"
+    assert anchor in text
+    assert _review_deep_defects(text.replace(anchor, "ordinary Codex CLI is supported"))

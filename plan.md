@@ -46,8 +46,16 @@ The single full-root test run was operator-stopped after **101.7 minutes**, with
 test verdict. Reviewed commit `4a967f0` is preserved on the
 [paused candidate branch](https://github.com/aberson/skill-mesh/tree/paused/cd155-operator-stop-20260923) and in its local worktree.
 The prior exhausted 3/3 attempt remains preserved. Step **156 is unstarted**;
-the intended installed profile is unchanged. No further tests, qualification,
-installs or repairs are authorized without operator reconciliation.
+the intended installed profile was unchanged at that stop.
+
+The operator subsequently requested that Agent Advocate's build invocation work
+without repeating the testing overrun. The bounded amendment in the Phase CD plan
+reuses the unchanged reviewed candidate and focused evidence; it leaves the full
+suite INCOMPLETE/deferred under an explicit one-candidate validation exception.
+One 20-minute total installed-proof/profile-activation attempt is permitted. A
+failure stops that attempt without a repair/retest loop. Agent Advocate code work
+remains for a subsequent invocation. Current status is still pending acceptance
+and installed proof; the historical stop and both runs' consumed rounds remain.
 
 On 2026-09-23, the operator requested this recurring prerequisite
 be fixed before continuing Agent Advocate. The Phase CD amendment also covers

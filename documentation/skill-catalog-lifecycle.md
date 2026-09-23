@@ -72,9 +72,8 @@ skill's neutral core and its provider adapters, and no other package-local file.
 that would add, remove, or relocate any other package-local file, or change a skill's
 declared support assets, stops before writing with `PACKAGE_RESOURCE_PLAN_REQUIRED` and
 needs a scoped packaging plan first. The reason is concrete rather than procedural: the
-distribution builder emits cores and adapters, so a package-local script or template
-authored by a well-meaning creator would look portable in the source tree and be silently
-absent from every installed profile.
+distribution builder emits cores and adapters by default; package-local resources require
+an explicit reviewed emission path so they cannot silently disappear from installed profiles.
 
 This stop grades package-local files only. The repository-level surfaces a mutation also
 edits — the `_shared/` prose a core cites, and the skill's row in
@@ -100,9 +99,14 @@ change and takes the stop above.
 **The grandfathered set is closed at this commit and is not a precedent.** A *new*
 package-local file takes `PACKAGE_RESOURCE_PLAN_REQUIRED` in every skill, including these
 two: being grandfathered exempts the files that already exist, never the next one. The
-distribution builder emits cores, adapters, and the `_shared/` prose a core cites — never a
-package-local support file — so a new one would be present in the source tree and absent from
-every installed profile, which is the whole reason for the stop.
+distribution builder emits cores, adapters, and the `_shared/` prose a core cites.
+Phase CD is the explicit reviewed exception: its builder emits four existing review-deep
+inputs (`scripts/aggregate.py`, `scripts/lint_prepass.sh`, `scripts/README.md`, and
+`config/model-tier-map.json`, represented as `<loaded-package>/config/model-tier-map.md` with one fenced
+JSON payload). This does not generalize `support_assets` into an emission protocol or
+authorize new package files. Missing inputs fail generation; normal provenance, path,
+ledger and current-byte guards still govern installation. See
+[`codex-deep-review-unblock-plan.md`](codex-deep-review-unblock-plan.md).
 
 **What mechanically enforces this document, and what it does not.**
 `tests/package-integrity/test_skill_catalog_lifecycle.py` pins, byte-for-byte, a named set of

@@ -29,7 +29,15 @@ is not recognized`. Windows PowerShell 5.1 is the floor all `.ps1` tooling targe
 BOM) and the executable the test suites shell out to. (`documentation/architecture.md` §8 spells the
 same commands with the PowerShell 7 name; that is the same command in the other spelling.)
 
-**DONE gate — the full suite is the repo-root invocation, with no path argument.** It is slow
+**Scoped Phase CD exception (2026-09-23):** For the unchanged reviewed repair
+`4a967f0705fdbde98694d9eaf4808b66169345af` only, the amended
+`documentation/codex-deep-review-unblock-plan.md` sections 7 and 9 own acceptance.
+Reuse its recorded focused checks and independent reviews; the operator-stopped
+full suite remains INCOMPLETE and deferred. Qualification and normal profile
+activation get one 20-minute total attempt. This is an agent-selected response to
+the operator's bounded-unblock request, not a repository-wide gate change.
+
+**Default DONE gate — the full suite is the repo-root invocation, with no path argument.** It is slow
 (the release, distribution, and smoke suites shell out to PowerShell once or more per test);
 `documentation/phase-75-baseline.md` owns the measured wall clock. Run it from the repository
 root, and report its real summary line:

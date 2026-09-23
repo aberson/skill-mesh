@@ -134,6 +134,11 @@ $SYNTHESIZE_FRONTMATTER_PROFILES = @('gpt', 'codex')
 $VERDICT_HELPER_SOURCE = Join-Path $SHARED_ROOT 'build_step_verdict.py'
 $PATH_GUARD = Join-Path $REPO_ROOT 'runtime\path-guard.ps1'
 $PROVENANCE = Join-Path $TOOLS_DIR 'skill-mesh-provenance.ps1'
+# Phase CD's reviewed package exception, not manifest support_assets expansion.
+$REVIEW_DEEP_RESOURCES = @(
+    'scripts/aggregate.py', 'scripts/lint_prepass.sh',
+    'scripts/README.md', 'config/model-tier-map.json'
+)
 
 if ([string]::IsNullOrWhiteSpace($ManifestPath)) {
     $ManifestPath = Join-Path $REPO_ROOT 'config\skill-manifest.json'
@@ -563,6 +568,20 @@ foreach ($profile in $profiles) {
 
         $skillOutDir = Join-Path $profileDir $name
 
+        # Resolve the complete fixed input set before emitting this package.
+        $reviewResources = @{}
+        if ($name -eq 'review-deep') {
+            $packageRoot = Join-Path $SKILLS_ROOT 'review-deep'
+            foreach ($resource in $REVIEW_DEEP_RESOURCES) {
+                $resourceAbs = Resolve-SafePath -Path (Join-Path $packageRoot $resource) `
+                                               -AllowedRoots @($packageRoot)
+                if (-not (Test-Path -LiteralPath $resourceAbs -PathType Leaf)) {
+                    throw "build-distributions: review-deep resource source missing: $resource"
+                }
+                $reviewResources[$resource] = Read-SourceText $resourceAbs
+            }
+        }
+
         # -- Launcher (SKILL.md) -- (all sources validated above)
         $adapterBody = Read-SourceText $adapterAbs
         # Harvest closure seeds from the CANONICAL text, before any repoint.
@@ -612,6 +631,28 @@ foreach ($profile in $profiles) {
             $coreBody = Repoint-SharedReference $coreBody
             $coreOut = Add-Provenance $coreBody $coreRel $profile
             Write-GeneratedFile (Join-Path $skillOutDir 'core.md') $coreOut $profileDirAbs
+            $fileCount++
+        }
+
+        foreach ($resource in $REVIEW_DEEP_RESOURCES) {
+            if ($name -ne 'review-deep') { break }
+            $resourceBody = $reviewResources[$resource]
+            $resourceLabel = "skills/review-deep/$resource"
+            $resourceDest = $resource
+            switch ([System.IO.Path]::GetExtension($resource)) {
+                '.py' { $resourceOut = Add-PythonProvenance $resourceBody $resourceLabel $profile }
+                '.sh' { $resourceOut = Add-ShellProvenance $resourceBody (New-ProvenanceHeader $resourceLabel $profile) }
+                '.json' {
+                    # Human-readable map; the standalone router keeps its root JSON.
+                    $null = $resourceBody | ConvertFrom-Json
+                    $resourceDest = 'config/model-tier-map.md'
+                    $mapBody = '# Review-deep model tier map' + "`n`n" +
+                               '```json' + "`n" + $resourceBody.TrimEnd() + "`n" + '```' + "`n"
+                    $resourceOut = Add-Provenance $mapBody $resourceLabel $profile
+                }
+                '.md' { $resourceOut = Add-Provenance $resourceBody $resourceLabel $profile }
+            }
+            Write-GeneratedFile (Join-Path $skillOutDir $resourceDest) $resourceOut $profileDirAbs
             $fileCount++
         }
 

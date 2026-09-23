@@ -232,9 +232,8 @@ its own reported result, never a silently degraded one.
   onto fresh siblings, and a host that does not halts `required_tool_missing` at the
   required arm. `judge-ui` conditions on that contract AND on a separately proven
   image-capable child, because its core requires a fresh-context VISION-capable
-  judge; failing either conjunct halts. Three members of the historical set are NOT
-  capability-conditioned on that contract, for reasons specific to what their cores
-  require: `review-deep` stays an unconditional fail-closed halt (next bullet), and
+  judge; failing either conjunct halts. Two members of the historical set are NOT
+  capability-conditioned on that contract:
   `skill-evolve` and `skill-iterate` need the HOST WORKFLOW PRIMITIVE that runs
   `_shared/score_skill.workflow.js` -- an agent-isolation probe says nothing about
   whether that script can execute, so those two keep their own workflow-scoped halts.
@@ -245,15 +244,14 @@ its own reported result, never a silently degraded one.
   `required_tool_missing`; the child receives only symptom, repro, and bounded
   read-only primary-source scope. This repair does not silently generalize one
   proven mapping.
-- **`review-deep` is an accepted known gap on this profile.** Its adapter halts
-  fail-closed with `required_tool_missing` at the required isolated dispatch, by
-  design, and that gap is formally accepted by
-  [`../descope-2026-09.md`](../descope-2026-09.md) decision DS-D3 — the halt is the
-  documented behavior, not a defect to patch in the wrapper. The deep lane
-  calibrates in-repo on the Claude side once RD-lite (#177) lands; any future
-  restoration of the codex deep lane starts from the preserved evidence branches
-  under a new reviewed plan. See "Codex review-deep is a known gap" in
-  [`../troubleshooting.md`](../troubleshooting.md).
+- **`review-deep` has an unqualified code-only source mapping.** Phase CD is the
+  reviewed restoration plan required by DS-D3. The adapter requires fresh sibling
+  dispatch in capacity-limited batches and the existing parent-only authority probes;
+  unsupported or inconclusive hosts halt `required_tool_missing`. All six lenses,
+  installed resources and the separate authenticated enclosing verdict must be proved
+  by Step 156 before any consumer relies on this route. Runtime/full review and
+  installed calibration remain outside this qualification. See the
+  [acceptance procedure](../codex-deep-review-unblock-acceptance.md).
 - **Visual verdicts are capability-conditioned, so `--ui` can degrade downstream.**
   `judge-motion` is Claude-native and absent from this profile, and `judge-ui` halts
   at its vision-judge dispatch on any host that does not pass BOTH the build-step

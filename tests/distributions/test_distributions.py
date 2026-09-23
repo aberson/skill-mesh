@@ -413,8 +413,8 @@ def test_build_file_counts_match_manifest(dist_root):
     # `test_shared_payload_matches_an_independent_closure_walk` is what proves the
     # SET, from a re-walk rather than from this literal.
     shared = len(EXPECTED_SHARED_PAYLOAD)
-    assert len(claude_files) == len(portable) * 2 + len(native) * 1 + 2 + shared
-    assert len(gpt_files) == len(portable) * 2 + 2 + shared
+    assert len(claude_files) == len(portable) * 2 + len(native) * 1 + 2 + shared + 4
+    assert len(gpt_files) == len(portable) * 2 + 2 + shared + 4
 
 
 # --------------------------------------------------------------------------- #
@@ -3239,3 +3239,248 @@ def test_codex_profile_rerun_over_the_committed_manifest_is_byte_identical(tmp_p
     # ...and rebuilding IN PLACE over an existing profile is identical too.
     assert _build(first, provider="codex").returncode == 0
     assert _tree_snapshot(first / "codex") == snap1
+
+# Phase CD's narrow resource closure. These tests use the real builder/installer.
+CD_RESOURCES = ("scripts/aggregate.py", "scripts/lint_prepass.sh", "scripts/README.md", "config/model-tier-map.md")
+
+
+@pytest.fixture(scope="module")
+def cd_distribution(tmp_path_factory):
+    root = tmp_path_factory.mktemp("cd-distribution")
+    manifest = root / "manifest.json"
+    _write_manifest(manifest, [next(entry for entry in _load_manifest()["skills"] if entry["name"] == "review-deep")])
+    _build_from_manifest(root / "dist", manifest, provider="all")
+    return root / "dist"
+
+
+@pytest.fixture(scope="module")
+def cd_installed(cd_distribution, tmp_path_factory):
+    home = tmp_path_factory.mktemp("cd-installed")
+    result = _install(home, "codex", dist_dir=cd_distribution)
+    assert result.returncode == 0, result.stdout + result.stderr
+    return _installed_root(home, "codex") / "review-deep"
+
+
+def _cd_recipe(package):
+    namespace = {}
+    text = (package / "SKILL.md").read_text(encoding="utf-8")
+    code = re.search(r"```python\n(.*?)\n```", text, re.S).group(1)
+    exec(compile(code, str(package / "SKILL.md"), "exec"), namespace)
+    return namespace["aggregate_code_review"]
+
+
+def _cd_lenses():
+    return [{"lens_id": lens, "model_tier": "haiku" if lens == "style" else "sonnet",
+             "authority": lens, "coverage_claim": "fixture code", "findings": [], "overall_verdict": "PASS"}
+            for lens in ("correctness", "bugs", "security", "test-quality", "style", "plan-conformance")]
+
+
+def _cd_invocation():
+    return {"reviewers_flag": "code", "model_overrides": {"style": "haiku"}, "force_runtime": False,
+            "url": None, "start_cmd": None, "runtime_downgraded": False, "runtime_downgrade_reason": None}
+
+
+def _cd_aggregate(package, lenses, output, **kwargs):
+    return _cd_recipe(package)(package, [json.dumps(v) for v in lenses],
+        plan_step=kwargs.pop("plan_step", (output.parent / "proof-plan.md").as_posix() + ":1"),
+        invocation=_cd_invocation(), timestamp="2026-09-23T10-00-00", output_dir=output, **kwargs)
+
+
+@pytest.mark.parametrize("provider", ["claude", "gpt", "codex"])
+def test_cd_resource_closure_map_and_references(cd_distribution, provider, tmp_path):
+    package = cd_distribution / provider / "review-deep"
+    assert {p.relative_to(package).as_posix() for p in package.rglob("*") if p.is_file()} == {"SKILL.md", "core.md", *CD_RESOURCES}
+    mapping = (package / "config/model-tier-map.md").read_text(encoding="utf-8")
+    payloads = re.findall(r"```json\n(.*?)\n```", mapping, re.S)
+    assert len(payloads) == 1
+    assert json.loads(payloads[0]) == json.loads((SKILLS_ROOT / "review-deep/config/model-tier-map.json").read_text(encoding="utf-8"))
+    assert "config/model-tier-map.md" in (package / "core.md").read_text(encoding="utf-8")
+    if provider != "claude":
+        assert "config/model-tier-map.md" in (package / "SKILL.md").read_text(encoding="utf-8")
+    verdicts = _provenance_verdicts(package, tmp_path)
+    assert verdicts and all(verdicts.values()), verdicts
+
+
+def test_cd_installed_helpers_execute_outside_source(cd_installed, tmp_path, monkeypatch):
+    import sys
+    monkeypatch.chdir(tmp_path)
+    result = subprocess.run([sys.executable, str(cd_installed / "scripts/aggregate.py"), "--unit-test"], capture_output=True, text=True)
+    assert result.returncode == 0, result.stdout + result.stderr
+    bash = Path(os.environ.get("ProgramFiles", "C:/Program Files")) / "Git/bin/bash.exe"
+    assert bash.is_file(), "Git Bash required to verify emitted shell syntax"
+    script = cd_installed / "scripts/lint_prepass.sh"
+    assert script.read_text(encoding="utf-8").startswith("#!/usr/bin/env bash\n")
+    syntax = subprocess.run([str(bash), "-n", script.as_posix()], capture_output=True, text=True)
+    assert syntax.returncode == 0, syntax.stderr
+    (tmp_path / "README.md").write_text("fixture", encoding="utf-8")
+    result = subprocess.run([str(bash), script.as_posix(), "--output-dir", (tmp_path / "lint").as_posix(), "--diff-paths", "README.md"], capture_output=True, text=True)
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert json.loads((tmp_path / "lint/lint-findings.json").read_text())["findings"] == []
+    path, audit, _ = _cd_aggregate(cd_installed, _cd_lenses(), tmp_path / "audit")
+    assert path.name == "2026-09-23T10-00-00.json"
+    assert json.loads(path.read_text()) == audit
+    assert audit["plan_step"] == (tmp_path / "proof-plan.md").as_posix() + ":1"
+    assert audit["invocation"] == _cd_invocation()
+    assert audit["aggregated_verdict"]["result"] == "PASS"
+
+
+@pytest.mark.parametrize("mutation", ["missing", "duplicate", "extra", "malformed", "uncertain", "clarification", "skipped", "duplicate-key", "pass-with-nit"])
+def test_cd_installed_recipe_rejects_raw_invalid_sets(cd_installed, tmp_path, mutation):
+    lenses = _cd_lenses()
+    if mutation == "missing":
+        lenses.pop()
+    elif mutation == "duplicate":
+        lenses.append(lenses[0])
+    elif mutation == "extra":
+        lenses[-1]["lens_id"] = "runtime"
+    elif mutation == "malformed":
+        lenses[0]["findings"] = None
+    elif mutation == "uncertain":
+        lenses[0]["overall_verdict"] = "UNCERTAIN"
+    elif mutation == "clarification":
+        lenses[-1]["overall_verdict"] = "NEEDS-CLARIFICATION"
+    elif mutation == "skipped":
+        lenses[-1]["overall_verdict"] = "SKIPPED"
+    elif mutation == "pass-with-nit":
+        lenses[1]["findings"] = [{"severity": "Nit", "file_line": "sum.py:1",
+                                  "excerpt": "a + b", "rationale": "retained mismatch"}]
+    reports = [json.dumps(v) for v in lenses]
+    if mutation == "duplicate-key":
+        reports[0] = reports[0].replace('"lens_id":', '"lens_id": "bugs", "lens_id":')
+    with pytest.raises(ValueError):
+        _cd_recipe(cd_installed)(cd_installed, reports, plan_step="proof-plan.md:1", invocation=_cd_invocation(),
+                                timestamp="2026-09-23T10-00-00", output_dir=tmp_path / "audit")
+    assert not (tmp_path / "audit").exists()
+
+
+@pytest.mark.parametrize("verdict", ["NEEDS-WORK", "NO-EVIDENCE", "FAILED"])
+def test_cd_installed_recipe_preserves_nonpassing_verdict(cd_installed, tmp_path, verdict):
+    lenses = _cd_lenses()
+    lenses[0]["overall_verdict"] = verdict
+    if verdict == "FAILED":
+        lenses[0]["failure_reason"] = "model_overloaded"
+    _, audit, _ = _cd_aggregate(cd_installed, lenses, tmp_path / "audit")
+    assert audit["aggregated_verdict"]["result"] == "NEEDS-WORK"
+
+
+def test_cd_installed_recipe_keeps_prior_and_lint_metadata(cd_installed, tmp_path):
+    lenses = _cd_lenses()
+    finding = {"severity": "Nit", "file_line": "sum.py:1", "excerpt": "a + b", "rationale": "prior mismatch", "anti_pattern": "silent-wiring"}
+    lenses[0]["findings"] = [finding]
+    lenses[0]["overall_verdict"] = "NEEDS-WORK"
+    prior = tmp_path / "prior.json"
+    prior.write_text(json.dumps({"lens_verdicts": [{"findings": [dict(finding, rationale="Demoted per rule 2: previous")]}]}))
+    lint = tmp_path / "lint.json"
+    lint.write_text(json.dumps({"findings": [{"tool": "ruff", "rule": "F401", "file_line": "sum.py:1", "message": "fixture"}]}))
+    _, audit, _ = _cd_aggregate(cd_installed, lenses, tmp_path / "audit", prior_sidecar=prior, lint_findings_path=lint)
+    retained = audit["lens_verdicts"][0]["findings"][0]
+    assert retained["also_flagged_by_linter"] == {"tool": "ruff", "rule": "F401"}
+    assert retained["severity"] == "Nit"  # lint demotes to FYI, prior escalates once
+    assert retained["rationale"].startswith("Persistent disagreement: Cited-by-linter:")
+
+
+@pytest.mark.parametrize("missing", ["scripts/aggregate.py", "scripts/lint_prepass.sh", "scripts/README.md", "config/model-tier-map.json"])
+def test_cd_builder_refuses_each_missing_resource(tmp_path, missing):
+    repo = _synthetic_build_repo(tmp_path, {}, "fixture")
+    package = repo / "skills/review-deep"
+    shutil.copytree(SKILLS_ROOT / "review-deep", package)
+    (package / missing).unlink()
+    _write_manifest(repo / "config/skill-manifest.json", [next(entry for entry in _load_manifest()["skills"] if entry["name"] == "review-deep")])
+    result = _synthetic_build(repo, tmp_path / "dist", "codex")
+    assert result.returncode != 0
+    assert "review-deep resource source missing" in result.stderr
+    assert not (tmp_path / "dist/codex/review-deep/SKILL.md").exists()
+
+
+def test_cd_shell_provenance_rejects_malformed_wrappers(cd_distribution, tmp_path):
+    shell = (cd_distribution / "codex/review-deep/scripts/lint_prepass.sh").read_text(encoding="utf-8")
+    marker = "SKILL_MESH_PROVENANCE_END"
+    variants = {
+        "valid": shell,
+        "unquoted": shell.replace("<<'" + marker + "'", "<<" + marker),
+        "missing-end": shell.replace("\n" + marker + "\n", "\n"),
+        "suffix": shell.replace("\n" + marker + "\n", "\n" + marker + "; echo injected\n"),
+        "body-quotation": "echo body\n" + shell,
+        "early-end": shell.replace("     Canonical source:", marker + "\n     Canonical source:"),
+    }
+    root = tmp_path / "cases"
+    root.mkdir()
+    for name, text in variants.items():
+        (root / name).write_text(text, encoding="utf-8")
+    assert _provenance_verdicts(root, tmp_path) == {name: name == "valid" for name in variants}
+
+
+def test_cd_resources_normal_ownership_lifecycle_and_foreign_edit(cd_distribution, tmp_path):
+    home = tmp_path / "home"
+    result = _install(home, "codex", dist_dir=cd_distribution)
+    assert result.returncode == 0, result.stderr
+    package = _installed_root(home, "codex") / "review-deep"
+    entry = _ledger(home)["installs"]["codex"]
+    for resource in CD_RESOURCES:
+        path = package / resource
+        rel = path.relative_to(home).as_posix()
+        assert rel in entry["owned_files"]
+        assert entry["owned_file_hashes"][rel] == hashlib.sha256(path.read_bytes()).hexdigest()
+    before = _tree_snapshot(home)
+    assert _install(home, "codex", dist_dir=cd_distribution).returncode == 0
+    assert _tree_snapshot(home) == before
+    foreign = package / "notes.md"
+    foreign.write_text("consumer-only", encoding="utf-8")
+    owned = package / "scripts/lint_prepass.sh"
+    original = owned.read_bytes()
+    owned.write_bytes(original + b"\n# local edit\n")
+    edited = _tree_snapshot(home)
+    assert _install(home, "codex", dist_dir=cd_distribution).returncode != 0
+    assert _tree_snapshot(home) == edited
+    assert _install(home, "codex", uninstall=True).returncode != 0
+    assert _tree_snapshot(home) == edited
+    owned.write_bytes(original)  # test-only restoration of its own planted edit
+    assert _install(home, "codex", uninstall=True).returncode == 0
+    assert foreign.read_text() == "consumer-only"
+    assert all(not (package / resource).exists() for resource in CD_RESOURCES)
+
+
+@pytest.mark.parametrize("failure", [None, "no-parent", "digest", "plan", "needs-work", "missing-lens"])
+def test_cd_capture_requires_actual_service_result_and_canonical_audit(cd_installed, tmp_path, failure):
+    import importlib.util
+    import sys
+    helper_path = REPO_ROOT / "_shared/build_step_verdict.py"
+    spec = importlib.util.spec_from_file_location("cd_verdict_service", helper_path)
+    helper = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = helper
+    spec.loader.exec_module(helper)
+    service = helper.VerdictService()
+    evidence = tmp_path / "evidence"
+    path, audit, _ = _cd_aggregate(cd_installed, _cd_lenses(), tmp_path / "audit")
+    evidence.mkdir()
+    if failure == "needs-work":
+        audit["lens_verdicts"][0]["overall_verdict"] = "NEEDS-WORK"
+    if failure == "missing-lens":
+        audit["lens_verdicts"].pop()
+    if failure in {"needs-work", "missing-lens"}:
+        path.write_text(json.dumps(audit), encoding="utf-8")
+    shutil.copy2(path, evidence / "audit.json")
+    digest = hashlib.sha256(path.read_bytes()).hexdigest()
+    namespace = {}
+    doc = (REPO_ROOT / "documentation/codex-deep-review-unblock-acceptance.md").read_text(encoding="utf-8")
+    code = re.search(r"```python\n(.*?)\n```", doc, re.S).group(1)
+    exec(compile(code, "CD156 evidence capture", "exec"), namespace)
+    try:
+        service.handle({"op": "open", "verdict_path": str(tmp_path / "private-test-verdict.json"), "run_id": "test-only"})
+        written, _ = service.handle({"op": "write", "terminal": "PASS", "halt": None, "summary": "test fixture"})
+        assert written == {"ok": True, "op": "write"}
+        response, _ = service.handle({"op": "classify"})
+        args = (None if failure == "no-parent" else response,
+                "0" * 64 if failure == "digest" else digest,
+                "wrong-plan:1" if failure == "plan" else audit["plan_step"], evidence)
+        if failure:
+            with pytest.raises(ValueError):
+                namespace["preserve_cd156_observation"](*args)
+            assert not (evidence / "parent-observation.json").exists()
+        else:
+            namespace["preserve_cd156_observation"](*args)
+            observation = json.loads((evidence / "parent-observation.json").read_text())
+            assert observation == {"classification": response, "audit_sha256": digest}
+    finally:
+        service.handle({"op": "cleanup"})
+        service.handle({"op": "close"})

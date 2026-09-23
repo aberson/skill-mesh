@@ -2,6 +2,18 @@
 
 **Status:** OPERATOR-STOPPED 2026-09-23. Step 155 is not DONE. Independent code review passed in amended round 2/3 and focused checks passed, but the single full-root test run was stopped by the operator after 101.7 minutes (27% last reported progress). The full gate is incomplete; no passing or failing test verdict is claimed. Reviewed commit `4a967f0` is preserved on the [paused candidate branch](https://github.com/aberson/skill-mesh/tree/paused/cd155-operator-stop-20260923) and in its local worktree. The earlier exhausted 3/3 attempt remains preserved. Step 156 is unstarted and the intended installed profile is unchanged. No further tests, qualification, installs or repairs are authorized without operator reconciliation. Phase CD #221, Step 155/#222 and Step 156/#223 retain their identities.
 
+**Bounded resumption amendment (2026-09-23):** The operator subsequently requested
+that Agent Advocate's build invocation become usable without repeating the testing
+overrun. That request supersedes the pause for this prerequisite only. The agent
+selects the narrow validation exception below; it is not an operator-selected test
+waiver or a passing full-suite result. Reuse unchanged candidate
+`4a967f0705fdbde98694d9eaf4808b66169345af`, its focused receipts and five final
+independent PASS reviews. Do not restart implementation, reviews or the root suite.
+Step 156 gets **one 20-minute total attempt**, including disposable setup, native
+proof, normal profile refresh and cleanup. A failure, timeout, unavailable capability
+or ownership conflict stops this attempt without a repair/retest loop. Agent
+Advocate implementation remains for a subsequent invocation.
+
 ## 1. What This Feature Does
 
 Provide a capability-conditioned Codex mapping for the existing `review-deep` code lane so a host that proves fresh sibling dispatch and parent-only verdict authority can perform the six required independent lenses. The operator requested that this recurring prerequisite failure be addressed before continuing Agent Advocate. This remains the owning restoration plan required by DS-D3; reuse it rather than create another adapter in a consumer project. It unblocks capable Codex consumers, including Agent Advocate Steps 1/3 and Phase LH Step 153, only after actual installed-host proof. A separately qualified Claude route remains distinct.
@@ -85,8 +97,14 @@ No new runtime helper, dependency, manifest record, or installer behavior is int
 - **Flags:** --reviewers code --isolation worktree --max-iter 3
 - **Files:** `skills/review-deep/providers/codex.md`; `skills/review-deep/providers/gpt.md`; `skills/review-deep/core.md`; `tools/build-distributions.ps1`; `tools/skill-mesh-provenance.ps1`; `tests/package-integrity/test_codex_capability_claims_honesty.py`; `tests/package-integrity/test_codex_agent_isolation_contract.py`; `tests/distributions/test_distributions.py`; `tests/package-integrity/test_skill_catalog_lifecycle.py` (only assertions affected by the explicit packaging exception); `documentation/providers/codex.md`; `documentation/providers/README.md`; `documentation/troubleshooting.md`; `documentation/architecture.md`; `documentation/skill-catalog-lifecycle.md`; `plan.md`; `documentation/codex-deep-review-unblock-acceptance.md`. Verify the four canonical helper/config source files, manifest, installer, standalone router and shared verdict helper remain unchanged.
 - **Produces:** A Codex adapter that dispatches all six code lenses as direct fresh siblings after the inherited capability probe passes, using available-slot batches; generated code-lane resources with installed-path execution coverage; and the exact acceptance/install/resume procedure.
-- **Done when:** The source and emitted adapter preserve parent-only aggregation; all six lens prompts are read-only and receive no private verdict material or sibling findings; missing/duplicate/malformed/incomplete lens sets and unsupported capability fail closed; uncertainty follows the unchanged reducer and cannot become PASS; missing declared helper sources fail generation; emitted helpers execute outside the source checkout; installed map payload equals the source JSON and all three provider references resolve; shell syntax/provenance and normal install/reinstall/uninstall preserve ownership and refuse foreign edits; the unsigned audit remains distinct from the signed build-step verdict; documentation keeps the mapping unqualified until Step 156; focused tests, all-provider builds, repository-root `python -m pytest`, and `git diff --check` pass for the exact candidate. No live host claim comes from these static/mechanical checks.
+- **Done when:** The source and emitted adapter preserve parent-only aggregation; all six lens prompts are read-only and receive no private verdict material or sibling findings; missing/duplicate/malformed/incomplete lens sets and unsupported capability fail closed; uncertainty follows the unchanged reducer and cannot become PASS; missing declared helper sources fail generation; emitted helpers execute outside the source checkout; installed map payload equals the source JSON and all three provider references resolve; shell syntax/provenance and normal install/reinstall/uninstall preserve ownership and refuse foreign edits; the unsigned audit remains distinct from the signed build-step verdict; documentation keeps the mapping unqualified until Step 156. For the exact unchanged candidate identified above, reuse section 9's focused checks, all-provider builds and independent reviews, verify source identity and `git diff --check`, and explicitly retain the root suite as INCOMPLETE/deferred. This narrow acceptance does not certify the full repository or any live host.
 - **Depends on:** none
+
+The preserved candidate also includes the affected link-inventory assertion in
+`tests/package-integrity/test_link_resolution.py` and the clarified installed
+package locator in the existing plan-wrap receipt. This amendment additionally
+updates `CLAUDE.md`, this plan and its proposal to make the scoped validation
+exception discoverable to the next coordinator.
 
 <!-- autofix-applied: 2026-09-19 -->
 ### Step 156: Qualify and activate the generated Codex code-deep mapping
@@ -99,6 +117,13 @@ No new runtime helper, dependency, manifest record, or installer behavior is int
 - **Produces:** Observed verdict, sanitized evidence, and a normal installer refresh of the intended Codex profile after successful disposable proof; no source, helper, or runbook authorship.
 - **Done when:** A fresh capable host loads the generated disposable install and completes `build-phase -> build-step --reviewers deep -> review-deep`: the existing conversation and parent-authority probes pass; six distinct fresh lenses run in capacity-limited batches on identical review inputs; the packaged reducer writes its deterministic audit; the parent separately authenticates the enclosing build-step verdict. Then the normal installer refreshes the intended profile without overwriting foreign changes, and an ownership/hash check proves that profile contains the same qualified bytes. Record exactly which host/entry points were exercised and provide a fresh-session consumer resume prompt. Missing capability, incomplete lenses, invalid artifacts or installation conflicts leave the step incomplete; no switch to another host/model is implied.
 - **Depends on:** 155
+
+The enclosing 20-minute deadline applies to every action in Step 156, even if an
+embedded fixture normally permits more rounds. Record start/deadline before setup;
+check remaining time before each dispatch or install. Reserve time for cleanup and
+do not begin a live-profile mutation without enough time to finish its ownership
+check. Cleanup may finish after the deadline solely to release owned resources;
+no further proof or installation work may start. A failed attempt stays incomplete.
 
 ## 8. Risks and Open Questions
 
@@ -114,17 +139,35 @@ No new runtime helper, dependency, manifest record, or installer behavior is int
 
 ## 9. Testing, Setup, and First Run
 
-Toolchain coverage is explicit: no dependency install is needed because this changes no dependency; no dev server is applicable because the feature is a headless skill mapping; the build command is `powershell -NoProfile -File tools/build-distributions.ps1 -Provider all`; focused tests cover the two package-integrity contracts and Codex distribution closure; the DONE gate is repository-root `python -m pytest`; lint and typecheck are deliberately not configured in this repository; `git diff --check` is the final diff gate.
+This one-candidate exception replaces the former full-suite prerequisite; it does
+not relabel a subset as the full suite. Existing private receipts under
+`.build-step/cd155-amended-20260923/candidate-evidence/` record:
 
-Step 155 adds source, generated-distribution, and planted-negative coverage for the conditional mapping. Run these commands from the Skill Mesh root in this order:
+- `dev-report.md`: 109 affected integrity checks passed; 28 distribution checks
+  passed; four parser/provenance/build-determinism checks passed; all three provider
+  distributions built. The initial broader integrity run had four failures and is
+  not a passing receipt; its fixes were checked by the named focused run.
+- `dev-report-round2.md`: the planted negative failed on the old recipe as intended;
+  the final distribution selection passed 20 checks and affected package selection
+  passed nine. Only the adapter guard and its test changed after round 1; the other
+  17 candidate files retained their identity.
+- `review-r2-{correctness,bugs,security,test-quality,style}`: five independent PASS
+  reviews, zero findings, frozen diff SHA-256
+  `5b3bed17370a356d6f1bbae176be31378f58d9582d847442724adb0a827f78e2`.
+- The final repo-root `python -m pytest` was stopped after 101.7 minutes and remains
+  **INCOMPLETE/deferred**. It produced no failing-test verdict before interruption.
 
-1. `python -m pytest tests/package-integrity/test_codex_capability_claims_honesty.py tests/package-integrity/test_codex_agent_isolation_contract.py`
-2. `powershell -NoProfile -File tools/build-distributions.ps1 -Provider all`
-3. `python -m pytest tests/distributions/test_distributions.py`
-4. `python -m pytest`
-5. `git diff --check`
+Verify unchanged source identity when integrating the preserved candidate. Plan,
+proposal and instruction changes that document this exception do not invalidate
+unchanged executable-source receipts. Any code change invalidates this exception
+and requires a separately scoped decision, not an automatic new test campaign.
+Run `git diff --check` once for the final amendment. No tests are required for its
+prose. No dependency install, dev server, lint or typecheck is introduced.
 
-The prepared acceptance document gives exact setup, subject-snapshot, invocation, evidence, profile-refresh and safe-cleanup commands. Follow the existing installer and ownership inspection interfaces, not guessed flags. The static negative cases cover missing support files and missing/duplicate lens results; actual host observation covers fresh siblings in batches and parent-only authority. Native acceptance does not require predetermined model findings, a long soak or a new benchmark project. Run the existing root suite once on the final code candidate for this step; ordinary focused checks are sufficient during repairs. Do not call a partial suite the DONE gate.
+Step 156 follows the already-reviewed acceptance document's exact setup, native
+proof, evidence, normal installation and safe-cleanup commands under the single
+20-minute total deadline. It builds the distribution needed for that actual proof;
+it does not repeat distribution tests, the root suite, a soak or a benchmark.
 
 After Step 156 passes, the consumer coordinator reloads the qualified profile, performs its session preflight and resumes the preserved candidate with its real retry history. Keep Agent Advocate's deep flags unchanged. This one-shot mapping repair does not start Phase LH or the broader Skill Mesh backlog, and cannot qualify an independently different host by analogy.
 
@@ -136,7 +179,10 @@ After Step 156 passes, the consumer coordinator reloads the qualified profile, p
 |---|---|---|---|
 | CD-P1 | P | Restore a Codex-native deep lane without downgrading consumer gates | existing approved Phase CD direction |
 | CD-P2 | P | Address recurring review unavailability before continuing Agent Advocate | requested 2026-09-23 |
+| CD-P3 | P | Make the Agent Advocate build invocation usable without repeating endless testing | requested after the operator stop, 2026-09-23 |
 | CD-D1 | D | Reuse the existing capability probe and parent verdict service | retained |
 | CD-D2 | D | Permit fresh independent reviewer batches bounded by host capacity | selected 2026-09-23; six lenses retained |
 | CD-D3 | D | Emit four existing code-lane inputs through the normal builder; Markdown map and shell-safe provenance | selected 2026-09-23; scoped packaging exception, no JSON protocol or installer redesign |
 | CD-D4 | D | Disposable proof followed by normal profile refresh and consumer-session preflight | changed 2026-09-23 to repair the actual installed consumer |
+| CD-D5 | D | Accept unchanged reviewed candidate using existing focused evidence; defer incomplete full suite for this repair only | agent-selected bounded validation exception, 2026-09-23 |
+| CD-D6 | D | One 20-minute total proof/activation attempt; stop on failure without repair/retest loops | agent-selected execution bound, 2026-09-23 |
