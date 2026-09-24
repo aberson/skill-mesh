@@ -1117,16 +1117,15 @@ def _report_abandoned_temporaries(inbox, directory, diagnostics):
 # false-positive check for widening the handler.
 #
 # One honest edge, stated rather than left to be rediscovered: the re-walk also
-# inspects the leaf's ANCESTORS, so an ancestor that turns into a reparse point
-# DURING a page is absorbed here as a per-entry refusal instead of failing the
-# command. The ancestor contract is not weakened by that. The directory-level guards
-# run before the loop and still refuse an ancestor that is already poisoned, at exit
-# 2; in the race window every entry under the poisoned ancestor is withheld AND
-# named, so the page serves nothing and says why rather than serving a redirected
-# record. What matters for safety is identical either way: not one byte is read
-# through the link, because the refusal still happens before the open.
+# inspects the leaf's ANCESTORS. If it detects an ancestor that became a reparse
+# point during a page, that entry is refused instead of failing the command.
+# The directory-level guards refuse an ancestor detected as a reparse
+# point before the loop, at exit 2. When the per-entry re-walk detects a changed
+# ancestor, that entry is withheld and named before its file is opened. These are
+# point-in-time checks; a directory replaced after a check is outside the stated
+# operator-controlled Git metadata boundary.
 #
-# That claim has a second sub-case, and it is the one that has to be MADE true
+# That check has a second sub-case, and it is the one that has to be handled
 # rather than observed: a redirected ancestor whose target holds no file by this
 # leaf's name. The leaf's own os.lstat then raises FileNotFoundError while transiting
 # the poisoned ancestor, and at that one call a poisoned ancestor and an ordinary
@@ -1134,8 +1133,8 @@ def _report_abandoned_temporaries(inbox, directory, diagnostics):
 # innocuous -- a record removed between the listing and the read; an observation that
 # simply has no receipt yet -- so an UNVERIFIED absence is the one answer that drops
 # a live record from the page with no diagnostic at all, which is strictly worse than
-# the named refusal above. The absent branch therefore proves the chain clean before
-# it concludes anything, and a poisoned ancestor becomes the named refusal instead.
+# the named refusal above. The absent branch therefore re-checks the chain before
+# concluding absence; an ancestor detected as poisoned becomes a named refusal.
 #
 # The handler is `except LessonError`, NOT `except Exception`: a genuine bug
 # (TypeError, KeyError) still reaches main's backstop and still reports exit 3. Any
@@ -1179,9 +1178,9 @@ def _read_inbox_entry(inbox, path, observation_id, parse):
             # file by this name, and both callers read ENTRY_ABSENT as innocuous and
             # continue WITHOUT a diagnostic -- so, unverified, this is the one branch
             # that can drop a live record from the page silently. Re-walking the
-            # chain here establishes that the absence is genuine; a poisoned ancestor
-            # raises instead and the handler below reports it as the per-entry
-            # refusal the loops already name. A genuine deletion costs one bounded
+            # chain here checks for a poisoned ancestor at that point in time; one
+            # detected by the guard raises and the handler below reports it as the
+            # per-entry refusal the loops already name. A deletion costs one bounded
             # ancestor walk and still answers ENTRY_ABSENT.
             _guard_state_path(inbox, path)
             return ENTRY_ABSENT, None
@@ -1227,9 +1226,8 @@ def _load_observations(inbox, diagnostics):
         if outcome == ENTRY_OK:
             entries.append(envelope)
         elif outcome == ENTRY_ABSENT:
-            # Removed between the listing and the read. Nothing is hidden by
-            # skipping it: it is not in the inbox any more, so it is not a record
-            # this page is withholding.
+            # Absent at the read and ancestor re-check. A record removed between
+            # listing and reading can be skipped without withholding that record.
             continue
         elif outcome == ENTRY_REFUSED:
             diagnostics.append(_diagnostic(
@@ -1271,7 +1269,7 @@ def _load_receipt_state(inbox, entries, diagnostics):
         outcome, _ = _read_inbox_entry(
             inbox, path, observation_id, parse_receipt_document)
         if outcome == ENTRY_ABSENT:
-            # No receipt: the observation is genuinely undispositioned.
+            # No receipt found at the read and ancestor re-check.
             continue
         if outcome == ENTRY_OK:
             completed.add(observation_id)
