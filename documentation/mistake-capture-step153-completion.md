@@ -80,3 +80,14 @@ The installed Codex route must pass its capability checks in this session. Prior
 Phase CD qualification alone is not a substitute. This record replaces the old
 Claude-only launch direction for this selected continuation; it does not claim
 runtime/full review or support on another Codex host.
+
+## Bounded attempt outcome (2026-09-24)
+
+Round 7 closing review passed all six lenses. The single root-suite attempt on
+`ab8284cb8b0796aee1301f719899efd3eceaefc0` was stopped after 3 hours 10 minutes
+when a pre-existing status assertion failed and release tests repeated the same
+package suite. It is failed/incomplete, not a full-suite PASS. No retry or merge
+followed. The candidate, raw evidence and proposed narrow test-maintenance patch
+are preserved in the [completion checkpoint](findings/mistake-capture-closure-2026-09-23.md).
+Further repair or a changed acceptance gate requires a new bounded decision;
+this outcome does not reset either ceiling or mark Step 153 complete.

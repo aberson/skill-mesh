@@ -1,16 +1,18 @@
 # Skill Mesh plan
 
-## Active bounded continuation - Step 153 (2026-09-23)
+## Bounded continuation stopped - Step 153 (2026-09-24)
 
 The operator selected completion of the preserved mistake-capture candidate with
 Codex coordinating and Sol building. The [execution record](documentation/mistake-capture-step153-completion.md)
-owns the bounded continuation and one integrated full-suite gate. Five historical
-developer iterations and four deep reviews remain recorded; iteration 5's repair
-has now received closing review. The [completion checkpoint](documentation/findings/mistake-capture-closure-2026-09-23.md)
-records five passing lenses and one confirmed security Block. The operator has
-approved the documented local-filesystem trust boundary; its narrow claim and
-contract correction is undergoing closing review. Step 153/#219 remains unfinished. The full suite has
-not started; no merge or issue closure is claimed.
+owns the bounded continuation and one integrated full-suite gate. All historical
+iterations remain recorded. The [completion checkpoint](documentation/findings/mistake-capture-closure-2026-09-23.md)
+records the approved local-filesystem trust boundary and final round 7: all six
+independent lenses PASS. The single full-suite attempt on `ab8284c` was stopped
+after 3 hours 10 minutes when a pre-existing Phase CD status assertion failed and
+release testing repeated the same package checks. Progress showed 1,657 passes and
+two failures; this is not a completed suite summary. The full gate remains failed
+and incomplete. Step 153/#219 remains unfinished; no merge or issue closure is
+claimed. The candidate and evidence are preserved, with no automatic retry.
 Step 154/#220 remains attended work. Other tracks are not resumed by this selection.
 
 ## Revised proposal — context continuity and learning (2026-09-19)
