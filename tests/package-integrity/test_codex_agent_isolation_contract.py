@@ -470,15 +470,18 @@ def test_review_deep_contract_rejects_removed_boundaries(row, token):
 def _cd_status_defects(text):
     section = _section(text, "Phase CD preparation — qualified Codex deep-review unblock (2026-09-19)", level=3)
     normalized = " ".join(section.split("\n## ", 1)[0].split())
-    return [s for s in ("unqualified pending Step 156", "installed proof", "normal intended-profile refresh",
-                        "does not claim ordinary Codex support", "not a dependency of the separately qualified Claude Code route")
+    return [s for s in ("Step **156 is DONE** for the observed code-only nested route",
+                        "does not claim ordinary Codex support",
+                        "not a dependency of the separately qualified Claude Code route")
             if s not in normalized]
 
 
-def test_cd_status_retains_the_pending_qualification_boundary():
+def test_cd_status_retains_the_host_specific_qualification_boundary():
     text = (REPO_ROOT / "plan.md").read_text(encoding="utf-8")
     assert not _cd_status_defects(text)
-    for phrase in ("unqualified pending Step 156", "does not claim ordinary\nCodex support"):
+    for phrase in ("Step **156 is DONE** for the",
+                   "does not claim ordinary\nCodex support",
+                   "dependency of the separately qualified Claude Code route"):
         assert phrase in text
         assert _cd_status_defects(text.replace(phrase, "qualified everywhere"))
 

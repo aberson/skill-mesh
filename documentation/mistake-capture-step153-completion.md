@@ -91,3 +91,34 @@ followed. The candidate, raw evidence and proposed narrow test-maintenance patch
 are preserved in the [completion checkpoint](findings/mistake-capture-closure-2026-09-23.md).
 Further repair or a changed acceptance gate requires a new bounded decision;
 this outcome does not reset either ceiling or mark Step 153 complete.
+
+## LH-E1: operator-approved narrow closeout (2026-09-24)
+
+After receiving the failed/incomplete full-gate result and the drafted stale-test
+repair, the operator approved a 30-minute narrow closeout, then explicitly asked
+to perform it before moving to Baseline releases. This is a scoped acceptance
+exception for Step 153 only, overriding the full-gate requirement in this record,
+the Step 153 Done when clause, and the repository's default gate for this landing.
+It does not reset historical review counts or change future steps' requirements.
+
+Window: **07:07:15 through 07:37:15 UTC on 2026-09-24**, including closeout.
+One Sol developer applies the narrow Phase CD status-test repair; run only
+`python -m pytest tests/package-integrity/test_codex_agent_isolation_contract.py -q`
+once, capped at five minutes. One fresh independent Terra reviewer checks this
+delta and the acceptance exception after the focused check passes. No new six-lens
+round, root suite, package-wide suite, release run, installation or feature work
+is admitted. Failure or deadline exhaustion preserves the candidate unfinished;
+there is no automatic retry.
+
+Acceptance combines the recorded round 7 six-lens PASS, unchanged executable
+implementation and packaged inputs, prior helper/installer/provider evidence,
+the new passing contract-file check, and the narrow closing review. The stale
+test repair must retain the host-specific qualification boundary and independent
+Claude-route checks. Source/test/config identity at merge must match the accepted
+candidate; list administrative status/receipt changes separately.
+
+If those conditions pass within the window, mark Step 153 accepted under LH-E1,
+merge and push its preserved candidate, and close #219. Keep Step 154/#220 pending.
+The earlier root run remains **failed/incomplete**, with the release/tail checks
+unfinished and other possible failures unexcluded. Do not claim a new full-suite
+PASS or an authenticated ADVANCE for a restarted historical controller.
