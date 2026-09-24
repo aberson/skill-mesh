@@ -1,5 +1,23 @@
 # Skill Mesh plan
 
+## Baseline releases: bounded resumption (2026-09-24)
+
+After closing Step 153 under LH-E1, the operator selected Baseline releases.
+The [BR plan](documentation/baseline-releases-plan.md) retains Steps 147-152 and
+issues #207-#212 under #206. Step 147's run-2 iteration-3 candidate `c88391b` is
+being reconciled onto current main `7ae573b`; original worktrees and all prior
+failed or incomplete runs remain preserved. Only one bounded read-only readiness
+review is admitted at this checkpoint, with no tests or automatic retry reset.
+Step 147 remains unfinished, and Steps 148-152 remain pending.
+
+The [dated baseline report](documentation/baseline-release-report.md) retains its
+original source/install snapshot identities. No source repin, release qualification,
+public publication or live profile activation follows from this resumption.
+The [resumption record](documentation/findings/baseline-releases-resumption-2026-09-24.md)
+records integration, current evidence and the next bounded decision. Step 149
+prepares the dev/prod daily-profile split; Step 150 remains operator adoption.
+The old automatic 147-149 span is not launched by this readiness pass.
+
 ## Step 153 accepted under scoped closeout exception (2026-09-24)
 
 Step 153/#219 is **DONE under operator-approved LH-E1**, recorded in the

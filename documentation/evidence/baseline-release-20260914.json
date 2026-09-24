@@ -1,0 +1,131 @@
+{
+  "schema_version": 1,
+  "kind": "dated-baseline-observation",
+  "observed_utc": "2026-09-14T03:28:15.767231+00:00",
+  "release_certification": false,
+  "private_evidence_id": "baseline-release-20260914T032353Z",
+  "repositories": {
+    "toolkit": {
+      "head": "79a985a38a2ca413da43014b8b50ae4dab67143c",
+      "tree": "4c77812d51eb845db8022ac43b0d53b8926432cf",
+      "branch": "main",
+      "status_porcelain": "",
+      "tracked_files": 579,
+      "remote_names": [
+        "origin"
+      ],
+      "tags": [
+        "cp-migrator-rounds12"
+      ]
+    },
+    "lab": {
+      "head": "700a71e84e5af9cd6914982ef8fa424d44e5dd9c",
+      "tree": "4d272adfc6bf24e915f612422a9744c5fed2564e",
+      "branch": "editor-project-input-20260914",
+      "status_porcelain": "",
+      "tracked_files": 93,
+      "remote_names": [],
+      "tags": []
+    }
+  },
+  "toolkit_remote": {
+    "main": "79a985a38a2ca413da43014b8b50ae4dab67143c",
+    "github_release_count_returned": 0,
+    "release_list_limit": 10
+  },
+  "codex_install": {
+    "ledger_sha256": "190a04c27a3c6c4fcd153971c95f622072557aa8d560b4a9909b7243bb9ae0c8",
+    "ledger_fields": [
+      "created_dirs",
+      "discovery_subdir",
+      "owned_file_hashes",
+      "owned_files",
+      "provider"
+    ],
+    "file_count": 125,
+    "missing": 0,
+    "ledger_matches": 125,
+    "distribution_raw_matches": 125,
+    "distribution_normalized_matches": 125,
+    "stable_during_capture": true,
+    "archive_verified": true,
+    "snapshot": "codex-owned-install-snapshot.zip"
+  },
+  "distributions": {
+    "claude": {
+      "files": 128,
+      "skills": 57
+    },
+    "gpt": {
+      "files": 125,
+      "skills": 54
+    },
+    "codex": {
+      "files": 125,
+      "skills": 54
+    }
+  },
+  "source_archives": [
+    {
+      "archive": "skill-mesh-79a985a-source.zip",
+      "source_commit": "79a985a38a2ca413da43014b8b50ae4dab67143c",
+      "verified_git_blob_files": 579,
+      "exact_file_set_and_bytes": true
+    },
+    {
+      "archive": "skill-mesh-lab-700a71e-source.zip",
+      "source_commit": "700a71e84e5af9cd6914982ef8fa424d44e5dd9c",
+      "verified_git_blob_files": 93,
+      "exact_file_set_and_bytes": true
+    }
+  ],
+  "staged_package_integrity": {
+    "command": "python -m pytest tests/package-integrity -q",
+    "source_commit": "79a985a38a2ca413da43014b8b50ae4dab67143c",
+    "passed": 417,
+    "skipped": 3,
+    "seconds": 85.1,
+    "exit_code": 0,
+    "scope": "focused staged tree; not root DONE gate"
+  },
+  "retained_artifacts": [
+    {
+      "path": "codex-owned-install-snapshot.zip",
+      "bytes": 638761,
+      "sha256": "b765256513f67b644a0b443bdeaca2f9b2bd5ae60370e0075028e8a7e31c4f53"
+    },
+    {
+      "path": "skill-mesh-79a985a-source.zip",
+      "bytes": 3388185,
+      "sha256": "de0c52ef7ed83264a6f62cbe32cdf0fed894ae8abb2c8b5d32f891c5be3814db"
+    },
+    {
+      "path": "skill-mesh-lab-700a71e-source.zip",
+      "bytes": 298768,
+      "sha256": "be7babc7eaf1e15c1c504cc513262f8cbeb7b4309ab2f49cf0a72c13807593fb"
+    },
+    {
+      "path": "skill-mesh-lab-all-refs.bundle",
+      "bytes": 374308,
+      "sha256": "840035f3fc9cd3b36a955ce995ea843547217ff26a5c558abb429da3c9954f11"
+    }
+  ],
+  "lab_bundle_restore": {
+    "independent_bare_clone": true,
+    "current_branch_commit": "700a71e84e5af9cd6914982ef8fa424d44e5dd9c",
+    "main_commit": "032da7d4cdf25fb0eb5b3c482af3f7afb85d206c"
+  },
+  "python": "Python 3.14.3",
+  "packages": {
+    "pytest": "9.1.1",
+    "PyYAML": "6.0.3",
+    "markdown-it-py": "4.2.0",
+    "jsonschema": "4.26.0"
+  },
+  "limits": [
+    "No new native-host qualification",
+    "No full repository-root gate",
+    "No live activation",
+    "Local retained copies only; ignored lab evidence not backed up by Git bundle"
+  ]
+}

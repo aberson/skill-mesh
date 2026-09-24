@@ -10,20 +10,26 @@
 
 ## Durable status
 
-- Phase IS C2V is sealed at `09e7f4d`; C2A is sealed at `2f6c7b8`. Phase RD now owns the
-  prerequisite `review-deep` restoration before Phase IS can resume at C2N.
-- Phase PROD is the operator-authorized current detour. Its authority is
-  `documentation/production-toolchain-separation-plan.md`, with umbrella #183 and seven serialized
-  steps. Step 1/#184 is complete at `2e8e4f3`; Step 2/#185 is next; #190 is the dedicated
-  activation-engine Step 3; #186-#189 remain Steps 4-7. No production directory or active-profile
-  mutation has occurred.
-- Phase PROD revised Steps 1-5 use the fixed-scope lineage of the original Steps 1-4
-  `--reviewers code` bootstrap exception; Step 6 is an attended Codex-only activation of the exact
-  Step-5 artifact. This does not restore or waive
-  `--reviewers deep` for any other build.
-- Phase CL — Skill catalog lifecycle safety is planned under umbrella #167 with step issues #168–#176. Its authority is `documentation/skill-catalog-lifecycle-plan.md`.
-- Phase CL implementation is parked until Phase IS C5 (#143/#153) and Phase CP M3 plus closeout (#132) are complete.
-- Phase CL Steps 110–117 are the automated build/certification span. Step 118 (#176) is attended operator acceptance and is never part of unattended `/build-phase` execution.
+- Read [plan.md](plan.md) for current execution status, acceptance evidence and the next
+  permitted work. This memory does not maintain a second mutable status list.
+- The approved first-release scope is in
+  [baseline-releases-plan.md](documentation/baseline-releases-plan.md): retain current
+  toolkit/lab baselines, then establish development/production separation. Utility
+  portfolio integration follows later. Historical PROD instructions below do not
+  select the contents of that first release.
+
+## Baseline-release preparation decisions
+
+- The Phase BR plan separates selected product source from the packaging builder's
+  own commit, and archive retention from qualification, publication and activation.
+- Phase BR release/activation/evidence steps require the deep reviewer lane. Use
+  a currently qualified host route and its required capability preflight; readiness
+  of a plan is not evidence that the old Codex build milestone passed.
+- The lab remains a read-only external packaging input to the toolkit-owned Phase
+  BR steps. Lab development and acceptance stay under its own AGENTS.md and plan.
+- Preparation findings and issue mapping live beside the plan in
+  `documentation/findings/baseline-releases-*-2026-09-14.md`. See root plan.md for
+  the active automated span and operator boundary, rather than duplicating status here.
 
 ## Lifecycle safety decisions
 
@@ -33,6 +39,11 @@
 - The local roadmap mirror is `.claude/artifacts/phase-is-whats-next.html`; it is intentionally gitignored.
 
 ## Production toolchain decisions
+
+Historical Phase PROD decisions, retained for provenance. Consult plan.md before
+using them; they do not resume the parked implementation or define the new baseline
+release's portfolio. Their original context is
+`documentation/production-toolchain-separation-plan.md`.
 
 - Phase PROD Step 1 is declarative-only. Policy, schemas, and pure consistency checks never mint a
   `Validated*`, `Authorized*`, or other caller-constructible runtime capability. Step 2 independently
