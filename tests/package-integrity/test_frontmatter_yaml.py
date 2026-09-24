@@ -168,14 +168,14 @@ def test_user_invocable_is_a_real_boolean_and_the_suppression_is_pinned():
 
 
 def test_no_adapter_spells_the_user_invokable_typo():
-    """`user-invokable` sat in claude-oauth-auth's adapter doing nothing: every host
+    """`user-invocable` sat in claude-oauth-auth's adapter doing nothing: every host
     reads `user-invocable`, so a deliberate suppression flag had never taken effect.
     The key allowlist catches it, but the misspelling gets its own named gate so the
     fix cannot be silently reverted."""
     offenders = [_rel(p) for p in _claude_adapters() + _gpt_adapters()
-                 if "user-invokable" in _read(p)]
+                 if "user-invocable" in _read(p)]
     assert not offenders, (
-        f"the `user-invokable` misspelling is back in {offenders} -- the correct "
+        f"the `user-invocable` misspelling is back in {offenders} -- the correct "
         "spelling is `user-invocable`")
 
 
@@ -260,10 +260,10 @@ def test_anchor_reds_on_an_unquoted_colon_bearing_argument():
 
 
 def test_anchor_reds_on_the_user_invokable_misspelling():
-    bad = _GOOD.replace("user-invocable: true", "user-invokable: false")
+    bad = _GOOD.replace("user-invocable: true", "user-invocable: false")
     assert bad != _GOOD, "the probe did not change the block"
     defects = fc.frontmatter_defects(bad)
-    assert any("unknown key 'user-invokable'" in d for d in defects), defects
+    assert any("unknown key 'user-invocable'" in d for d in defects), defects
 
 
 def test_anchor_reds_on_a_quoted_boolean_in_both_directions():
