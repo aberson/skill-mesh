@@ -124,20 +124,25 @@ single-owner discovery map and checked against a genuine containment root.
 
 The closing 11 Blocks are narrower than the opening 12 and cluster as:
 
-1. **Seven test-coverage Blocks.** Named guards that are deletable with the suite
-   green - the apply-time release-manifest rebinding refusal, the plan-path containment
-   check, the ledger-shape guards behind the byte-deleting `remove` action, and the
-   operation-status guards. These are coverage debt, not observed misbehavior; the
-   guards exist and the acceptance run exercised the paths they protect.
+1. **Seven test-coverage Blocks.** The review requests coverage for a changed release
+   at apply time, forged plan paths, malformed or foreign ledger ownership, a
+   noncolliding foreign file, durable postimage/receipt records, malformed or mismatched
+   operation IDs, and replayed apply/status rejection. These are source-inspection
+   findings, not results of mutation testing or seven observed behavior failures.
+   Compare them with the focused and disposable evidence before choosing additional
+   assertions; they do not require seven separate new tests.
 2. **One native-command redirection defect** (bugs lens, empirically reproduced): under
    the script-wide `$ErrorActionPreference = 'Stop'`, redirecting the installer's stderr
    converts a stderr line into a terminating error. The disposable acceptance apply
    nevertheless succeeded on 130 files, so the reachable blast radius is narrower than
    the lens feared - but it is a real defect and it would corrupt the very evidence the
    recovery procedure tells an operator to read.
-3. **Two path-canonicalization and exit-code edges**: a trailing-separator spelling of
-   the same home can slip past the unresolved-prior-operation refusal, and a mistyped
-   `-Mode` exits 1 at parameter binding where the contract says 2.
+3. **Three other behavioral Blocks**: a trailing-separator spelling of the same home
+   can slip past the unresolved-prior-operation refusal; an exception before mutation
+   can mark an operation incomplete and weaken later rollback drift checks; and two
+   homes sharing one state root can overwrite the shared selector and prevent the
+   first home's rollback. The invalid `-Mode` exit-code observation is FYI in the
+   original review, not one of these Blocks.
 
 None of these was observed to break the happy path or the refusals in section 4. They
 are recorded here rather than argued away.
@@ -201,11 +206,14 @@ release - does not exist.
 
 ## 8. The one concrete next action
 
-Close the closing round's four behavioral Blocks - the native-command stderr
-redirection, the home-canonicalization mismatch, the `-Mode` binding exit code, and the
-rollback re-throw condition - then add tests pinning the seven deletable guards. Those
-eleven findings are itemized with file, line and verbatim excerpt in the review sidecar
-named in the private morning file.
+Triage the closing round's four behavioral Blocks - native-command stderr
+redirection, home canonicalization, incorrect incomplete states before mutation,
+and a selector shared across different homes - against the cited evidence, then
+fix the confirmed defects. Reconcile the seven coverage requests with existing
+evidence and add only the missing meaningful assertions. The eleven findings are
+itemized with file, line and verbatim excerpt in the review sidecar named in the
+private morning file. This list corrects the initial morning summary's substitution
+of the invalid-mode FYI for the shared-selector Block; the original review is unchanged.
 
 That is one bounded developer pass plus one closing review. Only after the aggregator
 returns a verdict that can honestly be recorded as `PASS` is it worth spending the
