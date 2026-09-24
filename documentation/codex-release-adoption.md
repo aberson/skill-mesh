@@ -141,21 +141,20 @@ First inspect the operation directory and its installer output. Then use the sam
 operation id to restore its preimage:
 
 ```powershell
-powershell -NoProfile -File tools/activate-codex-release.ps1 -Mode rollback -StateRoot $stateRoot -OperationId $operationId
+powershell -NoProfile -File tools/activate-codex-release.ps1 -Mode rollback -TargetHome $targetHome -StateRoot $stateRoot -OperationId $operationId
 ```
 
-Optionally bind the rollback command to the expected home:
-
-```powershell
-powershell -NoProfile -File tools/activate-codex-release.ps1 -Mode rollback -StateRoot $stateRoot -OperationId $operationId -TargetHome $targetHome
-```
-
-Rollback accepts only `applied` or `incomplete` operations. It first refuses if the
-live files, ledger, or selector contain intervening drift. For a completed apply it
-expects the recorded postimage; for an incomplete one it accepts only recorded
-preimage or postimage states. It then restores saved bytes exactly and deletes only
+`$targetHome` is required and must match the operation record. Rollback accepts
+`applied`, `incomplete`, `applying`, and `rolling-back` operations. It first refuses
+if the live files, ledger, or selector contain intervening drift. For an interrupted
+operation it accepts only the recorded preimage or the plan-derived desired state,
+then restores saved bytes exactly and deletes only
 planned paths that were absent before. The prior ledger and selector are restored
 byte-for-byte, or removed when they were originally absent.
+
+If restoration itself is interrupted, the operation remains `rolling-back` and the
+same rollback command is the resume command. Do not take a new preview until that
+operation has either completed rollback or been investigated.
 
 A previewed operation has no installation to undo, and a rolled-back operation is
 not silently accepted a second time.

@@ -98,10 +98,9 @@ def _apply(release, home, state, op, *, expect=0, env=None):
     return result
 
 
-def _rollback(state, op, home=None, *, expect=0):
-    args = ["-Mode", "rollback", "-StateRoot", state, "-OperationId", op]
-    if home is not None:
-        args += ["-TargetHome", home]
+def _rollback(state, op, home, *, expect=0):
+    args = ["-Mode", "rollback", "-StateRoot", state, "-OperationId", op,
+            "-TargetHome", home]
     result = _run(*args)
     assert result.returncode == expect, result.stdout + result.stderr
     return result
@@ -153,10 +152,11 @@ def test_inspect_refuses_extra_codex_file(codex_dist, tmp_path):
 
 def test_preview_writes_uuid_add_plan_without_touching_home(codex_dist, tmp_path):
     release, home, state = _release(tmp_path, codex_dist), tmp_path / "home", tmp_path / "state"
-    _, op, preview = _preview(release, home, state)
+    result, op, preview = _preview(release, home, state)
     assert re.fullmatch(r"[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}", op)
     assert preview["status"] == "previewed"
     assert {row["action"] for row in preview["plan"]} == {"add"}
+    assert "add: 2" in result.stdout and "update: 0" in result.stdout
     assert not home.exists()
 
 
@@ -207,6 +207,37 @@ def test_apply_refuses_target_drift_after_preview(codex_dist, tmp_path):
     assert "NEW preview" in result.stderr
 
 
+def test_apply_refuses_ledger_and_selector_drift_after_preview(codex_dist, tmp_path):
+    release, home, state = _release(tmp_path, codex_dist), tmp_path / "home", tmp_path / "state"
+    _, op, _ = _preview(release, home, state)
+    home.mkdir()
+    (home / ".skill-mesh-install.json").write_text('{"changed":true}\n', encoding="utf-8")
+    (state / "current-codex.json").write_text('{"changed":true}\n', encoding="utf-8")
+    result = _apply(release, home, state, op, expect=2)
+    assert "ledger or selector changed" in result.stderr
+
+
+def test_preview_refuses_unresolved_prior_operation(codex_dist, tmp_path):
+    release, home, state = _release(tmp_path, codex_dist), tmp_path / "home", tmp_path / "state"
+    _, op, preview = _preview(release, home, state)
+    preview["status"] = "incomplete"
+    (state / "operations" / op / "preview.json").write_text(json.dumps(preview), encoding="utf-8")
+    result, _, _ = _preview(release, home, state, expect=2)
+    assert "unresolved prior operation" in result.stderr
+
+
+def test_preview_refuses_target_home_junction(codex_dist, tmp_path):
+    release, actual, link = _release(tmp_path, codex_dist), tmp_path / "actual", tmp_path / "home-junction"
+    actual.mkdir()
+    made = subprocess.run(["cmd", "/c", "mklink", "/J", str(link), str(actual)],
+                          capture_output=True, text=True)
+    if made.returncode != 0:
+        pytest.skip("could not create directory junction: " + made.stderr + made.stdout)
+    result = _run("-Mode", "preview", "-ReleaseDir", release, "-TargetHome", link,
+                  "-StateRoot", tmp_path / "state")
+    assert result.returncode == 2 and "reparse-point" in result.stderr
+
+
 def test_apply_refuses_unknown_operation_id(codex_dist, tmp_path):
     release, home, state = _release(tmp_path, codex_dist), tmp_path / "home", tmp_path / "state"
     result = _apply(release, home, state, "12345678-1234-4123-8123-123456789abc", expect=2)
@@ -244,7 +275,7 @@ def test_rollback_deletes_files_absent_before(codex_dist, tmp_path):
     release, home, state = _release(tmp_path, codex_dist), tmp_path / "home", tmp_path / "state"
     _, op, _ = _preview(release, home, state)
     _apply(release, home, state, op)
-    _rollback(state, op)
+    _rollback(state, op, home)
     assert not (home / ".agents/skills/demo/SKILL.md").exists()
     assert not (home / ".skill-mesh-install.json").exists()
     assert not (state / "current-codex.json").exists()
@@ -254,9 +285,9 @@ def test_rollback_preserves_foreign_files(codex_dist, tmp_path):
     release, home, state = _release(tmp_path, codex_dist), tmp_path / "home", tmp_path / "state"
     _, op, _ = _preview(release, home, state)
     _apply(release, home, state, op)
-    foreign = home / "consumer-only.txt"
+    foreign = home / ".agents/skills/operator-notes.md"
     foreign.write_text("keep", encoding="utf-8")
-    _rollback(state, op)
+    _rollback(state, op, home)
     assert foreign.read_text(encoding="utf-8") == "keep"
 
 
@@ -265,14 +296,14 @@ def test_rollback_refuses_postapply_drift(codex_dist, tmp_path):
     _, op, _ = _preview(release, home, state)
     _apply(release, home, state, op)
     (home / ".agents/skills/demo/SKILL.md").write_text("drift", encoding="utf-8")
-    result = _rollback(state, op, expect=2)
+    result = _rollback(state, op, home, expect=2)
     assert "drift" in result.stderr
 
 
 def test_rollback_refuses_previewed_operation(codex_dist, tmp_path):
     release, home, state = _release(tmp_path, codex_dist), tmp_path / "home", tmp_path / "state"
     _, op, _ = _preview(release, home, state)
-    result = _rollback(state, op, expect=2)
+    result = _rollback(state, op, home, expect=2)
     assert "nothing to roll back" in result.stderr
 
 
@@ -280,8 +311,8 @@ def test_rollback_refuses_double_rollback(codex_dist, tmp_path):
     release, home, state = _release(tmp_path, codex_dist), tmp_path / "home", tmp_path / "state"
     _, op, _ = _preview(release, home, state)
     _apply(release, home, state, op)
-    _rollback(state, op)
-    result = _rollback(state, op, expect=2)
+    _rollback(state, op, home)
+    result = _rollback(state, op, home, expect=2)
     assert "already" in result.stderr
 
 
@@ -295,7 +326,8 @@ def test_interrupted_selector_publish_is_incomplete_and_rolls_back(codex_dist, t
     preview = json.loads((state / "operations" / op / "preview.json").read_text())
     assert preview["status"] == "incomplete"
     assert (home / ".agents/skills/demo/SKILL.md").is_file()
-    _rollback(state, op)
+    assert not (state / "current-codex.json").exists()
+    _rollback(state, op, home)
     assert not (home / ".agents/skills/demo/SKILL.md").exists()
 
 
@@ -326,8 +358,52 @@ def test_second_ledger_profile_survives_apply_and_rollback(codex_dist, tmp_path)
     _, op, _ = _preview(release, home, state)
     _apply(release, home, state, op)
     assert json.loads((home / ".skill-mesh-install.json").read_text())["installs"]["gpt"] == gpt
-    _rollback(state, op)
+    _rollback(state, op, home)
     assert json.loads((home / ".skill-mesh-install.json").read_text())["installs"]["gpt"] == gpt
+
+
+def test_remove_action_deletes_and_rollback_restores_owned_stale_file(codex_dist, tmp_path):
+    release, home, state = _release(tmp_path, codex_dist), tmp_path / "home", tmp_path / "state"
+    rel = ".agents/skills/retired.md"
+    old = (release / "dist/codex/demo/SKILL.md").read_bytes()
+    (home / Path(rel)).parent.mkdir(parents=True)
+    (home / Path(rel)).write_bytes(old)
+    ledger = {"tool": "skill-mesh", "ledger_version": 1,
+              "installs": {"codex": _ledger_entry({rel: old})}}
+    (home / ".skill-mesh-install.json").write_text(json.dumps(ledger), encoding="utf-8")
+    _, op, preview = _preview(release, home, state)
+    assert any(row["rel"] == rel and row["action"] == "remove" for row in preview["plan"])
+    _apply(release, home, state, op)
+    assert not (home / Path(rel)).exists()
+    _rollback(state, op, home)
+    assert (home / Path(rel)).read_bytes() == old
+
+
+def test_applying_operation_is_recoverable_by_rollback(codex_dist, tmp_path):
+    release, home, state = _release(tmp_path, codex_dist), tmp_path / "home", tmp_path / "state"
+    _, op, preview = _preview(release, home, state)
+    preview["status"] = "applying"
+    (state / "operations" / op / "preview.json").write_text(json.dumps(preview), encoding="utf-8")
+    missing_home = _run("-Mode", "rollback", "-StateRoot", state, "-OperationId", op)
+    assert missing_home.returncode == 2 and "TargetHome" in missing_home.stderr
+    _rollback(state, op, home)
+    restored = json.loads((state / "operations" / op / "preview.json").read_text())
+    assert restored["status"] == "rolled-back"
+
+
+def test_rollback_refuses_forged_target_home_without_touching_victim(codex_dist, tmp_path):
+    release, home, state = _release(tmp_path, codex_dist), tmp_path / "home", tmp_path / "state"
+    _, op, preview = _preview(release, home, state)
+    outside = tmp_path / "outside"
+    victim = outside / ".agents/skills/demo/SKILL.md"
+    victim.parent.mkdir(parents=True)
+    victim.write_bytes(b"do-not-delete")
+    preview["target_home"] = str(outside)
+    preview["status"] = "applying"
+    (state / "operations" / op / "preview.json").write_text(json.dumps(preview), encoding="utf-8")
+    result = _rollback(state, op, home, expect=2)
+    assert "TargetHome does not match" in result.stderr
+    assert victim.read_bytes() == b"do-not-delete"
 
 
 def test_preview_refuses_missing_codex_directory(codex_dist, tmp_path):

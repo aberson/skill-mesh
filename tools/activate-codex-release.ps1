@@ -20,7 +20,7 @@
     Retained release directory containing release.json and dist/codex.
 
 .PARAMETER TargetHome
-    Consumer home to inspect, preview, or activate.
+    Consumer home to inspect, preview, activate, or roll back. Required for rollback.
 
 .PARAMETER StateRoot
     Private durable state directory for locks, operations, and selector evidence.
@@ -416,8 +416,33 @@ function Get-CodexOwnedHashes($Ledger, [string]$CodexRoot) {
     return $result
 }
 
+function Get-PlanProfileRel([string]$Rel) {
+    # preview.json is caller-authored state. It may choose WHICH paths below the
+    # Codex discovery root are restored; it may never choose WHERE those paths are.
+    $codexRoot = Get-SkillMeshDiscoveryRoot 'codex'
+    if ([string]::IsNullOrWhiteSpace($codexRoot)) {
+        throw 'activate-codex-release: codex discovery root is unavailable.'
+    }
+    $prefix = $codexRoot.TrimEnd('/') + '/'
+    if ([string]::IsNullOrWhiteSpace($Rel) -or $Rel.Contains('\') -or
+        [System.IO.Path]::IsPathRooted($Rel) -or $Rel -match '\A[A-Za-z]:' -or
+        -not $Rel.StartsWith($prefix, [System.StringComparison]::Ordinal)) {
+        Stop-ActivationRefusal 'operation plan contains an unsafe Codex relative path.'
+    }
+    $tail = $Rel.Substring($prefix.Length)
+    $bad = @($tail.Split('/') | Where-Object { $_ -eq '' -or $_ -eq '.' -or $_ -eq '..' })
+    if ([string]::IsNullOrWhiteSpace($tail) -or $bad.Count -ne 0) {
+        Stop-ActivationRefusal 'operation plan contains an unsafe Codex relative path.'
+    }
+    return $tail
+}
+
 function Get-HomeTargetPath([string]$HomeAbs, [string]$Rel) {
-    return (Resolve-ActivationPath (Join-Path $HomeAbs ($Rel -replace '/', '\')) $HomeAbs)
+    $profileRel = Get-PlanProfileRel $Rel
+    $codexRoot = Get-SkillMeshDiscoveryRoot 'codex'
+    $rootAbs = Join-Path $HomeAbs ($codexRoot -replace '/', '\')
+    [void](Resolve-ActivationPath $rootAbs $HomeAbs)
+    return (Resolve-ActivationPath (Join-Path $rootAbs ($profileRel -replace '/', '\')) $rootAbs)
 }
 
 function Get-HomeSnapshot([string]$HomeAbs, $Plan, [string]$StateAbs) {
@@ -609,7 +634,10 @@ function Invoke-Preview([string]$ReleaseDirValue, [string]$HomeValue, [string]$S
         $summary = @{}
         foreach ($row in @($plan)) { if (-not $summary.ContainsKey($row.action)) { $summary[$row.action] = 0 }; $summary[$row.action]++ }
         Write-Output ('operation_id: ' + $id)
-        foreach ($action in @('add', 'update', 'remove', 'no-op')) { Write-Output ($action + ': ' + [int](Get-ObjectField $summary $action 0)) }
+        foreach ($action in @('add', 'update', 'remove', 'no-op')) {
+            $count = if ($summary.ContainsKey($action)) { [int]$summary[$action] } else { 0 }
+            Write-Output ($action + ': ' + $count)
+        }
     } finally {
         if ($null -ne $lock) { $lock.Dispose() }
     }
@@ -640,7 +668,9 @@ function Invoke-InstallerForActivation([string]$HomeAbs, $Release, $Operation, [
     $stderr = Join-Path $Operation.dir 'installer.stderr.txt'
     [void](Assert-SafeTargetAndParent $stdout $State); [void](Assert-SafeTargetAndParent $stderr $State)
     $argv = @('-NoProfile', '-File', $INSTALLER, '-Provider', 'codex', '-Home', $HomeAbs, '-DistDir', (Join-Path $Release.release_dir 'dist'))
-    & powershell @argv 1> $stdout 2> $stderr
+    $psExe = (Get-Process -Id $PID).Path
+    if ([string]::IsNullOrWhiteSpace($psExe)) { $psExe = 'powershell' }
+    & $psExe @argv 1> $stdout 2> $stderr
     return [PSCustomObject]@{ exit_code = $LASTEXITCODE; argv = $argv; stdout = $stdout; stderr = $stderr }
 }
 
@@ -690,11 +720,13 @@ function Invoke-Apply([string]$ReleaseDirValue, [string]$HomeValue, [string]$Sta
     [void](Resolve-ActivationPath $homeAbs $homeAbs); [void](Resolve-ActivationPath $state $state)
     $operation = Read-Operation $state $Id
     $lock = $null; $stage = 'preview binding'; $started = Get-SkillMeshTxUtcNow
+    $installerInvoked = $false
     try {
         $lock = Enter-ActivationLock $state $homeAbs
         $before = Assert-PreviewBinding $operation $release $homeAbs $state
         $stage = 'status publication'; Set-OperationStatus $operation 'applying' '' $state
-        $stage = 'installer'; $installer = Invoke-InstallerForActivation $homeAbs $release $operation $state
+        $stage = 'installer'; $installerInvoked = $true
+        $installer = Invoke-InstallerForActivation $homeAbs $release $operation $state
         if ($installer.exit_code -ne 0) { throw "activate-codex-release: installer failed with exit $($installer.exit_code)." }
         $stage = 'postimage verification'; $verified = Verify-Postimage $operation $release $before $homeAbs $state
         $stage = 'selector publication'
@@ -716,13 +748,13 @@ function Invoke-Apply([string]$ReleaseDirValue, [string]$HomeValue, [string]$Sta
         Write-Output ('applied operation_id: ' + $Id)
     } catch {
         if ($_.Exception.Message.StartsWith('activate-codex-release: REFUSING --',
-                [System.StringComparison]::Ordinal)) {
+                [System.StringComparison]::Ordinal) -and -not $installerInvoked) {
             throw
         }
         $failure = $_.Exception.Message
         try { Set-OperationStatus $operation 'incomplete' $stage $state } catch { $failure += ' Also failed to record incomplete status: ' + $_.Exception.Message }
         [Console]::Error.WriteLine('activate-codex-release: INCOMPLETE at ' + $stage + '. ' + $failure)
-        [Console]::Error.WriteLine('Recover with: powershell -NoProfile -File tools/activate-codex-release.ps1 -Mode rollback -StateRoot <stateRoot> -OperationId ' + $Id)
+        [Console]::Error.WriteLine('Recover with: powershell -NoProfile -File tools/activate-codex-release.ps1 -Mode rollback -TargetHome <targetHome> -StateRoot <stateRoot> -OperationId ' + $Id)
         exit 1
     } finally {
         if ($null -ne $lock) { $lock.Dispose() }
@@ -731,6 +763,7 @@ function Invoke-Apply([string]$ReleaseDirValue, [string]$HomeValue, [string]$Sta
 
 function Get-PreimageState($Operation, $Row, [string]$State) {
     if (-not [bool]$Row.present_before) { return [PSCustomObject]@{ present = $false; sha256 = $null } }
+    [void](Get-PlanProfileRel ([string]$Row.rel))
     $path = Join-Path (Join-Path (Join-Path $Operation.dir 'preimage') 'files') ([string]$Row.rel -replace '/', '\')
     $saved = Read-OptionalFileState $path $State 'preimage file'
     if (-not $saved.present) { throw 'activate-codex-release: preimage is incomplete.' }
@@ -748,26 +781,69 @@ function Test-CurrentMatchesOne($Current, $First, $Second) {
     return ($a -or $b)
 }
 
-function Get-Postimage($Operation, [string]$State, [switch]$Required) {
-    $path = Join-Path $Operation.dir 'postimage.json'
-    if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
-        if ($Required) { Stop-ActivationRefusal 'applied operation lacks postimage.json.' }
-        return $null
+function Get-PlanDesiredHashes($Operation) {
+    $expected = New-Object 'System.Collections.Generic.Dictionary[string,string]' ([System.StringComparer]::Ordinal)
+    foreach ($row in @($Operation.preview.plan)) {
+        $rel = [string]$row.rel
+        [void](Get-PlanProfileRel $rel)
+        $action = [string]$row.action
+        if ($action -eq 'remove') { continue }
+        $hash = [string]$row.desired_sha256
+        if (($action -ne 'add' -and $action -ne 'update' -and $action -ne 'no-op') -or
+            -not ($hash -cmatch '\A[0-9a-f]{64}\z') -or $expected.ContainsKey($rel)) {
+            Stop-ActivationRefusal 'operation plan has an invalid desired Codex state.'
+        }
+        [void]$expected.Add($rel, $hash)
     }
-    return (Read-JsonFile $path $State 'postimage.json')
+    return $expected
+}
+
+function Get-PlanPostState($Row) {
+    [void](Get-PlanProfileRel ([string]$Row.rel))
+    $action = [string]$Row.action
+    if ($action -eq 'remove') { return [PSCustomObject]@{ present = $false; sha256 = $null } }
+    if ($action -ne 'add' -and $action -ne 'update' -and $action -ne 'no-op') {
+        Stop-ActivationRefusal 'operation plan has an invalid desired Codex state.'
+    }
+    $hash = [string]$Row.desired_sha256
+    if (-not ($hash -cmatch '\A[0-9a-f]{64}\z')) {
+        Stop-ActivationRefusal 'operation plan has an invalid desired Codex state.'
+    }
+    return [PSCustomObject]@{ present = $true; sha256 = $hash }
+}
+
+function Test-PostLedgerState($Current, $Operation, [string]$State) {
+    if (-not $Current.present) { return $false }
+    $ledger = Get-LedgerView $Current
+    $owned = Get-CodexOwnedHashes $ledger (Get-SkillMeshDiscoveryRoot 'codex')
+    $expected = Get-PlanDesiredHashes $Operation
+    if ($owned.Count -ne $expected.Count) { return $false }
+    foreach ($rel in $expected.Keys) {
+        if (-not $owned.ContainsKey($rel) -or -not (Test-OrdinalEquals $owned[$rel] $expected[$rel])) { return $false }
+    }
+    $preLedger = Read-OptionalFileState (Join-Path (Join-Path $Operation.dir 'preimage') 'ledger.json') $State 'preimage ledger'
+    return (Test-UnrelatedInstallsEqual (Get-LedgerView $preLedger) $ledger)
+}
+
+function Test-PostSelectorState($Current, $Operation) {
+    if (-not $Current.present) { return $false }
+    try { $selector = $UTF8_NO_BOM.GetString($Current.bytes) | ConvertFrom-Json }
+    catch { return $false }
+    return ([string](Get-ObjectField $selector 'schema_version') -ceq '1' -and
+        (Test-OrdinalEquals ([string](Get-ObjectField $selector 'release_id')) ([string]$Operation.preview.release_id)) -and
+        (Test-OrdinalEquals ([string](Get-ObjectField $selector 'release_manifest_sha256')) ([string]$Operation.preview.release_manifest_sha256)) -and
+        (Test-OrdinalIgnoreCaseEquals ([string](Get-ObjectField $selector 'target_home')) ([string]$Operation.preview.target_home)) -and
+        (Test-OrdinalEquals ([string](Get-ObjectField $selector 'operation_id')) ([string]$Operation.preview.operation_id)) -and
+        -not [string]::IsNullOrWhiteSpace([string](Get-ObjectField $selector 'verified_at')))
 }
 
 function Assert-RollbackDriftFree($Operation, [string]$HomeAbs, [string]$State) {
-    $post = Get-Postimage $Operation $State -Required:([string]$Operation.preview.status -eq 'applied')
+    $status = [string]$Operation.preview.status
     foreach ($row in @($Operation.preview.plan)) {
         $pre = Get-PreimageState $Operation $row $State
         $current = Read-OptionalFileState (Get-HomeTargetPath $HomeAbs $row.rel) $HomeAbs "rollback path $($row.rel)"
-        $postState = $null
-        if ($null -ne $post) {
-            $postHash = Get-ObjectField (Get-ObjectField $post 'files') ([string]$row.rel) $null
-            $postState = [PSCustomObject]@{ present = ($null -ne $postHash); sha256 = $postHash }
-        }
-        if ([string]$Operation.preview.status -eq 'applied') {
+        $postState = Get-PlanPostState $row
+        if ($status -eq 'applied') {
             if (-not (Test-CurrentMatchesOne $current $postState $null)) { Stop-ActivationRefusal "post-apply drift at $($row.rel)." }
         } elseif (-not (Test-CurrentMatchesOne $current $pre $postState)) {
             Stop-ActivationRefusal "intervening drift at $($row.rel)."
@@ -777,14 +853,12 @@ function Assert-RollbackDriftFree($Operation, [string]$HomeAbs, [string]$State) 
     $preSelector = [PSCustomObject]@{ present = ($null -ne $Operation.preview.selector_sha256); sha256 = $Operation.preview.selector_sha256 }
     $currentLedger = Read-OptionalFileState (Join-Path $HomeAbs $LEDGER_NAME) $HomeAbs 'rollback ledger'
     $currentSelector = Read-OptionalFileState (Join-Path $State 'current-codex.json') $State 'rollback selector'
-    $postLedger = $null; $postSelector = $null
-    if ($null -ne $post) {
-        $postLedger = [PSCustomObject]@{ present = ($null -ne $post.ledger_sha256); sha256 = $post.ledger_sha256 }
-        $postSelector = [PSCustomObject]@{ present = ($null -ne $post.selector_sha256); sha256 = $post.selector_sha256 }
-    }
-    if ([string]$Operation.preview.status -eq 'applied') {
-        if (-not (Test-CurrentMatchesOne $currentLedger $postLedger $null) -or -not (Test-CurrentMatchesOne $currentSelector $postSelector $null)) { Stop-ActivationRefusal 'post-apply ledger or selector drift.' }
-    } elseif (-not (Test-CurrentMatchesOne $currentLedger $preLedger $postLedger) -or -not (Test-CurrentMatchesOne $currentSelector $preSelector $postSelector)) {
+    $ledgerPost = Test-PostLedgerState $currentLedger $Operation $State
+    $selectorPost = Test-PostSelectorState $currentSelector $Operation
+    if ($status -eq 'applied') {
+        if (-not $ledgerPost -or -not $selectorPost) { Stop-ActivationRefusal 'post-apply ledger or selector drift.' }
+    } elseif ((-not (Test-CurrentMatchesOne $currentLedger $preLedger $null) -and -not $ledgerPost) -or
+              (-not (Test-CurrentMatchesOne $currentSelector $preSelector $null) -and -not $selectorPost)) {
         Stop-ActivationRefusal 'intervening ledger or selector drift.'
     }
 }
@@ -826,30 +900,54 @@ function Assert-PreimageRestored($Operation, [string]$HomeAbs, [string]$State) {
     }
 }
 
-function Invoke-Rollback([string]$StateValue, [string]$Id, [string]$OptionalHome) {
+function Invoke-Rollback([string]$StateValue, [string]$Id, [string]$TargetHomeValue) {
     $state = [System.IO.Path]::GetFullPath($StateValue)
     [void](Resolve-ActivationPath $state $state)
     $operation = Read-Operation $state $Id
     $status = [string]$operation.preview.status
     if ($status -eq 'previewed') { Stop-ActivationRefusal 'a previewed operation has nothing to roll back.' }
     if ($status -eq 'rolled-back') { Stop-ActivationRefusal 'operation was already rolled back.' }
-    if ($status -ne 'applied' -and $status -ne 'incomplete') { Stop-ActivationRefusal 'operation is not eligible for rollback.' }
-    $homeAbs = [string]$operation.preview.target_home
-    if (-not [string]::IsNullOrWhiteSpace($OptionalHome) -and
-        -not (Test-OrdinalIgnoreCaseEquals ([System.IO.Path]::GetFullPath($OptionalHome)) $homeAbs)) {
+    if ($status -ne 'applied' -and $status -ne 'incomplete' -and
+        $status -ne 'applying' -and $status -ne 'rolling-back') {
+        Stop-ActivationRefusal 'operation is not eligible for rollback.'
+    }
+    if ([string]::IsNullOrWhiteSpace($TargetHomeValue)) {
+        Stop-ActivationRefusal 'rollback requires TargetHome.'
+    }
+    $homeAbs = [System.IO.Path]::GetFullPath($TargetHomeValue)
+    $recordedHome = [string]$operation.preview.target_home
+    if ([string]::IsNullOrWhiteSpace($recordedHome) -or
+        -not (Test-OrdinalIgnoreCaseEquals ([System.IO.Path]::GetFullPath($recordedHome)) $homeAbs)) {
         Stop-ActivationRefusal 'TargetHome does not match the operation target_home.'
     }
-    [void](Resolve-ActivationPath $homeAbs $homeAbs)
+    $codexRoot = Get-SkillMeshDiscoveryRoot 'codex'
+    $codexRootAbs = Join-Path $homeAbs ($codexRoot -replace '/', '\')
+    [void](Resolve-ActivationPath $codexRootAbs $homeAbs)
     $lock = $null
+    $stage = 'rollback drift check'
+    $restoreStarted = $false
     try {
         $lock = Enter-ActivationLock $state $homeAbs
         Assert-RollbackDriftFree $operation $homeAbs $state
-        Set-OperationStatus $operation 'rolling-back' '' $state
+        $stage = 'restoration status publication'; Set-OperationStatus $operation 'rolling-back' 'restoration' $state
+        $stage = 'restoration'; $restoreStarted = $true
         Restore-Preimage $operation $homeAbs $state
+        $stage = 'restoration verification'
         Assert-PreimageRestored $operation $homeAbs $state
-        Set-OperationStatus $operation 'rolled-back' '' $state
+        $stage = 'receipt publication'
         Write-Receipt $operation ([PSCustomObject]@{ schema_version = 1; operation_id = $Id; rolled_back_at = Get-SkillMeshTxUtcNow; evidence = 'preimage' }) $state
+        $stage = 'status publication'; Set-OperationStatus $operation 'rolled-back' '' $state
         Write-Output ('rolled back operation_id: ' + $Id)
+    } catch {
+        if ($_.Exception.Message.StartsWith('activate-codex-release: REFUSING --',
+                [System.StringComparison]::Ordinal) -and -not $restoreStarted) {
+            throw
+        }
+        $failure = $_.Exception.Message
+        try { Set-OperationStatus $operation 'rolling-back' $stage $state } catch { $failure += ' Also failed to record rollback state: ' + $_.Exception.Message }
+        [Console]::Error.WriteLine('activate-codex-release: ROLLBACK INCOMPLETE at ' + $stage + '. ' + $failure)
+        [Console]::Error.WriteLine('Resume with: powershell -NoProfile -File tools/activate-codex-release.ps1 -Mode rollback -TargetHome <targetHome> -StateRoot <stateRoot> -OperationId ' + $Id)
+        exit 1
     } finally {
         if ($null -ne $lock) { $lock.Dispose() }
     }
@@ -874,7 +972,7 @@ try {
             Invoke-Apply $ReleaseDir $TargetHome $StateRoot $OperationId
         }
         'rollback' {
-            if ([string]::IsNullOrWhiteSpace($StateRoot) -or [string]::IsNullOrWhiteSpace($OperationId)) { Stop-ActivationRefusal 'rollback requires StateRoot and OperationId.' }
+            if ([string]::IsNullOrWhiteSpace($TargetHome) -or [string]::IsNullOrWhiteSpace($StateRoot) -or [string]::IsNullOrWhiteSpace($OperationId)) { Stop-ActivationRefusal 'rollback requires TargetHome, StateRoot, and OperationId.' }
             Invoke-Rollback $StateRoot $OperationId $TargetHome
         }
     }
