@@ -10,9 +10,12 @@ started. Step 147 remains unfinished and its historical blocked result is retain
 The [resumption record](findings/baseline-releases-resumption-2026-09-24.md) owns this
 checkpoint, not a reset of the previous developer/reviewer budget. The subsequent
 bounded privacy repair is complete with focused evidence and a narrow review;
-full Step 147 qualification remains unfinished. The original source pin remains
-in force until the operator answers the recorded current-main versus historical
-release-source choice.
+full Step 147 qualification remains unfinished. The subsequent authorized overnight
+build follows the [September 24 execution amendment](baseline-overnight-2026-09-24.md):
+one final current-main-based integrated source/builder candidate, Steps 147 and 149,
+one shared qualification attempt and an 08:00 Pacific hard stop. The original source
+pin remains historical evidence, not this new release's source. Live activation
+remains Step 150 and requires an attended decision.
 
 The historical Claude-only direction below predates Phase CD qualification.
 Current main qualifies one observed code-lens route on this Codex collaboration

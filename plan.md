@@ -9,12 +9,16 @@ reconciled onto current main `7ae573b`; original worktrees and all prior
 failed or incomplete runs remain preserved. A bounded readiness review identified
 a public-packet privacy defect. Its narrow repair and closing review are recorded
 at `d7897f3` and `308083d`, with focused checks taking about 20 seconds in total.
-No root-suite or real release attempt ran. Source selection and exact-source
-qualification remain pending. Step 147 is unfinished; Steps 148-152 remain pending.
+No root-suite or real release attempt ran in that slice. The subsequent authorized
+overnight build follows the [bounded execution amendment](documentation/baseline-overnight-2026-09-24.md):
+one current-main-based integrated source/builder, Steps 147 and 149, one shared
+qualification attempt, and an 08:00 Pacific hard stop. Step 147 is unfinished;
+Steps 148-152 remain pending until their actual acceptance evidence exists.
 
 The [dated baseline report](documentation/baseline-release-report.md) retains its
-original source/install snapshot identities. No source repin, release qualification,
-public publication or live profile activation follows from this resumption.
+original source/install snapshot identities. The overnight amendment selects a new
+release source without changing that history. No release qualification, public
+publication or live profile activation is claimed by this setup.
 The [resumption record](documentation/findings/baseline-releases-resumption-2026-09-24.md)
 records integration, current evidence and the next bounded decision. Step 149
 prepares the dev/prod daily-profile split; Step 150 remains operator adoption.
