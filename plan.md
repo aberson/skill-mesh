@@ -1,5 +1,14 @@
 # Skill Mesh plan
 
+## Active bounded continuation - Step 153 (2026-09-23)
+
+The operator selected completion of the preserved mistake-capture candidate with
+Codex coordinating and Sol building. The [execution record](documentation/mistake-capture-step153-completion.md)
+owns the bounded continuation and one integrated full-suite gate. Five historical
+developer iterations and four deep reviews remain recorded; iteration 5's repair
+awaits closing review and acceptance. Step 153/#219 is in progress, not DONE.
+Step 154/#220 remains attended work. Other tracks are not resumed by this selection.
+
 ## Revised proposal — context continuity and learning (2026-09-19)
 
 **Objective:** reduce context loss and repeated mistakes, then automatically trial

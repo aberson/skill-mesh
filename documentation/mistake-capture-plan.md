@@ -2,6 +2,13 @@
 
 ## 1. What This Is
 
+**Current execution amendment (2026-09-23):** the operator selected a bounded
+Codex-coordinated continuation of the preserved Step 153 candidate. The
+[completion record](mistake-capture-step153-completion.md) owns this invocation's
+route, cumulative retry ceiling, deadline and single-root-gate reuse exception.
+It supersedes the older Claude-only launch directions below for this continuation.
+All product acceptance requirements and Step 154's attended boundary remain.
+
 **Objective:** preserve an evidenced in-session mistake and harvest it at unchanged Git HEAD, using lesson-harvest's existing five-store deduplication and draft-only boundary.
 
 This is Project 2 of the accepted [context-learning portfolio](context-learning-plan.md). It reserves **Steps 153–154**: one implementation slice, then attended Codex acceptance. The September 19 scan covered 29 Skill Mesh worktrees; other plans reserve through 152, including baseline releases (BR, Steps 147–152). The abandoned portfolio Steps 132–138 remain withdrawn.

@@ -79,6 +79,11 @@ EXPECTED_SHARED_PAYLOAD = frozenset({
     "judge-core.md",
     "score-skill.md",
     "build_step_verdict.py",
+    # Phase LH Step 153. Enters the closure exactly like every other asset -- as a
+    # `_shared/<leaf>` token harvested from a canonical core (`lesson-harvest`, which
+    # spells it `<repo>/_shared/<leaf>`; see `Repoint-SharedReference`) -- so the
+    # independent walk below finds it without being told about it.
+    "lesson_observations.py",
     "calibrate_judge.py",
     "grader_prompt.py",
     "score_skill_absolute.py",
