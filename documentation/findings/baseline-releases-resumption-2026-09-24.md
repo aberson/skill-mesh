@@ -54,3 +54,52 @@ entry already invokes source-root pytest plus staged release, and release tests
 repeat package-integrity internally. Obtain missing review evidence and decide the
 exact-source gate budget before launching those expensive commands. The old
 automatic 147-149 span remains suspended.
+
+## Bounded repair outcome
+
+Integration commit: `43764f0ef334435073dc4172177bcf884283bf6d`. Sol's privacy repair
+is `d7897f359ab00378dd447f464e2b25f21c1b0521`; the narrow runbook correction is
+`308083d77d1d3456848df061204d9eb67d58329c`. The retained source archive is private,
+offered text and distribution files are scanned, and `PUBLIC-SHA256SUMS` describes
+the publishable subset. The private retained manifest still covers the full archive.
+There is no source repin, new dependency or change to qualification requirements.
+
+One focused invocation selected nine named publication/checksum/claims checks in
+`tests/release/test_baseline_release.py`: **8 passed, 1 failed**, exit 1, 17.881
+seconds process time. The failure was an undispositioned explanatory comment in
+the existing prose-claims inventory. The developer stopped as instructed. The
+coordinator then admitted one specific mechanical follow-up within the same time
+budget: remove the unnecessary comment, correct a checksum-description string,
+and rerun only the failed inventory check. It reported **1 passed in 0.15 seconds**,
+exit 0, 1.536 seconds process time. The initial failed receipt remains unchanged;
+the eight successful checks were not repeated. This is focused evidence, not a
+new nine-test aggregate or full-suite result.
+
+One fresh Terra reviewer examined the three-file privacy delta. It identified one
+stale public-copy verification command in runbook section 7; its initial
+NEEDS_WORK report is preserved. The coordinator corrected only that instruction,
+and the same reviewer confirmed the finding resolved with no remaining findings
+on the narrow delta. No new review campaign or test run followed that Markdown
+correction. All 622 tracked files were unchanged during the initial review; only
+the identified runbook correction followed it. This review does not certify the
+entire inherited Step 147 implementation or qualify a release.
+
+Private receipts live in `.build-step/br147-resume-20260924/`: input identities,
+`focused-public-packet.json`, `focused-claim-followup.json`,
+`closing-review-initial.json`, `closing-review-mutation-audit.json` and
+`closing-review-finding-disposition.json`. The candidate is retained on
+`build/br147-resume-20260924`, separate from main. Step 147/#207 remains unfinished.
+
+## Required next decisions and evidence
+
+The operator was asked whether the first daily toolkit release should use current
+main, including the Codex route repair and Step 153, while preserving the dated
+September 13 snapshot, or keep the original pinned release source. **No answer or
+repin is assumed.** Source selection precedes exact-source qualification.
+
+The selected source still needs attributable representative cross-family review
+and the existing qualification evidence. Admit one explicitly bounded real release
+attempt only after that proof is available; its nested root/staged checks must be
+included in the total budget. No full test suite or real release operation ran in
+this resumption. Step 149 prepares the daily-profile split; Step 150 remains the
+separate live-adoption decision after a concrete preview.

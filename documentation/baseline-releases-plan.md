@@ -8,7 +8,11 @@ baselines and all prior BR runs. The preserved run-2 iteration-3 code candidate
 readiness assessment; no root suite, release invocation or new repair loop has
 started. Step 147 remains unfinished and its historical blocked result is retained.
 The [resumption record](findings/baseline-releases-resumption-2026-09-24.md) owns this
-checkpoint, not a reset of the previous developer/reviewer budget.
+checkpoint, not a reset of the previous developer/reviewer budget. The subsequent
+bounded privacy repair is complete with focused evidence and a narrow review;
+full Step 147 qualification remains unfinished. The original source pin remains
+in force until the operator answers the recorded current-main versus historical
+release-source choice.
 
 The historical Claude-only direction below predates Phase CD qualification.
 Current main qualifies one observed code-lens route on this Codex collaboration

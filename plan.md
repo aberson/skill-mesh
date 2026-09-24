@@ -5,10 +5,12 @@
 After closing Step 153 under LH-E1, the operator selected Baseline releases.
 The [BR plan](documentation/baseline-releases-plan.md) retains Steps 147-152 and
 issues #207-#212 under #206. Step 147's run-2 iteration-3 candidate `c88391b` is
-being reconciled onto current main `7ae573b`; original worktrees and all prior
-failed or incomplete runs remain preserved. Only one bounded read-only readiness
-review is admitted at this checkpoint, with no tests or automatic retry reset.
-Step 147 remains unfinished, and Steps 148-152 remain pending.
+reconciled onto current main `7ae573b`; original worktrees and all prior
+failed or incomplete runs remain preserved. A bounded readiness review identified
+a public-packet privacy defect. Its narrow repair and closing review are recorded
+at `d7897f3` and `308083d`, with focused checks taking about 20 seconds in total.
+No root-suite or real release attempt ran. Source selection and exact-source
+qualification remain pending. Step 147 is unfinished; Steps 148-152 remain pending.
 
 The [dated baseline report](documentation/baseline-release-report.md) retains its
 original source/install snapshot identities. No source repin, release qualification,
