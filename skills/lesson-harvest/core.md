@@ -95,6 +95,8 @@ python <repo>/_shared/lesson_observations.py record --repo <path> --input <file>
 
 Observations live in the repository's private Git metadata, shared across linked worktrees, outside versioned content and outside any release artifact. They are never staged, never committed, and never pasted into a PR body verbatim.
 
+The helper operates in operator-controlled Git metadata. Its symlink/reparse and containment checks inspect filesystem state before access; they do not protect against another process replacing directories concurrently. Hostile concurrent mutation of that metadata is outside this mode's supported boundary. Normal concurrent capture/read remains supported, with private placement, atomic no-overwrite publication, bounded reads and sanitized publication still required.
+
 ---
 
 ## Phase 0 — Bootstrap: resolve the scan window AND the observation inbox

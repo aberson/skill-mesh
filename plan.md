@@ -7,8 +7,9 @@ Codex coordinating and Sol building. The [execution record](documentation/mistak
 owns the bounded continuation and one integrated full-suite gate. Five historical
 developer iterations and four deep reviews remain recorded; iteration 5's repair
 has now received closing review. The [completion checkpoint](documentation/findings/mistake-capture-closure-2026-09-23.md)
-records five passing lenses and one confirmed security Block; a local-filesystem
-trust decision is pending. Step 153/#219 remains unfinished. The full suite has
+records five passing lenses and one confirmed security Block. The operator has
+approved the documented local-filesystem trust boundary; its narrow claim and
+contract correction is undergoing closing review. Step 153/#219 remains unfinished. The full suite has
 not started; no merge or issue closure is claimed.
 Step 154/#220 remains attended work. Other tracks are not resumed by this selection.
 

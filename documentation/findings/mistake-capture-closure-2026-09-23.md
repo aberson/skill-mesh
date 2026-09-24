@@ -25,7 +25,7 @@ worktree remains untouched. This is an unfinished build, not a release certifica
 The full repository-root suite has **not started**. There is no full-suite PASS,
 merge, issue closure, live profile activation or Step 154 acceptance.
 
-## Decision needed: local filesystem trust
+## Approved decision: local filesystem trust
 
 The guard in `_shared/lesson_observations.py` checks path components and resolved
 containment, then publication opens a pathname. A process able to replace the
@@ -33,7 +33,7 @@ private inbox directory between those operations can redirect the write outside
 the common Git directory. The module's statement that a swap between inspection
 and opening still cannot move a record out of the clone is therefore false.
 
-**Proposed first-version boundary, awaiting operator decision:**
+**Operator-approved first-version boundary (2026-09-23):**
 
 > The helper operates in operator-controlled Git metadata. Its symlink/reparse
 > and containment checks inspect the filesystem state before access; they are not
@@ -43,9 +43,12 @@ and opening still cannot move a record out of the clone is therefore false.
 > storage placement, no-overwrite atomic publication, bounded reads and sanitized
 > publication rules remain requirements.
 
-If selected, correct the false claim and document this boundary consistently,
-then obtain a closing review of the changed assumptions. Preserve this historical
-Block and its reproduction; do not relabel it as a passing deep review.
+The operator approved this boundary after reviewing the confirmed race and the
+alternative of implementing race-resistant storage now. Correct the false claim
+and document this boundary consistently, then obtain a closing review of the
+changed assumptions. Preserve this historical Block and its reproduction; do not
+relabel the historical review as passing. This is an accepted scope limitation,
+not a claim that the directory-swap race was repaired.
 
 The alternative is race-resistant filesystem access before first delivery. That
 requires an explicit implementation decision and revised scope; it is not another
@@ -53,5 +56,5 @@ line-level recheck, which would merely move the same race window.
 
 The [bounded execution record](../mistake-capture-step153-completion.md) retains
 the cumulative retry ceiling and one-root-gate limit. No expensive test runs are
-admitted while this decision is unresolved. Memory admission is checked immediately
+admitted before the closing review passes. Memory admission is checked immediately
 before the eventual gate rather than assumed from an earlier observation.

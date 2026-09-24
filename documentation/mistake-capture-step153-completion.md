@@ -18,6 +18,15 @@ The complete preserved patch is applied with Git's three-way merge onto
 `110d916df9d46916fa7aeee19fefc2847b9f5476`, preserving the intervening Phase CD
 distribution changes. No implementation rewrite is authorized by this resumption.
 
+The operator subsequently approved an explicit local-filesystem trust boundary:
+Git metadata is operator-controlled; path checks do not defend against another
+process replacing its directories concurrently. Correct the false race-proof
+claim and document that limitation without changing runtime logic. Normal helper
+capture/read concurrency, private placement, atomic no-overwrite publication,
+bounded reads and sanitized publication remain required. The confirmed race and
+historical security Block remain recorded in the
+[completion checkpoint](findings/mistake-capture-closure-2026-09-23.md).
+
 ## Models, review and limits
 
 - Coordinator: the current Codex session. Builder: a fresh Sol child.

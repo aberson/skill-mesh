@@ -35,8 +35,10 @@ whole chain is inspected rather than the leaf alone because os.lstat declines to
 follow a link only at the FINAL component: an ancestor junction would otherwise
 redirect the entire subtree transparently, and the leaf's own lstat would report the
 redirected target's attributes rather than a refusal. The resolved real path is then
-required to stay inside the resolved inbox root, so a component swapped between the
-walk and the open still cannot move a record out of the clone.
+required to stay inside the resolved inbox root at inspection time. These checks
+inspect filesystem state before access; they do not protect against another process
+replacing a directory concurrently. Git metadata is operator-controlled, and hostile
+concurrent mutation of it is outside this helper's supported boundary.
 
 Publication
 -----------
