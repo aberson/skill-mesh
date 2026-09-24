@@ -631,16 +631,14 @@ def test_an_ungraded_public_artifact_aborts_the_release_end_to_end(
 def test_the_packet_describes_exactly_the_artifacts_that_were_scanned(lab_release):
     """The packet's `sanitization.scanned` must describe what was really graded.
 
-    The published field and the scan call site were two verbatim copies of one
-    4-item list, which drift the first time an artifact is added to only one of
-    them -- the packet would then misdescribe the sanitization a consumer is
-    relying on. Graded end to end against a real release: the published field,
-    the single owner, and the files that actually exist must all agree.
+    Graded end to end against a real release: the published field, the scanner's
+    selected files, and the files that actually exist must all agree.
     """
     _, release_dir, _, _ = lab_release
     packet = json.loads((release_dir / "public" / "packet.json").read_text(encoding="utf-8"))
-    assert packet["sanitization"]["scanned"] == list(br.PUBLIC_SCANNED_ARTIFACTS)
-    for name in br.PUBLIC_SCANNED_ARTIFACTS:
+    assert packet["sanitization"]["scanned"] == br.public_scanned_artifacts(
+        release_dir, "lab")
+    for name in packet["sanitization"]["scanned"]:
         assert (release_dir / name).is_file(), (
             "the packet claims %s was scanned, but the release has no such file" % name)
 
@@ -855,10 +853,40 @@ def test_public_packet_excludes_private_evidence(lab_release):
     packet = json.loads((release_dir / "public" / "packet.json").read_text(encoding="utf-8"))
     assert packet["publication_status"] == "NOT_PUBLISHED"
     excluded = {row["path"] for row in packet["exclude"]}
-    for private in ("checks/", "reviews/", "proofs/", "receipt.json"):
+    for private in ("source.zip", "SHA256SUMS", "checks/", "reviews/",
+                    "proofs/", "receipt.json"):
         assert private in excluded, "%s must not be publishable" % private
-    assert "source.zip" in packet["include"] and "release.json" in packet["include"]
+    assert "PUBLIC-SHA256SUMS" in packet["include"]
+    assert "release.json" in packet["include"]
+    assert "source.zip" not in packet["include"]
     assert all(row["reason"].strip() for row in packet["exclude"])
+
+
+def test_public_subset_keeps_pinned_source_private_and_verifies(tmp_path):
+    root, commit = _make_repo(tmp_path / "source", {
+        "README.md": "Private path: /home/alice/private\n",
+        "tests/test_ok.py": TRIVIAL_TEST,
+    })
+    store = tmp_path / "store"
+    result = _release("lab", root, commit, "v1", store)
+    assert result.returncode == 0, result.stdout + result.stderr
+    retained = store / "skill-mesh-lab" / "v1"
+    packet = json.loads((retained / "public/packet.json").read_text(encoding="utf-8"))
+    with zipfile.ZipFile(retained / "source.zip") as archive:
+        assert b"/home/alice/private" in archive.read("README.md")
+    published = tmp_path / "published"
+    published.mkdir()
+    for name in packet["include"]:
+        target = published / name
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(retained / name, target)
+    assert not (published / "source.zip").exists()
+    assert b"/home/alice/private" not in b"".join(
+        path.read_bytes() for path in published.rglob("*") if path.is_file())
+    verified = subprocess.run(
+        [sys.executable, "verify-artifacts.py", packet["hash_manifest"], "."],
+        cwd=published, capture_output=True, text=True)
+    assert verified.returncode == 0, verified.stdout + verified.stderr
 
 
 def test_every_file_the_notes_tell_a_consumer_to_run_is_publishable(lab_release):
@@ -1606,6 +1634,11 @@ def test_toolkit_release_runs_the_pinned_sources_release_entry(kit_qualified):
         assert (release_dir / "dist" / provider).is_dir()
     assert (release_dir / "CHECKSUMS.txt").is_file(), (
         "the ORIGINAL normalized manifest produced by release.ps1 must be retained")
+    packet = json.loads((release_dir / "public/packet.json").read_text(encoding="utf-8"))
+    assert "dist/" in packet["include"]
+    assert "CHECKSUMS.txt" in packet["sanitization"]["scanned"]
+    for provider in br.TOOLKIT_PROVIDERS:
+        assert "dist/%s/SKILL.md" % provider in packet["sanitization"]["scanned"]
 
 
 def test_toolkit_qualification_requires_all_four_gates(kit_qualified):
@@ -3095,7 +3128,7 @@ CLAIM_DISPOSITIONS = {
     'It is a description, not an action: `publication_status` is always `NOT_PUBLISHED`.':
         'test:test_public_packet_excludes_private_evidence',
     # runbook
-    '- **Never publishable**: `checks/` (captured run output carries machine-specific absolute paths), `reviews/` and `proofs/` (imported private evidence), `receipt.json` (a private run record), and `public/` itself.':
+    '- **Never publishable**: the exact retained `source.zip` (its member contents are not inspected here), `SHA256SUMS` (it names private files), `checks/` (captured run output carries machine-specific absolute paths), `reviews/` and `proofs/` (imported private evidence), `receipt.json` (a private run record), and `public/` itself.':
         'test:test_public_packet_excludes_private_evidence',
     # runbook
     'Private consumer backups and raw host records are out of scope entirely — they are never inputs.':
@@ -3241,9 +3274,6 @@ CLAIM_DISPOSITIONS = {
     # module
     'An operator who pastes the runbook line without resolving its variables must be refused, never acted on.':
         'test:test_placeholder_values_are_refused',
-    # module
-    'ONE list: `_build_and_publish` scans exactly these and `build_public_packet` publishes exactly this as `sanitization.scanned`, so the packet can never misdescribe what was actually graded.':
-        'test:test_the_packet_describes_exactly_the_artifacts_that_were_scanned',
     # module
     'Generous ceilings so a real release is never cut short.':
         'descriptive',

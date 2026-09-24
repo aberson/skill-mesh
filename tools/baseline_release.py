@@ -317,16 +317,16 @@ PLACEHOLDER_PATTERNS = (
 #: recipient of the published subset must actually receive it. It is written from
 #: the hardcoded VERIFY_ARTIFACTS_SOURCE constant below and carries no captured
 #: host output, which is what makes `checks/` private in the first place.
-PUBLIC_INCLUDE_COMMON = ("source.zip", "release.json", "SHA256SUMS", "release-notes.md",
+PUBLIC_INCLUDE_COMMON = ("release.json", "PUBLIC-SHA256SUMS", "release-notes.md",
                          "verify-artifacts.py")
 PUBLIC_INCLUDE_TOOLKIT = ("CHECKSUMS.txt", "dist/")
-#: The generated public text artifacts the leak scanner covers, release-relative.
-#: ONE list: `_build_and_publish` scans exactly these and `build_public_packet`
-#: publishes exactly this as `sanitization.scanned`, so the packet can never
-#: misdescribe what was actually graded.
+#: Generated text outside dist/; dist/ members are added from the staged tree.
 PUBLIC_SCANNED_ARTIFACTS = ("release.json", "release-notes.md",
+                            "verify-artifacts.py", "PUBLIC-SHA256SUMS",
                             "public/packet.json", "receipt.json")
 PUBLIC_EXCLUDE = (
+    ("source.zip", "exact pinned source retained privately; archive contents are not scanned"),
+    ("SHA256SUMS", "retained manifest names private files; publish PUBLIC-SHA256SUMS instead"),
     ("checks/", "raw host run records -- captured stdout/stderr carries machine-specific absolute paths"),
     ("reviews/", "imported review evidence -- private review material, kept local"),
     ("proofs/", "imported check evidence -- private run material, kept local"),
@@ -367,7 +367,7 @@ PATH_TOKEN_DOC = {
 #: exists to stop it.
 
 CHECKSUM_SEMANTICS = {
-    "artifacts": "raw SHA-256 over each retained file's bytes; excludes release.json and SHA256SUMS to avoid recursive hashing",
+    "artifacts": "raw SHA-256 over retained file bytes; excludes release.json, SHA256SUMS, and PUBLIC-SHA256SUMS to avoid recursive hashing",
     "SHA256SUMS": "raw SHA-256 over every retained file except SHA256SUMS itself, so it covers release.json",
     "CHECKSUMS.txt": "the ORIGINAL normalized payload manifest produced by tools/release.ps1 over dist/ (CRLF->LF, BOM stripped by the builder); a separate concept from raw whole-file hashes",
     "source.zip": "ZIP container metadata is not part of the identity and need not reproduce byte-for-byte; extracted member contents must, and a repeated request verifies exactly that",
@@ -1747,15 +1747,26 @@ def hash_release_tree(release_dir: Path, exclude):
     ]
 
 
-def write_sha256sums(release_dir: Path, rows):
+def write_sha256sums(release_dir: Path, rows, filename="SHA256SUMS"):
     ordered = sorted(rows, key=lambda row: row["path"])
     body = "".join("%s  %s\n" % (row["sha256"], row["path"]) for row in ordered)
-    (release_dir / "SHA256SUMS").write_text(body, encoding="utf-8", newline="\n")
+    (release_dir / filename).write_text(body, encoding="utf-8", newline="\n")
+
+
+def public_scanned_artifacts(release_dir: Path, product_key: str):
+    names = list(PUBLIC_SCANNED_ARTIFACTS)
+    if product_key == "toolkit":
+        if (release_dir / "CHECKSUMS.txt").is_file():
+            names.append("CHECKSUMS.txt")
+        if (release_dir / "dist").is_dir():
+            names.extend("dist/" + name for name in iter_files(release_dir / "dist"))
+    return names
 
 
 def build_public_packet(release_dir: Path, record: dict, product_key: str, gaps):
     include = list(PUBLIC_INCLUDE_COMMON)
-    if product_key == "toolkit":
+    if (product_key == "toolkit" and (release_dir / "CHECKSUMS.txt").is_file()
+            and (release_dir / "dist").is_dir()):
         include += list(PUBLIC_INCLUDE_TOOLKIT)
     packet = {
         "schema_version": SCHEMA_VERSION,
@@ -1770,7 +1781,7 @@ def build_public_packet(release_dir: Path, record: dict, product_key: str, gaps)
             "This packet describes what MAY be published to the product's existing "
             "remote. Tagging and upload are a separate, later operator step. This "
             "tool creates no tag, uploads nothing, and installs nothing."),
-        "hash_manifest": "SHA256SUMS",
+        "hash_manifest": "PUBLIC-SHA256SUMS",
         "include": sorted(include),
         "exclude": [{"path": path, "reason": reason} for path, reason in PUBLIC_EXCLUDE],
         "evidence_locators_are_public": (
@@ -1779,11 +1790,9 @@ def build_public_packet(release_dir: Path, record: dict, product_key: str, gaps)
             "output carries machine-specific absolute paths."),
         "sanitization": {
             "rule": "no machine-specific absolute user path may appear in a published text artifact",
-            "scanned": list(PUBLIC_SCANNED_ARTIFACTS),
+            "scanned": public_scanned_artifacts(release_dir, product_key),
             "not_scanned": [
-                "source.zip member CONTENTS -- gated upstream by the source repository's "
-                "own committed-path gate (tests/package-integrity/test_manifest_contract.py)",
-                "dist/ artifact bodies -- generated from those same gated sources",
+                "source.zip member contents -- retained privately, excluded from publication",
             ],
         },
         "known_gaps": list(gaps),
@@ -1906,14 +1915,14 @@ def render_release_notes(record: dict, product_key: str) -> str:
     for gap in record["known_gaps"]:
         add("* %s" % md_untrusted(gap))
     add("")
-    add("## Verify the retained bytes")
+    add("## Verify the published bytes")
     add("")
     add("`verify-artifacts.py` ships beside this file and is part of the publishable")
     add("set, so a recipient of the published subset can run it. From the release")
     add("directory, with any Python 3 interpreter:")
     add("")
     add("```")
-    add("python verify-artifacts.py SHA256SUMS .")
+    add("python verify-artifacts.py PUBLIC-SHA256SUMS .")
     add("```")
     if product_key == "toolkit":
         add("")
@@ -1926,9 +1935,10 @@ def render_release_notes(record: dict, product_key: str) -> str:
         add("python verify-artifacts.py CHECKSUMS.txt . --require-dir dist/claude")
         add("```")
     add("")
-    add("`source.zip` container metadata is not part of the identity; its extracted")
-    add("member contents are. Re-running the original command against this same")
-    add("release ID re-verifies both, and refuses rather than overwrites.")
+    add("The exact pinned `source.zip` stays in the private retained release.")
+    add("There, `python verify-artifacts.py SHA256SUMS .` checks all retained")
+    add("files. Re-running the original command also compares extracted source")
+    add("contents with a fresh checkout and refuses to overwrite the release.")
     add("")
     return "\n".join(lines) + "\n"
 
@@ -2050,7 +2060,7 @@ def baseline_gaps(product_key: str):
         "Nothing is published: no tag was created, nothing was uploaded, and no "
         "consumer installation was read or changed.",
         "source.zip member CONTENTS are not re-scanned for machine-specific paths here; "
-        "they are gated upstream by the source repository's own committed-path gate.",
+        "the exact pinned archive is retained privately and excluded from the public packet.",
     ]
     if product_key == "lab":
         gaps.append(
@@ -2298,7 +2308,7 @@ def _build_and_publish(args, ctx, staging: Path) -> int:
 
     exit_code = release_exit_code(product_key, qualification)
 
-    build_public_packet(staging, record, product_key, gaps)
+    packet = build_public_packet(staging, record, product_key, gaps)
     (staging / "release-notes.md").write_text(
         render_release_notes(record, product_key), encoding="utf-8", newline="\n")
     (staging / "receipt.json").write_text(
@@ -2315,14 +2325,22 @@ def _build_and_publish(args, ctx, staging: Path) -> int:
             "evidence": sorted({row["evidence"] for row in checks if row["evidence"]}),
         }, indent=2, sort_keys=True) + "\n", encoding="utf-8", newline="\n")
 
-    record["artifacts"] = hash_release_tree(staging, ("release.json", "SHA256SUMS"))
+    record["artifacts"] = hash_release_tree(
+        staging, ("release.json", "SHA256SUMS", "PUBLIC-SHA256SUMS"))
     (staging / "release.json").write_text(
         json.dumps(record, indent=2, sort_keys=True) + "\n", encoding="utf-8", newline="\n")
-    write_sha256sums(staging, record["artifacts"] + [{
-        "path": "release.json", "sha256": sha256_file(staging / "release.json")}])
+    public_files = [name for name in packet["include"] if name != "PUBLIC-SHA256SUMS"
+                    and not name.endswith("/")]
+    if "dist/" in packet["include"]:
+        public_files.extend("dist/" + name for name in iter_files(staging / "dist"))
+    write_sha256sums(staging, [
+        {"path": name, "sha256": sha256_file(staging / name)} for name in public_files
+    ], filename="PUBLIC-SHA256SUMS")
+    write_sha256sums(staging, hash_release_tree(staging, ("SHA256SUMS",)))
 
     problem = describe_scan_findings(scan_private_paths([
-        (name, staging.joinpath(*name.split("/"))) for name in PUBLIC_SCANNED_ARTIFACTS
+        (name, staging.joinpath(*name.split("/")))
+        for name in packet["sanitization"]["scanned"]
     ]))
     if problem:
         raise ExecutionError(problem)

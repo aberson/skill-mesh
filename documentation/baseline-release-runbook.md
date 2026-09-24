@@ -300,6 +300,7 @@ section 4.1.
   source.zip                     git-tracked files of the pinned commit
   release.json                   the record, schema_version 1
   SHA256SUMS                     raw SHA-256 of every retained file except itself
+  PUBLIC-SHA256SUMS              raw SHA-256 of the publishable files except itself
   release-notes.md               sanitized, public-safe notes
   receipt.json                   this operation's argv / time / exit / evidence
   verify-artifacts.py            the retained verifier (publishable; the notes tell
@@ -327,8 +328,10 @@ Three checksum concepts are deliberately separate, and `release.json`'s
 - `CHECKSUMS.txt` — **normalized payload checksums** produced by `release.ps1` over
   `dist/` (CRLF→LF, BOM stripped by the builder).
 - `SHA256SUMS` and `release.json`'s `artifacts` — **raw whole-file SHA-256** over the
-  retained bytes. `artifacts` excludes `release.json` and `SHA256SUMS` to avoid
-  recursive hashing; `SHA256SUMS` covers `release.json` and excludes only itself.
+  retained bytes. `artifacts` excludes `release.json`, `SHA256SUMS`, and
+  `PUBLIC-SHA256SUMS` to avoid a hash cycle; `SHA256SUMS` covers both the record
+  and the public manifest and excludes only itself. `PUBLIC-SHA256SUMS` covers
+  every publishable file except itself.
 - `source.zip` — its **container metadata** is not part of the identity and need not
   reproduce byte-for-byte. Its **extracted member contents** must.
 
@@ -459,9 +462,10 @@ Common causes, in the order they usually appear:
 `public/packet.json` describes what may be published and what may not. It is a
 description, not an action: `publication_status` is always `NOT_PUBLISHED`.
 
-- **Publishable**: `source.zip`, `release.json`, `SHA256SUMS`, `release-notes.md`,
-  `verify-artifacts.py`, and for the toolkit `CHECKSUMS.txt` and `dist/`.
-- **Never publishable**: `checks/` (captured run output carries machine-specific
+- **Publishable**: `release.json`, `PUBLIC-SHA256SUMS`, `release-notes.md`,
+  `verify-artifacts.py`, and, when built, `CHECKSUMS.txt` and `dist/` for the toolkit.
+- **Never publishable**: the exact retained `source.zip` (its member contents are
+  not inspected here), `SHA256SUMS` (it names private files), `checks/` (captured run output carries machine-specific
   absolute paths), `reviews/` and `proofs/` (imported private evidence), `receipt.json`
   (a private run record), and `public/` itself.
 - `verify-artifacts.py` sits at the release **root**, not under `checks/`, precisely so
@@ -477,7 +481,8 @@ description, not an action: `publication_status` is always `NOT_PUBLISHED`.
   that is `gh auth login` for GitHub Copilot CLI, with no `OPENAI_API_KEY` used or
   needed.
 
-Before retaining anything, the tool scans the generated public text artifacts for
+Before retaining anything, the tool scans the offered generated text files, including
+each `dist/` file, the verifier, the public manifest, and the packet metadata, for
 machine-specific absolute paths — a Windows drive-letter home path in either
 separator, and the POSIX `/home/<user>/…` and `/Users/<name>/…` spellings, because
 only a `toolkit` run requires PowerShell and a `lab` run can therefore be cut off
@@ -520,9 +525,11 @@ generated rather than supplied, invoke the gate from a directory layout that doe
 produce it. Do **not** "fix" this by exempting the token: that exemption existed, was
 measured, and let 3 of 13 real leaks through.
 
-Archive member contents and `dist/` bodies are not re-scanned here; they are gated
-upstream by this repository's own committed-path gate in
-`tests/package-integrity/test_manifest_contract.py`.
+Archive member contents are not re-scanned here; the exact pinned archive stays
+private. The scan recognizes the specified absolute user-path shapes, not arbitrary
+secrets or other private data. On a published subset, run
+`python verify-artifacts.py PUBLIC-SHA256SUMS .`; on the complete retained release,
+run `python verify-artifacts.py SHA256SUMS .`.
 
 The lab baseline stays local. Publication of the toolkit packet to its existing remote
 is a subsequent, exact-packet operator step, and is out of this runbook's scope.
