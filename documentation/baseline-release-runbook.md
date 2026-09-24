@@ -350,11 +350,17 @@ never conflated.
 
 ## 7. Reopen and re-verify a retained release
 
-**Cheap check — hashes only.** From the release directory, with any Python 3
-interpreter. This is also how a consumer verifies a copy:
+**Cheap check — hashes only.** From the private retained release directory, with
+any Python 3 interpreter:
 
 ```powershell
 python verify-artifacts.py SHA256SUMS .
+```
+
+For a copy of the public subset, use its public manifest:
+
+```powershell
+python verify-artifacts.py PUBLIC-SHA256SUMS .
 ```
 
 For a toolkit release, the normalized payload manifest is a separate check:
