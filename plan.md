@@ -6,7 +6,10 @@ The operator selected completion of the preserved mistake-capture candidate with
 Codex coordinating and Sol building. The [execution record](documentation/mistake-capture-step153-completion.md)
 owns the bounded continuation and one integrated full-suite gate. Five historical
 developer iterations and four deep reviews remain recorded; iteration 5's repair
-awaits closing review and acceptance. Step 153/#219 is in progress, not DONE.
+has now received closing review. The [completion checkpoint](documentation/findings/mistake-capture-closure-2026-09-23.md)
+records five passing lenses and one confirmed security Block; a local-filesystem
+trust decision is pending. Step 153/#219 remains unfinished. The full suite has
+not started; no merge or issue closure is claimed.
 Step 154/#220 remains attended work. Other tracks are not resumed by this selection.
 
 ## Revised proposal — context continuity and learning (2026-09-19)
