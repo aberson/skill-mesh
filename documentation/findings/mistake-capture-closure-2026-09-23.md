@@ -1,5 +1,9 @@
 # Step 153 completion checkpoint
 
+**Current outcome (2026-09-24): accepted under operator-approved LH-E1.** The final
+narrow closeout is recorded at the end of this document. Earlier stopped/unmerged
+statements below describe their historical checkpoints, not the current outcome.
+
 Initial reviewed candidate: `48c926f392a6a4b06212bd92037ffe637c5f3b2b`, based on
 `110d916df9d46916fa7aeee19fefc2847b9f5476`. The preserved implementation was
 integrated with current main without changing its behavior. The original dirty
@@ -120,3 +124,43 @@ should have accounted for that duplication and arranged prompt failure reporting
 No extra feature scope was added in the closing passes, but repeated six-lens
 reviews of wording changes also added ceremony. These are follow-up observations,
 not authorization to expand this completion attempt into an infrastructure build.
+
+## Approved LH-E1 closeout
+
+The operator approved the proposed 30-minute narrow repair, focused checks and
+single closing review, then requested execution before Baseline releases. The
+[completion record](../mistake-capture-step153-completion.md) owns LH-E1 and its
+07:07:15–07:37:15 UTC window. This accepts Step 153 without pretending the prior
+root gate completed or changing the default gate for another step.
+
+Sol updated only the Phase CD status contract test: it now requires the recorded
+observed Step 156 qualification, retains the ordinary-Codex limitation and the
+independent Claude-route boundary, and mutation-checks each requirement. The
+repair and explicit exception are committed as
+`6018cb1cc035a07a463ef05eb19ccd6d8b5bded5`.
+
+The single command
+`python -m pytest tests/package-integrity/test_codex_agent_isolation_contract.py -q`
+printed **35 passed in 2.09 seconds**; launcher wall time was 3.314 seconds. The
+launcher exited 0, but PowerShell returned no child exit code. The receipt keeps
+that limitation explicit; pytest stdout supplies the pass-count evidence. No
+test was rerun merely to replace the receipt.
+
+One fresh independent Terra closing review returned **PASS, no findings**, on the
+two-file delta and focused evidence. All 612 tracked files were unchanged during
+review. This is a narrow closing verdict, not another six-lens invocation or an
+authenticated restart of the historical controller. Existing full-feature review,
+helper smoke and provider-build evidence remain preserved.
+
+Step 153 is accepted for landing under LH-E1. Only administrative status/receipt
+Markdown changes follow the reviewed candidate; source, tests, configuration and
+packaged skill inputs retain their accepted identities. The root run remains
+failed/incomplete, including unfinished release and tail checks. The hostile
+concurrent directory-replacement limitation remains accepted. Step 154/#220 stays
+pending; no live profile activation is included.
+
+New private receipts are under `.build-step/closure-20260924-scoped/`:
+`contract-pytest.receipt.json`, `contract-pytest.stdout.txt`,
+`contract-pytest.stderr.txt`, `closing-review.json`, `review-inputs.json` and
+`review-mutation-audit.json`. Both preserved worktrees and prior raw evidence remain
+available. No further test or review campaign was started for this closeout.

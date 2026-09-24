@@ -9,6 +9,12 @@ route, cumulative retry ceiling, deadline and single-root-gate reuse exception.
 It supersedes the older Claude-only launch directions below for this continuation.
 All product acceptance requirements and Step 154's attended boundary remain.
 
+**Closeout amendment (2026-09-24):** Step 153 is accepted under the operator-approved
+LH-E1 exception in the completion record. That exception supersedes this step's
+full-root-gate requirement for this landing only, retaining the failed/incomplete
+historical run and the approved local-filesystem trust boundary. Step 154 remains
+pending; no installed-host acceptance or daily-profile adoption is claimed.
+
 **Objective:** preserve an evidenced in-session mistake and harvest it at unchanged Git HEAD, using lesson-harvest's existing five-store deduplication and draft-only boundary.
 
 This is Project 2 of the accepted [context-learning portfolio](context-learning-plan.md). It reserves **Steps 153–154**: one implementation slice, then attended Codex acceptance. The September 19 scan covered 29 Skill Mesh worktrees; other plans reserve through 152, including baseline releases (BR, Steps 147–152). The abandoned portfolio Steps 132–138 remain withdrawn.
@@ -154,7 +160,7 @@ LH-D6: one implementation step and one attended acceptance step. One complete re
 
 - **Problem:** In-session mistakes can disappear without a commit, and equal HEAD currently suppresses the scan.
 - **Type:** code
-- **Status:** TODO
+- **Status:** DONE (2026-09-24; scoped acceptance exception LH-E1)
 - **Issue:** #219
 - **Flags:** --reviewers deep --isolation worktree
 - **Files:** canonical lesson-harvest core and all three adapters; new _shared/lesson_observations.py; new tests/package-integrity/test_lesson_observations.py; tests/distributions/test_distributions.py; new documentation/mistake-capture-acceptance.md. Preserve builder, manifest, installer, hooks, AP and other skills.

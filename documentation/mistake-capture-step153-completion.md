@@ -122,3 +122,14 @@ merge and push its preserved candidate, and close #219. Keep Step 154/#220 pendi
 The earlier root run remains **failed/incomplete**, with the release/tail checks
 unfinished and other possible failures unexcluded. Do not claim a new full-suite
 PASS or an authenticated ADVANCE for a restarted historical controller.
+
+**LH-E1 result:** accepted at candidate
+`6018cb1cc035a07a463ef05eb19ccd6d8b5bded5`. The one contract-file run printed
+**35 passed in 2.09 seconds** (3.314 seconds launcher wall time); launcher exit was
+0, but PowerShell did not capture the child exit code. The receipt preserves that
+limitation and the full stdout. One fresh Terra closing review returned PASS with
+no findings and explicitly noted this evidence limitation. All 612 tracked files
+were unchanged across review. No root, release, installation or helper rerun
+followed. Landing status/receipt edits are administrative Markdown only; reviewed
+test and feature inputs remain unchanged. The full historical gate is still
+failed/incomplete, and Step 154 remains pending.
