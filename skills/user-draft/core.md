@@ -62,9 +62,16 @@ Both branches run the same pass:
 
 1. **Find the gaps.** Ambiguities, missing constraints (format, scope, audience, edge cases),
    assumed context, contradictions, weak verbs ("handle", "process", "deal with").
-2. **Ask targeted questions.** 3–5 focused questions, only the ones that meaningfully change the
+2. **Sweep for proportionality (PROMPT branch).** When the input is an existing prompt or describes
+   a multi-step workflow, identify the stated outcome or named failure mode protected by every
+   specified skill, artifact, test family, review pass, and gate. Remove items with no such tie,
+   duplicated ceremony, speculative hardening, and exhaustive cross-products when a smaller
+   representative check proves the same thing. Preserve user-owned scope, safety and authorization
+   boundaries, direct regressions for known failures, and acceptance gates. Do not invent extra
+   process merely to perform this sweep.
+3. **Ask targeted questions.** 3–5 focused questions, only the ones that meaningfully change the
    output. Skip entirely if the input is already clear. Do not ask obvious questions.
-3. **Polish** per the branch below, after the user answers (or directly if no questions needed).
+4. **Polish** per the branch below, after the user answers (or directly if no questions needed).
 
 Preserve the user's voice and intent — refine, don't rewrite into a template.
 
@@ -81,7 +88,8 @@ Produce the improved prompt with:
 - **Negative examples** where they prevent a known failure mode ("do NOT …")
 
 Return the prompt in a fenced code block (see Step 4 for the preamble). Follow it with a 2–4 line
-`## Changes` summary of what you tightened and why.
+`## Changes` summary of what you tightened and why. If the proportionality sweep removed material
+requirements, name the cuts and why the remaining proof is sufficient.
 
 ## Step 3b — GOAL branch
 
