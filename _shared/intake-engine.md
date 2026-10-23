@@ -24,7 +24,7 @@ vocabulary, and check command live here **once** (per `code-quality.md § "One s
 for data-shape constants"`). When any grammar below changes, grep
 the gateway skill + the routing web + this file before landing.
 
-**Sibling, not generalization.** This file is modeled on `shakedown-engine.md`
+**Sibling, not generalization.** This file is modeled on `<repo>/_shared/shakedown-engine.md`
 and deliberately kept a **sibling with its own pinned grammar**: the two schemas are independent
 and evolve independently (the shakedown grammar has three live consumers and its own executed
 fixtures; sharing a table schema would couple them for no gain). The only reused element is the
@@ -51,7 +51,7 @@ rail skills writing back a re-route (§5) may be running anywhere.
 ### Topic slug (reused by cross-reference)
 
 `<topic-slug>` is computed from the gateway's topic argument by the **deterministic
-feature-slug rule in `shakedown-engine.md § 1`** — that rule is stated
+feature-slug rule in `<repo>/_shared/shakedown-engine.md § 1`** — that rule is stated
 once there and reused here by cross-reference, **never restated** (one owner per contract,
 `knowledge-placement.md`). Same rule for the same reason:
 every writer — the gateway seeding rows, a rail skill writing back, the `/goal` evaluator —
@@ -116,7 +116,7 @@ fragment or disposition prose.
 A **well-formed data row** matches, in full:
 
 ```
-^\| *F[0-9]+ *\|[^|]*\|[^|]*\| *(open|routed|parked|done) *\|.*$
+^\| *F[0-9]+ *\|[^|]*\|[^|]*\| *(open|routed|parked|done) *\|.*[^|[:space:]].*$
 ```
 
 (row starts with an `F<n>` id, a fragment cell and a route cell each with no interior pipe, a
@@ -129,8 +129,10 @@ included — or it counts as open. Anchoring data-row detection on the id itself
 whose id cell got corrupted (`X9`, blank, lowercase `f1`) vanish from the count entirely — the
 one corruption class that could silently close the goal.
 
+A terminal outcome must contain at least one character other than whitespace or the table delimiter. A bare closing pipe does not count as evidence.
+
 The disposition is the **terminal** cell and may itself contain pipes — seed text routinely does
-(`pytest -k export | tail -1`, `grep -E 'a|b'`) — so it is matched with `.*$`, never `[^|]*`.
+(`pytest -k export | tail -1`, `grep -E 'a|b'`) — so it is matched with `.*[^|[:space:]].*$`, never restricted to `[^|]*`.
 Pinning it pipe-free would miscount a genuinely-`routed` row whose seed quotes a piped command
 as malformed → `open`, which would make the zero-open `/goal` **unreachable** even on a clean
 ledger.
@@ -172,21 +174,24 @@ questions stay visibly waiting in the ledger; they are simply not intake work. `
 
 ```bash
 LEDGER="$(git rev-parse --show-toplevel)/.claude/task-state/intake-<topic-slug>.md"
-[ -f "$LEDGER" ] || { echo "ABORT: ledger not found: $LEDGER" >&2; exit 1; }          # fail loud — never a silent 0
-grep -qE '^\| *id *\|' "$LEDGER" || { echo "ABORT: no ledger header in: $LEDGER" >&2; exit 1; }  # truncated/garbage file
+[ -f "$LEDGER" ] && [ -r "$LEDGER" ] || { echo "ABORT: ledger not found: $LEDGER" >&2; exit 1; }          # fail loud — never a silent 0
 STATUS='open|routed|parked|done'   # the four status words — canonical list, defined once, reused below
 
 # data rows = every table row EXCEPT the header and the structural separator (id-agnostic:
 # an id-corrupted row still lands in DATA, fails WELL below, and so counts as open)
-ROWS=$(grep -cE '^\|' "$LEDGER")
-HEADER=$(grep -cE '^\| *id *\|' "$LEDGER")
-SEP=$(grep -cE '^\|[-:| ]*-[-:| ]*$' "$LEDGER")
+ROWS=$(grep -cE '^\|' "$LEDGER") || [ "$?" -eq 1 ] || { echo "ABORT: ledger read failed" >&2; exit 1; }
+HEADER=$(grep -cE '^\| *id *\| *fragment *\| *route *\| *status *\| *disposition *\|[[:space:]]*$' "$LEDGER") || [ "$?" -eq 1 ] || { echo "ABORT: ledger read failed" >&2; exit 1; }
+SEP=$(grep -cE '^\|[-:| ]*-[-:| ]*$' "$LEDGER") || [ "$?" -eq 1 ] || { echo "ABORT: ledger read failed" >&2; exit 1; }
+[ "$HEADER" -eq 1 ] && [ "$SEP" -eq 1 ] || { echo "ABORT: expected one complete header and separator" >&2; exit 1; }
+TABLE=$(grep -E '^\|' "$LEDGER") || { echo "ABORT: ledger table unavailable" >&2; exit 1; }
+printf '%s\n' "$TABLE" | sed -n '1p' | grep -qE '^\| *id *\| *fragment *\| *route *\| *status *\| *disposition *\|[[:space:]]*$' || { echo "ABORT: header must be first table row" >&2; exit 1; }
+printf '%s\n' "$TABLE" | sed -n '2p' | grep -qE '^\|[-:| ]*-[-:| ]*[[:space:]]*$' || { echo "ABORT: separator must follow header" >&2; exit 1; }
 DATA=$(( ROWS - HEADER - SEP ))
 # well-formed rows = data rows matching the FULL grammar, F<n> id included.
-# Disposition is the TERMINAL cell (matched `.*$`) so it may contain pipes — seed text does.
-WELL=$(grep -cE "^\| *F[0-9]+ *\|[^|]*\|[^|]*\| *($STATUS) *\|.*$" "$LEDGER")
+# Disposition is the TERMINAL cell (matched with a required nonblank, non-pipe character) so it may contain pipes — seed text does.
+WELL=$(grep -cE "^\| *F[0-9]+ *\|[^|]*\|[^|]*\| *($STATUS) *\|.*[^|[:space:]].*$" "$LEDGER") || [ "$?" -eq 1 ] || { echo "ABORT: ledger read failed" >&2; exit 1; }
 # open-status rows (status cell is exactly `open`)
-OPEN=$(grep -cE '^\| *F[0-9]+ *\|[^|]*\|[^|]*\| *open *\|' "$LEDGER")
+OPEN=$(grep -cE '^\| *F[0-9]+ *\|[^|]*\|[^|]*\| *open *\|' "$LEDGER") || [ "$?" -eq 1 ] || { echo "ABORT: ledger read failed" >&2; exit 1; }
 
 MALFORMED=$(( DATA - WELL ))
 UNROUTED=$(( OPEN + MALFORMED ))
@@ -219,10 +224,13 @@ the table from conversation memory silently drops rows written by other sessions
 Seed a fresh table **only when the file is absent**. The near-miss safety net keys on the
 **topic slug, never on any-ledger-exists**: other topics' ledgers routinely coexist under
 `intake-*.md`, and an existing ledger for a *different* topic must never block seeding a new
-one. Before seeding, glob `<git-root>/.claude/task-state/intake-*.md` and load-instead-of-seed
-only when an existing filename matches the computed topic slug or is an obvious near-miss of
-it (one slug contains the other — two phrasings of the same topic); otherwise seed the new
-ledger.
+one. Before seeding, glob `<git-root>/.claude/task-state/intake-*.md`. An exact topic-slug
+match takes precedence and is loaded as-is. A substring or similar filename alone does
+not establish topic identity. For a possible near match, inspect its topic and scope:
+load it only when those establish the same intended topic. A distinct topic gets its
+own new ledger. If identity remains ambiguous, or multiple ledgers plausibly match,
+ask which topic/ledger the operator intends before writing; never select arbitrarily
+or silently replace the requested topic with a loaded slug.
 
 **One session writes a given ledger at a time** (the workspace's parallel-session rules
 apply); a rail-skill write-back appends to its named row only — it never rewrites the table.

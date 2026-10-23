@@ -1,0 +1,136 @@
+{
+  "manifest_version": 2,
+  "skill": "user-gateway",
+  "generated_at": "2026-07-13T00:00:00Z",
+  "good_source": "hand-crafted",
+  "additional_goods": [
+    {
+      "file": "good_multirail_vent.md",
+      "scenario": "scenario_multirail_vent",
+      "passes_all": true,
+      "note": "Embedded ledger executed against the intake-engine §3 check: scores 0 (4 routed + 1 parked; parked does not count as open)."
+    },
+    {
+      "file": "good_cruft_investigate.md",
+      "scenario": "scenario_nonplan_cruft",
+      "passes_all": true,
+      "note": "Embedded ledger executed against the intake-engine §3 check: scores 0 (3 routed)."
+    },
+    {
+      "file": "good_loaded_resume.md",
+      "scenario": "scenario_loaded_resume",
+      "passes_all": null,
+      "note": "Source-only anchor added for the resumable-intake contract; no grader result claimed."
+    },
+    {
+      "file": "good_preflight_matrix.md",
+      "scenario": "scenario_preflight_matrix",
+      "passes_all": null,
+      "note": "Source-only anchor added for dependency, empty-slug, and exact-identity preflight behavior; no grader result claimed."
+    }
+  ],
+  "verification_summary": {
+    "verified_single_defect": 10,
+    "ungraded": 2,
+    "total_bads": 12,
+    "note": "Historical verification metadata is preserved for the original corpus. New r2 fixtures are source-only and carry no grader result."
+  },
+  "bads": [
+    {
+      "file": "bad_second_question_round.md",
+      "defect_type": "listening - second question round, oversized round, or blocking",
+      "assertion_id": 1,
+      "scenario": "scenario_multirail_vent",
+      "verified_fails": true,
+      "regen_attempts": 1
+    },
+    {
+      "file": "bad_unprompted_suggestion.md",
+      "defect_type": "posture - unprompted suggestion (proposing, not converting)",
+      "assertion_id": 2,
+      "scenario": "scenario_multirail_vent",
+      "verified_fails": true,
+      "regen_attempts": 1
+    },
+    {
+      "file": "bad_dropped_fragment.md",
+      "defect_type": "coverage - voiced fragment dropped before the ledger",
+      "assertion_id": 3,
+      "scenario": "scenario_multirail_vent",
+      "verified_fails": true,
+      "regen_attempts": 1
+    },
+    {
+      "file": "bad_corrupted_row_id.md",
+      "defect_type": "ledger - malformed row or wrong path",
+      "assertion_id": 4,
+      "scenario": "scenario_multirail_vent",
+      "verified_fails": true,
+      "regen_attempts": 1
+    },
+    {
+      "file": "bad_row_left_open.md",
+      "defect_type": "ledger - row left open at gateway close",
+      "assertion_id": 5,
+      "scenario": "scenario_multirail_vent",
+      "verified_fails": true,
+      "regen_attempts": 1
+    },
+    {
+      "file": "bad_distrust_routed_bug.md",
+      "defect_type": "routing - route inconsistent with the web/tiebreak",
+      "assertion_id": 6,
+      "scenario": "scenario_multirail_vent",
+      "verified_fails": true,
+      "regen_attempts": 1
+    },
+    {
+      "file": "bad_decide_ground_through.md",
+      "defect_type": "routing - decide fragment ground through",
+      "assertion_id": 7,
+      "scenario": "scenario_multirail_vent",
+      "verified_fails": true,
+      "regen_attempts": 1
+    },
+    {
+      "file": "bad_vague_seed.md",
+      "defect_type": "seeds - not ready-to-paste for the row's rail",
+      "assertion_id": 8,
+      "scenario": "scenario_multirail_vent",
+      "verified_fails": true,
+      "regen_attempts": 1
+    },
+    {
+      "file": "bad_missing_quick_copy.md",
+      "defect_type": "closing - ledger path, /goal, or QUICK COPY missing",
+      "assertion_id": 9,
+      "scenario": "scenario_multirail_vent",
+      "verified_fails": true,
+      "regen_attempts": 1
+    },
+    {
+      "file": "bad_inlined_routing_table.md",
+      "defect_type": "duplication - routing table inlined instead of cited",
+      "assertion_id": 10,
+      "scenario": "scenario_nonplan_cruft",
+      "verified_fails": true,
+      "regen_attempts": 1
+    },
+    {
+      "file": "bad_stale_quick_copy.md",
+      "defect_type": "closing - loaded pass replays an earlier routed seed",
+      "assertion_id": 9,
+      "scenario": "scenario_loaded_resume",
+      "verified_fails": null,
+      "regen_attempts": 0
+    },
+    {
+      "file": "bad_empty_slug_write.md",
+      "defect_type": "preflight - missing dependency, empty slug, or ambiguous identity writes anyway",
+      "assertion_id": 11,
+      "scenario": "scenario_preflight_matrix",
+      "verified_fails": null,
+      "regen_attempts": 0
+    }
+  ]
+}

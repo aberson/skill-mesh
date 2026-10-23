@@ -1,0 +1,107 @@
+{
+  "skill": "user-gateway",
+  "version": "1.0",
+  "description": "Discrimination-based evaluation for user-gateway's INTAKE contract (created 2026-07-13, plan Step 12 / #313). user-gateway is a THIN converter: listening pass per user-draft's discipline (gaps -> 3-5 targeted questions, ONE round max, never block), every voiced fragment lands as an intake-ledger row per intake-engine.md (path formula, row grammar, status vocabulary — cited, never restated), routes chosen by CONSULTING the routing web (skill-pipeline.md § 'The 8 rails' + tiebreak — cited, never inlined), a ready-to-paste seed per routed row, decide rows PARKED never ground through, and a closing block (ledger path + canonical /goal + QUICK COPY). Pinned posture: CONVERT, DON'T PROPOSE — an unprompted suggestion is a defect (plan §8 risk row). Each assertion is judged against the full output a /user-gateway run produces on a scenario. All conditions are OUTPUT-observable (the graded artifact carries its own evidence: the echoed fragment split, the question round, the embedded written ledger, the per-row seeds, the closing block), so the same assertions grade both scenario renders and the golden corpus.",
+  "passing_threshold": "9/11",
+  "scoring_convention": "Applicable-assertions-only: assertion 7 grades TRUE by vacuous condition when the vent contains no decide-shaped fragment; assertion 1 grades zero questions as a pass when the output notes the vent was already clear. Per-category scores aggregated by weight: 0.30 Listening & conversion posture, 0.35 Ledger & routing, 0.35 Seeds & closing block. Simple score also reported as TRUE/11 for transparency. Threshold follows the total-minus-2 convention.",
+  "categories": [
+    {
+      "name": "Listening & conversion posture",
+      "description": "user-draft's listening discipline (one round, 3-5 targeted, never block) plus the pinned CONVERT-DON'T-PROPOSE posture: nothing invented, nothing dropped.",
+      "weight": 0.30,
+      "evals": [
+        {
+          "id": 1,
+          "statement": "The listening pass runs AT MOST one round of clarifying questions, sized 3-5 (or zero when the vent is already clear, with the zero explicitly noted), and never blocks: unanswered questions are carried forward as explicitly-marked assumptions in the affected rows/seeds, and no second question block appears anywhere after the operator's answers (no 'a couple more before I route', no follow-up round). A second question round, a round larger than 5, or a run that stalls waiting for answers instead of proceeding-with-assumptions grades FALSE. (A ledger row left at status open is graded by assertion 5, not here — this assertion grades the question round and the run's forward progress, not row statuses.)",
+          "source": "user-gateway SKILL.md Step 1; user-draft SKILL.md Step 2 + Principles (never block)",
+          "defect_type": "listening - second question round, oversized round, or blocking",
+          "result": null
+        },
+        {
+          "id": 2,
+          "statement": "Convert, don't propose: every ledger row and every seed traces to a fragment the operator actually voiced in the vent (or to their direct answer to a clarifying question). Any invented work item — an extra row, per-row seed, or QUICK COPY line for something the operator never said ('while we're in there…', 'you should also…', 'my suggestion:') — grades FALSE. Wanting ideas is /goblin-suggest's job. (Autonomously answering a decide-shaped question the operator DID voice is graded by assertion 7, not here.)",
+          "source": "user-gateway SKILL.md Pinned posture; skill-web-consolidation plan §8 risk 'user-gateway scope creep toward proposing'",
+          "defect_type": "posture - unprompted suggestion (proposing, not converting)",
+          "result": null
+        },
+        {
+          "id": 3,
+          "statement": "Fragment coverage is total: every distinct fragment the listening pass identifies (and every distinct fragment in the vent) lands as exactly one ledger row — none silently dropped between the echoed split and the ledger, none merged away without a stated reason. A fragment acknowledged in the listening-pass split that appears in no ledger row grades FALSE.",
+          "source": "user-gateway SKILL.md Steps 1-2; intake-engine.md §4 (one row per fragment)",
+          "defect_type": "coverage - voiced fragment dropped before the ledger",
+          "result": null
+        }
+      ]
+    },
+    {
+      "name": "Ledger & routing",
+      "description": "The embedded written ledger obeys intake-engine's grammar; every row is terminal for the gateway; routes are consistent with the routing web's entry conditions + tiebreak; decide rows park.",
+      "weight": 0.35,
+      "evals": [
+        {
+          "id": 4,
+          "statement": "The output embeds the written ledger at the intake-engine path selected by its exact normalized topic identity (<git-root>/.claude/task-state/intake-<topic-slug>.md), uses the loaded file's slug thereafter, and every data row is well-formed per intake-engine §2: an F<N> id (gapless ascending — from F1 on a fresh ledger, continuing the existing sequence on an append pass), pipe-free fragment and route cells, a status cell holding exactly one of open/routed/parked/done, and a non-empty one-line disposition (pipes are legal ONLY in the terminal disposition cell). Any corrupted id (X2, F2b), interior-cell pipe, unknown status word, empty disposition, paragraph-length disposition, wrong ledger path, or silent near-match load grades FALSE.",
+          "source": "intake-engine.md §1-§2 (path formula, row grammar, ids, one-line disposition)",
+          "defect_type": "ledger - malformed row or wrong path",
+          "result": null
+        },
+        {
+          "id": 5,
+          "statement": "Every row is terminal for the gateway at close: each status cell reads routed, parked, or done — never open. A fragment the gateway cannot safely route parks with the routing question stated; a row left at status open — regardless of its disposition wording — grades FALSE. This assertion is the ONE owner of the open-row defect (assertions 1 and 6 carve it out to here).",
+          "source": "user-gateway SKILL.md Step 2 (no row stays open at close); intake-engine.md §2 (routed is terminal for the gateway)",
+          "defect_type": "ledger - row left open at gateway close",
+          "result": null
+        },
+        {
+          "id": 6,
+          "statement": "Routes are consistent with the routing web for every non-decide row: each route cell names one of the web's rails and fits its fragment per the web's entry conditions and tiebreak as cited — in particular, distrust with no repro or failing check in hand lands verify (not bug), cruft-smell about a plan document lands trim while cruft-smell NOT about a plan document lands investigate first (the web's trim note). A misrouted row (e.g. the distrust fragment sent to bug with a /user-debug seed) grades FALSE. (Decide-shaped fragments are graded by assertion 7, not here; a row left at status open — including its placeholder '-' route cell, intake-engine §2's own convention for unrouted rows — is graded by assertion 5, not here.)",
+          "source": "user-gateway SKILL.md Step 2; skill-pipeline.md § 'The 8 rails' (entry conditions + tiebreak — consulted and cited, never restated)",
+          "defect_type": "routing - route inconsistent with the web/tiebreak",
+          "result": null
+        },
+        {
+          "id": 7,
+          "statement": "An unresolved operator-only choice is PARKED and never ground through: a new or still-unanswered decide-shaped fragment has status parked with its open question stated, and the gateway never answers it, picks a side, or derives a plan/do seed from an unmade decision. On a loaded ledger, when the operator explicitly answers that parked decide row, recording the operator's answer and changing the row to done is correct; it is not autonomous deciding. A row where the gateway chose without the operator grades FALSE. Grades TRUE by vacuous condition when the vent contains no decide-shaped fragment.",
+          "source": "user-gateway SKILL.md Step 3 (decide shape); skill-pipeline.md decide rail + any->decide edge; intake-engine.md §2-§3 (parked semantics)",
+          "defect_type": "routing - decide fragment ground through",
+          "result": null
+        }
+      ]
+    },
+    {
+      "name": "Seeds & closing block",
+      "description": "Ready-to-paste seeds matching each row's rail, a complete closing block (path + canonical /goal + QUICK COPY), and routing authority cited rather than inlined.",
+      "weight": 0.35,
+      "evals": [
+        {
+          "id": 8,
+          "statement": "Every row routed in this pass carries a ready-to-paste seed matching its row's route, emitted in the per-row output: bug -> a complete /user-debug --symptom '...' line; plan -> a full /plan-feature seed paragraph in the OUTPUT (the ledger disposition keeps only the one-line form); investigate -> a deep-research charter for the receiving window to dispatch via Workflow({name: \"deep-research-pinned\"}) (never the built-in deep-research name) for external/multi-source questions, or a scoped Explore-agent framing for codebase-local ones; verify -> one of the verify rail's four mode invocations (/review-uat, /user-uat, /user-shakedown, /user-walkthrough); trim -> a /plan-trim invocation naming the explicit readable plan-file path, never merely a project name or directory; do -> the two-step pair (a /goblin-suggest --small <project> line, then a /goblin-do <matching atom id or fuzzy text> line — /goblin-do resolves persisted atoms only, so a bare /goblin-do on a freshly-voiced task fails to resolve and grades FALSE); draft -> a /user-draft line. The gateway emits the charter or framing as text and does not dispatch it. Vague hand-wave prose in place of a paste-able seed ('worth chasing X with user-debug sometime') grades FALSE.",
+          "source": "user-gateway SKILL.md Step 3 (seed shapes per rail); CLAUDE.md deep-research dispatch rule",
+          "defect_type": "seeds - not ready-to-paste for the row's rail",
+          "result": null
+        },
+        {
+          "id": 9,
+          "statement": "The closing block is complete, carrying all three elements: (a) the ledger path, (b) the canonical /goal line for the actual written file's slug exactly as intake-engine §3 defines it, and (c) a QUICK COPY section listing every seed routed in this pass (including a previously parked routing-question row resolved now, excluding earlier routed rows, `already F<n>` echoes, decide rows resolved to done, and rows still parked). A closing block missing any element, naming a requested near-match slug instead of the loaded slug, omitting a row routed this pass, or replaying stale seeds grades FALSE.",
+          "source": "user-gateway SKILL.md Step 4; intake-engine.md §3 (canonical /goal, defined once there)",
+          "defect_type": "closing - ledger path, /goal, or QUICK COPY missing",
+          "result": null
+        },
+        {
+          "id": 10,
+          "statement": "Routing authority is CITED, never inlined: the output names the routing web (skill-pipeline.md § 'The 8 rails') as where routes come from, and does NOT reproduce a rail-by-rail entry-condition table (verbatim or paraphrased) as its own routing reference. Naming a rail beside its row or seed is fine; an inlined table — or an equivalent list/bullet reproduction of the rail-to-entry-condition mapping — grades FALSE.",
+          "source": "user-gateway SKILL.md Pinned posture + routing bullet (defect clause); skill-pipeline.md intro (no skill hardcodes its own routing table)",
+          "defect_type": "duplication - routing table inlined instead of cited",
+          "result": null
+        },
+        {
+          "id": 11,
+          "statement": "Preflight fails closed before any ledger write: all required shared contracts must be readable or the output returns required_tool_missing naming the missing contract; a topic whose normalized slug is empty requires explicit clarification and never creates intake-.md; exact normalized identity is used for load-before-derive, while ambiguous near matches require clarification rather than an arbitrary load. Any ledger write or seed emission after one of these preflight failures grades FALSE.",
+          "source": "user-gateway core.md provider-neutral prerequisites + Step 0; intake-engine.md §1; shakedown-engine.md §1",
+          "defect_type": "preflight - missing dependency, empty slug, or ambiguous identity writes anyway",
+          "result": null
+        }
+      ]
+    }
+  ]
+}
