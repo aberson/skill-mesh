@@ -1,8 +1,8 @@
-# NOTE: This is the canonical provider-independent contract. Both provider wrappers must load it in full.
+# NOTE: This is the canonical provider-independent contract. Every provider wrapper (Claude, Codex, GPT) must load it in full.
 
 ## Provider-neutral host abstractions
 
-- Resolve supporting assets and relative script paths against `.claude/skills/user-learn/`; the canonical prose lives here while implementation assets remain with the compatibility launcher.
+- This skill ships no scripts. `evals/` is support material that stays with the compatibility launcher at `.claude/skills/user-learn/evals/`. Project paths such as `scripts/run_all_notebooks.sh` resolve against the output project root (default `applied_learning/`), never against the skill directory.
 - A named skill call means the host's skill-dispatch primitive. An Agent, Explore agent, workflow, or sub-agent means an isolated task/action invocation with fresh context and the requested capability tier. Provider wrappers map these roles to their native APIs.
 - Model tier names in inherited procedures describe capability roles. Resolve them through `config/model-tier-map.json`; an unavailable required capability returns `required_tool_missing` rather than weakening a gate.
 - Never expose hidden chain-of-thought. Preserve only decisions, evidence, commands, structured artifacts, and operator-facing rationale required by this contract.
@@ -14,6 +14,16 @@ Turn a topic into a self-contained, **hands-on** learning folder. The method is 
 Two phases: a short **interactive setup** (get topic, confirm scope, ground in the user's real projects), then **parallel authoring** (one background sub-agent per file; notebook agents author AND execute their own notebook until it runs clean).
 
 Default output root is the `applied_learning/topics/<slug>/` repo. The skill is topic-agnostic and reusable for any future concept.
+
+## Contract
+
+- **Input:** `<topic>` (required), optional depth `maximal` (default) or `lite`, optional output project root (default `applied_learning/` under the dev workspace root). Bare invocation: ask once for the topic; write nothing until it is answered.
+- **Output:** the topic folder (Output layout), its `README.md` and `20-mentoring/progress.md`, and the Step 7 report in chat.
+- **Allowed writes** (project-visible writes; tool-managed caches such as the uv, Jupyter and matplotlib caches are excluded): only inside `<root>/topics/<slug>/`, plus three pre-existing project mechanics: one `uv sync --project <root> --locked --inexact` of the output project (it may create `<root>/.venv/` or install declared packages into it; it never rewrites `<root>/uv.lock` and keeps undeclared packages, except one uv must replace because it conflicts with a declared dependency), new dataset files in the shared `<root>/data/` cache (existing entries are never deleted or overwritten), and each notebook agent's own `NN`-unique temp files (deleted after use). Never edit another topic, the project's `pyproject.toml`, `uv.lock`, scripts or plan, or goblin's source. Every Step 4 arm prompt carries this boundary (the BOUNDARY lines in the templates).
+- **No git:** the skill never stages, commits or pushes. The new folder is left uncommitted for the operator.
+- **Setup writes nothing:** Steps 1-3 only read and ask.
+- **Stops (write nothing):** the topic folder already exists; `<root>/pyproject.toml` is missing; the host cannot dispatch the Step 4 isolated arms (`required_tool_missing`, reported after setup, before any preflight write). A failed preflight `uv sync` (including a missing or stale `<root>/uv.lock`, which `--locked` refuses to rewrite) or dataset pre-fetch also stops the run before any arm is dispatched: no topic file is written, and the report names any `.venv/` or `data/` change already made.
+- **Re-runs:** a second run for the same slug hits the existing-topic guard, so a partial folder from an interrupted run is never overwritten; the operator extends or removes it.
 
 ## When to use
 
@@ -29,13 +39,13 @@ Default output root is the `applied_learning/topics/<slug>/` repo. The skill is 
 
 ### 1. Get the topic
 
-Required argument. Derive a kebab-case slug. Confirm the output path (default `applied_learning/topics/<slug>/` relative to the dev workspace root).
+Required argument; if invoked bare, ask once for the topic and do nothing else until answered. Derive a kebab-case slug and the output path (default `applied_learning/topics/<slug>/` relative to the dev workspace root). Check that the output project root has a `pyproject.toml`; if not, stop and say so.
 
-**Existing-topic guard:** Before proceeding, check whether `applied_learning/topics/<slug>/` already exists. If it does, stop immediately: tell the user the folder exists, offer to extend it or open it, and do NOT recreate it.
+**Existing-topic guard:** Before proceeding, check whether `<root>/topics/<slug>/` already exists. If it does, stop immediately: tell the user the folder exists, offer to extend it or open it, and do NOT recreate it. Extending is a separate explicit request; this run writes nothing. Re-apply the guard if Step 2 changes the path or slug.
 
 ### 2. Confirm scope
 
-Show the user: the folder layout (below), the planned notebook list (3-5 titles), and the depth (default: knowledge base + 4 notebooks + examples + exercises + seed-ideas). Ask "Proceed?" and wait. (This skill is interactive/user-facing — a confirm here is expected; it is NOT a build-pipeline skill.)
+Show the user: the output path, the folder layout (below), the planned notebook list (3-5 titles), and the depth (default: knowledge base + 4 notebooks + examples + exercises + seed-ideas). Ask "Proceed?" and wait. (This skill is interactive/user-facing — a confirm here is expected; it is NOT a build-pipeline skill.)
 
 Depth knob: `maximal` = full KB + 4-5 notebooks + standalone examples + full exercise set. `lite` = KB + 3 notebooks (skip standalone examples and full exercise set). Default `maximal`.
 
@@ -49,25 +59,38 @@ Before dispatching, gather the inputs the agents need:
 
 ### 4. Dispatch sub-agents in waves
 
-One background sub-agent (`run_in_background: true`) per file, each with explicit `model: sonnet` (authorship fan-out arms run Sonnet by default — tier policy, CLAUDE.md model paragraph), in waves of ~6-10 (a single mega-batch has triggered 529 cascades). One agent each for:
+**Preflight, before the first wave** (the run's first writes):
 
-- every `10-coursework/*.md` and `20-mentoring/*.md` file (the seminal-papers + seed-ideas agents get the grounding from step 3),
+1. Re-check that `<root>/pyproject.toml` exists and `<root>/topics/<slug>/` does not; otherwise stop and write nothing (Step 2 may have changed the path, and another session may have created the folder since Step 1).
+2. Confirm the host can dispatch isolated arms (the provider wrapper decides); if not, return `required_tool_missing` naming this step, report the setup results, and stop.
+3. Record SHA-256 hashes of `<root>/pyproject.toml` and `<root>/uv.lock`, and recursively list `<root>/data/` (if it exists), for the Step 7 outside-topic line.
+4. Run `uv sync --project <root> --locked --inexact` once so torch and the notebook tooling are installed before any agent runs; concurrent first-time installs from parallel agents race. `--locked` fails rather than rewrite the tracked `uv.lock`; `--inexact` keeps packages the project does not declare. Keep the sync's summary line for Step 7. If it fails, stop and report the error.
+5. Pre-fetch any SHARED dataset once (e.g. `torchvision.datasets.MNIST(...download=True)`) into the single repo-root `data/` dir; concurrent first-downloads to the same dir race and corrupt. If it fails, stop and report the error and any `data/` change.
+
+One background sub-agent (`run_in_background: true`) per file, each with explicit `model: sonnet` (authorship fan-out arms run the Sonnet tier by default under the workspace model-tiering policy), in waves of ~6-10 (a single mega-batch has triggered 529 cascades). Authorship arms stay on the orchestrator's primary provider. Every arm prompt includes its template's BOUNDARY lines unabbreviated. One agent each for:
+
+- every `10-coursework/*.md` and `20-mentoring/*.md` file except `progress.md` (the seminal-papers + seed-ideas agents get the grounding from step 3),
 - every notebook in `70-handson/notebooks/` (each authors + self-validates its own notebook — see the notebook template),
-- every `70-handson/examples/*.py` and `exercises.md`.
+- every `70-handson/examples/*.py` and `exercises.md`; the `exercises.md` arm uses the Knowledge-base / mentoring template, including its BOUNDARY.
 
-Retry any agent that fails (529, timeout) as a fresh single dispatch.
+Retry a failed dispatch (529, timeout, no reply) once as a fresh single dispatch, but only after the original arm has terminated (its completion arrived or you stopped it); a still-running background arm is not a failed dispatch. If the retry also fails, record that file as not written and continue. An agent that replies it could not get its notebook or script green is not retried; Step 5 records the result.
 
-### 5. Write README + progress
+### 5. Verify, then write README + progress
 
-After agents complete, glob the folder to confirm every planned file exists. Then write `topics/<slug>/README.md` (index + suggested learning path, tier-ordered: skim coursework essentials -> work the notebooks in order -> do the exercises -> read seed-ideas) and `20-mentoring/progress.md` (a checklist derived from the ACTUAL notebooks + exercises produced).
+After agents complete:
+
+1. Glob the folder to confirm every planned file exists; list any that do not.
+2. **Re-check notebooks and examples.** Resolve `<ABS-ROOT>` as the absolute output project root. Re-execute each notebook of THIS topic yourself, one at a time, with the same command the notebook agent used (`uv run --project <ABS-ROOT> jupyter nbconvert --to notebook --execute --inplace "<nb>"`), and run each example script of THIS topic once from its own directory (`uv run --project <ABS-ROOT> python <name>.py`). Your observed exit code is the result; an agent's "exit 0" claim alone is not. Do not run the project's all-topics `scripts/run_all_notebooks.sh` / `.ps1`: they re-execute every topic's notebooks in place.
+3. **Check relative links** in this topic's markdown files. Parallel agents link to sibling files that may not exist. Repoint each broken link to an existing file in this topic, or reduce it to plain text, and note each fix.
+4. Write `topics/<slug>/README.md` (index + suggested learning path, tier-ordered: skim coursework essentials -> work the notebooks in order -> do the exercises -> read seed-ideas) and `20-mentoring/progress.md` (a checklist derived from the ACTUAL notebooks + exercises produced). A notebook or example whose re-check failed stays in place and is marked `(does not run: <one-line error>)` wherever either file lists it; never list a file that was not written.
 
 ### 6. Goblin hook
 
-`applied_learning` is already a `b2_project_goblin` target (it has a `CLAUDE.md` + `plan.md`). End by noting `uv run goblin suggest applied_learning` (from the goblin repo) as the "what should I learn/do next" nudge — goblin ranks next steps grounded in the topic folders. Do not modify goblin's source.
+`applied_learning` is already a `b2_project_goblin` target (it has a `CLAUDE.md` + `plan.md`). End by noting `uv run goblin suggest applied_learning` (from the goblin repo) as the "what should I learn/do next" nudge — goblin ranks next steps grounded in the topic folders. This skill does not run it. Do not modify goblin's source. If the output root is not `applied_learning`, add that the nudge covers `applied_learning` only.
 
 ### 7. Report
 
-Files written, any agent retries, notebook execution results (all green?), and one suggested next action (open the README, run a notebook, run `goblin suggest`).
+Files written, files not written, any agent retries, notebook and example-script results from your Step 5 re-check (per file: exit 0 or the error), link fixes, changes outside the topic folder (the preflight `uv sync` summary, meaning packages installed into `<root>/.venv/` or none; any recursively listed `<root>/data/` paths added since preflight; and whether the re-hashed `pyproject.toml` and `uv.lock` are unchanged or changed), that nothing was committed, and one suggested next action (open the README, run a notebook, run `goblin suggest`, or commit the folder).
 
 ## Output layout
 
@@ -116,13 +139,14 @@ CONSTRAINTS:
 - No emojis. No padding (one honest line beats a filler paragraph).
 - No fabricated citations or arXiv ids. Author+year is always safe; link arxiv.org/abs/<id> only when certain.
 - Markdown links relative from the file's location.
+- BOUNDARY: write only <ABS-PATH>/<FILE>. Run no project script or notebook, and never modify any other file, another topic, or the project's pyproject.toml, uv.lock, scripts or plan.
 
 Write with the Write tool. Reply: "Wrote <FILE>" + notes.
 ```
 
 ### Notebook agent (authors AND self-validates)
 
-**Every notebook agent prompt must include the full SELF-VALIDATE block below. Do not abbreviate or omit it for any notebook in the batch.**
+**Every notebook agent prompt must include the full BOUNDARY and SELF-VALIDATE blocks below. Do not abbreviate or omit them for any notebook in the batch.**
 
 ```text
 Author ONE Jupyter notebook at <ABS-PATH>/70-handson/notebooks/<NN>-<slug>.ipynb, then make it run clean.
@@ -135,28 +159,36 @@ REQUIREMENTS:
 - MUST produce at least one matplotlib figure (the graphic).
 - MUST run headless on CPU in seconds: tiny models (small nets, few epochs), dataset SUBSETS, set a seed. <if numpy-only: do NOT import torch>.
 - ASCII only in any print()/string (Windows cp1252).
-- Use only deps declared in the repo pyproject.toml (numpy, matplotlib, scikit-learn, torch CPU, torchvision). Datasets download under ./data (gitignored).
+- Use only deps declared in the repo pyproject.toml (numpy, matplotlib, scikit-learn, torch CPU, torchvision). Datasets go in the single repo-root data/ dir (walk up to pyproject.toml; gitignored), never a per-notebook copy; the orchestrator pre-fetched any shared dataset there.
+
+BOUNDARY (required):
+- Write only <ABS-PATH-TO-NB>, your own `NN`-unique temp files including `_build_<NN>.py` (all deleted after use), and new dataset files under <APPLIED-LEARNING-ROOT>/data/. Never delete or overwrite an existing entry under data/.
+- Run only your own builder and your own notebook (with the SELF-VALIDATE command below). Never run scripts/run_all_notebooks.* (it re-executes every topic in place), and never execute or modify another topic's files or the project's pyproject.toml, uv.lock, scripts or plan.
 
 SELF-VALIDATE (required — do not reply until green):
   uv run --project <APPLIED-LEARNING-ROOT> jupyter nbconvert --to notebook --execute --inplace "<ABS-PATH-TO-NB>"
 Run it. If it errors, fix the notebook and re-run until exit 0. Execution embeds the figures into the committed file.
 
-Reply: "Wrote + executed <NN>-<slug>.ipynb (exit 0)" + wall-clock + any caveat. If you cannot get it green after reasonable effort, say so explicitly with the error — do NOT claim success.
+Reply: "Wrote + executed <NN>-<slug>.ipynb (exit 0)" + wall-clock + any caveat. If you cannot get it green after reasonable effort, leave the notebook in place and say so explicitly with the error — do NOT claim success.
 ```
 
 ### Example-script agent
 
+**Every example agent prompt must include the BOUNDARY line below.**
+
 ```text
 Write ONE standalone script at <ABS-PATH>/70-handson/examples/<name>.py — a minimal, self-contained, runnable distillation of the core idea of "<TOPIC>".
 
-CONSTRAINTS: runs headless on CPU in seconds (tiny); ASCII-only print(); only declared deps; a top docstring saying what it does and how to run it (`uv run python <name>.py`). Validate by running it once (exit 0). Reply with the result.
+CONSTRAINTS: runs headless on CPU in seconds (tiny); ASCII-only print(); only declared deps; a top docstring saying what it does and how to run it (`uv run python <name>.py`). `<APPLIED-LEARNING-ROOT>` is the absolute output project root. Datasets go in its single repo-root data/ dir (walk up to pyproject.toml), never a per-script copy; write any runtime output next to the script (`Path(__file__).parent`), never relative to the working directory. Validate by running it once from its own directory (`uv run --project <APPLIED-LEARNING-ROOT> python <name>.py`, exit 0). Reply with the result; if it does not reach exit 0, leave the script in place and say so with the error.
+
+BOUNDARY (required): write only this script, its runtime outputs next to it, and new dataset files under <APPLIED-LEARNING-ROOT>/data/; never delete or overwrite an existing entry under data/. Run no file other than this script. Never run scripts/run_all_notebooks.*, and never execute or modify another topic's files or the project's pyproject.toml, uv.lock, scripts or plan.
 ```
 
 ## Constraints
 
 - **Runnable code only** — no pseudocode in notebooks/examples. The execute-in-place gate is the proof.
 - **No fabricated references.** Seed the seminal-papers agent with a vetted list; instruct author+year over uncertain ids.
-- **Tiny + fast** — everything runs headless on CPU in seconds, or it doesn't ship.
+- **Tiny + fast** — everything runs headless on CPU in seconds, or it is marked `(does not run: <one-line error>)` (Step 5).
 - **70/20/10 layout** — always the numeric-prefix folders.
 - **Ground seed-ideas in real projects** — read their CLAUDE.md or AGENTS.md; generic "you could use this for X" is the failure mode.
 - **No emojis. Terse reference tone.**
@@ -164,7 +196,6 @@ CONSTRAINTS: runs headless on CPU in seconds (tiny); ASCII-only print(); only de
 ## Limitations
 
 - Dispatching all agents in one mega-message has hit 529 cascades — wave them (~6-10).
-- Notebook agents that can't reach exit 0 must say so, not fake success — the orchestrator re-checks with `scripts/run_all_notebooks.sh`.
+- Notebook agents that can't reach exit 0 must say so, not fake success — the orchestrator re-checks this topic's notebooks and examples in Step 5. The project's `scripts/run_all_notebooks.sh` / `.ps1` remain the operator's all-topics gate; this skill does not run them.
 - Skipping the grounding step produces generic blog-post content and hand-wavy seed ideas.
-- torch install must be done (`uv sync`) before notebook agents run, or every execute fails.
-- Pre-fetch any SHARED dataset once (e.g. `torchvision.datasets.MNIST(...download=True)`) BEFORE dispatching notebook agents — concurrent first-downloads to the same dir race and corrupt. Point notebooks at a single repo-root `data/` dir (walk up to `pyproject.toml`), not a per-notebook copy.
+- The Step 4 preflight (`uv sync`, shared-dataset pre-fetch) must finish before notebook agents run, or every execute fails or races.

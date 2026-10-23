@@ -1,8 +1,8 @@
-# NOTE: This is the canonical provider-independent contract. Both provider wrappers must load it in full.
+# NOTE: This is the canonical provider-independent contract. Every provider wrapper (Claude, GPT, Codex) must load it in full.
 
 ## Provider-neutral host abstractions
 
-- Resolve supporting assets and relative script paths against `.claude/skills/user-brainstorm/`; the canonical prose lives here while implementation assets remain with the compatibility launcher.
+- This skill has no runtime scripts or assets. Its offline evals stay with the compatibility launcher at `.claude/skills/user-brainstorm/evals/`.
 - A named skill call means the host's skill-dispatch primitive. An Agent, Explore agent, workflow, or sub-agent means an isolated task/action invocation with fresh context and the requested capability tier. Provider wrappers map these roles to their native APIs.
 - Model tier names in inherited procedures describe capability roles. Resolve them through `config/model-tier-map.json`; an unavailable required capability returns `required_tool_missing` rather than weakening a gate.
 - Never expose hidden chain-of-thought. Preserve only decisions, evidence, commands, structured artifacts, and operator-facing rationale required by this contract.
@@ -26,11 +26,20 @@ The activity has two phases: **interactive ideation** (seed → gap-fill → tie
 - Topic is already covered by an existing doc set — point at that instead.
 - Topic is too narrow (one concern, not a space of concerns).
 
+## Inputs, writes and re-runs
+
+- **Input:** the topic (argument, or asked for in Step 1). There are no flags; a bare invocation asks for the topic and writes nothing until the user confirms a write (Step 5's "Proceed?", or a resume's "Proceed?").
+- **Writes:** only inside the confirmed output directory. The orchestrator writes `topics.md`, `plan.md` and `README.md`; each sub-agent writes only its one assigned `NN-<slug>.md`. Every write is create-only: immediately before writing `topics.md`, `plan.md` or `README.md`, confirm that file is absent; if it is present, write nothing more, report it, and re-run the directory check below. Nothing is deleted, renamed or overwritten, no git operation runs, and nothing is published.
+- **Existing output directory** (checked in Step 1 before the path is confirmed, and again at each write gate, after Step 5's or a resume's "Proceed?" and before anything is written; if the state differs from the one the user confirmed, write nothing and offer the outcome for the new state):
+  - Absent, or empty (no entries at all: no files, no sub-directories, hidden entries included): a new set.
+  - Holds `topics.md` and `plan.md`, no `README.md`, every investigation link in `topics.md` resolves to a direct child `<dir>/NN-<slug>.md`, and otherwise only investigation files named in `topics.md`: an interrupted set (a session that ended, or a host that stopped at Step 7). Offer to resume it, stating how many of the files listed in `topics.md` are missing and that a set another live session is still writing looks the same, so the user should confirm no other session is working on it; then ask "Proceed?". On explicit confirmation, run Step 7 for the missing files only, then Step 8. A declined resume is treated as an existing set (below), but suggest only a sibling path such as `<slug>-2`: creating a sub-directory inside the interrupted set would block a later resume. A resume never rewrites `topics.md`, `plan.md` or an existing investigation file. Ideation bullets are not on disk: in a new session, brief the missing files from `topics.md`, `plan.md` and the per-agent grounding, and say so in the end report.
+  - Anything else: an existing set. Never write a file into it. Point the user at it (see "When NOT to use") and ask for a different path, suggesting `<slug>-2` beside it, or a new sub-directory inside it that does not exist yet (only that new sub-directory is written; the set's own files are never touched). The new path gets the same check.
+
 ## Steps
 
 ### 1. Get the topic
 
-Required argument. If not provided, ask: "What topic do you want to brainstorm?" Derive a kebab-case slug from the topic. Confirm the output path with the user (default: `docs/investigations/<slug>/` relative to CWD).
+Required argument. If not provided, ask: "What topic do you want to brainstorm?" Derive a kebab-case slug from the topic. Check the target directory (see "Inputs, writes and re-runs") and confirm the output path with the user (default: `docs/investigations/<slug>/` relative to CWD); a different path the user picks gets the same check.
 
 ### 2. Seed 10 topics
 
@@ -44,7 +53,7 @@ Stop when:
 - User says no new topics surface, or
 - The next round produces only low-value / redundant additions.
 
-Typical: **3-4 rounds total** (1 seed + 2-3 gap-fills). Do not loop indefinitely. If after round 3 the user is still adding meaningful topics, the topic was probably wider than expected — say so and ask whether to keep going or split into sub-topics.
+Typical: **3-4 rounds total** (1 seed + 2-3 gap-fills); the cap is **4 rounds** (1 seed + 3 gap-fills). Do not loop indefinitely. If after round 3 the user is still adding meaningful topics, the topic was probably wider than expected — say so and ask whether to keep going (round 4, the last) or split into sub-topics. After round 4, run no further round: take any user additions verbatim without generating more, say the subject is too broad for one set, and ask whether to keep going to tiering with the current list or split into sub-topics. On a split, propose the sub-topics; this run continues to Step 4 with the topics of the one the user picks, under its own slug (Step 1's directory check again), and the end report names the rest as separate later runs.
 
 ### 4. Aggregate + tier
 
@@ -64,21 +73,24 @@ Before writing anything, show the user:
 - The file structure that will be created (see "Output layout" below).
 - The total number of investigation files (one per surfaced topic).
 - Approximate per-file size (350-600 words).
+- On a host whose provider wrapper already reports that it cannot dispatch isolated sub-agents, a note that only `topics.md` and `plan.md` will be written now. Where the wrapper decides this only at Step 7 (an isolation check that runs before the first isolated arm), a note that the investigation files may not be written on this host.
 
 Ask: "Proceed?" Wait for explicit confirmation before any file write.
 
 ### 6. Write meta files
 
-Write two meta files into the output directory before dispatching agents:
+After the write-gate directory check ("Inputs, writes and re-runs"), write two meta files into the output directory before dispatching agents. Each write is create-only:
 
 - **`topics.md`** — flat list of all topics, tier-organized, each line a markdown link to the eventual investigation file (`NN-<slug>.md`). Brief provenance note at top (how many rounds, how the set was assembled).
 - **`plan.md`** — investigation methodology. Goal, scope, common template (verbatim), execution model (sub-agent-per-file dispatch), output structure, done criteria.
 
+The links in `topics.md` name planned files. Never report a file as written until Step 8 confirms it exists.
+
 ### 7. Dispatch sub-agents
 
 One background sub-agent per investigation file, each dispatched with explicit
-`model: sonnet` (authorship fan-out arms run Sonnet by default — tier policy,
-CLAUDE.md model paragraph). Each agent is briefed with:
+`model: sonnet` (authorship fan-out arms run Sonnet by default — workspace
+model-tiering policy). Each agent is briefed with:
 
 - File path to write (`docs/investigations/<slug>/NN-<topic-slug>.md`).
 - Topic title and tier.
@@ -90,11 +102,13 @@ CLAUDE.md model paragraph). Each agent is briefed with:
 
 **Dispatch in waves of ~10-12 background agents per message.** A single mega-message dispatching all agents has been observed to trigger `529 Overloaded` cascades; waves keep concurrent load manageable. Use `run_in_background: true` so completions arrive as task-notifications.
 
-If any agent fails (529, timeout, refusal), retry that single file in a fresh sub-agent dispatch.
+If any agent fails (529, timeout, refusal) or completes without writing its file, retry that single file once in a fresh sub-agent dispatch, but only after the original arm has terminated (its completion arrived or you stopped it). A timed-out or otherwise unknown arm is not safe to retry while it may still be running: report that file as pending and assign no second writer until termination is confirmed. A file still missing after its retry is reported as missing, never dropped silently; retry it again only if the user asks.
+
+If the host cannot dispatch isolated sub-agents, stop with `required_tool_missing`, naming this step. Never author the investigation files in the orchestrator's own context instead; `topics.md` and `plan.md` stay on disk for a resume on a capable host.
 
 ### 8. Write README
 
-After all agents have completed, glob the output directory to confirm every `NN-<slug>.md` exists. Then write `README.md`:
+After all agents have completed, glob the output directory to confirm every `NN-<slug>.md` listed in `topics.md` exists. If any is still missing, do not write `README.md`: report the missing files and that re-invoking with the same topic and path resumes the set. Also list any entry other than `topics.md`, `plan.md` and the investigation files named in `topics.md` (sub-directories and hidden entries included); such an entry blocks a resume until the user resolves it, and the skill never deletes or renames it. Otherwise write `README.md`, create-only. If `README.md` is already present, write nothing, report that another writer produced the index, and finish with the normal end report without offering a new path.
 
 - Intro paragraph stating the topic and scope.
 - Tier-organized list of links to each investigation file with a one-line hook per topic.
@@ -157,7 +171,7 @@ Each sub-agent's prompt instructs it to read (whatever exists in the workspace):
 - `SKILL.md` files under `.claude/skills/<name>/` for skills clearly relevant to the topic.
 - The `topics.md` file in the output directory (for the canonical cross-reference slug list).
 
-Agents must only cite files they actually verified by reading. Inventing references defeats the point.
+Agents must only cite files they actually verified by reading. Inventing references defeats the point. Never read a secret-bearing file (credentials, tokens, `.env`, private keys).
 
 ## Sub-agent prompt template
 
@@ -187,6 +201,8 @@ CONSTRAINTS:
 - Cross-references via [[slug]].
 - No padding. Honest-line is fine ("No prior incident in this workspace; pattern recommended on first-principles grounds").
 - No invented references.
+- Write only this one file. If it already exists, do not overwrite it; reply "Exists <NN>-<SLUG>.md".
+- Never read secret-bearing files (credentials, tokens, .env, private keys).
 
 Write the file with the Write tool. Reply: "Wrote <NN>-<SLUG>.md" plus any notes.
 ```
@@ -201,23 +217,25 @@ Topic-specific bullets come from the ideation phase: as the user surfaces topics
 - **Cross-references via `[[slug]]`** — slug = the file's `<slug>` part (without the `NN-` prefix or `.md` extension).
 - **No padding.** A section with nothing real says one honest line, not a paragraph of filler.
 - **No invented references.** Agents only cite files they verified by reading.
-- **No naming specific other skills or projects** unless the topic is explicitly about them. The skill itself is topic-agnostic; the investigation set produced should be.
+- **No naming specific other skills or projects** in the body unless the topic is explicitly about them or the name identifies a verified source (a cited rule, memory, skill or incident). The skill is topic-agnostic; each investigation stays on its topic. The References section and the README's "See also" may cite any file the agent verified by reading.
 
 ## Limitations
 
 - **Dispatching all agents in one mega-message.** Hit a 529 cascade once. Wave them in batches of ~10-12.
 - **Skipping the tier confirmation.** Tiering decisions shape the README's organization and the user's mental model. Always confirm before writing.
-- **Letting gap-fill loop forever.** Cap at 4 rounds. If the user keeps adding meaningful topics past that, the subject is too broad — surface this and ask to split.
+- **Letting gap-fill loop forever.** Cap at 4 rounds. If the user keeps adding meaningful topics past that, the subject is too broad — surface this and ask whether to keep going to tiering with the current list or split (Step 3).
 - **Writing meta files before tier confirmation.** Cheap to revise verbally, expensive to revise after files exist.
 - **Producing generic content because the agents weren't grounded.** Per-agent bullets and workspace context reads are what make the output useful. Skipping them produces hand-wavy reference docs that read like generic blog posts.
+- **Writing into an existing set.** Other documents cite investigation files by path; overwriting or renumbering one breaks them. Use a new path, or resume an interrupted set ("Inputs, writes and re-runs").
 
 ## End-of-activity report
 
 Final message to the user includes:
 - Output directory path.
-- File count produced (and any that needed retry).
+- File count produced (and any that needed retry, plus any still missing with the resume instruction and any unlisted file that blocks the resume).
 - Total topics by tier (e.g., "9 Tier 1, 12 Tier 2, 11 Tier 3, 3 Tier 4").
 - Any notes the agents flagged in their completion replies (e.g., "agent 14 noted an existing inconsistency in <rule>; worth a follow-up").
+- Any sub-topics deferred by a split, as separate later runs.
 - One suggested next action — usually "browse the README" or "grep for <topic-keyword>".
 
 Keep it short. Two or three sentences plus the file count.
