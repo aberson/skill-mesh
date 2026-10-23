@@ -76,6 +76,9 @@ SHARED_DEST = "_shared"
 # compares it against a real build, so a builder walk that narrows (or widens) reds
 # there even if this literal were edited to agree with it.
 EXPECTED_SHARED_PAYLOAD = frozenset({
+    # Intent continuity is now cited by the planning/build/session cores. The
+    # independent closure walk below still verifies that the source requires it.
+    "intent-continuity.md",
     "judge-core.md",
     "score-skill.md",
     "build_step_verdict.py",
@@ -95,6 +98,7 @@ EXPECTED_SHARED_PAYLOAD = frozenset({
     # `Repoint-SharedReference`) -- so the independent walk below finds them without
     # being told about them.
     "intake-engine.md",
+    "shakedown-engine.md",
     "skill-pipeline.md",
     "skill-role-taxonomy.md",
     "step-authoring.md",

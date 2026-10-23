@@ -4,7 +4,7 @@
 
 ## Intent continuity (drift-ranger)
 
-Follow [the intent continuity contract](../../_shared/intent-continuity.md).
+Follow the intent continuity contract at `<repo>/_shared/intent-continuity.md`.
 Before dispatch and after each completed work unit, reconcile the private intent record with the actual user capability. After two units without observable advancement, reassess reuse, integration and scope before extending supporting work; preserve required safety gates. Report what the user can and cannot do, not only step/test counts.
 
 

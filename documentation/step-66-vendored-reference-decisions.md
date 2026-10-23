@@ -202,6 +202,8 @@ de-linked (§4). Verified clean under all six leak patterns, including the new h
   formula this document exists to own. Same reasoning as `task-state-schema.md`.
 * **I: none. M: none. T: none.**
 
+* **Later shell adaptation:** the ledger completion check feeds table text to its two row selectors with Bash here-strings. This preserves the header/order guards without shell format markers that collide with the categorical public-payload rule; no disclosure category or test exemption changed.
+
 ### `skill-role-taxonomy.md` — **SAFE, no content scrub**
 I: none. X: none. M: none. H: none. T: none. The only edit is the vendored self-citation
 (§2.2) plus the `code-quality.md` de-link. Clean under all six leak patterns.

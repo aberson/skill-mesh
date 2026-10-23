@@ -184,8 +184,8 @@ HEADER=$(grep -cE '^\| *id *\| *fragment *\| *route *\| *status *\| *disposition
 SEP=$(grep -cE '^\|[-:| ]*-[-:| ]*$' "$LEDGER") || [ "$?" -eq 1 ] || { echo "ABORT: ledger read failed" >&2; exit 1; }
 [ "$HEADER" -eq 1 ] && [ "$SEP" -eq 1 ] || { echo "ABORT: expected one complete header and separator" >&2; exit 1; }
 TABLE=$(grep -E '^\|' "$LEDGER") || { echo "ABORT: ledger table unavailable" >&2; exit 1; }
-printf '%s\n' "$TABLE" | sed -n '1p' | grep -qE '^\| *id *\| *fragment *\| *route *\| *status *\| *disposition *\|[[:space:]]*$' || { echo "ABORT: header must be first table row" >&2; exit 1; }
-printf '%s\n' "$TABLE" | sed -n '2p' | grep -qE '^\|[-:| ]*-[-:| ]*[[:space:]]*$' || { echo "ABORT: separator must follow header" >&2; exit 1; }
+sed -n '1p' <<< "$TABLE" | grep -qE '^\| *id *\| *fragment *\| *route *\| *status *\| *disposition *\|[[:space:]]*$' || { echo "ABORT: header must be first table row" >&2; exit 1; }
+sed -n '2p' <<< "$TABLE" | grep -qE '^\|[-:| ]*-[-:| ]*[[:space:]]*$' || { echo "ABORT: separator must follow header" >&2; exit 1; }
 DATA=$(( ROWS - HEADER - SEP ))
 # well-formed rows = data rows matching the FULL grammar, F<n> id included.
 # Disposition is the TERMINAL cell (matched with a required nonblank, non-pipe character) so it may contain pipes — seed text does.

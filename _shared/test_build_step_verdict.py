@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import json
 import io
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -656,12 +657,15 @@ def test_service_cli_is_strict_json_lines_and_emits_no_verdict_secret(tmp_path):
 
 
 def _acceptance_request(tmp_path, run_id="run-production"):
+    # Generated fixture IDs cannot be mistaken for retained private session IDs.
+    from uuid import uuid4
+
     return {
         "op": "export",
         "destination": str(tmp_path / "parent-acceptance.json"),
         "schema": "swarm-forge/parent-acceptance-v1",
-        "attempt_id": "11111111-1111-4111-8111-111111111111",
-        "submission_id": "22222222-2222-4222-8222-222222222222",
+        "attempt_id": str(uuid4()),
+        "submission_id": str(uuid4()),
         "verdict_run_id": run_id,
         "classification": "ADVANCE",
         "result": "PASS",
@@ -676,7 +680,7 @@ def _acceptance_request(tmp_path, run_id="run-production"):
         "suite_evidence": [{"name": "pytest", "locator": "evidence/pytest.txt", "sha256": "8" * 64}],
         "review_evidence": [{"name": "review-deep", "locator": "evidence/review.json", "sha256": "9" * 64}],
         "landed_paths_locator": "archive/landed-paths.json",
-        "native_session_id": "33333333-3333-4333-8333-333333333333",
+        "native_session_id": str(uuid4()),
         "observed_model": "claude-opus-5-5",
     }
 
@@ -1252,9 +1256,12 @@ def test_export_rejects_non_string_evidence_sha256(tmp_path):
 
 
 def test_forge_launcher_passes_agents_file_path_without_json_reencoding():
-    launcher = (
-        THIS_DIR.parent.parent / "launchers" / "claude-isolated.ps1"
-    ).read_text(encoding="ascii")
+    # This is an external consumer check, not an asset shipped by Skill Mesh.
+    # Explicit selection keeps release checkouts independent of sibling layout.
+    selected = os.environ.get("SKILL_MESH_FORGE_LAUNCHER")
+    if not selected:
+        pytest.skip("external Forge launcher not selected; set SKILL_MESH_FORGE_LAUNCHER")
+    launcher = Path(selected).read_text(encoding="ascii")
     assert "$common += @('--agents', $agentPath)" in launcher
     assert "ReadAllText($agentPath)" not in launcher
 

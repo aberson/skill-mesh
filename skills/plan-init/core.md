@@ -4,7 +4,7 @@
 
 ## Intent continuity (drift-ranger)
 
-Follow [the intent continuity contract](../../_shared/intent-continuity.md).
+Follow the intent continuity contract at `<repo>/_shared/intent-continuity.md`.
 Before decomposing work, establish the intended observable journey and actual entry point. Keep private context in the intent record; put only publication-safe acceptance criteria in the plan. Make one complete usable path the first delivery, with explicit non-goals.
 
 

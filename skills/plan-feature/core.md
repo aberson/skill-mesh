@@ -4,7 +4,7 @@
 
 ## Intent continuity (drift-ranger)
 
-Follow [the intent continuity contract](../../_shared/intent-continuity.md).
+Follow the intent continuity contract at `<repo>/_shared/intent-continuity.md`.
 Before adding phases, inspect the actual user entry point and existing implementations. Establish the intended journey and first missing capability; reuse accepted work before rebuilding it. Keep private context out of published plans.
 
 

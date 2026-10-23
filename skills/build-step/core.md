@@ -8,7 +8,7 @@
 
 ## Intent continuity (drift-ranger)
 
-Follow [the intent continuity contract](../../_shared/intent-continuity.md).
+Follow the intent continuity contract at `<repo>/_shared/intent-continuity.md`.
 Receive the parent intent and the specific journey gap this step advances. Return implemented/isolated/available status and evidence without claiming user delivery from component gates. The parent coordinator owns the project checkpoint; do not duplicate it for worker/reviewer subcalls.
 
 

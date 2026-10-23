@@ -122,6 +122,12 @@ missing input fails generation. Like Phase CD, this does not generalize `support
 an emission protocol, does not reopen the grandfathered set, and authorizes no other package
 file.
 
+**Scoped source-only resource plan: user-wrap evaluation assets.** The v2
+[user-wrap maintenance plan](user-wrap-source-evals.md) admits
+`skills/user-wrap/evals/` as repository evaluation inputs. These assets are not
+emitted or installed; the skill workflow has no runtime dependency on them.
+The grandfathered set and installer provenance contract remain unchanged.
+
 **What mechanically enforces this document, and what it does not.**
 `tests/package-integrity/test_skill_catalog_lifecycle.py` pins, byte-for-byte, a named set of
 contract sentences from this guide, from the root `CLAUDE.md` pointer section, and from
@@ -457,3 +463,9 @@ record per reported occurrence:
 
 The contract tests for this guide and for the root pointer live in
 `tests/package-integrity/test_skill_catalog_lifecycle.py`.
+
+## Scoped v2 source-only user-gateway evaluations
+
+`skills/user-gateway/evals/` is permitted solely as repository evaluation input under
+[user-gateway-source-evals.md](user-gateway-source-evals.md). These files do not enter the
+installed payload, generalize resource emission, or change the closed grandfathered set.
