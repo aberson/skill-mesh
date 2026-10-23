@@ -7,6 +7,11 @@ See [../core.md](../core.md) for the full specification.
 - Load the core in full before acting. Use structured tool/action calls for filesystem, shell, browser, GitHub, and named-skill operations.
 - Normalize GPT verbosity: do not reveal hidden chain-of-thought; return only required decisions, evidence, artifacts, commands, questions, and the core's closing report.
 - Resolve capability tiers with `config/model-tier-map.json`; explicit router overrides win.
+- Before dispatch, inspect the current GPT/Copilot host's actual discovery/actions and feed
+  the core's early capability table. `context-slim` is provider-native Claude-only and is
+  therefore `known unavailable` here unless an explicit supported adapter is actually present;
+  there is no substitute audit or fallback. A discovered child stays `unprobed` until its own
+  qualification passes. Preserve exact reason codes and continue other selected work.
 - Map each independent Agent/Explore/workflow arm to a fresh-context GPT action/task call. Dispatch independent arms in parallel. GPT action nesting may be depth-limited: orchestration stays in this parent invocation, and child actions never spawn graders. If isolated actions are unavailable, return `required_tool_missing`; do not self-grade or serialize roles into one context.
 
 ## Known GPT limitations
