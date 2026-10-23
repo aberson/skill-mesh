@@ -20,8 +20,10 @@ Aggregator rules implemented (each as apply_rule_N_<desc>):
 2. Lens owns its dimension: when two lenses disagree on the same file_line,
    the lens whose Scope covers that dimension wins; the other is demoted to
    FYI. Catalog Lens-routing fields drive primary/secondary selection.
-3. SKIPPED handling: SKIPPED lenses are informational; they do NOT contribute
-   to NEEDS-WORK. plan-conformance is the only lens that emits SKIPPED.
+3. SKIPPED handling: an ALLOWED SKIPPED lens is informational and does NOT
+   contribute to NEEDS-WORK. SKIPPED is allowed only for plan-conformance
+   without a plan step, or for the six code lenses under --reviewers runtime;
+   any other SKIPPED is a required lens skipped (NEEDS-WORK, see below).
 4. FAILED handling: a FAILED lens (model overloaded after retry) maps to
    NEEDS-WORK at the aggregated level; the failure_reason surfaces in the
    aggregated rationale.
@@ -43,16 +45,45 @@ Aggregator rules implemented (each as apply_rule_N_<desc>):
    rationale prefixed "Cited-by-linter: <tool> <rule>" and an
    also_flagged_by_linter annotation.
 
+Default-deny PASS (P-RD-1 variant (a); the sidecar result enum stays
+PASS | NEEDS-WORK | DEFERRED-TO-UAT). The aggregated result is PASS only when
+every required lens is present exactly once with overall_verdict PASS (or an
+allowed SKIPPED, rule 3), zero Block, aggregated Nit < 3, no failed or invalid
+mechanical result and no deferral. Everything else is NEEDS-WORK with an
+explicit rationale, including: a lens UNCERTAIN (abstention -- escalate to the
+operator, never PASS), NEEDS-CLARIFICATION, an unknown or missing
+overall_verdict, a missing / duplicate / unexpected lens, a lens file whose
+name is not <lens_id>.json, a required lens SKIPPED, no runtime lens under
+--reviewers runtime (or full without a recorded downgrade), a recorded runtime
+downgrade under --reviewers runtime, a runtime lens record under a recorded
+downgrade, a SKIPPED lens carrying findings, a PASS lens carrying Block/Nit
+findings, an invalid finding severity, and a mechanical check whose status is
+"fail" or a malformed mechanical record -- including a supplied record that is
+not a JSON object, such as null ("missing-tool" is listed in the rationale and
+does not block). A structurally malformed lens record (not an object, no string
+lens_id, findings not a list), a sidecar-shaped file in --lens-dir, or a
+duplicate JSON key in a lens file is rejected with ValueError; the CLI exits
+non-zero and writes no sidecar (a duplicate key in --mechanical-results
+likewise exits 2).
+
 CLI:
 
     python aggregate.py \\
-      --lens-dir <path>            # required; directory of per-lens JSON files
+      --lens-dir <path>            # required; FRESH dir holding only this run's lens files
       --output-dir <path>          # required; sidecar lands here
       --skill-version <v>          # default "v3"
       --prior-sidecar <path>       # optional; enables rule 6
       --lint-findings <path>       # optional; enables rule 7's lint-dedup path
+      --mechanical-results <path>  # optional; {"checks":[{check,status,command,evidence}]}
+      --plan-step <path>:<step-id> # optional; id after the last colon; recorded as plan_step
+      --reviewers code|runtime|full  # default code; drives lens-set completeness
+      --force-runtime              # optional; recorded in invocation
+      --runtime-downgrade-reason <token>  # optional; recorded in invocation
       [--timestamp <ISO>]          # optional override (for round-trip tests)
       [--self-test <m1-sidecar>]   # round-trip test against an M1 sidecar
+
+Each option is given at most once: repeating an option that takes a value
+(as `--opt value` or `--opt=value`) exits 2 and writes no sidecar.
 """
 
 from __future__ import annotations
@@ -137,9 +168,12 @@ class LensVerdict:
             Coverage claim section).
         findings: List of Finding dicts; MUST be an empty list (not None) when
             overall_verdict == 'PASS' / 'SKIPPED'.
-        overall_verdict: One of 'PASS' | 'NEEDS-WORK' | 'NO-EVIDENCE' |
-            'FAILED' | 'SKIPPED' | 'NEEDS-CLARIFICATION'. See SKILL.md
-            Model strategy section's enum table for the canonical set.
+        overall_verdict: One of 'PASS' | 'NEEDS-WORK' | 'UNCERTAIN' |
+            'NO-EVIDENCE' | 'FAILED' | 'SKIPPED' | 'NEEDS-CLARIFICATION'
+            (LENS_VERDICTS). See SKILL.md Model strategy section's enum
+            table for the canonical set. Only PASS and an allowed SKIPPED
+            can contribute to an aggregated PASS; every other value,
+            including an unknown or missing one, aggregates to NEEDS-WORK.
         failure_reason: OPTIONAL; present only when overall_verdict == FAILED.
             Current allowed values: 'model_overloaded'. Cross-step contract
             with SKILL.md Model strategy section -- adding a value requires
@@ -196,48 +230,195 @@ ANTI_PATTERN_PRIMARY = {
 # Severity ordinals for monotonic comparison / demotion / escalation.
 SEVERITY_ORDER = {"FYI": 0, "Nit": 1, "Block": 2}
 
+# Complete per-lens overall_verdict enum (SKILL.md "Per-lens overall_verdict
+# enum"). Cross-step contract: a new value MUST touch both sites.
+LENS_VERDICTS = (
+    "PASS",
+    "NEEDS-WORK",
+    "UNCERTAIN",
+    "NO-EVIDENCE",
+    "FAILED",
+    "SKIPPED",
+    "NEEDS-CLARIFICATION",
+)
+
+# Default-deny: the ONLY lens verdicts that may contribute to an aggregated
+# PASS. SKIPPED counts only where rule 3 allows it (check_lens_set).
+PASSING_LENS_VERDICTS = ("PASS", "SKIPPED")
+
+# Runtime lens ids (SKILL.md Flag selection); appended after CODE_LENS_ORDER.
+RUNTIME_LENS_IDS = ("ui", "backend", "frontend")
+
+# --reviewers lanes (SKILL.md Flag selection); drives lens-set completeness.
+REVIEWERS_FLAGS = ("code", "runtime", "full")
+
+# Mechanical-check statuses accepted in --mechanical-results. "fail" is itself
+# a verdict (NEEDS-WORK); "missing-tool" is listed but never blocks.
+MECHANICAL_STATUSES = ("pass", "fail", "missing-tool")
+
+# Auth-gate probe reason tokens (SKILL.md Auth-gated runtime downgrade).
+_RUNTIME_DOWNGRADE_RE = re.compile(
+    r"^(?:status_401|login_form_in_200_body|timeout|redirect_to_login:.+)$"
+)
+# --plan-step <plan-file-path>:<step-id>. The step id is the token after the
+# LAST colon -- the <step-id> of a `### Step <step-id>:` heading or the first
+# column of a table-format row (12, 5a, 22-prep, 7-1, D.6) -- so a Windows
+# drive path keeps its colon. A bare path with no step id is rejected.
+_PLAN_STEP_RE = re.compile(r"^.+:[A-Za-z0-9][A-Za-z0-9._-]*$")
+
+
+def default_invocation(
+    reviewers_flag: str = "code",
+    *,
+    force_runtime: bool = False,
+    runtime_downgrade_reason: str | None = None,
+) -> dict:
+    """The sidecar ``invocation`` object with its fixed seven-key set.
+
+    The key set and order are a cross-step contract (SKILL.md Audit-trail JSON
+    sidecar schema; build-step and the Codex recipe validate it). Fields the
+    CLI cannot observe (model_overrides, url, start_cmd) keep their legacy
+    defaults.
+    """
+    return {
+        "reviewers_flag": reviewers_flag,
+        "model_overrides": {},
+        "force_runtime": force_runtime,
+        "url": None,
+        "start_cmd": None,
+        "runtime_downgraded": runtime_downgrade_reason is not None,
+        "runtime_downgrade_reason": runtime_downgrade_reason,
+    }
+
 
 # ---------------------------------------------------------------------------
 # I/O: per-lens verdict loading
 # ---------------------------------------------------------------------------
 
 
+class LensSetError(ValueError):
+    """The files in one --lens-dir do not bind one-to-one to lens records.
+
+    Raised by load_lens_verdicts when a file's lens_id differs from its file
+    name stem (a record under another name, e.g. a stale ``zz-prev.json``,
+    must never fill a slot) or when two records share a lens_id. ``records``
+    carries EVERY record in deterministic order and ``problems`` the
+    file-binding problems, so the CLI can still reduce them: the problems join
+    check_lens_set's and the aggregated verdict is NEEDS-WORK with all
+    evidence kept.
+    """
+
+    def __init__(self, message: str, records: list[dict], problems: list[str] | None = None):
+        super().__init__(message)
+        self.records = records
+        self.problems = list(problems or [])
+
+
+class DuplicateLensError(LensSetError):
+    """Two lens records in one --lens-dir share a lens_id.
+
+    load_lens_verdicts never lets a later record overwrite an earlier one
+    (that silently hid duplicates and let a stale file fill a slot). It raises
+    this error instead; ``records`` carries EVERY record in deterministic
+    order so the CLI can still reduce them -- check_lens_set then reports the
+    duplicate and the aggregated verdict is NEEDS-WORK with all evidence kept.
+    """
+
+
+def _reject_duplicate_keys(pairs: list[tuple[str, object]]) -> dict:
+    """json object_pairs_hook: a repeated key is an error, never last-wins.
+
+    Parity with the Codex recipe's ``unique_object``: an ambiguous record such
+    as ``"overall_verdict": "UNCERTAIN", "overall_verdict": "PASS"`` must not
+    reduce as PASS on one host and be rejected on the other.
+    """
+    obj: dict = {}
+    for key, value in pairs:
+        if key in obj:
+            raise ValueError(f"duplicate JSON key {key!r}")
+        obj[key] = value
+    return obj
+
+
+def load_json_strict(path: Path) -> object:
+    """Parse one JSON input file, rejecting duplicate keys (ValueError)."""
+    with path.open("r", encoding="utf-8") as f:
+        return json.load(f, object_pairs_hook=_reject_duplicate_keys)
+
+
 def load_lens_verdicts(lens_dir: Path) -> list[dict]:
     """Read per-lens JSON files from lens_dir.
 
-    Expects one file per lens, named <lens_id>.json. Returns a list of dicts
-    in the order they appear after sorting by the canonical CODE_LENS_ORDER
-    prefix (then any runtime lenses appended in filename order).
+    Expects one file per lens, named <lens_id>.json, in a FRESH directory that
+    holds only this run's lens records (SKILL.md Aggregator rules). Returns a
+    list of dicts sorted by the canonical CODE_LENS_ORDER prefix, then any
+    other (runtime) lenses by lens_id.
 
-    Each file may contain either a single lens-verdict object OR a
-    full prior-style sidecar (the round-trip test path decomposes a v2 sidecar
-    into per-lens files; either shape is accepted).
+    Only the bare lens-verdict object shape is accepted. A sidecar-shaped file
+    (``lens_verdicts`` or ``aggregated_verdict`` key -- a prior run's
+    audit-trail JSON) is rejected with ValueError, as is any other shape and
+    a file with a duplicate JSON key. Raises LensSetError (a ValueError) when
+    a record's lens_id differs from its file name stem, and its subclass
+    DuplicateLensError when two records share a lens_id; both carry every
+    record. A stale same-name ``<lens_id>.json`` in a reused directory is
+    NOT detectable here (records carry no run token); the fresh-directory
+    rule owns that case.
     """
-    verdicts_by_id: dict[str, dict] = {}
+    records: list[tuple[str, dict]] = []
+    binding_problems: list[str] = []
     for child in sorted(lens_dir.iterdir()):
         if not child.is_file() or child.suffix != ".json":
             continue
-        with child.open("r", encoding="utf-8") as f:
-            data = json.load(f)
-        # Accept either bare lens verdict object or a sidecar with lens_verdicts[]
-        if isinstance(data, dict) and "lens_verdicts" in data:
-            for v in data["lens_verdicts"]:
-                verdicts_by_id[v["lens_id"]] = v
-        elif isinstance(data, dict) and "lens_id" in data:
-            verdicts_by_id[data["lens_id"]] = data
-        else:
+        try:
+            data = load_json_strict(child)
+        except ValueError as e:
+            raise ValueError(f"{child}: {e}") from e
+        if isinstance(data, dict) and ("lens_verdicts" in data or "aggregated_verdict" in data):
+            raise ValueError(
+                f"{child}: a review-deep sidecar (audit-trail JSON), not a lens "
+                f"record; --lens-dir must be a fresh directory holding only this "
+                f"run's <lens_id>.json files"
+            )
+        if not (isinstance(data, dict) and "lens_id" in data):
             raise ValueError(
                 f"{child}: not a recognized lens-verdict shape "
-                f"(expected dict with 'lens_id' or 'lens_verdicts')"
+                f"(expected an object with 'lens_id')"
+            )
+        records.append((child.name, data))
+        if data["lens_id"] != child.stem:
+            binding_problems.append(
+                f"lens file {child.name} holds lens_id {data['lens_id']!r} "
+                f"(each record must be in <lens_id>.json)"
             )
 
-    ordered: list[dict] = []
-    for lens_id in CODE_LENS_ORDER:
-        if lens_id in verdicts_by_id:
-            ordered.append(verdicts_by_id.pop(lens_id))
-    # Any leftover keys are runtime lenses; append in deterministic order.
-    for lens_id in sorted(verdicts_by_id):
-        ordered.append(verdicts_by_id[lens_id])
+    def _order(item: tuple[str, dict]) -> tuple:
+        lens_id = item[1]["lens_id"]
+        if lens_id in CODE_LENS_ORDER:
+            return (0, CODE_LENS_ORDER.index(lens_id), "")
+        # Any other lens is a runtime lens; append in deterministic order.
+        return (1, 0, str(lens_id))
+
+    # sorted() is stable, so duplicates keep their filename order.
+    ordered = [record for _source, record in sorted(records, key=_order)]
+    sources: dict[str, list[str]] = {}
+    for source, record in records:
+        sources.setdefault(str(record["lens_id"]), []).append(source)
+    duplicates = {k: v for k, v in sources.items() if len(v) > 1}
+    if duplicates:
+        detail = "; ".join(f"{k} ({', '.join(v)})" for k, v in sorted(duplicates.items()))
+        raise DuplicateLensError(
+            f"duplicate lens_id in {lens_dir}: {detail}"
+            + "".join(f"; {p}" for p in binding_problems),
+            ordered,
+            binding_problems,
+        )
+    if binding_problems:
+        raise LensSetError(
+            f"lens files in {lens_dir} do not bind to their records: "
+            + "; ".join(binding_problems),
+            ordered,
+            binding_problems,
+        )
     return ordered
 
 
@@ -688,6 +869,232 @@ def load_lint_findings(lint_findings_path: Path | None) -> list[dict]:
 
 
 # ---------------------------------------------------------------------------
+# Default-deny input contract: lens records, lens-set completeness, mechanical
+# results
+# ---------------------------------------------------------------------------
+
+
+def validate_lens_records(lens_verdicts: list[dict]) -> None:
+    """Reject lens records the rules cannot reduce safely.
+
+    Raises ValueError when a record is not an object, has no non-empty string
+    ``lens_id``, has no ``findings`` list, or holds a finding that is not an
+    object or whose ``severity`` / ``file_line`` / ``excerpt`` / ``rationale``
+    / ``anti_pattern`` has a non-string value. No verdict is produced for such
+    input (fail-closed: the caller reports the error, never a PASS).
+    """
+    for i, lv in enumerate(lens_verdicts, start=1):
+        if not isinstance(lv, dict):
+            raise ValueError(f"lens record #{i}: not a JSON object")
+        lens_id = lv.get("lens_id")
+        if not isinstance(lens_id, str) or not lens_id.strip():
+            raise ValueError(f"lens record #{i}: lens_id must be a non-empty string")
+        findings = lv.get("findings")
+        if not isinstance(findings, list):
+            raise ValueError(
+                f"lens {lens_id!r}: findings must be a list (empty when none)"
+            )
+        for j, f in enumerate(findings, start=1):
+            if not isinstance(f, dict):
+                raise ValueError(f"lens {lens_id!r} finding #{j}: not a JSON object")
+            for key in ("severity", "file_line", "excerpt", "rationale"):
+                if key in f and not isinstance(f[key], str):
+                    raise ValueError(
+                        f"lens {lens_id!r} finding #{j}: {key} must be a string"
+                    )
+            if f.get("anti_pattern") is not None and not isinstance(f["anti_pattern"], str):
+                raise ValueError(
+                    f"lens {lens_id!r} finding #{j}: anti_pattern must be a string or null"
+                )
+
+
+def check_lens_set(
+    lens_verdicts: list[dict],
+    *,
+    plan_step: str | None = None,
+    invocation: dict | None = None,
+) -> list[str]:
+    """Lens-set contract problems; any problem makes the result NEEDS-WORK.
+
+    Runs on the RAW lens records, before rules 7/2/6 mutate severities, so a
+    stale lint file or a dedup demotion cannot launder a self-contradictory
+    record. "Required" follows ``invocation.reviewers_flag``:
+
+    - every code lens in CODE_LENS_ORDER appears exactly once (the stable
+      six-element prefix), on every lane;
+    - ``code``: no other lens id; ``runtime`` / ``full``: other ids must be
+      RUNTIME_LENS_IDS;
+    - SKIPPED is allowed only for plan-conformance when ``plan_step`` is None,
+      or for any code lens under ``runtime``; a SKIPPED lens carries no
+      findings;
+    - ``runtime`` needs at least one runtime lens that ran, and a recorded
+      runtime downgrade under ``runtime`` is NEEDS-WORK unconditionally (the
+      runtime lenses were dropped and the code lenses were not selected);
+      ``full`` needs one unless ``invocation.runtime_downgraded`` records the
+      downgrade;
+    - under a recorded downgrade (``invocation.runtime_downgraded is True``)
+      runtime lenses are never spawned, so ANY runtime lens record is stale or
+      fabricated and is a problem;
+    - a PASS lens carries no Block/Nit finding, and every finding severity is
+      Block, Nit or FYI.
+
+    Unknown or missing overall_verdict values are handled by
+    build_aggregated_verdict (default-deny), not here.
+    """
+    problems: list[str] = []
+    inv = default_invocation() if invocation is None else invocation
+    reviewers = inv.get("reviewers_flag") if isinstance(inv, dict) else None
+    if reviewers not in REVIEWERS_FLAGS:
+        problems.append(
+            f"invalid invocation.reviewers_flag {reviewers!r} "
+            f"(expected one of {', '.join(REVIEWERS_FLAGS)})"
+        )
+    downgraded = isinstance(inv, dict) and inv.get("runtime_downgraded") is True
+
+    ids = [lv["lens_id"] for lv in lens_verdicts]
+    duplicates = [x for x in dict.fromkeys(ids) if ids.count(x) > 1]
+    if duplicates:
+        problems.append("duplicate lens_id: " + ", ".join(duplicates))
+    missing = [x for x in CODE_LENS_ORDER if x not in ids]
+    if missing:
+        problems.append("missing required lens: " + ", ".join(missing))
+    allowed_extra = RUNTIME_LENS_IDS if reviewers in ("runtime", "full") else ()
+    unexpected = [
+        x for x in dict.fromkeys(ids)
+        if x not in CODE_LENS_ORDER and x not in allowed_extra
+    ]
+    if unexpected:
+        problems.append(
+            f"unexpected lens for --reviewers {reviewers}: " + ", ".join(unexpected)
+        )
+
+    for lv in lens_verdicts:
+        lens_id = lv["lens_id"]
+        verdict = lv.get("overall_verdict")
+        findings = lv["findings"]
+        if verdict == "SKIPPED":
+            allowed = (lens_id in CODE_LENS_ORDER and reviewers == "runtime") or (
+                lens_id == "plan-conformance" and plan_step is None
+            )
+            if not allowed:
+                problems.append(f"required lens SKIPPED: {lens_id}")
+            if findings:
+                problems.append(f"SKIPPED lens carries findings: {lens_id}")
+        bad = [f.get("severity") for f in findings if f.get("severity") not in SEVERITY_ORDER]
+        if bad:
+            problems.append(
+                f"invalid finding severity in {lens_id}: "
+                + ", ".join(repr(s) for s in bad)
+            )
+        if verdict == "PASS" and any(
+            f.get("severity") in ("Block", "Nit") for f in findings
+        ):
+            problems.append(f"PASS lens carries Block/Nit findings: {lens_id}")
+
+    reason = (inv.get("runtime_downgrade_reason") or "reason not recorded") if downgraded else None
+    if downgraded:
+        present = [x for x in dict.fromkeys(ids) if x in RUNTIME_LENS_IDS]
+        if present:
+            problems.append(
+                "runtime lens record present under a recorded runtime downgrade: "
+                + ", ".join(present)
+                + f" (runtime downgrade: {reason}; runtime lenses were not "
+                "spawned, so the record is stale or fabricated)"
+            )
+    if reviewers in ("runtime", "full"):
+        ran = [
+            lv["lens_id"] for lv in lens_verdicts
+            if lv["lens_id"] in RUNTIME_LENS_IDS and lv.get("overall_verdict") != "SKIPPED"
+        ]
+        if reviewers == "runtime" and (downgraded or not ran):
+            problems.append(
+                "no runtime lens ran under --reviewers runtime"
+                + (f" (runtime downgrade: {reason})" if downgraded else "")
+            )
+        elif reviewers == "full" and not ran and not downgraded:
+            problems.append(
+                "no runtime lens ran under --reviewers full and no runtime "
+                "downgrade was recorded"
+            )
+    return problems
+
+
+def _json_type_name(value: object) -> str:
+    if value is None:
+        return "null"
+    if isinstance(value, bool):
+        return "boolean"
+    if isinstance(value, (int, float)):
+        return "number"
+    if isinstance(value, str):
+        return "string"
+    if isinstance(value, list):
+        return "array"
+    return type(value).__name__
+
+
+def evaluate_mechanical_results(
+    mechanical_results: object,
+    *,
+    supplied: bool = False,
+) -> dict | None:
+    """Summarize the mechanical-check phase for the verdict.
+
+    Input shape (SKILL.md Tools; the parent writes it after the mechanical
+    phase): ``{"checks": [{"check", "status", "command", "evidence"}]}`` with
+    ``status`` one of MECHANICAL_STATUSES. Returns None only when no results
+    were supplied (legacy callers: ``mechanical_results`` is None and
+    ``supplied`` is False), else ``{passed, failed, missing_tool, invalid}``
+    lists. A SUPPLIED value that is not an object -- including JSON ``null``
+    read from a ``--mechanical-results`` file (``supplied=True``) -- is
+    malformed, never the legacy path. A ``fail`` status or any malformed
+    entry makes the aggregated result NEEDS-WORK; ``missing-tool`` is listed
+    and never blocks.
+    """
+    if mechanical_results is None and not supplied:
+        return None
+    summary: dict[str, list[str]] = {
+        "passed": [], "failed": [], "missing_tool": [], "invalid": [],
+    }
+    if not isinstance(mechanical_results, dict):
+        summary["invalid"].append(
+            "expected an object with a 'checks' list, got JSON "
+            + _json_type_name(mechanical_results)
+        )
+        return summary
+    checks = mechanical_results.get("checks")
+    if not isinstance(checks, list):
+        summary["invalid"].append("expected an object with a 'checks' list")
+        return summary
+    if not checks:
+        # The mechanical-check phase is mandatory (the lint pre-pass always
+        # runs), so a supplied record with zero checks means it was skipped.
+        summary["invalid"].append("no mechanical check recorded")
+        return summary
+    for i, entry in enumerate(checks, start=1):
+        if not isinstance(entry, dict):
+            summary["invalid"].append(f"check #{i} is not an object")
+            continue
+        name = entry.get("check")
+        status = entry.get("status")
+        if not isinstance(name, str) or not name.strip():
+            summary["invalid"].append(f"check #{i} has no 'check' name")
+            continue
+        if any(k in entry and not isinstance(entry[k], str) for k in ("command", "evidence")):
+            summary["invalid"].append(f"{name}: command/evidence must be strings")
+            continue
+        if status == "pass":
+            summary["passed"].append(name)
+        elif status == "fail":
+            summary["failed"].append(name)
+        elif status == "missing-tool":
+            summary["missing_tool"].append(name)
+        else:
+            summary["invalid"].append(f"{name}: status {status!r}")
+    return summary
+
+
+# ---------------------------------------------------------------------------
 # Aggregated verdict assembly + sidecar
 # ---------------------------------------------------------------------------
 
@@ -699,22 +1106,59 @@ def build_aggregated_verdict(
     failed: list[dict],
     no_evidence: list[str],
     deferred_items: list[dict],
+    *,
+    lens_set_problems: list[str] | None = None,
+    mechanical: dict | None = None,
 ) -> dict:
     """Compute aggregated_verdict.result and rationale from the rule outputs.
 
-    Rules from SKILL.md "Aggregated-verdict output ladder":
-      PASS              -- zero Block; zero NEEDS-WORK/FAILED/NO-EVIDENCE
-                           lens verdicts; SKIPPED lenses do not block
-      NEEDS-WORK        -- any Block; OR any lens NEEDS-WORK/FAILED/NO-EVIDENCE;
+    Default-deny rules from SKILL.md "Aggregated-verdict output ladder" (the
+    result enum stays PASS | NEEDS-WORK | DEFERRED-TO-UAT):
+      PASS              -- every lens verdict is PASS or an allowed SKIPPED;
+                           zero Block; Nit < 3; no lens-set problem
+                           (check_lens_set); no failed or invalid mechanical
+                           result; no deferral
+      NEEDS-WORK        -- any Block; OR any lens verdict other than PASS /
+                           SKIPPED (NEEDS-WORK, FAILED, NO-EVIDENCE, UNCERTAIN,
+                           NEEDS-CLARIFICATION, or an unknown/missing value);
+                           OR any lens-set problem; OR a mechanical check with
+                           status "fail" or a malformed mechanical result;
                            OR aggregated Nit count >= 3
       DEFERRED-TO-UAT   -- structurally un-evaluable parts (Step 7 trigger);
                            deferral over PASS but NOT over NEEDS-WORK
+    UNCERTAIN and NEEDS-CLARIFICATION are abstentions: the rationale names the
+    lens so the operator escalates; they never become PASS.
     """
+    lens_set_problems = list(lens_set_problems or [])
     needs_work_lenses = [
         lv["lens_id"]
         for lv in lens_verdicts
         if lv.get("overall_verdict") == "NEEDS-WORK"
     ]
+    uncertain = [
+        lv["lens_id"] for lv in lens_verdicts if lv.get("overall_verdict") == "UNCERTAIN"
+    ]
+    clarification = [
+        lv["lens_id"]
+        for lv in lens_verdicts
+        if lv.get("overall_verdict") == "NEEDS-CLARIFICATION"
+    ]
+    invalid_verdicts = [
+        f"{lv['lens_id']}="
+        + (repr(lv["overall_verdict"]) if "overall_verdict" in lv else "missing")
+        for lv in lens_verdicts
+        if lv.get("overall_verdict") not in LENS_VERDICTS
+    ]
+    # Default-deny catch-all: anything but PASS / SKIPPED is non-passing.
+    non_passing = [
+        lv["lens_id"]
+        for lv in lens_verdicts
+        if lv.get("overall_verdict") not in PASSING_LENS_VERDICTS
+    ]
+    mech_failed = list((mechanical or {}).get("failed", []))
+    mech_invalid = list((mechanical or {}).get("invalid", []))
+    mech_missing = list((mechanical or {}).get("missing_tool", []))
+    mech_passed = list((mechanical or {}).get("passed", []))
     block_count = severity_counts["block_count"]
     nit_count = severity_counts["nit_count"]
 
@@ -725,6 +1169,10 @@ def build_aggregated_verdict(
         or bool(needs_work_lenses)
         or bool(failed)
         or bool(no_evidence)
+        or bool(non_passing)
+        or bool(lens_set_problems)
+        or bool(mech_failed)
+        or bool(mech_invalid)
     )
     has_deferral = bool(deferred_items)
 
@@ -753,6 +1201,29 @@ def build_aggregated_verdict(
         )
     if no_evidence:
         parts.append(f"NO-EVIDENCE: {', '.join(no_evidence)}")
+    if uncertain:
+        parts.append(
+            "UNCERTAIN (lens abstained; escalate to the operator, never PASS): "
+            + ", ".join(uncertain)
+        )
+    if clarification:
+        parts.append(
+            "NEEDS-CLARIFICATION (inputs could not be resolved): "
+            + ", ".join(clarification)
+        )
+    if invalid_verdicts:
+        parts.append("invalid overall_verdict: " + ", ".join(invalid_verdicts))
+    parts.extend(f"lens set: {p}" for p in lens_set_problems)
+    if mech_failed:
+        parts.append("mechanical check failed: " + ", ".join(mech_failed))
+    if mech_invalid:
+        parts.append("invalid mechanical result: " + "; ".join(mech_invalid))
+    if mech_missing:
+        parts.append(
+            "MISSING-TOOL (warning; that check did not run): " + ", ".join(mech_missing)
+        )
+    if mech_passed:
+        parts.append("mechanical checks passed: " + ", ".join(mech_passed))
     if skipped:
         parts.append(f"SKIPPED: {', '.join(skipped)}")
     if has_deferral:
@@ -760,7 +1231,7 @@ def build_aggregated_verdict(
             f"{len(deferred_items)} deferred UAT item"
             f"{'s' if len(deferred_items) != 1 else ''}"
         )
-    rationale = ("; ".join(parts) if parts else "Zero findings; all lenses PASS.") + "."
+    rationale = ("; ".join(parts) if parts else "Zero findings; all lenses PASS") + "."
 
     return {"result": result, "rationale": rationale}
 
@@ -844,14 +1315,17 @@ def build_sidecar(
     skill_version: str,
     plan_step: str | None,
     invocation: dict,
+    mechanical_results: dict | None = None,
 ) -> dict:
     """Assemble the JSON sidecar in the canonical key order.
 
     Schema declared in SKILL.md "Audit-trail JSON sidecar schema". The key
     order here matches the schema example block (timestamp, plan_step,
     skill_version, invocation, lens_verdicts, aggregated_verdict,
-    model_tiers_used, deferred_uat_items) so a sidecar diff against the
-    schema is alignable.
+    model_tiers_used, deferred_uat_items, mechanical_results) so a sidecar
+    diff against the schema is alignable. ``mechanical_results`` echoes the
+    supplied --mechanical-results object verbatim, or null when none was
+    supplied.
     """
     model_tiers_used = {lv["lens_id"]: lv.get("model_tier") for lv in lens_verdicts}
     return {
@@ -863,6 +1337,7 @@ def build_sidecar(
         "aggregated_verdict": aggregated_verdict,
         "model_tiers_used": model_tiers_used,
         "deferred_uat_items": deferred_items,
+        "mechanical_results": mechanical_results,
     }
 
 
@@ -917,7 +1392,8 @@ def render_markdown(sidecar: dict) -> str:
     """Render the human-readable markdown summary.
 
     Shape: matches SKILL.md "Markdown output shape" section. Sections in
-    order: header line, ## Lens verdicts, ## Findings (by severity), and
+    order: header line, a "Rationale: <aggregated rationale>" line,
+    ## Lens verdicts, ## Findings (by severity), and
     ## Deferred to operator UAT (when applicable). Final line is the
     "Please run M<N> next." cue when deferrals exist, followed by
     "Audit-trail JSON: <path>".
@@ -932,13 +1408,17 @@ def render_markdown(sidecar: dict) -> str:
     else:
         out.append(f"# review-deep: {agg['result']}")
     out.append("")
+    # The rationale names every default-deny reason (abstaining lens, lens-set
+    # problem, failed mechanical check) the per-lens lines cannot show.
+    out.append(f"Rationale: {_escape_md(str(agg.get('rationale', '')))}")
+    out.append("")
 
     # Lens verdicts.
     out.append("## Lens verdicts")
     out.append("")
     for lv in sidecar["lens_verdicts"]:
         finding_count = len(lv.get("findings", []))
-        verdict = lv["overall_verdict"]
+        verdict = lv.get("overall_verdict", "<missing>")
         tier = lv.get("model_tier", "?")
         if verdict == "SKIPPED" and lv["lens_id"] == "plan-conformance":
             out.append(
@@ -1042,6 +1522,9 @@ def aggregate(
     plan_step: str | None = None,
     invocation: dict | None = None,
     lint_findings: list[dict] | None = None,
+    mechanical_results: dict | None = None,
+    mechanical_results_supplied: bool = False,
+    lens_file_problems: list[str] | None = None,
 ) -> dict:
     """Run all seven aggregator rules and assemble the sidecar dict.
 
@@ -1053,22 +1536,35 @@ def aggregate(
     ``lint-findings.json`` (see ``load_lint_findings``). When supplied, rule 7's
     lint path demotes lens findings that share a file_line with a linter
     finding to FYI with rationale prefixed ``Cited-by-linter: <tool> <rule>``.
+
+    Default-deny: validate_lens_records raises ValueError for records the
+    rules cannot reduce; check_lens_set (on the raw records, before any rule
+    mutates them) and evaluate_mechanical_results feed build_aggregated_verdict,
+    which returns PASS only when nothing is missing, duplicated, abstaining,
+    unknown, skipped-while-required or mechanically failed.
+    ``mechanical_results`` (``{"checks": [...]}``) is optional for legacy
+    callers; when supplied it is echoed into the sidecar. A caller that read
+    it from a file passes ``mechanical_results_supplied=True`` so a JSON
+    ``null`` (or any non-object) is reduced as a malformed record and echoed
+    as ``{"malformed_input": <value>}``, never as the flag-absent ``null``.
+    ``lens_file_problems`` carries load_lens_verdicts' file-binding problems
+    (LensSetError.problems); each is a lens-set problem (NEEDS-WORK).
     """
+    if invocation is None:
+        invocation = default_invocation()
+    supplied = mechanical_results_supplied or mechanical_results is not None
+    mechanical = evaluate_mechanical_results(mechanical_results, supplied=supplied)
+    if not supplied:
+        mechanical_echo = None
+    elif isinstance(mechanical_results, dict):
+        mechanical_echo = json.loads(json.dumps(mechanical_results))
+    else:
+        mechanical_echo = {"malformed_input": json.loads(json.dumps(mechanical_results))}
     # Guardrail: empty lens-verdict input is virtually always an orchestrator
     # failure (load_lens_verdicts returned [] because the dir was empty or
     # contained no .json files). Surface as NEEDS-WORK rather than a vacuous
     # PASS so the operator notices.
     if len(lens_verdicts) == 0:
-        if invocation is None:
-            invocation = {
-                "reviewers_flag": "code",
-                "model_overrides": {},
-                "force_runtime": False,
-                "url": None,
-                "start_cmd": None,
-                "runtime_downgraded": False,
-                "runtime_downgrade_reason": None,
-            }
         return build_sidecar(
             lens_verdicts=[],
             aggregated_verdict={
@@ -1083,7 +1579,13 @@ def aggregate(
             skill_version=skill_version,
             plan_step=plan_step,
             invocation=invocation,
+            mechanical_results=mechanical_echo,
         )
+    # Default-deny input contract, on the RAW records (before rules mutate).
+    validate_lens_records(lens_verdicts)
+    lens_set_problems = check_lens_set(
+        lens_verdicts, plan_step=plan_step, invocation=invocation
+    ) + list(lens_file_problems or [])
     # Rule 7 first: dedup absences across lenses + lint-finding dedup.
     lens_verdicts = apply_rule_7_absence_dedup(lens_verdicts, lint_findings)
     # Rule 2: cross-lens dimension demotion at the same file_line.
@@ -1101,18 +1603,15 @@ def aggregate(
     raw_deferred = extract_deferred_items(lens_verdicts)
     deferred = assign_m_numbers(raw_deferred)
     aggregated_verdict = build_aggregated_verdict(
-        lens_verdicts, severity_counts, skipped, failed, no_evidence, deferred
+        lens_verdicts,
+        severity_counts,
+        skipped,
+        failed,
+        no_evidence,
+        deferred,
+        lens_set_problems=lens_set_problems,
+        mechanical=mechanical,
     )
-    if invocation is None:
-        invocation = {
-            "reviewers_flag": "code",
-            "model_overrides": {},
-            "force_runtime": False,
-            "url": None,
-            "start_cmd": None,
-            "runtime_downgraded": False,
-            "runtime_downgrade_reason": None,
-        }
     return build_sidecar(
         lens_verdicts,
         aggregated_verdict,
@@ -1121,6 +1620,7 @@ def aggregate(
         skill_version=skill_version,
         plan_step=plan_step,
         invocation=invocation,
+        mechanical_results=mechanical_echo,
     )
 
 
@@ -1257,8 +1757,12 @@ def run_unit_tests() -> int:
     render_markdown Unicode smoke (Test 5), rule 7 lint-finding dedup
     (Test 6) with normalization + range sub-case (Test 6b),
     load_lint_findings I/O round-trip (Test 7), rule 7
-    scope-boundary-deferral exclusion in the lint path (Test 8), and rule 2
-    Security-as-primary-owner for a Bugs+Security secret-dump co-flag (Test 9).
+    scope-boundary-deferral exclusion in the lint path (Test 8), rule 2
+    Security-as-primary-owner for a Bugs+Security secret-dump co-flag (Test 9),
+    and the default-deny PASS cases (Test 10): (a) UNCERTAIN with no findings,
+    (b) incomplete set, (c) duplicate lens id (load_lens_verdicts rejects it),
+    (d) unknown verdict, (e) SKIPPED required lens, (f) failed mechanical
+    check -- each NEEDS-WORK -- and (g) the known-good six-lens anchor -> PASS.
     Prints
     UNIT TESTS PASSED + returns 0 on success; prints UNIT TEST FAILED:
     <reason> + returns 1 on first failure.
@@ -1846,6 +2350,65 @@ def run_unit_tests() -> int:
             f"got {out6['aggregated_verdict']['result']!r}"
         )
 
+        # Test 10: default-deny PASS (P-RD-1 variant (a)). Each garbage case
+        # (a)-(f) must aggregate to NEEDS-WORK; the known-good anchor (g)
+        # must still PASS, so a reducer that always says NEEDS-WORK fails too.
+        def _six() -> list[dict]:
+            lenses = [
+                {
+                    "lens_id": lens_id,
+                    "model_tier": "haiku" if lens_id == "style" else "sonnet",
+                    "authority": "a",
+                    "coverage_claim": "c",
+                    "findings": [],
+                    "overall_verdict": "PASS",
+                }
+                for lens_id in CODE_LENS_ORDER
+            ]
+            lenses[-1]["overall_verdict"] = "SKIPPED"
+            return lenses
+
+        def _result(lenses: list[dict], **kwargs) -> str:
+            return aggregate(
+                lenses, timestamp="2026-01-01T00-00-00", skill_version="v3", **kwargs
+            )["aggregated_verdict"]["result"]
+
+        assert _result(_six()) == "PASS", "(g) known-good six-lens anchor must PASS"
+        case_a = _six()
+        case_a[0]["overall_verdict"] = "UNCERTAIN"
+        assert _result(case_a) == "NEEDS-WORK", "(a) UNCERTAIN must not PASS"
+        assert _result(_six()[:3]) == "NEEDS-WORK", "(b) incomplete set must not PASS"
+        case_c = _six() + [_six()[0]]
+        assert _result(case_c) == "NEEDS-WORK", "(c) duplicate lens must not PASS"
+        case_d = _six()
+        case_d[1]["overall_verdict"] = "pass"
+        assert _result(case_d) == "NEEDS-WORK", "(d) unknown verdict must not PASS"
+        case_e = _six()
+        case_e[0]["overall_verdict"] = "SKIPPED"
+        assert _result(case_e) == "NEEDS-WORK", "(e) SKIPPED required lens must not PASS"
+        failing = {"checks": [{"check": "pytest", "status": "fail"}]}
+        assert _result(_six(), mechanical_results=failing) == "NEEDS-WORK", (
+            "(f) failed mechanical check must not PASS"
+        )
+        missing_tool = {"checks": [{"check": "mypy", "status": "missing-tool"}]}
+        assert _result(_six(), mechanical_results=missing_tool) == "PASS", (
+            "(f') missing-tool is listed but non-blocking"
+        )
+        dup_dir = Path(tempfile.mkdtemp(prefix="agg-test10-"))
+        try:
+            for name in ("correctness.json", "correctness-stale.json"):
+                (dup_dir / name).write_text(json.dumps(_six()[0]), encoding="utf-8")
+            try:
+                load_lens_verdicts(dup_dir)
+            except DuplicateLensError as dup:
+                assert len(dup.records) == 2, "(c) duplicate records must be kept"
+            else:
+                raise AssertionError("(c) load_lens_verdicts must reject duplicates")
+        finally:
+            for child in dup_dir.iterdir():
+                child.unlink()
+            dup_dir.rmdir()
+
     except AssertionError as e:
         sys.stdout.write(f"UNIT TEST FAILED: {e}\n")
         return 1
@@ -1861,6 +2424,33 @@ def run_unit_tests() -> int:
 # ---------------------------------------------------------------------------
 
 
+class _StoreOnce(argparse.Action):
+    """`store` that refuses a second occurrence of the same option.
+
+    argparse's default `store` keeps the LAST occurrence silently, so a repeated
+    single-value option resolved last-wins: `--mechanical-results fail.json
+    --mechanical-results ok.json` dropped a recorded fail, and a repeated
+    `--lens-dir` or `--reviewers` swapped in another lens set or lane. A second
+    occurrence, in the `--opt value` or the `--opt=value` form, is a usage error
+    (parser.error: exit 2, no sidecar). Occurrences are tracked per parse.
+    """
+
+    SEEN = "_store_once_seen"
+
+    def __call__(self, parser, namespace, values, option_string=None):
+        seen = getattr(namespace, self.SEEN, None)
+        if seen is None:
+            seen = set()
+            setattr(namespace, self.SEEN, seen)
+        if self.dest in seen:
+            parser.error(
+                f"argument {'/'.join(self.option_strings)}: given more than once; "
+                "each option is given at most once"
+            )
+        seen.add(self.dest)
+        setattr(namespace, self.dest, values)
+
+
 def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="review-deep multi-lens verdict aggregator",
@@ -1868,27 +2458,32 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     parser.add_argument(
         "--lens-dir",
+        action=_StoreOnce,
         type=Path,
         help="Directory containing per-lens JSON verdict files (one per lens)",
     )
     parser.add_argument(
         "--output-dir",
+        action=_StoreOnce,
         type=Path,
         help="Directory where the sidecar JSON will be written",
     )
     parser.add_argument(
         "--skill-version",
+        action=_StoreOnce,
         default="v3",
         help="Skill version string to embed in the sidecar (default: v3)",
     )
     parser.add_argument(
         "--prior-sidecar",
+        action=_StoreOnce,
         type=Path,
         default=None,
         help="Path to a prior sidecar JSON to enable rule 6 (persistent disagreement)",
     )
     parser.add_argument(
         "--lint-findings",
+        action=_StoreOnce,
         type=Path,
         default=None,
         help=(
@@ -1898,12 +2493,58 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "--mechanical-results",
+        action=_StoreOnce,
+        type=Path,
+        default=None,
+        help=(
+            "Path to this run's mechanical-check results JSON "
+            '({"checks": [{"check", "status": "pass|fail|missing-tool", '
+            '"command", "evidence"}]}); a "fail" or malformed entry is '
+            "NEEDS-WORK, missing-tool is listed and non-blocking"
+        ),
+    )
+    parser.add_argument(
+        "--plan-step",
+        action=_StoreOnce,
+        default=None,
+        help=(
+            "<plan-file-path>:<step-id> the review was run against (the step "
+            "id is the token after the last colon, e.g. 12, 5a, 22-prep, D.6); "
+            "recorded as plan_step and makes a SKIPPED plan-conformance lens "
+            "NEEDS-WORK"
+        ),
+    )
+    parser.add_argument(
+        "--reviewers",
+        action=_StoreOnce,
+        choices=REVIEWERS_FLAGS,
+        default="code",
+        help="Review lane that ran (default: code); drives lens-set completeness",
+    )
+    parser.add_argument(
+        "--force-runtime",
+        action="store_true",
+        help="Record that the auth-gate probe was skipped by --force-runtime",
+    )
+    parser.add_argument(
+        "--runtime-downgrade-reason",
+        action=_StoreOnce,
+        default=None,
+        help=(
+            "Auth-gate probe reason token when runtime lenses were downgraded "
+            "(status_401 | redirect_to_login:<url> | login_form_in_200_body | timeout)"
+        ),
+    )
+    parser.add_argument(
         "--timestamp",
+        action=_StoreOnce,
         default=None,
         help="ISO-8601 timestamp override (filesystem-safe; default: now)",
     )
     parser.add_argument(
         "--self-test",
+        action=_StoreOnce,
         type=Path,
         default=None,
         help="Round-trip self-test against an M1 baseline sidecar; exits after",
@@ -1913,7 +2554,19 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         action="store_true",
         help="Run in-process unit tests for aggregator rules 6/7 + smoke checks; exits after",
     )
-    return parser.parse_args(argv)
+    args = parser.parse_args(argv)
+    vars(args).pop(_StoreOnce.SEEN, None)
+    if args.plan_step is not None and not _PLAN_STEP_RE.fullmatch(args.plan_step):
+        parser.error("--plan-step must be <plan-file-path>:<step-id>")
+    if args.runtime_downgrade_reason is not None:
+        if not _RUNTIME_DOWNGRADE_RE.match(args.runtime_downgrade_reason):
+            parser.error("--runtime-downgrade-reason is not an auth-gate probe reason token")
+        if args.reviewers == "code" or args.force_runtime:
+            parser.error(
+                "--runtime-downgrade-reason needs --reviewers runtime|full "
+                "and excludes --force-runtime"
+            )
+    return args
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -1941,7 +2594,35 @@ def main(argv: list[str] | None = None) -> int:
         )
         return 2
 
-    lens_verdicts = load_lens_verdicts(args.lens_dir)
+    lens_file_problems: list[str] = []
+    try:
+        lens_verdicts = load_lens_verdicts(args.lens_dir)
+    except LensSetError as e:
+        # Never overwrite a duplicate and never let a record under another
+        # file name fill a slot: reduce every record so the lens-set checks
+        # report it and the verdict is NEEDS-WORK with all evidence kept.
+        sys.stderr.write(f"warning: {e}; the lens set is non-passing\n")
+        lens_verdicts = e.records
+        lens_file_problems = e.problems
+    except (OSError, ValueError) as e:
+        sys.stderr.write(
+            f"error: lens input rejected: {e}. No sidecar written; this run "
+            f"has no verdict and is non-passing.\n"
+        )
+        return 1
+
+    mechanical_results = None
+    if args.mechanical_results is not None:
+        try:
+            # Duplicate keys rejected (a "fail" then "pass" status must not
+            # resolve last-wins); a JSON null is reduced as malformed below.
+            mechanical_results = load_json_strict(args.mechanical_results)
+        except (OSError, ValueError) as e:
+            sys.stderr.write(
+                f"error: --mechanical-results unreadable: {e}. No sidecar "
+                f"written; this run has no verdict and is non-passing.\n"
+            )
+            return 2
 
     prior_sidecar = None
     if args.prior_sidecar is not None:
@@ -1963,15 +2644,30 @@ def main(argv: list[str] | None = None) -> int:
 
     timestamp = args.timestamp or datetime.now().strftime("%Y-%m-%dT%H-%M-%S")
 
-    sidecar = aggregate(
-        lens_verdicts,
-        prior_sidecar=prior_sidecar,
-        timestamp=timestamp,
-        skill_version=args.skill_version,
-        plan_step=None,
-        invocation=None,
-        lint_findings=lint_findings,
+    invocation = default_invocation(
+        args.reviewers,
+        force_runtime=args.force_runtime,
+        runtime_downgrade_reason=args.runtime_downgrade_reason,
     )
+    try:
+        sidecar = aggregate(
+            lens_verdicts,
+            prior_sidecar=prior_sidecar,
+            timestamp=timestamp,
+            skill_version=args.skill_version,
+            plan_step=args.plan_step,
+            invocation=invocation,
+            lint_findings=lint_findings,
+            mechanical_results=mechanical_results,
+            mechanical_results_supplied=args.mechanical_results is not None,
+            lens_file_problems=lens_file_problems,
+        )
+    except ValueError as e:
+        sys.stderr.write(
+            f"error: lens input rejected: {e}. No sidecar written; this run "
+            f"has no verdict and is non-passing.\n"
+        )
+        return 1
 
     sidecar_path = write_sidecar(sidecar, args.output_dir)
     sys.stderr.write(f"Sidecar written: {sidecar_path}\n")

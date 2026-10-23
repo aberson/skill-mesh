@@ -139,6 +139,13 @@ $REVIEW_DEEP_RESOURCES = @(
     'scripts/aggregate.py', 'scripts/lint_prepass.sh',
     'scripts/README.md', 'config/model-tier-map.json'
 )
+# build-step's reviewed package exception (packet route P2), mirroring the review-deep
+# one above: exact package-relative Python helpers the core cites as
+# `<skill-dir>/scripts/<leaf>`, shipped at the same relative path. Not manifest
+# support_assets expansion, and not a precedent for other skills.
+$BUILD_STEP_RESOURCES = @(
+    'scripts/build_step_tree.py', 'scripts/capture_evidence.py'
+)
 
 if ([string]::IsNullOrWhiteSpace($ManifestPath)) {
     $ManifestPath = Join-Path $REPO_ROOT 'config\skill-manifest.json'
@@ -581,6 +588,18 @@ foreach ($profile in $profiles) {
                 $reviewResources[$resource] = Read-SourceText $resourceAbs
             }
         }
+        $buildStepResources = @{}
+        if ($name -eq 'build-step') {
+            $packageRoot = Join-Path $SKILLS_ROOT 'build-step'
+            foreach ($resource in $BUILD_STEP_RESOURCES) {
+                $resourceAbs = Resolve-SafePath -Path (Join-Path $packageRoot $resource) `
+                                               -AllowedRoots @($packageRoot)
+                if (-not (Test-Path -LiteralPath $resourceAbs -PathType Leaf)) {
+                    throw "build-distributions: build-step resource source missing: $resource"
+                }
+                $buildStepResources[$resource] = Read-SourceText $resourceAbs
+            }
+        }
 
         # -- Launcher (SKILL.md) -- (all sources validated above)
         $adapterBody = Read-SourceText $adapterAbs
@@ -653,6 +672,14 @@ foreach ($profile in $profiles) {
                 '.md' { $resourceOut = Add-Provenance $resourceBody $resourceLabel $profile }
             }
             Write-GeneratedFile (Join-Path $skillOutDir $resourceDest) $resourceOut $profileDirAbs
+            $fileCount++
+        }
+
+        foreach ($resource in $BUILD_STEP_RESOURCES) {
+            if ($name -ne 'build-step') { break }
+            $resourceLabel = "skills/build-step/$resource"
+            $resourceOut = Add-PythonProvenance $buildStepResources[$resource] $resourceLabel $profile
+            Write-GeneratedFile (Join-Path $skillOutDir $resource) $resourceOut $profileDirAbs
             $fileCount++
         }
 

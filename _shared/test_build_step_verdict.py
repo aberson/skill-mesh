@@ -13,6 +13,7 @@ test_score_skill_absolute.py.
 from __future__ import annotations
 
 import json
+import io
 import subprocess
 import sys
 from pathlib import Path
@@ -20,6 +21,7 @@ from pathlib import Path
 import pytest
 
 SECRET = "11" * 32
+CREATE_NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0)
 
 # Sibling import - same dir as the module under test.
 THIS_DIR = Path(__file__).resolve().parent
@@ -29,12 +31,18 @@ if str(THIS_DIR) not in sys.path:
 from build_step_verdict import (  # noqa: E402  (sys.path tweak above)
     ADVANCE,
     BLOCKED,
+    MCP_MAX_JSON_NESTING,
     ORCHESTRATOR_WRITER,
     SCHEMA_VERSION,
+    SERVICE_REQUEST_KEYS,
     SERVICE_SCHEMA,
     VerdictService,
+    _mcp_tool_schema,
+    claude_parent_guard,
     classify_verdict,
     decode_service_request,
+    serve_mcp,
+    serve_verdict_service,
     translate_build_step_verdict,
     write_verdict,
 )
@@ -464,6 +472,29 @@ def test_service_decoder_rejects_duplicate_extra_malformed_and_oversize(raw):
         decode_service_request(raw)
 
 
+def test_service_decoder_recursion_error_preserves_connection(monkeypatch):
+    nesting = sys.getrecursionlimit() + 100
+    overdeep = "[" * nesting + "0" + "]" * nesting
+    stdin = io.StringIO(overdeep + '\n{"op":"cleanup"}\n')
+    stdout = io.StringIO()
+    original_loads = json.loads
+
+    def decoder_with_depth_failure(raw, *args, **kwargs):
+        if raw == overdeep:
+            raise RecursionError("decoder nesting limit")
+        return original_loads(raw, *args, **kwargs)
+
+    with monkeypatch.context() as scoped:
+        scoped.setattr(json, "loads", decoder_with_depth_failure)
+        assert serve_verdict_service(stdin, stdout) == 0
+    responses = [original_loads(line) for line in stdout.getvalue().splitlines()]
+    assert responses == [
+        {"ok": True, "schema": SERVICE_SCHEMA},
+        {"ok": False, "error": "invalid_request"},
+        {"ok": True, "op": "cleanup"},
+    ]
+
+
 @pytest.mark.parametrize(
     "service_request",
     [
@@ -593,6 +624,7 @@ def test_service_cli_is_strict_json_lines_and_emits_no_verdict_secret(tmp_path):
         stderr=subprocess.PIPE,
         text=True,
         encoding="utf-8",
+        creationflags=CREATE_NO_WINDOW,
     )
     requests = (
         {"op": "open", "verdict_path": str(verdict_path), "run_id": "run-cli"},
@@ -621,6 +653,636 @@ def test_service_cli_is_strict_json_lines_and_emits_no_verdict_secret(tmp_path):
     rendered = json.dumps(responses, separators=(",", ":"))
     assert "signature" not in rendered
     assert "secret" not in rendered
+
+
+def _acceptance_request(tmp_path, run_id="run-production"):
+    return {
+        "op": "export",
+        "destination": str(tmp_path / "parent-acceptance.json"),
+        "schema": "swarm-forge/parent-acceptance-v1",
+        "attempt_id": "11111111-1111-4111-8111-111111111111",
+        "submission_id": "22222222-2222-4222-8222-222222222222",
+        "verdict_run_id": run_id,
+        "classification": "ADVANCE",
+        "result": "PASS",
+        "plan_path": "docs/plans/master_plan.md",
+        "approved_input_plan_sha256": "1" * 64,
+        "checkpoint_plan_sha256": "2" * 64,
+        "item_id": "Step 1",
+        "baseline_checkpoint": "3" * 40,
+        "accepted_checkpoint": "4" * 40,
+        "candidate_source": {"head": "5" * 40, "tree_sha256": "6" * 64},
+        "installed_skills_sha256": "7" * 64,
+        "suite_evidence": [{"name": "pytest", "locator": "evidence/pytest.txt", "sha256": "8" * 64}],
+        "review_evidence": [{"name": "review-deep", "locator": "evidence/review.json", "sha256": "9" * 64}],
+        "landed_paths_locator": "archive/landed-paths.json",
+        "native_session_id": "33333333-3333-4333-8333-333333333333",
+        "observed_model": "claude-opus-5-5",
+    }
+
+
+def _mcp_initialize(request_id=1, **overrides):
+    params = {
+        "protocolVersion": "2025-06-18",
+        "capabilities": {},
+        "clientInfo": {"name": "test-client", "version": "1"},
+    }
+    params.update(overrides)
+    return {"jsonrpc": "2.0", "id": request_id, "method": "initialize", "params": params}
+
+
+def test_export_requires_live_advancing_channel_and_hashes_exact_receipt(tmp_path):
+    service = VerdictService(secret_factory=lambda: SECRET)
+    verdict_path = tmp_path / "verdict.json"
+    export = _acceptance_request(tmp_path)
+    assert service.handle({"op": "open", "verdict_path": str(verdict_path), "run_id": "run-production"})[0]["ok"]
+    assert service.handle(export)[0] == {"ok": False, "error": "invalid_request"}
+    assert service.handle({"op": "write", "terminal": "PASS", "halt": None, "summary": "accepted"})[0]["ok"]
+    assert service.handle({
+        "op": "write", "terminal": "DEFERRED-TO-UAT", "halt": None,
+        "summary": "deferred",
+    })[0]["ok"]
+    deferred = {**export, "result": "DEFERRED-TO-UAT"}
+    assert service.handle(deferred)[0] == {"ok": False, "error": "invalid_request"}
+    assert not Path(export["destination"]).exists()
+    assert service.handle({"op": "write", "terminal": "PASS", "halt": None, "summary": "accepted"})[0]["ok"]
+    response, close = service.handle(export)
+    assert close is False
+    assert set(response) == {"ok", "op", "attempt_id", "submission_id", "verdict_run_id", "destination", "receipt_sha256"}
+    receipt = Path(export["destination"])
+    assert response["receipt_sha256"] == __import__("hashlib").sha256(receipt.read_bytes()).hexdigest()
+    assert "signature" not in receipt.read_text(encoding="ascii")
+
+
+def test_mcp_same_connection_cleanup_reopen_audit_and_final_close(tmp_path):
+    verdict_one = tmp_path / "one.json"
+    verdict_two = tmp_path / "two.json"
+    calls = [
+        {"op": "open", "verdict_path": str(verdict_one), "run_id": "canary"},
+        {"op": "cleanup"},
+        {"op": "open", "verdict_path": str(verdict_two), "run_id": "production"},
+        {"op": "write", "terminal": "PASS", "halt": None, "summary": "accepted"},
+        {"op": "classify"},
+        {"op": "close"},
+    ]
+    messages = [
+        _mcp_initialize(),
+        {"jsonrpc": "2.0", "method": "notifications/initialized", "params": {}},
+    ]
+    messages += [{"jsonrpc": "2.0", "id": i + 2, "method": "tools/call", "params": {"name": "verdict", "arguments": call}} for i, call in enumerate(calls)]
+    process = subprocess.run(
+        [sys.executable, str(THIS_DIR / "build_step_verdict.py"), "--mcp"],
+        input="".join(json.dumps(item) + "\n" for item in messages),
+        text=True, capture_output=True, timeout=10, check=False,
+        creationflags=CREATE_NO_WINDOW,
+    )
+    responses = [json.loads(line) for line in process.stdout.splitlines()]
+    structured = [item["result"]["structuredContent"] for item in responses[1:]]
+    assert [item["audit_seq"] for item in structured] == [1, 2, 3, 4, 5, 6]
+    assert structured[-2]["classification"] == ADVANCE
+    assert structured[-1] == {"ok": True, "op": "close", "audit_seq": 6}
+    assert process.returncode == 0
+    assert "signature" not in process.stdout and "secret" not in process.stdout
+
+
+def test_mcp_protocol_initialize_ping_list_notifications_and_errors():
+    stream = "not-json\n" + "".join(json.dumps(item) + "\n" for item in (
+        {"jsonrpc": "2.0", "id": 1, "method": "unknown", "params": {}},
+        {"jsonrpc": "2.0", "method": "notifications/initialized", "params": {}},
+        _mcp_initialize(2),
+        {"jsonrpc": "2.0", "method": "notifications/initialized", "params": {}},
+        {"jsonrpc": "2.0", "id": 3, "method": "ping", "params": {}},
+        {"jsonrpc": "2.0", "id": 4, "method": "tools/list", "params": {}},
+        {"jsonrpc": "2.0", "id": 5, "method": "tools/call", "params": {"name": "verdict", "arguments": {"op": "close"}}},
+    ))
+    process = subprocess.run(
+        [sys.executable, str(THIS_DIR / "build_step_verdict.py"), "--mcp"],
+        input=stream, text=True, capture_output=True, timeout=10, check=False,
+        creationflags=CREATE_NO_WINDOW,
+    )
+    responses = [json.loads(line) for line in process.stdout.splitlines()]
+    assert responses[0]["error"]["code"] == -32700
+    assert responses[1]["error"]["code"] == -32002
+    assert responses[2]["result"]["serverInfo"]["name"] == "forge-verdict"
+    assert responses[3]["result"] == {}
+    tool = responses[4]["result"]["tools"][0]
+    assert tool["name"] == "verdict"
+    assert tool["inputSchema"]["type"] == "object"
+    assert all(variant["additionalProperties"] is False for variant in tool["inputSchema"]["oneOf"])
+    assert responses[5]["result"]["structuredContent"]["audit_seq"] == 1
+
+
+def test_mcp_rejects_bad_initialize_params_and_id_bearing_notification():
+    messages = (
+        {"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {"protocolVersion": []}},
+        {"jsonrpc": "2.0", "id": 2, "method": "initialize", "params": []},
+        _mcp_initialize(3),
+        {"jsonrpc": "2.0", "id": 4, "method": "notifications/unknown", "params": {}},
+        {"jsonrpc": "2.0", "method": "notifications/initialized", "params": {}},
+        {"jsonrpc": "2.0", "id": 5, "method": "tools/call", "params": {"name": "verdict", "arguments": {"op": "close"}}},
+    )
+    process = subprocess.run(
+        [sys.executable, str(THIS_DIR / "build_step_verdict.py"), "--mcp"],
+        input="".join(json.dumps(item) + "\n" for item in messages),
+        text=True, capture_output=True, timeout=10, check=False,
+        creationflags=CREATE_NO_WINDOW,
+    )
+    responses = [json.loads(line) for line in process.stdout.splitlines()]
+    assert [item.get("id") for item in responses] == [1, 2, 3, 4, 5]
+    assert responses[0]["error"]["code"] == -32602
+    assert responses[1]["error"]["code"] == -32600
+    assert responses[2]["result"]["protocolVersion"] == "2025-06-18"
+    assert responses[3]["error"]["code"] == -32002
+
+
+def test_mcp_rejects_invalid_ids_and_idless_requests_without_audit():
+    messages = (
+        _mcp_initialize(),
+        {"jsonrpc": "2.0", "method": "tools/call", "params": {"name": "verdict", "arguments": {"op": "classify"}}},
+        {"jsonrpc": "2.0", "id": True, "method": "tools/call", "params": {"name": "verdict", "arguments": {"op": "classify"}}},
+        {"jsonrpc": "2.0", "id": None, "method": "ping", "params": {}},
+        {"jsonrpc": "2.0", "method": "initialize", "params": {}},
+        {"jsonrpc": "2.0", "method": "ping", "params": {}},
+        {"jsonrpc": "2.0", "method": "tools/list", "params": {}},
+        {"jsonrpc": "2.0", "method": "notifications/initialized", "params": {}},
+        {"jsonrpc": "2.0", "id": 2, "method": "tools/call", "params": {"name": "verdict", "arguments": {"op": "classify"}}},
+    )
+    process = subprocess.run(
+        [sys.executable, str(THIS_DIR / "build_step_verdict.py"), "--mcp"],
+        input="".join(json.dumps(item) + "\n" for item in messages),
+        text=True, capture_output=True, timeout=10, check=False,
+        creationflags=CREATE_NO_WINDOW,
+    )
+    responses = [json.loads(line) for line in process.stdout.splitlines()]
+    assert len(responses) == 4
+    assert responses[0]["result"]["protocolVersion"] == "2025-06-18"
+    assert responses[1]["error"]["code"] == -32600
+    assert responses[2]["error"]["code"] == -32600
+    assert responses[3]["result"]["structuredContent"]["audit_seq"] == 1
+
+
+def test_mcp_schema_variants_are_derived_from_service_request_keys():
+    schema = _mcp_tool_schema()
+    assert schema["type"] == "object"
+    variants = {
+        variant["properties"]["op"]["const"]: variant
+        for variant in schema["oneOf"]
+    }
+    assert set(variants) == set(SERVICE_REQUEST_KEYS)
+    for op, fields in SERVICE_REQUEST_KEYS.items():
+        variant = variants[op]
+        assert set(variant["properties"]) == fields
+        assert set(variant["required"]) == fields
+        assert variant["additionalProperties"] is False
+        assert all(variant["properties"][field] for field in fields)
+
+
+def _mcp_exchange(*messages):
+    stdin = io.StringIO("".join(
+        item if isinstance(item, str) else json.dumps(item) + "\n"
+        for item in messages
+    ))
+    stdout = io.StringIO()
+    assert serve_mcp(stdin, stdout) == 0
+    return [json.loads(line) for line in stdout.getvalue().splitlines()]
+
+
+@pytest.mark.parametrize(
+    ("arguments", "path_name"),
+    [
+        (None, None),
+        ({}, None),
+        ({"op": "unknown"}, None),
+        ({"op": "classify", "extra": True}, None),
+        ({"op": "classify", "_meta": {"progressToken": "wrong-layer"}}, None),
+        ({"op": "cleanup", "extra": True}, None),
+        ({"op": "close", "extra": True}, None),
+        ({"op": "open", "verdict_path": "relative.json", "run_id": "run"}, None),
+        ({"op": "open", "verdict_path": "PATH", "run_id": ""}, "invalid-open.json"),
+        ({"op": "write", "terminal": 1, "halt": None, "summary": "ok"}, None),
+        ({"op": "write", "terminal": "PASS", "halt": 1, "summary": "ok"}, None),
+        ({"op": "write", "terminal": "PASS", "halt": None, "summary": "line\nbreak"}, None),
+    ],
+)
+def test_mcp_rejects_every_closed_operation_argument_shape_without_audit(
+    tmp_path, arguments, path_name,
+):
+    if path_name:
+        arguments = {**arguments, "verdict_path": str(tmp_path / path_name)}
+    invalid_call = {
+        "jsonrpc": "2.0", "id": 2, "method": "tools/call",
+        "params": {"name": "verdict", "arguments": arguments},
+    }
+    responses = _mcp_exchange(
+        _mcp_initialize(),
+        {"jsonrpc": "2.0", "method": "notifications/initialized", "params": {}},
+        invalid_call,
+        {"jsonrpc": "2.0", "id": 3, "method": "tools/call", "params": {
+            "name": "verdict", "arguments": {"op": "classify"},
+        }},
+    )
+    assert responses[1]["error"] == {"code": -32602, "message": "invalid tool arguments"}
+    assert responses[2]["result"]["structuredContent"]["audit_seq"] == 1
+    if path_name:
+        assert not (tmp_path / path_name).exists()
+
+
+@pytest.mark.parametrize(
+    ("field", "invalid"),
+    [
+        ("destination", "relative.json"),
+        ("schema", "wrong"),
+        ("attempt_id", "wrong"),
+        ("submission_id", "wrong"),
+        ("verdict_run_id", ""),
+        ("classification", "BLOCKED"),
+        ("result", "DEFERRED-TO-UAT"),
+        ("plan_path", ""),
+        ("approved_input_plan_sha256", "x" * 64),
+        ("checkpoint_plan_sha256", "x" * 64),
+        ("item_id", ""),
+        ("baseline_checkpoint", "x" * 40),
+        ("accepted_checkpoint", "x" * 40),
+        ("candidate_source", {"head": "5" * 40}),
+        ("installed_skills_sha256", "x" * 64),
+        ("suite_evidence", []),
+        ("review_evidence", [{"name": "review", "locator": "e", "sha256": []}]),
+        ("landed_paths_locator", ""),
+        ("native_session_id", ""),
+        ("observed_model", ""),
+    ],
+)
+def test_mcp_rejects_each_export_argument_before_service_dispatch(
+    tmp_path, field, invalid,
+):
+    arguments = _acceptance_request(tmp_path)
+    arguments[field] = invalid
+    responses = _mcp_exchange(
+        _mcp_initialize(),
+        {"jsonrpc": "2.0", "method": "notifications/initialized", "params": {}},
+        {"jsonrpc": "2.0", "id": 2, "method": "tools/call", "params": {
+            "name": "verdict", "arguments": arguments,
+        }},
+        {"jsonrpc": "2.0", "id": 3, "method": "tools/call", "params": {
+            "name": "verdict", "arguments": {"op": "classify"},
+        }},
+    )
+    assert responses[1]["error"]["code"] == -32602
+    assert responses[2]["result"]["structuredContent"]["audit_seq"] == 1
+    assert not Path(_acceptance_request(tmp_path)["destination"]).exists()
+
+
+@pytest.mark.parametrize(
+    ("message", "error_code"),
+    [
+        ({"jsonrpc": "1.0", "id": 2, "method": "ping", "params": {}}, -32600),
+        ({"jsonrpc": "2.0", "id": True, "method": "ping", "params": {}}, -32600),
+        ({"jsonrpc": "2.0", "id": 2, "method": "ping", "params": {"extra": 1}}, -32602),
+        ({"jsonrpc": "2.0", "id": 2, "method": "tools/list", "params": {"extra": 1}}, -32602),
+        ({"jsonrpc": "2.0", "id": 2, "method": "tools/call", "params": {"name": "wrong", "arguments": {"op": "classify"}}}, -32602),
+        ({"jsonrpc": "2.0", "id": 2, "method": "unknown", "params": {}}, -32601),
+    ],
+)
+def test_mcp_malformed_envelope_method_and_tool_have_no_audit(message, error_code):
+    responses = _mcp_exchange(
+        _mcp_initialize(),
+        {"jsonrpc": "2.0", "method": "notifications/initialized", "params": {}},
+        message,
+        {"jsonrpc": "2.0", "id": 3, "method": "tools/call", "params": {
+            "name": "verdict", "arguments": {"op": "classify"},
+        }},
+    )
+    assert responses[1]["error"]["code"] == error_code
+    assert responses[2]["result"]["structuredContent"]["audit_seq"] == 1
+
+
+def test_mcp_requires_initialized_notification_and_bounds_input_lines():
+    oversized = json.dumps({
+        "jsonrpc": "2.0", "id": 9, "method": "ping",
+        "params": {"padding": "secret" * 800},
+    }) + "\n"
+    responses = _mcp_exchange(
+        _mcp_initialize(),
+        {"jsonrpc": "2.0", "id": 2, "method": "ping", "params": {}},
+        {"jsonrpc": "2.0", "method": "notifications/initialized", "params": {"bad": True}},
+        {"jsonrpc": "2.0", "method": "notifications/initialized", "params": {}},
+        oversized,
+        {"jsonrpc": "2.0", "id": 3, "method": "tools/call", "params": {
+            "name": "verdict", "arguments": {"op": "classify"},
+        }},
+    )
+    assert responses[1]["result"] == {}
+    assert responses[2] == {
+        "jsonrpc": "2.0", "id": None,
+        "error": {"code": -32600, "message": "invalid request"},
+    }
+    assert "secret" not in json.dumps(responses[2])
+    assert responses[3]["result"]["structuredContent"]["audit_seq"] == 1
+
+
+@pytest.mark.parametrize("capabilities", [
+    {"roots": []},
+    {"roots": {"listChanged": "yes"}},
+    {"sampling": []},
+    {"elicitation": True},
+    {"experimental": []},
+    {"experimental": {"vendor.example/feature": []}},
+])
+def test_mcp_invalid_known_capability_shapes_do_not_initialize(capabilities):
+    responses = _mcp_exchange(
+        _mcp_initialize(1, capabilities=capabilities),
+        _mcp_initialize(2),
+    )
+    assert responses[0]["error"] == {
+        "code": -32602, "message": "invalid initialize params",
+    }
+    assert responses[1]["result"]["protocolVersion"] == "2025-06-18"
+
+
+def test_mcp_negotiates_version_accepts_capability_extensions_and_gates_tools():
+    capabilities = {
+        "roots": {"listChanged": True, "vendorRootOption": {"enabled": True}},
+        "sampling": {"vendorSamplingOption": "kept"},
+        "elicitation": {},
+        "experimental": {"vendor.example/feature": {"revision": 2}},
+        "vendor.example/top-level": {"mode": "custom"},
+    }
+    initialize = _mcp_initialize(
+        1,
+        protocolVersion="2099-01-01",
+        capabilities=capabilities,
+        clientInfo={
+            "name": "test-client", "title": "Test Client", "version": "1",
+            "vendorClientOption": {"enabled": True},
+        },
+    )
+    initialize["params"]["_meta"] = {
+        "progressToken": "initialize-progress", "vendorMeta": {"trace": 1},
+    }
+    responses = _mcp_exchange(
+        initialize,
+        _mcp_initialize(2),
+        {"jsonrpc": "2.0", "id": 3, "method": "ping", "params": {
+            "_meta": {"progressToken": "ping-progress"},
+        }},
+        {"jsonrpc": "2.0", "id": 4, "method": "tools/list", "params": {}},
+        {"jsonrpc": "2.0", "method": "notifications/initialized", "params": {}},
+        {"jsonrpc": "2.0", "id": 5, "method": "tools/call", "params": {
+            "name": "verdict", "arguments": {"op": "classify"},
+            "_meta": {"progressToken": 7},
+        }},
+    )
+    assert capabilities["vendor.example/top-level"] == {"mode": "custom"}
+    assert responses[0]["result"]["protocolVersion"] == "2025-06-18"
+    assert responses[1]["error"]["code"] == -32602
+    assert responses[2]["result"] == {}
+    assert responses[3]["error"]["code"] == -32002
+    assert responses[4]["result"]["structuredContent"]["audit_seq"] == 1
+
+
+def test_mcp_supported_protocol_surface_accepts_metadata_and_list_cursor():
+    responses = _mcp_exchange(
+        _mcp_initialize(),
+        {"jsonrpc": "2.0", "id": 1.5, "method": "ping", "params": {
+            "_meta": {"progressToken": 2.5, "vendorRequestMeta": True},
+        }},
+        {"jsonrpc": "2.0", "method": "notifications/initialized", "params": {
+            "_meta": {
+                "progressToken": {"notificationMetadataIsUnconstrained": True},
+                "vendorNotificationMeta": [1, 2],
+            },
+        }},
+        {"jsonrpc": "2.0", "id": 2, "method": "tools/list", "params": {
+            "cursor": "opaque-page", "_meta": {"progressToken": "list-progress"},
+        }},
+        {"jsonrpc": "2.0", "method": "notifications/cancelled", "params": {
+            "requestId": 1.5, "reason": "late", "_meta": {"anything": {"goes": True}},
+        }},
+        {"jsonrpc": "2.0", "id": 3, "method": "tools/call", "params": {
+            "name": "verdict", "arguments": {"op": "classify"},
+            "_meta": {"progressToken": "tool-progress"},
+        }},
+    )
+    assert [response["id"] for response in responses] == [1, 1.5, 2, 3]
+    assert responses[1]["result"] == {}
+    assert responses[2]["result"]["tools"][0]["name"] == "verdict"
+    assert responses[3]["result"]["structuredContent"]["audit_seq"] == 1
+
+
+@pytest.mark.parametrize("metadata", [[], "bad", 1])
+def test_mcp_malformed_initialized_notification_metadata_leaves_tools_gated(metadata):
+    responses = _mcp_exchange(
+        _mcp_initialize(),
+        {"jsonrpc": "2.0", "method": "notifications/initialized", "params": {
+            "_meta": metadata,
+        }},
+        {"jsonrpc": "2.0", "id": 2, "method": "tools/list", "params": {}},
+    )
+    assert responses[1]["error"]["code"] == -32002
+
+
+@pytest.mark.parametrize("params", [
+    {},
+    {"requestId": True},
+    {"requestId": []},
+    {"requestId": 1, "reason": 2},
+    {"requestId": 1, "extra": True},
+    {"requestId": 1, "_meta": []},
+])
+def test_mcp_malformed_cancellation_notifications_are_silent_and_stateless(params):
+    responses = _mcp_exchange(
+        _mcp_initialize(),
+        {"jsonrpc": "2.0", "method": "notifications/initialized", "params": {}},
+        {"jsonrpc": "2.0", "method": "notifications/cancelled", "params": params},
+        {"jsonrpc": "2.0", "id": 2, "method": "tools/call", "params": {
+            "name": "verdict", "arguments": {"op": "classify"},
+        }},
+    )
+    assert len(responses) == 2
+    assert responses[1]["result"]["structuredContent"]["audit_seq"] == 1
+
+
+@pytest.mark.parametrize(
+    ("wire", "error_code"),
+    [
+        ("not-json\n", -32700),
+        ('{"jsonrpc":"2.0",\n', -32700),
+        ('{"jsonrpc":"2.0","id":NaN,"method":"ping"}\n', -32700),
+        ('{"jsonrpc":"2.0","id":Infinity,"method":"ping"}\n', -32700),
+        ('[]\n', -32600),
+        ('{"jsonrpc":"2.0","jsonrpc":"2.0","id":1,"method":"ping"}\n', -32600),
+        ('{"jsonrpc":"2.0","id":1e999,"method":"ping"}\n', -32600),
+    ],
+)
+def test_mcp_parse_errors_are_distinct_from_decoded_invalid_requests(wire, error_code):
+    responses = _mcp_exchange(wire)
+    assert responses == [{
+        "jsonrpc": "2.0", "id": None,
+        "error": {
+            "code": error_code,
+            "message": "parse error" if error_code == -32700 else "invalid request",
+        },
+    }]
+
+
+def test_mcp_parse_and_decoded_errors_do_not_dispatch_service_operations():
+    responses = _mcp_exchange(
+        _mcp_initialize(),
+        {"jsonrpc": "2.0", "method": "notifications/initialized", "params": {}},
+        "not-json\n",
+        "[]\n",
+        {"jsonrpc": "2.0", "id": 2, "method": "tools/call", "params": {
+            "name": "verdict", "arguments": {"op": "classify"},
+        }},
+    )
+    assert [response.get("error", {}).get("code") for response in responses[1:3]] == [
+        -32700, -32600,
+    ]
+    assert responses[3]["result"]["structuredContent"]["audit_seq"] == 1
+
+
+def test_mcp_deep_valid_metadata_preserves_connection_for_following_request():
+    nested_metadata = "[" * 500 + "0" + "]" * 500
+    deep_ping = (
+        '{"jsonrpc":"2.0","id":2,"method":"ping","params":{"_meta":'
+        f'{{"nested":{nested_metadata}}}}}}}\n'
+    )
+    responses = _mcp_exchange(
+        _mcp_initialize(),
+        {"jsonrpc": "2.0", "method": "notifications/initialized", "params": {}},
+        deep_ping,
+        {"jsonrpc": "2.0", "id": 3, "method": "ping", "params": {}},
+    )
+    assert [response["id"] for response in responses] == [1, 2, 3]
+    assert responses[1]["result"] == {}
+    assert responses[2]["result"] == {}
+
+
+def test_mcp_decoder_depth_rejection_preserves_connection_for_valid_request():
+    nesting = MCP_MAX_JSON_NESTING + 1
+    nested_metadata = "[" * nesting + "0" + "]" * nesting
+    overdeep = (
+        '{"jsonrpc":"2.0","id":2,"method":"ping","params":{"_meta":'
+        f'{{"nested":{nested_metadata}}}}}}}\n'
+    )
+    responses = _mcp_exchange(
+        _mcp_initialize(),
+        overdeep,
+        {"jsonrpc": "2.0", "id": 3, "method": "ping", "params": {}},
+    )
+    assert responses[1] == {
+        "jsonrpc": "2.0", "id": None,
+        "error": {"code": -32600, "message": "invalid request"},
+    }
+    assert responses[2]["id"] == 3
+    assert responses[2]["result"] == {}
+
+
+@pytest.mark.parametrize(
+    ("method", "params"),
+    [
+        ("tools/list", {"cursor": 1}),
+        ("tools/list", {"cursor": None}),
+        ("tools/list", {"cursor": "ok", "extra": True}),
+        ("tools/call", {"name": "verdict"}),
+        ("tools/call", {"name": "verdict", "arguments": {"op": "classify"}, "extra": True}),
+    ],
+)
+def test_mcp_supported_request_field_table_rejects_wrong_shapes_without_audit(
+    method, params,
+):
+    responses = _mcp_exchange(
+        _mcp_initialize(),
+        {"jsonrpc": "2.0", "method": "notifications/initialized", "params": {}},
+        {"jsonrpc": "2.0", "id": 2, "method": method, "params": params},
+        {"jsonrpc": "2.0", "id": 3, "method": "tools/call", "params": {
+            "name": "verdict", "arguments": {"op": "classify"},
+        }},
+    )
+    assert responses[1]["error"]["code"] == -32602
+    assert responses[2]["result"]["structuredContent"]["audit_seq"] == 1
+
+
+@pytest.mark.parametrize("metadata", [
+    [],
+    {"progressToken": True},
+    {"progressToken": {}},
+])
+def test_mcp_invalid_request_metadata_has_no_service_side_effect(metadata):
+    responses = _mcp_exchange(
+        _mcp_initialize(),
+        {"jsonrpc": "2.0", "method": "notifications/initialized", "params": {}},
+        {"jsonrpc": "2.0", "id": 2, "method": "tools/call", "params": {
+            "name": "verdict", "arguments": {"op": "classify"}, "_meta": metadata,
+        }},
+        {"jsonrpc": "2.0", "id": 3, "method": "tools/call", "params": {
+            "name": "verdict", "arguments": {"op": "classify"},
+        }},
+    )
+    assert responses[1]["error"]["code"] == -32602
+    assert responses[2]["result"]["structuredContent"]["audit_seq"] == 1
+
+
+@pytest.mark.parametrize("overrides", [
+    {"protocolVersion": ""},
+    {"capabilities": []},
+    {"clientInfo": []},
+    {"clientInfo": {"name": "client"}},
+    {"clientInfo": {"name": "", "version": "1"}},
+    {"clientInfo": {"name": "client", "version": 1}},
+    {"clientInfo": {"name": "client", "version": "1", "title": 1}},
+])
+def test_mcp_initialize_requires_valid_version_capabilities_and_client_info(overrides):
+    process = subprocess.run(
+        [sys.executable, str(THIS_DIR / "build_step_verdict.py"), "--mcp"],
+        input=json.dumps(_mcp_initialize(**overrides)) + "\n",
+        text=True, capture_output=True, timeout=10, check=False,
+        creationflags=CREATE_NO_WINDOW,
+    )
+    response = json.loads(process.stdout)
+    assert response["id"] == 1
+    assert response["error"]["code"] == -32602
+
+
+def test_export_rejects_non_string_evidence_sha256(tmp_path):
+    request = _acceptance_request(tmp_path)
+    request["suite_evidence"][0]["sha256"] = ["8"] * 64
+    with pytest.raises(ValueError, match="invalid evidence hash"):
+        decode_service_request(json.dumps(request))
+
+
+def test_forge_launcher_passes_agents_file_path_without_json_reencoding():
+    launcher = (
+        THIS_DIR.parent.parent / "launchers" / "claude-isolated.ps1"
+    ).read_text(encoding="ascii")
+    assert "$common += @('--agents', $agentPath)" in launcher
+    assert "ReadAllText($agentPath)" not in launcher
+
+
+def test_claude_build_step_maps_every_terminal_verdict_and_keeps_pass_last():
+    adapter = (
+        THIS_DIR.parent / "skills" / "build-step" / "providers" / "claude.md"
+    ).read_text(encoding="utf-8")
+    assert "map every terminal core `write_verdict` call" in adapter
+    assert "including blocked, failed and halt exits" in adapter
+    assert "Send terminal `PASS` only after every ship gate" in adapter
+
+
+@pytest.mark.parametrize(
+    ("event", "decision"),
+    [
+        ({"session_id": "parent", "tool_name": "mcp__forge_verdict__verdict"}, "allow"),
+        ({"session_id": "parent", "agent_id": "child", "tool_name": "mcp__forge_verdict__verdict"}, "deny"),
+        ({"session_id": "other", "tool_name": "mcp__forge_verdict__verdict"}, "deny"),
+        ({"session_id": "parent"}, "deny"),
+    ],
+)
+def test_claude_parent_guard_native_decision(event, decision):
+    output = io.StringIO()
+    assert claude_parent_guard("parent", io.StringIO(json.dumps(event)), output) == 0
+    payload = json.loads(output.getvalue())
+    assert payload["hookSpecificOutput"]["permissionDecision"] == decision
+    assert "secret" not in output.getvalue()
 
 
 # ---------------------------------------------------------------------------

@@ -417,9 +417,12 @@ def test_build_file_counts_match_manifest(dist_root):
     # asserted at all. The shared term is a length, not a directory listing --
     # `test_shared_payload_matches_an_independent_closure_walk` is what proves the
     # SET, from a re-walk rather than from this literal.
+    # The trailing literals are the two reviewed package exceptions: + 4 review-deep
+    # resources (Phase CD) and + 2 build-step scripts (packet route P2,
+    # `test_build_step_resource_closure` proves that SET per profile).
     shared = len(EXPECTED_SHARED_PAYLOAD)
-    assert len(claude_files) == len(portable) * 2 + len(native) * 1 + 2 + shared + 4
-    assert len(gpt_files) == len(portable) * 2 + 2 + shared + 4
+    assert len(claude_files) == len(portable) * 2 + len(native) * 1 + 2 + shared + 4 + 2
+    assert len(gpt_files) == len(portable) * 2 + 2 + shared + 4 + 2
 
 
 # --------------------------------------------------------------------------- #
@@ -3329,7 +3332,7 @@ def test_cd_installed_helpers_execute_outside_source(cd_installed, tmp_path, mon
     assert audit["aggregated_verdict"]["result"] == "PASS"
 
 
-@pytest.mark.parametrize("mutation", ["missing", "duplicate", "extra", "malformed", "uncertain", "clarification", "skipped", "duplicate-key", "pass-with-nit"])
+@pytest.mark.parametrize("mutation", ["missing", "duplicate", "extra", "malformed", "skipped", "duplicate-key", "pass-with-nit"])
 def test_cd_installed_recipe_rejects_raw_invalid_sets(cd_installed, tmp_path, mutation):
     lenses = _cd_lenses()
     if mutation == "missing":
@@ -3340,10 +3343,6 @@ def test_cd_installed_recipe_rejects_raw_invalid_sets(cd_installed, tmp_path, mu
         lenses[-1]["lens_id"] = "runtime"
     elif mutation == "malformed":
         lenses[0]["findings"] = None
-    elif mutation == "uncertain":
-        lenses[0]["overall_verdict"] = "UNCERTAIN"
-    elif mutation == "clarification":
-        lenses[-1]["overall_verdict"] = "NEEDS-CLARIFICATION"
     elif mutation == "skipped":
         lenses[-1]["overall_verdict"] = "SKIPPED"
     elif mutation == "pass-with-nit":
@@ -3358,7 +3357,7 @@ def test_cd_installed_recipe_rejects_raw_invalid_sets(cd_installed, tmp_path, mu
     assert not (tmp_path / "audit").exists()
 
 
-@pytest.mark.parametrize("verdict", ["NEEDS-WORK", "NO-EVIDENCE", "FAILED"])
+@pytest.mark.parametrize("verdict", ["NEEDS-WORK", "NO-EVIDENCE", "FAILED", "UNCERTAIN", "NEEDS-CLARIFICATION"])
 def test_cd_installed_recipe_preserves_nonpassing_verdict(cd_installed, tmp_path, verdict):
     lenses = _cd_lenses()
     lenses[0]["overall_verdict"] = verdict
@@ -3366,6 +3365,7 @@ def test_cd_installed_recipe_preserves_nonpassing_verdict(cd_installed, tmp_path
         lenses[0]["failure_reason"] = "model_overloaded"
     _, audit, _ = _cd_aggregate(cd_installed, lenses, tmp_path / "audit")
     assert audit["aggregated_verdict"]["result"] == "NEEDS-WORK"
+    assert audit["lens_verdicts"][0]["overall_verdict"] == verdict
 
 
 def test_cd_installed_recipe_keeps_prior_and_lint_metadata(cd_installed, tmp_path):
@@ -3489,3 +3489,65 @@ def test_cd_capture_requires_actual_service_result_and_canonical_audit(cd_instal
     finally:
         service.handle({"op": "cleanup"})
         service.handle({"op": "close"})
+
+
+# build-step's reviewed package exception (packet route P2): the two package-local
+# scripts the core cites as `<skill-dir>/scripts/<leaf>`. A literal pin, independent of
+# the builder's own list, so a builder edit that drops or adds one is caught here.
+BUILD_STEP_RESOURCES = ("scripts/build_step_tree.py", "scripts/capture_evidence.py")
+
+
+@pytest.fixture(scope="module")
+def build_step_distribution(tmp_path_factory):
+    root = tmp_path_factory.mktemp("build-step-distribution")
+    manifest = root / "manifest.json"
+    _write_manifest(manifest, [next(entry for entry in _load_manifest()["skills"]
+                                    if entry["name"] == "build-step")])
+    _build_from_manifest(root / "dist", manifest, provider="all")
+    return root / "dist"
+
+
+@pytest.mark.parametrize("provider", ["claude", "gpt", "codex"])
+def test_build_step_resource_closure(build_step_distribution, provider, tmp_path):
+    """Each profile's build-step package is exactly the launcher, the core, the
+    co-located verdict helper and the two reviewed scripts -- each script with the
+    provenance marker inside its docstring, still compiling, and otherwise byte-equal
+    to the canonical LF source."""
+    package = build_step_distribution / provider / "build-step"
+    files = {p.relative_to(package).as_posix() for p in package.rglob("*") if p.is_file()}
+    assert files == {"SKILL.md", "core.md", "build_step_verdict.py", *BUILD_STEP_RESOURCES}
+    core = (package / "core.md").read_text(encoding="utf-8")
+    marker = _marker_literal()
+    for resource in BUILD_STEP_RESOURCES:
+        assert f"<skill-dir>/{resource}" in core, f"core no longer cites {resource}"
+        emitted = (package / resource).read_text(encoding="utf-8")
+        assert marker in emitted
+        assert f"Canonical source: skills/build-step/{resource}" in emitted
+        assert f"Profile: {provider}" in emitted
+        compile(emitted, str(package / resource), "exec")
+        # Removing exactly the inserted header block (a newline, then the header through
+        # its closing line) must give back the canonical LF source, byte for byte.
+        source = (SKILLS_ROOT / "build-step" / resource).read_bytes().replace(b"\r\n", b"\n")
+        start = emitted.index("\n<!-- GENERATED FILE - DO NOT EDIT.")
+        closing = "edits here are overwritten. -->"
+        end = emitted.index(closing, start) + len(closing)
+        assert emitted[start - 3:start] == '"""', "header not inserted inside the docstring"
+        assert (emitted[:start] + emitted[end:]).encode("utf-8") == source, resource
+    verdicts = _provenance_verdicts(package, tmp_path)
+    assert verdicts and all(verdicts.values()), verdicts
+
+
+@pytest.mark.parametrize("missing", list(BUILD_STEP_RESOURCES))
+def test_build_step_builder_refuses_each_missing_resource(tmp_path, missing):
+    repo = _synthetic_build_repo(tmp_path, {}, "fixture")
+    package = repo / "skills/build-step"
+    shutil.copytree(SKILLS_ROOT / "build-step", package,
+                    ignore=shutil.ignore_patterns("__pycache__"))
+    (package / missing).unlink()
+    _write_manifest(repo / "config/skill-manifest.json",
+                    [next(entry for entry in _load_manifest()["skills"]
+                          if entry["name"] == "build-step")])
+    result = _synthetic_build(repo, tmp_path / "dist", "codex")
+    assert result.returncode != 0
+    assert "build-step resource source missing" in result.stderr
+    assert not (tmp_path / "dist/codex/build-step/SKILL.md").exists()

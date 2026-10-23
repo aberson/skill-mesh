@@ -469,6 +469,11 @@ REVIEW_DEEP_SHIPPED_RESOURCES = {
     "scripts/aggregate.py", "scripts/lint_prepass.sh", "scripts/README.md",
     "config/model-tier-map.md",
 }
+# build-step's reviewed exception (packet route P2), the same shape: exact
+# package-relative paths credited to build-step only.
+BUILD_STEP_SHIPPED_RESOURCES = {
+    "scripts/build_step_tree.py", "scripts/capture_evidence.py",
+}
 
 _LINK_RE = re.compile(r"\[[^\]]*\]\(([^)\s]+)")
 _BACKTICK_RE = re.compile(r"`([^`\n]+)`")
@@ -609,6 +614,8 @@ def ships_into_discovery_root(target):
     if parts[0] == "_shared":
         return True
     if parts[0] == "review-deep" and "/".join(parts[1:]) in REVIEW_DEEP_SHIPPED_RESOURCES:
+        return True
+    if parts[0] == "build-step" and "/".join(parts[1:]) in BUILD_STEP_SHIPPED_RESOURCES:
         return True
     return len(parts) == 2 and parts[1] in SHIPPED_LEAVES
 
@@ -2374,6 +2381,11 @@ def test_shipped_shape_predicate_is_pinned():
         assert ships_into_discovery_root("review-deep/" + resource)
         assert not ships_into_discovery_root("judge-ui/" + resource)
     assert not ships_into_discovery_root("review-deep/scripts/auth_gate_probe.sh")
+    for resource in BUILD_STEP_SHIPPED_RESOURCES:
+        assert ships_into_discovery_root("build-step/" + resource)
+        assert not ships_into_discovery_root("build-phase/" + resource)
+        assert not ships_into_discovery_root("review-deep/" + resource)
+    assert not ships_into_discovery_root("build-step/scripts/other_helper.py")
 
 
 def test_resolution_roots_are_pinned():
@@ -2571,6 +2583,9 @@ def test_shipped_leaves_matches_a_real_build(dist_root):
             if skill_dir.name == "review-deep":
                 assert REVIEW_DEEP_SHIPPED_RESOURCES <= paths
                 paths -= REVIEW_DEEP_SHIPPED_RESOURCES
+            if skill_dir.name == "build-step":
+                assert BUILD_STEP_SHIPPED_RESOURCES <= paths
+                paths -= BUILD_STEP_SHIPPED_RESOURCES
             names = paths
             unlisted = sorted(names - set(SHIPPED_LEAVES))
             assert not unlisted, (

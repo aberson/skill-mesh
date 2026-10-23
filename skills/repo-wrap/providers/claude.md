@@ -14,7 +14,7 @@ See [../core.md](../core.md) for the full specification.
 - Preserve the core's gates, retry limits, filesystem safety, and exact output contracts.
 - Use Claude session JSONL, scratchpad identity, Artifact actions, or VS Code deep links only where available and requested by the core.
 - Resolve exactly ONE target per invocation in the core's precedence (explicit positional arg, then the `/user-project` pin, then cwd), classify it, and state the classification line before acting.
-- Rail A is a pure pass-through: invoke `/repo-update` via the Skill tool and add nothing to its ceremony. On failure, surface repo-update's own failure verbatim rather than improvising a fallback.
+- Rail A adds nothing to repo-update's ceremony: when the core's delegation preconditions hold, invoke `/repo-update` via the Skill tool with the target's absolute path; under `--dry-run`, a pin naming a different repo, or a subdirectory-named target, print the core's advisory and invoke nothing. On failure, surface repo-update's own failure verbatim rather than improvising a fallback.
 - Safety-critical, never weakened: apply the Owner-match check exactly as the core defines it (case-insensitive exact equality against `gh api user --jq .login`; any error counts as NOT owned), never push to a remote the operator does not own, and never rely on a configured upstream. Never `git add -A`, never `git add .`, and never stash at the coding root.
 - Autonomous by default and never a `(y/n)` gate: execute the safe subset and PARK everything ambiguous or outward-facing as an advisory line carrying the exact command, printed and not run. `--dry-run` performs zero mutations.
 

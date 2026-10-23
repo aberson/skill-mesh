@@ -2,6 +2,12 @@
 
 # session-wrap core
 
+## Intent continuity (drift-ranger)
+
+Follow [the intent continuity contract](../../_shared/intent-continuity.md).
+Preserve the private intent locator and capability gap via task-handoff. Closeout must distinguish implemented, isolated, available at the actual entry point, and user accepted. Never label an unobserved journey ready. Do not publish private intent through memory, issue or commit closeout.
+
+
 ## Purpose and complete operating contract
 
 One decision-making front door for session transitions. Invoked bare, it TRIAGES the

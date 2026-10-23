@@ -8,7 +8,7 @@ See [../core.md](../core.md) for the full specification.
 - Normalize GPT verbosity: do not reveal hidden chain-of-thought; return only required decisions, evidence, artifacts, commands, questions, and the core's closing report.
 - Resolve capability tiers with `config/model-tier-map.json`; explicit router overrides win.
 - Resolve exactly ONE target per invocation in the core's precedence, classify it, and state the classification line before acting. Use structured tool/action calls for filesystem, shell, git, GitHub, and named-skill operations.
-- Rail A is a pure pass-through: dispatch `/repo-update` through the named-skill action and add nothing to its ceremony.
+- Rail A adds nothing to repo-update's ceremony: when the core's delegation preconditions hold, dispatch `/repo-update` through the named-skill action with the target's absolute path; under `--dry-run`, a pin naming a different repo, or a subdirectory-named target, print the core's advisory and invoke nothing.
 - Safety-critical, never weakened: the Owner-match check (any error counts as NOT owned), never push to a remote the operator does not own, never a bare `git push`, and never `git add -A` / `git add .` / stash at the coding root.
 - Autonomous by default and never a `(y/n)` gate; `--dry-run` performs zero mutations.
 

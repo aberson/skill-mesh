@@ -27,12 +27,12 @@ configured Codex model without weakening a gate. No automatic model/host fallbac
 ## Parent aggregation from the installed package
 
 Use the following parent-only call pattern with the loaded package's absolute path.
-The existing CLI hardcodes `plan_step=None`; the existing library API carries the
+The CLI records only the invocation fields it has flags for; the library API carries the
 exact binding, prior-sidecar, lint findings and resolved invocation metadata. Do not
 rewrite the helper or edit its output to insert metadata. Keep raw reports separately
 for audit. Parse each direct child's entire JSON response, with no fences or duplicate
 keys. Validate all six before calling `aggregate`; do not use `load_lens_verdicts`,
-whose ID dictionary would hide duplicates. This block is an invocation recipe, not a
+which reads a lens directory instead of the raw reports. This block is an invocation recipe, not a
 new helper installed into the project.
 
 ```python
@@ -72,10 +72,8 @@ def aggregate_code_review(package, reports, *, plan_step, invocation, timestamp,
         if lens["model_tier"] not in {"haiku", "sonnet", "opus"}:
             raise ValueError("NEEDS-WORK: invalid tier")
         verdict = lens["overall_verdict"]
-        if verdict in {"UNCERTAIN", "NEEDS-CLARIFICATION"}:
-            # The unchanged reducer cannot safely represent these states today.
-            raise ValueError(verdict + ": preserve raw evidence; escalate, never PASS")
-        if verdict not in {"PASS", "NEEDS-WORK", "FAILED", "NO-EVIDENCE", "SKIPPED"}:
+        if verdict not in {"PASS", "NEEDS-WORK", "FAILED", "NO-EVIDENCE", "SKIPPED",
+                           "UNCERTAIN", "NEEDS-CLARIFICATION"}:
             raise ValueError("NEEDS-WORK: invalid verdict")
         if verdict == "SKIPPED" and (lens["lens_id"] != "plan-conformance" or plan_step is not None):
             raise ValueError("NEEDS-WORK: required lens skipped")
@@ -116,11 +114,21 @@ def aggregate_code_review(package, reports, *, plan_step, invocation, timestamp,
 
 Any parse, validation, resource or execution failure is non-passing; preserve the
 raw evidence and report the concrete failure. UNCERTAIN and NEEDS-CLARIFICATION
-stop before this reducer because its current implementation can otherwise return
-PASS for them. This limitation does not authorize invented findings, rewritten
+remain exact in the sidecar and the reducer maps them to NEEDS-WORK. This recipe
+forwards no mechanical results, so a mechanical check of
+this run with status `fail` likewise stops before this reducer as non-passing
+NEEDS-WORK with its command and output preserved; a `missing-tool` check is
+reported and does not block. This limitation does not authorize invented findings, rewritten
 results or changed reducer semantics. Apply the core's evidence-free finding
 filter and anti-pattern validity rules before this call; preserve cited findings
 and the seven rules unchanged. The parent reports the returned result verbatim.
+
+Known divergence (plan binding): the pinned recipe's plan check (`.+:[0-9]+`) and
+the `plan-binding` row above take only an integer step id, while the core's
+`--plan-step` and the reducer CLI take any step id after the last colon (for
+example `22-prep`, `3a` or `D.6`). On this route a non-integer step id stops at
+`invalid plan binding`, non-passing and with no audit file, until the recipe is
+revised and re-qualified; never coerce or drop the id to get past the check.
 
 For an enclosing build step, only after all build-step gates, cleanup and stash
 restoration succeed does the parent service write/classify its separate terminal

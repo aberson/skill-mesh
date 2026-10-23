@@ -32,6 +32,11 @@ Set these from a project-level override or infer at runtime:
 | `WIKI_PATH` | Path to wiki directory (optional — see WIKI_PATH defaults below) |
 | `WIKI_ARTIFACTS` | Glob patterns the wiki should cover (see WIKI_ARTIFACTS defaults below) |
 
+**DEFAULT_BRANCH resolution.** Use the override's value, else
+`git symbolic-ref --short refs/remotes/origin/HEAD` (minus the `origin/` prefix), else the branch
+`git ls-remote --symref origin HEAD` names. Never infer it from `git branch --show-current`. If
+none resolves, withhold Steps 9–11 as `Result: PARTIAL (withheld: default branch unresolved)`.
+
 **WIKI_PATH defaults.** If unset, auto-detect by checking `documentation/wiki/`, `docs/wiki/`, then `wiki/`. Skip the wiki check if none exist.
 
 **WIKI_ARTIFACTS defaults.**
@@ -44,17 +49,82 @@ Set these from a project-level override or infer at runtime:
 ## What this skill does
 
 1. **Orient** — read current README, plan doc, recent git log, and memory to understand current state
-2. **Gather** — ask the user what was completed (if not obvious from context)
+2. **Gather** — derive what was completed from the invocation and the evidence; never wait on a question
 3. **Update README** — build status, stack table, UI pages section (if applicable)
 4. **Update plan doc** — add/update phase section documenting what was built
 5. **Run drift checks** — `/plan-wrap` plus wiki coverage check (if `WIKI_PATH` is set)
 6. **Fix plan doc and wiki** — address all blockers and gaps found by either check
 7. **Refresh the instruction file (CLAUDE.md or AGENTS.md)** — verify the seven sections; create only on row 1
 8. **Update memory** — project memory file with new phase status and test counts
-9. **Commit** — stage relevant files, write a structured commit message
-10. **Create + close GitHub issue** — for audit trail / posterity
-11. **Push** — push to default branch
+9. **Commit** — check branch and ownership, stage relevant files, write a structured commit message
+10. **Push** — push to default branch and confirm it landed
+11. **Create + close GitHub issue** — for audit trail / posterity, only after the push is confirmed
 12. **Guided-tour artifact** — publish a durable HTML tour of what shipped (substantive multi-step phase wraps only; skipped for trivial/doc-only wraps)
+13. **Refresh dev-observatory** — `observatory sync` at the workspace root when one exists (advisory)
+
+---
+
+## Operating contract
+
+- **Position.** The post-phase close-out for an owned project, run after `/build-phase`, which
+  leaves its checkpoint commits unpushed. It is invoked directly, by `/session-wrap`'s delegate
+  route, or by `/repo-wrap`'s owned-project rail (verbatim delegation). Both callers surface this
+  skill's failure; the `Result:` line below is the line callers can read. No caller parses it yet,
+  so a deliberate withhold is only fully honored on the session-wrap route once that caller
+  distinguishes `PARTIAL (withheld: …)` from a failure.
+- **Target.** `$PROJECT_ROOT` resolves in the precedence `/user-project` pin → the invocation's
+  path, slug or plan (or a delegating caller's target) → the cwd repo (per
+  transition-directory-contract.md). When a pin is set and an explicit or delegated target names a
+  different repo, stop before any write with
+  `Result: NOT RUN (target conflict: pin <pin-path>, argument <target>)`. All git/gh work runs there.
+- **Workspace root.** `<workspace-root>` is the nearest directory at or above `$PROJECT_ROOT` that
+  holds `.claude/observatory/registry.toml` (the workspace `/repo-wrap` names). When there is
+  none, the Step 9 ownership check and Step 13 are skipped.
+- **Zero-flag.** A bare `/repo-update` runs the whole close-out on that target. It never asks a
+  (y/n) question and never pauses mid-run for an answer. `--no-tour` suppresses Step 12.
+- **Writes.** Local files: `$README_PATH`, `$PLAN_PATH` (including plan-wrap's autofixes), wiki
+  pages under `$WIKI_PATH`, the instruction file Step 7's row selects, `$MEMORY_FILE`, and the
+  workspace task file Step 13 regenerates. Git: at most one new commit in `$PROJECT_ROOT` and one
+  push of `$DEFAULT_BRANCH`. GitHub: one posterity issue, created and closed. Optionally one
+  private tour artifact. Nothing else is created, closed, deleted or pushed.
+- **Quality-gate wording.** The README, plan, commit, issue and report templates below show the
+  wording for a phase whose tests, typecheck and lint all ran clean. State only gates whose
+  result was observed this phase, from the build-phase report or a run this skill made. Name an
+  absent gate (`typecheck not configured`, `lint not run`) and report a failing one by its real
+  count. Never write `0` for a gate that did not run.
+- **Result.** The final report opens with exactly one of:
+  - `Result: COMPLETE` — Steps 1–11 succeeded. Steps 12 and 13 are advisory and never change it.
+  - `Result: PARTIAL (withheld: <reason>)` — a check deliberately withheld git or GitHub steps.
+    The reasons are fixed strings: `on <branch>, expected $DEFAULT_BRANCH`,
+    `on detached HEAD, expected $DEFAULT_BRANCH`, `default branch unresolved`,
+    `project owned = false`, `repo identity unverified`. `project owned = false` overrides every
+    other reason, in `Result:` and in `Follow-ups:`. Callers must not commit or push the withheld
+    scope themselves.
+  - `Result: PARTIAL (<step>: <reason>)` — a git or GitHub step failed. `<step>` is one of
+    `commit failed`, `push failed`, `posterity issue`, followed by the first error line.
+  - In both PARTIAL forms earlier writes stand. `Follow-ups:` depends on the outcome; the re-run
+    invocation names the phase label, issues and test count:
+    - `project owned = false`: `/repo-wrap <target>` only.
+    - Branch or default-branch withhold, `commit failed`, `push failed`: the withheld commands plus
+      the re-run invocation.
+    - `repo identity unverified`: the identity fix (set the `REPO_SLUG` override to origin's
+      `nameWithOwner`, or correct `origin`) plus the re-run invocation. Never a raw
+      `gh issue create`.
+    - `posterity issue`, create failed: the re-run invocation, which creates the one issue.
+    - `posterity issue`, close failed: the `gh issue close` command only, with no re-run
+      invocation.
+  - `Result: NOT RUN (<reason>)` — stopped before any write: no target repo, a target conflict,
+    or the completed work could not be determined (Step 2).
+- **Re-run.** After a `PARTIAL` from Steps 9–10, re-running converges: Step 2 recovers the phase
+  label from this skill's own summary section, Steps 3–8 leave accurate text alone and Step 7's
+  rows are fixed points; Step 9 makes no commit when nothing is staged; Step 10 pushes whatever is
+  unpushed; Step 11 runs only once a push is confirmed. After a Step 11 `PARTIAL`, follow
+  `Follow-ups:`: when the close failed, run the printed `gh issue close` command and do not
+  re-run, because a re-run, like a re-run after `COMPLETE`, creates a second posterity issue, as it
+  always has. When the create failed or identity was unverified, the printed re-run invocation
+  creates the one issue.
+- **Advisory steps.** Steps 12 and 13 run after `COMPLETE` and after `PARTIAL`, never after
+  `NOT RUN`, and never change `Result:`.
 
 ---
 
@@ -64,9 +134,13 @@ Read the following before doing anything else:
 
 ```bash
 cd $PROJECT_ROOT && git status --short
+git branch --show-current
 git log --oneline -5
 git log --oneline origin/$DEFAULT_BRANCH..HEAD
 ```
+
+Record the current branch for Step 9 (empty output means a detached HEAD). If `$PROJECT_ROOT` is
+not inside a git work tree, stop with `Result: NOT RUN (no target repo)`.
 
 Also read:
 - `$README_PATH` — current build status block
@@ -77,15 +151,24 @@ Also read:
 
 ## Step 2 — Gather what was completed
 
-If the user hasn't described what was completed, ask:
+Collect four facts. Use the invocation's description for any fact it states, and derive the rest
+from evidence, never from a question:
 
-> "What was completed in this session? Please describe:
-> 1. Phase name / label (e.g. 'Phase 4 — Audio Ingestion')
-> 2. GitHub issue numbers closed (if any)
-> 3. Final test count (run `$TEST_CMD` if unsure)
-> 4. Any new routes, types, or files added that the plan doc doesn't document yet"
+1. Phase name / label (e.g. 'Phase 4 — Audio Ingestion') — the build-phase completion report
+   produced this session, else the most recent plan phase whose steps read `**Status:** DONE` and
+   that has no `## Phase N — …` summary section from this skill yet, else (a re-run after
+   `PARTIAL`) the most recent such summary section whose edits are uncommitted or whose commits
+   are not on `origin/$DEFAULT_BRANCH`.
+2. GitHub issue numbers closed (if any) — those steps' `**Issue:**` values and the closing
+   references in `git log origin/$DEFAULT_BRANCH..HEAD`.
+3. Final test count — the build-phase report's count, else the real summary line of a
+   `$TEST_CMD` run. Never write a count that no run reported.
+4. Any new routes, types, or files added that the plan doc doesn't document yet —
+   `git diff --stat origin/$DEFAULT_BRANCH..HEAD`, checked against the plan.
 
-If the user provides this in their invocation message, use it directly — don't ask again.
+If the phase label still cannot be determined, stop before any write with
+`Result: NOT RUN (completed work not determinable)` and print the invocation that supplies it,
+e.g. `/repo-update Phase 4 — Audio Ingestion; issues #12–#15; 214 tests passing`.
 
 ---
 
@@ -233,7 +316,7 @@ Apply plan doc fixes first (5a findings), then wiki fixes (5b findings). For gap
 
 **For stale references** (5b type 1), remove or replace the stale name. In a narrative paragraph (not a table), reword rather than delete.
 
-**Escalate to the user** if any of these come up — don't auto-fix:
+**Do not auto-fix these.** List each on the final report's `Follow-ups:` line and continue; never wait for an answer:
 - A wiki page describes a feature that was deliberately removed (might still want a note about why)
 - Multiple wiki pages are in scope for the same coverage gap (which page should host the new content?)
 - A new wiki page would need to be created (`/repo-update` doesn't author new wiki pages)
@@ -381,7 +464,27 @@ Edit `$MEMORY_FILE` (if one exists):
 
 > Wrong-directory guard: before this commit/push, warn if the resolved target repo != the repo this lands in (advisory, never blocks) — per working-directory.md § Wrong-directory guard; reference impl `Test-WrongDirGuard`.
 
+Then check where the commit would land, before staging anything. Check ownership first; when it
+withholds, it is the only reason reported, even if the branch or default branch would also withhold.
+
+- **Ownership.** If `<workspace-root>`'s registry has an entry whose `path` matches
+  `$PROJECT_ROOT` (relative to `<workspace-root>`) with `owned = false`, withhold Steps 9–11: no
+  commit, push or issue. The doc edits stay on disk. Report
+  `Result: PARTIAL (withheld: project owned = false)` and print `/repo-wrap <target>` on
+  `Follow-ups:` instead of raw push or issue commands; `/repo-wrap` owns third-party close-outs.
+  An unregistered project proceeds as before, with one advisory line naming the registration
+  command from `.claude/rules/descriptor-contract.md`.
+- **Branch.** If the branch recorded in Step 1 is not `$DEFAULT_BRANCH` (another branch, a
+  worktree branch, or a detached HEAD), withhold Steps 9–11: no commit, push or issue. The doc
+  edits stay on disk. Report
+  `Result: PARTIAL (withheld: on <branch>, expected $DEFAULT_BRANCH)` (for a detached HEAD,
+  `on detached HEAD, expected $DEFAULT_BRANCH`) and print the commands for the operator to run.
+
 Add files matching `$STAGE_INCLUDE`. Do NOT stage anything matching `$STAGE_EXCLUDE`.
+
+If nothing is staged, make no commit and continue to Step 10, which still pushes unpushed commits
+such as build-phase checkpoints. If `git commit` fails (for example a hook), withhold Steps 10–11
+and report `Result: PARTIAL (commit failed: <first error line>)`. Never retry with `--no-verify`.
 
 Commit message format:
 
@@ -401,12 +504,31 @@ Use a heredoc for the commit body to avoid quoting issues.
 
 ---
 
-## Step 10 — Create and close GitHub issue
+## Step 10 — Push
+
+```bash
+git push origin $DEFAULT_BRANCH
+```
+
+Confirm the push succeeded — `origin/$DEFAULT_BRANCH` now equals `HEAD` — and report the final
+commit hash and number of commits pushed. Never force-push. If the push fails, withhold Step 11
+and report `Result: PARTIAL (push failed: <first error line>)`.
+
+---
+
+## Step 11 — Create and close GitHub issue
+
+Run only after Step 10 confirmed the push, so the issue cites a commit that is on the remote.
+Bind the issue to the remote Step 10 pushed: `ORIGIN_SLUG` is the `nameWithOwner` of
+`gh repo view "$(git remote get-url origin)" --json nameWithOwner`. `$REPO_SLUG` is the override's
+value when it equals `ORIGIN_SLUG` (compared case-insensitively), else `ORIGIN_SLUG`. If
+`ORIGIN_SLUG` cannot be read or the override differs from it, withhold Step 11 and report
+`Result: PARTIAL (withheld: repo identity unverified)`. Pass `$REPO_SLUG` to every `gh` call.
 
 Create one issue per phase (or per logical chunk of work if not phase-based):
 
 ```bash
-gh issue create \
+gh issue create -R "$REPO_SLUG" \
   --title "<Phase N — short description>" \
   --body "$(cat <<'EOF'
 ## Summary
@@ -427,18 +549,14 @@ EOF
 Immediately close it:
 
 ```bash
-gh issue close <NUMBER> --comment "Delivered in commit <hash>."
+gh issue close <NUMBER> -R "$REPO_SLUG" --comment "Delivered in commit <hash>."
 ```
 
----
-
-## Step 11 — Push
-
-```bash
-git push origin $DEFAULT_BRANCH
-```
-
-Confirm the push succeeded and report the final commit hash and number of commits pushed.
+If either call fails, report `Result: PARTIAL (posterity issue: <first error line>)`. When the
+create failed, print the re-run invocation on `Follow-ups:`. When the create succeeded and the
+close failed, name the issue number and print only the exact
+`gh issue close <N> -R "$REPO_SLUG" --comment "Delivered in commit <hash>."` on `Follow-ups:`,
+with no re-run invocation.
 
 ---
 
@@ -475,6 +593,11 @@ better than chat can — a multi-step phase. It is a communication deliverable, 
    tool**: private by default, an emoji favicon (required), theme-aware (light + dark), responsive,
    real content (no lorem, no placeholder text).
 
+If the `artifact-design` skill is unavailable on this host, author the tour without it and append
+`(artifact-design unavailable)` to the `Tour:` line. If the Artifact tool is unavailable, use the
+host adapter's fallback, else report `Tour: skipped (Artifact tool unavailable)`. A tour failure
+is reported on the `Tour:` line and never changes `Result:`.
+
 **Content priorities, in order:**
 
 - **(a) What the operator can do now** — the capabilities this phase unlocked, described from the
@@ -482,22 +605,49 @@ better than chat can — a multi-step phase. It is a communication deliverable, 
 - **(b) The structure / map** — if the work is graph- or system-shaped, *render* the map (a diagram),
   don't just list it.
 - **(c) The shipped steps as a typed timeline** — step numbering is honest here; it is a real sequence.
-- **(d) Where it landed** — branches / SHAs / mirror — plus the operator's next move.
+- **(d) Where it landed** — branches / SHAs / mirror, stated from the actual `Result:` (on
+  `PARTIAL`, what did not land) — plus the operator's next move.
 
 ### Durability
 
 The Artifact URL is private to the operator and survives a window clear. **Record the URL in the
-final report** (`Tour:` line). Optionally note it in the plan-doc phase section and/or the posterity
-issue (Step 10) so it stays findable later.
+final report** (`Tour:` line). Optionally note it in the plan-doc phase section so it stays
+findable later.
+
+---
+
+## Step 13 — dev-observatory refresh (additive; see `.claude/rules/descriptor-contract.md`)
+
+After Step 11 (and Step 12 when it runs), refresh the control plane so verbs and ports re-derive
+from the instruction file and plan this run updated. Anchor it at the workspace root, never at
+`$PROJECT_ROOT`:
+
+```text
+uv run --project <workspace-root>/dev-observatory observatory sync --root <workspace-root>
+```
+
+`--root` is required. Without it the tool takes the current git toplevel as its root, and in a
+nested project repo that is the project: it would read the wrong registry and write a new
+`dev.code-workspace` inside the project.
+
+- Skip it, reporting `Observatory: skipped (no workspace)`, when `<workspace-root>/dev-observatory`
+  does not exist.
+- It rewrites `<workspace-root>/dev.code-workspace`, a coding-root file. This skill never stages
+  or commits that file; the coding-root wrap owns it.
+- Advisory only: a non-zero exit reports `Observatory: failed (<first error line>)` and changes
+  nothing else. It never blocks, retries or prompts.
+
+Keep README/CLAUDE.md command + port mentions scrapable.
 
 ---
 
 ## Final report to user
 
-After completing all steps, report:
+After completing all steps, report (on `NOT RUN`, the `Result:` line and the invocation hint are
+the whole report; on `PARTIAL`, mark each line whose step did not run `not run (withheld)`):
 
 ```text
-Done.
+Result: COMPLETE   (or `PARTIAL (withheld: <reason>)` / `PARTIAL (<step>: <reason>)` / `NOT RUN (<reason>)` — see Operating contract)
 
 Commits pushed: N (origin/$DEFAULT_BRANCH is now at <hash>)
 README: build status updated to Phase N
@@ -509,6 +659,8 @@ GitHub: issue #N created and closed
 Tour: <Artifact URL>   (or `skipped (<reason>)` — trivial/doc-only wrap or --no-tour)
 
 Quality gates: M/M tests · 0 type errors · 0 lint violations
+Observatory: synced (<n> tasks)   (or `skipped (<reason>)` / `failed (<first error line>)`)
+Follow-ups: <Step 6 escalations, Step 7 findings, the Result-dependent follow-ups from the Operating contract>   (or `none`)
 ```
 
 `<state>` is the state Step 7 classified for that path, and both were stated there before any write
@@ -541,7 +693,7 @@ All git/gh operations here run in `$PROJECT_ROOT` (Step 1 `cd $PROJECT_ROOT`) �
 - Do not stage secrets, debug screenshots, server logs, or lock files from other projects
 - Do not run `git add -A` or `git add .` — stage files explicitly
 - Do not amend previous commits — always create a new commit
-- Do not push until the commit exists and has been verified
+- Do not push until this run's commit (when there is one) exists and has been verified
 - Do not skip the plan-wrap — it catches drift between code and docs that will trip up future work
 - Do not skip the wiki check if `WIKI_PATH` is set — drift between wiki and code accumulates silently and is much cheaper to fix one phase at a time
 - Do not author new wiki pages from `/repo-update` — surface the need to the user instead
@@ -549,16 +701,9 @@ All git/gh operations here run in `$PROJECT_ROOT` (Step 1 `cd $PROJECT_ROOT`) �
 - Do not produce a guided-tour artifact (Step 12) for a trivial or doc-only wrap — a chat summary suffices — and never make the tour a blocking/confirm gate: it is autonomous by default and skipping is a legal outcome
 - Do not create an `AGENTS.md` outside Step 7 row 1 — CLAUDE.md or AGENTS.md, one content file only
 - Do not let Step 7's drift advisory block, halt, gate or prompt — it always prints and continues
-
-
----
-
-## dev-observatory hook (additive; see `.claude/rules/descriptor-contract.md`)
-
-At phase-wrap, refresh the control plane:
-
-```
-uv run --project dev-observatory observatory sync
-```
-
-This re-derives verbs/ports from the current `CLAUDE.md` + plan and regenerates the `dev.code-workspace` tasks. Keep README/CLAUDE.md command + port mentions scrapable.
+- Do not wait on a question mid-run — derive (Step 2) or stop with `Result: NOT RUN` before any write
+- Do not commit, push or open the posterity issue from any branch but `$DEFAULT_BRANCH` (Step 9)
+- Do not commit, push or open the posterity issue for an `owned = false` project — hand it to `/repo-wrap`
+- Do not create the posterity issue before the push is confirmed, and never force-push
+- Do not write a quality-gate result that no run reported
+- Do not stage or commit the workspace task file Step 13 regenerates

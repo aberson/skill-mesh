@@ -36,12 +36,20 @@ Multi-lens verdict aggregator. Reads per-lens JSON verdicts from `--lens-dir`, a
 **Usage:**
 
 ```bash
-python aggregate.py --lens-dir <dir> --output-dir <dir> [--skill-version v3] [--prior-sidecar <path>]
+python aggregate.py --lens-dir <fresh-dir> --output-dir <dir> --lint-findings <path> [--mechanical-results <path>] [--plan-step <plan>:<step-id>] [--reviewers code|runtime|full] [--force-runtime] [--runtime-downgrade-reason <token>] [--skill-version v3] [--prior-sidecar <path>]
 ```
+
+Each option is given at most once: repeating an option that takes a value (as `--opt value` or `--opt=value`) exits `2` and writes no sidecar. `--lens-dir` must be a fresh directory holding only this run's lens records (one `<lens_id>.json` each). `--plan-step` is `<plan-file-path>:<step-id>`, where the step id is the token after the last colon (for example `12`, `5a`, `22-prep`, `D.6`; a letter or digit first, then letters, digits, `.`, `_` or `-`); a value with no step id, such as a bare path, exits `2`. `--lint-findings` names the `lint-findings.json` this run's pre-pass wrote; without it the script still auto-discovers `<--output-dir>/lint-findings.json`, then `.review-deep/lint-findings.json`, which can pick up a stale file. `--mechanical-results` is this run's mechanical-check record:
+
+```json
+{"checks": [{"check": "pytest", "status": "pass|fail|missing-tool", "command": "python -m pytest", "evidence": "3 passed"}]}
+```
+
+**Default-deny PASS.** The sidecar result stays `PASS | NEEDS-WORK | DEFERRED-TO-UAT`. `PASS` needs every required lens exactly once with `PASS` (or an allowed `SKIPPED`: plan-conformance without `--plan-step`, or the code lenses under `--reviewers runtime`), zero `Block`, fewer than three `Nit`, and no failed or malformed mechanical result. `UNCERTAIN`, `NEEDS-CLARIFICATION`, an unknown or missing `overall_verdict`, a missing / duplicate / unexpected lens, a lens file whose name is not `<lens_id>.json`, a required lens `SKIPPED`, no runtime lens under `--reviewers runtime` (or `full` without a recorded downgrade), a recorded runtime downgrade under `--reviewers runtime`, a runtime lens record under a recorded downgrade, a `SKIPPED` lens with findings, a `PASS` lens with `Block`/`Nit` findings, and a mechanical `fail` or malformed mechanical record (including an empty `checks` list, because the phase is mandatory, and a supplied file whose JSON is not an object, such as `null`) each give `NEEDS-WORK` with the reason in `aggregated_verdict.rationale` (also printed as the markdown `Rationale:` line). `missing-tool` is listed there and does not block. Duplicate or misnamed lens files are never overwritten and never fill another lens's slot: every record is kept in the sidecar. A malformed lens record, a sidecar-shaped file (a prior run's audit-trail JSON) in `--lens-dir`, a duplicate JSON key, or unreadable input exits non-zero (`1` for lens input, `2` for usage or an unreadable or duplicate-key `--mechanical-results`) and writes no sidecar. The sidecar gains a trailing `mechanical_results` key: the supplied object, `{"malformed_input": <value>}` when the supplied JSON is not an object, or `null` when `--mechanical-results` was not given.
 
 Plus a `--self-test <m1-sidecar>` mode that round-trips a baseline sidecar through the aggregator and reports any structural diff vs the input (legitimate v1→v3 rule-2/rule-7 demotions are surfaced separately from real failures).
 
-A `--unit-test` mode runs in-process unit tests for the aggregator rules Step 4 builds on (rule 6 escalation chain, rule 7 dedup-demote, rule 7 `scope-boundary-deferral` exclusion, empty-`--lens-dir` → `NEEDS-WORK` guardrail, and a `render_markdown` Unicode + markdown-metacharacter smoke). On success the command prints `UNIT TESTS PASSED` and exits 0; on the first assertion failure it prints `UNIT TEST FAILED: <reason>` and exits non-zero.
+A `--unit-test` mode runs in-process unit tests for the aggregator rules Step 4 builds on (rule 6 escalation chain, rule 7 dedup-demote, rule 7 `scope-boundary-deferral` exclusion, empty-`--lens-dir` → `NEEDS-WORK` guardrail, a `render_markdown` Unicode + markdown-metacharacter smoke, and the default-deny cases: UNCERTAIN, incomplete set, duplicate lens, unknown verdict, SKIPPED required lens and failed mechanical check each `NEEDS-WORK`, with the known-good six-lens anchor still `PASS`). On success the command prints `UNIT TESTS PASSED` and exits 0; on the first assertion failure it prints `UNIT TEST FAILED: <reason>` and exits non-zero.
 
 ```bash
 python aggregate.py --unit-test

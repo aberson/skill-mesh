@@ -85,12 +85,15 @@ declared `resource_paths` field. A package-local file that an outside creator em
 that the request never mentions still trips it: a request that *declares* nothing is not the
 same as a change that *adds* nothing, and the second is what this stop grades.
 
-**Two skills are grandfathered**, and both predate this contract:
+**Two skills are grandfathered**, and both predate this contract. The table's third row,
+`build-step`, is not grandfathered: it is the reviewed packaging exception described after
+this table, recorded here so the table names every skill that carries package-local files:
 
 | Skill | Package-local files | Provenance |
 |---|---|---|
 | `judge-ui` | `calibration-notes.md` | Authored in the pre-migration GPT tree; rescued into `skills/` at commit `72356fb` |
 | `review-deep` | a `config/`, `evals/`, and `scripts/` support tree | Authored at commit `e36a03e`, landed on `main` with RD-lite (issue #177) via merge `8a1b501` — the merge section 1 records as a prerequisite |
+| `build-step` | `scripts/build_step_tree.py` and `scripts/capture_evidence.py` | The P1 mechanics helper, and an LF copy of the legacy top-level package's capture script; reviewed packaging exception, packet route P2 |
 
 `READ`, and an `UPDATE` confined to the core and adapters, may leave those files in place.
 `DELETE`, `RENAME`, or any change to their presence or location is a resource-topology
@@ -107,6 +110,17 @@ JSON payload). This does not generalize `support_assets` into an emission protoc
 authorize new package files. Missing inputs fail generation; normal provenance, path,
 ledger and current-byte guards still govern installation. See
 [`codex-deep-review-unblock-plan.md`](codex-deep-review-unblock-plan.md).
+
+**Reviewed packaging exception: the `build-step` scripts.** The two files in the table's
+`build-step` row are not grandfathered. They entered through the stop above, with the
+build-step preparation packet's route P2 as their resource plan: decision D-MECH (a packaged
+Python mechanics helper) is operator-approved, and the route was agent-defaulted under the
+2026-10-12 isolated build authorization, which is not a main catalog release. The distribution builder emits exactly
+these two inputs into every profile's `build-step/` package, at the same relative path the core
+cites as `<skill-dir>/scripts/<leaf>`, with Python provenance inside each module docstring; a
+missing input fails generation. Like Phase CD, this does not generalize `support_assets` into
+an emission protocol, does not reopen the grandfathered set, and authorizes no other package
+file.
 
 **What mechanically enforces this document, and what it does not.**
 `tests/package-integrity/test_skill_catalog_lifecycle.py` pins, byte-for-byte, a named set of

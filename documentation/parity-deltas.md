@@ -436,6 +436,15 @@ columns as the Deltas table so M2 can promote a row unchanged if it re-observes 
 | user-project | session identity comes from the abstract session-I/O layer; with no stable Codex identity the pin write follows the schema fallback (freshest sessions/*.md) and never mints a session file under a fabricated UUID - with no session file at all, the adapter reports the pin unset in one line and writes nothing (the pin is advisory; honoring skills fall back to cwd) | minor | accept |
 | * | no Cohort B skill is in the manifest's `sub-agent` capability set, so the no-Agent-primitive mapping stays the pilot's single-context fallback with no capability loss for any of the twelve | minor | accept |
 
+> **Superseded 2026-10-12 (plan-init row only).** The plan-init row above assumes an
+> auto-run redline hook at plan-init save. The reworked plan-init core removes that hook:
+> plan-init invokes no other skill, its closing report names
+> `/plan-review --autofix <plan-path>` next and carries no proposal locator, and plan-redline
+> runs later in the fixed review, redline, wrap order through its own codex adapter (whose file-path locator is the
+> plan-redline row above). The row is kept verbatim as a dated observation; present behavior
+> is owned by `skills/plan-init/core.md` and `skills/plan-init/providers/codex.md`. Nothing in
+> the M-step verdict lines or the run-environment records is affected.
+
 ## Step 7 authoring deltas (Cohort C - authored by construction, not host-observed) -- SUPERSEDED in part, 2026-09-06
 
 > **Superseded 2026-09-06.** Phase CL Step 119 (issue #165) changed the disposition

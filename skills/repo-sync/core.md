@@ -14,6 +14,15 @@ updates, closes, and **enriches** issues so GitHub mirrors the plan's
 structure and any fresh-context LLM picking up a step has enough context
 in the issue body to start work.
 
+## Operating contract
+
+- **Position:** plan pipeline stage 5 of 7 — after `/plan-review` → `/plan-redline` → `/plan-wrap`, before `/build-phase`; `/repo-init` is the first-time alternative at the same stage (see Prerequisites).
+- **Input:** `--plan` is required. A bare invocation, or a `--plan` path that is missing or unreadable, ends `Result: NOT RUN (<reason>)` before any `gh` call. Never guess a plan: a guessed plan would flow into issue mutation.
+- **Target repo:** resolved once in Step 0, in the precedence of `.claude/references/transition-directory-contract.md` § The resolved target repo (`/user-project` pin → the plan's project → cwd repo). Every `gh` call after Step 0's resolution passes `-R <owner>/<repo>` for that one repo.
+- **Allowed writes:** in the target repo only — `gh issue create`, `gh issue edit` (title and body), and `gh issue close` with its comment; temp body files under the Windows-safe temp directory, deleted after use; and blank `**Issue:**` values in the plan (Step 7b). Nothing else: no reopen, delete, label, milestone or other comment, no other repository, and no git write command (add, commit, push, stash, checkout, reset); read-only `git rev-parse` is allowed for target resolution, the wrong-directory guard and the footer `<git-short-sha>`. `--dry-run` writes nothing.
+- **Result:** every run, including a stop, ends with one `Result:` line followed by the `Next:` line (Step 8). Callers should read the `Result:` line (plan-expedite adoption: X3), not the last line, which is `Next:`; success is never inferred from prose.
+- **Re-run:** matching is by title prefix and footer, so a re-run after a partial failure or a plan edit converges — existing issues become ENRICH, UPDATE or NO-OP rather than duplicates, and Step 7b never overwrites an existing issue number.
+
 ## Principle: optimize for LLM effectiveness, not human-noise reduction
 
 Issue bodies should be substantive. A fresh-context model reading
@@ -81,13 +90,15 @@ frontend-touching step still counts as needing ENRICH.
 
 ## Prerequisites
 
-Run the plan pipeline in order. `/repo-sync` is step 4 of 5:
+Run the plan pipeline in order. `/repo-sync` is step 5 of 7:
 
   1. `/plan-init` or `/plan-feature` — produce `plan.md`.
   2. `/plan-review` — gap-check before sync.
-  3. `/plan-wrap` — clean-context check before sync.
-  4. `/repo-sync` — mint or update issues from the plan.
-  5. `/build-phase` — execute the steps.
+  3. `/plan-redline` — operator P/D feedback on the corrected plan.
+  4. `/plan-wrap` — clean-context check before sync.
+  5. `/repo-sync` (or `/repo-init` the first time) — mint or update issues from the plan.
+  6. `/build-phase` — execute the steps.
+  7. `/repo-update` — commit, update docs, push.
 
 Skipping `/plan-review` or `/plan-wrap` before sync is the
 **N+1 rework trap**: one plan edit becomes N+1 edits — the plan
@@ -97,12 +108,13 @@ straight from the plan, so plan-only ambiguities (undefined IDs,
 unexplained acronyms, lingering TBDs) bake into every issue.
 
 For an autonomous pre-flight that runs the chain unattended,
-use `/plan-expedite --plan <path>` — it chains
-`plan-review --autofix → plan-wrap --autofix → repo-sync →
-session-wrap` in one shot.
+use `/plan-expedite --plan <path>` — it runs the pre-sync review
+chain, then this skill, then its handoff, in one shot (its core
+owns the exact stage list).
 
 Canonical workspace-level statement of the chain lives in
-`dev/.claude/rules/plan-and-issue-flow.md` § Order.
+`dev/.claude/references/plan-and-issue-flow.md` § Order (the
+`dev/.claude/rules/plan-and-issue-flow.md` stub points there).
 
 ---
 
@@ -110,12 +122,12 @@ Canonical workspace-level statement of the chain lives in
 
 | Arg | Required | Default | Description |
 |---|---|---|---|
-| `--plan` | yes | -- | Path to plan/build-doc (e.g. `documentation/plans/phase-d-build-plan.md`) |
+| `--plan` | yes | -- | Path to plan/build-doc (e.g. `documentation/plans/phase-d-build-plan.md`). Absent or unreadable → `Result: NOT RUN`; never guessed |
 | `--phase` | no | inferred | Phase identifier (B, D, E, 6, 7, F, G, G.2, 9, etc.) — letters and numbers both supported. Inferred from filename if omitted. |
 | `--scope` | no | both | `umbrella`, `steps`, or `both` |
 | `--enrich` | no | false | Update existing-issue bodies if richer content is now in the plan |
 | `--dry-run` | no | false | Print issue-change preview and exit without applying — for validation before commit |
-| `--force` | no | false | Proceed despite missing evidence that the plan-review and plan-wrap prerequisite gates ran. |
+| `--force` | no | false | Proceed despite missing evidence that the plan-review and plan-wrap prerequisite gates ran. An explicit operator waiver of that one gate only: it never waives the Step 0 repo checks, and the run prints `Prerequisites: waived by --force (<missing gate>)`. |
 
 ---
 
@@ -160,13 +172,19 @@ flagged as lean (see "Doc richness check").
 
 ### Step 0 — Pre-flight: resolve and verify target repo
 
-Before proceeding to issue mutation, verify plan-review and plan-wrap have each been run on the target plan. Accept evidence such as a checkpoint entry or `Status: DONE` on the corresponding review steps. If evidence for either gate is absent, emit a `WARNING` naming the missing prerequisite evidence and halt unless the operator supplied the explicit `--force` flag. Do not silently skip prerequisite gates.
+Before proceeding to issue mutation, verify plan-review and plan-wrap have each been run on the target plan. Accept evidence such as a checkpoint entry (for example a `.plan-expedite-state` `completed[]` entry for that gate on this plan), a record in this session that the gate ran on this plan, or `Status: DONE` on the corresponding review steps. Print one line naming the source for each gate, e.g. `Prerequisites: plan-review (.plan-expedite-state), plan-wrap (this session)`. If evidence for either gate is absent, emit a `WARNING` naming the missing prerequisite evidence and halt (`Result: NOT RUN (missing prerequisite evidence: <gate>)`) unless the operator supplied the explicit `--force` flag. Do not silently skip prerequisite gates. Redline evidence is not checked.
 
 `gh` resolves the target repo from cwd by walking up to the nearest
 `.git/`. The `dev/` workspace root is itself a git repo with its own
 remote (`aberson/coding-root`), so running `gh` from `dev/` silently
 lands on `aberson/coding-root` instead of the intended project
-subdirectory. Resolve and echo the repo before any mutating call:
+subdirectory. `<absolute-project-dir>` below is the resolved target
+(Operating contract). When a set `/user-project` pin names a different
+repo than the one containing `--plan`, print one
+`WARNING target repo '<pin-repo>' != plan repo '<plan-repo>'` line
+naming both, then continue with the resolved target (advisory, like the
+wrong-directory guard below). Resolve and echo the repo before any
+mutating call:
 
 ```bash
 cd <absolute-project-dir>
@@ -176,7 +194,8 @@ echo "Target repo: $REPO (default branch: $DEFAULT_BRANCH)"
 ```
 
 Confirm the printed `Target repo:` matches the intended project. If it
-does not, stop — the cwd is wrong.
+does not, or no repo resolves, stop — the cwd is wrong
+(`Result: NOT RUN (target repo: <reason>)`).
 
 `$DEFAULT_BRANCH` is the `<default-branch>` placeholder every body
 template below interpolates into its `../blob/<default-branch>/` doc
@@ -264,15 +283,44 @@ needed — but no halt mid-sync.
 ### Step 3 — Fetch existing GitHub issues
 
 ```bash
-# jq requires POSIX classes — no \d / \w / \s / \. (see Common mistakes § Perl-style regex escapes)
-gh issue list --state all --limit 200 --json number,title,body,state \
-  --jq '.[] | select(.title | test("^Phase [A-Z0-9]+([.][0-9]+)?( Step [0-9]+)?:|^Phase [A-Z0-9]+([.][0-9]+)? — "))'
+# jq requires POSIX classes - no \d / \w / \s / \. (see Common mistakes § Perl-style regex escapes)
+# the jq string escape \u2014 (six ASCII characters) decodes to the umbrella em-dash, so no non-ASCII character crosses the shell boundary
+gh -R "$REPO" issue list --state all --limit 1000 --json number --jq 'length'
+gh -R "$REPO" issue list --state all --limit 1000 --json number,title,body,state \
+  --jq '.[] | select(.title | test("^Phase [A-Z0-9]+([.][0-9]+)?( Step [0-9]+)?:|^Phase [A-Z0-9]+([.][0-9]+)? (\u2014|-) "))'
 ```
 
-This regex matches both umbrella titles (`Phase X — ...`) and step
+This regex matches both umbrella titles (`Phase X <em-dash> ...`) and step
 titles (`Phase X Step N: ...`) across numeric, letter, and sub-phase
-numbering. Falls through to the legacy `(Phase \d+ )?Step \d+:` if the
-new pattern returns nothing (back-compat).
+numbering. Falls through to the legacy `(Phase [0-9]+ )?Step [0-9]+:` if the
+new pattern returns nothing (back-compat). The umbrella separator is the
+jq string escape `\u2014` (written as six ASCII characters; jq decodes it to the em-dash) or an ASCII `-`, never a literal em-dash,
+which is mangled in `gh` flag values on Windows
+(`.claude/references/windows-shell.md` § Shell args & grep gates); `.`
+is not used because it matches any character.
+
+**Fetch failure fails closed.** If any Step 3 command (including the legacy
+fallback) exits non-zero, or the first prints anything other than an integer, the issue state is unknown:
+stop before any mutation with `Result: NOT RUN (issue list unavailable)`.
+An empty or failed list is never read as "no issues" (that would mint
+duplicate CREATEs).
+
+If the first command prints the limit (1000), the list may be truncated
+and the absence of an issue is unproven: print one
+`WARN: issue list truncated` line, hold every CREATE (preview label
+`CREATE … (held: issue list truncated)`) and run the other buckets.
+Only when at least one CREATE is actually held does the run end
+`Result: PARTIAL (issue list truncated; <n> creates held)`, with `Next:`
+naming the fix — create the held steps by hand from the preview, or
+transfer stale issues to another repo until the repo-wide count is below
+1000, then re-run. Closing issues does not help: `--state all` still
+counts closed issues. With zero held creates the warning stays and the
+normal Result rules apply, so "create by hand, then re-run" converges.
+A repo at or above the limit never gets an automatic CREATE. Under
+`--dry-run`, `Result: DRY-RUN` wins and the preview carries the held
+labels plus the warning line. The limit is a backstop, not a scope: the list stays repo-wide
+(not a `--search` query), because search results are index-backed and
+can omit a just-created issue, which would break re-run convergence.
 
 #### 3.1 — Cross-plan collision check
 
@@ -294,7 +342,7 @@ parenthetical "linked to" phrase.
   `*Synced from `<plan>` by /repo-sync at <git-short-sha>*`
   (with `<plan>` rendered as the markdown link described above).
 - Enrich / update path (see Update / enrich):
-  `*Enriched by /repo-sync from <build-doc-path> @
+  `*Enriched by /repo-sync from <plan> @
   <git-short-sha>*`
 
 Long-lived issues that have been re-synced carry the second
@@ -306,21 +354,33 @@ Regex shapes the parser must match:
 - Create:  `Synced from \[(.*?)\]`
 - Enrich:  `Enriched by /repo-sync from (.+?)( @ |$)`
 
-Algorithm: for each issue that matched a plan step in the
-Step 3 fetch above, parse the footer's plan path from the
+Algorithm: for each fetched issue in this plan's phase (the
+Step 3 fetch above, matched to a plan step or not, so CLOSE
+can prove ownership), parse the footer's plan path from the
 issue body — from EITHER `Synced from [<plan>]` OR
-`Enriched by /repo-sync from <build-doc-path>`. If that plan
-path differs from the current `--plan` argument's path,
-classify the match as a CROSS-PLAN COLLISION (the issue
+`Enriched by /repo-sync from <plan>`. `<plan>` in both footers
+is the `--plan` file's path relative to the doc repo root, with
+forward slashes, and both templates render it in that form.
+Normalize both the parsed path and the current `--plan` path
+before comparing: strip backticks and a leading `./`, convert
+`\` to `/`, make an absolute path relative to the doc repo
+root, and compare case-insensitively on Windows. If the
+normalized footer path differs from the normalized `--plan`
+path, classify the match as a CROSS-PLAN COLLISION (the issue
 belongs to a different plan; the step key collision is
-incidental).
+incidental). An issue this skill enriched from the same plan
+therefore never classifies as a collision.
 
 Action: emit a `WARN: cross-plan collision` line in the
 Step 5 preview output for each collision. **No halt** —
 autonomous default still executes; the operator sees the
 warning in the preview but the run proceeds without
-prompting. Collided issues are excluded from ENRICH /
-REOPEN candidate lists (treat as stale w.r.t. this plan).
+prompting. Collided issues are excluded from every mutation
+bucket — ENRICH, UPDATE and CLOSE (treat as stale w.r.t. this
+plan; this skill never reopens). A plan step whose only title
+match is a collided issue is not created either; it stays in
+the preview with its WARN line (see Edge cases § Cross-plan
+step-key collision).
 
 Example warning line in the preview:
 
@@ -328,7 +388,7 @@ Example warning line in the preview:
 WARN: cross-plan collision — issue #123 "Phase D Step 3: foo"
   plan footer: documentation/old-plan.md
   --plan arg:  docs/archived-plans/repo-sync-improvements-plan.md
-  classify as: stale (do not ENRICH, do not REOPEN)
+  classify as: stale (do not ENRICH, UPDATE or CLOSE)
 ```
 
 Footer-absent issues (legacy or hand-authored) cannot be
@@ -348,7 +408,7 @@ Required Step 3.1 header line in the rendered output:
 ```text
 Footer shapes recognized:
   Create:  Synced from [<plan>](...)
-  Enrich:  Enriched by /repo-sync from <build-doc-path> @ <sha>
+  Enrich:  Enriched by /repo-sync from <plan> @ <sha>
 ```
 
 When no issues were matched, follow with `(no existing
@@ -373,8 +433,13 @@ Classify into buckets:
 | **CREATE step** | Plan step has no matching issue | Create with rich body |
 | **ENRICH** | Issue exists, body is lean (≤2 sections), plan now has richer content | Update body (auto if `--enrich` OR if plan has clear new fields) |
 | **UPDATE** | Issue exists but title or body changed substantively | Update |
-| **CLOSE** | Issue exists, plan step removed | Close with comment |
+| **CLOSE** | Open issue in this plan's phase whose step was removed from the plan AND whose footer names this plan (Step 3.1) | Close with comment |
 | **NO-OP** | Issue exists, body is rich, no plan change | Skip |
+
+CLOSE requires proven ownership. An open issue whose step key is absent
+from the plan but whose footer is missing or names another plan is never
+closed: list it as `NO-OP` with the note `not closed: footer <missing |
+names another plan>`.
 
 ### Step 5 — Preview
 
@@ -401,6 +466,8 @@ If `--dry-run` was specified, stop here and print:
 Dry-run complete. No changes applied.
 ```
 
+followed by the `Result: DRY-RUN` and `Next:` lines (Step 8).
+
 Otherwise, proceed directly to Step 6 — print `Applying changes now...`
 and execute. **Do not prompt for confirmation.** The preview is the
 operator's read-out, not a halt point; autonomous orchestration
@@ -425,6 +492,15 @@ Each `gh issue create/edit/close` is its own Bash tool invocation, OR a
 loop in one Bash with explicit per-iteration error handling. Do NOT
 batch with `&&` — one failure must not break the chain.
 
+Record each action's exit status and the issue number or URL `gh`
+returns. A non-zero exit, or a create that returns no issue URL, is a
+failed action: report it, continue with the remaining actions, and never
+infer success. A failed step create leaves that step without an issue
+(no umbrella line, no Step 7b value); a failed umbrella create leaves
+step bodies without the umbrella reference and skips Step 7. Any failed
+action makes the result `PARTIAL`; completed actions stand, and a re-run
+converges (Operating contract).
+
 #### Body delivery — always use `--body-file`
 
 All `gh issue create/edit` calls in this skill MUST deliver bodies via `--body-file <path>`, never inline `--body "$(cat <<EOF ... EOF)"`. The inline heredoc form silently truncates or parser-tangles bodies that contain nested quote levels (code spans, quoted text, tables) — see `dev/.claude/rules/windows-shell.md` § gh / jq.
@@ -436,6 +512,11 @@ Use a Windows-safe temp path:
 POSIX `/tmp/` is invisible to `gh.exe` on Windows (different temp roots).
 
 The Create / Update / Close templates below all assume this delivery method.
+
+**Link notation.** In the templates, `` `<path>` (linked to `<url>`) ``
+is notation, not literal output: render it as the markdown link
+`[<path>](<url>)` with the resolved `<default-branch>`, as Step 3.1
+requires. Never emit the "linked to" parenthetical.
 
 #### Body template — umbrella
 
@@ -542,22 +623,33 @@ cat > "$BODY_FILE" << 'BODYEOF'
 <full new body following template>
 
 ---
-*Enriched by /repo-sync from <build-doc-path> @ <git-short-sha>*
+*Enriched by /repo-sync from <plan> @ <git-short-sha>*
 BODYEOF
-gh issue edit <NUMBER> --title "<title>" --body-file "$BODY_FILE"
+gh -R "$REPO" issue edit <NUMBER> --title "<title>" --body-file "$BODY_FILE"
 rm "$BODY_FILE"
 ```
+
+The enrich footer replaces the template's `Synced from` footer; a body
+carries exactly one footer.
 
 #### Close
 
 ```bash
-gh issue close <NUMBER> --comment "Closed by /repo-sync — step removed from plan."
+gh -R "$REPO" issue close <NUMBER> --comment "Closed by /repo-sync - step removed from plan."
 ```
+
+Close only issues in the CLOSE bucket (ownership proven, Step 4).
 
 ### Step 7 — Re-edit umbrellas with step references
 
-After step issues are created, edit each phase's umbrella issue to
-include the **Work** checklist with actual issue numbers:
+After step issues are created, edit each phase's OPEN umbrella issue to
+include the **Work** checklist with actual issue numbers. A CLOSED
+umbrella match is never edited here or in UPDATE/ENRICH (it may be
+`/repo-update`'s closed phase-audit issue, `Phase N — …`); report
+`NO-OP #<n> not edited: umbrella closed`. When more than one issue
+matches a phase's umbrella title, warn and skip all of them (as Edge
+cases § Multiple issues match same step key):
+`WARN: multiple umbrella matches #<a>, #<b> — not edited`.
 
 ```markdown
 ## Work (N steps)
@@ -572,21 +664,107 @@ direction. Without this, the umbrella has stale `<step-1-issue>`
 placeholders or a generic `(steps will be cut by /repo-sync)` note,
 which forces the LLM to do a separate `gh issue list` to find them.
 
+### Step 7b — Backfill the plan's `**Issue:**` fields
+
+After Step 7, and never under `--dry-run` or a `NOT RUN` result, write
+each step's issue number into the plan, so `/build-phase` can post
+progress (it posts nothing for a step without an Issue) and plan-review
+and plan-redline can see that the plan was synced.
+
+- **Map:** every plan step matched in this run to exactly one
+  non-collided issue that is created now, an existing open issue, or an
+  existing closed issue whose footer names this plan (Step 3.1). A
+  closed match whose footer is missing is never mapped; report
+  `Issue not backfilled: Step N #B (closed, footer missing)`, so
+  `/build-phase` cannot route progress comments to an unowned closed
+  issue. Collided, multiple-match and failed-create steps get no value.
+- **Scope:** only the value of the step's own `**Issue:**` line, and only
+  when it is blank, `#` or `TBD`. Never add a missing `**Issue:**` line,
+  never change any other byte, and never overwrite an existing number;
+  when it differs from the matched issue, report
+  `Issue mismatch: Step N plan #A, issue #B`.
+- **Mechanics:** one in-place pass that preserves the file's encoding and
+  line endings, using the snippet below as the reference implementation,
+  then the verification command below.
+- **Boundary:** the plan edit is left uncommitted; this skill runs no git
+  write command (read-only `git rev-parse` only). If the plan cannot be written, print the remaining map with
+  the snippet for the operator; the result is `PARTIAL`.
+
+Report line: `Backfilled: <k> Issue fields; missing field: <m>; mismatch: <j>`.
+
+Backfill snippet (Python) — the reference implementation, and the
+operator's fallback when Step 7b could not write. `ISSUE_MAP` is this
+run's step-to-issue map:
+
+```python
+# Backfill blank **Issue:** values after /repo-sync.
+# ISSUE_MAP = {step_number: issue_number} from this run's mapping, e.g.:
+ISSUE_MAP = {
+    1: 164,   # Step 1 -> issue #164
+    2: 165,
+    # ...
+}
+
+import re
+# REPLACE <plan-file> with your plan's actual filename,
+# e.g. "documentation/phase-rs-plan.md".
+PLAN = "documentation/<plan-file>"
+with open(PLAN, encoding="utf-8", newline="") as f:  # newline="" keeps line endings
+    text = f.read()
+for step_n, issue_n in ISSUE_MAP.items():
+    # Match Step N heading, then consecutive single-line
+    # **Field:** bullets, then the step's own **Issue:** line.
+    # No re.DOTALL: `.` does not match newlines, so `.*?\n`
+    # stays within a single line and the bullet-eater group
+    # matches only consecutive single-line bullets (no
+    # cross-step contamination).
+    # The `(?:- )?` makes the list-bullet prefix OPTIONAL: plans
+    # use BOTH `- **Issue:**` and bare `**Issue:**` styles.
+    # Only a blank, `#` or `TBD` value matches; an existing
+    # number never matches, so it is never overwritten.
+    pattern = (
+        rf"(### Step {step_n}:.*?\n(?:(?:- )?\*\*[^*]+\*\*.*?\n)*?"
+        rf"(?:- )?\*\*Issue:\*\*)[ \t]*(?:TBD|#)?[ \t]*(?=\r?\n|\Z)"
+    )
+    text, n = re.subn(pattern, rf"\g<1> #{issue_n}", text, count=1, flags=re.M)
+    if n == 0:  # count=0 is NOT success: field missing or already set
+        print(f"Step {step_n}: Issue field missing or already set; not changed")
+with open(PLAN, "w", encoding="utf-8", newline="") as f:
+    f.write(text)
+```
+
+Verification — after a fully-populated backfill, the following
+returns empty: every `**Issue:**` line holds exactly one `#<number>`
+(no `TBD`, blank, bare `#` or malformed value). REPLACE `<plan-file>`
+with your plan's actual filename:
+
+```bash
+grep -nE "\*\*Issue:\*\*" documentation/<plan-file> | grep -vE "\*\*Issue:\*\* #[0-9]+[[:space:]]*$"
+```
+
+This pattern is one instance of the broader bulk-placeholder-fill
+discipline (see `feedback_bulk_placeholder_fills.md`). Background
+and rationale in investigation
+`docs/investigations/skill-deep-dives/repo-sync/03-issue-blank-lines-kill-build-phase.md`.
+
 ### Step 8 — Report
 
-The final line of the report MUST surface this skill's plan-pipeline
-position — `step 4 of 5: after /plan-review + /plan-wrap, before
-/build-phase` — so the operator and any fresh-context downstream LLM
-see at a glance what runs next. The breadcrumb is non-optional.
+The second line of the report, directly under the header, MUST surface
+this skill's plan-pipeline position — `step 5 of 7: after /plan-review →
+/plan-redline → /plan-wrap, before /build-phase` — so the operator and
+any fresh-context downstream LLM see at a glance what runs next. The
+breadcrumb is non-optional.
 
 ```text
 repo-sync complete for Phase D (umbrella #114)
-Plan pipeline: /plan-review + /plan-wrap → /repo-sync (step 4 of 5) → /build-phase
+Plan pipeline: /plan-review → /plan-redline → /plan-wrap → /repo-sync (step 5 of 7) → /build-phase
 
   Created: 1 umbrella, 8 step issues (#164–#171)
   Enriched: 0
   Updated: 0
   Closed:  0
+  Failed:  0
+  Backfilled: 8 Issue fields; missing field: 0; mismatch: 0
 
   Body richness: 3/8 issues fully rich; 5/8 missing Files/Existing-context
   Cross-refs: umbrella #114 updated with step issue links
@@ -595,70 +773,19 @@ Plan pipeline: /plan-review + /plan-wrap → /repo-sync (step 4 of 5) → /build
   enriching documentation/plans/phase-d-build-plan.md with explicit
   per-step Files / Done when / Existing context sections, then
   re-run with --enrich to bring issues to richer state.
+
+Result: SYNCED
+Next: /build-phase --plan documentation/plans/phase-d-build-plan.md — run in <absolute-project-dir>
 ```
 
-The `/build-phase` next-step runs in the project repo (the Step 0 target), so name it:
-`Next: /build-phase --plan <plan> — run in <absolute-project-dir>`.
+Every run, a stop included, ends with these two lines, `Next:` last:
+
+- `Result: SYNCED` — every planned action succeeded (a run whose rows are all NO-OP included) and every plan step has a usable `**Issue:**` value. `Next: /build-phase --plan <plan> — run in <absolute-project-dir>` (the Step 0 target).
+- `Result: PARTIAL (<detail>)` — at least one `gh` action failed, creates were held (Step 3), the Step 7b plan write failed, or a plan step is left without a usable `**Issue:**` value — `PARTIAL (<n> steps without issue: <reasons>)`, reasons from collision-held, multiple-match, failed or held create, closed footer missing, missing field, mismatch; each failure is listed above. Completed actions stand. `Next: /repo-sync --plan <plan> — run in <absolute-project-dir>` after fixing the cause; a re-run converges.
+- `Result: DRY-RUN` — after `Dry-run complete. No changes applied.`; `Next:` is the same command without `--dry-run`.
+- `Result: NOT RUN (<reason>)` — a stop before any mutation (missing or unreadable `--plan`, no steps found, no or wrong target repo, missing prerequisite evidence, issue list unavailable). `Next:` names the fix; for missing evidence, the missing gate per Prerequisites, then this command.
 
 > Next-step commands name their target directory, and the proactive project-switch message fires on a cwd≠project mismatch with no pin, per transition-directory-contract.md.
-
-If new issues were created, the operator (or the orchestrator)
-backfills the plan's `**Issue:**` lines so `/build-phase` can post
-progress updates — e.g., via the pattern below. The skill itself
-does not back-propagate; surfacing the pattern is enough for the
-operator to run once after sync.
-
-Copy-paste bulk-fill snippet (Python). Adapt the `ISSUE_MAP` from
-the sync output's "Created" / "Enriched" mapping:
-
-```python
-# Backfill **Issue:** #N lines after /repo-sync.
-# Save the sync output's "Created" or "Enriched" mapping as
-# {step_number: issue_number}, e.g.:
-ISSUE_MAP = {
-    1: 164,   # Step 1 -> issue #164
-    2: 165,
-    # ...
-}
-
-import re, pathlib
-# REPLACE <plan-file> with your plan's actual filename,
-# e.g. "documentation/phase-rs-plan.md".
-plan = pathlib.Path("documentation/<plan-file>")
-text = plan.read_text(encoding="utf-8")
-for step_n, issue_n in ISSUE_MAP.items():
-    # Match Step N heading, then the immediately-following
-    # **Issue:** line (which may be #N, TBD, or empty).
-    # No re.DOTALL: `.` does not match newlines, so `.*?\n`
-    # stays within a single line and the bullet-eater group
-    # matches only consecutive single-line bullets. If a step
-    # is missing its **Issue:** bullet entirely, the pattern
-    # fails to match for that step and the script safely skips
-    # it (no cross-step contamination).
-    # The `(?:- )?` makes the list-bullet prefix OPTIONAL: plans
-    # use BOTH `- **Issue:**` and bare `**Issue:**` styles, and a
-    # bullet-only pattern silently substitutes NOTHING on a
-    # bare-style plan (re.subn count=0 looks like success).
-    pattern = (
-        rf"(### Step {step_n}:.*?\n(?:(?:- )?\*\*[^*]+\*\*.*?\n)*?"
-        rf"(?:- )?\*\*Issue:\*\* )(#\d+|TBD|)"
-    )
-    text = re.sub(pattern, rf"\g<1>#{issue_n}", text)
-plan.write_text(text, encoding="utf-8")
-```
-
-Verification — after a fully-populated backfill, the following
-returns empty (no remaining `TBD` or blank `**Issue:**` values).
-REPLACE `<plan-file>` with your plan's actual filename:
-
-```bash
-grep -nE "Issue:\*\*\s*(TBD\s*$|#\s*$|$)" documentation/<plan-file>
-```
-
-This pattern is one instance of the broader bulk-placeholder-fill
-discipline (see `feedback_bulk_placeholder_fills.md`). Background
-and rationale in investigation
-`docs/investigations/skill-deep-dives/repo-sync/03-issue-blank-lines-kill-build-phase.md`.
 
 ---
 
@@ -686,11 +813,11 @@ Manually renamed issue titles still match as long as the step prefix
   N: <name>`); those manual issues will not be re-matched by
   future runs. See investigation
   `docs/investigations/skill-deep-dives/repo-sync/01-step-key-collision.md`.
-- **Closed issue, step still in plan:** Log it as an informational note in the sync report and skip mutation (do not reopen, do not prompt). The operator can reopen manually if needed.
+- **Closed issue, step still in plan:** Log it as an informational note in the sync report and skip mutation (do not reopen, do not prompt). The operator can reopen manually if needed. Step 7b may still fill a blank `**Issue:**` with its number, but only when the issue's footer names this plan (Step 7b § Map).
 - **Multiple issues match same step key:** Warn and skip — user must resolve manually.
 - **Plan has no umbrella H1, just steps:** Skip umbrella creation; only step issues.
-- **No steps found:** Error: `No steps found in <path>. Expected "### Step N:", "### Phase X Step N:", or "| X.N | ... |" table row.`
-- **No GitHub repo:** See Step 0 — Pre-flight. The resolve command halts early if no repo is found.
+- **No steps found:** Error: `No steps found in <path>. Expected "### Step N:", "### Phase X Step N:", or "| X.N | ... |" table row.`, then `Result: NOT RUN (no steps found)`.
+- **No GitHub repo:** See Step 0 — Pre-flight. The resolve command halts early if no repo is found (`Result: NOT RUN`).
 - **Numbering gaps:** If plan jumps from Phase 7 to Phase 9 (intentional), don't try to create Phase 8. Honor the plan as written.
 - **Existing umbrella, plan adds new steps:** Create new step issues + re-edit umbrella to add their links.
 - **Step issue exists but lean, build doc still lean:** ENRICH would be a no-op. Recommend doc enrichment in summary; do not edit issue.

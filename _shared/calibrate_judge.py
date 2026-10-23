@@ -22,7 +22,7 @@ Gold artifacts (per skill, under ``<skill_dir>/evals/golden/``)
      "expected_block_anti_pattern": "<optional>"}
 
 The ``verdict`` enum mirrors review-deep's lens verdict set:
-``PASS | NEEDS-WORK | NO-EVIDENCE | FAILED | SKIPPED | NEEDS-CLARIFICATION``
+``PASS | NEEDS-WORK | UNCERTAIN | NO-EVIDENCE | FAILED | SKIPPED | NEEDS-CLARIFICATION``
 (see review-deep/scripts/aggregate.py ``LensVerdict.overall_verdict``).
 ``expected_block_anti_pattern`` is OPTIONAL provenance carried for Phase-3 use
 and is not consumed by the Phase-2 CI gate.
@@ -125,6 +125,7 @@ VALID_VERDICTS = frozenset(
     {
         "PASS",
         "NEEDS-WORK",
+        "UNCERTAIN",
         "NO-EVIDENCE",
         "FAILED",
         "SKIPPED",

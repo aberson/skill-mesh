@@ -7,6 +7,15 @@
 Read the project plan (typically `plan.md` in the current directory or a path provided by
 the user) and produce a structured review covering gaps, risks, and forgotten items.
 
+### Operating contract
+
+- **Pipeline position.** The first gate after `/plan-init` or `/plan-feature`. The fixed order after this review is `/plan-redline` → `/plan-wrap` → `/repo-init` or `/repo-sync` → `/build-phase` (owner: `.claude/rules/plan-and-issue-flow.md`). `/plan-expedite` invokes this skill with `--autofix <plan-path>` and reads its verdict line (see **Verdict line**).
+- **Plan resolution — bare invocation never blocks.** Use the path argument when one is given; otherwise the one plan authored or named earlier in this session; otherwise the canonical plan in the current directory (`plan.md`, then `master_plan.md`, at the root or under `plans/`, `docs/` or `documentation/`). Without a path argument, two or more plans authored or named in this session leave the plan unresolved. If no plan resolves or the resolved file cannot be read, emit only `Verdict: NOT REVIEWED: <paths tried, competing plans or read error>` and stop: no findings, and no write other than the report itself (see **Allowed writes**). When the plan was resolved without a path argument, name it on its own line directly after the mode declaration: `Plan: <resolved path>`.
+- **Allowed writes.** Autofix edits only the reviewed plan file, only through the fix classes in **Autofix mode**, plus at most one marker per touched step. It never changes an existing `**Issue:**` number, a `### Decision Inventory`, a `Proposal:` locator, any other project file, git state or GitHub. `--no-autofix` modifies no plan or project file unless the operator answers and the legacy flow under **Clarifying questions** applies those answers. The only other write is the report itself: when a host adapter directs the report to be written as a file (see that host's adapter), the operator-facing report is persisted as that file. That file is the report, not a review record, and no consumer treats it as review evidence.
+- **Result.** The report defined under **Output format**, including exactly one verdict line. The report is the review result, whether shown inline or persisted by the host adapter as above; this skill writes no separate review record.
+- **Re-run.** Idempotent on the plan's actual state (see **Re-run behavior**).
+- **Independence.** The review runs in the invoking session. It certifies no later gate (redline, wrap, sync or build), and when it runs in the session that authored the plan it is not an independent review.
+
 ## Arguments
 
 | Arg | Required | Default | Description |
@@ -270,7 +279,7 @@ Default to splitting. Inline-code-inside-operator-brief is acceptable only when 
 
 Apply the symmetric check: a `Type: code` step whose `Done when:` includes "operator visually reviews" or "operator runs and confirms" masks an operator dependency the same way. Either move the visual review to its own operator step, or re-label as `Type: operator` with the code split out as a prep step.
 
-See `.claude/rules/plan-and-issue-flow.md` § "Operator-type steps must not produce code artifacts" for rationale and the Toybox Phase M M2 incident.
+See `.claude/references/plan-and-issue-flow.md` § "Operator-type steps must not produce code artifacts" for rationale and the Toybox Phase M M2 incident.
 
 ### 23. Conditional steps must declare a Condition: predicate (Blocker)
 
@@ -296,13 +305,13 @@ If the operator does not yet know the predicate, the placeholder `**Condition:**
 
 ### 24. Reviewer flag matches step shape (Significant Gap)
 
-**Check:** For every `/build-phase`-compatible step whose `**Flags:**` line contains `--reviewers full` or `--reviewers runtime`, require an accompanying `**Start-cmd:** <command>` AND `**URL:** <url>` field (or equivalent indication of a running app available at review time).
+**Check:** For every `/build-phase`-compatible step whose `**Flags:**` line contains `--reviewers full` or `--reviewers runtime`, require `--start-cmd <command>` AND `--url <url>` on that same `**Flags:**` line: the form `/build-phase` Step 0 validates and forwards to `/build-step`. `/build-phase` does not read separate `**Start-cmd:**` / `**URL:**` fields; a step that carries them without the flags still gets the finding, which names the values to move onto the Flags line. A `--start-cmd` or `--url` value that is empty, a deferred sentinel, or only angle-bracket placeholder text with no real command or URL (quoted or not, such as fix template (b)'s `<…>` values) counts as missing, as a placeholder `Condition:` does under §23: `/build-phase` Step 0 checks only that the two flags are present.
 
 For each `Type: conditional` step, validate all runtime fields (`Files`, `Flags`, `Done when`) as if the predicate were true. A conditional step with a valid predicate but invalid runtime fields is a Blocker — the step will fail when the predicate fires. Do not skip runtime-field validation merely because the predicate may evaluate false.
 
-**Why:** Avoid wasting `/build-phase` dispatch + worktree setup on a step that will fail `/build-step` pre-flight. SKILL.md edits, backend-only logic, and unit-test-only changes have no running UI to review — use `--reviewers code` instead. Per `.claude/rules/plan-and-issue-flow.md` § "Reviewer flag must match step shape" + Alpha4Gate Phase 4.6 incident.
+**Why:** Avoid wasting `/build-phase` dispatch + worktree setup on a step that will fail `/build-step` pre-flight. SKILL.md edits, backend-only logic, and unit-test-only changes have no running UI to review — use `--reviewers code` instead. Per `.claude/references/plan-and-issue-flow.md` § "Reviewer flag must match step shape" + Alpha4Gate Phase 4.6 incident.
 
-**Severity:** Significant Gap for non-conditional steps (the operator may have intentionally omitted runtime fields for a fast-iteration step). The conditional-step override above is a Blocker. Surface so the operator either downgrades the flag or adds the runtime fields before `/repo-sync` mints the issue body.
+**Severity:** Significant Gap for non-conditional steps (the operator may have intentionally omitted runtime flags for a fast-iteration step). The conditional-step override above is a Blocker. Surface so the operator either downgrades the flag or adds the runtime flags before `/repo-sync` mints the issue body.
 
 **Fix template:** Either (a) downgrade the flag to match the step's actual shape:
 
@@ -310,17 +319,15 @@ For each `Type: conditional` step, validate all runtime fields (`Files`, `Flags`
 - **Flags:** --reviewers code
 ```
 
-or (b) add the missing runtime fields beneath the existing `**Flags:**` line, citing `.claude/rules/plan-and-issue-flow.md` § "Reviewer flag must match step shape":
+or (b) add the missing runtime flags to the existing `**Flags:**` line, citing `.claude/references/plan-and-issue-flow.md` § "Reviewer flag must match step shape":
 
 ```markdown
-- **Flags:** --reviewers full
-- **Start-cmd:** <shell command that launches the app, e.g. `uv run python -m bots.current.runner --serve`>
-- **URL:** <url the runtime reviewers will probe, e.g. `http://localhost:8766`>
+- **Flags:** --reviewers full --start-cmd "<shell command that launches the app, e.g. uv run python -m bots.current.runner --serve>" --url <url the runtime reviewers will probe, e.g. http://localhost:8766>
 ```
 
 **Example finding:**
 
-> Step 5 declares `**Flags:** --reviewers full` but has no `**Start-cmd:** ` / `**URL:** ` fields. Either downgrade to `--reviewers code` (if the step's work is SKILL.md-only / backend-only / unit-test-only and has no running app to review) or add the runtime fields. Per `.claude/rules/plan-and-issue-flow.md` § "Reviewer flag must match step shape".
+> Step 5 declares `**Flags:** --reviewers full` but its Flags line has no `--start-cmd` / `--url`. Either downgrade to `--reviewers code` (if the step's work is SKILL.md-only / backend-only / unit-test-only and has no running app to review) or add `--start-cmd <cmd> --url <url>` to the Flags line. Per `.claude/references/plan-and-issue-flow.md` § "Reviewer flag must match step shape".
 
 ### 25. Plan format readiness for /build-phase (Blocker if table-only)
 
@@ -420,7 +427,7 @@ Never wholesale-replace the line — dropping a co-located flag (`--max-iter`, `
 
 `--reviewers deep` is `/build-step`'s review-deep lane: it dispatches `/review-deep` (its code
 lenses + deterministic aggregation + JSON audit sidecar) INSTEAD OF the gauntlet's four arms.
-The lane is code-lens-only, so the rewrite adds no `**Start-cmd:**`/`**URL:**` requirement and
+The lane is code-lens-only, so the rewrite adds no `--start-cmd`/`--url` requirement and
 never triggers §24 on the rewritten line.
 
 **High-tier escalation note (annotate, NEVER auto-set):** each §27 finding carries a one-line
@@ -462,14 +469,14 @@ Use these EXACT strings (no rewording, no extra punctuation). The mode line is m
 
 **Carve-out note (separate from the locked string above):** even when the declaration reads "Sections 17–21 skipped", §19's CLAUDE.md/AGENTS.md-conventions bullet and §21's step-sizing bullet still run in greenfield (per the §17–21 intro carve-out). This note is metadata beneath the declaration — the two EXACT mode strings are byte-unchanged.
 
-**Sequencing with the Repo-sync-already-ran detection warning:** When BOTH the mode declaration AND the repo-sync warning fire, the warning is line 1 and the mode declaration is line 2 (warning sits ABOVE mode declaration). When ONLY the mode declaration fires (no populated `**Issue:**` fields), it is line 1.
+**Sequencing with the Repo-sync-already-ran detection warning:** When BOTH the mode declaration AND the repo-sync warning fire, the warning is line 1 and the mode declaration is line 2 (warning sits ABOVE mode declaration). When ONLY the mode declaration fires (no populated `**Issue:**` fields), it is line 1. In either case, when the plan was resolved without a path argument, the `Plan: <resolved path>` line (see **Operating contract**) immediately follows the mode declaration; like the mode line, it is metadata, not a finding.
 
 ### Repo-sync-already-ran detection (warning at top of output)
 
 At the start of every review, scan the plan for non-blank `**Issue:** #<number>` lines (regex `^\s*-?\s*\*\*Issue:\*\*\s*#\d+`). If any step has a non-blank Issue field, emit this warning as the very first line of output, before any other content:
 
 ```text
-[!] Detected non-blank Issue fields — repo-sync appears to have already run. Findings applied to plan.md will require corresponding `gh issue edit` updates (N+1 rework). See `feedback_plan_review_before_repo_sync.md`.
+[!] Detected non-blank Issue fields — repo-sync appears to have already run. Findings applied to plan.md will require corresponding `gh issue edit` updates (N+1 rework). See `.claude/references/plan-and-issue-flow.md` § Order.
 ```
 
 Use ASCII `[!]` (locked per plan §8 OQ1 + `feedback_python_unicode_print_windows` — do NOT use the Unicode warning glyph; it crashes on Windows cp1252 consoles).
@@ -492,6 +499,22 @@ docs sections).
 Include all four tiers in every review. If a tier has no findings, include the heading
 followed by "None."
 
+### Verdict line
+
+After the four severity tiers, and before the trailing block (`Auto-applied N fixes:` / `M items need your input:` in autofix mode; the **Clarifying questions** list and closing line under `--no-autofix`), emit exactly one verdict line:
+
+```text
+Verdict: READY | READY (auto-fixed N items) | NEEDS WORK: B blockers, M items need input
+```
+
+Count after autofix has run. **N** = fixes applied this run (always 0 under `--no-autofix`). **B** = Blockers still present in the plan. **M** = distinct open items that need operator input before the plan proceeds: each remaining Blocker once, plus each other finding that needs an operator answer once. A §24 finding (downgrade the flag or add `--start-cmd`/`--url`) and a §26 finding (accept or decline the proposed smoke step) each need an operator answer. Under `--no-autofix`, each finding an autofix run would have applied also counts once in M, because nothing applied it. In autofix mode these are exactly the bullets under `M items need your input:`, so every remaining Blocker is listed there. Because each remaining Blocker is an open item, B ≤ M, and a plan with a remaining Blocker is never reported ready.
+
+- `READY` — B = 0, M = 0, N = 0.
+- `READY (auto-fixed N items)` — B = 0, M = 0, N ≥ 1 (autofix mode only).
+- `NEEDS WORK: B blockers, M items need input` — M ≥ 1 (B may be 0).
+
+The three variants are mutually exclusive and exhaustive over (B, M, N). Apart from the items counted in M above, Significant gaps, Missing items and Nice-to-haves that need no operator answer stay in their tiers and do not change the verdict. `NOT REVIEWED: <reason>` is not a review verdict; it is emitted only when no single plan resolves or the plan cannot be read (see **Operating contract**). The `READY`, `READY (auto-fixed N items)` and `NEEDS WORK` tokens are the ones `/plan-expedite` already matches for this skill.
+
 ---
 
 ## Autofix mode (default ON)
@@ -504,7 +527,7 @@ followed by "None."
 |---|---|---|
 | Operator+code split | Splits a `Type: operator` step whose `Produces:` includes a code-shaped artifact into adjacent `N-prep (code)` + `N (operator)` per §22. | §22 |
 | Missing Done-when | Adds a `**Done when:** <TBD — operator fills in>` placeholder line to any step lacking the field. | (existing Done-when check) |
-| Missing Files list | Greps the project tree for producer files matching the step's `**Files:**` declared paths; fills missing `**Files:**` from grep results. | (existing Files check) |
+| Missing Files list | For a step with no `**Files:**` line, greps the project tree for the files the step's own `**Problem:**` / `**Produces:**` text names and fills `**Files:**` with the names that match an existing path, citing each grep match, plus each file path listed in the step's `**Produces:**` line (files the step creates). A name in the `**Problem:**` text that matches no existing path is not filled; it is listed under Missing items. Never invents a path the step does not name; if nothing qualifies, the field stays absent and is listed under Missing items. | (existing Files check) |
 | Default Type: code | Adds `**Type:** code` to any step lacking a Type: field. | (existing Type check) |
 | Stakes-aware reviewer escalation | Token-level substitution on the `**Flags:**` line of a step whose blast surface matches the high-stakes trigger classes per `review-deep` SKILL.md's header: `--reviewers code` → `--reviewers deep`, all co-located flags preserved verbatim. Emits nothing (and touches nothing) on a plan with zero high-stakes steps; steps already declaring `--reviewers deep` are a no-op. The high-tier escalation note stays a surfaced annotation — never written into the plan. | §27 |
 
@@ -528,7 +551,7 @@ When `/plan-review --no-autofix` is invoked, the skill surfaces ALL findings as 
 
 ### Output template (autofix ON)
 
-After the severity-grouped findings, the report ends with:
+After the severity-grouped findings and the verdict line (see **Verdict line**), the report ends with:
 
 ```text
 Auto-applied N fixes:
@@ -540,23 +563,23 @@ M items need your input:
   - ...
 ```
 
-If N = 0 (no auto-fixable items), omit the "Auto-applied" block — the report ends with the "M items need your input" block only (or the existing "Want me to update the plan to address these, or discuss any first?" line if also no clarifying items). **Exception:** on a re-run where all prior defects are verified resolved and the full review finds no new defects, emit "Auto-applied 0 fixes. Plan is ready for `/plan-wrap` and `/repo-sync`." instead of omitting — the explicit 0-count signals successful idempotent re-run to `/plan-expedite` and the operator. See **Re-run behavior** below.
+If N = 0 and M ≥ 1, omit the "Auto-applied" block — the report ends with the "M items need your input" block. If N = 0 and M = 0 (a clean first run and an idempotent re-run alike), the report ends with "Auto-applied 0 fixes. Plan is ready for `/plan-redline`, then `/plan-wrap` and `/repo-sync`." — the explicit 0-count signals a clean result to `/plan-expedite` and the operator. The legacy "Want me to update the plan to address these, or discuss any first?" line is never emitted in autofix mode. See **Re-run behavior** below.
 
-If M = 0 (no items need input but >=1 autofix applied), the report ends with "Auto-applied N fixes. Plan is ready for `/plan-wrap` and `/repo-sync`."
+If M = 0 and N ≥ 1, list the fixes under "Auto-applied N fixes:" as above, then end the report with "Auto-applied N fixes. Plan is ready for `/plan-redline`, then `/plan-wrap` and `/repo-sync`."
 
 > Next-step commands name their target directory, and the proactive project-switch message fires on a cwd≠project mismatch with no pin, per transition-directory-contract.md.
 
-plan-review's next-steps here (`/plan-wrap`, `/repo-sync`) are readiness pointers, not directory-anchored run-this-now directives, so no `— run in <dir>` clause is appended and the trailing lines above stay byte-unchanged (the contract's §1 omit branch — `/repo-sync`'s own directory anchoring lands when it runs).
+plan-review's next-steps here (`/plan-redline`, `/plan-wrap`, `/repo-sync`) are readiness pointers, not directory-anchored run-this-now directives, so no `— run in <dir>` clause is appended to the trailing lines above (the contract's §1 omit branch — `/repo-sync`'s own directory anchoring lands when it runs).
 
 ### Re-run behavior
 
 `/plan-review --autofix` is **idempotent** on already-applied fixes. Idempotency is keyed to the plan's actual state, never to markers: a step carrying an `autofix-applied` marker (see **Autofix marker**) is NOT exempt from any finding class on subsequent runs. Plan-review must re-examine all steps regardless of prior autofix markers. For each finding class, skip its write only when that specific defect is already resolved; continue running every other check and applying any newly relevant fix class.
 
-Re-running on a plan with no new defects emits "Auto-applied 0 fixes. Plan is ready for `/plan-wrap` and `/repo-sync`." (the N=0/M=0 trailing line).
+Re-running on a plan with no new defects emits "Auto-applied 0 fixes. Plan is ready for `/plan-redline`, then `/plan-wrap` and `/repo-sync`." (the N=0/M=0 trailing line) and the verdict `READY`.
 
 ### Relationship to `/build-phase` runtime safety-net
 
-`/plan-review --autofix` is the **plan-time** preferred path for the §22 operator+code split. `/build-phase` includes a complementary **runtime safety-net** that auto-splits any `Type: operator` step whose `Produces:` includes a code artifact at orchestration time (so an un-autofixed plan still won't halt mid-build). The two are complementary; fixing at plan time keeps issue bodies and the audit trail consistent (per `feedback_plan_review_before_repo_sync`).
+`/plan-review --autofix` is the **plan-time** preferred path for the §22 operator+code split. `/build-phase` includes a complementary **runtime safety-net** that auto-splits any `Type: operator` step whose `Produces:` includes a code artifact at orchestration time (so an un-autofixed plan still won't halt mid-build). The two are complementary; fixing at plan time keeps issue bodies and the audit trail consistent (per `.claude/references/plan-and-issue-flow.md` § Order).
 
 ---
 
@@ -590,8 +613,8 @@ If there are NO clarifying questions (all findings can be resolved without user 
 
 ## Usage
 
-When invoked, read the plan file (ask the user for the path if not obvious), then determine
-which mode applies:
+When invoked, resolve and read the plan file per **Operating contract** (bare invocation
+never blocks), then determine which mode applies:
 
 - **Greenfield plan** — the file is `plan.md` or describes a full project from scratch.
   Apply sections 1–16 AND sections 22–27. Skip sections 17–21, EXCEPT §19's conventions bullet and §21's step-sizing bullet (both apply in greenfield — see `<repo>/_shared/step-authoring.md` §1).
@@ -621,4 +644,4 @@ is to leave the plan in a better state after every review — not just list prob
 
 ## dev-observatory hook (additive; see `.claude/rules/descriptor-contract.md`)
 
-**Control-plane checks (additive).** Confirm: (1) the plan lives at a **discoverable canonical path** — `plan.md` or `master_plan.md` in the project root or `plans/`/`docs/`/`documentation/` (per `.claude/rules/descriptor-contract.md` §4) so the control-plane observer + tooling can find it; (2) it carries a **scrapable goal** (a `## 1. What This Is` section or labeled objective); (3) for a built-vs-planned signal, it has **scrapable step/phase units** inline (`### Step N:` with `**Status:**` markers, or `## Phase` headings) — a pure pointer/index plan that only links to sub-plans yields a goal but no progress ratio (the observer shows `gap = -`); (4) declared ports don't collide with the registry (`observatory ports`). All Nice-to-have findings, not blockers.
+**Control-plane checks (additive).** Confirm: (1) the plan lives at a **discoverable canonical path** — `plan.md` or `master_plan.md` in the project root or `plans/`/`docs/`/`documentation/` (per `.claude/references/descriptor-contract.md` §4) so the control-plane observer + tooling can find it; (2) it carries a **scrapable goal** (a `## 1. What This Is` section or labeled objective); (3) for a built-vs-planned signal, it has **scrapable step/phase units** inline (`### Step N:` with `**Status:**` markers, or `## Phase` headings) — a pure pointer/index plan that only links to sub-plans yields a goal but no progress ratio (the observer shows `gap = -`); (4) declared ports don't collide with the registry (`observatory ports`; if the `observatory` CLI is unavailable or errors, skip this item with one Nice-to-have line saying so — never block). All Nice-to-have findings, not blockers.

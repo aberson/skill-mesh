@@ -4,7 +4,7 @@
 
 ## Purpose and complete operating contract
 
-Read a document (ask the user for the path if not obvious) and determine whether a model
+Read a document (resolved per **Plan resolution** below; never ask) and determine whether a model
 with **zero prior context** — no conversation history, no other files — could read it and
 act on it correctly.
 
@@ -12,12 +12,23 @@ Note this differs from `plan-review`, which checks for technical gaps. This skil
 for *self-sufficiency*: everything needed to understand and act on the document must be
 present inside it.
 
+### Operating contract
+
+- **Pipeline position.** The last planning gate. The fixed order is `/plan-review` → `/plan-redline` → `/plan-wrap` → `/repo-init` (first publication) or `/repo-sync` → `/build-phase` (owner: `.claude/rules/plan-and-issue-flow.md`; long form `.claude/references/plan-and-issue-flow.md` § Order), so run this check after the plan's last content edit. `/plan-expedite` invokes it with `--autofix <plan-path>` and reads its `Verdict:` line; `/repo-update` Step 5a runs it at phase wrap, where the **Completion gate** selects the pass.
+- **Plan resolution — bare invocation never blocks.** Use the path argument when one is given; otherwise the one plan authored or named earlier in this session, an unsaved draft included (it has no file to read, so the run ends in `plan-wrap not run`); otherwise the canonical plan in the current directory: the first match searching the root, then `plans/`, `docs/` and `documentation/`, with `plan.md` before `master_plan.md` in each (the dev-observatory finder order). Without a path argument, two or more plans authored or named in this session leave the plan unresolved. If no plan resolves or the resolved file cannot be read, print one line, `plan-wrap not run: <paths tried, competing plans or read error>`, and stop: no checklist, no verdict line, no write. A plan resolved without a path argument is named on the report's first line: `Plan: <resolved path>`.
+- **Allowed writes.** Only an autofix run (the default, or `--autofix`) writes, and only to the wrapped plan file: the fix classes under **Autofix mode** plus the marker that section cites. It never edits an existing `**Issue:**` number, a `**Status:**` line, the `### Decision Inventory` or the `Proposal:` locator (both owned by `/plan-redline`), any other project file, git state or GitHub. A `--no-autofix` run, a completion-gate branch-1 run and a not-run stop write nothing.
+- **Result.** For a resolved plan, the report defined under **Output format**, with exactly one `Verdict:` line. This skill writes no separate wrap record or receipt.
+- **Reading discipline.** Judge the document as the fresh reader receives it. Reading a file the document names, to verify it (§9) or to source an autofix (§1), is allowed; but a fact known only from this session — the conversation, files read earlier, a producer the document does not summarize — is absent for that reader. If the reader would need it to act correctly, it is a finding.
+- **Independence.** The check runs in the invoking session and spawns no reviewer. When that session authored, reviewed or redlined the plan, the verdict is not an independent judgment, and it never certifies issue bodies, build results or any later gate. In that case, or when the session cannot tell whether it did, the report carries the `Independence:` line (see **Output format**).
+- **Re-run.** Idempotent on the plan's actual state (see **Re-run behavior**).
+
 ## Arguments
 
 | Arg | Required | Default | Description |
 |---|---|---|---|
 | `--autofix` | no | true (default ON) | Auto-apply fixes that don't need user judgment (missing schema summaries, bare `<id>` placeholders, operator+code splits). Findings requiring judgment are still surfaced under "Needs your input:". |
 | `--no-autofix` | no | -- | Opt out of autofix. Surface ALL findings as recommendations; do not modify plan.md. For operators who want to review before applying. |
+| `<plan-path>` | no | resolved per **Plan resolution** | The plan to check. `/plan-expedite` passes it after `--autofix`. |
 
 ---
 
@@ -131,7 +142,7 @@ Use this minimum-acceptable inline summary template (markdown table; only fields
 | <field-name> | <type-string> | <constraint/range/role> |
 ```
 
-Note that a one-row summary table counts; the full schema does not need to be inlined. Anchor incident: Alpha4Gate Phase 4 planning named the reward schema verbatim but mis-paraphrased its shape, producing a wrong reward-schema Blocker (B1) and missing API response shapes (Gaps G1-G3, G7). All were preventable with one Read tool call to the producer file. See `.claude/rules/plan-and-issue-flow.md` § "Read producers before drafting plan content".
+Note that a one-row summary table counts; the full schema does not need to be inlined. Anchor incident: Alpha4Gate Phase 4 planning named the reward schema verbatim but mis-paraphrased its shape, producing a wrong reward-schema Blocker (B1) and missing API response shapes (Gaps G1-G3, G7). All were preventable with one Read tool call to the producer file. See `.claude/references/plan-and-issue-flow.md` § "Read producers before drafting plan content".
 
 ### 2. Identifiers
 - Every entity ID (job ID, user ID, record key) has its format explicitly defined:
@@ -205,8 +216,8 @@ Note the range-vs-decision disambiguation: range values (e.g., "8-16 KB max body
   it because the gap is high-cost (mid-build operator interruption) and trivial to
   catch at doc-scan time.
 - Fix at plan level: split into adjacent `N-prep (code) + N (operator)` steps.
-- See `.claude/rules/plan-and-issue-flow.md` § "Operator-type steps must not produce
-  code artifacts".
+- See `.claude/references/plan-and-issue-flow.md` § "Operator-type steps must not
+  produce code artifacts".
 
 ### 12. Conditional steps must declare a Condition: predicate (Blocker)
 
@@ -246,6 +257,8 @@ Note this mirrors `/plan-review` §26 — plan-wrap repeats it for the same belt
 
 ## Output format
 
+Emit one report in this order: the `Plan:` line (only when the plan was resolved without a path argument), the completion-gate preamble line, the line `Independence: same-session check, not an independent judgment` (only when the operating contract's **Independence** rule calls for it), the thirteen §N lines, the findings grouped by severity tier, then the verdict block under **Output template**. Nothing follows the verdict block.
+
 Check **every** checklist item (1–13) in the output:
 - Items with issues: state which section triggered it, what is missing, and a concrete suggestion.
 - Items that pass: include a one-line note confirming no issues found (e.g., "**Schemas** — all data structures have fields defined. No issues.").
@@ -274,7 +287,7 @@ Apply severity grouping (always show all three tiers, even if a tier has no find
 - **Gap** — a fresh model could probably guess, but shouldn't have to
 - **Minor** — cosmetic or low-stakes ambiguity
 
-Always end with a one-line verdict. There are exactly four mutually-exclusive verdict variants, exhaustive over the (Blocker-count, Gap-count, autofix-applied-count) tuple:
+Always close the report with the verdict block, whose first line is the one `Verdict:` line. There are exactly four mutually-exclusive verdict variants, exhaustive over the (Blocker-count, Gap-count, autofix-applied-count) tuple:
 
 - `READY` — 0 Blockers, 0 Gaps (autofix off, OR autofix on with 0 autofixes applied). Document is self-contained.
 - `READY (auto-fixed N items)` — 0 Blockers, 0 Gaps (autofix on, N≥1 autofixes applied). Document is self-contained after autofix.
@@ -314,6 +327,8 @@ Note the four variants are mutually exclusive and exhaustive over (Blocker-count
 
 Note that when --no-autofix is set, only three of the four variants are reachable: `READY` (0/0), `READY WITH GAPS: M gaps` (0/M≥1), and `NEEDS WORK: N blockers, M gaps` (N≥1). The `READY (auto-fixed N items)` variant requires --autofix to be on.
 
+A remaining Blocker is never a clarifying question that a caller may answer for the operator: `NEEDS WORK` is not wrap-ready for any caller, including `/plan-expedite`, until a re-run reports no Blocker.
+
 ### `--no-autofix` opt-out
 
 Use `/plan-wrap --no-autofix` to surface ALL findings as recommendations without modifying plan.md. Pick this mode when:
@@ -337,6 +352,8 @@ Needs your input (M):
 Next: <action recommendation>
 ```
 
+`Next:` names `/repo-init` (project not yet published) or `/repo-sync` after any of the three READY variants, and "resolve the Blockers under Needs your input, then re-run `/plan-wrap`" after `NEEDS WORK`. A completion-gate branch-1 run overrides both: its `Next:` names the stale references to fix, or `none`. Under `--no-autofix` the block has the same shape without `Auto-applied fixes`; each finding an autofix run would have applied is listed under `Needs your input` as a recommendation.
+
 Apply this verdict selection (one of the four; mutually exclusive and exhaustive):
 - 0 Blockers, 0 Gaps, 0 autofixes applied → `READY`; omit both "Auto-applied fixes" and "Needs your input" sections.
 - 0 remaining Blockers, 0 Gaps, N ≥ 1 autofixes applied → `READY (auto-fixed N items)`; omit the "Needs your input" section.
@@ -347,13 +364,14 @@ Apply this verdict selection (one of the four; mutually exclusive and exhaustive
 
 ## When to use
 
-- After `/plan-init` produces a draft plan
-- After `/plan-review` resolves technical issues
+- After `/plan-review` and `/plan-redline` on a new or substantially edited plan (from `/plan-init`, `/plan-feature` or `/plan-merge`): wrap checks the plan after its last content edit
+- Again after a redline fold materially changes an already-wrapped plan: re-run `/plan-review`, then `/plan-wrap`
 - Any time the document will be given to a new model, agent, or human collaborator
   with no prior context
 - Before starting a long autonomous build session where clarification mid-way is costly
+- At phase wrap, when `/repo-update` Step 5a runs it on a partly or fully executed plan (the **Completion gate** selects the pass)
 
-**Pipeline position matters: run plan-wrap AFTER `/plan-review` and BEFORE `/repo-sync`.**
+**Pipeline position matters: run plan-wrap AFTER `/plan-review` and `/plan-redline`, and BEFORE `/repo-init` or `/repo-sync`.**
 
 Run plan-wrap before `/repo-sync` to collapse the N+1 edit cost to 1. Rationale:
 
@@ -361,11 +379,11 @@ Run plan-wrap before `/repo-sync` to collapse the N+1 edit cost to 1. Rationale:
 - Toybox iPad-Kiosk burned ~30 min on 6 issues.
 - Alpha4Gate Phase 4 hit blank `Issue: #` lines mid-build.
 - Cross-plan slug collisions only surface at plan-wrap time.
-- `/plan-expedite` chains `plan-review → plan-wrap → repo-sync` in the correct order by default; see `.claude/rules/plan-and-issue-flow.md` § Order for the canonical sequence.
+- `/plan-expedite` chains `plan-review → plan-redline → plan-wrap → repo-sync` (its redline stage publishes local-only and continues without waiting); the canonical sequence is `.claude/references/plan-and-issue-flow.md` § Order.
 
 
 ---
 
 ## dev-observatory hook (additive; see `.claude/rules/descriptor-contract.md`)
 
-**Control-plane check (additive).** Confirm the plan carries a clearly-labeled, scrapable goal/objective near the top (dev-observatory's goal-vs-reality observer extracts it from `## 1. What This Is` + step `Problem:` fields). Minor finding, not a blocker.
+**Control-plane check (additive).** Confirm the plan carries a clearly-labeled, scrapable goal/objective near the top (dev-observatory's goal-vs-reality observer extracts it from `## 1. What This Is` + step `Problem:` fields). Minor finding, not a blocker: report it in the Minor tier prefixed `[observatory]`, not as a §N line.

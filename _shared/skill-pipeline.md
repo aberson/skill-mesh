@@ -85,10 +85,10 @@ First-time setup: `/repo-init` once before first `/plan-expedite`.
 
 ```
 [dev-root] /plan-init  or  /plan-feature   Plan: produce plan.md with build steps (planning is dev-root-fine — plan from anywhere)
-        │                           └─ [dev-root] /plan-redline (auto at plan-init close; on-request after plan-feature/plan-merge): operator-facing proposal Artifact — P/D decision inventory, ID-referenced feedback folded back into the plan BEFORE issues are minted
+        │                           └─ [dev-root] /plan-redline (after /plan-review --autofix, before /plan-wrap; never auto-run by plan-init; on-request after plan-feature/plan-merge): operator-facing proposal Artifact — P/D decision inventory, ID-referenced feedback folded back into the plan BEFORE issues are minted
         ▼
 ··· plan→repo context switch ··· /plan-expedite ANNOUNCES + PINS it here (between plan-wrap and repo-sync): plan-review/plan-wrap are dev-root-fine plan-doc ops; repo-sync onward targets the project repo
-[dev-root → project] /plan-expedite   Autonomous prep: chains plan-review --autofix → plan-wrap --autofix → repo-sync → task-handoff --next-task as one unattended pre-flight before /build-phase (--new-window: durable task-handoff --next-task write, then /session-wrap --end renders handoff-prompt.md + the Pick-up-here block)
+[dev-root → project] /plan-expedite   Autonomous prep: chains plan-review --autofix → plan-redline --local-only → plan-wrap --autofix → repo-sync → task-handoff --next-task as one unattended pre-flight before /build-phase (--new-window: durable task-handoff --next-task write, then /session-wrap --end renders handoff-prompt.md + the Pick-up-here block)
         │
         ▼   ◇ suggested /clear point — before /build-phase; NEVER mid-build (see below)
 [project] /build-phase --plan <path>   Build: run each step via /build-step

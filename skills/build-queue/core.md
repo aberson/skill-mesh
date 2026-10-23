@@ -2,6 +2,12 @@
 
 # build-queue core
 
+## Intent continuity (drift-ranger)
+
+Follow [the intent continuity contract](../../_shared/intent-continuity.md).
+Carry each project intent and actual entry point into its delegated phase. Preserve its no-progress streak across queue switches. Reassess stalled supporting work within existing authorization; do not create a new review campaign or treat a new worktree as a reset.
+
+
 ## Purpose and complete operating contract
 
 `/build-queue --queue <path>` runs an unattended overnight orchestration of multiple phase plans. Each queue item gets the full `/plan-expedite` -> `/build-phase` chain. Halts are converted to GitHub issues, not retries — the operator triages in the morning from the summary report.

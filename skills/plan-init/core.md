@@ -2,44 +2,70 @@
 
 # plan-init core
 
+## Intent continuity (drift-ranger)
+
+Follow [the intent continuity contract](../../_shared/intent-continuity.md).
+Before decomposing work, establish the intended observable journey and actual entry point. Keep private context in the intent record; put only publication-safe acceptance criteria in the plan. Make one complete usable path the first delivery, with explicit non-goals.
+
+
 ## Purpose and complete operating contract
 
 Run a structured planning conversation and produce a complete `plan.md` for a new project.
 The goal is to surface all architectural decisions *before* writing the plan, so the
 document is correct on the first pass rather than requiring a review cycle to patch gaps.
 
+- **Use for:** a wholly new project with no committed code, no schema, and no existing module
+  structure. An existing codebase goes to `/plan-feature`, which reads the code before drafting.
+- **Target:** the project directory the operator names, else the current directory. There are no
+  flags; the planning conversation is the interface.
+- **Writes, and nothing else:** `<project>/plan.md`; the project instruction file the
+  Instruction-file contract below selects (CLAUDE.md or AGENTS.md, or neither); and, for an owned
+  project, one dev-observatory registry entry through its CLI. plan-init commits nothing, creates
+  no repository or issue, publishes no proposal, and invokes no other skill.
+- **Stops before writing anything** when the greenfield check fails.
+- **Re-running converges:** an existing `plan.md` is refreshed in place, instruction-file rows 3
+  and 4 are fixed points, and re-registering updates the same registry entry.
+
 ## Greenfield check
 
-Before walking through the 7 conversation phases, confirm this is a
-**greenfield** project. Run `git log --oneline | head -1` in the project
-directory — if it returns any commit, STOP and recommend `/plan-feature`
-instead. `/plan-feature` reads the existing codebase before drafting;
-`/plan-init` does not, and using it on a project with committed code risks
-proposing data models that conflict with the live schema (Phase 2 entities,
-Phase 4 stack choices get answered from imagination rather than from the
-existing producing files — see plan-init deep-dive investigation #17).
-`/plan-init` is for wholly new projects with no committed code, no schema,
-and no existing module structure. If uncertain (e.g., the directory has
-stray files but no real codebase), ask the operator to confirm "greenfield"
-before proceeding.
+Before Phase 1, confirm the target is **greenfield**. Planning over committed code risks proposing
+data models that conflict with the live schema (Phase 2 entities, Phase 4 stack choices get
+answered from imagination rather than from the existing producing files — see plan-init deep-dive
+investigation #17).
+
+1. If the operator is at a workspace or parent-repository root and names no project directory, ask
+   for the new project's directory first.
+2. Run `git -C <project> rev-parse --show-toplevel` and compare it with `<project>` as normalized
+   absolute paths (git prints forward slashes on Windows). Only when they match is history evidence
+   about this project: then any commit from `git -C <project> log --oneline -1` means STOP and
+   recommend `/plan-feature`.
+3. Otherwise (a parent repository such as a coding-root or monorepo checkout, no repository, or the
+   project's own repository with no commit yet), inspect the directory: existing source, schema, or
+   module structure (tracked under `<project>` or not) means STOP and recommend `/plan-feature`.
+4. If the directory holds only stray files (notes, a seed document, a README, or a plan or
+   instruction file from an earlier plan-init run), ask the operator to confirm "greenfield"
+   before proceeding. An empty directory, or one that does not exist yet, is greenfield.
+
+On STOP, write nothing and report one line:
+`plan-init stopped: not greenfield (<evidence>) · nothing written · Next: /plan-feature`.
 
 ## Pipeline position
 
-`/plan-init` is Step 1 of the plan pipeline:
-`plan-init or plan-feature → plan-review → plan-wrap → repo-sync → build-phase`.
-Always run `/plan-review` and `/plan-wrap` on the produced plan BEFORE
-`/repo-sync` mints GitHub issues — a gap caught after sync is an
-**N+1-edit** problem (1 plan-doc fix + N issue-body edits in GitHub to keep
-the sync intact), whereas the same gap caught pre-sync is a single plan
-edit. `/plan-expedite` is the autonomous pre-flight meta-skill that chains
-`plan-review-autofix → plan-wrap-autofix → repo-sync → session-wrap` so
-`/build-phase` gets a clean, sync'd plan to walk; operators in autonomous
-mode should invoke `/plan-expedite --plan <path>` immediately after
-`/plan-init` finishes. Close every `/plan-init` session by surfacing the
-next step explicitly to the operator — e.g., "Plan written to <path>.
-Proposal: <artifact URL> — scan it and reply with ID tweaks. Next: run
-`/plan-expedite --plan <path>` to auto-prep, or `/plan-review` if you
-want manual review first."
+`/plan-init` (or `/plan-feature` for existing code) produces the plan. The fixed downstream order,
+owned by `.claude/rules/plan-and-issue-flow.md`, is:
+
+`/plan-review --autofix <plan-path>` → `/plan-redline --plan <plan-path>` →
+`/plan-wrap --autofix <plan-path>` → issue publication → `/build-phase --plan <plan-path>`.
+
+Issue publication is `/repo-init` for a project's first publication (the greenfield case) and
+`/repo-sync --plan <plan-path>` once the repository exists. Review and wrap run BEFORE issues are
+minted: a gap caught after sync is an **N+1-edit** problem (1 plan-doc fix + N issue-body edits),
+whereas the same gap caught pre-sync is a single plan edit. plan-redline sits between review and
+wrap so the operator redlines the review-corrected plan. plan-init runs none of these stages and
+certifies none of their gates. Never recommend an orchestration shortcut that omits
+`plan-redline`, and never recommend `/build-phase` before the plan's `**Issue:**` fields are
+populated (issue publication creates the issues; backfilling their numbers into the plan is a
+separate step).
 
 ## Conversation phases
 
@@ -52,6 +78,9 @@ answered.
 phase explicitly: summarize what you understood for that phase, confirm it, and ask about
 any gaps. This ensures all 7 phases are covered even when the user provides a dense
 initial description.
+
+Track which decisions the operator stated (`P`) and which you defaulted (`D`); the plan's
+Decision Inventory records them (section 12).
 
 ---
 
@@ -131,70 +160,60 @@ initial description.
 ### Phase 7 — Development process
 
 - Should this use `/build-phase` (multi-step orchestrator) for building?
-- For each step, what `/build-step` flags make sense?
-  - `--isolation`: `worktree` (default, fast) or `docker` (clean-room isolation)
-  - `--reviewers`: **Default: `--reviewers code` for build steps.**
-    `--reviewers code` runs the 4-agent code-review gauntlet (correctness,
-    bugs, test quality, style) plus automated typecheck / lint / test gates
-    — safe and fast for backend, library, and pure-docs / JSON changes.
-    Escalate only when the step has a real runtime/UI surface to validate.
-    Values:
-    - `code` (default) — 4-agent diff review + gates. Use for backend
-      logic, libraries, docs, scripts, JSON / YAML config edits, and
-      unit-test-only changes.
-    - `runtime` — 3 evidence-based agents (UI / backend / frontend).
-      Requires `--start-cmd` + `--url`. Use when the step changes
-      visible UI behavior with no backend logic.
-    - `full` — all 7 agents (4 code + 3 runtime). Requires `--start-cmd`
-      + `--url`. Use for full-stack steps spanning backend logic AND
-      visible UI in the same change.
-    - `auto` — gates only (no agent reviewers). Use for fast scaffolds
-      or mechanical wiring where the test suite is the entire reviewer.
-    - **Auth-gate downgrade:** if a step's `--url` points behind a PIN,
-      login screen, session-bound token, or any auth flow a fresh
-      Playwright session cannot satisfy, DOWNGRADE from `runtime` /
-      `full` to `code` — the runtime reviewers cannot reach the URL,
-      every screenshot shows the gate not the feature, and the step
-      enters silent false-pass mode (Toybox K17 wasted ~50 minutes
-      before the PIN gate was identified). Pair with `--exercise-cmd`
-      that injects auth state (e.g., a Playwright snippet that does
-      `localStorage.setItem('PIN', '1234')` before evidence capture)
-      ONLY if such a script exists; otherwise downgrade.
+- For each step, what `/build-step` flags make sense? `/build-step`'s flag table
+  ([`../build-step/core.md`](../build-step/core.md)) owns every value, default, and reviewer
+  set; never restate reviewer counts in the plan.
+  - `--isolation`: `worktree` (the default and the only value build-step accepts; it refuses `docker`).
+  - `--reviewers`: **write `--reviewers code` for ordinary build steps** — backend logic,
+    libraries, docs, scripts, JSON / YAML config edits, and unit-test-only changes. Escalate only
+    when the step has a real runtime/UI surface to validate: `runtime` for visible UI behavior
+    with no backend logic, `full` for backend logic AND visible UI in the same change. Both
+    require `--start-cmd` + `--url` on the same Flags line. `auto` (automated gates only, no
+    agent reviewers) suits fast scaffolds or mechanical wiring where the test suite is the
+    entire reviewer. Routing a high-stakes step to `deep` belongs to `/plan-review` §27.
+  - **Auth-gate downgrade:** if a step's `--url` points behind a PIN, login screen,
+    session-bound token, or any auth flow a fresh Playwright session cannot satisfy, DOWNGRADE
+    from `runtime` / `full` to `code` — the runtime reviewers cannot reach the URL, every
+    screenshot shows the gate not the feature, and the step enters silent false-pass mode
+    (Toybox K17 wasted ~50 minutes before the PIN gate was identified). Pair with
+    `--exercise-cmd` that injects auth state (e.g., a Playwright snippet that does
+    `localStorage.setItem('PIN', '1234')` before evidence capture) ONLY if such a script
+    exists; otherwise downgrade.
+  - `--ui`: add if the step needs Playwright screenshots/evidence.
 
-    Rationale: `.claude/rules/plan-and-issue-flow.md § Reviewer flag must
-    match step shape` (anchors: `feedback_plan_reviewer_flags.md`,
-    `feedback_runtime_reviewers_skip_on_auth_gated_substrate.md`).
-  - `--ui`: add if the step needs Playwright screenshots/evidence
+  Rationale: `.claude/references/plan-and-issue-flow.md § Reviewer flag must match step shape`.
 - What are the natural step boundaries? (Size each step as one vertical slice — see `<repo>/_shared/step-authoring.md` §1; don't over-split a coherent slice.)
 - **Are there any manual checks, observation periods, or operator-driven
   verifications that must happen AFTER the automated build steps complete?**
   (E.g., visual UI spot-checks against a real client; a soak test the operator
   runs unattended; integration testing against a live external service.)
-  Surfacing these up-front lets the produced plan split its Build Steps into
-  labeled `Automated Steps` + `Manual Steps` subsections from the first draft,
-  with named `M1`/`M2`/`M3` handoff entries — rather than mixing operator/wait
-  steps into the automated numbering and forcing a re-shape later.
-  All-automated plans skip the split. See output spec section 11 below for the
-  template.
+  Surfacing these up-front lets the plan split its Build Steps into labeled
+  `Automated Steps` + `Manual Steps` subsections from the first draft, with named
+  `M1`/`M2`/`M3` handoff entries — rather than mixing operator/wait steps into the
+  automated numbering and forcing a re-shape later. All-automated plans skip the split.
+  See section 11 below for the template.
 - **For any step identified as `Type: conditional`** (i.e. only runs if a predicate
   from a prior step is true), ask the operator:
   "What shell command can the orchestrator run to decide whether this step should
   execute? (Exit 0 → run; non-zero → skip. Use bash syntax — predicates are
   evaluated via `bash -c \"<expr>\"`.) If you don't know yet, I'll write a
   placeholder you can fill in later."
-  The answer becomes the step's `**Condition:**` value. If the operator does not
-  yet know, write the placeholder described in the plan-format section below
-  rather than omitting the field.
+  The answer becomes the step's `**Condition:**` value; an unknown predicate gets the
+  placeholder described in section 11.
 
 ---
 
 ## After the conversation
 
-Once phases 1–7 are complete, produce `plan.md` with these sections.
-Every numbered section below is **required** — adapt the *depth*, not the presence.
-For example, a CLI tool with no database still gets a Data Store section describing how it
-reads and writes data (filesystem layout, file formats). Only section 4 (domain-specific)
-and section 6 (API Route Contract) may be omitted when genuinely not applicable.
+Once phases 1–7 are complete, write `plan.md` at the project root — the one canonical plan
+that `/repo-init` and dev-observatory discover. If a `plan.md` already exists there (an earlier
+plan-init run), refresh it in place: keep its step numbers and any populated `**Issue:**` values,
+and never create a second plan file.
+
+The plan has these sections. Every numbered section below is **required** — adapt the *depth*,
+not the presence. For example, a CLI tool with no database still gets a Data Store section
+describing how it reads and writes data (filesystem layout, file formats). Only section 4
+(domain-specific) and section 6 (API Route Contract) may be omitted when genuinely not applicable.
 
 1. **What This Is** — one-paragraph description
 2. **Stack** — table of layer / tool / why
@@ -220,7 +239,9 @@ and section 6 (API Route Contract) may be omitted when genuinely not applicable.
     - **Done when:** <specific test or verification>
     - **Depends on:** <step numbers, or "none">
     ```
-    If no flags are needed, omit the Flags line (build-step defaults apply).
+    Write a Flags line on every step `/build-phase` dispatches to `/build-step` (`Type: code` and
+    `Type: conditional`). An omitted line inherits `/build-step`'s own default (its flag table owns
+    the value; today it runs no agent reviewers) and escapes `/plan-review` §27 stakes routing.
     Size each step as one vertical slice (`<repo>/_shared/step-authoring.md` §1). Phrase
     `Done when:` however makes it falsifiable — EARS (`WHEN … SHALL …`) and Given/When/Then
     are OPTIONAL examples (`<repo>/_shared/step-authoring.md` §2), never required grammar.
@@ -229,26 +250,18 @@ and section 6 (API Route Contract) may be omitted when genuinely not applicable.
     (soak tests, benchmarks). Use `Type: conditional` for steps that only run
     if a predicate from a prior step is true.
 
-    **`Type: operator` steps must not produce code artifacts.** If a step is
-    declared `Type: operator`, its `Produces:` field must NOT include
-    code-shaped artifacts:
-    - `.py`, `.ts`, `.tsx`, `.js`, `.sh`, `.rs`, `.go` source files
-    - `.json`, `.yaml`, `.toml` configs shipped in `src/` or `scripts/` or any
-      package directory the project's build tooling reads
-    - `.md` ops docs that depend on code-state (under `documentation/operator/`
-      or similar)
-
-    If a step would naturally produce both an operator action AND a code
-    artifact, SPLIT into two adjacent steps: `N-prep` (Type: code) authors the
-    artifact via the standard `/build-step` flow, and `N` (Type: operator)
-    runs the manual checks. **Symmetric inverse:** if a step is declared
-    `Type: code` but its `Done when:` field requires an operator visual
-    review or manual confirmation (e.g., "operator visually reviews",
-    "operator runs and confirms", "operator inspects output"), apply the
-    same split in reverse — `N-prep` (Type: code) covers the automatable
-    portion and `N` (Type: operator) covers the manual verification.
-    Otherwise `/build-phase` halts mid-run asking the operator to do
-    code/operator work the plan didn't budget for.
+    **`Type: operator` steps must not produce code artifacts.** Their `Produces:` field must NOT
+    include `.py`, `.ts`, `.tsx`, `.js`, `.sh`, `.rs`, `.go` source files; `.json`, `.yaml`,
+    `.toml` configs shipped in `src/` or `scripts/` or any package directory the project's build
+    tooling reads; or `.md` ops docs that depend on code-state (under `documentation/operator/`
+    or similar). A step that would naturally produce both an operator action AND a code artifact
+    is SPLIT into two adjacent steps: `N-prep` (Type: code) authors the artifact via the standard
+    `/build-step` flow, and `N` (Type: operator) runs the manual checks. **Symmetric inverse:** a
+    `Type: code` step whose `Done when:` requires an operator visual review or manual
+    confirmation (e.g., "operator visually reviews", "operator runs and confirms", "operator
+    inspects output") is split the same way — `N-prep` (Type: code) covers the automatable
+    portion and `N` (Type: operator) covers the manual verification. Otherwise `/build-phase`
+    halts mid-run asking the operator to do code/operator work the plan didn't budget for.
 
     Split pattern:
 
@@ -256,6 +269,7 @@ and section 6 (API Route Contract) may be omitted when genuinely not applicable.
     ### Step N-prep: <code work, author the artifact>
     - **Problem:** <author the script / helper / config>
     - **Type:** code
+    - **Flags:** --reviewers code
     - **Produces:** <code-shaped artifacts>
     - **Done when:** <automated gates pass>
 
@@ -266,14 +280,11 @@ and section 6 (API Route Contract) may be omitted when genuinely not applicable.
     - **Done when:** <operator confirms>
     ```
 
-    **Step field reference — `**Condition:**`:**
-
-    - **Condition:** `<shell-expression>` — required when `Type: conditional`.
-      Build-phase evaluates this predicate via `bash -c "<expr>"` at
-      step-dispatch time. Exit 0 → run the step; non-zero → skip with
-      `Status: SKIPPED (condition false)`. Steps with `Type: conditional`
-      lacking this field are pre-flight Blockers caught by `/plan-review` §23
-      and `/plan-wrap` §12.
+    **Step field reference — `**Condition:**`:** required when `Type: conditional`.
+    `/build-phase` evaluates the predicate via `bash -c "<expr>"` at step-dispatch time:
+    exit 0 → run the step; non-zero → skip with `Status: SKIPPED (condition false)`. A
+    `Type: conditional` step lacking this field is a pre-flight Blocker caught by
+    `/plan-review` §23 and `/plan-wrap` §12.
 
     Worked example of a conditional step:
 
@@ -283,14 +294,14 @@ and section 6 (API Route Contract) may be omitted when genuinely not applicable.
     - **Type:** conditional
     - **Condition:** test -s documentation/findings/step-4-blockers.md
     - **Issue:** #65
+    - **Flags:** --reviewers code
     ```
 
-    If the operator does not yet know the predicate during the planning
-    conversation, emit `**Condition:** <shell command returning exit 0 to run,
-    non-zero to skip>` as a placeholder. The operator (or
-    `/plan-review --autofix` once Step 7 of the BPA plan lands) fills in the
-    real predicate later. The placeholder is NOT considered "empty" by the
-    upstream §23/§12 checks — it is a valid intermediate state.
+    If the operator does not yet know the predicate, emit `**Condition:** <shell command
+    returning exit 0 to run, non-zero to skip>` as a placeholder rather than omitting the field,
+    and list the step under `Unresolved:` in the closing report. The placeholder is a drafting
+    state only: `/plan-review` §23 and `/plan-wrap` §12 still treat it as a Blocker, and neither
+    autofixes it — the operator supplies the real predicate.
 
     **Mixed-type plans split Build Steps into Automated + Manual subsections.**
     If the plan has any `Type: operator` or `Type: wait` steps mixed with
@@ -302,14 +313,9 @@ and section 6 (API Route Contract) may be omitted when genuinely not applicable.
     carries a `**Commands:**` code-fence block (copy-paste-ready) and a
     `**What to look for:**` table with `Check | Expected outcome` columns —
     keeping the commands separate from the checks so the operator can paste
-    without scanning past prose. Close the section with an explicit handoff
-    cue (e.g., the closing line of `/plan-init` and the orchestrator's
-    end-of-phase report both surface "Please run M1 next." rather than
-    dropping the command in passing prose).
-
-    All-automated plans (no `Type: operator` / `Type: wait` steps) skip the
-    split — render Build Steps as a flat numbered list, no subsection headers
-    required.
+    without scanning past prose. All-automated plans (no `Type: operator` /
+    `Type: wait` steps) skip the split — render Build Steps as a flat numbered
+    list, no subsection headers required.
 
     Sub-template:
 
@@ -350,15 +356,18 @@ and section 6 (API Route Contract) may be omitted when genuinely not applicable.
     ... (each manual step numbered M1, M2, M3, ...)
     ````
 
-    Closing handoff cue: after all Automated Steps complete, the orchestrator
-    prints `Please run M1 next.` to surface the first manual handoff
-    explicitly — not as ambiguous prose ("the slow run is X") that leaves the
-    operator guessing whether the orchestrator already verified or wants a
-    human to. Rationale: `.claude/rules/plan-and-issue-flow.md § Automated vs
-    manual split` (anchors: `feedback_plan_auto_vs_manual_sections.md`,
-    `feedback_name_manual_verification_handoff.md`).
+    Close the Manual Steps section with an explicit handoff cue: after all Automated Steps
+    complete, the orchestrator surfaces `Please run M1 next.` — not ambiguous prose ("the slow
+    run is X") that leaves the operator guessing whether the orchestrator already verified or
+    wants a human to. Rationale: `.claude/references/plan-and-issue-flow.md § Automated vs
+    manual split`.
 12. **Appendix** — schema summaries, profile structures, or other reference material
-    a clean-context model would need
+    a clean-context model would need. End it with a `### Decision Inventory` table recording
+    each decision the conversation settled — `| ID | P/D | Choice (short) | Status |`, `P1`, `P2`…
+    for choices the operator stated and `D1`, `D2`… for agent defaults, Status `proposed` (not
+    yet redlined). `/plan-redline` reads this table when the planning conversation is no longer
+    available and owns every later change to it, including every status transition
+    ([`../plan-redline/core.md`](../plan-redline/core.md)).
 
 ## Quality bar before saving
 
@@ -367,16 +376,14 @@ Before writing the file, verify:
 - Every "X or Y" choice from the conversation is resolved to a single answer with rationale.
 - Every entity has a defined ID format (UUID, hash, slug — not just `<id>`).
 - Every external file or schema referenced in the plan is summarized inline.
-- **Every reference to an external artifact — a library API, third-party tool
-  CLI, sibling skill's SKILL.md, or shared schema from another workspace
-  project — was sourced by reading the producing file verbatim, not from docs
-  or memory.** Quote the actual value (the real CLI flag, the real schema
-  field name, the real `package.json` script) into the plan with a file-path
-  citation, or mark it as TBD if unknown. Even on greenfield projects, plans
-  typically reference at least a few existing artifacts the project will
-  reuse — those references must come from the producing file. Rationale:
-  `.claude/rules/plan-and-issue-flow.md § Read producers before drafting plan
-  content` + `feedback_plan_read_producer_first.md`.
+- **Every reference to an external artifact — a library API, third-party tool CLI, sibling
+  skill's SKILL.md, or shared schema from another workspace project — was sourced by reading the
+  producing file verbatim, not from docs or memory.** Quote the actual value (the real CLI flag,
+  the real schema field name, the real `package.json` script) into the plan with a file-path
+  citation, or mark it as TBD if unknown. Even on greenfield projects, plans typically reference
+  at least a few existing artifacts the project will reuse — those references must come from the
+  producing file. Rationale: `.claude/references/plan-and-issue-flow.md § Read producers
+  before drafting plan content`.
 - A fresh model with no conversation history could read the plan and start building.
 - **If the project has any autonomous, scheduled, background, or "always-on" behavior,
   the Build Steps section includes at least one explicit step dedicated to end-to-end
@@ -393,7 +400,7 @@ Before writing the file, verify:
   happy path AND error path end-to-end (10 real invocations), capture timing + failure
   findings" with a target duration (e.g. 15 minutes) and a `capture findings`
   deliverable. The step must be DISTINCT from any component-implementation step —
-  not folded into a "build the worker" step's `Done when:`. Rationale: per-request
+  not folded into a "build the worker" step's `Done when:` — because per-request
   background tasks still hide time-dependent failures (queue backpressure, task
   cancellation on shutdown, silent exception-swallowing inside the executor) that
   unit tests on the producer endpoint miss.
@@ -410,29 +417,21 @@ Before writing the file, verify:
   `Type: operator` if it requires manual setup, otherwise `Type: code` with a
   shell-script test. The smoke gate's deliverable is "the pipeline can complete
   one real cycle without crashing" — pass/fail of any business logic is out of scope.
-- Every `Type: operator` step's `Produces:` field is free of code-shaped
-  artifacts (`.py`/`.ts`/`.js`/`.sh`/`.json`-or-`.yaml`-or-`.toml`-under-`src/`-or-`scripts/`/code-dependent
-  `.md`). Steps that would naturally produce code AND require operator action
-  are split into `N-prep` (code) + `N` (operator). Anchor: Toybox Phase M
-  Step M2 mid-build-phase halt. See `.claude/rules/plan-and-issue-flow.md
-  § "Operator-type steps must not produce code artifacts"`.
-- Every `Type: code` step's `Done when:` field is automatable (no "operator
-  visually reviews" / "operator runs and confirms"). Steps that mix
-  automatable code completion with operator confirmation are split into
-  `N-prep` (code) + `N` (operator). Symmetric to the operator+code-Produces
-  rule above.
+- Every `Type: operator` step's `Produces:` field is free of code-shaped artifacts, and every
+  `Type: code` step's `Done when:` is automatable; mixed steps are split into `N-prep` (code) +
+  `N` (operator). Anchor: Toybox Phase M Step M2 mid-build-phase halt. See
+  `.claude/references/plan-and-issue-flow.md § "Operator-type steps must not produce code
+  artifacts"`.
 - Each step is one vertical slice (fits one agent context, one observable behavior via its production caller, no "and" to describe) per `<repo>/_shared/step-authoring.md` §1 — neither too big nor over-split.
-- If the plan has any `Type: operator` or `Type: wait` steps mixed with
-  `Type: code` steps, the Build Steps section labels them under a Manual
-  subsection separate from the Automated subsection, with named
-  `M1`/`M2`/`M3` handoff entries (each containing a `**Commands:**`
-  copy-paste block + a `**What to look for:**` Check | Expected outcome
-  table) — and the plan's closing convention is a "Please run M1 next" cue.
-  All-automated plans skip the split (no defect). Rationale:
-  `feedback_plan_auto_vs_manual_sections.md` +
-  `feedback_name_manual_verification_handoff.md`.
+- If the plan mixes `Type: operator` or `Type: wait` steps with `Type: code` steps, the Build
+  Steps section separates Automated and Manual subsections with named `M1`/`M2`/`M3` entries
+  (each with a `**Commands:**` block and a `**What to look for:**` Check | Expected outcome
+  table) and the "Please run M1 next" closing cue. All-automated plans skip the split.
+- The Appendix ends with the Decision Inventory.
 
-Run `/plan-wrap` on the draft before saving if any of the above is uncertain.
+Resolve a failing item in the conversation before saving. If the operator explicitly defers one,
+record it in section 9 and list it under `Unresolved:` in the closing report. plan-init never runs
+`/plan-review` or `/plan-wrap` on its own draft; those independent passes follow in the fixed order.
 
 ---
 
@@ -618,7 +617,7 @@ contract fixes, and nothing else.
 Report at the end of plan-init:
 
 ```text
-plan.md written (N sections) · <instruction-file outcome> · proposal published (<artifact URL>)
+plan.md written (N sections) · <instruction-file outcome> · <registration outcome>
 ```
 
 `<instruction-file outcome>` is exactly the phrase the row that ran assigns — no other spelling,
@@ -642,6 +641,13 @@ On creating a new **owned** project, register it with the control plane so its o
 uv run --project dev-observatory observatory register <slug> --owned --path <rel-path>
 ```
 
+Run it from the coding root that contains `dev-observatory/`, with `<rel-path>` relative to that
+root. Registration is additive and degradable: when `dev-observatory` is absent, its CLI is
+unavailable, or the command exits non-zero, report `observatory registration skipped (<reason>)`
+and continue — it never blocks plan-init. An unregistered project stays `owned=false`
+(write-blocked), the fail-safe default. The CLI changes only that registry entry; plan-init
+commits nothing.
+
 Keep the content instruction file scrapable — whichever of CLAUDE.md or AGENTS.md the row above
 left carrying the content. That is what this phase's plan § 8 resolved dev-observatory row
 requires: keep this constraint, and apply it to whichever file or files are SUBSTANTIVE. Its
@@ -658,14 +664,19 @@ The pointer file carries none of that content and needs none of it.
 
 ---
 
-## plan-redline hook (auto-run)
+## Closing report and handoff
 
-After `plan.md` is saved, the instruction-file row above has run (CLAUDE.md or AGENTS.md written,
-or neither on the two rows that write nothing), and the observatory registration ran,
-invoke the `plan-redline` skill (host skill-invocation adapter) with the plan path — it
-publishes the operator-facing proposal through its provider renderer and owns that contract
-end-to-end ([`../plan-redline/core.md`](../plan-redline/core.md); do
-not restate it here). Include the published URL in the closing report (format
-above). If the publish fails or no provider renderer is available, report
-`proposal skipped (<reason>)` in its place and continue — this hook must never
-block plan-init's completion.
+Close every run that saved a plan with the report line above, where `<registration outcome>` is
+`observatory registered (<slug>)`, `observatory registration skipped (<reason>)`, or
+`observatory registration not applicable (not an owned project)`, followed by:
+
+```text
+Unresolved: <none | each operator-deferred decision or placeholder Condition, by step>
+Next: /plan-review --autofix <plan-path>
+```
+
+Then name the rest of the fixed order from the Pipeline position section — plan-redline after
+review, plan-wrap after redline, then `/repo-init` for the first publication and the `**Issue:**`
+backfill before `/build-phase` — and why review runs before issues are minted. plan-init does
+not invoke plan-redline: the operator redlines the review-corrected plan, and plan-redline
+publishes the proposal and records its locator in the plan at that later stage.

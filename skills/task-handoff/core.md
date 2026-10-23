@@ -2,6 +2,12 @@
 
 # task-handoff core
 
+## Intent continuity (drift-ranger)
+
+Follow [the intent continuity contract](../../_shared/intent-continuity.md).
+On every checkpoint and resume, preserve the private intent-record locator, original user journey, actual entry point, current capability, next gap, delivery stage and no-progress streak. Use the existing private WIP section; do not change the session parser schema. Read the record before following Next Action and reconcile any mismatch. Do not count a handoff as a work unit or reset the streak. Never carry private intent into committed MEMORY.md or public handoff text.
+
+
 ## Purpose and complete operating contract
 
 Checkpoint library for `current.md` writes and reads. Its callers are orchestrating
