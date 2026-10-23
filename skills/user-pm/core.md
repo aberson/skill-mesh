@@ -1,10 +1,10 @@
-# NOTE: This is the canonical provider-independent contract. Both provider wrappers must load it in full.
+# NOTE: This is the canonical provider-independent contract. Every provider wrapper (Claude, Codex, GPT) must load it in full.
 
 ## Provider-neutral host abstractions
 
-- Resolve supporting assets and relative script paths against `.claude/skills/user-pm/`; the canonical prose lives here while implementation assets remain with the compatibility launcher.
-- A named skill call means the host's skill-dispatch primitive. An Agent, Explore agent, workflow, or sub-agent means an isolated task/action invocation with fresh context and the requested capability tier. Provider wrappers map these roles to their native APIs.
-- Model tier names in inherited procedures describe capability roles. Resolve them through `config/model-tier-map.json`; an unavailable required capability returns `required_tool_missing` rather than weakening a gate.
+- This skill has no runtime scripts or assets. Its evals are support assets and are never loaded at runtime.
+- It calls no named skill, spawns no agent or sub-agent, and uses no model tier: the invoking session performs every step.
+- A missing host capability never blocks. Read what the host can read, skip the rest, and say in one line which input was unavailable. Never simulate a tool result.
 - Never expose hidden chain-of-thought. Preserve only decisions, evidence, commands, structured artifacts, and operator-facing rationale required by this contract.
 
 # user-pm
@@ -18,10 +18,12 @@ Use one of two modes:
 
 If multiple topic flags are passed, use the first and note the others were ignored in one line. If an unknown flag is passed, fall back to default mode and note the unrecognized flag in one line.
 
+**Invocation.** `--json` is an output-format modifier, not a topic flag: it is never treated as unrecognized, it combines with at most one topic flag, and it changes only the rendering (see "dev-observatory hook" below). Text after the command that is not a flag is context (for example `Context: review the project '<slug>'.`): it may focus the overview but never changes the mode or the project. The project is the current directory's: the plan paths below resolve against it, and `git log` reports the repository that contains it. Put every note (ignored or unrecognized flags, no plan file, unavailable git history or host capability, no `/goal`) together on ONE line directly under the title line, separated by semicolons, so the title and `**What it is:**` stay at the top. Never ask or block before writing the overview. The output is operator-facing text only; re-running is safe and reflects the state at that moment.
+
 ## Steps
 
-1. **Read the plan.** Try in order: `documentation/plan.md`, `plan.md`, `README.md`. Skim the status table or equivalent.
-2. **Read recent git activity.** `git log --oneline -30`. Note the most recent shipped milestone.
+1. **Read the plan.** Try the workspace canonical `docs/plans/master_plan.md` first. Then try legacy locations in order: `docs/plan.md`, root `plan.md`, `plans/plan.md`, `documentation/plan.md`, then `master_plan.md` in the root, `plans/`, `docs/`, or `documentation/`; then `README.md`. Skim the status table or equivalent. If no plan file is found, say so in one line naming the locations tried, and proceed from `README.md` and git.
+2. **Read recent git activity.** `git log --oneline -30`. Note the most recent shipped milestone. If it fails (not a git repository, no commits, or the host cannot run commands), say so in one line and take History from the plan's shipped markers only; never infer commit subjects or dates.
 3. **Check archived/done markers.** Phases marked ✅, ARCHIVED, or COMPLETE in the plan, plus any in `**/archive/`.
 4. **Output the sections for the chosen mode.** No preamble, no closing summary.
 
@@ -92,7 +94,7 @@ Check the Overnight rubric: a move qualifies only if `/build-phase` could run it
 - **Plan format ready.** Steps already use `### Step N` + `**Problem:**` + `**Type:**` + `**Issue:** #<n>` + `**Flags:**` headers (or are trivially extendable). Table-only or bullet-only plans don't qualify until extended — surface them under Build instead.
 - **Issues synced.** No blank `**Issue:** #` lines — they kill the build-phase audit trail. If missing, the prereq line in the candidate should say `/repo-sync` first.
 - **No manual gates inside the run.** Operator UAT, soak observation, "operator runs M2", `Type: operator`, `Type: wait`, conditional steps — any of these halts overnight progress. Steps gated on a 4–8h soak don't fit either; surface those under Test as next-day work.
-- **Reviewer flags match step shape.** `--reviewers full` requires `--start-cmd` + `--url`. Backend-only / unit-test-only steps must be `code`. Mismatch = build-phase aborts.
+- **Reviewer flags match step shape.** `--reviewers full` and `--reviewers runtime` require `--start-cmd` + `--url`, and so does `--ui`; a missing pair stops the run at pre-flight (build-phase or build-step). Backend-only / unit-test-only steps must be `code` or `deep` (`/plan-review` rewrites `code` to `deep`), which need neither. A backend step left on the `auto` default spawns no reviewer, so its prereq line says to set `--reviewers code`.
 - **Frontend touches need `--ui`.** Any step changing `frontend/`, `/api/...` shapes, or WebSocket payloads must have `--ui` in `**Flags:**`. Code-only review on UI work is the known gap.
 - **Worktree-safe.** Multiple steps editing the same shared file (routes module, central config) overwrite each other on merge. If two candidate steps both rewrite the same file end-to-end, surface ONE per night, not both in parallel.
 - **No external dependencies a human has to set up overnight** (game client, paid API quota refresh, hardware reboot).
@@ -165,6 +167,7 @@ Be honest in **What this unblocks**. If completing this topic doesn't unblock an
   - **Skip** any item blocked on operator action, hardware, or an external dependency a fresh window can't satisfy — those aren't goal-drivable; route them to `--test` or `--decide` instead.
   - Close **The work** with a mandatory `QUICK COPY (one per window)` block — the single paste-line for each candidate (`/goal "<condition>"` for ready ones, `/user-draft <seed>` for ones with an Open point), one per line — so each new window either starts the goal or starts the clarify-then-goal pass.
   - If nothing currently has a checkable stop condition, say so in one line and name the closest candidate plus the criterion it'd need. Don't dress a fuzzy task up as a goal.
+  - `/goal` and its Stop hook exist only on hosts that provide them (build-phase applies the same capability guard). If the invoking host has no `/goal`, still emit every candidate and paste line, and add to the notes line under the title that the lines need a `/goal`-capable window.
 
 - **`--other`** — board hygiene, deferred passive-use accumulation, real-world wait states. Per move:
   - **Steps:** the manual flow or copy-paste commands.
@@ -200,13 +203,14 @@ Be honest in **What this unblocks**. If completing this topic doesn't unblock an
 
 ## Constraints
 
-- Read-only — never edit plan docs, issues, or code while producing the snapshot.
+- Read-only — never edit plan docs, issues, or code while producing the snapshot. Run only reads: no command that changes files, git refs, or remote state (no fetch, pull, commit, or issue write), and no tests or builds. Every command the output proposes is for the operator; never execute it.
 - Don't invent moves not derivable from the plan + git log + archive markers.
 - One-pass — no follow-up iterations after emitting the snapshot.
 
 ## Limitations
 
-- Plan must exist at `documentation/plan.md`, `plan.md`, or `README.md`; otherwise the snapshot will be sparse.
+- If no plan file is found at the Step 1 locations, the snapshot is sparse (`README.md` and git only).
+- In a project folder inside a parent repository (no nested `.git`), `git log` returns the parent repository's history, which can include commits from outside the project.
 - Stale plan docs produce stale snapshots — this skill does not re-read git log to second-guess plan-marked status.
 - Overnight qualification is a heuristic, not a guarantee — the rubric catches common misroutes but cannot detect every silent precondition.
 
@@ -216,3 +220,5 @@ Be honest in **What this unblocks**. If completing this topic doesn't unblock an
 ## dev-observatory hook (additive; see `.claude/rules/descriptor-contract.md`)
 
 **`--json` output mode (additive).** When invoked with `--json`, emit the snapshot as ONE structured JSON object instead of prose, so a tool (e.g. dev-observatory's on-demand goal-vs-reality review) can render it: each default section (`history`, `outstanding`, `possible_next`, `cut_candidates`) and any topic-mode payload becomes a top-level key; prose bullets become arrays of objects. The prose modes are unchanged when `--json` is absent.
+
+Emit only the JSON object, with no fence or prose around it. A default-mode object also carries `project` and `what_it_is`, and each `possible_next` item carries its `category` (`test`, `build`, `decide`, `overnight`, or `other`). A topic-mode object carries `project`, `topic`, `context`, `unblocks`, and `work`. One-line notes go in a `notes` array of strings, omitted when empty. Selection, ordering, count, and omission rules are the same as in prose; an omitted section is an omitted key.

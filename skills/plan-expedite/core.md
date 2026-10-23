@@ -146,17 +146,31 @@ Call each sub-skill below through the host's skill-invocation adapter, in order.
      `$codingRoot` = walk up for `.claude/observatory/registry.toml`.
    - **Nested project repo registered in the observatory registry** (`$planRepo` ≠ `$codingRoot`
      and its `slug`/`path` matches a registry entry): **auto-pin it** — invoke `/user-project` via
-     the host skill-invocation adapter with `args: "<slug>"` — then emit:
-     `-> repo phase for <slug> (<abs-repo>) - context pinned (repo-sync + downstream honor it regardless of cwd)`.
+     the host skill-invocation adapter with `args: "<slug>"`. Emit
+     `-> repo phase for <slug> (<abs-repo>) - context pinned (repo-sync + downstream honor it regardless of cwd)`
+     only when the result confirms `Pinned active project:` for that requested project.
+     If identity is unavailable, the write failed, or confirmation is absent/mismatched,
+     preserve the actual result and emit the existing switch-message below; do not claim
+     a pin was written. This advisory failure does not authorize another session's state.
    - **Coding-root work** (`$planRepo` == `$codingRoot` — the plan lives in the coding-root repo,
-     e.g. a `dev/...` plan): cwd is already coding-root, so do NOT pin; emit:
-     `-> repo phase - coding-root work (<coding-root>); no project pin`.
+     e.g. a `dev/...` plan): do NOT pin; after the effective-target check below succeeds, emit:
+     `-> repo phase - coding-root work (<coding-root>); target verified`.
    - **Unresolvable** (a nested repo whose basename is not a registry `slug`/`path`): do NOT guess
-     or pin — emit the proactive switch-message and proceed:
+     or pin — emit the proactive switch-message, then apply the target check below:
      `this is <repo-basename> work; a switch might help (open its window, or register it + /user-project <name>)`.
 
-   Never halt here — the pin is advisory; on any resolution error, log one line and continue to
-   `repo-sync`. Nothing is recorded in `.plan-expedite-state` (the pin lives in task-state).
+   **Verify the effective downstream target before any repo operation.** After the optional
+   pin attempt, resolve the target using the honoring consumer's precedence: this session's
+   verified own pin, then the plan's repo, then cwd. Do this on every branch above, including
+   coding-root work and unregistered repos. A failed pin is advisory only when that effective
+   target still equals `$planRepo`; a success message alone is not target verification.
+   If an existing pin names a different repo, the confirmation conflicts with observed state,
+   or the intended/effective repo cannot be established, halt before `repo-sync`, handoff or
+   build dispatch. Report both known targets and the actual pin result; identify fixing this
+   session's pin or selecting the correct plan as the next action. Never clear a pin implicitly,
+   borrow another session's identity, or pass a plan to a conflicting mutation target.
+   With no conflicting pin and a verified plan repo, continue even if the optional pin failed.
+   Nothing is recorded in `.plan-expedite-state` (the pin lives in task-state).
 
 4. **Invoke `repo-sync` through the host's skill-invocation adapter** with `args: "--plan <plan-path>"` (autonomous default per Step 6 — no `--dry-run`).
    - Same success / halt criteria (the result rules above).
