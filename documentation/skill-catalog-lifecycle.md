@@ -85,15 +85,20 @@ declared `resource_paths` field. A package-local file that an outside creator em
 that the request never mentions still trips it: a request that *declares* nothing is not the
 same as a change that *adds* nothing, and the second is what this stop grades.
 
-**Two skills are grandfathered**, and both predate this contract. The table's third row,
-`build-step`, is not grandfathered: it is the reviewed packaging exception described after
-this table, recorded here so the table names every skill that carries package-local files:
+**Two skills are grandfathered**, and both predate this contract. The other rows are reviewed
+packaging exceptions or scoped source-only resource plans described after this table. They are
+recorded here so the table names every skill that carries package-local files without treating a
+resource plan as a new grandfathering waiver:
 
 | Skill | Package-local files | Provenance |
 |---|---|---|
 | `judge-ui` | `calibration-notes.md` | Authored in the pre-migration GPT tree; rescued into `skills/` at commit `72356fb` |
 | `review-deep` | a `config/`, `evals/`, and `scripts/` support tree | Authored at commit `e36a03e`, landed on `main` with RD-lite (issue #177) via merge `8a1b501` — the merge section 1 records as a prerequisite |
 | `build-step` | `scripts/build_step_tree.py` and `scripts/capture_evidence.py` | The P1 mechanics helper, and an LF copy of the legacy top-level package's capture script; reviewed packaging exception, packet route P2 |
+| `user-wrap` | `evals/` | Scoped repository-only evaluation plan in `user-wrap-source-evals.md`; not emitted or installed |
+| `user-gateway` | `evals/` | Scoped repository-only evaluation plan in `user-gateway-source-evals.md`; not emitted or installed |
+| `review-uat` | `evals/` | Scoped repository-only evaluation plan in `uat-source-evals.md`; not emitted or installed |
+| `user-uat` | `evals/` | Scoped repository-only evaluation plan in `uat-source-evals.md`; not emitted or installed |
 
 `READ`, and an `UPDATE` confined to the core and adapters, may leave those files in place.
 `DELETE`, `RENAME`, or any change to their presence or location is a resource-topology
@@ -127,6 +132,18 @@ file.
 `skills/user-wrap/evals/` as repository evaluation inputs. These assets are not
 emitted or installed; the skill workflow has no runtime dependency on them.
 The grandfathered set and installer provenance contract remain unchanged.
+
+**Scoped source-only resource plan: user-gateway evaluation assets.** The
+[user-gateway evaluation plan](user-gateway-source-evals.md) admits
+`skills/user-gateway/evals/` solely as repository evaluation inputs. These files do
+not enter installed profiles, generalize resource emission, or reopen the closed
+grandfathered set.
+
+**Scoped source-only resource plan: selected UAT evaluation assets.** The
+[UAT evaluation plan](uat-source-evals.md) admits only the named repository evaluation
+files under `skills/review-uat/evals/` and `skills/user-uat/evals/`. They are excluded
+from installed runtime profiles. This scoped plan does not grant generic support-asset
+packaging or inherited calibration, and the closed grandfathered set remains unchanged.
 
 **What mechanically enforces this document, and what it does not.**
 `tests/package-integrity/test_skill_catalog_lifecycle.py` pins, byte-for-byte, a named set of
@@ -463,13 +480,3 @@ record per reported occurrence:
 
 The contract tests for this guide and for the root pointer live in
 `tests/package-integrity/test_skill_catalog_lifecycle.py`.
-
-## Scoped v2 source-only user-gateway evaluations
-
-`skills/user-gateway/evals/` is permitted solely as repository evaluation input under
-[user-gateway-source-evals.md](user-gateway-source-evals.md). These files do not enter the
-installed payload, generalize resource emission, or change the closed grandfathered set.
-
-## Selected UAT v2 source-only resources
-
-The review-uat and user-uat candidate uses only the explicitly scoped repository evaluation files in `documentation/uat-source-evals.md`. They are excluded from installed runtime profiles. This named exception does not grant generic support-asset packaging or inherited calibration.

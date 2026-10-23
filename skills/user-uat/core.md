@@ -180,7 +180,7 @@ not to a still-frame judge.
    that has the operator run a command in a project repo names its target directory. End by
    naming what's left (e.g. "Please eyeball M4 row 3 and M4 row 5; the rest passed").
 
-> Next-step / Pick-up-here commands name their target directory, and the proactive project-switch message fires on a cwd≠project mismatch with no pin, per `.claude/references/transition-directory-contract.md` (workspace root).
+> Next-step / Pick-up-here commands name their target directory, and the proactive project-switch message fires on a cwd≠project mismatch with no pin, under the workspace transition-directory policy.
 
 ## Outputs, writes and re-runs
 
@@ -215,8 +215,8 @@ not to a still-frame judge.
 - **Delegate, don't guess.** Fuzzy/ungroundable script → `/review-uat`, not a guessed run.
 - **Push back on state mismatch.** If the operator (or the `--deep` assessor) calls something PASS but the
   mechanical check disagrees, surface the discrepancy verbatim (`observed X, expected Y`) plus
-  ONE disambiguating question — don't rubber-stamp (per `.claude/references/plan-and-issue-flow.md` § UAT: push back on state mismatch).
-  On a match, report it; the cited section's "mark complete" is the operator's (or a later
+  ONE disambiguating question — don't rubber-stamp (under the workspace plan-and-issue-flow policy).
+  On a match, report it; that policy's "mark complete" is the operator's (or a later
   skill's) action, outside this skill's writes.
 - **Show the data.** Every verdict cites the observed value; a verdict with no evidence is a
   defect.

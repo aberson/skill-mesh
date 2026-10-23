@@ -30,7 +30,7 @@ Routes chosen by consulting the routing web (skill-pipeline.md § "The 8 rails",
 ===== written file: .claude/task-state/intake-switchboard-leftovers.md =====
 # Intake ledger — switchboard-leftovers
 
-Seeded by /user-gateway 2026-07-13. Grammar + statuses per .claude/references/intake-engine.md.
+Seeded by /user-gateway 2026-07-13. Grammar + statuses per <repo>/_shared/intake-engine.md.
 
 | id | fragment | route | status | disposition |
 |----|----------|-------|--------|-------------|

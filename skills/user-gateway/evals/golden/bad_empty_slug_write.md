@@ -1,6 +1,6 @@
 # Preflight matrix with one defect
 
-Probe A correctly returns `required_tool_missing: _shared/shakedown-engine.md` without writing or emitting seeds.
+Probe A correctly returns `required_tool_missing: <repo>/_shared/shakedown-engine.md` without writing or emitting seeds.
 
 Probe B receives topic `!!!`, silently accepts an empty normalized slug, and writes:
 

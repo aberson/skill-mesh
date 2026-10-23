@@ -4,7 +4,7 @@ Each probe below is an independent invocation. None writes a ledger, emits a see
 
 ## Probe A — required contract unavailable
 
-`required_tool_missing: _shared/shakedown-engine.md`
+`required_tool_missing: <repo>/_shared/shakedown-engine.md`
 
 The run stops before Step 0 because a required shared contract cannot be read.
 

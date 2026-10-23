@@ -8,7 +8,7 @@ Listening pass:
 
 Questions: none — the new vent settles the loaded rows and the new fragment is clear.
 
-Routes were chosen by consulting `_shared/skill-pipeline.md` § "The 8 rails"; its table is not reproduced here.
+Routes were chosen by consulting `<repo>/_shared/skill-pipeline.md` § "The 8 rails"; its table is not reproduced here.
 
 ===== written file: .claude/task-state/intake-switchboard-leftovers.md =====
 # Intake ledger — switchboard-leftovers

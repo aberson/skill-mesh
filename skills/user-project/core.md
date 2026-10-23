@@ -195,9 +195,8 @@ outrank the pin (a deviation that contract records).
 
 ## Persistence
 
-The `**Active project:**` field is a documented header field in the task-state schema
-(`.claude/references/task-state-schema.md`, vendored as
-`<repo>/_shared/task-state-schema.md`; File-format header + Field-definitions table): overwrite
+The `**Active project:**` field is a documented header field in the vendored task-state schema
+(`<repo>/_shared/task-state-schema.md`; File-format header + Field-definitions table): overwrite
 on re-pin, **preserve verbatim across every other write**, remove only on `/user-project clear`.
 Consequences:
 

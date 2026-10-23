@@ -34,7 +34,7 @@ Applying it: (a) is cruft about the repo, not a plan document — assess first, 
 ===== written file: .claude/task-state/intake-toybox-cleanup.md =====
 # Intake ledger — toybox-cleanup
 
-Seeded by /user-gateway 2026-07-13. Grammar + statuses per .claude/references/intake-engine.md.
+Seeded by /user-gateway 2026-07-13. Grammar + statuses per <repo>/_shared/intake-engine.md.
 
 | id | fragment | route | status | disposition |
 |----|----------|-------|--------|-------------|
