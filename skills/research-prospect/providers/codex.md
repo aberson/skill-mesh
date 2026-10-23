@@ -2,19 +2,20 @@
 
 See [../core.md](../core.md) for the full specification.
 
-## Codex invocation differences
+## Provider-specific instructions
 
-- Load the core in full before acting and follow it verbatim. This wrapper only maps host abstractions; it never weakens a gate the core defines. The topic-quality bar ("informs" must name a real pending decision), the depth-scoped command forms, and the mandatory QUICK COPY block stay exactly as the core states them.
-- Tier names in inherited procedures name capability ROLES. `config/model-tier-map.json` maps Claude tiers onto GPT peers and declares no Codex peer, so resolve a tier to the closest capability the configured Codex model actually provides; explicit router overrides win. If a required capability is unavailable, return `required_tool_missing` rather than weakening a gate.
-- Fresh-context dispatch is a runtime HOST capability, not a provider-wide Codex constant: apply the separate build-step agent-isolation contract before the first isolated arm, and a host that passes it may map Step 2's per-project Explore arms onto fresh sibling children. This core's Step 2 requires one Explore arm per project dispatched in parallel ("sequential dispatch is a defect") with NO documented single-context fallback, so on a host that does not pass that contract, halt visibly with `required_tool_missing`, naming the Step 2 per-project Explore fan-out as the core step that could not run. Do not sweep the projects in this session in its place -- a menu rendered from in-session skims is not the contract's output.
-- Step 1's project-list resolution (flags, MEMORY.md, directory checks) is ordinary file reading and may run before the halt so the report can name exactly which per-project arms could not be dispatched.
-- Normalize verbosity: do not reveal hidden chain-of-thought; return only required decisions, evidence, artifacts, commands, questions, and the core's closing report.
-
-## Known Codex limitations
-
-- Claude Artifact actions, Claude session JSONL/scratchpad paths, the Claude Agent/Workflow tools, and Claude-only deep links are unavailable unless an explicit adapter supplies them. Use the core's standalone-file or durable-state fallback where one is defined; never simulate the missing tool.
-- On timeout, rate limit, provider 5xx, parse failure, or missing required adapter, return the router reason code and consume at most the shared cross-cloud retry allowance. Never silently omit a core gate, and never render a topic menu the fan-out did not actually produce.
+- Load the core in full before acting. The pending-decision evidence bar, depth-specific command forms, render-time drops, and mandatory QUICK COPY block remain exactly as the core defines them.
+- Fresh-context dispatch is a runtime host capability, not a provider-wide Codex constant. Before Step 2, apply the installed build-step isolation contract. A host that proves the capability may map each project to a fresh sibling child and dispatch all siblings in parallel; each child is read-only and single-shot, while validation and consolidation stay in the parent.
+- If that isolation contract is unavailable or fails, return `required_tool_missing` naming Step 2's parallel per-project fan-out. Step 1 may still resolve and report the project list. Never replace the arms with parent-context scans, sequential children, or a claimed native Codex fan-out.
+- Resolve the Sonnet role to the closest capability the configured Codex model actually provides; `config/model-tier-map.json` declares no Codex peer. An unavailable required capability is visible rather than downgraded.
+- Render high-depth `/deep-research-pinned` lines as commands for a fresh Claude workflow window. Codex does not supply that workflow through this adapter, so do not launch it or claim native execution. Medium-depth lines remain narrow prompts.
+- `--session-wrap` is supported only when the runtime exposes a stable ID proven to belong to this executing Codex session and the task-state derive helper is available. The current adapter binds neither merely by being on Codex. Without both, print the core's topics-not-parked message after the menu and stop. Never use `CODEX_THREAD_ID` inherited from a parent process, a freshest-session guess, another host's ID, or a direct `current.md` write.
+- After a successful own-session park, load session-wrap's installed skill and core and execute its bare same-session path. Preserve its identity preflight and triage; a missing dependency is reported, never simulated.
 
 ## Output normalization
 
-Return only the core-defined operator-facing output and durable artifacts. Preserve locked strings, verdict enums, schemas, paths, command ordering, and retry limits exactly; reject missing required fields instead of inferring success.
+Emit only the core's operator-facing menu and guard results. Never reveal hidden chain-of-thought or present a menu that the required fan-out did not produce.
+
+## Unsupported capabilities
+
+Claude Agent/Workflow tools, scratchpad/session paths, Artifact actions, and native `deep-research-pinned` execution are unavailable. Missing fan-out, own-session identity, derive-helper, or named-skill capability remains visible at the step that requires it.

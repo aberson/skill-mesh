@@ -2,19 +2,19 @@
 
 See [../core.md](../core.md) for the full specification.
 
-## GPT invocation differences
+## Provider-specific instructions
 
-- Load the core in full before acting. Use structured tool/action calls for filesystem, shell, browser, GitHub, and named-skill operations.
-- Normalize GPT verbosity: do not reveal hidden chain-of-thought; return only required decisions, evidence, artifacts, commands, questions, and the core's closing report.
-- Resolve capability tiers with `config/model-tier-map.json`; explicit router overrides win.
-- Map each independent Agent/Explore/workflow arm to a fresh-context GPT action/task call. Dispatch independent arms in parallel. GPT action nesting may be depth-limited: orchestration stays in this parent invocation, and child actions never spawn graders. If isolated actions are unavailable, return `required_tool_missing`; do not self-grade or serialize roles into one context.
-- GPT host limitation: Claude Agent/Workflow syntax is not portable. Use the host action/task API as the adapter, keep fan-out children single-shot, and consolidate in the parent. This port is functional only where fresh-context task calls are available.
-
-## Known GPT limitations
-
-- Claude Artifact actions, Claude session JSONL/scratchpad paths, and Claude-only deep links are unavailable unless an explicit adapter supplies them. Use the core's standalone-file or durable-state fallback.
-- On timeout, rate limit, provider 5xx, parse failure, or missing required adapter, return the router reason code and consume at most the shared cross-cloud retry allowance. Never silently omit a core gate.
+- Load the core in full before acting. Map Step 2 to one fresh-context GPT/Copilot action per resolved project and dispatch all independent actions in one parallel call. Each child is single-shot and read-only; orchestration, JSON validation, filtering, prefix assignment, and rendering stay in the parent.
+- Resolve the Sonnet capability role through `config/model-tier-map.json`; an explicit router override may select an equal-or-stronger peer. If the host cannot provide isolated parallel actions, return `required_tool_missing` for Step 2. Sequential or in-session scanning is not a fallback.
+- Resolve workspace and project memory through the host's own project-memory convention. Never translate an absent project store into a made-up Claude path.
+- The rendered `/deep-research-pinned` line is a command for a fresh Claude workflow window because that harness is not provided by this adapter. Render it faithfully and do not claim GPT launched or natively executed it. Medium-depth lines remain host-neutral narrow research prompts.
+- `--session-wrap` requires a stable ID proven to belong to this executing host session plus access to the task-state derive helper. When either is unavailable, print the core's topics-not-parked message and stop after the menu. Never borrow a parent/foreign ID, write `current.md`, or claim a rollup regeneration from a direct shared-file write.
+- After a successful own-session park and helper call, invoke session-wrap through the host's named-skill mechanism. A missing invocation adapter is `required_tool_missing`; it does not erase the already parked entries.
 
 ## Output normalization
 
-Return only the core-defined operator-facing output and durable artifacts. Preserve locked strings, verdict enums, schemas, paths, command ordering, and retry limits exactly; reject missing required fields instead of inferring success.
+Return only the core-defined menu and guard messages. Preserve JSON rejection, dropped-topic, empty-state, and QUICK COPY contracts exactly.
+
+## Unsupported capabilities
+
+Claude Agent/Workflow tools, Claude scratchpad identity, and native execution of `deep-research-pinned` are unavailable. Use only the explicit mappings above and surface missing runtime capabilities without weakening the core.
