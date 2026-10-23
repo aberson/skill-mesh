@@ -5,9 +5,10 @@ See [../core.md](../core.md) for the full specification.
 ## Codex invocation differences
 
 - Load the core in full before acting and follow it verbatim. Use Codex's structured tool/action calls for filesystem, shell, git, and named-skill operations. This wrapper only maps host abstractions; it never weakens a gate the core defines. The forced primary-source investigation, the Diagnosis Block shape, and the bug-vs-feature re-route contract stay exactly as the core states them.
-- Tier names in inherited procedures name capability ROLES. `config/model-tier-map.json` maps Claude tiers onto GPT peers and declares no Codex peer, so resolve a tier to the closest capability the configured Codex model actually provides; explicit router overrides win. If a required capability is unavailable, return `required_tool_missing` rather than weakening a gate.
+- Tier names in inherited procedures name capability roles. The tier map declares no Codex peer, so do not invent one or route through GPT/Copilot/API transport. Use only a model the native host actually accepts for the isolated arm; record requested, accepted/configured and runtime-reported model and effort separately, leaving unreported fields unknown. If the required capability is unavailable, return `required_tool_missing` rather than weakening a gate.
 - Step 1's investigation and Diagnosis Block run natively and remain durable output. Step 2's independent reproduction and Option 4's tie-breaker are capability-conditioned isolated arms; apply the contract below before either dispatch. The core documents no single-context substitute: never compare the parent's diagnosis against itself and call it independent.
 - Normalize verbosity: do not reveal hidden chain-of-thought; return only required decisions, evidence, artifacts, commands, questions, and the core's closing report.
+- Codex exposes no stable own-session identifier for this contract. Print the core's write-as-you-go skip line once and write no session file; never read `COPILOT_AGENT_SESSION_ID`, a Claude scratchpad UUID, or a child identity.
 
 ## Independent-diagnosis capability contract
 
@@ -23,7 +24,7 @@ See [../core.md](../core.md) for the full specification.
 ## Known Codex limitations
 
 - Claude Artifact actions, Claude session JSONL/scratchpad paths, the Claude Agent/Workflow tools, and Claude-only deep links are unavailable unless an explicit adapter supplies them. Use the core's standalone-file or durable-state fallback where one is defined; never simulate the missing tool.
-- On timeout, rate limit, provider 5xx, parse failure, or missing required adapter, return the router reason code and consume at most the shared cross-cloud retry allowance. Never silently omit a core gate, and never ship a fix whose diagnosis the independence check did not actually corroborate.
+- On timeout, rate limit, provider 5xx, parse failure, or missing required adapter, preserve the actual native-host error and stop the affected arm. This adapter authorizes no API, router or cross-cloud retry. Never silently omit a core gate, and never ship a fix whose diagnosis the independence check did not actually corroborate.
 
 ## Output normalization
 
