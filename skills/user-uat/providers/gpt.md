@@ -4,15 +4,17 @@ See [../core.md](../core.md) for the full specification.
 
 ## GPT invocation differences
 
-- Load the core in full before acting. Use structured tool/action calls for filesystem, shell, browser, GitHub, and named-skill operations.
+- Load the core in full before acting. Use structured tool/action calls for filesystem, shell, browser, GitHub, and named-skill operations. This wrapper only maps host abstractions; it never weakens a gate the core defines. The tier partition (never auto-PASS a non-mechanical check on your own judgment), the side-effect confirmation gate, the operator-actor prerequisite rule, and stop-on-`AUTO-FAIL` stay exactly as the core states them.
 - Normalize GPT verbosity: do not reveal hidden chain-of-thought; return only required decisions, evidence, artifacts, commands, questions, and the core's closing report.
-- Resolve capability tiers with `config/model-tier-map.json`; explicit router overrides win.
-- Human-in-the-loop normalization: stop after the exact operator ask, separate `Done` from `Needs you`, and never add speculative advice or verbose internal deliberation. Preserve PASS/FAIL/UNCERTAIN or escalation enums exactly.
+- Resolve capability tiers with `config/model-tier-map.json` and the capabilities the current host actually exposes.
+- Map `--deep` to a fresh-context GPT action/task at the lens capability tier. After a visual judge's corroborated PASS, map the strong-final gate to a different fresh-context action/task at the strongest configured gate tier. Child actions do not spawn other graders; this parent invocation owns dispatch and deterministic mapping. If isolated actions or the required tier are unavailable, emit the core's `required_tool_missing` escalation instead of assessing inline or accepting the visual PASS.
+- Human-in-the-loop normalization: return exactly the core's stop/hold message when input, prerequisite or capability resolution halts; otherwise return the step-5 report - one plain-text line per step with the verdicts `AUTO-PASS` / `AUTO-FAIL` / `ESCALATED`, any `Still running:` line, then the exact `Needs you` heading and the closing what's-left line - or, under `--dry-run`, exactly the core's step-2 listing. Add no other result headings (no separate `Done` section), no speculative advice, and no verbose internal deliberation; stop after the operator ask.
+- `--ui` delegates through named-skill dispatch to `/judge-ui` / `/judge-motion`. `judge-motion` is Claude-native and absent from the GPT profile; if a needed judge is unavailable or fails its own capability contract on this host, report the step `ESCALATED` with `required_tool_missing: <judge>` and list it in `Needs you` - never view the screen and render a visual verdict yourself.
 
 ## Known GPT limitations
 
 - Claude Artifact actions, Claude session JSONL/scratchpad paths, and Claude-only deep links are unavailable unless an explicit adapter supplies them. Use the core's standalone-file or durable-state fallback.
-- On timeout, rate limit, provider 5xx, parse failure, or missing required adapter, return the router reason code and consume at most the shared cross-cloud retry allowance. Never silently omit a core gate.
+- On timeout, provider failure, parse failure, or missing required adapter, use the core's fail-closed escalation and name the missing capability. Never silently omit a core gate or rationalize a side-effectful step as read-only to skip confirmation.
 
 ## Output normalization
 

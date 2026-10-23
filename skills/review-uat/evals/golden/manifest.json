@@ -1,0 +1,41 @@
+{
+  "skill": "review-uat",
+  "source_only": true,
+  "measured_results": false,
+  "fixtures": [
+    {
+      "path": "good_apply.md",
+      "scenario": "apply_boundary",
+      "kind": "positive",
+      "passes_all": null,
+      "verified_fails": null,
+      "regen_attempts": 0
+    },
+    {
+      "path": "bad_apply_manual_uat.md",
+      "scenario": "apply_boundary",
+      "kind": "negative",
+      "single_defect": "writes into build-phase-owned Manual UAT content",
+      "passes_all": null,
+      "verified_fails": null,
+      "regen_attempts": 0
+    },
+    {
+      "path": "good_exec.md",
+      "scenario": "exec_dispatch",
+      "kind": "positive",
+      "passes_all": null,
+      "verified_fails": null,
+      "regen_attempts": 0
+    },
+    {
+      "path": "bad_exec_inline.md",
+      "scenario": "exec_dispatch",
+      "kind": "negative",
+      "single_defect": "executes the refined steps inline instead of named /user-uat dispatch",
+      "passes_all": null,
+      "verified_fails": null,
+      "regen_attempts": 0
+    }
+  ]
+}

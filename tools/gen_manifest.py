@@ -150,7 +150,7 @@ LOCAL_CAPABLE = {
     "plan-init", "plan-merge", "plan-review", "plan-trim", "plan-wrap",
     "repo-init", "repo-sync", "repo-update", "review-proof", "review-uat",
     "skill-eval-setup", "user-draft", "user-gateway",
-    "user-orient", "user-pm", "user-shakedown", "user-uat", "user-walkthrough",
+    "user-orient", "user-pm", "user-shakedown", "user-walkthrough",
     "user-wrap",
 }
 
@@ -186,6 +186,7 @@ SUB_AGENT = {
     "user-brainstorm",   # "One background sub-agent per investigation file"
     "user-debug",        # Step 2 and Option 4 require independent fresh-context arms
     "user-learn",        # "One background sub-agent per file"
+    "user-uat",          # isolated deep assessor and strong final visual judge
 }
 
 # Skills with a documented native-vision dependency.

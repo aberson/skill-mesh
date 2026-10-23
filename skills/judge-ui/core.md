@@ -61,7 +61,7 @@ the caller or the adapter supplies the rest.
    structured read-back. This is non-relaxable per judge-core §4.
 5. **Rubric** — per-stage natural-language pass criteria for the vision judge, in *observable*
    terms ("review table shows 7 rows; first row name is editable; a Create button is present").
-   Borrow these verbatim from a `Verify (human)` block if `/review-uat` produced one.
+   Borrow these verbatim from a `Verify (visual — vision-judge)` block if `/review-uat` produced one.
 
 ## The run loop
 

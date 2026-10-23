@@ -7,8 +7,8 @@
     "claude": 57,
     "gpt": 54,
     "codex": 54,
-    "local_capable": 23,
-    "sub_agent": 18,
+    "local_capable": 22,
+    "sub_agent": 19,
     "vision": 2,
     "filesystem": 57
   },
@@ -150,7 +150,6 @@
     "user-orient",
     "user-pm",
     "user-shakedown",
-    "user-uat",
     "user-walkthrough",
     "user-wrap"
   ],
@@ -172,7 +171,8 @@
     "tier-offload",
     "user-brainstorm",
     "user-debug",
-    "user-learn"
+    "user-learn",
+    "user-uat"
   ],
   "vision": [
     "judge-motion",
@@ -1308,9 +1308,10 @@
     {
       "name": "user-uat",
       "status": "portable",
-      "local_capable": true,
+      "local_capable": false,
       "capabilities": [
-        "filesystem"
+        "filesystem",
+        "sub-agent"
       ],
       "migration": {
         "legacy_core": ".claude/skills-gpt/user-uat/SKILL-core.md",

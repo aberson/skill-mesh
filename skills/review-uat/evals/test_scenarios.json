@@ -1,0 +1,21 @@
+{
+  "skill": "review-uat",
+  "version": "2.0-source-only",
+  "scope": "Selected apply and exec boundaries; not whole-skill qualification.",
+  "scenarios": [
+    {
+      "id": "apply_boundary",
+      "description": "Refine one anchored draft, enforce ownership and span holds, preserve every byte outside its owned tail span, render scraper-safe headings without touching fences, reject stale input, use the completed-write closing, and make an equal rerun a no-op.",
+      "positive_fixture": "golden/good_apply.md",
+      "negative_fixture": "golden/bad_apply_manual_uat.md",
+      "expected_assertions": [1, 2, 3]
+    },
+    {
+      "id": "exec_dispatch",
+      "description": "Given review-uat --exec --dry-run with no --ui invocation flag and a refined Verify (visual — vision-judge) block, delegate through /user-uat with --dry-run forwarded explicitly and --ui added automatically from the block. Relay only user-uat's dry-run classification and safety listing, never add --deep or --yes-side-effects, and surface missing dispatch without inline execution.",
+      "positive_fixture": "golden/good_exec.md",
+      "negative_fixture": "golden/bad_exec_inline.md",
+      "expected_assertions": [4]
+    }
+  ]
+}

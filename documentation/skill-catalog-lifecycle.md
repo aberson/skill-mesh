@@ -469,3 +469,7 @@ The contract tests for this guide and for the root pointer live in
 `skills/user-gateway/evals/` is permitted solely as repository evaluation input under
 [user-gateway-source-evals.md](user-gateway-source-evals.md). These files do not enter the
 installed payload, generalize resource emission, or change the closed grandfathered set.
+
+## Selected UAT v2 source-only resources
+
+The review-uat and user-uat candidate uses only the explicitly scoped repository evaluation files in `documentation/uat-source-evals.md`. They are excluded from installed runtime profiles. This named exception does not grant generic support-asset packaging or inherited calibration.

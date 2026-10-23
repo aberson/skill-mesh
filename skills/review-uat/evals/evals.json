@@ -1,0 +1,32 @@
+{
+  "skill": "review-uat",
+  "version": "2.0-source-only",
+  "description": "Unmeasured checks for the selected apply and exec boundaries only.",
+  "passing_threshold": "4/4",
+  "assertions": [
+    {
+      "id": 1,
+      "name": "exact anchored source",
+      "statement": "For --apply, resolve exactly one path#anchor and preserve its exact source bytes. An unreadable file, missing anchor, or duplicate anchor stops with no write and no exec.",
+      "result": null
+    },
+    {
+      "id": 2,
+      "name": "owned replaceable span",
+      "statement": "The only write is a separable trailing draft span inside the anchored section. Hold without writing for Manual UAT or M-entry ownership, a metadata-field draft, several entries, interleaved or trailing kept content, an open question, or a required heading deeper than H6. On a valid write, preserve outside bytes and fenced headings; render step headings as UAT step <N>: at H5 or one level below a deeper section.",
+      "result": null
+    },
+    {
+      "id": 3,
+      "name": "stale guard and idempotency",
+      "statement": "Immediately before replacement, re-read and compare the original exact bytes. Changed bytes stop without a write. An already-equal rendered span produces no write; a successful write reports the path and changed line range and ends with the Written back to closing rather than inviting --apply again.",
+      "result": null
+    },
+    {
+      "id": 4,
+      "name": "named exec dispatch",
+      "statement": "--exec delegates the refined script through the named /user-uat capability. It forwards --dry-run only when review-uat received --dry-run, automatically adds --ui when the refined script contains a Verify (visual — vision-judge) block, and never implicitly forwards --deep or --yes-side-effects. review-uat exposes no --ui invocation flag. Under --dry-run it relays user-uat's classification and safety listing, not a Step 5 execution report. It never executes steps inline; unavailable dispatch reports required_tool_missing and preserves the refined script.",
+      "result": null
+    }
+  ]
+}
