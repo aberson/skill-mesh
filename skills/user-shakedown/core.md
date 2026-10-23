@@ -23,7 +23,7 @@ started, and picks up mid-stream (load-before-derive per the engine — never re
 
 Before acting, read `<repo>/_shared/shakedown-engine.md` in full, resolving `<repo>` as the
 loaded Skill Mesh package root rather than the target project's git root. If it cannot be read,
-stop with `required_tool_missing: _shared/shakedown-engine.md`, write nothing, and never
+stop with `required_tool_missing: <repo>/_shared/shakedown-engine.md`, write nothing, and never
 reconstruct the grammar from memory.
 
 ## When to use / not
