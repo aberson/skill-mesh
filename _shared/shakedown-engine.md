@@ -64,7 +64,8 @@ multiple ledgers plausibly match, clarify before writing rather than choosing ar
 
 ## 2. Row schema (machine-checkable)
 
-The ledger body is a single markdown table. One data row per UAT item:
+The ledger contains one declared markdown table, with one data row per UAT item. Prose headings
+and context may appear before or after it; they are outside the table's structural check.
 
 ```
 | id | source | status | evidence |
@@ -91,11 +92,11 @@ evidence prose (evidence is the **last** cell, after the fourth pipe).
 A **well-formed data row** matches, in full:
 
 ```
-^\| *(M|D)[0-9]+ *\|[^|]*\| *(open|satisfied|fixed|logged) *\|.*[^|[:space:]].*$
+^\| *(M[0-9]+ *\| *M[0-9]+|D[0-9]+ *\| *derived) *\| *(open|satisfied|fixed|logged) *\|.*[^|[:space:]].*$
 ```
 
-(row starts with a `M<n>`/`D<n>` id, a source cell with no interior pipe, a status cell holding
-exactly one of the four words, then the **evidence cell**.) The evidence cell is the **terminal**
+(row starts with an `M<n>` id and `M<n>` source, or a `D<n>` id and `derived` source; its status
+cell holds exactly one of the four words, followed by the **evidence cell**.) The evidence cell is the **terminal**
 cell and may itself contain pipes â€” command output routinely does (`pytest | tail -1`,
 `grep -E 'a|b'`) â€” so it is matched with `.*[^|[:space:]].*$`, never restricted to `[^|]*`. Pinning it as pipe-free would
 miscount a genuinely-`satisfied` row whose evidence is a piped command as malformed â†’ `open`,
@@ -116,33 +117,47 @@ LEDGER="$(git rev-parse --show-toplevel)/.claude/task-state/shakedown-<feature-s
 [ -f "$LEDGER" ] && [ -r "$LEDGER" ] || { echo "ABORT: ledger missing or unreadable: $LEDGER" >&2; exit 1; }
 STATUS='open|satisfied|fixed|logged'   # the four status words â€” canonical list, defined once, reused below
 
-# Count data structurally so corrupt IDs cannot disappear from the goal check.
-ROWS=$(grep -cE '^\|' "$LEDGER") || [ "$?" -eq 1 ] || { echo "ABORT: ledger read failed" >&2; exit 1; }
 HEADER=$(grep -cE '^\| *id *\| *source *\| *status *\| *evidence *\|[[:space:]]*$' "$LEDGER") || [ "$?" -eq 1 ] || { echo "ABORT: ledger read failed" >&2; exit 1; }
 [ "$HEADER" -eq 1 ] || { echo "ABORT: expected one ledger header" >&2; exit 1; }
 SEP=$(grep -cE '^\|[-:| ]*-[-:| ]*[[:space:]]*$' "$LEDGER") || [ "$?" -eq 1 ] || { echo "ABORT: ledger read failed" >&2; exit 1; }
 [ "$HEADER" -eq 1 ] && [ "$SEP" -eq 1 ] || { echo "ABORT: expected one complete header and separator" >&2; exit 1; }
-TABLE=$(grep -E '^\|' "$LEDGER") || { echo "ABORT: ledger table unavailable" >&2; exit 1; }
-printf '%s\n' "$TABLE" | sed -n '1p' | grep -qE '^\| *id *\| *source *\| *status *\| *evidence *\|[[:space:]]*$' || { echo "ABORT: header must be first table row" >&2; exit 1; }
-printf '%s\n' "$TABLE" | sed -n '2p' | grep -qE '^\|[-:| ]*-[-:| ]*[[:space:]]*$' || { echo "ABORT: separator must follow header" >&2; exit 1; }
-DATA=$(( ROWS - HEADER - SEP ))
+HEADER_MATCH=$(grep -nE '^\| *id *\| *source *\| *status *\| *evidence *\|[[:space:]]*$' "$LEDGER") || { echo "ABORT: ledger read failed" >&2; exit 1; }
+HEADER_LINE=${HEADER_MATCH%%:*}
+SEPARATOR_LINE=$(sed -n "$(( HEADER_LINE + 1 ))p" "$LEDGER") || { echo "ABORT: ledger read failed" >&2; exit 1; }
+printf '%s\n' "$SEPARATOR_LINE" | grep -qE '^\|[[:space:]]*:?-+:?[[:space:]]*\|[[:space:]]*:?-+:?[[:space:]]*\|[[:space:]]*:?-+:?[[:space:]]*\|[[:space:]]*:?-+:?[[:space:]]*\|[[:space:]]*$' || { echo "ABORT: four-column separator must follow header" >&2; exit 1; }
+# The declared data region starts after the separator and ends at the first blank line or heading.
+# Count every nonblank line in that region so a row that loses or indents its leading pipe cannot disappear.
+DATA_TAIL=$(sed -n "$(( HEADER_LINE + 2 )),\$p" "$LEDGER") || { echo "ABORT: ledger read failed" >&2; exit 1; }
+DATA_REGION=$(printf '%s\n' "$DATA_TAIL" | sed -n '/^[[:space:]]*$/q; /^[[:space:]]*#/q; p')
+DATA=$(printf '%s\n' "$DATA_REGION" | grep -cE '[^[:space:]]') || [ "$?" -eq 1 ] || { echo "ABORT: ledger read failed" >&2; exit 1; }
 # well-formed rows = data rows whose status cell holds exactly one status word.
 # Evidence is the TERMINAL cell (matched with a required nonblank, non-pipe character) so it may contain pipes â€” command output does.
-WELL=$(grep -cE "^\| *(M|D)[0-9]+ *\|[^|]*\| *($STATUS) *\|.*[^|[:space:]].*$" "$LEDGER") || [ "$?" -eq 1 ] || { echo "ABORT: ledger read failed" >&2; exit 1; }
+WELL=$(printf '%s\n' "$DATA_REGION" | grep -cE "^\| *(M[0-9]+ *\| *M[0-9]+|D[0-9]+ *\| *derived) *\| *($STATUS) *\|.*[^|[:space:]].*$") || [ "$?" -eq 1 ] || { echo "ABORT: ledger read failed" >&2; exit 1; }
 # open-status rows (status cell is exactly `open`)
-OPEN=$(grep -cE '^\| *(M|D)[0-9]+ *\|[^|]*\| *open *\|' "$LEDGER") || [ "$?" -eq 1 ] || { echo "ABORT: ledger read failed" >&2; exit 1; }
+OPEN=$(printf '%s\n' "$DATA_REGION" | grep -cE '^\| *(M[0-9]+ *\| *M[0-9]+|D[0-9]+ *\| *derived) *\| *open *\|.*[^|[:space:]].*$') || [ "$?" -eq 1 ] || { echo "ABORT: ledger read failed" >&2; exit 1; }
+# Four-cell records elsewhere are orphans, independent of every cell value. The shared bounded
+# grammar accepts either a leading pipe (including an empty first cell) or a nonblank first cell
+# with its leading pipe missing, and requires three more cell separators. The strict separator
+# guard guarantees that ALL contains exactly the guarded header and separator before data rows.
+ROWLIKE='^([[:space:]]*\|[^|]*\|[^|]*\|[^|]*\|.*|[[:space:]]*[^|[:space:]][^|]*\|[^|]*\|[^|]*\|.*)$'
+STRUCTURAL_ALL=$(grep -cE "$ROWLIKE" "$LEDGER") || [ "$?" -eq 1 ] || { echo "ABORT: ledger read failed" >&2; exit 1; }
+STRUCTURAL_DATA=$(printf '%s\n' "$DATA_REGION" | grep -cE "$ROWLIKE") || [ "$?" -eq 1 ] || { echo "ABORT: ledger read failed" >&2; exit 1; }
 
 MALFORMED=$(( DATA - WELL ))
-UNSATISFIED=$(( OPEN + MALFORMED ))
+ORPHAN=$(( STRUCTURAL_ALL - STRUCTURAL_DATA - 2 ))
+UNSATISFIED=$(( OPEN + MALFORMED + ORPHAN ))
 echo "$UNSATISFIED"     # 0 => ledger clean (goal satisfied); >0 => still work to do
 ```
 
 Only `UNSATISFIED == 0` printed with exit 0 is the mechanical termination condition.
 Missing/unreadable files, missing or duplicate headers, and read errors abort with exit 1;
 an abort is never a clean ledger. A genuine header-only ledger has zero rows and prints 0.
-Data rows are counted structurally (all pipe-starting rows except the exact header and
-separator), so a corrupted ID still counts as malformed rather than disappearing. Any malformed row makes it non-zero
-even if no cell literally says `open`, so a typo can never silently close the goal.
+Data rows are counted structurally within the declared table region, so surrounding prose is
+ignored while a missing or indented leading pipe, corrupted ID, invalid source, invalid status, or empty
+evidence still counts as malformed rather than disappearing. Any malformed row makes it non-zero
+even if no cell literally says `open`, so a typo can never silently close the goal. Any four-cell
+record outside that region counts as an orphan regardless of its ID or other cell values and also
+keeps the result non-zero; headings and ordinary context remain outside the bounded row grammar.
 
 ### Canonical /goal string
 

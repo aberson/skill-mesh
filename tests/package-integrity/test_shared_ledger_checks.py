@@ -10,25 +10,43 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[2]
 BASH = Path("C:/Program Files/Git/bin/bash.exe")
-
-
-@pytest.mark.parametrize("engine", ["intake", "shakedown"])
-@pytest.mark.parametrize("case", [
+BASE_CASES = [
     "empty", "blank", "pipe_only", "valid_pipes", "open", "bad_id",
     "bad_status", "partial_header", "duplicate_header", "missing_separator",
     "reversed_header", "header_only", "missing", "zero_byte",
-])
+]
+CASES = (
+    [(engine, case) for case in BASE_CASES for engine in ("intake", "shakedown")]
+    + [("shakedown", case) for case in (
+        "dropped_leading_pipe", "indented_row", "bad_source", "empty_source",
+        "valid_fixed_pipes", "prose_context", "read_error", "blank_before_open",
+        "middle_blank", "heading_before_open", "dropped_leading_pipe_orphan",
+        "broken_id_blank", "broken_fields_middle_no_leading",
+        "broken_fields_heading_indented",
+        "empty_id_orphan", "short_separator_open",
+        "empty_id_heading_indented", "all_fields_malformed_blank_no_leading",
+        "empty_source_heading", "empty_status_blank_no_leading",
+        "empty_evidence_heading_indented",
+    )]
+)
+CLEAN_CASES = {"valid_pipes", "valid_fixed_pipes", "prose_context", "header_only"}
+
+
+@pytest.mark.parametrize("engine,case", CASES)
 def test_zero_requires_valid_table_and_outcome(engine, case, tmp_path):
     bash = str(BASH) if BASH.is_file() else shutil.which("bash")
     if not bash:
         pytest.skip("Bash is required to execute the documented Bash checks")
     core = (ROOT / "_shared" / f"{engine}-engine.md").read_text(encoding="utf-8")
     blocks = re.findall(r"```bash\n(.*?)\n```", core, re.S)
-    check = next(block for block in blocks if "WELL=$(grep" in block)
+    check = next(block for block in blocks if "WELL=$(" in block)
     # Bind only the ledger locator to a disposable fixture; execute every guard unchanged.
     lines = check.splitlines()
     assert lines[0].startswith("LEDGER=")
     lines[0] = 'LEDGER="$1"'
+    if case == "read_error":
+        # Fault-inject grep's documented read-error exit while leaving every guard unchanged.
+        lines.insert(1, "grep() { return 2; }")
     script = tmp_path / "check.sh"
     script.write_text("\n".join(lines) + "\n", encoding="utf-8", newline="\n")
     if engine == "intake":
@@ -44,11 +62,21 @@ def test_zero_requires_valid_table_and_outcome(engine, case, tmp_path):
     )
     if case == "open":
         status = "open"
+    elif case == "valid_fixed_pipes":
+        status = "fixed"
     elif case == "bad_status":
         status = "invented"
     if case == "bad_id":
         prefix = prefix.replace("F1", "X1").replace("D1", "X1")
+    elif case == "bad_source":
+        prefix = prefix.replace("derived", "bogus")
+    elif case == "empty_source":
+        prefix = prefix.replace("derived", "")
     row = f"{prefix} {status} |{tail}"
+    if case == "dropped_leading_pipe":
+        row = row.removeprefix("| ")
+    elif case == "indented_row":
+        row = "  " + row
     body = f"{header}\n{separator}\n{row}\n"
     if case == "partial_header":
         body = "| id |\n"
@@ -62,6 +90,48 @@ def test_zero_requires_valid_table_and_outcome(engine, case, tmp_path):
         body = f"{header}\n{separator}\n"
     elif case == "zero_byte":
         body = ""
+    elif case == "prose_context":
+        body = f"# Shakedown context\n\n{body}\n## Notes\nClosed by the run above.\n"
+    elif case == "blank_before_open":
+        body = f"{header}\n{separator}\n\n| D2 | derived | open | not exercised |\n"
+    elif case == "middle_blank":
+        body = (
+            f"{header}\n{separator}\n{row}\n\n"
+            "| D2 | derived | open | not exercised |\n"
+        )
+    elif case == "heading_before_open":
+        body = (
+            f"{header}\n{separator}\n## Later items\n"
+            "| D2 | derived | open | not exercised |\n"
+        )
+    elif case == "dropped_leading_pipe_orphan":
+        body = f"{header}\n{separator}\n\nD2 | derived | open | not exercised |\n"
+    elif case == "broken_id_blank":
+        body = f"{header}\n{separator}\n\n| BROKEN | derived | open | not exercised |\n"
+    elif case == "broken_fields_middle_no_leading":
+        body = (
+            f"{header}\n{separator}\n{row}\n\n"
+            "BROKEN | bogus | invented | not exercised |\n"
+        )
+    elif case == "broken_fields_heading_indented":
+        body = (
+            f"{header}\n{separator}\n## Later items\n"
+            "  | BROKEN | | invented | not exercised |\n"
+        )
+    elif case == "empty_id_orphan":
+        body = f"{header}\n{separator}\n\n| | derived | open | pending |\n"
+    elif case == "short_separator_open":
+        body = f"{header}\n|-|\n| D1 | derived | open | pending |\n"
+    elif case == "empty_id_heading_indented":
+        body = f"{header}\n{separator}\n## Later\n  | | derived | open | pending |\n"
+    elif case == "all_fields_malformed_blank_no_leading":
+        body = f"{header}\n{separator}\n\nBROKEN | | invented | |\n"
+    elif case == "empty_source_heading":
+        body = f"{header}\n{separator}\n## Later\n| BROKEN | | invented | pending |\n"
+    elif case == "empty_status_blank_no_leading":
+        body = f"{header}\n{separator}\n\nBROKEN | bogus | | pending |\n"
+    elif case == "empty_evidence_heading_indented":
+        body = f"{header}\n{separator}\n## Later\n  | BROKEN | bogus | invented | |\n"
     ledger = tmp_path / "ledger.md"
     if case != "missing":
         ledger.write_text(body, encoding="utf-8", newline="\n")
@@ -75,10 +145,20 @@ def test_zero_requires_valid_table_and_outcome(engine, case, tmp_path):
         capture_output=True, text=True, timeout=15,
     )
     clean = result.returncode == 0 and result.stdout.strip() == "0"
-    assert clean == (case in {"valid_pipes", "header_only"}), (
+    assert clean == (case in CLEAN_CASES), (
         engine, case, result.returncode, result.stdout, result.stderr
     )
-    if case in {"empty", "blank", "pipe_only", "open", "bad_id", "bad_status"}:
+    if case in {
+        "empty", "blank", "pipe_only", "open", "bad_id", "bad_status",
+        "dropped_leading_pipe", "indented_row", "bad_source", "empty_source",
+        "blank_before_open", "middle_blank", "heading_before_open",
+        "dropped_leading_pipe_orphan", "broken_id_blank",
+        "broken_fields_middle_no_leading", "broken_fields_heading_indented",
+        "empty_id_orphan",
+        "empty_id_heading_indented", "all_fields_malformed_blank_no_leading",
+        "empty_source_heading", "empty_status_blank_no_leading",
+        "empty_evidence_heading_indented",
+    }:
         assert result.returncode == 0 and int(result.stdout.strip()) > 0
-    elif case not in {"valid_pipes", "header_only"}:
+    elif case not in CLEAN_CASES:
         assert result.returncode != 0
