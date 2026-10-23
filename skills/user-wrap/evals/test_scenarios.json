@@ -1,0 +1,151 @@
+{
+  "skill": "user-wrap",
+  "version": "2.0",
+  "description": "Eight scenarios for user-wrap's four verdict paths, including foreign fallback state and three incomplete WRAP & CLOSE outcomes. Every scenario is graded against all 10 assertions; conditional assertions are vacuously true when their banner is absent.",
+  "scenarios": [
+    {
+      "id": "scenario_keepgoing_return",
+      "name": "Operator sits back down after a break, mid-task -> KEEP GOING, execute Next Action with no ask",
+      "description": "The most common verdict. Orient-lite must come first (assertion 1), the verdict must arrive via a delegated session-wrap --advise run (assertion 2), the KEEP GOING banner + loss report are re-presented verbatim (assertions 4, 5), and the Next Action executes immediately with no confirmation ask (assertion 6). Nothing mutates before the banner (assertion 10) and no user-wrap-authored threshold prose appears (assertion 3). Actively exercises assertions 1, 2, 3, 4, 5, 6, 10; the golden anchor is golden/good_keep_going.md. Assertion 6 also grades the paired locked-bundle condition: a task-handoff-next-action-v1 bundle from the own file must be printed and held, never executed.",
+      "context": "Operator returns after ~40 minutes away to an open Alpha4Gate window and types '/user-wrap' ('sitting back down - keep going or wrap?'). This session's own sessions/<session-id>.md: Task 'build-phase | Alpha4Gate reward-shaping phase, step 4 of 9', Status IN_PROGRESS, Last written 2026-07-13T17:20:00Z (fresh per the schema doc), Session SHA f3a91d2 matches HEAD; Next Action 'uv run pytest tests/test_rewards.py -q, then continue /build-step --plan docs/plans/alpha4gate-plan.md --step 4'. Git: Alpha4Gate master @ f3a91d2, 2 dirty files (bot/rewards.py, tests/test_rewards.py), 1 ahead (last push landed 9d41c2e). A /goal is armed and unmet ('12 eval games green'). The delegated session-wrap --advise resolves the signal cleanly at 84,300 tokens (~42% assuming a 200k window), reports mid-task, and would route continue -> verdict KEEP GOING. Correct output: orientation block, the advise triage line + KEEP GOING banner + two-line loss report verbatim, then immediate execution of the Next Action with no confirmation ask. Conditional locked-bundle variant for assertion 6: replace the plain Next Action with a task-handoff-next-action-v1 bundle; correct behavior prints it verbatim, emits 'Locked bundle held (not executed by user-wrap).', and stops without execution.",
+      "expected_assertions": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10
+      ]
+    },
+    {
+      "id": "scenario_recycle_boundary",
+      "name": "Return right after a step flipped DONE, heavy context -> RECYCLE WINDOW, invoke bare /session-wrap",
+      "description": "The recycle path. --advise would route clear-next, so the banner is RECYCLE WINDOW and user-wrap's action is to invoke bare /session-wrap via the Skill tool — which then acts itself (durable write, render, git verb, Pick-up-here block ending in /clear). user-wrap adds nothing between banner and loss report and runs no git verb of its own before the banner. Actively exercises assertions 1, 2, 4, 5, 7, 10; the golden anchor is golden/good_recycle_window.md.",
+      "context": "toybox plan step 12 of 14 flipped DONE just before the operator stepped away for dinner; they return and type '/user-wrap - should I keep going or wrap up?'. This session's own sessions/<session-id>.md: Task 'build-phase | toybox plan, step 12 of 14', Status IN_PROGRESS (boundary write already set Next Action '/build-step --plan docs/plans/toybox-plan.md --step 13'), Last written 2026-07-13T23:05:00Z (fresh), Session SHA a7c22b1 matches HEAD. Git: toybox master @ a7c22b1, 3 dirty files (app/propose.py, app/judge.py, tests/test_propose.py), 0 ahead. No armed /goal. The delegated --advise reports 141,200 tokens (~71% assuming a 200k window) at the step boundary and would route clear-next -> verdict RECYCLE WINDOW. Correct action: invoke bare /session-wrap (it acts); its output — its own triage line, written own-session checkpoint, regenerated rollup, rendered handoff-prompt.md, per-repo git verb, Pick-up-here block whose next command is /clear — follows the re-presented report.",
+      "expected_assertions": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10
+      ]
+    },
+    {
+      "id": "scenario_wrapclose_morning",
+      "name": "Next-morning return, task COMPLETE, one unpushed commit + one unfiled TODO -> WRAP & CLOSE, invoke /session-wrap --end",
+      "description": "The wrap path. Triage would route end-window AND the salvage preview is non-empty (an unpushed commit + an unfiled TODO), so the banner is WRAP & CLOSE and user-wrap invokes /session-wrap --end. The loss report's concrete anchors (SHA, counts, the TODO's identity) must survive re-presentation untouched — this is the scenario where paraphrasing or burying the loss report does the most damage. Actively exercises assertions 1, 2, 4, 5, 8, 10; the golden anchor is golden/good_wrap_close.md. Its own-session Next Action is a locked task-handoff-next-action-v1 bundle, so the delegated render and opener must preserve it as held data for the owning dispatcher rather than execute or flatten it.",
+      "context": "Operator returns the next morning to a window left open overnight on shake_spear and types '/user-wrap - am I safe to close this window?'. This session's own sessions/<session-id>.md: Task 'repo-update | shake_spear v1 wrap', Status COMPLETE (v1 wrapped last night; the remaining work is operator M1 UAT #15 - an operator boundary, no agent-completable next action), Last written 2026-07-13T03:40:00Z (7h ago - fresh per the schema doc's staleness threshold), Session SHA d81f3a0 matches HEAD. Git: shake_spear master @ d81f3a0, 0 dirty, 1 ahead (last night's wrap commit d81f3a0 never reached origin - the push failed silently). The delegated --advise reports 58,900 tokens (~29% assuming a 200k window), would route end-window, and its salvage preview finds two at-risk items: the unpushed commit and 1 unfiled TODO from scrollback (the ss CLI --seed flag accepts out-of-range values; never parked, never filed) -> verdict WRAP & CLOSE. Correct action: re-present the banner + loss report verbatim, then invoke /session-wrap --end automatically with no confirmation ask (the full end-window wrap follows: memory pass, render, git verb, Pick-up-here block with the fresh-window opener), and close with the exact plain line 'RAN SESSION-WRAP & SAFE TO CLOSE'. The render labels the bundle data-only and the owner-bound opener reports that its owning dispatcher is required; neither uses generic execute-Next-Action wording.",
+      "expected_assertions": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10
+      ]
+    },
+    {
+      "id": "scenario_safeclose_allclear",
+      "name": "Next-morning return, everything durable -> SAFE TO CLOSE, one-liner then stop",
+      "description": "The stop path — the verdict where doing MORE is the defect. Every no-op condition holds (clean tree, origin in sync, no armed /goal, own session file fresh + consistent, salvage preview empty), so the banner is SAFE TO CLOSE with 'Dies with this window: nothing', and user-wrap prints exactly one all-durable closing line and stops: no /session-wrap invocation, no task-handoff invocation, no git verb, no Pick-up-here block. Actively exercises assertions 1, 2, 4, 5, 9, 10; the golden anchor is golden/good_safe_close.md.",
+      "context": "Same next-morning shake_spear shape, all clear: the operator returns and types '/user-wrap - am I safe to close this window?'. This session's own sessions/<session-id>.md: Task 'repo-update | shake_spear v1 wrap', Status COMPLETE, Last written 2026-07-13T03:40:00Z (7h ago - fresh per the schema doc), Session SHA d81f3a0 matches HEAD. Git: shake_spear master @ d81f3a0, 0 dirty, 0 ahead - origin in sync (last night's push landed). No armed /goal. The delegated --advise reports 61,300 tokens (~31% assuming a 200k window), would route end-window as a NO-OP: every durable condition holds and the salvage preview is empty -> verdict SAFE TO CLOSE, 'Dies with this window: nothing'. Correct action: re-present the banner + loss report, then ONE closing line stating everything is durable and the window can be closed - and STOP.",
+      "expected_assertions": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10
+      ]
+    },
+    {
+      "id": "scenario_wrapclose_ask_pending",
+      "name": "WRAP & CLOSE stops at the parallel-session ask",
+      "description": "A foreign commit on another local branch makes session-wrap's anomaly pre-flight return ask-first pending. Its ask response remains the last output; user-wrap neither answers it nor prints SAFE TO CLOSE.",
+      "context": "Use the wrap-close morning case, but seed a foreign commit on another local branch within the last hour. The Step D segment is exactly 'ask-first pending'. Correct output invokes /session-wrap --end, ends with session-wrap's ask response, and adds no user-wrap line.",
+      "expected_assertions": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10
+      ]
+    },
+    {
+      "id": "scenario_wrapclose_push_rejected",
+      "name": "WRAP & CLOSE reports a rejected push without claiming safety",
+      "description": "A deterministic local remote rejects the base-action push. The setup commit is pushed before the rejection hook is installed; a later dirty session edit is committed by session-wrap, so the rejected operation cannot be confused with the clean-but-ahead 'pushed N pending' case.",
+      "context": "Start from a disposable repo whose setup commit is already pushed to a local bare origin. Install a pre-receive hook that exits 1, then make one tracked dirty edit. session-wrap commits that edit and reports the exact non-completed segment 'commit created @ <short-sha>; push failed: remote rejected (pre-receive hook declined)'. Correct user-wrap output quotes that segment in one line, prints no SAFE TO CLOSE line, and stops without retry.",
+      "expected_assertions": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10
+      ]
+    },
+    {
+      "id": "scenario_keepgoing_fallback_state",
+      "name": "KEEP GOING treats another window's rollup as orientation only",
+      "description": "This window has no own session file. The fresh current.md rollup belongs to another session, so user-wrap labels the source and does not execute its Next Action even though --advise returns KEEP GOING.",
+      "context": "No sessions/<this-id>.md exists. current.md contains another session's fresh Next Action. Correct output includes 'state: current.md rollup — not this session's own; orientation only', re-presents KEEP GOING, then prints 'Next Action not run: state is the current.md rollup; orientation only.' and stops.",
+      "expected_assertions": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10
+      ]
+    },
+    {
+      "id": "scenario_wrapclose_unwritten_checkpoint",
+      "name": "WRAP & CLOSE preserves an unwritten checkpoint in the current window",
+      "description": "task-handoff returns a non-success line during session-wrap --end. No render or opener is presented and no safety line follows; session-wrap's in-window re-run step is last.",
+      "context": "The session file write cannot complete and task-handoff returns 'Checkpoint not written: required_tool_missing (session identity).'. Correct output contains session-wrap's pointer 'Full handoff: not rendered this turn (checkpoint not written)' and ends with its fenced /session-wrap --end re-run step. user-wrap appends nothing.",
+      "expected_assertions": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10
+      ]
+    }
+  ]
+}

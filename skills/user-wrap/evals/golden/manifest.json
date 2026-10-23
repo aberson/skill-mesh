@@ -1,0 +1,178 @@
+{
+  "manifest_version": 2,
+  "skill": "user-wrap",
+  "generated_at": "2026-10-23T19:47:19Z",
+  "good_source": "hand-crafted",
+  "additional_goods": [
+    {
+      "file": "good_keep_going.md",
+      "scenario": "scenario_keepgoing_return",
+      "passes_all": true
+    },
+    {
+      "file": "good_recycle_window.md",
+      "scenario": "scenario_recycle_boundary",
+      "passes_all": true
+    },
+    {
+      "file": "good_wrap_close.md",
+      "scenario": "scenario_wrapclose_morning",
+      "passes_all": true
+    },
+    {
+      "file": "good_safe_close.md",
+      "scenario": "scenario_safeclose_allclear",
+      "passes_all": true
+    },
+    {
+      "file": "good_keep_going_fallback.md",
+      "scenario": "scenario_keepgoing_fallback_state",
+      "passes_all": true
+    },
+    {
+      "file": "good_wrap_close_ask_pending.md",
+      "scenario": "scenario_wrapclose_ask_pending",
+      "passes_all": true
+    },
+    {
+      "file": "good_wrap_close_push_rejected.md",
+      "scenario": "scenario_wrapclose_push_rejected",
+      "passes_all": true
+    },
+    {
+      "file": "good_wrap_close_unwritten_checkpoint.md",
+      "scenario": "scenario_wrapclose_unwritten_checkpoint",
+      "passes_all": true
+    }
+  ],
+  "verification_summary": {
+    "accepted": 15,
+    "inert": 0,
+    "total": 15
+  },
+  "bads": [
+    {
+      "file": "bad_banner_before_orientation.md",
+      "defect_type": "structural - orientation missing or after the verdict",
+      "assertion_id": 1,
+      "scenario": "scenario_keepgoing_return",
+      "verified_fails": true,
+      "regen_attempts": 1
+    },
+    {
+      "file": "bad_no_advise_delegation.md",
+      "defect_type": "structural - verdict not delegated to session-wrap --advise",
+      "assertion_id": 2,
+      "scenario": "scenario_keepgoing_return",
+      "verified_fails": true,
+      "regen_attempts": 1
+    },
+    {
+      "file": "bad_own_triage_logic.md",
+      "defect_type": "anti-pattern - user-wrap computes its own triage",
+      "assertion_id": 3,
+      "scenario": "scenario_keepgoing_return",
+      "verified_fails": true,
+      "regen_attempts": 1
+    },
+    {
+      "file": "bad_loss_report_buried.md",
+      "defect_type": "structural - banner/loss-report block missing, malformed, or interrupted",
+      "assertion_id": 4,
+      "scenario": "scenario_wrapclose_morning",
+      "verified_fails": true,
+      "regen_attempts": 1
+    },
+    {
+      "file": "bad_paraphrased_loss_report.md",
+      "defect_type": "content - loss report paraphrased, anchors dropped",
+      "assertion_id": 5,
+      "scenario": "scenario_wrapclose_morning",
+      "verified_fails": true,
+      "regen_attempts": 1
+    },
+    {
+      "file": "bad_keepgoing_confirmation_ask.md",
+      "defect_type": "conditional-behavior - KEEP GOING asks for confirmation or stops",
+      "assertion_id": 6,
+      "scenario": "scenario_keepgoing_return",
+      "verified_fails": true,
+      "regen_attempts": 1
+    },
+    {
+      "file": "bad_recycle_wrong_invocation.md",
+      "defect_type": "conditional-behavior - RECYCLE WINDOW wrong or missing invocation",
+      "assertion_id": 7,
+      "scenario": "scenario_recycle_boundary",
+      "verified_fails": true,
+      "regen_attempts": 1
+    },
+    {
+      "file": "bad_wrapclose_no_invocation.md",
+      "defect_type": "conditional-behavior - WRAP & CLOSE never invokes /session-wrap --end",
+      "assertion_id": 8,
+      "scenario": "scenario_wrapclose_morning",
+      "verified_fails": true,
+      "regen_attempts": 1
+    },
+    {
+      "file": "bad_safeclose_still_wraps.md",
+      "defect_type": "conditional-behavior - SAFE TO CLOSE fails to stop",
+      "assertion_id": 9,
+      "scenario": "scenario_safeclose_allclear",
+      "verified_fails": true,
+      "regen_attempts": 1
+    },
+    {
+      "file": "bad_mutation_before_verdict.md",
+      "defect_type": "anti-pattern - mutation before the verdict",
+      "assertion_id": 10,
+      "scenario": "scenario_keepgoing_return",
+      "verified_fails": true,
+      "regen_attempts": 1
+    },
+    {
+      "file": "bad_keepgoing_runs_fallback_action.md",
+      "defect_type": "conditional-behavior - KEEP GOING executes fallback state",
+      "assertion_id": 6,
+      "scenario": "scenario_keepgoing_fallback_state",
+      "verified_fails": true,
+      "regen_attempts": 1
+    },
+    {
+      "file": "bad_wrapclose_safe_line_after_pending.md",
+      "defect_type": "conditional-behavior - safety claim after ask-first pending",
+      "assertion_id": 8,
+      "scenario": "scenario_wrapclose_ask_pending",
+      "verified_fails": true,
+      "regen_attempts": 1
+    },
+    {
+      "file": "bad_wrapclose_answers_ask.md",
+      "defect_type": "conditional-behavior - user-wrap answers session-wrap ask",
+      "assertion_id": 8,
+      "scenario": "scenario_wrapclose_ask_pending",
+      "verified_fails": true,
+      "regen_attempts": 1
+    },
+    {
+      "file": "bad_wrapclose_safe_line_after_push_failure.md",
+      "defect_type": "conditional-behavior - safety claim after rejected push",
+      "assertion_id": 8,
+      "scenario": "scenario_wrapclose_push_rejected",
+      "verified_fails": true,
+      "regen_attempts": 1
+    },
+    {
+      "file": "bad_wrapclose_safe_line_after_unwritten_checkpoint.md",
+      "defect_type": "conditional-behavior - safety claim after unwritten checkpoint",
+      "assertion_id": 8,
+      "scenario": "scenario_wrapclose_unwritten_checkpoint",
+      "verified_fails": true,
+      "regen_attempts": 1
+    }
+  ]
+}
+
+
+

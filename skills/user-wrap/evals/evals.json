@@ -1,0 +1,100 @@
+{
+  "skill": "user-wrap",
+  "version": "2.0",
+  "description": "Discrimination-based evaluation for user-wrap's return-moment contract. user-wrap orients from this session's own task state when available, delegates every verdict to session-wrap --advise, re-presents that report verbatim, and performs exactly the action permitted by the verdict. Fallback state is orientation-only, and WRAP & CLOSE claims safety only after positive completion evidence.",
+  "passing_threshold": "8/10",
+  "scoring_convention": "Applicable-assertions-only: conditional assertions (6-9, keyed to the verdict banner text) grade TRUE by vacuous condition when their banner is absent. Per-category scores aggregated by weight: 0.30 Orientation and delegation, 0.30 Verbatim re-presentation, 0.40 Verdict actions. Simple score also reported as TRUE/10 for transparency.",
+  "categories": [
+    {
+      "name": "Orientation & delegation",
+      "description": "Orient-lite precedes the verdict, the verdict is delegated to session-wrap --advise (never self-computed), and user-wrap authors zero triage logic of its own.",
+      "weight": 0.3,
+      "evals": [
+        {
+          "id": 1,
+          "statement": "The output opens with an orient-lite block BEFORE any verdict banner: a 'Resuming <Task>: <Status>' line plus the Next Action from this session's task state as task-handoff --resume resolves it. When that state is a fallback (the current.md rollup or the freshest session file), exactly one 'state: <source> — not this session's own; orientation only' line follows the block. A banner before orientation, a missing orientation block, or fallback state without the state-source line grades FALSE.",
+          "source": "skills/user-wrap/core.md § Step 1 — Orient-lite (read-only)",
+          "defect_type": "structural - orientation missing or after the verdict",
+          "result": null
+        },
+        {
+          "id": 2,
+          "statement": "The verdict is delegated, never self-computed: any '## <VERDICT>' banner is preceded by session-wrap --advise's triage line — 'triage: advise (would route <route>) | ...' — evidencing the delegated run. A banner with no advise triage line anywhere before it grades FALSE.",
+          "source": "skills/user-wrap/core.md § Step 2 — Delegate the verdict; skills/session-wrap/core.md § --advise",
+          "defect_type": "structural - verdict not delegated to session-wrap --advise",
+          "result": null
+        },
+        {
+          "id": 3,
+          "statement": "user-wrap authors zero triage logic: outside the re-presented --advise report (the advise triage line, the verdict banner, and the two loss-report lines), no line states a token threshold, context ceiling, staleness cutoff, or route-scoring rule as user-wrap's own reasoning ('well under the continue ceiling, so...', 'inside the staleness window, therefore...'). Any user-wrap-authored threshold or scoring prose grades FALSE.",
+          "source": "skills/user-wrap/core.md § Purpose and complete operating contract; § Step 2",
+          "defect_type": "anti-pattern - user-wrap computes its own triage",
+          "result": null
+        }
+      ]
+    },
+    {
+      "name": "Verbatim re-presentation",
+      "description": "The --advise banner + two-line loss report re-presented as the centerpiece: banner first, loss report immediately under it, nothing inserted, nothing paraphrased.",
+      "weight": 0.3,
+      "evals": [
+        {
+          "id": 4,
+          "statement": "The output carries exactly ONE verdict banner — a '## <VERDICT>' heading whose text is exactly one of 'KEEP GOING', 'RECYCLE WINDOW', 'WRAP & CLOSE', 'SAFE TO CLOSE' — with the two loss-report lines immediately under it, labeled exactly and in order: 'Already durable:' then 'Dies with this window:'. A missing, duplicate, or fifth-verdict banner, a missing or relabeled loss-report line, or ANY content inserted between the banner and the loss report grades FALSE.",
+          "source": "skills/user-wrap/core.md § Step 3 — Re-present the delegated report",
+          "defect_type": "structural - banner/loss-report block missing, malformed, or interrupted",
+          "result": null
+        },
+        {
+          "id": 5,
+          "statement": "The banner + loss report are re-presented unmangled from --advise: the loss-report lines keep concrete anchors (short SHAs, counts, paths, timestamps) consistent with the output's own reported facts (e.g. the triage line's git segment, when present), and 'Dies with this window:' reads exactly 'nothing' only when nothing is at risk. Hedged or summarized re-presentation ('recent work looks safe', 'some minor items') with the anchors dropped grades FALSE.",
+          "source": "skills/user-wrap/core.md § Step 3; skills/session-wrap/core.md § --advise",
+          "defect_type": "content - loss report paraphrased, anchors dropped",
+          "result": null
+        }
+      ]
+    },
+    {
+      "name": "Verdict actions",
+      "description": "Exactly one action keyed to the banner: KEEP GOING executes Next Action with no ask, RECYCLE WINDOW invokes bare /session-wrap, WRAP & CLOSE invokes /session-wrap --end, SAFE TO CLOSE stops with one line — and user-wrap itself never mutates state before the verdict.",
+      "weight": 0.4,
+      "evals": [
+        {
+          "id": 6,
+          "statement": "When the banner reads 'KEEP GOING': (a) if the orientation block carries a fresh plain Next Action from this session's own file (no fallback-source line and no 'no fresh task state' line), the output proceeds to execute it immediately after the loss report with NO confirmation ask; (b) if that own-file action is a locked task-handoff-next-action-v1 bundle, the output prints the bundle verbatim plus 'Locked bundle held (not executed by user-wrap).' and STOPS without executing it; (c) otherwise it prints the single line beginning 'Next Action not run:' and STOPS, executing nothing. An ask, a plain own-state run that stops without acting, a locked-bundle run that executes, or a fallback/stale/absent-state run that executes the Next Action grades FALSE.",
+          "source": "skills/user-wrap/core.md § Step 4 — Act on the verdict",
+          "defect_type": "conditional-behavior - KEEP GOING asks for confirmation or stops",
+          "result": null
+        },
+        {
+          "id": 7,
+          "statement": "When the banner reads 'RECYCLE WINDOW', the output invokes bare /session-wrap (which acts: its own triage line and routed action follow) — not --end, not a second --advise, not a bare suggestion to run it later. A missing or wrong invocation grades FALSE.",
+          "source": "skills/user-wrap/core.md § Step 4 — Act on the verdict",
+          "defect_type": "conditional-behavior - RECYCLE WINDOW wrong or missing invocation",
+          "result": null
+        },
+        {
+          "id": 8,
+          "statement": "When the banner reads 'WRAP & CLOSE', the output invokes /session-wrap --end automatically, without a confirmation ask. It closes with the exact plain line 'RAN SESSION-WRAP & SAFE TO CLOSE' only when session-wrap's Pick-up-here block is present, every Step D git-verb segment ends in a completed outcome ('repo-update completed + pushed @ <short-sha>', 'committed <N> files + pushed <M> commit(s) @ <short-sha>', 'nothing to commit', or 'pushed <N> pending @ <short-sha>'), and no checkpoint, commit, push, or /repo-update failure appears. If any segment reads 'ask-first pending' or a 'checkpoint not written' flag appears, no user-wrap line follows session-wrap's own final ask or re-run step. Otherwise (no segment reads 'ask-first pending' and no 'checkpoint not written' flag), an unrecognized segment, reported failure, or absent Pick-up-here block produces exactly one user-wrap line quoting the segment or error verbatim, no safety line, then STOP. Suggesting rather than invoking, asking first, claiming safety after a pending/unwritten/failed run, answering the ask, retrying, or invoking anything else grades FALSE. When the own-session Next Action is a locked task-handoff-next-action-v1 bundle, session-wrap's render must label it held data for the owning dispatcher and its screen/spawn opener must not instruct execution or flattening; turning that bundle into a generic executable Next Action grades FALSE.",
+          "source": "skills/user-wrap/core.md § Step 4 — Act on the verdict",
+          "defect_type": "conditional-behavior - WRAP & CLOSE never invokes /session-wrap --end",
+          "result": null
+        },
+        {
+          "id": 9,
+          "statement": "When the banner reads 'SAFE TO CLOSE', the output ends with a single closing line after the loss report stating everything is durable and the window can be closed — then STOPS: no /session-wrap or /task-handoff invocation, no git verb, no '## Pick up here' block, no render. Any invocation or action after a SAFE TO CLOSE banner grades FALSE.",
+          "source": "skills/user-wrap/core.md § Step 4 — Act on the verdict",
+          "defect_type": "conditional-behavior - SAFE TO CLOSE fails to stop",
+          "result": null
+        },
+        {
+          "id": 10,
+          "statement": "Steps 1-3 are read-only: no state write or git mutation is evidenced BEFORE the verdict banner — no 'Checkpoint written' line, no commit/push outcome, and no current.md or sessions/<session-id>.md write between orientation and the banner. Mutation evidence after the banner belongs to the delegated Step 4 action and is legal except under SAFE TO CLOSE. Any pre-banner mutation grades FALSE.",
+          "source": "skills/user-wrap/core.md § Steps 1-3",
+          "defect_type": "anti-pattern - mutation before the verdict",
+          "result": null
+        }
+      ]
+    }
+  ]
+}

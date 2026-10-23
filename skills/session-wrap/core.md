@@ -1,12 +1,11 @@
-# NOTE: This is the canonical provider-independent contract. Both provider wrappers must load it in full.
+# NOTE: This is the canonical provider-independent contract. Every provider wrapper must load it in full.
 
 # session-wrap core
 
 ## Intent continuity (drift-ranger)
 
-Follow [the intent continuity contract](../../_shared/intent-continuity.md).
+Follow the intent continuity contract at `<repo>/_shared/intent-continuity.md`.
 Preserve the private intent locator and capability gap via task-handoff. Closeout must distinguish implemented, isolated, available at the actual entry point, and user accepted. Never label an unobserved journey ready. Do not publish private intent through memory, issue or commit closeout.
-
 
 ## Purpose and complete operating contract
 
@@ -37,7 +36,7 @@ gets measured, one edit here moves them.
 | `CONTINUE_MAX_UTIL` | 60% | <=120k tokens | Below this and mid-task -> `continue` |
 | `CLEARNEXT_UTIL` | 60% | >120k tokens | At or near a task boundary -> `clear-next` |
 | `CLEARNEXT_FORCE_UTIL` | 75% | >150k tokens | Take the next boundary aggressively, regardless of task state |
-| (end-window) | — | — | No threshold. Operator intent only ("done", "end of day", explicit `--end`), or no agent-completable next action exists |
+| (end-window) | — | — | No threshold. Operator intent only ("done", "end of day", explicit `--end`), or no agent-completable next action exists (inside an active unattended work window, only after the closeout gate in Score rule 1) |
 
 Raw tokens are not a percentage: a percentage needs a model-aware window size, and
 extended (>200k) windows exist on this machine. When the window size is unknown, apply
@@ -49,20 +48,24 @@ present an assumed percentage as a measurement.
 
 ## Step 0 — triage: collect, score, announce
 
-**Read this session's own state first.** Before deriving any next action or route, read
-**this session's** `sessions/<session-id>.md` (the stable ID from the host session-I/O adapter;
-fallback to the derived `current.md` rollup, then the freshest session file — resolution +
-the per-session model are owned by the schema doc). Reading your OWN session file, not the
-shared `current.md` rollup, is what keeps a concurrent window's task from surfacing as this
-session's state. Absent file = no recorded task — it gets created on the first route write.
-That file plus git is the state; conversation prose is not. Every next action this skill
-writes or renders derives from it, never in parallel from prose.
+**Resolve and retain this session's authority first.** Resolve the executing session's stable
+ID from the host session-I/O adapter and read only its own `sessions/<session-id>.md` as task
+authority. Retain that ID and path through triage, both checkpoint calls, rendering and Next
+Action selection. The derived `current.md` rollup and every other session file may be read for
+orientation only: none can supply this session's Status, Next Action, edit set or plan, and no
+fallback value is ever promoted into a new own-session checkpoint. If a stable ID exists but
+its file does not, this session has no recorded task; the first route write may create the file
+only from facts established in this executing session and the caller-supplied exact Next
+Action. If the ID is unavailable, writes fail through task-handoff's preflight. This ownership
+rule prevents a concurrent window's task from surfacing as this session's state.
 
 Collect four signals:
 
-**(a) Context utilization.** Ask the host session-I/O adapter for the last top-level main-chain assistant usage record and sum its input/cache fields. The adapter must return exactly one unambiguous current-session record or ?unavailable?; it must never select another session by newest-file guess. When unavailable, print exactly `context signal unavailable - boundary-only triage` and use signals (b)?(d). Never fabricate a count or percentage.
+**(a) Context utilization.** Ask the host session-I/O adapter for the last top-level main-chain assistant usage record and sum its input/cache fields. The adapter must return exactly one unambiguous current-session record or "unavailable"; it must never select another session by newest-file guess. When unavailable, print exactly `context signal unavailable - boundary-only triage` and use signals (b)-(d). Never fabricate a count or percentage.
 
-**(b) Task-boundary state.** From the `current.md` read above: Status + Next Action.
+**(b) Task-boundary state.** From this session's own file read above: Status + Next Action.
+When that file is absent, treat task-boundary state as unknown; orientation fallback never
+establishes a boundary.
 Plus the active plan's step `**Status:**` lines (plan located per CLAUDE.md § Plan
 location — `plan.md`/`master_plan.md` at the project root or under
 `plans/`/`docs/`/`documentation/`; descriptor-contract §4), and whether the
@@ -78,7 +81,37 @@ branch, short SHA, dirty-file count, ahead-of-origin count.
 **Score — first match wins:**
 
 1. Operator intent ("done", "end of day", explicit `--end`), or no agent-completable
-   next action exists -> `end-window`.
+   next action exists -> `end-window`. Inside an active unattended work window, a lane
+   hold, a finished batch or a spent coordinator call allocation is NOT "no
+   agent-completable next action": the workspace's work-window closeout gate
+   (`docs/templates/progress-standard.md#unattended-window-closeout-gate`, senior per
+   the workspace instructions' Session wrap section) decides this clause, and this
+   skill only CONSUMES it. It never assesses lanes and never writes or refreshes the
+   window's record or any progress content.
+   - **Record and window detection.** The record is the `work_window` field of the progress
+     content file that this session's own state (the `sessions/<id>.md` read above) names — e.g.
+     `documentation/toolkit-progress-content.json`. This session is inside an active unattended
+     window when its own state records one, or when the named record's `action` is not
+     `inactive` and either the current instant is before its `end_utc` or that interval cannot
+     be read (an unknown verdict, which falls through). With neither, this rule is unchanged.
+   - **Evaluation (read-only, live instant).** Parse that file and pass its `work_window` object
+     to the gate's own `assess(window, now)` (`scripts/work_window_gate.py`) in process at the
+     current UTC instant, as `scripts/render-toolkit-progress.py` does — no scratch file, no
+     write. That Python runs under the standard's interpreter flags (at least `-B`), so it writes
+     no bytecode cache either. The standalone CLI (invocation owned by the progress standard)
+     takes a separate window file and replays `historical_stop` at the record's `observed_utc`.
+   - **Consumption.** Only a live `STOP_ALLOWED` routes `end-window` on this clause.
+     A `historical_stop` record is history and never a live stop approval (progress
+     standard), so it is not evaluated. It, `RESELECT`, `WAIT_RECHECK`, `CONTINUE`,
+     an evaluation that raises (the CLI's `INVALID`), any other verdict, and a record
+     that is missing or not evaluable read-only are unknown — never proof that no
+     work remains — and fall through to rules 2-4. `INACTIVE` (no unattended window
+     selected) leaves this rule unchanged — never against this session's own record
+     of an active window, which is unknown and falls through.
+   - An `--end` is honored as operator intent; a caller inside such a window applies
+     the same gate before passing it (workspace instruction). `--advise` does not
+     apply this gate (section below). With no workspace gate, this rule is
+     unchanged. The gate adds no prompt, no halt and no write.
 2. Utilization >= `CLEARNEXT_FORCE_UTIL` -> `clear-next` now (finish only the
    in-flight edit, not the task).
 3. Utilization >= `CLEARNEXT_UTIL` and at/near a boundary -> `clear-next`.
@@ -104,18 +137,30 @@ printed separately:
 
     Checkpoint written — continuing (<one-clause reason from the triage>).
 
-Nothing else — no summary, no rendered prompt, no wall of text.
+Nothing else — no summary, no rendered prompt, no wall of text. Compose that line only
+when the library returned its success line (`Checkpoint written.`). Any other library
+result is printed verbatim in its place — never a claimed checkpoint that was not
+written — and the route still ends there (no retry, no prompt).
 
 ## Route: `clear-next`
 
 Durable state to disk, then the git verb, then hand the operator `/clear`. Execute in
-this exact order — `current.md` first, render second, screen last:
+this exact order — own-session checkpoint first, render second, screen last:
 
-> **current.md durability contract: on-disk only (gitignored). Not in any git commit. Survives compaction via SessionStart hook re-injection.**
+> **Task-state durability contract: own session files and the derived `current.md` rollup are on-disk only (gitignored), never committed. The own file is authority; hook re-injection may use the rollup only for orientation.**
 
-1. **Write `current.md`** — invoke `task-handoff --loop --no-commit` via the Skill
-   tool (read-merge-write per the schema doc, which owns the per-field
-   append-vs-overwrite rules). Next Action = the exact command or skill invocation.
+1. **Write this session's checkpoint** — invoke `task-handoff --loop --no-commit` through the
+   host's skill-invocation adapter (read-merge-write per the schema doc, which owns the
+   per-field append-vs-overwrite rules). Next Action = the exact command or skill
+   invocation. Both checkpoint calls must resolve the same retained executing-session ID and
+   own path from Step 0; a changed or unprovable identity is non-success, never permission to
+   use fallback state. If the library does not return its success line, this turn's state is
+   not on disk: the route continues, but the digest carries the flag
+   `checkpoint not written (<library line>)`, step 4's render is skipped (a render of
+   the unwritten state would present the previous checkpoint as this turn's handoff,
+   and the resume hook prefers a newer render), and step 6 hands neither `/clear` nor
+   the fresh-window opener (Pick-up-here contract). Nothing on screen claims this
+   turn's write. No retry, no prompt, no halt.
    **No-regress clause:** the read-merge-write must never regress a Next Action that
    is already the exact next command from a boundary write made earlier this same
    turn/step (e.g. plan-expedite's `--next-task` write) — preserve it verbatim; the
@@ -124,20 +169,27 @@ this exact order — `current.md` first, render second, screen last:
    The route's own git verb (step 5) checkpoints code changes and plan `Status: DONE`
    lines only; `current.md` remains filesystem-only. Do NOT use `--next-task` here:
    its git behavior would duplicate the route's git verb.
-2. **Decisions log + salvage sweep** (section below) — bounded; results land in
-   `current.md` (§ Parked / Critical Gotchas) and the render, not on screen.
+2. **Decisions log + salvage sweep** (section below) — bounded. Collect it without writing
+   task state directly. If step 1 succeeded, pass its decisions and parked pointers through a
+   second `task-handoff --loop --no-commit` read-merge-write of this session's own file before
+   rendering. This is a library update, not a retry of step 1. If either checkpoint call is
+   non-success, flag `checkpoint not written (<library line>)`, make no direct session-file or
+   rollup write, and list any still-unsaved decisions/findings in the digest as
+   `unsaved with this window: <items>`.
 3. **Cheap memory subset only:** correct the project's MEMORY.md status pointer line
    if this session made it wrong, and park unfiled TODOs; the full
    memory/lessons/friction passes are end-window-only.
-4. **Render `handoff-prompt.md`** from `current.md` + the decisions log (rendering
-   contract below).
+4. **Render `handoff-prompt.md`** from this session's just-written own file + the decisions
+   log (rendering contract below) — skipped when either checkpoint call flagged
+   `checkpoint not written`.
 5. **Execute the git verb** — run the Git-verb router (section below): anomaly
    pre-flight, commit-owner decision, additive recommendation, one-line report.
    The router's base commit carries code changes and plan `Status: DONE` lines only;
    neither it nor a delegated `/repo-update` commit includes `current.md`.
 6. **Screen: the Pick-up-here block** (contract below), exact next command =
    `/clear`. The next window resumes via the SessionStart hook re-injecting
-   `current.md`.
+   this session's own state when the host retains its ID; otherwise the hook's fallback is
+   orientation-only and executes nothing.
 
 ## Route: `end-window`
 
@@ -217,7 +269,7 @@ This ask is the single sanctioned (y/n) gate in this skill. The checks:
 Trigger tests, one per check:
 
 1. **Foreign state file** — a hit whose plan path does not match this
-   session's active plan (from `current.md`'s Task / plan reference).
+   session's active plan (from this session's own file's Task / plan reference).
    Plan-mismatch or unknown = foreign = trigger.
 2. **ACTIVE foreign worktree** — a worktree beyond the main checkout whose
    branch tip committed within ~24h OR whose git index mtime is within ~24h
@@ -226,7 +278,7 @@ Trigger tests, one per check:
    failing both probes is stale: ONE digest note line, never an ask.
 3. **Cross-repo/foreign edits** — a modified TRACKED file outside this
    session's edit set. The edit set = the files the executor knows it edited
-   this session (its own history), corroborated by `current.md`'s Completed
+   this session (its own history), corroborated by this session's own file's Completed
    entries; Key Files is a CURATED subset (schema: populated only on notable
    discoveries), never the authoritative touched list. Untracked strays never
    fire — they are simply not added.
@@ -272,7 +324,7 @@ headings added/removed/renumbered, or step fields (Type / Depends on /
 Done when) edited; more than Status-line flips. Action: add ONE recommendation
 line to the digest —
 
-- plan-review ran this session (in `current.md` Completed or this
+- plan-review ran this session (in this session's own file's Completed or this
   conversation), or the plan carries a fresh review marker → recommend
   `/repo-sync`. Order guard: never repo-sync before plan-review
   (`.claude/rules/plan-and-issue-flow.md`).
@@ -281,35 +333,63 @@ line to the digest —
 
 **Step D — report.** One line total, one segment per touched repo,
 ` / `-joined. Invariant 3 owns the base segment shape (cross-reference, not
-restated); Step D appends only the verb outcome, ONE shared shape whichever
-Step-B path ran:
+restated); Step D appends exactly one of these verb outcomes:
 
-    <invariant-3 segment> — <repo-update | committed N files + pushed @ <short-sha> | nothing to commit | ask-first pending>
+- `repo-update completed + pushed @ <short-sha>` — only after `/repo-update`
+  positively reports its commit and push completed;
+- `committed <N> files + pushed <M> commit(s) @ <short-sha>`;
+- `pushed <N> pending @ <short-sha>` — a clean tree whose existing ahead commits
+  were successfully pushed;
+- `nothing to commit` — only when the tree is clean and the branch is not ahead;
+- `ask-first pending` — Step A withheld the verb;
+- `repo-update failed: <reason>; base action <completed outcome | failed outcome>`;
+- `commit failed: <reason>; nothing pushed`;
+- `commit created @ <short-sha>; push failed: <reason>`;
+- `pending push failed: <reason>`.
+
+The completed and pending outcomes are mutually exclusive. Never collapse a failed commit,
+failed push or incomplete `/repo-update` into `nothing to commit`, and never use bare
+`repo-update` as completion evidence.
 
 ---
 
 ## Rendering contract — `handoff-prompt.md`
 
-`<git-root>/.claude/task-state/handoff-prompt.md` is a **rendering of `current.md`
-plus the session's decisions log — never independently derived.** Every state field
-in it (task, status, next action, SHAs, key files, gotchas) comes from the
-just-written `current.md`; if the render needs a fact `current.md` lacks, write
-`current.md` first, then render. Write order on both routes: `current.md` -> render
--> screen. Lifecycle + staleness rows live in the schema doc.
+`<git-root>/.claude/task-state/handoff-prompt.md` is a **rendering of this session's
+just-written own file plus its decisions log — never independently derived and never sourced
+from the shared rollup.** Every state field in it (task, status, next action, SHAs, key files,
+gotchas) comes from that own file; if the render needs a task-state fact the file lacks, pass
+the update through `task-handoff --loop --no-commit` first, then render. Write order on both
+routes: own-session checkpoint -> render -> screen. Lifecycle + staleness rows live in the
+schema doc.
+
+The historical render path is shared, so every render binds itself to the retained identity
+with `Owner session: <session-id>` in its Identity section. Write the complete render
+atomically. The pointer line and every opener carry the same expected source-owner ID. A reader
+following that explicit operator-selected opener first compares the file's Owner session to the
+expected ID. A match authorizes that named handoff after its Git checks; absent or unequal
+means another window replaced the shared render, so the reader executes nothing from it and
+re-orients from the explicitly expected source file for recovery. This is distinct from an
+automatic hook/rollup fallback, which never authorizes a foreign Next Action. The owner check
+is part of the opener, not an optional prose hint.
 
 - **Untracked-on-purpose.** Session-local; never `git add` it. `current.md` remains
   durable on disk only (gitignored), and the `SessionStart` hook re-injects it after
   compaction or resume.
 - **Self-contained for a zero-context reader**, in this shape:
-  1. Identity — project name, working directory, one line on what it is.
+  1. Identity — `Owner session: <session-id>`, project name, working directory, one line on what it is.
   2. State — Status + one `HEAD @ <short-sha>` line per touched repo (invariant 3).
   3. Verify-first instruction (invariant 2, exact form below).
-  4. Next action — verbatim from `current.md`. If it is gated on human review, split
-     it into an **Investigate** block ending "post findings and STOP" and a separate
-     **After approval** block — never co-locate a gate and an action (a zero-context
-     reader executes a single block sequentially).
+  4. Next action — verbatim from this session's own file. A
+     `task-handoff-next-action-v1` bundle is rendered under
+     **Held Next Action bundle — data only; owning dispatcher required**, byte-for-byte,
+     followed by `Held bundle not executed or flattened by session-wrap.` It is never
+     placed under a generic executable Next Action heading. If a plain action is gated on
+     human review, split it into an **Investigate** block ending "post findings and STOP"
+     and a separate **After approval** block — never co-locate a gate and an action (a
+     zero-context reader executes a single block sequentially).
   5. Decisions log — N decisions = N bullets, rejected alternatives kept.
-  6. Key files + critical gotchas from `current.md`; parked/salvage pointers.
+  6. Key files + critical gotchas from this session's own file; parked/salvage pointers.
 - **No nested code fences anywhere in the render** (invariant 5): commands as
   2-space-indented plain lines, paths and inline code in single backticks.
 - **No flukes, no retry counts** (invariant 6).
@@ -328,7 +408,7 @@ run next is always the bottom of the output (operator contract, 2026-07-16):
 
     ## Pick up here
     <digest: <=6 lines>
-    Full handoff: .claude/task-state/handoff-prompt.md
+    Full handoff (owner <session-id>): .claude/task-state/handoff-prompt.md
 
     Step 1 — <label>:
     ```
@@ -342,8 +422,9 @@ run next is always the bottom of the output (operator contract, 2026-07-16):
 - **Digest (<=6 lines), then the pointer line, directly under the heading:** route +
   signal values; the git verb executed (repo, branch, SHA); memory/docs updates by
   name; invariant flags (`MEMORY.md over budget`, `friction catalog stale`, ...).
-  Exactly ONE pointer line to `handoff-prompt.md`. Everything longer lives in the
-  render, not on screen.
+  Exactly ONE owner-bound pointer line to `handoff-prompt.md` (its not-rendered variant when the
+  checkpoint was not written, bullet below). Everything longer lives in the render,
+  not on screen.
 - **One fenced code block per step; steps split at observation points** (per
   `command-presentation.md`): `/clear` is its
   own step; a `/model` reset is its own step; an atomic command pair (`/goal` +
@@ -356,23 +437,45 @@ run next is always the bottom of the output (operator contract, 2026-07-16):
   outside the fence, so the pasteable block stays verbatim (invariant 5). Pure
   window/harness steps (`/clear`, a `/model` reset) and pure dev-root/skill ops carry
   none.
+- **Checkpoint not written** (either route checkpoint call flagged non-success): the pointer line reads
+  `Full handoff: not rendered this turn (checkpoint not written)`, and the route
+  bullets below are replaced by ONE step run in this window — the same
+  `/session-wrap` invocation, flags included, re-run once the library line is
+  resolved — never `/clear` and never the fresh-window opener, because neither
+  this session's own file nor the render holds this turn's state. Same shape as
+  `ask-first pending` (no prompt, no halt); when a router segment also reads
+  `ask-first pending`, the ask response is the step (Git-verb router Step A). In
+  both shapes that step is the last thing on screen: a caller that re-emits or follows
+  this block appends no step and no closing line (no `SAFE TO CLOSE` claim) after it.
 - **`clear-next`:** a single step whose block is `/clear` (the SessionStart hook
-  re-injects `current.md` after the clear) — unless any router segment reads
+  resolves and re-injects this session's own file first after the clear; any rollup fallback
+  remains orientation-only) — unless any router segment reads
   `ask-first pending`; then the steps are replaced by the ask response (Git-verb
   router Step A), never a step past the open gate.
-- **`end-window` with a runnable Next Action pair** (the just-written `current.md`
+- **`end-window` with a locked `task-handoff-next-action-v1` bundle:** the bundle
+  remains data in the render. The single step is the owner-bound fresh-window opener,
+  but its final instruction is `preserve the held task-handoff-next-action-v1 bundle
+  byte-for-byte as data; report that its owning dispatcher is required; do not execute
+  or flatten it.` It never uses the generic `execute its Next Action` opener. This hold
+  applies equally to the on-screen block and the `--spawn` deep-link pointer.
+- **`end-window` with a runnable Next Action pair** (the just-written own session file
   Next Action is a paste-ready command pair, e.g. plan-expedite's `/goal` +
   `/build-phase`): Step 1 `/clear` (recycle this window; the hook re-injects state);
   then, ONLY when the session's model was explicitly overridden this session (for example,
-  a top-tier model for plan authoring — `/clear` keeps the window's session model), a
-  `/model <pinned-default>` step; then the FINAL step: the pair verbatim in one
-  block. The digest carries a one-line closed-window alternative:
-  `closing instead? fresh-window opener: Read <abs-path>\handoff-prompt.md fully, verify git state per its first instruction, then execute its Next Action.`
+  a top-tier model for plan authoring — `/clear` keeps the window's session model), or
+  when the pair is build-bearing (flows into `/build-phase` or `/build-step`) and this
+  is a Claude window running a fable-tier model (never recommend a build-bearing
+  command into a fable-tier window — `command-presentation.md`; Claude-only: other
+  hosts treat tier names as capability roles, so this condition never fires there),
+  a `/model <pinned-default>` step;
+  then the FINAL step: the pair verbatim in one block. The digest carries a one-line
+  closed-window alternative:
+  `closing instead? fresh-window opener: Read <abs-path>\handoff-prompt.md fully; require Owner session <session-id>, otherwise execute nothing and re-orient from the expected owner session file; then verify git state per its first instruction and execute its Next Action.`
 - **`end-window` without a runnable pair** (wait step, operator handoff, done-for-day
   with nothing paste-ready): the single step is the fresh-window opener, verbatim
   with an absolute path — never `/clear` (the SessionStart hook does not fire on
   plain startup, and nothing runnable follows the clear), e.g.
-  `Read .claude\task-state\handoff-prompt.md fully, verify git state per its first instruction, then execute its Next Action.`
+  `Read <abs-git-root>\.claude\task-state\handoff-prompt.md fully; require Owner session <session-id>, otherwise execute nothing and re-orient from the expected owner session file; then verify git state per its first instruction and execute its Next Action.`
 
 There is NO minimum length anywhere in this skill — no word-count floor for the
 digest, the render, or any block. Terseness and specificity are coupled constraints;
@@ -393,21 +496,32 @@ with this exact line:
     --spawn ignored (route was <route>, not end-window).
 
 Fire AFTER the Pick-up-here block is on screen — the baseline must exist whether or
-not the link works — via `code --open-url` (PowerShell; re-derived from stranded
-commit `1c241a7`, behavior verified 2026-06-22):
-
-Open the session in the host IDE or copy the session URI to clipboard. For VS Code +
-Claude Code hosts: `vscode://anthropic.claude-code/open?...`. For other hosts, surface
-the path to `current.md` and the next action so the operator can navigate manually.
+not the link works — and never when either route checkpoint call flagged `checkpoint not written`
+(the block carries no opener; report
+`spawn failed (checkpoint not written) - use the Pick-up-here block above`) or any
+Git-verb segment reads `ask-first pending` (the ask must remain the last actionable
+instruction; report `spawn failed (ask-first pending) - use the Pick-up-here block above`).
+On VS Code + Claude Code hosts, open the next window through the
+`vscode://anthropic.claude-code/open?...` deep link with `code --open-url` (PowerShell;
+re-derived from stranded commit `1c241a7`, behavior verified 2026-06-22). Other hosts
+have no deep link: never improvise one (no clipboard write, no other URI handler);
+surface the path to this session's own file (and the rendered handoff when available) and the next action so the operator can navigate
+manually, and report the spawn-failed status line below.
 
 For VS Code + Claude Code hosts, use:
 
     # --spawn deep link: try/catch because a missing `code` on PATH raises a
     # terminating CommandNotFoundException in PS 5.1 (an unguarded call would
     # die before the spawn-failed line could print)
+    $sessionId = '<retained-session-id>' # substitute the Step 0 retained ID before this invocation
+    $lockedBundle = '<retained-next-action-kind>' -eq 'locked-bundle'
     try {
         $gitRoot = (git rev-parse --show-toplevel).Trim() -replace '/','\'
-        $pointer = "Read $gitRoot\.claude\task-state\handoff-prompt.md fully, verify git state per its first instruction, then execute its Next Action."
+        if ($lockedBundle) {
+            $pointer = "Read $gitRoot\.claude\task-state\handoff-prompt.md fully; require Owner session $sessionId, otherwise execute nothing and re-orient from the expected owner session file; then verify git state per its first instruction; preserve the held task-handoff-next-action-v1 bundle byte-for-byte as data; report that its owning dispatcher is required; do not execute or flatten it."
+        } else {
+            $pointer = "Read $gitRoot\.claude\task-state\handoff-prompt.md fully; require Owner session $sessionId, otherwise execute nothing and re-orient from the expected owner session file; then verify git state per its first instruction and execute its Next Action."
+        }
         code --open-url "vscode://anthropic.claude-code/open?prompt=$([uri]::EscapeDataString($pointer))"
         if ($LASTEXITCODE -ne 0) { throw "code exited $LASTEXITCODE" }
         Write-Output "spawned next window - press Enter there"
@@ -455,9 +569,11 @@ Not a session summary. Two bounded passes:
    cannot re-derive; keep them.
 2. **Salvage sweep.** List knowledge that dies with this window: investigation
    findings written nowhere, seed docs worth creating, TODOs discovered but not
-   filed. Each item is either **written now** (if it takes <= a few minutes) or
-   **parked** as a pointer in `current.md` § Parked plus the project's MEMORY.md
-   entry. Nothing gets a third option.
+   filed. Each item is either **written now** outside task-state (if it takes <= a few
+   minutes) or submitted as a parked pointer through the route's second
+   `task-handoff --loop --no-commit` call. Never edit a session file or `current.md`
+   directly. If checkpointing failed, report each remaining item as unsaved in the
+   digest; do not claim durability. Nothing gets a hidden third option.
 
 ---
 
@@ -469,11 +585,13 @@ Explicit requirements — every `clear-next`/`end-window` run satisfies all that
    files BEFORE updating them; report what was read and the per-topic
    current/stale/absent verdicts before describing changes (full form in the
    end-window route).
-2. **Git-verify-first + SHA anchor.** The render states `HEAD @ <short-sha>` and its
-   verify-first instruction reads: *"First action — verify git state matches this
-   prompt: run `git log --oneline -5` and `git rev-parse --short HEAD`. If HEAD does
-   not match the SHA above, this prompt is stale — re-orient against actual git state
-   before doing any work."* (Saved prompts freeze a pre-execution view; git is the
+2. **Owner-and-Git-verify-first + SHA anchor.** The render states
+   `Owner session: <session-id>` and `HEAD @ <short-sha>`. Its verify-first instruction reads:
+   *"First action — require Owner session <session-id>; if absent or different, execute nothing
+   from this prompt and re-orient from the explicitly expected source file. Then verify git state: run
+   `git log --oneline -5` and `git rev-parse --short HEAD`. If HEAD does not match the SHA
+   above, this prompt is stale — re-orient against actual git state before doing any work."*
+   (Saved prompts freeze a pre-execution view; git is the
    only live state.)
 3. **Per-repo SHA lines in multi-project sessions.** Every touched repo gets its own
    ` / `-delimited status segment (name, branch, ahead-count, dirty state — e.g.
@@ -505,7 +623,7 @@ for exactly that. Any future edit to one side must re-check the other.
 - **`--end`** — operator intent made explicit: skip threshold scoring, route
   `end-window`. (`/task-handoff --end` delegates here.) An optional trailing
   free-text token (e.g. the plan path plan-expedite passes) is an advisory focus
-  hint only — every rendered next action still derives from `current.md`.
+  hint only — every rendered next action still derives from this session's own file.
 - **`--spawn`** — opt-in deep-link auto-open of the next window whenever the routed
   action is `end-window`: typically typed as `--end --spawn`, but bare `--spawn`
   also fires if triage itself routes `end-window`, and is otherwise ignored with the
@@ -525,12 +643,20 @@ For the returning operator who wants the triage verdict WITHOUT the action — "
 close this window without losing anything?".
 
 - **Same triage, plus a preview.** `--advise` runs Step 0 triage exactly as bare mode
-  does (same signals, same first-match-wins scoring) plus a READ-ONLY preview of the
+  does (same signals, same first-match-wins scoring; Score rule 1's work-window gate
+  excepted, next bullet) plus a READ-ONLY preview of the
   salvage sweep — what `end-window`'s sweep (section above) WOULD find: uncommitted
-  work, unpushed commits, un-checkpointed or git-inconsistent `current.md` state,
+  work, unpushed commits, un-checkpointed or git-inconsistent own-session state,
   findings and TODOs written nowhere. Freshness follows the staleness threshold owned
   by `task-state-schema.md`; consistency is
   Step 0's own Session-SHA-vs-HEAD signal.
+- **No work-window gate.** Score rule 1's unattended-window gate is not applied here:
+  `--advise` serves the operator who has returned to the window (its one skill caller
+  is `/user-wrap`, the sit-back-down front door), so the window is attended; and a
+  gated fall-through would read `KEEP GOING`, whose consumer executes the very Next
+  Action triage just judged not agent-completable. Inside an active unattended window
+  its `would route` can therefore read `end-window` where a bare run falls through;
+  the verdict mapping below is unchanged.
 - **Prints, then STOPS.** The report below is the entire output. Zero writes, zero
   git mutations: no `current.md` write, no render, no git verb, no `task-handoff` or
   `/repo-update` invocation, no Pick-up-here block, no `/clear` emission, no spawn.
@@ -548,7 +674,7 @@ segment marked as computed-not-acted:
 Then the report — one verdict banner plus a two-line loss report, nothing else:
 
     ## <VERDICT>
-    Already durable: <what is safe, with evidence - commits/pushes with short SHAs, current.md Last written timestamp + freshness verdict, Session SHA vs HEAD>
+    Already durable: <what is safe, with evidence - commits/pushes with short SHAs, own session file Last written timestamp + freshness verdict, Session SHA vs HEAD>
     Dies with this window: <each at-risk salvage-preview item with a count plus a path/SHA/identifier - or exactly `nothing` when the preview is empty>
 
 **The four verdicts** — exactly one banner per run, from this closed set:
@@ -558,7 +684,7 @@ Then the report — one verdict banner plus a two-line loss report, nothing else
 | `KEEP GOING` | Triage would route `continue`. |
 | `RECYCLE WINDOW` | Triage would route `clear-next`. |
 | `WRAP & CLOSE` | Triage would route `end-window` AND something would die with the window. |
-| `SAFE TO CLOSE` | `end-window` would be a NO-OP — ALL of: `current.md` fresh (schema-doc threshold) and consistent with git (Session SHA matches HEAD), clean tree in every touched repo, nothing unpushed/ahead anywhere, no armed `/goal`, salvage preview empty. |
+| `SAFE TO CLOSE` | `end-window` would be a NO-OP — ALL of: this session's own file is fresh (schema-doc threshold) and consistent with git (Session SHA matches HEAD), clean tree in every touched repo, nothing unpushed/ahead anywhere, no armed `/goal`, salvage preview empty. Fallback/foreign state can never prove this verdict. |
 
 The two end-window verdicts partition that route: every no-op condition holds ->
 `SAFE TO CLOSE`; any single failure -> `WRAP & CLOSE`, and the failing item IS the

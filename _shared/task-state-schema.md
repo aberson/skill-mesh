@@ -15,7 +15,8 @@
 > sign-off, recorded with the full list of link dispositions in this repository's Step 66
 > decision record, is the only class-level authority.
 
-**File:** `<project-root>/.claude/task-state/current.md`
+**Owned file:** `<project-root>/.claude/task-state/sessions/<session-id>.md`
+**Derived orientation view:** `<project-root>/.claude/task-state/current.md`
 **Template:** `.claude/task-state/current.md.template`
 
 ## Path resolution
@@ -26,7 +27,9 @@ which is deleted on cleanup. Writes inside a worktree are silently lost.
 
 ```powershell
 $gitRoot = git rev-parse --show-toplevel
-$statePath = "$gitRoot/.claude/task-state/current.md"
+# sessionId must already be established by the current host session identity contract.
+if (-not $sessionId) { throw "own session identity unavailable" }
+$statePath = "$gitRoot/.claude/task-state/sessions/$sessionId.md"
 ```
 
 ---
@@ -51,7 +54,11 @@ with **no mapping table needed**.
 **Fallback resolution order (hooks):** `session_id` from stdin → else
 `basename(transcript_path, ".jsonl")` → else (no stdin at all) fall back to the derived rollup /
 freshest session file rather than a session-specific read. Skills that cannot see a scratchpad
-path fall back the same way.
+path may read fallback state for orientation only. A fallback is never proof of this
+session identity: execute no Next Action and write, close, archive or release no session
+state based on it. Never promote fallback fields into a new own-session checkpoint.
+A child must not use an inherited parent identifier as its own; unsupported host identity
+resolution stays unavailable instead of minting or guessing an identifier.
 
 ---
 
@@ -188,28 +195,36 @@ Last written. These represent the current state, not history.
 **File:** `<git-root>/.claude/task-state/handoff-prompt.md` — written by `/session-wrap`'s
 `clear-next` and `end-window` routes.
 
-- **A rendering, not a source.** The file is a rendering of `current.md` plus the wrapping
-  session's decisions log — never independently derived. Write order: `current.md` is
-  read-merge-written first, the render second. If the render needs a fact `current.md`
-  lacks, `current.md` gets the fact first.
-- **Untracked-on-purpose.** Session-local; never committed. `current.md` remains the
-  committed durable state.
-- **Staleness:** `handoff-prompt.md` is stale whenever `current.md`'s `Last written` is
-  newer than the render — a stale render must never be trusted over `current.md`.
-- **Content contract** is owned by the `session-wrap` skill contract:
-  self-containment + shape under `§ Rendering contract — handoff-prompt.md`, the
-  invariants under `§ The six behavioral invariants`.
-- **Resume paths:** after `/clear`, the SessionStart hook injects `current.md`'s
-  Task/Status/Next Action; when a `handoff-prompt.md` newer than `current.md` exists, the
-  hook additionally injects a pointer to it (that hook wiring is spec until it lands, not live behavior). A fresh window (plain
-  startup — no hook fires) is opened via the Pick-up-here block's verbatim opener, which
-  points at this file by absolute path.
+- **A rendering, not a source.** Render the verified own-session file plus that
+  session's decisions log, never the derived rollup or a foreign file. Checkpoint
+  through task-handoff first; only its successful own-session write authorizes the
+  render. Facts learned later require another successful own-session checkpoint.
+  When checkpointing fails, report findings in the current conversation as unsaved;
+  do not bypass the failure with direct task-state writes.
+- **Untracked-on-purpose.** Both the source session state and render are gitignored;
+  neither is a committed durable project artifact.
+- **Staleness and ownership:** compare against the same verified own-session source,
+  not the freshest rollup. A newer source or mismatched owner invalidates a render.
+- **Content contract** is owned by session-wrap: self-containment, its rendering
+  contract and behavioral invariants. Retain the source session identity when
+  rendering and when handing off; a path or matching Git SHA alone proves no owner.
+  Atomically render the exact `Owner session: <session-id>` marker and bind every
+  pointer/opener to that same expected owner. A missing or mismatched marker means
+  execute nothing and re-orient from the explicitly expected source without
+  treating foreign/fallback state as current-session write authority. The shared
+  render pathname alone is never an executable handoff capability.
+- **Resume paths:** a hook with retained, verified own identity resolves that file
+  first after clear/resume. Missing or changed identity allows orientation-only
+  fallback; it never authorizes another session's Next Action. An explicit operator
+  handoff may identify its source, but a generic rollup injection cannot substitute
+  for that handoff. Hook/render wiring must be verified on the host; this schema
+  amendment does not itself deploy hooks or prove their behavior.
 
 ---
 
 ## Staleness threshold
 
-`current.md` is considered **stale** if `Last written` is more than **8 hours** before the
+A selected session file or fallback orientation view is considered **stale** if `Last written` is more than **8 hours** before the
 current UTC time. The SessionStart hook (`session-resume.ps1`) computes this and injects a
 stale-banner variant ("state is N hours old -- verify against git before trusting Next Action";
 ASCII `--` verbatim — the hook is ASCII-only, so grep gates must match `--`, not an em-dash)
@@ -230,9 +245,15 @@ model runs this backstop after any compaction (`/compact` or automatic) or `/cle
    freshest `sessions/*.md`). All timestamps are UTC ISO 8601 — compare against UTC now.
 2. If the file exists and `Last written:` is within **8 hours** (UTC — see the threshold above),
    read it immediately.
-3. Emit the resume echo (`Resuming <Task>: <Status> — next: <Next Action verbatim>`), sourced
-   from what was just read.
-4. Proceed with the next action — do NOT ask for confirmation.
+3. Retain whether the selected source belongs to this session's verified identity.
+   Emit the resume echo from that source, labeling fallback state as orientation-only.
+   A fallback read grants neither execution nor write authority and must not be promoted
+   into an own-session checkpoint. Report that no owned resumable action was found.
+4. Proceed without renewed confirmation only for a fresh, verified own-session plain
+   Next Action already authorized by the operator and permitted by its owning contract.
+   Never execute a fallback action. Preserve a `task-handoff-next-action-v1` bundle as
+   data, report that its owning dispatcher is required, and do not execute or flatten it.
+   A pending approval or failed prerequisite stays pending; an echo cannot clear it.
 
 If state is absent or stale (> 8 hours UTC), report `"No active task state found — starting
 fresh."` and ask what to work on. This backstop and the resume-echo behavioral rule are stubbed
@@ -242,9 +263,10 @@ in `CLAUDE.md` § Session Resume, which points here.
 
 ## Multi-level projects
 
-One `current.md` per directory level:
-- Workspace-level skills (running from `dev/`): write to `dev/.claude/task-state/current.md`
-- Project-level work (running from `dev/Alpha4Gate/`): write to `dev/Alpha4Gate/.claude/task-state/current.md`
+One session-state directory per Git root:
+- Workspace-level skills write only their own `dev/.claude/task-state/sessions/<id>.md`.
+- Project-level work writes only its own `<project-root>/.claude/task-state/sessions/<id>.md`.
+- The derive library alone regenerates each root's `current.md` orientation view.
 
 Path resolution (`git rev-parse --show-toplevel`) naturally returns the correct root for
 the active project when called from inside a project directory. Workspace-level work
