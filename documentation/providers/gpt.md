@@ -111,13 +111,16 @@ cross-provider retry (see [`../troubleshooting.md`](../troubleshooting.md)).
 
 GPT adapters support `filesystem`, `sub-agent`, and `vision`:
 
-- `sub-agent` fan-out skills (17 GPT-portable: build-step, citation-review,
-  citation-sweep, goblin-suggest, judge-ui, research-prospect, review-deep,
+- `sub-agent` fan-out skills (18 GPT-portable: build-step, citation-review,
+  citation-sweep, goblin-suggest, judge-ui, lesson-harvest, research-prospect, review-deep,
   review-gauntlet, skill-evolve, skill-iterate, test-prune, tier-escalate,
   tier-offload, user-brainstorm, user-debug, user-learn, user-uat) map fresh
   isolated arms onto the provider's
   action/task API; orchestration remains parent-owned. (context-slim and judge-motion are also
-  `sub-agent` but are Claude-native exclusions with no GPT adapter.)
+  `sub-agent` but are Claude-native exclusions with no GPT adapter.) The current
+  `lesson-harvest` adapter is packaged but its local preview halts
+  `required_tool_missing` because D-GPT provides no qualifying fresh-context proof;
+  automatic publication is unavailable in v2 on every provider.
 - `vision`: `judge-ui` uses native GPT vision (GPT-5.6 Sol) with the read-back +
   swap-and-tie calibration contract.
 

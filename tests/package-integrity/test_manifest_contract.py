@@ -122,9 +122,10 @@ def test_counts_match_fixture_and_array():
     assert derived["codex"] == 54
     # user-debug requires independent fresh-context diagnosis arms, so it is no
     # longer eligible for text-only local fallback and joins the sub-agent set.
-    # user-uat now requires isolated deep assessment and strong final visual review.
-    assert derived["local_capable"] == 22
-    assert derived["sub_agent"] == 19
+    # user-uat requires isolated deep assessment and strong final visual review;
+    # lesson-harvest requires a fresh strong privacy/disposition reviewer.
+    assert derived["local_capable"] == 21
+    assert derived["sub_agent"] == 20
     assert derived["vision"] == 2
     assert derived["filesystem"] == 57
 

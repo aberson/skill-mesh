@@ -420,7 +420,7 @@ Two independent tracks operate on the skills themselves and on the workspace's f
 /skill-iterate                                   # overnight serial hill-climb (1h or 12 iters per skill)
 
 # codify a lesson
-/lesson-harvest --dry-run                        # scan git history + run logs for un-codified regressions → draft PR
+/lesson-harvest --dry-run                        # zero-write, independently reviewed local preview; publication is unavailable in v2
 /memory-distill                                  # human gate: distill drafts into durable principles (the only memory writer)
 ```
 
@@ -429,7 +429,7 @@ Two independent tracks operate on the skills themselves and on the workspace's f
   nightly and hands plateaued skills back to `skill-evolve`; see each skill's `core.md`.)
 - `skill-evolve` and `skill-iterate` both require the evals folder `skill-eval-setup` creates.
 - Nothing self-approves: `skill-evolve` prints the PR command instead of opening it, `lesson-harvest`
-  only drafts, and `memory-distill` keeps a human at the write gate.
+  produces a reviewed local preview while v2 publication remains unavailable, and `memory-distill` keeps a human at the write gate.
 
 </details>
 

@@ -7,8 +7,8 @@
     "claude": 57,
     "gpt": 54,
     "codex": 54,
-    "local_capable": 22,
-    "sub_agent": 19,
+    "local_capable": 21,
+    "sub_agent": 20,
     "vision": 2,
     "filesystem": 57
   },
@@ -130,7 +130,6 @@
     "user-wrap"
   ],
   "local_capable": [
-    "lesson-harvest",
     "memory-distill",
     "observatory-doctor",
     "plan-feature",
@@ -161,6 +160,7 @@
     "goblin-suggest",
     "judge-motion",
     "judge-ui",
+    "lesson-harvest",
     "research-prospect",
     "review-deep",
     "review-gauntlet",
@@ -511,9 +511,10 @@
     {
       "name": "lesson-harvest",
       "status": "portable",
-      "local_capable": true,
+      "local_capable": false,
       "capabilities": [
-        "filesystem"
+        "filesystem",
+        "sub-agent"
       ],
       "migration": {
         "legacy_core": ".claude/skills-gpt/lesson-harvest/SKILL-core.md",

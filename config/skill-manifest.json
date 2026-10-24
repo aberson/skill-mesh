@@ -73,8 +73,8 @@
     "claude": 57,
     "gpt": 54,
     "codex": 54,
-    "local_capable": 22,
-    "sub_agent": 19,
+    "local_capable": 21,
+    "sub_agent": 20,
     "vision": 2,
     "filesystem": 57
   },
@@ -547,7 +547,7 @@
     {
       "name": "lesson-harvest",
       "status": "portable",
-      "description": "Scan git history and run-logs for un-codified regressions and draft candidates as a PR.",
+      "description": "Scan git history and recorded observations for un-codified regressions and produce an independently reviewed local preview.",
       "core": "skills/lesson-harvest/core.md",
       "providers": {
         "claude": "skills/lesson-harvest/providers/claude.md",
@@ -555,9 +555,10 @@
         "codex": "skills/lesson-harvest/providers/codex.md"
       },
       "capabilities": [
-        "filesystem"
+        "filesystem",
+        "sub-agent"
       ],
-      "local_capable": true,
+      "local_capable": false,
       "migration": {
         "legacy_core": ".claude/skills-gpt/lesson-harvest/SKILL-core.md",
         "legacy_claude_launcher": ".claude/skills/lesson-harvest/SKILL.md",

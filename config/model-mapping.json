@@ -31,8 +31,8 @@
   },
   "columns": {
     "default_model": "Provider to use when neither -Provider nor -Model is passed (legacy default-model column).",
-    "claude": "Claude variant exists and is functional (legacy claude-capable=Y).",
-    "gpt": "GPT variant exists and is functional (legacy gpt-capable=Y).",
+    "claude": "Claude adapter exists and the router may select it (legacy claude-capable=Y); runtime modes remain subject to the adapter's capability gates.",
+    "gpt": "GPT adapter exists and the router may select it (legacy gpt-capable=Y); runtime modes remain subject to the adapter's capability gates.",
     "local": "Can run on local code-30b, text-only, no vision/sub-agents (legacy local-capable=Y)."
   },
   "skills": {
@@ -145,8 +145,8 @@
       "default_model": "claude",
       "claude": true,
       "gpt": true,
-      "local": true,
-      "notes": "Ported - shared core + GPT/Claude wrappers"
+      "local": false,
+      "notes": "Ported - v2 offers reviewed local preview and record mode; automatic publication is unavailable. Preview requires a fresh independent privacy/disposition reviewer, so local fallback is unavailable; the current GPT adapter halts where its fresh-context proof is absent"
     },
     "memory-distill": {
       "default_model": "claude",
@@ -418,8 +418,8 @@
       "default_model": "claude",
       "claude": true,
       "gpt": true,
-      "local": true,
-      "notes": "Ported - shared core + GPT/Claude wrappers"
+      "local": false,
+      "notes": "Ported - local fallback unavailable for mandatory isolated assessment and strong visual/deep verdict paths"
     },
     "user-walkthrough": {
       "default_model": "claude",

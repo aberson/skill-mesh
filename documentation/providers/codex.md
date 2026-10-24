@@ -296,10 +296,20 @@ its own reported result, never a silently degraded one.
   per-artifact workers. Both adapters are capability-conditioned on the build-step
   agent-isolation contract and halt `required_tool_missing` before opening when the
   host cannot prove fresh siblings. Neither core has an in-context voting fallback.
-  (The `sub-agent` capability set in `config/skill-manifest.json` has 19
-  members, 17 of them codex-eligible. The gate
+  (The `sub-agent` capability set in `config/skill-manifest.json` has 20
+  members, 18 of them codex-eligible. The gate
   `tests/package-integrity/test_codex_capability_claims_honesty.py` derives its
   halt-gate subject set from that field rather than from any count written here.)
+- **Lesson harvest offers an audited local preview.** Its parent owns evidence reads,
+  in-memory candidate drafting, and a bounded repository-state audit. One read-only
+  strong reviewer gates the exact preview surfaces and final negative dispositions.
+  The adapter applies the installed build-step fresh-context contract: active-schema
+  inspection, a non-mutating no-inheritance probe, explicit `fork_turns="none"` (or a
+  semantically equivalent no-history mode), and one new direct sibling that is never
+  reused. It requests exact `gpt-5.6-sol` with high reasoning. A reported mismatch
+  halts; an unreported identity or effort is disclosed. Shared tools remain available,
+  so this is not OS isolation and the audit names its partial scope. Automatic
+  publication is unavailable in v2 and `--publish` halts in Phase 0.
 - **No router dispatch and no host auto-detection** — see the two sections below.
 - **The whole-catalog listing budget is the binding constraint.** Codex's initial
   skill list is capped at 2% of the selected model's context, or 8,000 characters

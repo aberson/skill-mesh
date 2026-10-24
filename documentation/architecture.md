@@ -176,7 +176,7 @@ each skill's legacy contract, not inferred from a single shared wrapper line.
 | Capability | Count | Skills |
 |---|---|---|
 | `filesystem` | 57 | all skills |
-| `sub-agent` | 19 | build-step, citation-review, citation-sweep, context-slim, goblin-suggest, judge-motion, judge-ui, research-prospect, review-deep, review-gauntlet, skill-evolve, skill-iterate, test-prune, tier-escalate, tier-offload, user-brainstorm, user-debug, user-learn, user-uat |
+| `sub-agent` | 20 | build-step, citation-review, citation-sweep, context-slim, goblin-suggest, judge-motion, judge-ui, lesson-harvest, research-prospect, review-deep, review-gauntlet, skill-evolve, skill-iterate, test-prune, tier-escalate, tier-offload, user-brainstorm, user-debug, user-learn, user-uat |
 | `vision` | 2 | judge-ui, judge-motion |
 
 The `sub-agent` set is derived by auditing every skill's contract for explicit
@@ -192,13 +192,15 @@ judge-ui "dispatches an independent vision-judge sub-agent"; research-prospect
 sub-agents, one per lens"; review-gauntlet "one fresh-context reviewer invocation
 for each lens"; skill-iterate "Dispatch ONE sub-agent" via a fresh-context task;
 test-prune "dispatch this phase as parallel Explore agents"; user-brainstorm /
-user-learn "one background sub-agent per file"; user-debug requires independent
+user-learn "one background sub-agent per file"; lesson-harvest requires a fresh strong
+reviewer before a local preview or any final negative disposition (automatic publication is
+unavailable in v2); user-debug requires independent
 fresh-context diagnosis arms; user-uat requires an isolated deep assessor and a
 separate strong-final visual judge. Skills that only spawn a *named
 skill* (e.g. build-phase → `/build-step`, build-queue → `/build-phase`,
 plan-expedite chaining) are **not** marked `sub-agent`.
 
-`local_capable: true` (24 skills) marks the text-only `code-30b` both-clouds-down
+`local_capable: true` (21 skills) marks the text-only `code-30b` both-clouds-down
 fallback path; it is authoritative hard data copied from the legacy mapping table
 (`model-mapping.md`, the `local-capable=Y` rows).
 
@@ -537,7 +539,7 @@ seam (defaults to this repository) that must be a git working tree.
 
 `tests/package-integrity/test_manifest_contract.py` fails on any of:
 
-- Skill count != 57, portable != 54, provider-native != 3, sub-agent != 19,
+- Skill count != 57, portable != 54, provider-native != 3, sub-agent != 20,
   vision != 2 (each set checked exactly against the committed
   `tests/package-integrity/expected_inventory.json` fixture — the package tests
   need no private source).

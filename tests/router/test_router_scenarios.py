@@ -83,6 +83,15 @@ def test_provider_local_selection():
     assert "local-capable:  True" in result.stdout
 
 
+@pytest.mark.parametrize("skill", ["lesson-harvest", "user-uat"])
+def test_mandatory_independent_review_skills_are_not_local_capable(skill):
+    """The router reads these booleans directly before its local execution path."""
+    result = _run(["-Provider", "local", "-Skill", skill, "-DryRun"])
+    assert result.returncode == 0, result.stderr
+    assert f"model-mapping.json lookup for '{skill}':" in result.stdout
+    assert "local-capable:  False" in result.stdout
+
+
 def test_explicit_provider_overrides_host_metadata():
     # CLAUDECODE present would auto-select claude, but explicit -Provider gpt wins.
     result = _run(

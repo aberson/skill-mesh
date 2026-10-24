@@ -27,9 +27,10 @@ never restates or reimplements it:
   - `tier-drift` — invoke [`/tier-escalate`](../tier-escalate/core.md) then
     [`/tier-offload`](../tier-offload/core.md) (both discovery-only; they write maps,
     never edit a skill), then diff the maps against live pins and report the deltas.
-  - [`/lesson-harvest --dry-run`](../lesson-harvest/core.md) — un-codified regressions
-    from recent history. **`--dry-run` is mandatory here:** bare lesson-harvest opens a
-    draft PR (mutating); afterparty runs it report-only.
+  - [`/lesson-harvest --dry-run --repo <workspace>`](../lesson-harvest/core.md) —
+    zero-write preview of un-codified regressions from recent history. The explicit
+    target is load-bearing: a conflicting `/user-project` pin makes lesson-harvest
+    stop `target_conflict` rather than silently scan another repository.
   - [`/context-slim`](../context-slim/providers/claude.md) — auto-loaded-context audit, bare
     (report-only by default).
   - `meta-tool-prune` — list the usage-logging meta-tools due for their periodic prune
@@ -86,7 +87,7 @@ afterparty's read of that contract, not a second copy of it.
 
 | Skill | Invocation | Bare default | Interactivity | Scope | Output |
 |---|---|---|---|---|---|
-| `lesson-harvest` | `/lesson-harvest [--dry-run] [--since <sha>]` | MUTATE (opens draft PR); `--dry-run` = report-only | **autonomous** | workspace | draft PR `memory/harvest-<date>` + `.claude/task-state/.last-harvest-sha` |
+| `lesson-harvest` | `/lesson-harvest --dry-run --repo <workspace> [--since <sha>]` | **REPORT** only; automatic publication is unavailable in v2 | **autonomous**, with its own independent privacy gate | workspace | gated stdout preview, or `required_tool_missing` when the host cannot prove a fresh reviewer; no report file, marker, branch, or PR |
 | `context-slim` | `/context-slim [--project <p>] [--apply]` | **REPORT** only | **autonomous** | per-project | stdout report; `--apply` edits-in-tree |
 | `memory-distill` | `/memory-distill` | mutate-on-approval, per round | **conversational** | per-project memory | edits `feedback_*.md` + `MEMORY.md` |
 | `test-prune` | `/test-prune` | REPORT until confirm | **conversational** | per-project | triage table → edits-in-tree on confirm |
@@ -209,7 +210,7 @@ fallback, and print `report persistence failed: workspace unresolved`.
 ### Step 1 — autonomous sweep (report mode), one consolidated report
 
 For each selected autonomous item, invoke it via the Skill tool and capture its output.
-Run these unattended; there are NO gates here. Set cwd to `<workspace>` (when resolved) before invoking the
+Run these unattended; afterparty adds no approval gate, while each child keeps its own required internal gates. Set cwd to `<workspace>` (when resolved) before invoking the
 workspace-wide items (`tier-drift`, `lesson-harvest`, `meta-tool-prune`), so each child's
 own cwd-relative discovery and default output location resolve at the workspace rather than
 inside whichever project cwd happens to be. Per-project items stay cwd-scoped to their
@@ -228,9 +229,13 @@ before Step 2 (a bare per-project call from `<workspace>` would audit the wrong 
   maps against the live pins and report the deltas (new/changed skills since the last
   cycle). Report-only — APPLYING any pin delta is a separate confirmed follow-up, never
   automatic.
-- **`lesson-harvest`** — invoke `/lesson-harvest --dry-run` via the Skill tool. The
-  `--dry-run` is load-bearing: it prints the report + the draft-PR body and creates
-  nothing. Capture the candidate count and the report pointer.
+- **`lesson-harvest`** — invoke `/lesson-harvest --dry-run --repo <workspace>` via
+  the Skill tool. The explicit repository must agree with any active project pin or
+  the child stops `target_conflict`; never drop `--repo` to route around that stop.
+  It prints the gated local preview and creates nothing. Capture the candidate count
+  and the child's status line from stdout; if its provider cannot prove a fresh sibling,
+  capture `required_tool_missing` as this item's visible result. There is no report file,
+  and afterparty never retries on another provider or silently retargets the repository.
 - **`context-slim`** — invoke via the Skill tool: bare for the current project, or —
   under `--all-projects` — once per active project with `/context-slim --project <p>`
   (never bare inside the loop; see the `--all-projects` targeting mechanism above).
@@ -655,7 +660,7 @@ Present the consolidated report as the centerpiece of the output:
 
     Autonomous (report):
     - tier-drift:      <delta summary + map pointer>
-    - lesson-harvest:  <N candidates (dry-run, nothing created) + report pointer>
+    - lesson-harvest:  <N candidates + gated status, or required_tool_missing (dry-run, nothing created)>
     - context-slim:    <top recommendations + report pointer>
     - meta-tool-prune: <tools due, or none>
 

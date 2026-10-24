@@ -146,7 +146,7 @@ CODEX = [
 # (citation-sweep is additionally excluded by construction: it is in SUB_AGENT below,
 # and sub-agent implies local_capable=false.)
 LOCAL_CAPABLE = {
-    "lesson-harvest", "memory-distill", "observatory-doctor", "plan-feature",
+    "memory-distill", "observatory-doctor", "plan-feature",
     "plan-init", "plan-merge", "plan-review", "plan-trim", "plan-wrap",
     "repo-init", "repo-sync", "repo-update", "review-proof", "review-uat",
     "skill-eval-setup", "user-draft", "user-gateway",
@@ -174,6 +174,7 @@ SUB_AGENT = {
     "goblin-suggest",    # "fan out --n-judges judge agent calls IN PARALLEL"
     "judge-motion",      # "separate sub-agent per transition" via Agent tool
     "judge-ui",          # "dispatches an independent vision-judge sub-agent"
+    "lesson-harvest",    # fresh strong reviewer gates public surfaces/dispositions
     "research-prospect", # "Fan out parallel Explore agents"
     "review-deep",       # "spawns six fresh-context sub-agents, one per lens"
     "review-gauntlet",   # "one fresh-context reviewer invocation for each lens"
@@ -240,7 +241,7 @@ DESCRIPTIONS = {
     "goblin-sweep": "List one project's discovered obligation atoms from the goblin engine and route to goblin-do.",
     "judge-motion": "Capture a UI transition as a slow-motion filmstrip and have a vision-judge render a PASS/FAIL/ESCALATE verdict on motion defects.",
     "judge-ui": "Drive a web UI through a flow, capture screenshots, and have a vision-judge render a verdict.",
-    "lesson-harvest": "Scan git history and run-logs for un-codified regressions and draft candidates as a PR.",
+    "lesson-harvest": "Scan git history and recorded observations for un-codified regressions and produce an independently reviewed local preview.",
     "memory-distill": "Review recent feedback memories one at a time and surface the principles they point at.",
     "observatory-doctor": "Health-check every dev-observatory launcher button and report which project verbs work.",
     "plan-expedite": "Chain plan-review, plan-wrap, repo-sync, and task-handoff into one prep step before build.",
