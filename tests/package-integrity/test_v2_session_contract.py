@@ -11,6 +11,13 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 EVALS_ROOT = REPO_ROOT / "skills" / "user-wrap" / "evals"
+# Expected host output is fixture data, not a dependency on a host source tree.
+SESSION_MARKERS = dict(
+    line.split("\t", 1)
+    for line in (REPO_ROOT / "tests" / "fixtures" / "session-output-markers.tsv")
+    .read_text(encoding="utf-8")
+    .splitlines()
+)
 
 
 def _read(relative: str) -> str:
@@ -266,9 +273,9 @@ def test_user_wrap_scenarios_and_goldens_use_own_session_state():
     golden = EVALS_ROOT / "golden"
     for name in ("good_recycle_window.md", "good_wrap_close.md"):
         rendered = (golden / name).read_text(encoding="utf-8")
-        assert "written file: .claude/task-state/sessions/<session-id>.md" in rendered
-        assert "regenerated derived rollup: .claude/task-state/current.md" in rendered
-        assert "written file: .claude/task-state/current.md" not in rendered
+        assert SESSION_MARKERS["owned_written"] in rendered
+        assert SESSION_MARKERS["derived_rollup"] in rendered
+        assert SESSION_MARKERS["legacy_written"] not in rendered
         assert "Owner session: <session-id>" in rendered
         assert "Full handoff (owner <session-id>)" in rendered
         assert "require Owner session <session-id>" in rendered
@@ -282,9 +289,9 @@ def test_completed_wrap_keeps_locked_bundle_as_data_through_render_and_opener():
     golden_path = EVALS_ROOT / "golden" / "good_wrap_close.md"
     golden_bytes = golden_path.read_bytes()
 
-    owned_prefix = b"===== written file: .claude/task-state/sessions/<session-id>.md (task-handoff read-merge-write excerpt) =====\r\n"
+    owned_prefix = SESSION_MARKERS["owned_prefix"].encode("utf-8") + b"\r\n"
     owned_suffix = b"\r\n===== end written file ====="
-    render_file_prefix = b"===== rendered file: .claude/task-state/handoff-prompt.md =====\r\n"
+    render_file_prefix = SESSION_MARKERS["render_prefix"].encode("utf-8") + b"\r\n"
     render_file_suffix = b"\r\n===== end rendered file ====="
     assert golden_bytes.count(owned_prefix) == 1
     assert golden_bytes.count(owned_suffix) == 1

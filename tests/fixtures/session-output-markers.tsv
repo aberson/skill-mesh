@@ -1,0 +1,5 @@
+owned_written	written file: .claude/task-state/sessions/<session-id>.md
+derived_rollup	regenerated derived rollup: .claude/task-state/current.md
+legacy_written	written file: .claude/task-state/current.md
+owned_prefix	===== written file: .claude/task-state/sessions/<session-id>.md (task-handoff read-merge-write excerpt) =====
+render_prefix	===== rendered file: .claude/task-state/handoff-prompt.md =====
