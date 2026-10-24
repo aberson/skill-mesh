@@ -124,7 +124,8 @@ For each row still `open`, choose exactly one disposition and record evidence:
   with concrete evidence (command output / observed result / `file:line`). Never a bare flip.
   Verification runs against the local working tree and disposable state. Never run an
   outward-facing or hard-to-reverse action to verify — a deploy, an external send, a `git push`,
-  a publish, a write or drop on non-disposable data, a real `goblin do` ship. Prefer the step's
+  a publish, a write or drop on non-disposable data, or a tool run that writes into a sibling
+  repository. Prefer the step's
   own `--dry-run`/preview; otherwise park the row per the STOP-not-guess rule with the action
   named. When reversibility or outward-facing-ness is unclear, treat it as outward-facing.
 - **Quick-fix in-tree → `fixed`.** If the item is a small, unambiguous defect and its candidate

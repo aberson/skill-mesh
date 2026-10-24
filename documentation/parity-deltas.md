@@ -461,6 +461,13 @@ BY CONSTRUCTION - nothing here has been observed on a real host yet; the M-step 
 confirm or contradict each row. Same columns as the Deltas table so a later pass can
 promote a row unchanged if it re-observes it.
 
+> **Historical Goblin rows (superseded 2026-10-23).** The `goblin-do` and
+> `goblin-suggest` rows below are preserved verbatim as dated authoring evidence and are
+> not current provider guidance. Present behavior is owned by their cores and Codex
+> adapters: `goblin-do` runs the deterministic read-only renderer through `uv` with no
+> Workflow, sub-agent, `claude` CLI, or OAuth; `goblin-suggest` maps no Codex Workflow
+> route and halts `required_tool_missing` before any Goblin command.
+
 Cohort C is the first cohort where the no-Agent-primitive mapping is NOT the pilot's
 single-context fallback: eleven of the sixteen are in the manifest's `sub-agent`
 capability set, and for nine of those eleven the core documents no single-context

@@ -98,8 +98,8 @@ not to a still-frame judge.
    audio/feel stay Human). There is no "Ungroundable" category. If a step can't be grounded or is
    ambiguous → stop, report it, and point at `/review-uat`.
 2. **Safety gate.** Tag each command read-only/preview, **reversible local mutation**, or
-   **destructive/outbound** (hard to reverse or crosses a trust boundary — e.g. a real
-   `goblin do` that auto-ships into a sibling repo, a deploy, an external send, a DB drop,
+   **destructive/outbound** (hard to reverse or crosses a trust boundary — e.g. a tool run
+   that writes into a sibling repo, a deploy, an external send, a DB drop,
    a `git push`, or starting a process that writes or sends anything externally). Auto-run the
    safe ones. Pause and confirm before every mutation by default. `--yes-side-effects` may
    pre-authorize only reversible mutations against an isolated local fixture/store. A
