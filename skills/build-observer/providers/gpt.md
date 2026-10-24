@@ -8,7 +8,7 @@ See [../core.md](../core.md) for the full specification.
 - Normalize GPT verbosity: do not reveal hidden chain-of-thought; return only required decisions, evidence, artifacts, commands, questions, and the core's closing report.
 - Resolve capability tiers with `config/model-tier-map.json`; explicit router overrides win.
 - Preserve the read-only contract exactly: no write to `registry.toml` or `snapshot.json`, and no `observatory scan`/`status` invocation.
-- Run the Step 5 validation call through a shell action and relay its stderr `KEPT`/`DROPPED`/`OMITTED` lines close to verbatim; stdout is the TOML snippet. Report both streams separately -- collapsing them loses the confident-vs-guessed distinction the redline exists to show.
+- Run the core's Step 5 launcher through a Windows PowerShell shell action as one command. Preserve its fixed offline flags, absolute paths, literal argument encoding, cwd restoration, and separate stdout/stderr capture. Relay every `[build-observer]` stderr line verbatim (`KEPT`/`DROPPED`/`OMITTED`, truncation notices, and registry and snapshot notes); stdout is the TOML snippet. Report both streams separately -- collapsing them loses the confident-vs-guessed distinction the redline exists to show. If the host lacks Windows PowerShell, return HELD rather than adding another dialect.
 - Never pass `--public` without `--public-reason` quoting the operator's own instruction.
 
 ## Known GPT limitations
@@ -18,4 +18,4 @@ See [../core.md](../core.md) for the full specification.
 
 ## Output normalization
 
-Return only the core-defined operator-facing output: the TOML snippet, the verbatim `KEPT`/`DROPPED`/`OMITTED` redline lines, any `[project.launch]` follow-up, and the nothing-was-written reminder. Preserve locked strings, field names, and ordering exactly; reject missing required fields instead of inferring success.
+Return only the core-defined four-part operator-facing output: the TOML snippet, the redline (every `[build-observer]` stderr line verbatim plus the core's other Step 6 redline items, including the one-line note on values that are not mechanically validated), any `[project.launch]` follow-up, and the nothing-was-written reminder. Preserve locked strings, field names, and ordering exactly; reject missing required fields instead of inferring success.

@@ -421,12 +421,12 @@ def test_build_file_counts_match_manifest(dist_root):
     # asserted at all. The shared term is a length, not a directory listing --
     # `test_shared_payload_matches_an_independent_closure_walk` is what proves the
     # SET, from a re-walk rather than from this literal.
-    # The trailing literals are the two reviewed package exceptions: + 4 review-deep
-    # resources (Phase CD) and + 2 build-step scripts (packet route P2,
-    # `test_build_step_resource_closure` proves that SET per profile).
+    # The trailing literals are the three reviewed package exceptions: + 4 review-deep
+    # resources (Phase CD), + 2 build-step scripts (packet route P2), and + 1
+    # build-observer validator. Their focused resource tests prove each exact SET.
     shared = len(EXPECTED_SHARED_PAYLOAD)
-    assert len(claude_files) == len(portable) * 2 + len(native) * 1 + 2 + shared + 4 + 2
-    assert len(gpt_files) == len(portable) * 2 + 2 + shared + 4 + 2
+    assert len(claude_files) == len(portable) * 2 + len(native) * 1 + 2 + shared + 4 + 2 + 1
+    assert len(gpt_files) == len(portable) * 2 + 2 + shared + 4 + 2 + 1
 
 
 # --------------------------------------------------------------------------- #

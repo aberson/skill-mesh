@@ -14,12 +14,12 @@ See [../core.md](../core.md) for the full specification.
 - Preserve the core's gates, retry limits, filesystem safety, and exact output contracts.
 - Use Claude session JSONL, scratchpad identity, Artifact actions, or VS Code deep links only where available and requested by the core.
 - Preserve the read-only contract exactly: never open `registry.toml` or `snapshot.json` for writing, never call `registry.upsert_entry`, and never run `observatory scan`/`status` (which would refresh the on-disk snapshot cache).
-- Run the Step 5 `uv run --project dev-observatory python .claude/skills/build-observer/scaffold_portfolio.py ...` validation call through the Bash tool, and relay its stderr `KEPT`/`DROPPED`/`OMITTED` lines close to verbatim -- that stderr IS the redline report, not a debug stream.
+- Run the core's Step 5 launcher through Claude's Windows PowerShell tool as one command. Preserve its fixed offline flags, absolute paths, literal argument encoding, cwd restoration, and separate stdout/stderr capture. Relay every `[build-observer]` stderr line verbatim (`KEPT`/`DROPPED`/`OMITTED`, truncation notices, and registry and snapshot notes) -- that stderr IS the redline report, not a debug stream.
 - Never pass `--public` without `--public-reason` quoting the operator's own instruction. The script hard-refuses the pair; this wrapper never supplies a reason the prose invented.
 
 ## Output normalization
 
-Return only the core's operator-facing report: the TOML snippet, the verbatim redline lines, any `[project.launch]` follow-up, and the nothing-was-written reminder. Preserve exact locked strings and field names.
+Return only the core's four-part operator-facing report: the TOML snippet, the redline (every `[build-observer]` stderr line verbatim plus the core's other Step 6 redline items, including the one-line note on values that are not mechanically validated), any `[project.launch]` follow-up, and the nothing-was-written reminder. Preserve exact locked strings and field names.
 
 ## Unsupported capabilities
 

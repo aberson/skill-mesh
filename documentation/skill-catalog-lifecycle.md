@@ -95,6 +95,7 @@ resource plan as a new grandfathering waiver:
 | `judge-ui` | `calibration-notes.md` | Authored in the pre-migration GPT tree; rescued into `skills/` at commit `72356fb` |
 | `review-deep` | a `config/`, `evals/`, and `scripts/` support tree | Authored at commit `e36a03e`, landed on `main` with RD-lite (issue #177) via merge `8a1b501` — the merge section 1 records as a prerequisite |
 | `build-step` | `scripts/build_step_tree.py` and `scripts/capture_evidence.py` | The P1 mechanics helper, and an LF copy of the legacy top-level package's capture script; reviewed packaging exception, packet route P2 |
+| `build-observer` | `scaffold_portfolio.py` | LF-normalized copy of the existing validator; reviewed scoped packaging exception for all three generated profiles |
 | `user-wrap` | `evals/` | Scoped repository-only evaluation plan in `user-wrap-source-evals.md`; not emitted or installed |
 | `user-gateway` | `evals/` | Scoped repository-only evaluation plan in `user-gateway-source-evals.md`; not emitted or installed |
 | `review-uat` | `evals/` | Scoped repository-only evaluation plan in `uat-source-evals.md`; not emitted or installed |
@@ -126,6 +127,18 @@ cites as `<skill-dir>/scripts/<leaf>`, with Python provenance inside each module
 missing input fails generation. Like Phase CD, this does not generalize `support_assets` into
 an emission protocol, does not reopen the grandfathered set, and authorizes no other package
 file.
+
+**Reviewed packaging exception: the `build-observer` validator.** The file in the table's
+`build-observer` row entered through a scoped resource plan for the 2026-10-23 isolated release.
+The distribution builder emits exactly `scaffold_portfolio.py` into every profile's
+`build-observer/` package, at the `<skill-dir>/scaffold_portfolio.py` path the core invokes, with
+Python provenance inside its module docstring; a missing input fails generation. This does not
+generalize `support_assets` into an emission protocol, reopen the grandfathered set, or authorize
+another package file. The coding-root Claude home may contain a foreign legacy helper: normal
+install must refuse that collision. Release qualification uses operator-owned relocation only after
+an exact hash check, preserves unrelated foreign sample/test files, and restores legacy helper bytes
+from the take-ownership backup after rollback. No unscoped `-Force` is routine or authorized without
+that check.
 
 **Scoped source-only resource plan: user-wrap evaluation assets.** The v2
 [user-wrap maintenance plan](user-wrap-source-evals.md) admits
