@@ -311,6 +311,14 @@ any write** with `PROVIDER_NATIVE_REVIEW_REQUIRED`. There is no flag, field, or 
 that grants provider-native authority — a future native exception requires an
 operator-approved architecture plan, which is a human decision and not an unattended waiver.
 
+**Approved scoped exception: the existing provider-native rebuild.** The operator-approved
+[provider-native rebuild plan](native3-provider-native-rebuild-plan.md) authorizes only its
+named adapter updates and separately gated resource work for the existing Claude-only
+identities. It does not make provider-native mutation routine: only the paths, behavior,
+review, and qualification gates in that plan are authorized, eligibility remains
+Claude-only, and every later native mutation still takes
+`PROVIDER_NATIVE_REVIEW_REQUIRED`.
+
 The catalog at the time of writing is 57 skills: 54 portable and 3 provider-native.
 
 ## 5. The five operations

@@ -642,6 +642,17 @@ LOCKED_CLAIMS = (
      "request shape that grants provider-native authority \u2014 a future "
      "native exception requires an operator-approved architecture plan, "
      "which is a human decision and not an unattended waiver."),
+    ('fact 3 - the approved provider-native exception is scoped', GUIDE_REL,
+     "Portable means a core", 'paragraph',
+     "**Approved scoped exception: the existing provider-native rebuild.** "
+     "The operator-approved [provider-native rebuild plan]"
+     "(native3-provider-native-rebuild-plan.md) authorizes only its named "
+     "adapter updates and separately gated resource work for the existing "
+     "Claude-only identities. It does not make provider-native mutation "
+     "routine: only the paths, behavior, review, and qualification gates in "
+     "that plan are authorized, eligibility remains Claude-only, and every "
+     "later native mutation still takes "
+     "`PROVIDER_NATIVE_REVIEW_REQUIRED`."),
     ('fact 4 - the gate order', GUIDE_REL,
      "recovery rule", 'fence',
      "normalize request -> verify Git checkout and resolve base_ref -> "
