@@ -366,7 +366,7 @@ def metric_cross_reference_resolution(
         }
 
     base = skill_md_path.parent
-    # Walk upward accumulating ALL .claude/projects/.../memory dirs from every
+    # Walk upward accumulating every per-project memory directory from every
     # ancestor — a workspace can have multiple project memory roots, and the
     # first ancestor hit may not contain the slug we're looking for.
     memory_dirs: list[Path] = []
