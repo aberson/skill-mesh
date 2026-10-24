@@ -1,6 +1,6 @@
 # Skill role taxonomy and isolated classification protocol
 
-> **Vendored shared payload.** Installed profiles carry this file under their discovery root's
+> **Vendored into skill-mesh.** Installed profiles carry this file under their discovery root's
 > `_shared` directory. Provider adapters bind host primitives; this document defines no
 > provider command, model ID, or discovery-root name.
 

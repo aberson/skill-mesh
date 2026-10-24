@@ -91,7 +91,8 @@ def test_comparison_reds_on_a_one_byte_drift():
     # Red-on-garbage anchor: the comparison the gate relies on must see a
     # single changed byte and must not see a pure line-ending difference.
     original = (REPO_ROOT / CANONICAL / SHARED_LEAF).read_bytes()
-    assert _normalized(original) == _normalized(original.replace(b"\n", b"\r\n"))
+    crlf = _normalized(original).replace(b"\n", b"\r\n")
+    assert _normalized(original) == _normalized(crlf)
     mutated = original.replace(b"headless", b"headfull", 1)
     assert mutated != original, "anchor mutation did not apply"
     assert _normalized(mutated) != _normalized(original)
