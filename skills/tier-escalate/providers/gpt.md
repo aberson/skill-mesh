@@ -1,20 +1,13 @@
 # tier-escalate - GPT entry point
 
-See [../core.md](../core.md) for the full specification.
+Load [../core.md](../core.md) in full before acting.
 
-## GPT invocation differences
+## GPT bindings
 
-- Load the core in full before acting. Use structured tool/action calls for filesystem, shell, browser, GitHub, and named-skill operations.
-- Normalize GPT verbosity: do not reveal hidden chain-of-thought; return only required decisions, evidence, artifacts, commands, questions, and the core's closing report.
-- Resolve capability tiers with `config/model-tier-map.json`; explicit router overrides win.
-- Map each independent Agent/Explore/workflow arm to a fresh-context GPT action/task call. Dispatch independent arms in parallel. GPT action nesting may be depth-limited: orchestration stays in this parent invocation, and child actions never spawn graders. If isolated actions are unavailable, return `required_tool_missing`; do not self-grade or serialize roles into one context.
-- GPT host limitation: Claude Agent/Workflow syntax is not portable. Use the host action/task API as the adapter, keep fan-out children single-shot, and consolidate in the parent. This port is functional only where fresh-context task calls are available.
+- Unless `--skills-dir` is explicit, set `discovery_root` to the parent of this loaded package: the active `.github/skills` discovery root. Do not hard-code or scan Claude's discovery tree.
+- Map `isolated_readonly_task` to a fresh no-history GPT action/task call with read-only filesystem access. Pin the ordinary fan-out capability through the current router/tier map, dispatch independent arms in parallel batches, and keep consolidation in the parent. Child actions never spawn graders.
+- Locate policy by walking cwd ancestors for `.claude/references/model-tiering.md`; an explicit `--policy` wins. A Claude-named policy file may govern workspace roles, but it does not prove GPT changed models. Report policy/source disagreement rather than translating it away.
+- Read the full generated package behavior: entrypoint plus linked core and adapter bodies. Do not classify discovery metadata or launcher prose alone.
+- Requested model, router choice, and tier-map resolution are not actual-model receipts. Report `UNKNOWN` absent a host execution receipt.
 
-## Known GPT limitations
-
-- Claude Artifact actions, Claude session JSONL/scratchpad paths, and Claude-only deep links are unavailable unless an explicit adapter supplies them. Use the core's standalone-file or durable-state fallback.
-- On timeout, rate limit, provider 5xx, parse failure, or missing required adapter, return the router reason code and consume at most the shared cross-cloud retry allowance. Never silently omit a core gate.
-
-## Output normalization
-
-Return only the core-defined operator-facing output and durable artifacts. Preserve locked strings, verdict enums, schemas, paths, command ordering, and retry limits exactly; reject missing required fields instead of inferring success.
+Claude Agent/Workflow syntax, session JSONL, Artifact actions, and model-switch commands are not portable. Use GPT task APIs and standalone files only. Preserve zero-write dry-run, evidence verification, verdict enums, artifact shape, and the exact closing line. If fresh isolated actions are unavailable, return `required_tool_missing: classification-fan-out`.

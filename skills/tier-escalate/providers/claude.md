@@ -6,18 +6,15 @@ user-invocable: true
 
 # tier-escalate - Claude entry point
 
-See [../core.md](../core.md) for the full specification.
+Load [../core.md](../core.md) in full before acting.
 
-## Provider-specific instructions
+## Claude bindings
 
-- Load the core in full before acting. Use Claude Code's Skill tool for named-skill calls and Agent/Workflow tools for isolated agents where the core requires those host abstractions.
-- Preserve the core's gates, retry limits, filesystem safety, and exact output contracts.
-- Use Claude session JSONL, scratchpad identity, Artifact actions, or VS Code deep links only where available and requested by the core.
+- Unless `--skills-dir` is explicit, set `discovery_root` to the parent of this loaded package: the active `.claude/skills` discovery root. Do not search `.agents/skills`, `.github/skills`, or a consumer home unrelated to the loaded entrypoint.
+- Map `isolated_readonly_task` to a fresh no-history Claude Agent/Explore invocation that has read-only tools. Pin every classification arm to the ordinary fan-out capability from the current workspace policy. Dispatch independent arms in parallel batches; never reuse a child or let it spawn graders.
+- Locate policy by walking from cwd toward the filesystem root for the nearest `.claude/references/model-tiering.md`. An explicit `--policy` wins. Absence is reported, not repaired.
+- Read each generated `SKILL.md` and its linked installed `core.md`; a launcher-only classification is invalid.
+- Reproduce operator model-selection instructions as target-host instructions. Do not call `/model`, edit settings, or claim this invocation changed the model.
+- Report an arm's actual model only from a host-supplied execution receipt. Otherwise report `UNKNOWN`.
 
-## Output normalization
-
-Return only the core's operator-facing report and structured artifacts. Preserve exact locked strings, verdict enums, and exit codes.
-
-## Unsupported capabilities
-
-If a required Claude host tool is unavailable, use the core's documented fallback; otherwise halt visibly with `required_tool_missing`. Never weaken a core gate.
+Preserve the core's zero-write dry-run, evidence verification, verdict enums, artifact shape, and exact closing line. If isolated read-only agents are unavailable, return `required_tool_missing: classification-fan-out`.

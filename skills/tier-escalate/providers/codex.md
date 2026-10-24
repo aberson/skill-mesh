@@ -1,20 +1,14 @@
 # tier-escalate - Codex entry point
 
-See [../core.md](../core.md) for the full specification.
+Load [../core.md](../core.md) in full before acting.
 
-## Codex invocation differences
+## Codex bindings
 
-- Load the core in full before acting and follow it verbatim. This wrapper only maps host abstractions; it never weakens a gate the core defines. The verdict enum, the per-agent row shape, the trigger requirement on CONDITIONAL, and the paste-ready-never-applied output rule stay exactly as the core states them.
-- Tier names in inherited procedures name capability ROLES. `config/model-tier-map.json` maps Claude tiers onto GPT peers and declares no Codex peer, so resolve a tier to the closest capability the configured Codex model actually provides; explicit router overrides win. If a required capability is unavailable, return `required_tool_missing` rather than weakening a gate.
-- Fresh-context dispatch is a runtime HOST capability, not a provider-wide Codex constant: apply the separate build-step agent-isolation contract before the first isolated arm, and a host that passes it may map the Phase 2 classification arms onto fresh sibling children. This core's classification constraint -- read-only fresh-context task invocations, every arm applying the SAME rules -- documents NO single-context fallback, so on a host that does not pass that contract, halt visibly with `required_tool_missing`, naming the Phase 2 classification fan-out as the core step that could not run. Do not classify the catalog in this session in its place.
-- The model-switch lines in the emitted map are OPERATOR instruction text about the target host; reproduce them exactly and never rewrite them to claim this host can switch models.
-- Normalize verbosity: do not reveal hidden chain-of-thought; return only required decisions, evidence, artifacts, commands, questions, and the core's closing report.
+- Unless `--skills-dir` is explicit, set `discovery_root` to the parent of this loaded package: the active `.agents/skills` discovery root. Never substitute `.claude/skills` or route native Codex through the GPT/Copilot transport.
+- Map `isolated_readonly_task` to fresh no-history sibling tasks with read-only access. Before the first arm, apply the host's established agent-isolation contract. Dispatch within available slots in independent batches; capacity changes scheduling only. No single-context fallback exists.
+- Resolve the ordinary fan-out capability from the loaded tier map and explicit host overrides. The map names capability roles; it does not establish a Codex model identity.
+- Locate policy by walking cwd ancestors for `.claude/references/model-tiering.md`; an explicit `--policy` wins. Preserve Claude-specific policy text as cited policy and report host/source disagreement instead of pretending Codex can execute Claude model-switch commands.
+- Read every generated entrypoint with its linked installed core and adapter bodies. Launcher-only classification is invalid.
+- Actual model is `UNKNOWN` unless the host returns a distinct execution receipt. Configuration, requested model, and this adapter are not receipts.
 
-## Known Codex limitations
-
-- Claude Artifact actions, Claude session JSONL/scratchpad paths, the Claude Agent/Workflow tools, and Claude-only deep links are unavailable unless an explicit adapter supplies them. Use the core's standalone-file or durable-state fallback where one is defined; never simulate the missing tool.
-- On timeout, rate limit, provider 5xx, parse failure, or missing required adapter, return the router reason code and consume at most the shared cross-cloud retry allowance. Never silently omit a core gate, and never emit an escalation map the classification fan-out did not actually produce.
-
-## Output normalization
-
-Return only the core-defined operator-facing output and durable artifacts. Preserve locked strings, verdict enums, schemas, paths, command ordering, and retry limits exactly; reject missing required fields instead of inferring success.
+Preserve zero-write dry-run, evidence verification, verdict enums, artifact shape, and the exact closing line. If the isolation contract or fresh sibling tasks are unavailable, return `required_tool_missing: classification-fan-out` and emit no map.

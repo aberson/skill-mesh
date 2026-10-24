@@ -1,117 +1,141 @@
-# NOTE: This is the canonical provider-independent contract. Both provider wrappers must load it in full.
-
-## Provider-neutral host abstractions
-
-- Resolve supporting assets and relative script paths against `.claude/skills/tier-escalate/`; the canonical prose lives here while implementation assets remain with the compatibility launcher.
-- A named skill call means the host's skill-dispatch primitive. A fresh-context task invocation or workflow means an isolated host action with the requested capability tier. Provider wrappers map these roles to their native APIs.
-- Tier names in this document are resolved to provider model IDs at runtime via `config/model-tier-map.json`. Do not hard-code provider-specific model strings. An unavailable required capability returns `required_tool_missing` rather than weakening a gate.
-- Never expose hidden chain-of-thought. Preserve only decisions, evidence, commands, structured artifacts, and operator-facing rationale required by this contract.
+# NOTE: This is the canonical provider-independent contract. Every provider adapter must load it in full.
 
 # tier-escalate
 
-Reads every `SKILL.md` under your `.claude/skills/`, classifies each skill's LLM-bearing roles with a fixed taxonomy, then applies the up-direction escalation rule to decide which (and only which) skills contain a phase worth escalating a *session* to the **fable-tier** (one tier above the opus-tier default). It emits one artifact: a human-readable **tier escalation map** (markdown, grouped by verdict) that tells the operator exactly when the fable-tier buys quality and when it only multiplies cost.
+Build a current, evidence-backed map of the skill phases that warrant a stronger model tier. The skill scans the active host's discovered skill packages, classifies their complete behavior, and emits an operator map. It never changes a model selection, a setting, an instruction file, or a skill.
 
-This is the UP-direction sibling of `tier-offload` (which finds the slices safe to route *down* to a cheap local model). It is **discovery + map only** — it identifies the escalation-worthy phases and their triggers; actually switching a session to the fable-tier stays a per-session operator action afterward. It never edits a skill or CLAUDE.md.
+## Host contract
 
-## When to use
+The provider adapter supplies these host bindings without weakening this core:
 
-- You want to know which of *your own* skills have a phase where escalating the session to the fable-tier buys real quality — and which would just double cost for the same output.
-- You want to regenerate the escalation map after adding or changing skills (the escalation surface drifts as skills evolve).
-- You want the CLAUDE.md model-paragraph escalation list regenerated from the current skill set as a paste-ready block, instead of hand-maintaining it and letting it drift.
+- `discovery_root`: the active host discovery root that contains this loaded skill package, unless the operator passed `--skills-dir`.
+- `isolated_readonly_task`: a genuinely fresh-context, read-only task invocation. It must not share producer reasoning or prior batch history.
+- `classification_tier`: the host capability corresponding to the workspace's ordinary fan-out tier. Resolve capability roles through the loaded profile's tier map when one exists. A configured or requested model is not an actual-model receipt.
+- `policy_locator`: the host-specific way to locate the nearest workspace model-tiering policy when the operator did not pass `--policy`.
 
-## Background — the up verdict rule (the fable-tier signature)
+If fresh isolated tasks are unavailable, stop with `required_tool_missing: classification-fan-out`. Do not classify in the parent context and do not serialize multiple classifier roles through one context.
 
-The escalation's one governing rule (the operator's tiering policy, encoded from the 2026-07-09 42-skill scan): **escalate a session to the fable-tier only for a single load-bearing seed-artifact — a phase whose one output is the deliverable's quality ceiling AND where a diversity committee (parallel reviewers/iterations) cannot substitute for a stronger single reasoner.** The three canonical seed-artifact shapes: greenfield architecture authoring (`plan-init`), hard root-cause diagnosis (`user-debug`), deep multi-source cited synthesis (`deep-research`). Everywhere reviewer/iteration DIVERSITY carries quality (the review-*, build-*, skill-* pipelines), opus-tier orchestration + sonnet-tier fan-out stays — a stronger model there adds cost, not quality.
+Never expose hidden chain-of-thought. Preserve only decisions, cited evidence, artifacts, commands, and the report required below.
 
-The policy owner is the workspace model-tiering rule (`.claude/references/model-tiering.md`; the `CLAUDE.md` `## Environment` model paragraph is its stub), with long-form provenance in the `user-model-preference` memory. This skill *derives* a map from the current skill set against that policy; it never becomes the policy.
+## Invocation
 
-### Taxonomy + classification protocol — shared reference
+```text
+/tier-escalate [--skills-dir <path>] [--out-dir <path>] [--policy <path>] [--dry-run]
+```
 
-Classification follows `<repo>/_shared/skill-role-taxonomy.md`: its **§1 taxonomy** (the seven tags — ORCH / AUTHOR / PLAN / JUDGES / GATE / MECH / SOLO — plus the tag boundaries), its **§2 fan-out classification protocol**, and its **§3 output shape**. That reference is direction-neutral; this skill layers the up-direction (escalation) rules on top: the four up-corrections below and the FABLE-SEED / STAY / CONDITIONAL verdict columns added in Phase 2.
+Defaults:
 
-### The four up-corrections (apply them — a naive "hard skill → stronger model" read is wrong)
+- `--skills-dir`: the adapter's `discovery_root`.
+- `--out-dir`: `./tier-escalate-out` relative to the invocation cwd.
+- `--policy`: the adapter's nearest model-tiering policy, when one exists.
 
-1. **Fan-out arms are NEVER fable-tier.** Arms use the sonnet-tier; diversity beats per-arm strength. A JUDGES array, a reviewer committee, or parallel dev retries get their quality from *independent perspectives* — escalating the arms multiplies cost with no ceiling gain. Escalation applies to a solo seed phase, never to an array. (A **solo named-trigger diagnosis arm** — one read-only sub-agent, one sanctioned trigger, at most one spawn per run, e.g. build-step's Step 9 phone-a-friend arm — is a sanctioned seed-artifact shape under the workspace model-tiering rule, not a fan-out arm; arrays remain never-fable.)
-2. **Do NOT fan out single-mind synthesis to get it "for free".** A synthesis phase that must hold one coherent voice/judgment (e.g. `memory-distill`'s final latent-principle consolidation step) is a SOLO/GATE-shaped *candidate for escalation*, not for parallelization. Splitting it across arms destroys the coherence that made it valuable; the correct question is "does this one pass warrant a stronger reasoner?", never "can we committee it?".
-3. **Conditional escalations must NAME THEIR TRIGGER.** An escalation that applies only sometimes (e.g. a large cross-cutting `plan-feature`, a deep-conflict 3+ `plan-merge`, a high-stakes substrate/schema `review-deep`) is only actionable if the map states the concrete trigger condition. "Escalate when it feels big" is not a verdict — a CONDITIONAL row without a stated trigger is incomplete and must be resolved to FABLE-SEED, STAY, or a named trigger.
-4. **Session escalation cascades into unpinned arms — check the dispatch layer.** Invoking the host's model-switch primitive or restarting with the fable-tier configured changes the model for EVERY fresh-context task/workflow arm a skill dispatches unless the skill pins its arms explicitly to a tier. A FABLE-SEED verdict for a skill that fans out is only actionable if its arms are pinned to the sonnet-tier; otherwise the map row must carry an **`arms-unpinned`** flag and its how-to-apply becomes "pin the arms first, then escalate." (Evidence 2026-07-12: `/deep-research` on a fable-tier session ran 104/104 workflow tasks on the fable-tier — ~101 were fan-out arms; ~5x cost plus a session-limit blowout mid-run. Fixed by the owned override `deep-research-pinned` (canonical `dev/.claude/workflows/deep-research-pinned.js`, deployed per-project into `<project>/.claude/workflows/`), which pins search/fetch/verify arms to the sonnet-tier and lets only scope+synthesize inherit. Note the distinct name: built-ins silently shadow same-named local workflows, so a local `deep-research.js` would never resolve.)
+Parse and validate all arguments before any output setup. Unknown flags, missing values, a missing skills directory, or an unreadable explicit policy are input errors and stop before classification or writes.
 
-## Phase 1 — Bootstrap: discover the skill set
+## Safety and mode contract
 
-Parse args. Resolve `--skills-dir`:
-- If given, resolve to an absolute path.
-- Default: walk up from cwd to the innermost ancestor containing a `.claude/skills/` directory; use that.
+| Mode | Reads | Isolated classification | Creates output directory | Writes map |
+|---|---|---|---|---|
+| normal | yes | yes | immediately before artifact write | yes |
+| `--dry-run` | yes | yes | **no** | **no** |
 
-Enumerate the skill set per the shared reference's §2 steps 1–2 (Glob discovery, skip non-skill entries, `ls` the matched filenames before quoting any into a sub-agent prompt).
+Dry-run is a true zero-write preview for declared task outputs. It does not create the output directory, a temporary file, a cache, or a receipt. It prints the complete proposed map in the report and labels the artifact `not written (dry-run)`. Host transcript storage outside the task's declared outputs is not attributed to this skill.
 
-Resolve `--out-dir` (default `./tier-escalate-out`). Create it if absent (PowerShell: `New-Item -ItemType Directory -Force <path>`) — skip creation under `--dry-run`.
+Normal mode writes only `<out-dir>/escalation-map.md`. Create the output directory only after classification and synthesis succeed. Never edit a discovered package, workspace instructions, model settings, or live host profiles. Never commit, push, install, or switch a session model.
 
-Print the discovery line before analysis: the resolved skills dir, the count of skills found, and the out dir.
+## Governing escalation rule
 
-## Phase 2 — Parallel classification (read-only fresh-context fan-out)
+Recommend a stronger session tier only for a single load-bearing seed artifact whose quality sets the deliverable's ceiling and for which a diversity committee cannot substitute. Typical shapes are greenfield architecture authoring, hard root-cause diagnosis, and deep cited synthesis.
 
-Run the shared reference's **§2 fan-out classification protocol** exactly (read-only fresh-context task invocations using the sonnet tier (resolve via model-tier-map.json) per the reference §2, 6–8 skills per batch, all of a batch's tasks dispatched in one message, the §1 taxonomy verbatim in every task's prompt, read-only/classify-only discipline), with these up-direction additions:
+Apply all four corrections:
 
-- Each agent's prompt must include — besides the reference's §1 taxonomy verbatim, per the reference's own protocol — the **four up-corrections** verbatim (above). Every agent must apply the SAME rules, or the map drifts per-batch.
-- Each agent extends the reference's §3 output shape with the up-direction verdict columns, returning per skill: `Skill | Roles (tags) | Verdict (FABLE-SEED / STAY / CONDITIONAL) | Seed-artifact phase (if FABLE-SEED) | Trigger (if CONDITIONAL) | Arms pinned? (yes / no / n-a) | Note`, where **Verdict** is:
-  - **FABLE-SEED** — the skill contains a single load-bearing seed-artifact phase (SOLO / AUTHOR / PLAN / GATE-shaped, never a JUDGES array) whose one output is the deliverable's quality ceiling AND where a diversity committee cannot substitute for a stronger single reasoner. Name the specific phase (e.g. "greenfield plan.md authoring pass", "Step 1 root-cause diagnosis").
-  - **STAY** — quality is carried by diversity/iteration (JUDGES arrays, multi-lens reviewers, dev retries) or the work is templated/mechanical; opus-tier orchestration + sonnet-tier fan-out. A stronger model adds cost, not quality.
-  - **CONDITIONAL** — the seed-artifact shape appears only under a nameable condition. State the concrete trigger (up-correction 3); a trigger-less CONDITIONAL is invalid.
-- For each FABLE-SEED verdict, require the specific seed-artifact phase; for each CONDITIONAL, require the concrete trigger.
-- For each FABLE-SEED or CONDITIONAL verdict, additionally require the **arms-pinned check** (up-correction 4): does the skill dispatch subagents/workflow arms at all, and if so are those arms explicitly `model:`-pinned in the skill/workflow source? `yes` = pinned, `no` = dispatches unpinned arms (flag `arms-unpinned`), `n-a` = the skill dispatches no arms. STAY rows may leave this column `n-a`.
+1. A parallel reviewer, grader, search, or retry array is never the stronger-tier target. Diversity carries its quality. A single named-trigger diagnosis arm may be a seed phase; an array may not.
+2. A synthesis that must preserve one coherent judgment is a SOLO/GATE candidate. Do not relabel it as a cheap fan-out merely because parallelism is available.
+3. `CONDITIONAL` requires a concrete trigger an operator can check before the phase starts. A trigger such as "when it feels big" is invalid.
+4. A session escalation can cascade into unpinned child arms. Any candidate that dispatches arms must prove those arms are explicitly pinned to the ordinary fan-out tier. Otherwise mark `arms-unpinned` and require pinning before escalation.
 
-Collect every agent's table before Phase 3.
+The map is derived from both this fixed rule and the current policy source. When a located policy disagrees with the skill source or with this fixed rule, report the disagreement with citations. Do not silently choose one, rewrite policy, or claim that changing the current session repairs it. If no policy source is available, say `policy comparison: unavailable`; do not invent a path or current setting.
 
-## Phase 3 — Synthesize the tier escalation map
+## Phase 1: discover complete skill packages
 
-Merge all agent tables into one map, grouped by verdict:
+1. Resolve `skills_dir` and list the matched package entrypoints before forming task prompts.
+2. Discover exactly `<skills-dir>/*/SKILL.md`; skip directories without `SKILL.md`.
+3. For every entrypoint, resolve its local Markdown links that define behavior, including its shared `core.md` and provider adapter when present. Read the entrypoint and every required linked behavior body. Classification of the generated launcher or entrypoint alone is invalid.
+4. Reject a package whose entrypoint cites a required behavior body that is missing, escapes the discovery root, or cannot be read. Report `required_skill_body_missing` with the entrypoint and link; do not infer its behavior.
+5. Record the resolved entrypoint and behavior-body paths in the classification input inventory.
 
-1. **The fable-tier-worthy table** — FABLE-SEED skills only: `Skill | Seed-artifact phase | Why a committee can't substitute | Arms pinned? | How to apply`. The how-to-apply column is the same session pattern: **invoke the host's model-switch primitive or restart with the fable-tier configured, run the seed phase, then return to the default tier** — EXCEPT for `arms-unpinned` rows, where it becomes **pin the skill's fan-out arms to the sonnet-tier first, then escalate**; a session escalation on an unpinned fan-out multiplies cost across every arm (up-correction 4). This is the load-bearing output.
-2. **Conditional escalations** — `Skill | Trigger | Phase | How to apply`. Each row's trigger must be concrete enough to check at session start (up-correction 3). Note where the escalation is a flag rather than a session switch (e.g. `review-deep --model-override bugs=fable`) — and verify the target skill's flag actually accepts that tier before emitting it as the how-to-apply; if it doesn't yet (review-deep's tier enum is `haiku|sonnet|opus` today, #289), annotate the row and give "invoke the host's model-switch primitive or restart with the fable-tier configured" as the working fallback.
-3. **Everything else stays opus-tier + sonnet-tier** — bulleted list of STAY skills, each with its one-line reason (which diversity mechanism or mechanical shape carries its quality).
+Print one discovery line containing the resolved skills directory, skill count, output directory, mode, and policy source or `unavailable`.
 
-Optionally append a **paste-ready CLAUDE.md section**: a regenerated version of the model paragraph's escalation list (the FABLE-SEED trio + the conditional triggers), clearly marked as PASTE-READY — this skill only *regenerates* the block; it is never auto-applied to CLAUDE.md. The operator diffs it against the live paragraph and pastes if it has drifted.
+## Phase 2: fresh isolated classification
 
-Write the map to `<out-dir>/escalation-map.md`. Lead it with a one-paragraph summary: N skills scanned, F fable-tier seed phases found, C conditional escalations, and the date. Skip the write under `--dry-run` (print the map body to the report instead).
+Batch roughly 6-8 skills per classifier, bounded by host capacity. Dispatch independent classifiers concurrently where the host supports it. Capacity may change batching, never isolation or completeness.
 
-## Phase 4 — Report
+Load `<repo>/_shared/skill-role-taxonomy.md` in full, resolving its emitted relative path from this loaded package, never from `--skills-dir`. If missing or unreadable, stop with `required_tool_missing: role-taxonomy` before any classifier dispatch or write. Run its complete-package
+discovery and isolated-classification protocol. Every classifier receives:
 
-Print a summary (do not truncate):
+- the exact entrypoint and behavior-body paths for its batch;
+- that shared reference's section 1 taxonomy and tag boundaries verbatim;
+- the four corrections above verbatim;
+- the same output schema below;
+- an instruction to remain read-only and cite path plus heading or line evidence for every nontrivial claim.
+
+Each classifier returns exactly one row per skill:
+
+```text
+Skill | Roles | Verdict | Seed phase | Trigger | Arms pinned | Evidence | Note
+```
+
+Verdicts:
+
+- `FABLE-SEED`: one named seed-artifact phase satisfies the governing rule.
+- `CONDITIONAL`: that named seed shape exists only under a concrete named trigger.
+- `STAY`: diversity, iteration, or mechanical execution carries quality.
+
+`FABLE-SEED` requires a seed phase. `CONDITIONAL` requires both a phase and trigger. `Arms pinned` is `yes`, `no`, or `n-a`; a skill that dispatches arms cannot use `n-a`. Evidence must cite the complete behavior body, not only `SKILL.md` frontmatter or launcher prose.
+
+Each task also reports `actual model: <receipt value | UNKNOWN>`. Requested tier, adapter configuration, or model-map resolution is not a receipt. The parent reports `UNKNOWN` when the host supplies no actual-model receipt.
+
+## Phase 3: verify and synthesize
+
+Before accepting a `FABLE-SEED` or `CONDITIONAL` row, the parent reopens every cited behavior body and verifies the seed phase, trigger, dispatch shape, and arm pin. A missing or contradicted citation becomes `STAY` with note `classification evidence not verified`; it never becomes a positive escalation by inference.
+
+Create a map with:
+
+1. `## Stronger-tier seed phases`: `Skill | Seed-artifact phase | Why diversity cannot substitute | Arms pinned | How to apply | Evidence`.
+2. `## Conditional escalations`: `Skill | Trigger | Phase | How to apply | Evidence`.
+3. `## Stay on the default orchestration tier`: every other skill with its diversity or mechanical reason.
+4. `## Policy comparison`: source path or unavailable, current-policy agreements, and cited policy/source disagreements.
+5. `## Classification receipts`: batch identifier, input package names, and actual model receipt or `UNKNOWN`.
+
+For a positive row with pinned or no arms, `How to apply` says to use the target host's operator model-selection mechanism for the seed phase and then restore the workspace default. For `arms-unpinned`, it says `pin fan-out arms to the ordinary fan-out tier before any session escalation`. These are operator instructions, never claims that the current host changed its model.
+
+An optional paste-ready policy block may be included, clearly labeled `PASTE-READY — NOT APPLIED`. It contains only verified seed rows and triggers.
+
+Lead the map with the scan count, positive and conditional counts, mode, policy source, and date.
+
+## Phase 4: persist and report
+
+In normal mode, create the output directory and write UTF-8 `<out-dir>/escalation-map.md` only after the complete map exists. In dry-run, print that same body and write nothing.
+
+Print:
 
 ```text
 tier-escalate — <skills-dir>
 
 Scanned:       N skills
-FABLE-SEED:    F skills (each with its named seed-artifact phase)
-CONDITIONAL:   C skills (each with its named trigger)
-STAY:          S skills (opus-tier orchestration + sonnet-tier fan-out)
+FABLE-SEED:    F skills
+CONDITIONAL:   C skills
+STAY:          S skills
+Policy:        <path | unavailable>
+Actual models: <batch=receipt | batch=UNKNOWN; ...>
 
 Artifact:
-  escalation-map.md — <out-dir>/escalation-map.md
+  escalation-map.md — <path | not written (dry-run)>
 
-Next (per-session, NOT done by this skill):
-  For a FABLE-SEED skill: invoke the host's model-switch primitive or restart with the
-  fable-tier configured, run the seed phase, then return to the pinned default tier.
-  For a CONDITIONAL skill: escalate only when its named trigger holds. Practical
-  constraints (retention and model-pin resets):
-  see the workspace model-tiering rule (.claude/references/model-tiering.md; the CLAUDE.md
-  ## Environment model paragraph is its stub) — the policy owner this map is derived from.
+Next (operator action, not performed):
+  Apply a verified seed row only through the target host's model-selection mechanism.
+  Resolve every reported policy/source disagreement before treating the map as policy.
 ```
 
-End with the exact standalone line:
+End with the exact line:
 
-`tier-escalate wrote the escalation map — switching a session to the fable-tier stays a per-session operator action via the host's model-switch primitive or a restart with the target tier configured (it was NOT auto-applied).`
-
-## Differences from tier-offload (deliberate asymmetries)
-
-- **No config file is emitted.** tier-offload writes a machine-loadable switchboard config because a client consumes it; the escalation map has no machine consumer — it is for the operator, so the markdown map is the whole artifact.
-- **No safety gate / gate-precondition concept.** Routing *down* has a correctness failure mode (a weak model on a gate), so tier-offload carries a hard invariant. Escalating *up* to the fable-tier is never unsafe, only wasteful — the failure mode is cost, not correctness — so there is no gate analogue; the up-corrections guard against waste, not danger.
-- **The practical constraint worth noting:** The provider model resolved for the fable-tier may have retention requirements, and auto-updates can silently reset a model-tier pin. The workspace model-tiering rule (`.claude/references/model-tiering.md`) is the policy owner for these (the `CLAUDE.md` model paragraph is its stub) — cite it in the map rather than restating it wholesale.
-
-## Constraints
-
-- **Discovery + map only. Never auto-apply.** This skill never edits a `SKILL.md`, never edits CLAUDE.md, and never changes any model setting. It writes the map; the operator escalates per session. The paste-ready CLAUDE.md section is regenerated output, never applied.
-- **Use read-only fresh-context task invocations for classification.** They cannot edit or write — the safe substrate for reading someone's skills. Use the sonnet tier (resolve via model-tier-map.json).
-- **Apply the four up-corrections.** Fan-out arms are never fable-tier; single-mind synthesis is a candidate for escalation, not parallelization; conditional escalations must name their trigger; session escalation cascades into unpinned arms — flag `arms-unpinned` and require pinning before escalation.
-- **Autonomous — no mid-run (y/n) prompts.** Run bare = scan + report + write the map. `--dry-run` prints the report and writes nothing.
-- Do not commit. Leave the map in the out dir for the operator.
+`tier-escalate produced the escalation map; it did not change any session model, setting, instruction file, or skill.`

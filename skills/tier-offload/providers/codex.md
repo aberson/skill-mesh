@@ -1,20 +1,15 @@
 # tier-offload - Codex entry point
 
-See [../core.md](../core.md) for the full specification.
+Load [../core.md](../core.md) in full before acting.
 
-## Codex invocation differences
+## Codex bindings
 
-- Load the core in full before acting and follow it verbatim. This wrapper only maps host abstractions; it never weakens a gate the core defines. The LOCAL/PRIMARY/SCRIPT verdict enum, the `offload-config.json` schema, the standing `build-step-style: false`, and the gate-precondition rule (an unmet strong-tier-final-judge precondition emits `false`, never `true`) stay exactly as the core states them.
-- Tier names in inherited procedures name capability ROLES. `config/model-tier-map.json` maps Claude tiers onto GPT peers and declares no Codex peer, so resolve a tier to the closest capability the configured Codex model actually provides; explicit router overrides win. If a required capability is unavailable, return `required_tool_missing` rather than weakening a gate.
-- Fresh-context dispatch is a runtime HOST capability, not a provider-wide Codex constant: apply the separate build-step agent-isolation contract before the first isolated arm, and a host that passes it may map the Phase 2 classification arms onto fresh sibling children. This core's classification constraint -- read-only fresh-context task invocations, every arm applying the SAME rules -- documents NO single-context fallback, so on a host that does not pass that contract, halt visibly with `required_tool_missing`, naming the Phase 2 classification fan-out as the core step that could not run. Do not classify the catalog in this session in its place.
-- `--inventory-only` and `--dry-run` keep their exact core meanings; the `python -m switchboard config` line in the Next block is portable shell and is reproduced verbatim.
-- Normalize verbosity: do not reveal hidden chain-of-thought; return only required decisions, evidence, artifacts, commands, questions, and the core's closing report.
+- Unless `--skills-dir` is explicit, set `discovery_root` to the parent of this loaded package: the active `.agents/skills` discovery root. Never substitute `.claude/skills` or send native Codex through the GPT/Copilot router.
+- Map `isolated_readonly_task` to fresh no-history sibling tasks with read-only access after applying the host's established agent-isolation contract. Dispatch within available slots in independent batches. There is no parent-context fallback.
+- Resolve the ordinary fan-out capability through the loaded tier map and explicit host overrides. This is a role binding, not an actual-model receipt.
+- Read every generated entrypoint with its linked installed core and adapter bodies. Launcher-only classification is invalid.
+- Accept `EVIDENCED` only after parent verification that a fresh independent non-local primary-provider reviewer at its configured tier always runs and alone controls the gate, as defined in the core. `ABSENT` and `CONFLICTING` emit false; `build-step-style` is always false.
+- Use only the prepared Switchboard config loader with `PYTHONDONTWRITEBYTECODE=1`. Never read a live home config, run `judge`/`inspect`, probe an endpoint, install anything, or invoke a local model.
+- Report actual model as `UNKNOWN` unless the host supplies a distinct execution receipt.
 
-## Known Codex limitations
-
-- Claude Artifact actions, Claude session JSONL/scratchpad paths, the Claude Agent/Workflow tools, and Claude-only deep links are unavailable unless an explicit adapter supplies them. Use the core's standalone-file or durable-state fallback where one is defined; never simulate the missing tool.
-- On timeout, rate limit, provider 5xx, parse failure, or missing required adapter, return the router reason code and consume at most the shared cross-cloud retry allowance. Never silently omit a core gate, and never emit an inventory or config the classification fan-out did not actually produce.
-
-## Output normalization
-
-Return only the core-defined operator-facing output and durable artifacts. Preserve locked strings, verdict enums, schemas, paths, command ordering, and retry limits exactly; reject missing required fields instead of inferring success.
+Preserve the mode matrix, verdict enum, config schema, validator limitations, and exact closing line. Missing isolation or sibling-task capability returns `required_tool_missing: classification-fan-out` and emits no inventory or config.

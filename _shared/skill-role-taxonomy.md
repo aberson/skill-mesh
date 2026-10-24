@@ -1,107 +1,99 @@
-# Skill role taxonomy — tags + fan-out classification protocol
+# Skill role taxonomy and isolated classification protocol
 
-> **Vendored into skill-mesh.** This is a copy of the workspace reference document of the
-> same name, vendored into the shared payload (`_shared`) so that the skill cores citing it
-> resolve inside a host discovery root rather than against a workspace directory no
-> consumer home has.
-> Two adaptations apply throughout: citations to workspace documents that are **not** part
-> of this payload are rendered as plain names rather than links (their targets do not ship
-> here), and the private *values* of three classes (operator-specific identifiers, issue
-> and cron references, and harness-configuration paths) were removed or replaced with a
-> de-identified description. That is what this notice claims and the whole of it: some
-> references to those artifacts survive deliberately in de-identified form where the
-> surrounding contract needs them, no class is certified exhaustively absent, and a
-> residual is a defect to report rather than a contradiction of this notice. The per-file
-> sign-off, recorded with the full list of link dispositions in this repository's Step 66
-> decision record, is the only class-level authority.
+> **Vendored shared payload.** Installed profiles carry this file under their discovery root's
+> `_shared` directory. Provider adapters bind host primitives; this document defines no
+> provider command, model ID, or discovery-root name.
 
-Direction-NEUTRAL source of truth for classifying the LLM-bearing roles inside a skill's
-`SKILL.md`. It defines the tag set (§1) and the parallel classification protocol (§2–§3) that
-produces a per-skill role table. It deliberately says nothing about where any role should
-*route* — see §4.
+This is the direction-neutral source of truth used by `tier-escalate` and `tier-offload`.
+It defines the role tags, complete-package discovery, fresh-context classification protocol,
+and base output. It deliberately defines no up-tier or down-tier verdict.
 
-Cited by: `tier-offload` (down-direction — which roles can route to a cheaper model) and
-`tier-escalate` (up-direction — which roles warrant a stronger model), both as
-`../_shared/skill-role-taxonomy.md`. Each consuming skill layers its own verdict rules
-on top of the neutral classification this file produces.
+## 1. Role taxonomy
 
----
+Tag every role that performs or replaces LLM work with exactly one tag. Include `MECH` so
+mechanical work is classified rather than silently omitted.
 
-## §1 The role taxonomy
-
-Tag every role in a skill that performs — or replaces — LLM work with exactly one of these
-seven tags. MECH exists precisely for steps that need no LLM reasoning: tag them, don't drop
-them, or the classification is incomplete.
-
-| Tag | Role definition | Character (direction-neutral) |
+| Tag | Role definition | Character |
 |---|---|---|
-| **ORCH** | Orchestration — drives a multi-step pipeline, dispatches sub-agents | Stateful coordinating spine; holds cross-step context |
-| **AUTHOR** | Authorship — writes code, prose, docs, plans, notebook cells | Produces content; each pass creates rather than scores |
-| **PLAN** | Planning — designs a plan, sequences steps, makes architecture calls | Open-ended design reasoning; decisions ripple downstream |
-| **JUDGES** | A fan-out **array** of judges/graders scoring N items in parallel | Parallel array of cheap scorers; arms are independent and individually low-stakes |
-| **GATE** | The final/consolidating judgment — the merge/ship/keep decision | Single decision point consuming upstream findings; correctness-critical |
-| **MECH** | Mechanically checkable — exit code, valid JSON, regex/refusal match, `goal_condition` | Mechanically checkable; no LLM reasoning required |
-| **SOLO** | A single-pass reasoning call, not a fan-out array | One call, one context; not a parallel array |
+| `ORCH` | Drives a multi-step pipeline or dispatches tasks | Stateful coordinating spine |
+| `AUTHOR` | Writes code, prose, plans, or other deliverable content | Produces rather than scores |
+| `PLAN` | Makes architecture or sequencing decisions | Open-ended design judgment |
+| `JUDGES` | A genuine parallel array of independent scorers | Individually low-stakes scoring arms |
+| `GATE` | The final or consolidating correctness-critical decision | Controls merge, ship, keep, or reject |
+| `MECH` | Exit code, schema, regex, hash, or other deterministic check | No LLM judgment required |
+| `SOLO` | One reasoning pass that is not a parallel scoring array | One call, one context |
 
-**Tag boundaries (common mis-tags).** These are classification rules only — they carry no
-routing verdict:
+Tag boundaries:
 
-- A fan-out whose arms each **produce** content is AUTHOR, not JUDGES. JUDGES requires every
-  arm to be *scoring*, not *creating*.
-- A checklist enumerated in prose but executed as **one pass** at runtime is SOLO, not JUDGES.
-  JUDGES requires a genuinely parallel array.
-- The consolidating decision over a JUDGES array is a separate GATE role — when a skill has
-  both, tag both.
+- A fan-out whose arms produce content is `AUTHOR`, not `JUDGES`.
+- A checklist executed by one model pass is `SOLO`, not `JUDGES`.
+- A consolidating decision over a `JUDGES` array is a separate `GATE` role.
+- Tool use does not change a role tag. Direction-specific consumers decide whether tool needs
+  affect routing.
 
----
+## 2. Discover complete behavior packages
 
-## §2 Fan-out classification protocol
+The provider adapter supplies an absolute `discovery_root`. An explicit operator skills
+directory may replace it. Never hard-code `.claude/skills`, `.agents/skills`, or
+`.github/skills` in the shared protocol.
 
-A fresh model citing this file runs a complete pass over a skills directory as follows:
+1. Match `<skills-dir>/*/SKILL.md`; skip directories without an entrypoint.
+2. List the matched entrypoint paths before constructing any classifier prompt.
+3. Read each entrypoint and resolve every local Markdown link that defines required behavior,
+   including an installed `core.md` and provider-specific behavior when present. Keep resolved
+   bodies inside the discovery root.
+4. Record the entrypoint and required behavior-body paths in the input inventory.
+5. A missing, unreadable, or root-escaping required body is `required_skill_body_missing`.
+   Do not classify that package from launcher prose, frontmatter, description, or memory.
 
-1. **Discover.** Glob `<skills-dir>/*/SKILL.md`. Skip non-skill entries (e.g. a `_shared/`
-   helper dir with no `SKILL.md`).
-2. **`ls` before quoting.** `ls` the matched filenames before quoting any into a sub-agent
-   prompt — filenames with spaces or odd casing break the prompt otherwise.
-3. **Batch.** Roughly **6–8 skills per agent**, using **read-only Explore agents** (read-only
-   by construction — they never edit or write any file), each dispatched with an explicit
-   cheap-tier pin (`model: sonnet`) — the scan must not inherit an escalated session, or it
-   violates the very tier policy it audits.
-4. **Dispatch in parallel.** Send a batch's agents in **one message** so they run concurrently.
-5. **Same rules per agent.** Each agent's prompt must contain: the absolute `SKILL.md` paths
-   in its batch, and the §1 taxonomy (table + tag boundaries) **verbatim** — every batch must
-   apply the SAME rules, or the classification drifts per-batch.
-6. **Tag.** Each agent, per skill: read its `SKILL.md`, identify every role that performs or
-   replaces LLM work (including MECH — mechanically-checkable steps count), tag each role with
-   exactly one §1 tag, and return the compact per-skill table (§3).
-7. **Collect.** Merge all agent tables into one classification before any downstream use.
+A generated `SKILL.md` may be only an entrypoint. Reading it without the linked core is not a
+complete classification.
 
-Discipline: agents are **read-only, classify-only** — they never edit or write a file.
+## 3. Fresh isolated classification
 
----
+The provider adapter supplies `isolated_readonly_task` and the capability corresponding to
+the workspace's ordinary fan-out tier. These are runtime host capabilities, not provider-wide
+assumptions.
 
-## §3 Classification output shape
+1. Batch roughly 6-8 packages per classifier, bounded by available host slots.
+2. Launch each classifier with fresh context, no producer history, and read-only access.
+3. Dispatch independent classifiers concurrently where capacity permits. Smaller batches may
+   run sequentially as slots free, but no classifier context is reused.
+4. Put the complete section 1 taxonomy and tag boundaries verbatim in every classifier prompt.
+5. Give each classifier the exact entrypoint and behavior-body paths for its batch.
+6. Require path plus heading or line citations for every nontrivial role claim.
+7. Collect the complete required result set before any direction-specific synthesis.
 
-Each agent returns, and the merged result keeps, exactly this per-skill shape:
+There is no parent-context fallback. If the host cannot provide fresh isolated read-only tasks,
+the consuming skill returns `required_tool_missing: classification-fan-out`.
 
-| Skill | Roles (tags) | Notes |
-|---|---|---|
+Classifier tasks never edit, write, install, invoke another model, or spawn graders. A requested
+or configured model is not proof of the actual model. Each task reports an actual host receipt
+when one exists and `UNKNOWN` otherwise.
 
-No verdict columns. Verdicts are per-direction — the consuming skill adds its own verdict
-column(s) when it applies its rules to this table.
+## 4. Base result
 
----
+The direction-neutral base fields are:
 
-## §4 What this file deliberately does NOT contain
+```text
+Skill | Roles | Evidence | Notes
+```
 
-- **No routing verdict rules**, in either direction — nothing here says which tag routes to a
-  cheaper or a stronger model.
-- **No routing corrections** (e.g. tier-offload's "three corrections" — those encode a
-  direction and live in the consuming skill).
-- **No gate-precondition or safety invariants** (those live in `tier-offload`).
+Each consuming skill appends its own verdict fields. `tier-escalate` owns seed phase, trigger,
+and arm-pin fields. `tier-offload` owns local slice, gate state, tool needs, and config value.
 
-Consuming skills add all of the above on top of the neutral classification. Do not re-inline
-them here — that re-creates the drift this single source exists to prevent (per
-`code-quality.md § "One source of truth for data-shape constants"`).
-When changing the tag set or the §3 output shape, grep all consumers (`tier-offload`,
-`tier-escalate`) before landing.
+Before a consumer accepts a positive routing claim, its parent reopens the cited behavior body.
+Classification output is evidence to verify, not authority to route.
+
+## 5. Deliberate exclusions
+
+This file contains no:
+
+- escalation or offload verdict enum;
+- stronger-tier seed rule;
+- local-model eligibility correction;
+- gate-precondition or Switchboard config rule;
+- provider command, model ID, or discovery-root default.
+
+Those rules live in the consuming cores and provider adapters. When this taxonomy, discovery
+protocol, or base output changes, inspect both consumers before landing.

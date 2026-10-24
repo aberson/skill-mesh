@@ -6,18 +6,15 @@ user-invocable: true
 
 # tier-offload - Claude entry point
 
-See [../core.md](../core.md) for the full specification.
+Load [../core.md](../core.md) in full before acting.
 
-## Provider-specific instructions
+## Claude bindings
 
-- Load the core in full before acting. Use Claude Code's Skill tool for named-skill calls and Agent/Workflow tools for isolated agents where the core requires those host abstractions.
-- Preserve the core's gates, retry limits, filesystem safety, and exact output contracts.
-- Use Claude session JSONL, scratchpad identity, Artifact actions, or VS Code deep links only where available and requested by the core.
+- Unless `--skills-dir` is explicit, set `discovery_root` to the parent of this loaded package: the active `.claude/skills` discovery root. Do not scan another host profile.
+- Map `isolated_readonly_task` to fresh no-history Claude Agent/Explore invocations with read-only tools. Pin classification arms to the ordinary fan-out capability; dispatch independent arms in parallel batches and never reuse them.
+- Read each generated `SKILL.md` plus every linked installed core and adapter body. Frontmatter or launcher-only classification is invalid.
+- Accept `EVIDENCED` only after parent verification that a fresh independent non-local primary-provider reviewer at its configured tier always runs and alone controls the gate, as defined in the core. `ABSENT` and `CONFLICTING` emit false; `build-step-style` is always false.
+- Switchboard validation is config-only. Use a prepared source loader with `PYTHONDONTWRITEBYTECODE=1`; never invoke `judge`, `inspect`, the bare module smoke, or a local endpoint.
+- Report actual model only from a host receipt; otherwise `UNKNOWN`.
 
-## Output normalization
-
-Return only the core's operator-facing report and structured artifacts. Preserve exact locked strings, verdict enums, and exit codes.
-
-## Unsupported capabilities
-
-If a required Claude host tool is unavailable, use the core's documented fallback; otherwise halt visibly with `required_tool_missing`. Never weaken a core gate.
+Preserve the core's mode matrix, standing `build-step-style: false`, false-on-absent/conflicting gate evidence, config schema, and exact closing line. Missing isolated tasks return `required_tool_missing: classification-fan-out`.
