@@ -4,19 +4,15 @@ See [../core.md](../core.md) for the full specification.
 
 ## GPT invocation differences
 
-- Load the core in full before acting. Use structured tool/action calls for filesystem, shell, browser, GitHub, and named-skill operations.
-- Normalize GPT verbosity: do not reveal hidden chain-of-thought; return only required decisions, evidence, artifacts, commands, questions, and the core's closing report.
-- Resolve capability tiers with `config/model-tier-map.json`; explicit router overrides win.
-- Preserve the calibration gate: `cite calibrate check` first, and STOP if it is invalid.
-- Map each per-artifact review arm to a fresh-context GPT action/task call and dispatch independent arms in parallel. Each worker returns ONLY path, run id, band, number of choices, citation/absence summary, and blocker. If isolated actions are unavailable, run the reviews sequentially in this invocation under the SAME terse per-artifact return contract -- never widen the return, and never silently pass an unavailable review.
-- Cluster genuinely near-duplicate decisions before fanning out.
-- Never fabricate a corpus hit, an external verification, a calibrated verdict, or a completed review; stop instead.
+- Load the core in full. The invoking parent owns every artifact's OPEN, PREPARE, and COMMIT; never create per-artifact action workers.
+- Resolve one exact judge id through citation-review's current GPT rule and pass it unchanged. After OPEN ALL, map each vote to one fresh depth-1 action/task child with no prior conversation or child-spawn authority.
+- Prove that capability before opening. Missing or inconclusive isolation returns required_tool_missing; there is no in-context voting fallback.
+- Preserve project-filtered readiness lists, global field labels, ordered barrier, exact run ids, frozen evidence, k=3/5/7, and all partial states. Provider errors are reported and never trigger implicit replacement or calibration.
 
 ## Known GPT limitations
 
-- Claude Artifact actions, Claude session JSONL/scratchpad paths, and Claude-only deep links are unavailable unless an explicit adapter supplies them. Use the core's standalone-file or durable-state fallback.
-- On timeout, rate limit, provider 5xx, parse failure, or missing required adapter, return the router reason code and consume at most the shared cross-cloud retry allowance. Never silently omit a core gate.
+Claude-only session and Artifact surfaces are unavailable. Use only core-authorized durable forms.
 
 ## Output normalization
 
-Return only the core-defined operator-facing output: scope, clusters, completed and blocked reviews, queue rows, and any producer/API failure. Preserve locked strings, the per-artifact return fields, schemas, and command ordering exactly; reject missing required fields instead of inferring success.
+Return only the core's scope, per-path states, queue results, failures, and next actions.

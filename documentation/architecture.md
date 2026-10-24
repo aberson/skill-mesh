@@ -176,13 +176,14 @@ each skill's legacy contract, not inferred from a single shared wrapper line.
 | Capability | Count | Skills |
 |---|---|---|
 | `filesystem` | 57 | all skills |
-| `sub-agent` | 18 | build-step, citation-sweep, context-slim, goblin-suggest, judge-motion, judge-ui, research-prospect, review-deep, review-gauntlet, skill-evolve, skill-iterate, test-prune, tier-escalate, tier-offload, user-brainstorm, user-debug, user-learn, user-uat |
+| `sub-agent` | 19 | build-step, citation-review, citation-sweep, context-slim, goblin-suggest, judge-motion, judge-ui, research-prospect, review-deep, review-gauntlet, skill-evolve, skill-iterate, test-prune, tier-escalate, tier-offload, user-brainstorm, user-debug, user-learn, user-uat |
 | `vision` | 2 | judge-ui, judge-motion |
 
 The `sub-agent` set is derived by auditing every skill's contract for explicit
 isolated-agent dispatch (all 50 legacy contracts at Step 33, plus each skill promoted
-since -- citation-sweep, whose core dispatches one isolated per-artifact review
-worker, joined at Phase CP Step 10). Representative evidence (legacy `SKILL-core.md` /
+since -- citation-review and citation-sweep now require parent-dispatched fresh
+depth-1 classification judges, with sweep retaining every artifact phase in its
+parent, joined the audited set). Representative evidence (legacy `SKILL-core.md` /
 `SKILL.md`): build-step "Spawn a sub-agent" + "Step 6 — Spawn reviewer agents";
 context-slim "Spawn three parallel subagents using the Agent tool"; goblin-suggest "fan out `--n-judges`
 judge agent calls IN PARALLEL"; judge-motion "separate sub-agent per transition";
@@ -536,7 +537,7 @@ seam (defaults to this repository) that must be a git working tree.
 
 `tests/package-integrity/test_manifest_contract.py` fails on any of:
 
-- Skill count != 57, portable != 54, provider-native != 3, sub-agent != 18,
+- Skill count != 57, portable != 54, provider-native != 3, sub-agent != 19,
   vision != 2 (each set checked exactly against the committed
   `tests/package-integrity/expected_inventory.json` fixture — the package tests
   need no private source).

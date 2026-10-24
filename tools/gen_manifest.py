@@ -167,9 +167,9 @@ LOCAL_CAPABLE = {
 # per-entry evidence quote stays beside each name so the judgment is auditable.
 SUB_AGENT = {
     "build-step",        # "Spawn a sub-agent"; "Step 6 -- Spawn reviewer agents"
-    "citation-sweep",    # "Launch bounded per-artifact review work" -- one isolated
-                         # fresh-context worker per artifact, each returning only the
-                         # six terse fields the core locks
+    "citation-review",   # parent dispatches one fresh depth-1 judge per vote
+    "citation-sweep",    # parent owns every artifact phase and dispatches only fresh
+                         # depth-1 classification judges after the OPEN ALL barrier
     "context-slim",      # "Spawn three parallel subagents using the Agent tool"
     "goblin-suggest",    # "fan out --n-judges judge agent calls IN PARALLEL"
     "judge-motion",      # "separate sub-agent per transition" via Agent tool

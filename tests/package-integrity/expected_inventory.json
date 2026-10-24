@@ -8,7 +8,7 @@
     "gpt": 54,
     "codex": 54,
     "local_capable": 22,
-    "sub_agent": 18,
+    "sub_agent": 19,
     "vision": 2,
     "filesystem": 57
   },
@@ -155,6 +155,7 @@
   ],
   "sub_agent": [
     "build-step",
+    "citation-review",
     "citation-sweep",
     "context-slim",
     "goblin-suggest",
@@ -291,7 +292,8 @@
       "status": "portable",
       "local_capable": false,
       "capabilities": [
-        "filesystem"
+        "filesystem",
+        "sub-agent"
       ],
       "migration": {
         "legacy_core": ".claude/skills-gpt/citation-review/SKILL-core.md",

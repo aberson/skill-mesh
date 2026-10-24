@@ -239,6 +239,9 @@ its own reported result, never a silently degraded one.
   whether that script can execute, so those two keep their own workflow-scoped halts.
   Every adapter still establishes the capability for itself, from the active callable
   schema plus a non-mutating probe.
+  `citation-review` now joins the capability-conditioned set because its parent
+  dispatches fresh classification judges; its sweep caller uses the same direct
+  depth-1 mapping after completing the OPEN ALL barrier.
   `user-debug` is capability-conditioned: its parent directly dispatches separately
   probed fresh siblings for Step 2 and Option 4, or visibly halts
   `required_tool_missing`; the child receives only symptom, repro, and bounded
@@ -286,18 +289,15 @@ its own reported result, never a silently degraded one.
   than installing or hand-rendering an artifact. `goblin-suggest` maps no Workflow
   primitive on Codex and halts `required_tool_missing` before any Goblin command;
   it never substitutes `claude -p` or generates and judges in one session.
-- **`citation-sweep`'s serial rail was withdrawn.** Its core mandates one isolated
-  fresh-context worker per artifact and documents no fallback, so Step 119 made the
-  adapter capability-conditioned like the eight others the first bullet lists alongside
-  it: a host that does not pass the build-step agent-isolation contract halts
-  `required_tool_missing` at the per-artifact worker dispatch rather than degrading.
-  The in-session serial rail the wrapper carried before Step 119 was a wrapper-invented
-  substitute for a fallback the core never documented; writing one back is a CORE edit
-  with its own review, never a wrapper's call. As of Step 119 no adapter in this
-  profile substitutes an in-session serial rail for an isolated arm its core mandates;
-  every remaining mention of serializing an arm across the 54 adapters is a
-  prohibition. (The `sub-agent` capability set in `config/skill-manifest.json` has 18
-  members, 16 of them codex-eligible. The gate
+- **Citation review and sweep use parent-owned depth-1 judges.** Review's parent owns
+  OPEN, PREPARE and COMMIT and dispatches one fresh sibling per classification vote.
+  Sweep retains those same phases in one parent, opens every selected run before any
+  commit, and dispatches only the classification judges; it never creates nested
+  per-artifact workers. Both adapters are capability-conditioned on the build-step
+  agent-isolation contract and halt `required_tool_missing` before opening when the
+  host cannot prove fresh siblings. Neither core has an in-context voting fallback.
+  (The `sub-agent` capability set in `config/skill-manifest.json` has 19
+  members, 17 of them codex-eligible. The gate
   `tests/package-integrity/test_codex_capability_claims_honesty.py` derives its
   halt-gate subject set from that field rather than from any count written here.)
 - **No router dispatch and no host auto-detection** — see the two sections below.

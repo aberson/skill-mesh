@@ -74,7 +74,7 @@
     "gpt": 54,
     "codex": 54,
     "local_capable": 22,
-    "sub_agent": 18,
+    "sub_agent": 19,
     "vision": 2,
     "filesystem": 57
   },
@@ -270,7 +270,8 @@
         "codex": "skills/citation-review/providers/codex.md"
       },
       "capabilities": [
-        "filesystem"
+        "filesystem",
+        "sub-agent"
       ],
       "local_capable": false,
       "migration": {
