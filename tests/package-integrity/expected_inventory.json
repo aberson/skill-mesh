@@ -8,7 +8,7 @@
     "gpt": 54,
     "codex": 54,
     "local_capable": 22,
-    "sub_agent": 19,
+    "sub_agent": 18,
     "vision": 2,
     "filesystem": 57
   },
@@ -157,7 +157,6 @@
     "build-step",
     "citation-sweep",
     "context-slim",
-    "goblin-do",
     "goblin-suggest",
     "judge-motion",
     "judge-ui",
@@ -379,8 +378,7 @@
       "status": "portable",
       "local_capable": false,
       "capabilities": [
-        "filesystem",
-        "sub-agent"
+        "filesystem"
       ],
       "migration": {
         "legacy_core": ".claude/skills-gpt/goblin-do/SKILL-core.md",

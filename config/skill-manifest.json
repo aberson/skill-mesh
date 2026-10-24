@@ -74,7 +74,7 @@
     "gpt": 54,
     "codex": 54,
     "local_capable": 22,
-    "sub_agent": 19,
+    "sub_agent": 18,
     "vision": 2,
     "filesystem": 57
   },
@@ -380,7 +380,7 @@
     {
       "name": "goblin-do",
       "status": "portable",
-      "description": "Front door for one goblin atom: execute it via build-step, or hand a big one to the plan rail.",
+      "description": "Render the next step for one persisted Goblin atom after a read-only liveness check.",
       "core": "skills/goblin-do/core.md",
       "providers": {
         "claude": "skills/goblin-do/providers/claude.md",
@@ -388,8 +388,7 @@
         "codex": "skills/goblin-do/providers/codex.md"
       },
       "capabilities": [
-        "filesystem",
-        "sub-agent"
+        "filesystem"
       ],
       "local_capable": false,
       "migration": {

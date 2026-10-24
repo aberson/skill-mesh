@@ -171,7 +171,6 @@ SUB_AGENT = {
                          # fresh-context worker per artifact, each returning only the
                          # six terse fields the core locks
     "context-slim",      # "Spawn three parallel subagents using the Agent tool"
-    "goblin-do",         # runs /build-step via a Workflow agent() call
     "goblin-suggest",    # "fan out --n-judges judge agent calls IN PARALLEL"
     "judge-motion",      # "separate sub-agent per transition" via Agent tool
     "judge-ui",          # "dispatches an independent vision-judge sub-agent"
@@ -236,7 +235,7 @@ DESCRIPTIONS = {
     "citation-triage": "Walk Citation Needed's ranked distill queue and record keep, cut, or rewrite decisions.",
     "claude-oauth-auth": "How to authenticate with Claude using a subscription OAuth token instead of an API key.",
     "context-slim": "Audit a project's auto-loaded context files and produce a prioritized progressive-disclosure plan to cut per-turn token cost.",
-    "goblin-do": "Front door for one goblin atom: execute it via build-step, or hand a big one to the plan rail.",
+    "goblin-do": "Render the next step for one persisted Goblin atom after a read-only liveness check.",
     "goblin-suggest": "Produce a grounded, ranked improvement shortlist for a project as goblin suggestion atoms.",
     "goblin-sweep": "List one project's discovered obligation atoms from the goblin engine and route to goblin-do.",
     "judge-motion": "Capture a UI transition as a slow-motion filmstrip and have a vision-judge render a PASS/FAIL/ESCALATE verdict on motion defects.",

@@ -9,6 +9,7 @@ See [../core.md](../core.md) for the full specification.
 - Resolve capability tiers with `config/model-tier-map.json`; explicit router overrides win.
 - Run the three fail-loud prerequisite checks in order via shell actions before the invocation; STOP on the first failure exactly as the core specifies. Never emit an empty or fabricated backlog in place of a real run.
 - Parse the engine's `--json` output ONLY; never scrape its human-readable default output. Add no obligation-extraction, dedup, or atom-parsing logic.
+- Pass the dispatcher-supplied project as one literal argv element through structured argv or the selected shell's safe literal quoting; never use command-string interpolation or `eval`. Reject extra skill arguments and flags instead of forwarding them.
 - If a required shell or named-skill action is unavailable, return `required_tool_missing`; do not weaken the prerequisite gate or the seven-field output contract.
 
 ## Known GPT limitations
@@ -18,4 +19,4 @@ See [../core.md](../core.md) for the full specification.
 
 ## Output normalization
 
-Return only the core-defined operator-facing output: the seven locked fields per obligation and the closing `/goblin-do <obl-id>` next-rail line. Preserve locked strings, the `obl-<project>-<slug>` id shape, field order, and exit/stop behavior exactly; reject missing required fields instead of inferring success.
+Return only the core-defined operator-facing output: the seven locked fields per obligation and the closing `/goblin-do <obl-id>` next-rail line, plus any usage, fixed completeness notice, `Engine warnings:`, relayed engine stderr on a nonzero exit, malformed-output, empty-result, or stop line the core defines. Preserve locked strings, the `obl-<project>-<slug>` id shape, field order, and exit/stop behavior exactly; reject missing required fields instead of inferring success.
