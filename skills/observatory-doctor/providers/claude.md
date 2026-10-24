@@ -1,23 +1,13 @@
 ---
 name: observatory-doctor
-description: Claude provider entry point for observatory-doctor; loads the canonical shared core.
+description: Relay the real Dev Observatory launcher health check through a prepared, static, no-sync runtime.
 user-invocable: true
 ---
 
 # observatory-doctor - Claude entry point
 
-See [../core.md](../core.md) for the full specification.
+Load [../core.md](../core.md) in full before acting. The core owns behavior and safety; this adapter only maps its shell operation to Claude's local shell tool.
 
-## Provider-specific instructions
+Run the core's prepared `uv run` command from the coding root. Preserve command, stdout, stderr, and exit code. Keep `--no-probe` even when a caller asks for a live probe; explain the core's status-override hazard instead. Keep the fixed `--no-sync --frozen --offline --no-python-downloads` launcher flags. If the runtime is unavailable or stale, diagnose it and stop without installing, syncing, retrying through a different executable, or simulating the report.
 
-- Load the core in full before acting. Use Claude Code's Skill tool for named-skill calls and Agent/Workflow tools for isolated agents where the core requires those host abstractions.
-- Preserve the core's gates, retry limits, filesystem safety, and exact output contracts.
-- Use Claude session JSONL, scratchpad identity, Artifact actions, or VS Code deep links only where available and requested by the core.
-
-## Output normalization
-
-Return only the core's operator-facing report and structured artifacts. Preserve exact locked strings, verdict enums, and exit codes.
-
-## Unsupported capabilities
-
-If a required Claude host tool is unavailable, use the core's documented fallback; otherwise halt visibly with `required_tool_missing`. Never weaken a core gate.
+Relay only the core-defined operator report. Never edit a project or registry, run a fix command, select a probe, or claim health beyond the rows the CLI measured. If the shell capability is unavailable, return `required_tool_missing`.
