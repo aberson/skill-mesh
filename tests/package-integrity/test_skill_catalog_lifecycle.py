@@ -3780,6 +3780,15 @@ def test_both_disposition_classes_are_used_by_the_pasteable_template():
         f"a third class the contract does not have.")
 
 
+def test_skill_iterate_reviewed_packaging_exception_is_pinned():
+    section = _guide_section("What this guide governs")
+    assert "| `skill-iterate` | six Python files under `scripts/` |" in section
+    assert "**Reviewed packaging exception: the `skill-iterate` scripts.**" in section
+    assert "a missing input fails generation before the launcher is written" in section
+    assert "does not generalize `support_assets` into an emission protocol" in section
+    assert "No unscoped `-Force` is routine or authorized without that check" in section
+
+
 def test_grandfathered_package_local_files_agree_with_the_repository():
     """DERIVED, never hand-listed -- the exemption set has one authority.
 

@@ -9,6 +9,7 @@ documented in the module docstring lands on stdout.
 from __future__ import annotations
 
 import json
+import importlib.util
 import random
 import subprocess
 import sys
@@ -16,6 +17,11 @@ import tempfile
 import unittest
 from pathlib import Path
 from unittest import mock
+
+_CANONICAL_IMPORT_DIR = Path(__file__).resolve().parents[2] / "skills" / "skill-iterate" / "scripts"
+while str(_CANONICAL_IMPORT_DIR) in sys.path:
+    sys.path.remove(str(_CANONICAL_IMPORT_DIR))
+sys.path.insert(0, str(_CANONICAL_IMPORT_DIR))
 
 import adversarial_calibration
 from adversarial_calibration import (
@@ -32,7 +38,17 @@ from adversarial_calibration import (
     main,
 )
 
-SCRIPTS_DIR = Path(__file__).resolve().parent
+CANONICAL_DIR = Path(__file__).resolve().parents[2] / "skills" / "skill-iterate" / "scripts"
+assert Path(adversarial_calibration.__file__).resolve().parent == CANONICAL_DIR
+
+LEGACY_TEST_DIR = Path(__file__).resolve().parent
+_legacy_spec = importlib.util.spec_from_file_location(
+    "legacy_adversarial_calibration", LEGACY_TEST_DIR / "adversarial_calibration.py"
+)
+assert _legacy_spec and _legacy_spec.loader
+legacy_adversarial_calibration = importlib.util.module_from_spec(_legacy_spec)
+sys.modules[_legacy_spec.name] = legacy_adversarial_calibration
+_legacy_spec.loader.exec_module(legacy_adversarial_calibration)
 
 
 # A realistic SKILL.md fixture with at least one instance of every mutation
@@ -439,7 +455,7 @@ class CalibrateFleetTest(unittest.TestCase):
             gamma_skill = RICH_SKILL_MD + "\nGAMMA_MARKER\n"
             (root / "gamma" / "SKILL.md").write_text(gamma_skill, encoding="utf-8")
 
-            result = calibrate_fleet(
+            result = legacy_adversarial_calibration.calibrate_fleet(
                 score_fn,
                 num_mutations=4,
                 threshold=DEFAULT_CATCH_RATE_THRESHOLD,
@@ -476,7 +492,7 @@ class CliSmokeTest(unittest.TestCase):
                 sys.executable,
                 "-c",
                 "import sys, json; "
-                f"sys.path.insert(0, {str(SCRIPTS_DIR)!r}); "
+                f"sys.path.insert(0, {str(CANONICAL_DIR)!r}); "
                 "from adversarial_calibration import calibrate_skill, _default_structural_score_fn; "
                 "from pathlib import Path; "
                 f"result = calibrate_skill(Path({str(workspace / 'example-skill')!r}), "
@@ -548,12 +564,12 @@ class SkillsRootResolutionTest(unittest.TestCase):
     """
 
     def test_skills_root_resolves_to_real_directory(self) -> None:
-        root = adversarial_calibration._SKILLS_ROOT
+        root = legacy_adversarial_calibration._SKILLS_ROOT
         self.assertTrue(root.is_dir(), f"_SKILLS_ROOT does not exist: {root}")
         # Own package round trip — the off-by-one detector.
         self.assertEqual(
             (root / "skill-iterate" / "scripts").resolve(),
-            Path(adversarial_calibration.__file__).resolve().parent,
+            Path(legacy_adversarial_calibration.__file__).resolve().parent,
             f"_SKILLS_ROOT does not hold this module's own package: {root}",
         )
         # Sibling package dereferenced by calibrate_fleet for the cross-skill
@@ -598,7 +614,7 @@ class CalibrateFleetAutoDiscoverDefaultTest(unittest.TestCase):
     """
 
     def test_calibrate_fleet_uses_auto_discover_when_skills_root_default(self) -> None:
-        live_root = adversarial_calibration._SKILLS_ROOT
+        live_root = legacy_adversarial_calibration._SKILLS_ROOT
         eval_setup_scripts = live_root / "skill-eval-setup" / "scripts"
         # (1) the cross-skill import target must resolve from _SKILLS_ROOT.
         self.assertTrue(
@@ -640,10 +656,10 @@ class CalibrateFleetAutoDiscoverDefaultTest(unittest.TestCase):
             # own insert cannot leave a deleted tempdir on the real path.
             with mock.patch.object(sys, "path", list(sys.path)), \
                     mock.patch.object(
-                        adversarial_calibration, "_SKILLS_ROOT", fixture_root), \
+                        legacy_adversarial_calibration, "_SKILLS_ROOT", fixture_root), \
                     mock.patch.object(
                         generate_bad_examples, "auto_discover_skills", spy):
-                result = calibrate_fleet(score_fn=score_fn, num_mutations=1)
+                result = legacy_adversarial_calibration.calibrate_fleet(score_fn=score_fn, num_mutations=1)
 
         # (2) skills_root defaulted to None, so _SKILLS_ROOT is what discovery ran on.
         self.assertEqual(seen_roots, [fixture_root])

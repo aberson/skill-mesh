@@ -422,11 +422,12 @@ def test_build_file_counts_match_manifest(dist_root):
     # `test_shared_payload_matches_an_independent_closure_walk` is what proves the
     # SET, from a re-walk rather than from this literal.
     # The trailing literals are the three reviewed package exceptions: + 4 review-deep
-    # resources (Phase CD), + 2 build-step scripts (packet route P2), and + 1
-    # build-observer validator. Their focused resource tests prove each exact SET.
+    # resources (Phase CD), + 2 build-step scripts (packet route P2), + 1
+    # build-observer validator, and + 6 skill-iterate helpers. Their focused
+    # resource tests prove each exact SET.
     shared = len(EXPECTED_SHARED_PAYLOAD)
-    assert len(claude_files) == len(portable) * 2 + len(native) * 1 + 2 + shared + 4 + 2 + 1
-    assert len(gpt_files) == len(portable) * 2 + 2 + shared + 4 + 2 + 1
+    assert len(claude_files) == len(portable) * 2 + len(native) * 1 + 2 + shared + 4 + 2 + 1 + 6
+    assert len(gpt_files) == len(portable) * 2 + 2 + shared + 4 + 2 + 1 + 6
 
 
 # --------------------------------------------------------------------------- #
@@ -3555,3 +3556,76 @@ def test_build_step_builder_refuses_each_missing_resource(tmp_path, missing):
     assert result.returncode != 0
     assert "build-step resource source missing" in result.stderr
     assert not (tmp_path / "dist/codex/build-step/SKILL.md").exists()
+
+
+# skill-iterate's reviewed package exception. This literal is intentionally
+# independent of the builder's PowerShell allowlist.
+SKILL_ITERATE_RESOURCES = (
+    "scripts/adversarial_calibration.py",
+    "scripts/append_result.py",
+    "scripts/differential_grader.py",
+    "scripts/morning_summary.py",
+    "scripts/resolve_queue.py",
+    "scripts/structural_metrics.py",
+)
+
+
+@pytest.fixture(scope="module")
+def skill_iterate_distribution(tmp_path_factory):
+    root = tmp_path_factory.mktemp("skill-iterate-distribution")
+    manifest = root / "manifest.json"
+    _write_manifest(manifest, [next(entry for entry in _load_manifest()["skills"]
+                                    if entry["name"] == "skill-iterate")])
+    _build_from_manifest(root / "dist", manifest, provider="all")
+    return root / "dist"
+
+
+@pytest.mark.parametrize("provider", ["claude", "gpt", "codex"])
+def test_skill_iterate_resource_closure(skill_iterate_distribution, provider, tmp_path):
+    package = skill_iterate_distribution / provider / "skill-iterate"
+    files = {p.relative_to(package).as_posix() for p in package.rglob("*") if p.is_file()}
+    assert files == {"SKILL.md", "core.md", *SKILL_ITERATE_RESOURCES}
+    marker = _marker_literal()
+    for resource in SKILL_ITERATE_RESOURCES:
+        emitted_path = package / resource
+        emitted = emitted_path.read_text(encoding="utf-8")
+        assert marker in emitted
+        assert f"Canonical source: skills/skill-iterate/{resource}" in emitted
+        assert f"Profile: {provider}" in emitted
+        compile(emitted, str(emitted_path), "exec")
+        source = (SKILLS_ROOT / "skill-iterate" / resource).read_bytes().replace(b"\r\n", b"\n")
+        start = emitted.index("\n<!-- GENERATED FILE - DO NOT EDIT.")
+        closing = "edits here are overwritten. -->"
+        end = emitted.index(closing, start) + len(closing)
+        assert emitted[start - 3:start] == '"""'
+        assert (emitted[:start] + emitted[end:]).encode("utf-8") == source
+    verdicts = _provenance_verdicts(package, tmp_path)
+    assert verdicts and all(verdicts.values()), verdicts
+
+
+@pytest.mark.parametrize("missing", list(SKILL_ITERATE_RESOURCES))
+def test_skill_iterate_resource_builder_refuses_each_missing_source(tmp_path, missing):
+    repo = _synthetic_build_repo(tmp_path, {}, "fixture")
+    package = repo / "skills/skill-iterate"
+    shutil.copytree(SKILLS_ROOT / "skill-iterate", package,
+                    ignore=shutil.ignore_patterns("__pycache__"))
+    (package / missing).unlink()
+    _write_manifest(repo / "config/skill-manifest.json",
+                    [next(entry for entry in _load_manifest()["skills"]
+                          if entry["name"] == "skill-iterate")])
+    result = _synthetic_build(repo, tmp_path / "dist", "codex")
+    assert result.returncode != 0
+    assert "skill-iterate resource source missing" in result.stderr
+    assert not (tmp_path / "dist/codex/skill-iterate/SKILL.md").exists()
+
+
+def test_skill_iterate_canonical_helpers_drift_only_at_review_status():
+    legacy_root = REPO_ROOT / "skill-iterate/scripts"
+    canonical_root = SKILLS_ROOT / "skill-iterate/scripts"
+    for resource in SKILL_ITERATE_RESOURCES:
+        leaf = Path(resource).name
+        legacy = (legacy_root / leaf).read_text(encoding="utf-8")
+        canonical = (canonical_root / leaf).read_text(encoding="utf-8")
+        if leaf == "morning_summary.py":
+            canonical = canonical.replace(', "review-required"', "")
+        assert canonical == legacy, leaf

@@ -150,6 +150,13 @@ $BUILD_STEP_RESOURCES = @(
 # core at `<skill-dir>/scaffold_portfolio.py`. This is not manifest support_assets
 # expansion and does not authorize resources for another skill.
 $BUILD_OBSERVER_RESOURCES = @('scaffold_portfolio.py')
+# skill-iterate's reviewed package exception: the exact runtime closure named by
+# its core and by the shared composite scorer. Fixed list; never harvest scripts/.
+$SKILL_ITERATE_RESOURCES = @(
+    'scripts/adversarial_calibration.py', 'scripts/append_result.py',
+    'scripts/differential_grader.py', 'scripts/morning_summary.py',
+    'scripts/resolve_queue.py', 'scripts/structural_metrics.py'
+)
 
 if ([string]::IsNullOrWhiteSpace($ManifestPath)) {
     $ManifestPath = Join-Path $REPO_ROOT 'config\skill-manifest.json'
@@ -616,6 +623,18 @@ foreach ($profile in $profiles) {
                 $buildObserverResources[$resource] = Read-SourceText $resourceAbs
             }
         }
+        $skillIterateResources = @{}
+        if ($name -eq 'skill-iterate') {
+            $packageRoot = Join-Path $SKILLS_ROOT 'skill-iterate'
+            foreach ($resource in $SKILL_ITERATE_RESOURCES) {
+                $resourceAbs = Resolve-SafePath -Path (Join-Path $packageRoot $resource) `
+                                               -AllowedRoots @($packageRoot)
+                if (-not (Test-Path -LiteralPath $resourceAbs -PathType Leaf)) {
+                    throw "build-distributions: skill-iterate resource source missing: $resource"
+                }
+                $skillIterateResources[$resource] = Read-SourceText $resourceAbs
+            }
+        }
 
         # -- Launcher (SKILL.md) -- (all sources validated above)
         $adapterBody = Read-SourceText $adapterAbs
@@ -703,6 +722,14 @@ foreach ($profile in $profiles) {
             if ($name -ne 'build-observer') { break }
             $resourceLabel = "skills/build-observer/$resource"
             $resourceOut = Add-PythonProvenance $buildObserverResources[$resource] $resourceLabel $profile
+            Write-GeneratedFile (Join-Path $skillOutDir $resource) $resourceOut $profileDirAbs
+            $fileCount++
+        }
+
+        foreach ($resource in $SKILL_ITERATE_RESOURCES) {
+            if ($name -ne 'skill-iterate') { break }
+            $resourceLabel = "skills/skill-iterate/$resource"
+            $resourceOut = Add-PythonProvenance $skillIterateResources[$resource] $resourceLabel $profile
             Write-GeneratedFile (Join-Path $skillOutDir $resource) $resourceOut $profileDirAbs
             $fileCount++
         }

@@ -14,8 +14,15 @@ import tempfile
 import unittest
 from contextlib import redirect_stdout
 from pathlib import Path
+import sys
 from typing import Any
 
+_CANONICAL_IMPORT_DIR = Path(__file__).resolve().parents[2] / "skills" / "skill-iterate" / "scripts"
+while str(_CANONICAL_IMPORT_DIR) in sys.path:
+    sys.path.remove(str(_CANONICAL_IMPORT_DIR))
+sys.path.insert(0, str(_CANONICAL_IMPORT_DIR))
+
+import differential_grader as differential_grader_module
 from differential_grader import (
     COMPARISON_PROMPT_TEMPLATE,
     ScenarioVerdict,
@@ -27,8 +34,11 @@ from differential_grader import (
 )
 
 
+CANONICAL_DIR = Path(__file__).resolve().parents[2] / "skills" / "skill-iterate" / "scripts"
+assert Path(differential_grader_module.__file__).resolve().parent == CANONICAL_DIR
+
 SCRIPTS_DIR = Path(__file__).resolve().parent
-FIXTURES_DIR = SCRIPTS_DIR / "fixtures"
+LEGACY_FIXTURES_DIR = SCRIPTS_DIR / "fixtures"
 
 
 def _v(idx: int, verdict: str) -> ScenarioVerdict:

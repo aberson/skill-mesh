@@ -10,8 +10,16 @@ from pathlib import Path
 
 import pytest
 
+_CANONICAL_IMPORT_DIR = Path(__file__).resolve().parents[2] / "skills" / "skill-iterate" / "scripts"
+while str(_CANONICAL_IMPORT_DIR) in sys.path:
+    sys.path.remove(str(_CANONICAL_IMPORT_DIR))
+sys.path.insert(0, str(_CANONICAL_IMPORT_DIR))
+
 import resolve_queue as rq
 
+
+CANONICAL_DIR = Path(__file__).resolve().parents[2] / "skills" / "skill-iterate" / "scripts"
+assert Path(rq.__file__).resolve().parent == CANONICAL_DIR
 
 def _make_skill(project: Path, name: str, *, scenarios: bool = True, results_mtime: float | None = None) -> None:
     evals_dir = project / ".claude" / "skills" / name / "evals"
@@ -131,7 +139,7 @@ def test_dry_run_text_shape(tmp_path: Path) -> None:
 def test_cli_json_output(tmp_path: Path) -> None:
     _make_skill(tmp_path, "target-retro")
     out = subprocess.run(
-        [sys.executable, str(Path(__file__).parent / "resolve_queue.py"),
+        [sys.executable, str(CANONICAL_DIR / "resolve_queue.py"),
          "--project", str(tmp_path), "--now", "1000000"],
         capture_output=True, text=True, check=True,
     )

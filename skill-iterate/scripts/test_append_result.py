@@ -5,9 +5,19 @@ from __future__ import annotations
 import tempfile
 import unittest
 from pathlib import Path
+import sys
 
+_CANONICAL_IMPORT_DIR = Path(__file__).resolve().parents[2] / "skills" / "skill-iterate" / "scripts"
+while str(_CANONICAL_IMPORT_DIR) in sys.path:
+    sys.path.remove(str(_CANONICAL_IMPORT_DIR))
+sys.path.insert(0, str(_CANONICAL_IMPORT_DIR))
+
+import append_result as append_result_module
 from append_result import append_result
 
+
+CANONICAL_DIR = Path(__file__).resolve().parents[2] / "skills" / "skill-iterate" / "scripts"
+assert Path(append_result_module.__file__).resolve().parent == CANONICAL_DIR
 
 class AppendResultTest(unittest.TestCase):
     def setUp(self) -> None:

@@ -2,12 +2,24 @@
 
 from __future__ import annotations
 
+import json
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
+import sys
 
+_CANONICAL_IMPORT_DIR = Path(__file__).resolve().parents[2] / "skills" / "skill-iterate" / "scripts"
+while str(_CANONICAL_IMPORT_DIR) in sys.path:
+    sys.path.remove(str(_CANONICAL_IMPORT_DIR))
+sys.path.insert(0, str(_CANONICAL_IMPORT_DIR))
+
+import morning_summary as morning_summary_module
 from morning_summary import SkillResult, write_morning_summary
 
+
+CANONICAL_DIR = Path(__file__).resolve().parents[2] / "skills" / "skill-iterate" / "scripts"
+assert Path(morning_summary_module.__file__).resolve().parent == CANONICAL_DIR
 
 def _r(
     skill: str,
@@ -171,6 +183,40 @@ class WriteMorningSummaryTest(unittest.TestCase):
             "| review-deep | -- | -- | -- | 0 | 0 | defect-park | docs/skill-iterate-runs/parked-2026-01-15.md |",
             text,
         )
+
+    def test_review_required_link_rendering(self) -> None:
+        out = write_morning_summary(
+            runs_dir=self.runs_dir,
+            skill_results=[_r("review-deep", status="review-required",
+                              url="docs/skill-iterate-runs/proposals/review-deep.md")],
+            started_at=self.started,
+            ended_at=self.ended,
+            date_str="2026-01-15",
+        )
+        self.assertIn(
+            "| review-deep | 0.80 | 0.85 | +0.05 | 3 | 100 | review-required | docs/skill-iterate-runs/proposals/review-deep.md |",
+            out.read_text(encoding="utf-8"),
+        )
+
+    def test_cli_accepts_review_required_and_rejects_unknown_status(self) -> None:
+        script = CANONICAL_DIR / "morning_summary.py"
+        base = {
+            "skill": "review-deep", "baseline_score": 0.8,
+            "final_score": 0.85, "delta": 0.05, "iterations_run": 3,
+            "wall_seconds_total": 100, "top_keep_descriptions": [],
+            "parked_issue_url": "proposal.md",
+        }
+        for status, expected in (("review-required", 0), ("unknown-status", 1)):
+            payload = self.runs_dir / f"{status}.json"
+            payload.parent.mkdir(parents=True, exist_ok=True)
+            payload.write_text(json.dumps({"skill_results": [{**base, "ship_status": status}]}),
+                               encoding="utf-8")
+            result = subprocess.run(
+                [sys.executable, str(script), str(self.runs_dir), "--input", str(payload),
+                 "--date", "2026-01-15"],
+                capture_output=True, text=True,
+            )
+            self.assertEqual(result.returncode, expected, result.stderr)
 
     def test_all_none_scores_skipped_from_top_keeps(self) -> None:
         # A skill that crashed before scoring (no baseline, no final) and is NOT

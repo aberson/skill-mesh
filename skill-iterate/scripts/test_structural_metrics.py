@@ -16,6 +16,12 @@ import unittest
 from contextlib import redirect_stdout
 from pathlib import Path
 
+_CANONICAL_IMPORT_DIR = Path(__file__).resolve().parents[2] / "skills" / "skill-iterate" / "scripts"
+while str(_CANONICAL_IMPORT_DIR) in sys.path:
+    sys.path.remove(str(_CANONICAL_IMPORT_DIR))
+sys.path.insert(0, str(_CANONICAL_IMPORT_DIR))
+
+import structural_metrics as structural_metrics_module
 from structural_metrics import (
     DEFAULT_BANNED_PHRASES,
     DEFAULT_MAX_LINE_LENGTH,
@@ -34,8 +40,11 @@ from structural_metrics import (
 )
 
 
-SCRIPTS_DIR = Path(__file__).resolve().parent
-FIXTURES_DIR = SCRIPTS_DIR / "fixtures"
+CANONICAL_DIR = Path(__file__).resolve().parents[2] / "skills" / "skill-iterate" / "scripts"
+assert Path(structural_metrics_module.__file__).resolve().parent == CANONICAL_DIR
+
+LEGACY_TEST_DIR = Path(__file__).resolve().parent
+LEGACY_FIXTURES_DIR = LEGACY_TEST_DIR / "fixtures"
 
 
 class SectionDepthConsistencyTest(unittest.TestCase):
@@ -316,8 +325,8 @@ class IntegrationFixtureTest(unittest.TestCase):
     """Plan §7 Step 3 Done-when condition: well-structured > degraded composite."""
 
     def test_well_structured_outscores_degraded(self) -> None:
-        well = score_skill(FIXTURES_DIR / "well_structured.md")
-        bad = score_skill(FIXTURES_DIR / "degraded.md")
+        well = score_skill(LEGACY_FIXTURES_DIR / "well_structured.md")
+        bad = score_skill(LEGACY_FIXTURES_DIR / "degraded.md")
         self.assertIsInstance(well, StructuralScore)
         self.assertIsInstance(bad, StructuralScore)
         self.assertGreater(well.score, bad.score,
@@ -332,7 +341,7 @@ class IntegrationFixtureTest(unittest.TestCase):
             self.assertIn("score", m, msg=f"metric {name} missing 'score'")
 
     def test_eight_metrics_reported(self) -> None:
-        result = score_skill(FIXTURES_DIR / "well_structured.md")
+        result = score_skill(LEGACY_FIXTURES_DIR / "well_structured.md")
         self.assertEqual(len(result.metrics), 8)
         expected = {
             "section_depth_consistency",
@@ -395,7 +404,7 @@ class CLITest(unittest.TestCase):
     def test_main_emits_valid_json(self) -> None:
         buf = io.StringIO()
         with redirect_stdout(buf):
-            rc = main([str(FIXTURES_DIR / "well_structured.md")])
+            rc = main([str(LEGACY_FIXTURES_DIR / "well_structured.md")])
         self.assertEqual(rc, 0)
         parsed = json.loads(buf.getvalue())
         self.assertIn("score", parsed)
@@ -404,14 +413,14 @@ class CLITest(unittest.TestCase):
         self.assertEqual(len(parsed["metrics"]), 8)
 
     def test_main_missing_file_returns_3(self) -> None:
-        rc = main([str(FIXTURES_DIR / "definitely-not-a-real-file.md")])
+        rc = main([str(LEGACY_FIXTURES_DIR / "definitely-not-a-real-file.md")])
         self.assertEqual(rc, 3)
 
     def test_subprocess_invocation_emits_json(self) -> None:
         """Smoke: real `python structural_metrics.py <path>` end-to-end."""
         result = subprocess.run(
-            [sys.executable, str(SCRIPTS_DIR / "structural_metrics.py"),
-             str(FIXTURES_DIR / "well_structured.md")],
+            [sys.executable, str(CANONICAL_DIR / "structural_metrics.py"),
+             str(LEGACY_FIXTURES_DIR / "well_structured.md")],
             capture_output=True,
             text=True,
             timeout=30,

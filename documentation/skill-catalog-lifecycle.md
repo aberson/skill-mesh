@@ -96,6 +96,7 @@ resource plan as a new grandfathering waiver:
 | `review-deep` | a `config/`, `evals/`, and `scripts/` support tree | Authored at commit `e36a03e`, landed on `main` with RD-lite (issue #177) via merge `8a1b501` — the merge section 1 records as a prerequisite |
 | `build-step` | `scripts/build_step_tree.py` and `scripts/capture_evidence.py` | The P1 mechanics helper, and an LF copy of the legacy top-level package's capture script; reviewed packaging exception, packet route P2 |
 | `build-observer` | `scaffold_portfolio.py` | LF-normalized copy of the existing validator; reviewed scoped packaging exception for all three generated profiles |
+| `skill-iterate` | six Python files under `scripts/` | Canonical copies of the established evaluation helpers; reviewed scoped packaging exception for all three generated profiles |
 | `user-wrap` | `evals/` | Scoped repository-only evaluation plan in `user-wrap-source-evals.md`; not emitted or installed |
 | `user-gateway` | `evals/` | Scoped repository-only evaluation plan in `user-gateway-source-evals.md`; not emitted or installed |
 | `review-uat` | `evals/` | Scoped repository-only evaluation plan in `uat-source-evals.md`; not emitted or installed |
@@ -139,6 +140,19 @@ install must refuse that collision. Release qualification uses operator-owned re
 an exact hash check, preserves unrelated foreign sample/test files, and restores legacy helper bytes
 from the take-ownership backup after rollback. No unscoped `-Force` is routine or authorized without
 that check.
+
+**Reviewed packaging exception: the `skill-iterate` scripts.** Exactly
+`adversarial_calibration.py`, `append_result.py`, `differential_grader.py`,
+`morning_summary.py`, `resolve_queue.py`, and `structural_metrics.py` under the table row's
+`scripts/` directory entered through the scoped evaluation-pair resource plan for the
+2026-10-23 isolated release. The distribution builder emits those six files into every
+profile's `skill-iterate/scripts/` package with Python provenance inside each module
+docstring; a missing input fails generation before the launcher is written. This does not
+generalize `support_assets` into an emission protocol, reopen the grandfathered set, or
+authorize another package file. Unmarked legacy copies in a consumer home are relocated only
+by operator action after an exact hash check. Unrelated foreign files, including fixtures,
+M2 launchers and tests, are preserved, and rollback restores legacy bytes from the
+take-ownership backup. No unscoped `-Force` is routine or authorized without that check.
 
 **Scoped source-only resource plan: user-wrap evaluation assets.** The v2
 [user-wrap maintenance plan](user-wrap-source-evals.md) admits

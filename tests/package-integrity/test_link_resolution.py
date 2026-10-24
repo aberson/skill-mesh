@@ -2579,6 +2579,14 @@ def test_shipped_leaves_matches_a_real_build(dist_root):
     excluded from the per-skill loop, and asserted present separately below so the
     exclusion cannot become a hole that hides the payload not shipping at all.
     """
+    skill_iterate_resources = {
+        "scripts/adversarial_calibration.py",
+        "scripts/append_result.py",
+        "scripts/differential_grader.py",
+        "scripts/morning_summary.py",
+        "scripts/resolve_queue.py",
+        "scripts/structural_metrics.py",
+    }
     shared_seen = {}
     seen = set()
     for provider in PROFILES:
@@ -2599,6 +2607,9 @@ def test_shipped_leaves_matches_a_real_build(dist_root):
             if skill_dir.name == "build-observer":
                 assert BUILD_OBSERVER_SHIPPED_RESOURCES <= paths
                 paths -= BUILD_OBSERVER_SHIPPED_RESOURCES
+            if skill_dir.name == "skill-iterate":
+                assert skill_iterate_resources <= paths
+                paths -= skill_iterate_resources
             names = paths
             unlisted = sorted(names - set(SHIPPED_LEAVES))
             assert not unlisted, (
