@@ -279,10 +279,13 @@ its own reported result, never a silently degraded one.
   the tier-drift pair halt on a host that does not pass their own capability contract.
   Each lands in the one report as its reason code rather than being reimplemented
   inline.
-- **`goblin-do` and `goblin-suggest` need the `claude` CLI.** Their Workflow session
-  path is unavailable, so they ride their cores' documented CLI fallback; absent the
-  `claude` CLI or its OAuth token they halt `required_tool_missing` rather than
-  degrading to an unreviewed edit or a self-judged generation.
+- **The two Goblin skills take different Codex paths.** `goblin-do` runs the
+  read-only deterministic renderer through `uv`; it needs no Workflow, sub-agent,
+  `claude` CLI, or OAuth. If `uv`, the prepared environment, its frozen lock, or the
+  `goblin` console script is unavailable, it halts `required_tool_missing` rather
+  than installing or hand-rendering an artifact. `goblin-suggest` maps no Workflow
+  primitive on Codex and halts `required_tool_missing` before any Goblin command;
+  it never substitutes `claude -p` or generates and judges in one session.
 - **`citation-sweep`'s serial rail was withdrawn.** Its core mandates one isolated
   fresh-context worker per artifact and documents no fallback, so Step 119 made the
   adapter capability-conditioned like the eight others the first bullet lists alongside

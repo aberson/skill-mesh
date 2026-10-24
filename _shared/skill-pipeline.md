@@ -73,9 +73,10 @@ When a rail skill discovers mid-run that the work is on the wrong rail, it:
    `routed`, with a disposition note recording the re-route.
 4. **STOPS** instead of grinding through on the wrong rail.
 
-`/goblin-do`'s small→big handoff — a `big` atom gets the `/plan-feature` seed + the
-build-rail next step printed, then the skill deliberately stops — is the codified
-template for this contract.
+`/goblin-do`'s non-goal seed handoff is the codified template for this contract: an atom
+with `goal_able: true` and a non-empty goal condition gets a copy-pasteable `/goal` block;
+every other atom gets the seed for its kind, including a `/plan-feature` seed for a
+suggestion. The skill stops after rendering and executes no work.
 
 ---
 
