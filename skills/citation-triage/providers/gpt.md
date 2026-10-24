@@ -4,18 +4,17 @@ See [../core.md](../core.md) for the full specification.
 
 ## GPT invocation differences
 
-- Load the core in full before acting. Use structured tool/action calls for filesystem, shell, browser, GitHub, and named-skill operations.
+- Load the core in full before acting. Use structured tool/action calls for filesystem and shell operations.
 - Normalize GPT verbosity: do not reveal hidden chain-of-thought; return only required decisions, evidence, artifacts, commands, questions, and the core's closing report.
-- Resolve capability tiers with `config/model-tier-map.json`; explicit router overrides win.
 - Never infer an operator decision from rank, from model output, or from a citation alone; present the queue as decision support and wait for the operator.
-- Invoke exactly ONE of `--keep` / `--cut` / `--rewrite` per decision through a shell action, adding `--by <operator>` when supplied.
-- On cancel, write nothing. Never edit or apply a target artifact.
+- Recheck the displayed row identity immediately before invoking exactly one of `--keep` / `--cut` / `--rewrite` through a shell action. Add `--by <operator>` only when supplied.
+- On cancel, make no further resolve calls; preserve and report earlier durable resolutions. Never edit or apply a target artifact.
 
 ## Known GPT limitations
 
-- Claude Artifact actions, Claude session JSONL/scratchpad paths, and Claude-only deep links are unavailable unless an explicit adapter supplies them. Use the core's standalone-file or durable-state fallback.
-- On timeout, rate limit, provider 5xx, parse failure, or missing required adapter, return the router reason code and consume at most the shared cross-cloud retry allowance. Never silently omit a core gate.
+- Claude Artifact actions, session JSONL paths, and Claude-only deep links are unavailable and are not required by this core.
+- On timeout, rate limit, provider 5xx, parse failure, or missing required adapter, return the router reason code without retrying. Never silently omit a core gate.
 
 ## Output normalization
 
-Return only the core-defined operator-facing output: the presented queue rows and the recorded decisions. Preserve locked strings, proposal IDs, the keep/cut/rewrite enum, and command ordering exactly; reject missing required fields instead of inferring success.
+The closing output is the core's Report or HELD form; the presentation and row-bound operator questions remain required interactive output. Preserve exact row identities, receipts, states, and command ordering; reject missing fields instead of inferring success.
