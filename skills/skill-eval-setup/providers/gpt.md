@@ -8,11 +8,18 @@ See [../core.md](../core.md) for the full specification.
 - Normalize GPT verbosity: do not reveal hidden chain-of-thought; return only required decisions, evidence, artifacts, commands, questions, and the core's closing report.
 - Resolve capability tiers with `config/model-tier-map.json`; explicit router overrides win.
 - Agent nesting is parent-owned: evaluator/improver children are single-shot and cannot launch descendants. The parent performs iteration, worktree coordination, and deterministic result collection.
+- Resolve the exact target repository before writing. Keep installed generated targets read-only,
+  preserve the catalog-lifecycle stop, and scope every output path to the selected skill directory.
+- Use separate parent-dispatched producer and grader actions. Invoke the shipped
+  `grader_prompt.py` and `score_skill_absolute.py` from the profile's `_shared` directory;
+  never replace their contract with an inline rubric or score calculation.
 
 ## Known GPT limitations
 
 - Claude Artifact actions, Claude session JSONL/scratchpad paths, and Claude-only deep links are unavailable unless an explicit adapter supplies them. Use the core's standalone-file or durable-state fallback.
-- On timeout, rate limit, provider 5xx, parse failure, or missing required adapter, return the router reason code and consume at most the shared cross-cloud retry allowance. Never silently omit a core gate.
+- On timeout, rate limit, provider 5xx, parse failure, missing isolation, or missing shipped
+  scorer, return the router reason code and consume at most the shared cross-cloud retry
+  allowance. Never silently omit a core gate or invoke an unwired generator mode.
 
 ## Output normalization
 

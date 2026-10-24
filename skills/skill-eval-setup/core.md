@@ -2,37 +2,87 @@
 
 ## Provider-neutral host abstractions
 
-- Resolve supporting assets and relative script paths against `.claude/skills/skill-eval-setup/`; the canonical prose lives here while implementation assets remain with the compatibility launcher.
+- Resolve shipped shared scorers from the current host profile's `_shared` directory. The
+  optional golden-corpus preview helper lives only in a source checkout at
+  `<repository-root>/skill-eval-setup/scripts/generate_bad_examples.py`; installed profiles do
+  not ship it, and no step depends on it (Step 5).
 - A named skill call means the host's skill-dispatch primitive. An Agent, Explore agent, workflow, or sub-agent means an isolated task/action invocation with fresh context and the requested capability tier. Provider wrappers map these roles to their native APIs.
 - Model tier names in inherited procedures describe capability roles. Resolve them through `config/model-tier-map.json`; an unavailable required capability returns `required_tool_missing` rather than weakening a gate.
 - Never expose hidden chain-of-thought. Preserve only decisions, evidence, commands, structured artifacts, and operator-facing rationale required by this contract.
 
 # Skill Eval Setup
 
-Takes a skill name or path, reads its SKILL.md, and produces:
+Takes a skill name or path, reads its behavior contract, and produces:
 1. An `evals/` folder inside the skill directory
-2. `evals/evals.json` — true/false assertions auto-derived from the SKILL.md
+2. `evals/evals.json` — true/false assertions auto-derived from the contract
 3. `evals/test_scenarios.json` — 2–3 synthetic scenarios to test the skill against
-4. A copy-paste prompt the user runs in a fresh window to start the self-improvement loop
+4. `evals/golden/` — a verified good output, one planted-defect bad per discrimination assertion, and `manifest.json` (Step 5), or a named HELD reason
+5. A copy-paste prompt the user runs in a fresh window to start the self-improvement loop
+
+Downstream consumers: `/skill-iterate` and `/skill-evolve` require `evals/evals.json` and
+`evals/test_scenarios.json`; the optional goldens verification in `_shared/score-skill.md` reads
+`evals/golden/good.md` and every top-level `evals/golden/bad_*.md`; and a recorded
+judge-calibration gate (`calibrate_judge.py`, used by review-deep) fails closed unless every
+fixture in a golden directory that holds `verdicts.jsonl` or `recorded_scores.json` appears in its
+recorded maps, so Step 5 never writes into such a directory. These paths and schemas are kept; the
+golden manifest gains one additive per-bad field, `sha256` (Step 5).
+
+This skill's grading path invokes only the shipped `grader_prompt.py` and
+`score_skill_absolute.py`. It does not invoke `score_skill_composite.py`: that downstream
+consumer has additional skill-iterate runtime dependencies and must be qualified by its owning
+workflow before use. Emitting the composite file is not evidence that its whole runtime closure
+works.
 
 ---
 
 ## Input
 
 The user provides one of:
-- A skill name (e.g., `session-wrap`) — resolved to `.claude/skills/<name>/SKILL.md`
+- A skill name (e.g., `session-wrap`) — resolved through the current host's discovery root
 - A relative or absolute path to a skill folder or SKILL.md
 
 Optional flag:
 - `--keep-scenarios` — when the target skill already has `evals/test_scenarios.json`, do NOT overwrite it. Regenerate only `evals.json`. Use this when regenerating the assertion set against a rebuilt eval bar while preserving hand-crafted, project-specific scenarios.
 
-If the skill or SKILL.md cannot be found, report the error and stop.
+**Behavior contract.** The contract is the target SKILL.md. When that SKILL.md defers its full
+specification to a sibling `core.md` (every generated Skill Mesh profile does; its files carry the
+marker `SKILL-MESH-GENERATED-FILE`), the contract is SKILL.md plus that `core.md`. In the steps
+below, "the target SKILL.md" means this contract, and each assertion's `source` names the file
+that holds the rule (`SKILL.md, line N` or `core.md, line N`).
+
+**Generated targets are read-only.** A file whose leading provenance header identifies it as a
+`SKILL-MESH-GENERATED-FILE` is overwritten by the next install. Do not use an unanchored substring
+test: a contract may quote that marker. This skill never edits a generated contract. It may author
+eval files beside an installed generated target, but the emitted loop stops before editing that
+target and reports the canonical source named by the provenance header; continued iteration must
+use that canonical source through its repository lifecycle. Assertions authored beside an
+installed generated target cite the installed contract's line positions, which can differ from
+the canonical source because of provenance headers; disclose that limitation in Part 1.
+
+**Resolve the exact target before writing.** Canonicalize the selected skill directory and every
+planned output path. Resolve `TARGET_REPO` with
+`git -C <skill-dir> rev-parse --show-toplevel`; stop with `target-repo-unresolved` if that command
+fails. Every write and every
+Git check uses absolute paths under that exact skill directory and `git -C TARGET_REPO`. Refuse a
+path that escapes through `..`, a symlink, junction, or reparse point. Never redirect a write to
+the invoking window's repository or to a similarly named installed copy.
+
+**Catalog-owned targets use the catalog lifecycle.** Before Steps 1-5 or emitting the Part 3 loop,
+if `TARGET_REPO` contains `config/skill-manifest.json` and that manifest owns the selected skill,
+stop unconditionally with `PACKAGE_RESOURCE_PLAN_REQUIRED`, whether or not `evals/` already exists.
+Report that the requested package-local eval
+resources need the repository's supported catalog lifecycle and, because they change resource
+topology, a scoped packaging or source-only resource plan. Follow the current manual lifecycle
+contract or installed `/skill-crud UPDATE` when available. A host-provided skill creator and a
+single-host installed copy are not substitutes.
+
+If the skill, its SKILL.md, or a `core.md` it defers to cannot be found, report the error and stop.
 
 ---
 
 ## Step 1: Read and analyze the SKILL.md
 
-Read the target SKILL.md completely. Extract every testable requirement:
+Read the full contract (SKILL.md and any deferred `core.md`). Extract every testable requirement:
 
 ### What to look for
 
@@ -63,7 +113,7 @@ category for negative assertions (things the skill must NOT do).
 Each assertion must be:
 - A single declarative statement that can be judged TRUE or FALSE
 - Testable by reading the skill's output alone (no access to internal state)
-- Traceable to a specific line or section in the SKILL.md via the `source` field
+- Traceable to a specific line or section in the contract via the `source` field
 
 ---
 
@@ -190,7 +240,9 @@ Create 2–3 synthetic test scenarios that exercise different paths through the 
 
 The `expected_assertions` field lists which assertion IDs should pass for this scenario.
 Typically all assertions apply to all scenarios, but some conditional assertions may only
-apply to specific scenarios.
+apply to specific scenarios. List every assertion whose trigger fires in the scenario: the
+shared grader grades an ID missing from a non-empty list as vacuously TRUE, so an omitted ID
+can never fail.
 
 ---
 
@@ -226,8 +278,8 @@ Rules:
   is considered broken
 - Number assertions sequentially starting at 1
 - The `result` field is always `null` in the template — the loop fills it in
-- The `source` field must reference actual line numbers in the SKILL.md (per the
-  Sourcing precision and Section-heading coverage rules in Step 1.5)
+- The `source` field must reference actual line numbers in the contract file that holds the
+  rule (per the Sourcing precision and Section-heading coverage rules in Step 1.5)
 - The `defect_type` field categorizes the assertion. Use `n/a-sanity` for pure
   structural sanity checks (valid JSON, sequential ids, etc.) and `n/a-coverage`
   for assertions that aggregate over the target SKILL.md rather than testing a
@@ -251,13 +303,20 @@ Rules:
 }
 ```
 
-Write both files to `<skill-folder>/evals/`.
+Before writing, verify that `evals/evals.json` and `evals/test_scenarios.json` resolve under
+the exact target directory. Define the write set as only the paths this run will write; with
+`--keep-scenarios`, omit the preserved scenario file. For every existing write-set path, run
+`git -C TARGET_REPO check-ignore -q -- <path>` and stop with `dirty-output` if it is ignored.
+Then run `git -C TARGET_REPO status --porcelain --untracked-files=all -- <write-set>`; nonempty
+stdout or a nonzero exit means `dirty-output`. Advisory stderr such as a line-ending warning is
+recorded but is not dirty by itself when the command succeeds. Write only after these checks pass,
+and still report kept-scenario ID drift.
 
 ### `--keep-scenarios` behavior
 
 When `--keep-scenarios` is passed AND `<skill-folder>/evals/test_scenarios.json` already exists:
 1. Do NOT overwrite `test_scenarios.json`.
-2. Read the existing scenarios and use their `id` values when assigning `expected_assertions` references in the new `evals.json`. If the new assertion set has IDs the old scenarios don't reference (or vice-versa), this is expected — the scenarios stay as-is; only the assertion list is rebuilt.
+2. Number the new assertions independently. Compare the kept scenarios' `expected_assertions` with the new IDs and list in Part 1 every kept reference to an ID the new `evals.json` lacks, and every new ID that no kept scenario lists (it can only grade vacuously TRUE). Do not edit the kept file to fix them.
 3. In Part 2 of the output, list `test_scenarios.json` with a `(preserved — N scenarios)` suffix instead of as a written file.
 
 When `--keep-scenarios` is passed BUT no existing `test_scenarios.json` is found, fall through to normal behavior (generate fresh scenarios) and note this in Part 1 Summary.
@@ -270,116 +329,287 @@ Output the following prompt, customized for the target skill. Present it in a co
 labeled `text` so the user can copy-paste it into a fresh window.
 
 The prompt must include:
-1. The skill name and the **absolute** path to the evals folder (e.g., `.claude/skills/<skill-name>/evals/`) — every `<skill-path>` and `<skill-name>` placeholder in the template must be replaced with concrete absolute values
-2. Instructions to read the evals.json and test_scenarios.json
-3. The produce-then-grade loop: for each scenario, use a producer invocation to simulate the
-   skill's behavior following the SKILL.md instructions and produce the output, then use a
+1. The skill name and **absolute** paths: the skill directory, every contract file, the one
+   editable file (the file that holds the contract's rules: the deferred `core.md` when there
+   is one, otherwise SKILL.md), the directory that contains the editable file, and the shared
+   scoring-helper directory, which is the `_shared` directory itself (the one that contains
+   `score-skill.md`, `grader_prompt.py` and `score_skill_absolute.py` in this install), not its
+   parent. Every placeholder in the template must be replaced with concrete absolute values
+2. Instructions to read the contract, evals.json and test_scenarios.json
+3. A preflight that stops before any edit when the editable file is generated, is outside a git
+   work tree, is catalog-owned, is untracked or ignored, is on a detached or changed branch, or
+   has uncommitted changes; when a scenario lists an assertion ID that evals.json lacks; when no
+   current verified golden pair exists; or when the grader cannot score the stripped good body
+   above the stripped bad body. Every git command in the loop runs against the editable file's own
+   repository (`git -C` with the root resolved from the editable file's directory), never
+   against the window's working directory
+4. A baseline scored and logged before any edit
+5. The produce-then-grade loop: for each scenario, use a producer invocation to simulate the
+   skill's behavior following the contract and produce the output, then use a
    separate fresh-context grader invocation to grade every assertion TRUE/FALSE. The generated
    loop MUST spawn a fresh-context grader invocation separate from the producer invocation. The
    same context window must not produce output and then evaluate it. This is invariant 1 and is
-   non-relaxable.
-4. Score calculation: pass count / total assertions across all scenarios
-5. If any assertions fail: propose ONE targeted change to SKILL.md, apply it, re-run all
-   scenarios, and compare scores
-6. Keep/revert logic: keep if score improved, `git reset` if not
-7. Iteration logging: number, score, keep/discard, what was tried
-8. Termination: perfect score or user interrupt
-9. Git commit on each kept change with a message like:
-   `<skill-name> eval: iteration N — <what changed>`
+   non-relaxable. Grader prompts come from the shared `build_grader_prompt` helper and scores
+   from the shared `score_skill_absolute.py` aggregator, never from hand-written grading rules
+6. Score calculation: the aggregator's `simple_score` (TRUE verdicts over scenario-assertion
+   pairs), with the baseline and every keep/revert decision taken over 3 trials
+7. If any assertions fail: propose ONE targeted change to the editable file, apply it, re-run
+   all scenarios, and compare with the baseline
+8. Keep/revert logic: keep if the score is strictly higher than the baseline; otherwise confirm
+   that the file's diff is only this iteration's change and restore it with
+   `git checkout -- <file>`; a diff holding anything else stops the loop without a restore
+9. Iteration logging: number, score, keep/discard, what was tried
+10. Termination: perfect score or user interrupt
+11. Git commit of the editable file alone (a pathspec-limited commit) on each kept change, with
+   a message like: `<skill-name> eval: iteration N — <what changed>`
 
 ### Prompt template
 
 ```text
-Run a self-improvement loop on the skill at `<skill-path>`.
+Run a self-improvement loop on the skill at `<skill-dir>`.
 
 ## Setup
-- Read `<skill-path>/SKILL.md` (the skill definition)
-- Read `<skill-path>/evals/evals.json` (the assertions)
-- Read `<skill-path>/evals/test_scenarios.json` (the test scenarios)
+- Read the contract in full: `<contract-files>`
+- The only skill file this loop may change: `<edit-file>` (in directory `<edit-dir>`)
+- Read `<skill-dir>/evals/evals.json` (the assertions)
+- Read `<skill-dir>/evals/test_scenarios.json` (the test scenarios)
+- Goldens: `<skill-dir>/evals/golden/` (good.md, verified bad_*.md, manifest.json)
+- Shared scoring helpers: `<shared-dir>/grader_prompt.py` and `<shared-dir>/score_skill_absolute.py`
+
+## Preflight (stop before any edit and report the reason)
+Run every git command in this loop as `git -C REPO ...`, where REPO is resolved below; never run
+git from this window's working directory.
+- generated-target: the leading provenance header of `<edit-file>` identifies it as a
+  SKILL-MESH-GENERATED-FILE. Report the canonical source it names; change that source through its
+  own repository's process, not in this loop. A quoted marker elsewhere in the file does not count.
+- untracked-target: `git -C <edit-dir> rev-parse --show-toplevel` fails (the file is outside a
+  git work tree; otherwise its output is REPO), or this fails because the file is untracked or
+  ignored: `git -C REPO ls-files --error-unmatch -- <edit-file>`.
+- catalog-target: REPO has `config/skill-manifest.json` and that manifest owns this skill. Stop
+  with `PACKAGE_RESOURCE_PLAN_REQUIRED`; do not edit or commit the catalog source from this loop.
+- branch-changed: record the nonempty result of `git -C REPO branch --show-current` as BRANCH;
+  detached HEAD is a stop. Re-run it before every edit and commit and stop if it differs.
+- dirty-target: `git -C REPO status --porcelain --untracked-files=all -- <edit-file>` prints
+  anything on stdout or exits nonzero. Record advisory stderr but do not treat a successful
+  command's line-ending warning as a dirty file.
+- scenario-drift: a scenario's expected_assertions lists an id that evals.json does not define.
+- uncalibrated-grader: good.md is missing, or manifest.json lists no bad for an assertion ID in
+  the current evals.json with verified_fails: true.
+- grader-cannot-discriminate: graded for 3 trials each as in Grade below (scenario_id "golden",
+  expected_assertions None), a current verified bad scores greater than or equal to good.md.
+  Before grading either artifact, remove only consecutive leading generated answer-key comments
+  matching `<!-- BAD OUTPUT ... -->` and `<!-- Violates ... -->`; keep the stored file unchanged.
+  Any invalid or incomplete golden grade is indeterminate and fails this preflight.
+
+## Baseline (before any edit)
+Run Produce + Grade for 3 trials and log the result as Iteration 0 with Result: BASELINE.
+That score is the baseline.
 
 ## Loop (repeat until perfect score or interrupted)
 
 ### Produce [producer step]
 For each scenario in test_scenarios.json:
 1. [producer step] Spawn a fresh producer invocation for the scenario
-2. [producer step] Simulate the environment described in the scenario's `context` field
-3. [producer step] Follow the SKILL.md instructions exactly as if you were executing the skill
-4. [producer step] Produce the full output the skill would generate
+2. [producer step] Give it only the contract and that scenario's `context`; never give a producer
+   evals.json, goldens, grader results, or the iteration log
+3. [producer step] Treat the scenario context as the whole simulated environment
+4. [producer step] Render output text only. Run no commands, use no tools, write or delete no files,
+   and make no network, Git, issue-tracker, or other external mutation. Dispatch without tools
+   wherever the host supports that restriction
+5. [producer step] Return the full text the skill would have produced
 
 ### Grade [grader step]
 Spawn a fresh-context grader invocation separate from the producer invocation. The same context
 window must not produce output and then evaluate it. This producer/grader split is invariant 1
 and is non-relaxable.
 
-For each assertion in evals.json, judge the produced output:
-- [grader step] TRUE if the assertion holds for the output
-- [grader step] FALSE if it does not
-- [grader step] When in doubt, grade FALSE (strict grading prevents false passes)
-
-[grader step] Calculate score: (total TRUE across all scenarios) / (total assertions x number of scenarios)
+- [grader step] Build each scenario's grader prompt with
+  build_grader_prompt(scenario_id=scenario_id, rendered_output=output, evals_json=evals_text,
+  expected_assertions=scenario_expected) from grader_prompt.py (keyword arguments only), using
+  that scenario's own id and expected_assertions. Use the template verbatim; do not write your
+  own grading rules.
+- [grader step] Each grader returns {"verdicts": {...}}. Before aggregation, validate against the
+  complete set of assertion IDs in evals.json. On a JSON parse failure, re-dispatch that grader
+  once. After that single retry, replace a failed block with every required ID set to JSON boolean
+  false. For a parsed block, drop unknown IDs, backfill omitted IDs as false, and coerce every
+  non-boolean verdict to false; preserve a short repair reason. Thus every block has every and only
+  the required IDs with literal JSON booleans.
+- [grader step] Collect the normalized blocks as one payload
+  {"trials": [{"scenario_id": ..., "verdicts": {...}}, ...]} with one entry per scenario per
+  trial. Write it to a temporary JSON file outside the source tree and run
+  `python <shared-dir>/score_skill_absolute.py --evals <skill-dir>/evals/evals.json --input <payload-file>`.
+  Accept the result only when `total` equals scenario count times assertion count. The score is
+  its simple_score; any other total is a harness error and stops before an edit.
+- [grader step] One trial is Produce + Grade over every scenario. Put all 3 trials in one
+  payload; the aggregator takes the per-scenario, per-assertion majority.
 
 ### Improve
 If score < 100%:
 1. Identify the root cause of the lowest-confidence FALSE assertions
-2. Propose ONE targeted change to SKILL.md that would fix them without breaking passing assertions
-3. Apply the change
-4. Re-run Produce [producer step] + Grade [grader step] for all scenarios using separate invocations
-5. If score improved: `git add <skill-path>/SKILL.md && git commit -m "<skill-name> eval: iteration N — <description>"`
-6. If score did not improve: `git checkout -- <skill-path>/SKILL.md`
+2. Propose ONE targeted change to `<edit-file>` that would fix them without breaking passing assertions
+3. Re-run the branch-changed and dirty-target checks and stop if either fails; then apply the change
+4. Re-run Produce [producer step] + Grade [grader step] for 3 trials using separate invocations
+5. If the score is strictly higher than the baseline: recheck BRANCH, run
+   `git -C REPO add -- <edit-file>`, then
+   `git -C REPO commit -m "<skill-name> eval: iteration N - <description>" -- <edit-file>`.
+   The new score becomes the baseline.
+6. Otherwise: confirm that `git -C REPO diff -- <edit-file>` shows only this iteration's change,
+   then run `git -C REPO checkout -- <edit-file>`. If the diff holds anything else, stop without
+   restoring and report concurrent-edit.
 
 ### Log
-Append to `<skill-path>/evals/iteration_log.md` using this format:
+Append to `<skill-dir>/evals/iteration_log.md` using this format:
 
     ## Iteration N
     - Score: X/Y (Z%)
-    - Result: KEPT / DISCARDED
+    - Result: BASELINE / KEPT / DISCARDED
     - Change: <one-line description of what was tried>
     - Failures: <list of assertion IDs that failed>
 
 ## Rules
 - Do NOT stop to ask questions. Run autonomously.
 - Do NOT make more than ONE change per iteration.
-- Do NOT modify evals.json or test_scenarios.json.
+- Do NOT modify evals.json, test_scenarios.json, or anything in evals/golden/.
+- Do NOT change any file except `<edit-file>` and the iteration log, and never commit or restore
+  any other path.
+- Run producer invocations on the known model the skill uses in production. If that model cannot
+  be established or dispatched, stop with `production-model-unknown` or `required_tool_missing`;
+  never substitute another model.
 - If you hit 3 consecutive DISCARDED iterations with no progress, try a fundamentally
   different approach rather than tweaking the same area.
 ```
 
-Replace all `<skill-path>` and `<skill-name>` placeholders with actual values.
+Replace all `<skill-dir>`, `<contract-files>`, `<edit-file>`, `<edit-dir>`, `<shared-dir>` and `<skill-name>` placeholders with actual values. REPO is not a placeholder: the loop resolves it in its own preflight.
 
 ---
 
-## Step 5: Generate the golden bad-example corpus
+## Step 5: Build and verify the golden corpus
 
-`/skill-iterate`'s composite scoring (see `_shared/score-skill.md`) requires
-a per-skill **golden corpus**: one `good.md` plus one `bad_<defect-slug>.md`
-per discrimination assertion. The corpus is the gradient signal hill-climbing
-optimizes against — without it, shape-only assertions pass 100% on any
-well-formed output and the loop has no gradient.
+Run after Step 4. The corpus is a calibration anchor: one known-good output plus one
+planted-defect bad per discrimination assertion. `verify_goldens` in
+`_shared/score_skill_composite.py` (the goldens verification described in
+`_shared/score-skill.md`) loads `evals/golden/good.md` and every top-level
+`evals/golden/bad_*.md`, ignores `manifest.json`, and reports harness-error, which parks the
+skill when that verification is invoked and any bad scores greater than or equal to the good.
+Composite mode does not invoke it automatically. Goldens are optional for that check (absent
+means skipped); the Step 4 loop requires a verified pair before its first edit.
 
-Hand-writing the corpus does not scale (27 evaluable skills × 5–9 defect
-types ≈ 130–240 files). This step documents the LLM-driven generation
-procedure and the script that automates it.
+### Who dispatches
 
-Run the generator after Step 4 finishes. The generator consumes the
-`evals.json` produced by Step 3 and emits the corpus into
-`<skill-dir>/evals/golden/`.
+The agent running this skill dispatches every producer, generator and grader invocation
+itself. Every grader is a fresh-context invocation separate from the invocation that wrote the
+content it grades. Producers and generators return text only: give them no filesystem, shell,
+network, Git, issue-tracker, or other mutation tools where the host can enforce that, and instruct
+them to make no external side effects. The parent agent alone performs the validated writes in
+this contract. Producers receive only the target contract and scenario context, never evals.json,
+goldens, grader results, the manifest, or an iteration log. The helper script's production dispatch and scoring are not wired: outside
+`--dry-run` its generate mode stops at the first dispatch (exit 4) after writing `good.md`,
+which is a placeholder when none existed, and its `--verify-only` mode records every bad as not
+verified and rewrites `manifest.json`. Use the script only for `--dry-run` previews and its pure
+helpers (`derive_slug`, `build_generator_prompt`, `build_retry_prompt`). Never run its generate,
+`--fleet` (without `--dry-run`) or `--verify-only` modes, and never treat their output as a
+verification result.
 
-### Per-skill golden directory layout
+### Preconditions and HELD outcomes
+
+Check these before any Step 5 dispatch:
+
+- `required_tool_missing`: a required producer, generator or grader invocation is unavailable.
+  Steps 1-4 remain a useful standalone authoring path, but Step 5 is HELD and makes no golden
+  write; never simulate an unavailable isolated grader in the current context.
+- `production-model-unknown`: the target skill's production model cannot be established. Do not
+  substitute a cheaper, nearby, or default model for a producer.
+- `PACKAGE_RESOURCE_PLAN_REQUIRED`: the unconditional catalog-owned-target guard from Input
+  applies even when `evals/` or a prior golden corpus already exists.
+- `calibrated-corpus`: `evals/golden/` holds `verdicts.jsonl` or `recorded_scores.json`. A
+  recorded judge-calibration gate replays a score for every fixture there and fails closed on a
+  fixture it lacks, so any new or replaced bad would break it.
+- `manifest-unreadable`: an existing `evals/golden/manifest.json` is not a JSON object, or its
+  `bads` is present but not a list, so the merge in Writes cannot preserve it.
+- `unanchored-corpus`: `good.md` is absent while top-level `bad_*.md` files or an
+  `additional_goods` manifest field already exist. Do not introduce a new primary good whose
+  relationship to that curated corpus has not been calibrated.
+
+Step 5 is also HELD with `good-not-verified` when 5a accepts no good. Every HELD outcome writes
+nothing under `evals/golden/` (no good, no bad, no manifest), reports the reason in Part 1, and
+keeps the Step 1–4 outputs.
+
+Before the first dispatch, state the planned maximum number of invocations: one good producer
+(only when 5a has no good to reuse), three independent good-grader trials, and, for each slug
+that Step 5b will generate, up to three attempts of one generator plus three independent
+grader trials. With a produced good, under the 25-assertion cap this is
+`1 + 3 + 25 * 3 * (1 + 3) = 304`; with a reused good it is at most 303. Also announce the
+Step 4 loop preflight cost of `3 * (1 + B)` grader invocations for one good and `B` current
+verified bads. This is a notice, not a question; then proceed.
+
+### Grading a golden
+
+Derive the grading body without changing the stored artifact: from both good and bad content,
+remove only consecutive leading generated answer-key comment lines matching
+`<!-- BAD OUTPUT ... -->` and `<!-- Violates ... -->`, then preserve the remainder byte for byte.
+This also applies to hand-curated bads and the Step 4 discrimination preflight. Do not remove
+arbitrary leading HTML comments.
+
+Grade that body with three independent fresh grader invocations whose prompt is
+`build_grader_prompt(scenario_id="golden", rendered_output=<grading-body>, evals_json=<evals.json text>, expected_assertions=None)`
+from the shared `grader_prompt.py`. With no list, the template's secondary rule grades an
+assertion whose trigger is absent from the content as vacuously TRUE. Aggregate the verdicts
+with the shared `score_skill_absolute.py`, passing three blocks with the same scenario id:
+`{"trials": [{"scenario_id": "golden", "verdicts": <trial-1>}, ...]}`.
+Before aggregation, validate each block against every assertion ID in evals.json. Re-dispatch
+once on a JSON parse failure. A block is `indeterminate` if the retry still fails, an ID is
+missing or extra, a verdict is absent or is not a literal JSON boolean, or its shape otherwise
+differs from the contract. Unlike loop scoring, never backfill or coerce a golden verdict. Write
+the complete valid payload to a temporary file outside the source tree and invoke
+`score_skill_absolute.py --evals <evals-path> --input <payload-file>`. Require `total` to equal
+the assertion count and require `failed_assertions` to be present; otherwise the grade is
+`indeterminate`. The content's score is its `simple_score`. An indeterminate grade never satisfies
+a gate. Step 5 graders run
+at the Sonnet tier resolved through `config/model-tier-map.json`. The absolute aggregator
+collapses the three trials by per-assertion majority. Use this same production-helper procedure
+for the good and every bad; do not hand-calculate or substitute the composite scorer.
+
+### 5a. Known-good anchor
+
+1. If `evals/golden/good.md` exists and is not the helper's placeholder stub, reuse it. The stub
+   is exactly these two lines, compared byte for byte after removing a UTF-8 BOM, converting
+   CRLF to LF and removing trailing newlines; any other content, including text added under the
+   stub's lines, is a real good:
+
+       <!-- GOOD OUTPUT — auto-generated placeholder (Step 8 of SIHC plan) -->
+       <!-- Step 9 will replace this by running the target skill on a canonical scenario. -->
+
+   Keep the earlier manifest's `good_source` when there is one. If it is absent, record
+   `hand-crafted` and add `good-provenance-inferred` to Part 1. Never overwrite a reused good.
+2. Otherwise dispatch a producer invocation that follows the contract on the main-path
+   scenario and returns the full output (`good_source: "auto-generated"`). Run it on the model
+   the target skill uses in production.
+3. Grade the good, reused or produced. Accept it only when the grade is determinate, `total`
+   equals the assertion count, `failed_assertions` is empty, and every assertion grades TRUE; then
+   write an accepted produced good to `evals/golden/good.md`, replacing the stub if one is
+   there.
+4. If the good is not accepted, Step 5 is HELD with `good-not-verified`: list the failing
+   assertion IDs in Part 1 and write nothing under `evals/golden/`. Never write a placeholder
+   good.
+
+### 5b. One bad per discrimination assertion
+
+#### Per-skill golden directory layout
 
 ```
 .claude/skills/<skill-name>/evals/golden/
-    good.md                       <- one well-formed reference output
-    bad_<defect-slug-1>.md        <- one per discrimination assertion
+    good.md                       <- accepted known-good output (5a)
+    bad_<defect-slug-1>.md        <- one per verified discrimination assertion
     bad_<defect-slug-2>.md
     ...
+    inert/bad_<defect-slug-N>.md  <- generated bads the grader could not distinguish
     manifest.json                 <- per-bad metadata index
 ```
 
-The corpus is **self-contained per skill** (plan §6 D5) — every skill ships
-with its own goldens; there is no central corpus directory. `/skill-iterate`
-discovers a skill's corpus by reading `<skill-dir>/evals/golden/manifest.json`.
+The corpus is **self-contained per skill**: every skill ships with its own goldens and there is
+no central corpus directory.
 
-### Slug derivation rule
+#### Slug derivation rule
 
 Map each assertion's `defect_type` field to a filesystem-safe slug:
 
@@ -387,6 +617,7 @@ Map each assertion's `defect_type` field to a filesystem-safe slug:
 2. Replace every run of non-alphanumeric characters with a single `_`.
 3. Strip leading and trailing `_`.
 4. Truncate at 60 characters.
+5. If the result is empty, use `unnamed`.
 
 | `defect_type` | Derived slug | Filename |
 |---|---|---|
@@ -396,11 +627,14 @@ Map each assertion's `defect_type` field to a filesystem-safe slug:
 | `required-content — fixed-string missing` | `required_content_fixed_string_missing` | `bad_required_content_fixed_string_missing.md` |
 
 When two assertions share the same `defect_type` (and therefore the same
-raw slug), the script appends a numeric suffix: `bad_duplicate_constants.md`,
+raw slug), append a numeric suffix: `bad_duplicate_constants.md`,
 `bad_duplicate_constants_2.md`, `bad_duplicate_constants_3.md`. The suffix
 preserves the 60-char total length cap by trimming the base portion first.
+Hand-crafted bads can carry derived names too (several existing corpora were built by hand with
+this rule), so a matching name never shows that this skill wrote a file. Writes (below) decides
+which existing files Step 5 may replace or remove.
 
-### Per-assertion mapping
+#### Per-assertion mapping
 
 One bad file per **discrimination assertion**, where "discrimination" means
 `defect_type` is NOT in `{n/a-sanity, n/a-coverage}`. Sanity-shape and coverage
@@ -408,34 +642,32 @@ assertions are excluded because they do not name a planted defect to target.
 
 The mapping is 1:1:1 — one assertion → one defect_type → one slug → one
 `bad_<slug>.md` file. If `evals.json` contains 8 discrimination assertions
-across all categories, the corpus has 8 `bad_*.md` files.
+across all categories, Step 5 generates up to 8 bad files (top level or `inert/`); a slug that
+collides with a file it did not write is skipped and reported (Writes).
 
-### Generator sub-agent contract
+#### Generator invocation contract
 
-The script dispatches one LLM sub-agent per assertion — each dispatched with
-`resolve via model-tier-map.json — default to sonnet tier`; resolve the tier through
-`config/model-tier-map.json` (the verification-gate graders inherit the same tier
-policy via `_shared/score-skill.md`) — with these inputs:
+Dispatch one generator invocation per assertion at the Sonnet tier resolved through
+`config/model-tier-map.json`, with these inputs:
 
 | Input | Source |
 |---|---|
 | Assertion text + `defect_type` | from `evals.json` |
-| `good.md` content | from `<skill-dir>/evals/golden/good.md` if hand-crafted, else auto-generated stub |
-| Target `SKILL.md` content | from `<skill-dir>/SKILL.md` |
-| Subtlety instruction | `"subtle"` (default) or `"obvious"` |
+| `good.md` content | the accepted good from 5a |
+| Target contract content | the SKILL.md and any deferred `core.md` |
+| Subtlety instruction | `"subtle"` (this skill has no input that selects the helper's `"obvious"` setting) |
 
-The sub-agent is instructed to:
+The generator is instructed to:
 1. Modify the GOOD output minimally so it violates **exactly** the named
    `defect_type` (prefer a single-line diff against `good.md`).
-2. Keep every other SKILL.md rule satisfied (only one defect planted).
+2. Keep every other contract rule satisfied (only one defect planted).
 3. Stay in the **subtle zone** by default — preserve surface plausibility,
    violate only the underlying rule. A sycophantic grader doing a substring
    or paraphrase-tolerant check should still mistakenly pass the output;
    only a strict assertion tied to the named defect_type should catch it.
-   (Per investigation file `11-bad-example-difficulty-calibration.md`, LLMs
-   default to obvious-bad — the explicit subtle instruction is what produces
-   real pressure-test material.)
-4. Prepend an HTML comment header naming the defect and the SKILL.md line
+   (LLMs default to obvious-bad; the explicit subtle instruction is what
+   produces real pressure-test material.)
+4. Prepend an HTML comment header naming the defect and the contract line
    range it violates. Example:
 
    ```
@@ -443,10 +675,83 @@ The sub-agent is instructed to:
    <!-- Violates SKILL.md lines <N-M>: "<quoted rule fragment>" -->
    ```
 
-The sub-agent returns ONLY the bad.md content (header + body). No surrounding
-prose, no JSON envelope.
+The generator returns ONLY the bad.md content (header + body). No surrounding
+prose, no JSON envelope. When the helper script is available, build the base prompt with its
+`build_generator_prompt` and each retry prompt with its `build_retry_prompt`.
 
-### `manifest.json` schema (v2 — post Step 9 verification gate)
+#### Verification gate
+
+Grade each generated bad as in Grading a golden, with three grader invocations that are never the
+generator. A bad is **accepted** only when its determinate score is **strictly lower** than the
+accepted good's score and its target `assertion_id` appears in `failed_assertions`. A different
+failure does not verify the claimed mapping. A tie, an unrelated failure, or an `indeterminate`
+result does not distinguish the pair and triggers the next attempt; an unverifiable bad is
+regenerated, never accepted.
+
+| Attempt | Prompt change | Outcome on `fails` | Outcome on `passes` |
+|---|---|---|---|
+| 1 | base generator prompt | accept (`verified_fails: true, regen_attempts: 1`) | escalate to attempt 2 |
+| 2 | base + "Previous attempt was too obvious; try a SUBTLER defect" | accept (`verified_fails: true, regen_attempts: 2`) | escalate to attempt 3 |
+| 3 | base + "FINAL retry; make this attempt MORE SUBTLE than the last" | accept (`verified_fails: true, regen_attempts: 3`) | mark INERT (`verified_fails: false, regen_attempts: 3`) |
+
+The default budget is 3 total attempts per bad. `fails` means the grader scored the bad lower
+than the good; `passes` covers ties and `indeterminate` results.
+
+#### INERT marker
+
+After the last attempt without an accepted result, write the most recent content to
+`evals/golden/inert/bad_<slug>.md`, never to the top level: a top-level bad that the grader
+cannot distinguish makes the goldens verification report harness-error and park the skill.
+Record it in the manifest with `verified_fails: false`. The operator can then:
+
+1. Hand-craft a discriminating bad (the generator's planted defects were
+   all in the grader's blind spot for this assertion).
+2. Tighten the corresponding assertion in `evals.json` (the assertion as
+   written cannot distinguish the failure modes the generator considers
+   subtle).
+3. Accept the gap and revisit it during the next adversarial calibration pass.
+
+#### Writes
+
+Step 5 writes only `good.md` (under 5a's rules), generated `bad_<slug>.md` files at the top
+level or under `inert/`, and `manifest.json`, written last. It never replaces or removes a file
+that it cannot show it wrote:
+
+- **Own file.** An existing bad is this skill's own unmodified output only when the previous
+  manifest lists it at that path with a `sha256` equal to the tool-computed lowercase SHA-256 of
+  normalized content: decode UTF-8, remove one leading BOM, convert CRLF and lone CR to LF, then
+  encode UTF-8 without a BOM. Never hand-transcribe the digest. This normalization prevents
+  `core.autocrlf` from destroying ownership while preserving all textual content. In addition,
+  when `evals/golden/` is inside a git work tree, this command must print nothing on stdout and
+  exit 0: `git -C <golden-dir> status --porcelain --untracked-files=all -- <file>`
+  (`<golden-dir>` is the absolute `evals/golden/` path). Record advisory stderr but do not treat
+  a successful line-ending warning as dirt. An entry without `sha256` never proves ownership.
+- **Collision.** Before any dispatch for a slug, check both of its paths, `bad_<slug>.md` and
+  `inert/bad_<slug>.md`. If either exists and is not an own file, the slug is a collision:
+  dispatch nothing for it, write or remove nothing for it, and list it in Part 1 with the path.
+- **Replacement.** For a slug without a collision, write the new bad at its new location
+  (replacing an own file there) and remove an own file at the other location.
+- **Everything else stays.** Leave every other file untouched. List in Part 1 every `bad_*.md`,
+  at the top level or under `inert/`, that the new manifest does not list.
+
+When this run wrote no good and wrote or removed no bad, leave `manifest.json` untouched.
+Otherwise, record the manifest's normalized SHA-256 at preflight (or record that it is absent),
+stage every prospective golden and manifest outside `evals/golden/`, and recheck the manifest
+immediately before applying the write set. If it changed, stop with `concurrent-manifest` and
+write nothing under `evals/golden/`. Write it by merging with the previous manifest when one exists:
+
+- Keep unchanged every previous `bads` entry for a file this run neither wrote nor removed,
+  whatever its fields.
+- For each slug this run wrote, one new entry replaces the previous entries for both of its
+  paths; carry forward any per-entry field this schema does not define from a replaced entry.
+- Keep every top-level field this schema does not define (for example `additional_goods` or
+  `update_note`). Set `manifest_version`, `skill`, `generated_at` and `good_source` as this
+  schema says, and recompute `verification_summary` over the merged `bads`.
+- Read JSON with optional UTF-8 BOM tolerance. Write the manifest as UTF-8 without BOM to a
+  temporary file in `evals/golden/`, recheck the recorded manifest hash, then atomically rename
+  it over `manifest.json`. A failed recheck or rename leaves the prior manifest intact.
+
+### `manifest.json` schema (v2)
 
 ```json
 {
@@ -461,153 +766,77 @@ prose, no JSON envelope.
   },
   "bads": [
     {
-      "file": "bad_<slug>.md",
+      "file": "bad_<slug>.md" | "inert/bad_<slug>.md",
       "defect_type": "<from assertion>",
       "assertion_id": "<from evals.json if present, else null>",
       "verified_fails": true | false,
-      "regen_attempts": 1 | 2 | 3
+      "regen_attempts": 1 | 2 | 3,
+      "sha256": "<lowercase hex SHA-256 of normalized UTF-8 content>"
     }
   ]
 }
 ```
 
-Schema notes (populated by the Step 9 §Verification gate below):
+Schema notes:
 
-- `manifest_version` is `2` for every manifest written by a Step-9-or-newer
-  generator. Prior generators wrote no `manifest_version` field and used
-  `verified_fails: null` / `regen_attempts: 0` placeholders — those manifests
-  remain readable but should be regenerated to pick up real verification.
-- `verification_summary` is a fleet-scannable tally: `accepted` counts bads
-  with `verified_fails: true`, `inert` counts bads with `verified_fails:
-  false`, and `total` is their sum.
-- Per-bad `verified_fails` is `true` (grader correctly distinguished bad from
-  good — gate accepted), or `false` (grader did NOT distinguish after the
-  retry budget was exhausted — bad is INERT). Never `null` post-Step-9.
-- Per-bad `regen_attempts` is the total number of dispatches consumed
-  (`1` accepted on first try, `2` on first retry, `3` on second retry or
-  INERT-after-final).
+- `manifest_version` is `2`. Manifests without it predate verification
+  (`verified_fails: null`, `regen_attempts: 0`); the merge carries their entries forward
+  unchanged, and they never prove ownership.
+- `generated_at` is read from the clock when the manifest is written.
+- `file` is the path relative to `evals/golden/`.
+- `verification_summary` is a fleet-scannable tally over the merged `bads`:
+  `accepted` counts entries with `verified_fails: true`, `inert` counts entries
+  with `verified_fails: false`, and `total` is their sum. A jq query for
+  `inert > 0` finds skills with gaps. Part 1 reports any carried-forward entry
+  whose `verified_fails` is neither `true` nor `false`.
+- Every entry this run writes has `verified_fails` `true` (accepted, at the top
+  level) or `false` (INERT, under `inert/`), never `null`. Carried-forward
+  entries keep their recorded values.
+- Per-bad `regen_attempts` is the total number of generator dispatches
+  consumed (`1` accepted on first try, `2` on first retry, `3` on second
+  retry or INERT-after-final).
+- Per-bad `sha256` is an additive field: the lowercase SHA-256 of the normalized UTF-8 content
+  defined in Writes. It is the only proof that a later run may replace
+  or remove the file (Writes). Goldens verification ignores the manifest.
 
-### CLI interface
+### Helper script (optional)
 
-The generator script lives at `scripts/generate_bad_examples.py` (relative
-to the skill root: `skills/skill-eval-setup/scripts/`). Three
-operator entry points:
+The helper lives only in a source checkout at
+`<repository-root>/skill-eval-setup/scripts/generate_bad_examples.py`. Safe entry points:
 
 | Command | Effect |
 |---|---|
-| `python generate_bad_examples.py <skill-name>` | Regenerate one skill's goldens. |
-| `python generate_bad_examples.py --fleet` | Regenerate every auto-discovered scorable skill (parallel batches; default batch size 3). |
-| `python generate_bad_examples.py --skill <name> --dry-run` | Preview what would be generated without dispatching any sub-agent or writing any files. |
+| `python generate_bad_examples.py --skill <name> --dry-run` | Preview one skill's planned bad files without dispatching or writing. |
+| `python generate_bad_examples.py --fleet --dry-run` | Preview every discovered skill that has `evals/evals.json` (directories beginning with `_` are skipped). |
 
-Additional flags:
-- `--batch-size N` — override the fleet batch size (default 3).
-- `--subtlety {subtle,obvious}` — pick the difficulty tier (default `subtle`).
-- `--max-regen-attempts N` — verification-gate retry budget (default `3`).
-  See §Verification gate below.
-- `--verify-only` — re-score existing on-disk bads against the current
-  grader without regenerating. See §Verification gate below.
+Its other modes are not wired to a dispatcher or scorer (see Who dispatches). Re-verifying a
+corpus after a grader or contract change therefore means re-running Step 5 under its Writes
+rules, not `--verify-only`.
+The preview helper discovers skills relative to its own source-checkout directory; it does not
+preview an arbitrary absolute target. If that discovery root is not the intended target, skip the
+helper and apply this contract directly.
 
-JSON summary is written to stdout (machine-consumable by orchestrators);
-human-readable progress to stderr.
+---
 
-Auto-discovery (the `--fleet` set) finds every `.claude/skills/<name>/`
-directory that contains an `evals/evals.json` file, excluding entries
-beginning with `_` (shared fragments).
+## Re-runs and interruptions
 
-### Worked example — slug derivation for the session-wrap corpus
-
-Applying the rule to the session-wrap `evals.json` discrimination assertions
-yields these filenames (matching the hand-crafted corpus already on disk):
-
-| Assertion `defect_type` | Slug | Filename |
-|---|---|---|
-| `structural — missing required output part` | `structural_missing_required_output_part` | `bad_structural_missing_required_output_part.md` |
-| `anti-pattern — explicit-rule violation` | `anti_pattern_explicit_rule_violation` | `bad_anti_pattern_explicit_rule_violation.md` |
-| `required-content — fixed-form bullet missing` | `required_content_fixed_form_bullet_missing` | `bad_required_content_fixed_form_bullet_missing.md` |
-| `quantity-constraint violation` | `quantity_constraint_violation` | `bad_quantity_constraint_violation.md` |
-| `anti-pattern — content-filter violation` | `anti_pattern_content_filter_violation` | `bad_anti_pattern_content_filter_violation.md` |
-| `required-content — fixed-string missing` | `required_content_fixed_string_missing` | `bad_required_content_fixed_string_missing.md` |
-| `internal-inconsistency — cross-part contradiction` | `internal_inconsistency_cross_part_contradiction` | `bad_internal_inconsistency_cross_part_contradiction.md` |
-| `conditional-behavior — multi-project rule not applied` | `conditional_behavior_multi_project_rule_not_applied` | `bad_conditional_behavior_multi_project_rule_not_applied.md` |
-
-(The existing session-wrap hand-crafted corpus uses shorter operator-chosen
-names — `bad_one_part.md`, `bad_nested_fence.md`, etc. The generator's
-defect-type-derived slugs are longer but mechanical, so a regen is
-non-destructive: hand-crafted bads stay where they are; generated bads use
-the longer slugs and live alongside.)
-
-### Verification gate
-
-Each generated bad is immediately scored against the current grader before
-being accepted into the corpus. The gate exists because inert bad examples
-(defects the grader does not actually catch) add noise without value —
-investigation file 03 anchors this as the meta-principle for the
-hill-climbing Tier 1 mechanisms.
-
-#### Accept criterion
-
-A bad is **accepted** when its grader score is **strictly lower** than the
-good's grader score on the same scoring procedure. Ties count as
-not-distinguishing (the grader cannot tell bad-from-good with this fixture
-pair) and trigger a regenerate.
-
-The grader is the composite scoring procedure from `_shared/score-skill.md`
-(implementation: `_shared/score_skill_composite.py`). The gate calls the
-grader once with the good content as input and once with the bad content as
-input; if `bad_score < good_score` the verdict is `fails` (gate accepts);
-otherwise `passes` (gate rejects). A scorer exception or invalid return
-shape yields verdict `indeterminate`, which the gate treats as `passes` for
-safety — an unverifiable bad is regenerated, not accepted.
-
-#### Retry policy
-
-| Attempt | Prompt change | Outcome on `fails` | Outcome on `passes` |
-|---|---|---|---|
-| 1 | base generator prompt | accept (`verified_fails: true, regen_attempts: 1`) | escalate to attempt 2 |
-| 2 | base + "Previous attempt was too obvious; try a SUBTLER defect" | accept (`verified_fails: true, regen_attempts: 2`) | escalate to attempt 3 |
-| 3 | base + "FINAL retry; make this attempt MORE SUBTLE than the last" | accept (`verified_fails: true, regen_attempts: 3`) | mark INERT (`verified_fails: false, regen_attempts: 3`) |
-
-The retry-prompt augmentation is mechanical: a helper
-`build_retry_prompt(original_prompt, attempt)` appends the attempt-specific
-directive. The retry budget is configurable via `--max-regen-attempts N`
-(default `3`).
-
-#### INERT marker
-
-After `max_regen_attempts` consecutive grader-passes, the bad is marked
-INERT in the manifest with `verified_fails: false`. The most recent
-generated content is still written to disk so the operator can inspect what
-the generator produced and decide whether to:
-
-1. Hand-craft a discriminating bad (the generator's planted defects were
-   all in the grader's blind spot for this assertion).
-2. Tighten the corresponding assertion in `evals.json` (the assertion as
-   written cannot distinguish the failure modes the generator considers
-   subtle).
-3. Accept the gap and revisit during the next adversarial calibration
-   pass (Step 13 of the SIHC plan).
-
-`verification_summary` in `manifest.json` exposes the `accepted` / `inert`
-/ `total` tally so a fleet-wide regeneration can be scanned with a single
-jq query for problematic skills (`inert > 0`).
-
-#### CLI flags
-
-- `--max-regen-attempts N` — override the retry budget (default `3`).
-- `--verify-only` — re-verify the existing on-disk corpus WITHOUT
-  regenerating. Useful after a grader change: each `bad_<slug>.md` on disk
-  is re-scored against the new grader and its `verified_fails` field is
-  updated in place. The generator sub-agent dispatcher is never called in
-  this mode (no token spend, no wall-clock waiting on retries).
-
-#### Forward references
-
-Step 12 of the SIHC plan wires this corpus (now annotated with
-verified-fails verdicts) into `/skill-iterate`'s per-iteration scoring
-loop so the keep/revert decision pulls signal only from verified-failing
-bads. Step 13 adds the adversarial-mutation calibration pass that lets the
-INERT pool stop being a backlog: each INERT bad becomes input to a stricter
-assertion derivation pass.
+- **Steps 1–3.** A re-run replaces `evals/evals.json`, and `evals/test_scenarios.json` unless
+  `--keep-scenarios` keeps it. The repository-bound `dirty-output` check above includes
+  untracked output files and fails closed on Git errors, so no uncommitted eval file is
+  overwritten. Part 2 marks each clean replaced file. Carried-forward manifest entries keep
+  their `assertion_id`, which refers to the `evals.json` they were made with.
+- **Step 5.** A re-run reuses an accepted good (5a), regenerates only slugs whose paths are
+  empty or hold own files, reports every collision, and merges the manifest. A previous run's
+  golden files that are still uncommitted count as collisions until the operator commits or
+  removes them.
+- **Interrupted Step 5.** The manifest is written last, so an interrupted run leaves its bads
+  unlisted and without a recorded `sha256`. The next run reports them as collisions or unlisted
+  files and never removes them; the operator keeps or deletes them. A `good.md` it wrote is
+  reused and graded like any existing good; without an earlier manifest its provenance is
+  reported as inferred.
+- **The loop.** Each run starts with the preflight and a new baseline, and kept changes are
+  already committed. An iteration interrupted after Apply leaves the edit file modified, so the
+  next run stops at dirty-target until the operator commits or restores it.
 
 ---
 
@@ -622,10 +851,15 @@ A short paragraph (3–5 lines) confirming:
   are discrimination-style (named `defect_type` other than `n/a-*`)
 - How many test scenarios were created and what they cover
 - The passing threshold
+- The golden corpus result: `accepted/inert/total` and `good_source`, or `HELD <reason>`
+
+Add one line for each N/A pattern note (Step 1.5), kept-scenario drift item (Step 3), replaced
+clean eval file (Re-runs), inferred good provenance, Step 5 collision, unlisted bad, or
+carried-forward manifest entry whose `verified_fails` is neither `true` nor `false` (Step 5).
 
 ### Part 2 — Files created
 
-List every file written, one per line, using its full **absolute** path (e.g., `.claude/skills/<skill-name>/evals/evals.json`). Do not use relative paths.
+List every file written, one per line, using its full **absolute** path (e.g., `/abs/path/to/.claude/skills/<skill-name>/evals/evals.json`). Do not use relative paths. Add a `(replaced)` suffix to a file that existed before this run, and list each file Step 5 removed with a `(removed)` suffix.
 
 ### Part 3 — Self-improvement prompt
 
@@ -640,7 +874,7 @@ The copy-paste prompt in a `text` code fence.
 - Do not generate more than 25 assertions — focus on the most important requirements
 - Do not create scenarios that are trivially identical — each must exercise a different path
 - Do not hardcode model names in the self-improvement prompt — keep it model-agnostic
-- Do not modify the target SKILL.md — this skill only reads it
+- Do not modify the target's contract files — this skill only reads them
 - Do not write vague-judgment assertions ("the output is well-structured", "the prompt feels
   clear"). Every assertion must name a specific observable property whose presence or
   absence can be checked mechanically by reading the output alone.
@@ -648,3 +882,8 @@ The copy-paste prompt in a `text` code fence.
   SKILL.md prose explicitly forbids something. For "NEVER do X" rules, the assertion must
   name X and check for its absence directly — not a surrounding positive property that
   happens to imply X's absence.
+- Do not write a placeholder or unverified `good.md`, and do not record a bad as verified
+  without a separate grader's result.
+- Do not replace or remove a golden file that Step 5 cannot show it wrote, and do not drop an
+  earlier manifest entry or field except where Writes replaces the entry of a file this run
+  wrote or removed.
