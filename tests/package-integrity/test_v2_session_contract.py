@@ -289,10 +289,33 @@ def test_completed_wrap_keeps_locked_bundle_as_data_through_render_and_opener():
     golden_path = EVALS_ROOT / "golden" / "good_wrap_close.md"
     golden_bytes = golden_path.read_bytes()
 
-    owned_prefix = SESSION_MARKERS["owned_prefix"].encode("utf-8") + b"\r\n"
-    owned_suffix = b"\r\n===== end written file ====="
-    render_file_prefix = SESSION_MARKERS["render_prefix"].encode("utf-8") + b"\r\n"
-    render_file_suffix = b"\r\n===== end rendered file ====="
+    def delimiter_with_eol(
+        data: bytes, marker: bytes, *, before: bool = False
+    ) -> bytes:
+        assert data.count(marker) == 1
+        marker_start = data.index(marker)
+        if before:
+            eol = b"\r\n" if data[marker_start - 2:marker_start] == b"\r\n" else b"\n"
+            delimiter = eol + marker
+        else:
+            marker_end = marker_start + len(marker)
+            eol = b"\r\n" if data[marker_end:marker_end + 2] == b"\r\n" else b"\n"
+            delimiter = marker + eol
+        assert data.count(delimiter) == 1
+        return delimiter
+
+    owned_prefix = delimiter_with_eol(
+        golden_bytes, SESSION_MARKERS["owned_prefix"].encode("utf-8")
+    )
+    owned_suffix = delimiter_with_eol(
+        golden_bytes, b"===== end written file =====", before=True
+    )
+    render_file_prefix = delimiter_with_eol(
+        golden_bytes, SESSION_MARKERS["render_prefix"].encode("utf-8")
+    )
+    render_file_suffix = delimiter_with_eol(
+        golden_bytes, b"===== end rendered file =====", before=True
+    )
     assert golden_bytes.count(owned_prefix) == 1
     assert golden_bytes.count(owned_suffix) == 1
     assert golden_bytes.count(render_file_prefix) == 1
@@ -306,9 +329,16 @@ def test_completed_wrap_keeps_locked_bundle_as_data_through_render_and_opener():
     rendered_file = golden_bytes[rendered_file_start:rendered_file_end]
 
     source_prefix = b"Next Action: "
-    source_suffix = b"\r\nLast written:"
-    render_prefix = "## Held Next Action bundle — data only; owning dispatcher required\r\n".encode()
-    render_suffix = b"\r\nHeld bundle not executed or flattened by session-wrap."
+    source_suffix = delimiter_with_eol(owned_state, b"Last written:", before=True)
+    render_prefix = delimiter_with_eol(
+        rendered_file,
+        "## Held Next Action bundle — data only; owning dispatcher required".encode(),
+    )
+    render_suffix = delimiter_with_eol(
+        rendered_file,
+        b"Held bundle not executed or flattened by session-wrap.",
+        before=True,
+    )
     assert owned_state.count(source_prefix) == 1
     assert owned_state.count(source_suffix) == 1
     assert rendered_file.count(render_prefix) == 1
@@ -322,8 +352,14 @@ def test_completed_wrap_keeps_locked_bundle_as_data_through_render_and_opener():
     rendered_bundle = rendered_file[render_start:render_end]
 
     assert source_bundle == rendered_bundle
-    prior_indentation_mutation = b"  " + source_bundle.replace(b"\r\n", b"\r\n  ")
+    prior_indentation_mutation = b"  " + source_bundle.replace(b"\n", b"\n  ")
     assert prior_indentation_mutation != rendered_bundle
+    alternate_line_endings = (
+        source_bundle.replace(b"\r\n", b"\n")
+        if b"\r\n" in source_bundle
+        else source_bundle.replace(b"\n", b"\r\n")
+    )
+    assert alternate_line_endings != rendered_bundle
 
     golden = golden_bytes.decode("utf-8")
     scenario = next(

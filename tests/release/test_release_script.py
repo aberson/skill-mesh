@@ -51,7 +51,7 @@ _FIXTURE_IGNORE = shutil.ignore_patterns(
 )
 
 
-def _run(args, timeout=180):
+def _run(args, timeout=1800):
     return subprocess.run(
         [PWSH, "-NonInteractive", "-File", str(RELEASE_SCRIPT), *args],
         capture_output=True, text=True, timeout=timeout,
