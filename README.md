@@ -1,170 +1,208 @@
-# Skill Mesh v2
+# skill-mesh
 
-Agent skills for planning, building, reviewing, and shipping software on Claude Code,
-GitHub Copilot CLI, and OpenAI Codex. Each portable skill has one shared behavior
-contract and a host adapter; required review and safety gates stay in the contract.
+**Agent skills for planning, building, reviewing, and shipping software — a shared
+workflow for Claude Code, GitHub Copilot, and OpenAI Codex.**
 
-**[Download v2.0.0](https://github.com/aberson/skill-mesh/releases/tag/v2.0.0)**
-— 57 Claude skills, including 54 portable skills also packaged for Codex and Copilot.
-The release reconciles 15 retained skills and completes 42 rebuilds. It improves
-workflow contracts and packaging; it does not promise that every skill is shorter.
+- **A connected pipeline.** Turn an idea into a plan, a bounded build, an independently reviewed change, and a release.
+- **Explicit quality gates.** Automated checks and fresh-context reviewers inform the result; missing required capabilities stop the workflow.
+- **One contract, three hosts.** 57 Claude skills; 54 also packaged for Copilot and Codex through host adapters.
 
-| Start here | What you get |
+**[v2.0.0 is released](https://github.com/aberson/skill-mesh/releases/tag/v2.0.0)** ·
+[Try it](#install-or-upgrade) · [Browse the skills](documentation/skill-reference.md) ·
+[Detailed workflows](docs/workflows/README.md)
+
+## Workflows
+
+The skills work together, but you can start with one: plan a feature, debug a bug,
+review a change, or recover where a session left off.
+
+### The core pipeline
+
+Plan → sync → build → ship. Everything else supports this spine.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="_shared/core-pipeline-dark.svg">
+  <img alt="Plan a new or existing project, review and wrap the plan, sync GitHub issues, execute reviewed build steps, then run acceptance and update the repository." src="_shared/core-pipeline-light.svg">
+</picture>
+
+`plan-expedite` connects review, proposal, wrap, issue sync, and handoff.
+`build-phase` runs the planned steps through `build-step`.
+
+### Inside one build step: the review gate
+
+Implementation and judgment are separate jobs. A failed check sends the change
+back for repair; a passing candidate still has to clear the landing checks.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="_shared/review-gate-dark.svg">
+  <img alt="A developer works in isolation, automated checks run, independent reviewers examine the change, and the verdict routes it to repair, a bounded stop, or merge with post-merge checks." src="_shared/review-gate-light.svg">
+</picture>
+
+The illustration shows the five-lens code lane. Other lanes add deeper or runtime
+review. The [build-step contract](skills/build-step/core.md) defines the full gates,
+iteration limits, and recovery behavior.
+
+### One workflow, three hosts
+
+Portable behavior lives in shared contracts. Adapters map that behavior to each
+host's capabilities; installation puts the generated skills where the host finds them.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="_shared/host-profiles-dark.svg">
+  <img alt="Shared Skill Mesh contracts generate three host profiles: 57 Claude skills and 54 portable skills each for GitHub Copilot and OpenAI Codex." src="_shared/host-profiles-light.svg">
+</picture>
+
+### The routing web
+
+Have several half-formed ideas at once? `user-gateway` separates the fragments
+and routes each to a useful next step.
+
+<details>
+<summary><strong>See the eight routes: bug, do, plan, investigate, verify, trim, decide, draft</strong></summary>
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="_shared/routing-web-dark.svg">
+  <img alt="An operator's notes enter user-gateway and split across eight routes, from debugging and planning to verification and drafting." src="_shared/routing-web-light.svg">
+</picture>
+
+The `goblin-do` route renders a next-action seed for an existing atom; it does not
+execute the work. Host commands such as `/goal` and `/deep-research` are separate
+from this skill catalog. [Routing contract](_shared/skill-pipeline.md).
+
+</details>
+
+## What's inside
+
+| Family | Examples |
 |---|---|
-| [Install or upgrade](#install-or-upgrade) | Versioned bundle, host selection and rollback |
-| [Skill reference](documentation/skill-reference.md) | All 57 skills: purpose, hosts, contract and individual diagram |
-| [Workflow diagrams](docs/workflows/README.md) | Source-linked Mermaid diagrams generated with show-your-work |
-| [Utility projects](#how-utility-projects-are-used) | Bundled helpers, separate dependencies and deferred integrations |
-| [Release notes](https://github.com/aberson/skill-mesh/releases/tag/v2.0.0) | Qualification evidence and scoped limitations |
+| Plan | `plan-init`, `plan-feature`, `plan-review`, `plan-redline` |
+| Build & ship | `build-step`, `build-phase`, `build-queue`, `repo-update` |
+| Review & acceptance | `review-deep`, `review-gauntlet`, `user-uat`, `judge-ui` |
+| Sessions & orientation | `session-wrap`, `task-handoff`, `user-wrap`, `user-orient` |
+| Evidence & improvement | `citation-review`, `lesson-harvest`, `skill-evolve`, `tier-offload` |
+
+<details>
+<summary><strong>Explore all 57 skills and their individual workflows</strong></summary>
+
+The [complete reference table](documentation/skill-reference.md) lists each skill's
+purpose, host coverage, source contract, and individual workflow. The
+[source-linked workflow catalog](docs/workflows/README.md) records the details and
+omissions behind each flow, checked with [Show Your Work](https://github.com/aberson/show-your-work).
+
+`claude-oauth-auth`, `context-slim`, and `judge-motion` are Claude-only.
+An adapter's presence does not guarantee every required native capability is
+available in your session.
+
+</details>
+
+## Pick your entry point
+
+| You want to… | Start with |
+|---|---|
+| Plan a new project or extend an existing one | `plan-init` / `plan-feature` |
+| Deliver one well-scoped change | `build-step` |
+| Work through an entire phase | `build-phase` |
+| Investigate a stubborn bug | `user-debug` |
+| Review a diff or prepare acceptance | `review-gauntlet` / `review-uat` |
+| Resume work or leave a durable handoff | `user-wrap` / `session-wrap` |
+
+<details>
+<summary><strong>Example: from a feature idea to a reviewed build</strong></summary>
+
+Use your host's skill invocation mechanism:
+
+```text
+plan-feature       investigate the existing project and write the plan
+plan-expedite      review → redline → wrap → issue sync → handoff
+build-phase        run the eligible steps through build-step
+repo-update        refresh documentation and publish the scoped changes
+```
+
+The skills preserve their own decision points, prerequisites, and stop conditions.
+The [individual workflows](docs/workflows/README.md) show those branches.
+
+</details>
+
+## How utility projects are used
+
+Skills coordinate the work. Small utility projects provide specific operations:
+tracking the intended outcome, finding prior work, keeping evidence, and validating
+project information.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="_shared/utility-support-dark.svg">
+  <img alt="Skill workflows use Drift Ranger for intent, Find Again for retrieval, Citation Needed for evidence, and dev-observatory for portfolio validation and static diagnostics. Show Your Work documents the workflows." src="_shared/utility-support-light.svg">
+</picture>
+
+These projects remain separate. Installing Skill Mesh does not install every
+utility or start background services.
+
+<details>
+<summary><strong>Which integrations are in v2?</strong></summary>
+
+| Utility | How it is used |
+|---|---|
+| [Drift Ranger](https://github.com/aberson/drift-ranger) | Private outcome records and capability checkpoints; existing session state is the fallback. |
+| [Find Again](https://github.com/aberson/find-again) | Optional prior-work retrieval in `plan-feature`; current source stays authoritative. |
+| [dev-observatory](https://github.com/aberson/coding-root/tree/master/dev-observatory) | `build-observer` validates print-only portfolio proposals; `observatory-doctor` runs static checks without live probes. |
+| [Citation Needed](https://github.com/aberson/citation-needed) | Evidence storage and scoring for the citation skills; review and sweep dispatch independent judges. v2 requires the [overview-filters branch](https://github.com/aberson/citation-needed/tree/skill-mesh-v2/overview-filters). |
+| Goblin | External CLI/private atom store. `goblin-do` prints a next-action seed; `goblin-suggest` generation remains held in v2. |
+| Switchboard | `tier-offload` produces advisory, inactive routing candidates. |
+| Lavish Editor | `user-lavishify` presents private, annotatable HTML through a separate loopback editor. |
+| [Show Your Work](https://github.com/aberson/show-your-work) | Checks diagram sources and generates the detailed workflow index; not a skill runtime dependency. |
+
+Build, review, and explicit mistake-observation helpers also ship inside the
+packages. The [older utility hookup investigation](documentation/findings/utility-hookup-map-resolved.md)
+is historical planning, not proof that every proposed caller is wired.
+
+</details>
 
 ## Install or upgrade
 
-Use **Windows PowerShell 5.1**. Download the release ZIP and its SHA-256 file,
-compare the archive hash with the checksum, then extract into a dedicated directory.
-The bundle includes generated distributions; installation needs no source build.
+Download the [v2.0.0 release](https://github.com/aberson/skill-mesh/releases/tag/v2.0.0),
+verify its checksum, and choose one host profile.
 
-From the directory holding the downloaded archive:
+<details>
+<summary><strong>Installation, upgrades, and restoration</strong></summary>
 
-```powershell
-Get-FileHash .\skill-mesh-v2.0.0.zip -Algorithm SHA256
-```
-
-Choose one host profile and an explicit consumer home:
-
-| Provider flag | Host | Discovery root under the chosen home |
-|---|---|---|
-| `claude` | Claude Code | `.claude/skills/` |
-| `gpt` | GitHub Copilot CLI | `.github/skills/` |
-| `codex` | OpenAI Codex CLI | `.agents/skills/` |
-
-From the extracted bundle root, replacing the example home:
+Use Windows PowerShell 5.1. From the extracted bundle, replacing the example home:
 
 ```powershell
 powershell -NoProfile -File tools/install-skill-mesh.ps1 -Provider claude -Home C:\path\to\consumer-home -DistDir .\dist
 ```
 
-For Codex use `-Provider codex`; first resolve its effective home with the
-read-only [probe](tools/probe-codex-skills.ps1) and
-[Codex guide](documentation/providers/codex.md). For Copilot use `-Provider gpt`.
-Start a fresh host session after installation. Installing does not authenticate
-the host or supply missing native capabilities. Codex uses its own adapter and
-authenticated host, not the GPT/Copilot transport.
-
-Before upgrading, preserve the previous distribution and back up the target
-discovery tree and `.skill-mesh-install.json`. Stop sessions writing those paths.
-Run the installer with the new distribution and existing home. It checks
-ownership and current bytes; investigate collisions instead of routinely using
-`-Force`. Multiple hosts may scan overlapping roots, so directory names alone
-do not establish ownership.
-
-<details>
-<summary>Uninstall, restoration and legacy installations</summary>
-
-Remove the selected profile's unchanged owned files:
-
-```powershell
-powershell -NoProfile -File tools/install-skill-mesh.ps1 -Provider claude -Home C:\path\to\consumer-home -Uninstall
-```
-
-To restore a preserved prior generated profile, uninstall the current profile,
-then use the v2 installer with `-DistDir` pointing to that prior distribution.
-Qualification covered preserved pre-rebuild bytes with the final installer,
-not every historical v1 release or older installer. Modified files may need
-explicit resolution. Uninstall does not reconstruct hand-maintained legacy
-files; retain a separate backup and follow the
-[migration guide](documentation/migration.md).
+Use `-Provider codex` for Codex or `-Provider gpt` for GitHub Copilot.
+Preserve the previous distribution and installation ledger before upgrading.
+See the [installation and restoration guide](documentation/v2-installation.md)
+for home resolution, collision handling, and legacy migration.
 
 </details>
 
-## Choose a workflow
+## Status & adapting
 
-| Need | Entry point | Typical next steps |
-|---|---|---|
-| Start a project | `plan-init` | `repo-init` → `plan-expedite` → `build-phase` |
-| Extend existing code | `plan-feature` | `plan-review` → `plan-redline` → `plan-wrap` |
-| Deliver a bounded change | `build-step` | Isolated implementation, automated gates, independent review, integration |
-| Execute a phase or queue | `build-phase` / `build-queue` | Ordered steps, checkpoints, explicit holds |
-| Diagnose a bug | `user-debug` | Evidence and independent reproduction before repair |
-| Review code | `review-gauntlet` / `review-deep` | Independent lenses and evidence-backed verdict |
-| Prepare and run acceptance | `review-uat` → `user-uat` | Separate mechanical checks from human judgment |
-| Return to work | `user-wrap` / `user-orient` | Inspect evidence and choose the next action |
-| Save or close a session | `session-wrap` | Triage → `task-handoff` → route-specific actions |
-| Learn from mistakes | `lesson-harvest` | Bounded, zero-write candidate preview in v2 |
+**v2.0.0 is published:** 42 rebuilds and 15 retained skills, with all-provider
+packaging and installation checks. The [release notes](https://github.com/aberson/skill-mesh/releases/tag/v2.0.0)
+record the exact qualification and its limits.
 
-Use the installed skill through your host's invocation mechanism. Host commands
-such as `/goal`, `/loop` and `/schedule` are not Skill Mesh packages.
-The [complete reference table](documentation/skill-reference.md) links every
-skill to its individual diagram and authoritative contract.
+<details>
+<summary><strong>Scope, dependencies, and known limitations</strong></summary>
 
-## How utility projects are used
+Catalog coverage is not blanket live qualification of every skill on every host.
+Required review and vision capabilities remain explicit. Lesson harvesting is
+preview-only; session advice has an accepted presentation limitation; session-bound
+writes require authoritative identity. Normal profiles are not upgraded by publishing
+a release. Adapt workspace conventions and external utility dependencies to your setup.
 
-Skills coordinate judgment and permissions. Utility projects supply mechanical
-operations such as retrieval, validation, evidence storage and documentation
-rendering. Installing Skill Mesh does not install every utility, start
-Observatory, or enable every proposed integration.
+[Provider guides](documentation/providers/README.md) ·
+[Source and development](CLAUDE.md) · [Architecture](documentation/architecture.md)
 
-| Project or packaged helper | Used by | Role and v2 boundary |
-|---|---|---|
-| [Drift Ranger](https://github.com/aberson/drift-ranger) | Planning, build orchestration, `task-handoff`, `session-wrap` | Private outcome records and capability checkpoints. If unavailable, use existing private session state. Assertions are not delivery proof. |
-| [Find Again](https://github.com/aberson/find-again) | `plan-feature` | Optional prior-work search with index age and scope reported. No automatic refresh; current source remains authoritative. |
-| [dev-observatory](https://github.com/aberson/coding-root/tree/master/dev-observatory) | `build-observer`, `observatory-doctor` | The packaged scaffold imports Observatory's own validation and prints portfolio proposals. Doctor uses `--no-probe` static checks, not live launches. |
-| [Citation Needed](https://github.com/aberson/citation-needed) | Four `citation-*` skills | Separate `cite` CLI owns scans, calibrated review records and scoring. Review and sweep prepare evidence and dispatch independent judges; distill and triage handle proposals and operator decisions. v2 requires the published [overview-filters branch](https://github.com/aberson/citation-needed/tree/skill-mesh-v2/overview-filters), not the default branch. |
-| Goblin CLI and private atom store | Three `goblin-*` skills | External project-specific dependency; see the [reconstruction guide](_shared/goblin-second-brain.md). `goblin-do` prints a next-action seed without executing it. `goblin-suggest` generation modes remain explicitly held in v2. |
-| Switchboard | `tier-offload` | Produces an advisory inventory and inactive candidate routing configuration. It does not activate or claim to benchmark a local model. |
-| Lavish Editor (`lavish-axi`) | `user-lavishify` | Re-presents a selected artifact as private annotatable HTML through a loopback editor. Requires Node 22+, an accessible local browser and the separate npm tool; the artifact is not published. |
-| Packaged build, review and observation helpers | `build-step`, `review-deep`, `lesson-harvest` | Evidence capture, deterministic verdict handling and explicit private mistake observations. `lesson-harvest --publish` is unavailable in v2. |
-| [Show Your Work](https://github.com/aberson/show-your-work) | This repository's documentation | Validates source-linked Mermaid and generates the workflow README/index. An authoring tool, not a skill runtime prerequisite. |
+</details>
 
-The older [utility hookup investigation](documentation/findings/utility-hookup-map-resolved.md)
-is historical planning evidence. It does not establish that Heads Up, Tripwire,
-Same Page, Changed Check, Paper Trail, Mesh Lens or every proposed Find Again
-caller is wired into this release. Passing Notes is not a bundled runtime
-dependency. Utility availability, caller wiring and native acceptance are
-separate claims.
+## Contributing
 
-## What v2 qualifies
+[Issues and suggestions](https://github.com/aberson/skill-mesh/issues) are welcome.
+Edit canonical sources under `skills/`, then rebuild; installed profiles are generated.
 
-The [release notes](https://github.com/aberson/skill-mesh/releases/tag/v2.0.0)
-record the exact source, full root-suite result, all-provider package checks,
-and disposable-home installation, upgrade, uninstall and prior-profile restoration.
-Downloaded assets were checked against the published archive checksum.
-Qualification did not change normal installed profiles.
-
-Catalog coverage is not blanket live qualification of every workflow:
-
-- `claude-oauth-auth`, `context-slim` and `judge-motion` are Claude-only.
-- Required independent-review, vision and Workflow capabilities must exist in the
-  invoking host. Missing capabilities produce a hold, not self-review.
-- Session advice may add a progress sentence and vary triage formatting;
-  strict presentation is deferred to v3.
-- `lesson-harvest` is preview-only; `observatory-doctor` is static-only.
-- Session-bound writes require authoritative session identity. Judge Motion needs
-  runtime/browser dependencies and native permissions. PowerShell 7 is not qualified.
-
-See the [provider guides](documentation/providers/README.md) and release notes
-for precise native-observation scope and outstanding limitations.
-
-## Source and development
-
-`skills/<name>/core.md` holds portable behavior; `providers/` binds the host.
-The [manifest](config/skill-manifest.json) owns membership. The three Claude-native
-entries use provider source directly. Generated `dist/` and installed profiles
-are outputs; edit canonical sources and rebuild. Legacy top-level packages are
-compatibility material, not v2 sources.
-
-From a source checkout, build one profile:
-
-```powershell
-powershell -NoProfile -File tools/build-distributions.ps1 -Provider codex
-```
-
-The repository-root qualification command is `python -m pytest` without a path
-argument. Requirements and gate details live in [CLAUDE.md](CLAUDE.md);
-release staging is documented in [architecture](documentation/architecture.md).
-For diagram maintenance see [workflow regeneration](docs/workflows/README.md#regenerating).
-
-Adapt workspace paths, conventions and optional utilities to your setup.
-Keep private observation stores, session records and credentials outside Git.
-[Issues and contributions](https://github.com/aberson/skill-mesh/issues) are welcome.
+## License
 
 MIT — see [LICENSE](LICENSE). Built by [Abraham Robison](https://github.com/aberson).

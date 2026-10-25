@@ -24,7 +24,7 @@
   <path class="spine" marker-end="url(#ar-s-dark)" d="M736,112 L792,112"/>
   <g class="node"><rect x="24" y="46" width="200" height="46" rx="10"/><text class="pn" x="38" y="67">plan-init · plan-feature</text><text class="ps" x="38" y="84">new · existing</text></g>
   <path class="lnk" marker-end="url(#ar-dark)" d="M124,92 L124,106"/>
-  <g class="node"><rect x="24" y="106" width="200" height="34" rx="10"/><text class="pn" x="38" y="127">plan-review</text></g>
+  <g class="node"><rect x="24" y="106" width="200" height="34" rx="10"/><text class="pn" x="38" y="127" style="font-size:11px">plan-review + plan-redline</text></g>
   <path class="lnk" marker-end="url(#ar-dark)" d="M124,140 L124,154"/>
   <g class="node"><rect x="24" y="154" width="200" height="34" rx="10"/><text class="pn" x="38" y="175">plan-wrap</text></g>
   <g class="node"><rect x="280" y="90" width="200" height="46" rx="10"/><text class="pn" x="294" y="111">repo-sync</text><text class="ps" x="294" y="128">first run: repo-init</text></g>

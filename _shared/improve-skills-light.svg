@@ -26,7 +26,7 @@
   <line x1="24" y1="120" x2="976" y2="120" stroke="#D4DBE8" stroke-width="1" stroke-dasharray="3 5"/>
   <text class="cap" x="880" y="116" text-anchor="end">independent tracks</text>
   <text class="lbl" x="24" y="150">CODIFY A LESSON</text>
-  <g class="node"><rect x="24" y="164" width="200" height="48" rx="10"/><text class="pn" x="38" y="185">lesson-harvest</text><text class="ps" x="38" y="202">draft PR</text></g>
+  <g class="node"><rect x="24" y="164" width="200" height="48" rx="10"/><text class="pn" x="38" y="185">lesson-harvest</text><text class="ps" x="38" y="202">preview candidates</text></g>
   <path class="lnk" marker-end="url(#ar-light)" d="M224,188 L262,188"/>
   <g class="node"><rect x="262" y="164" width="200" height="48" rx="10"/><text class="pn" x="276" y="185">memory-distill</text><text class="ps" x="276" y="202">human gate</text></g>
   </svg>
