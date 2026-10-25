@@ -1,0 +1,20 @@
+%% judge-motion
+%% Summary: Gate a motion run on session calibration, capture paint-driven evidence, short-circuit mechanical failures, and reduce per-transition verdicts.
+%% Sources: skills/judge-motion/providers/claude.md
+%% Not shown: flow-spec fields, capture and frame scripts, binary question battery, auth details, calibration procedure, reduced-motion mode, and artifact schema
+%% Alt: A motion run checks calibration before bring-up, captures transitions, fails hard mechanical defects without vision, judges residual motion, and reduces the worst result.
+
+flowchart TD
+    A[Resolve flow and transition rubrics] --> B{Session calibration passes?}
+    B -- No --> H[BLOCK before bring-up or capture]
+    B -- Yes --> C[Probe auth; bring up and capture flow]
+    C --> D[Select frames and evaluate signal gates]
+    D --> E{Transition state}
+    E -- Mechanical hard fail --> F[FAIL without a vision call]
+    E -- Missing rubric or stage error --> X[ESCALATE with exact reason]
+    E -- Gates pass --> G[Dispatch one vision judge per transition]
+    G --> I[Reconcile binary answers with gate evidence]
+    I --> J[Reduce worst-of: FAIL, ESCALATE, PASS]
+    F --> J
+    X --> J
+    J --> R[Write six-section verdict artifact]

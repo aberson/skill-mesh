@@ -1,0 +1,26 @@
+%% user-uat
+%% Summary: Classify a clear UAT script, gate side effects, auto-judge supported checks, and escalate irreducible human experience checks.
+%% Sources: skills/user-uat/core.md
+%% Not shown: accepted script syntax, evidence ledger fields, git safety rules, rerun behavior, output wording, and relationships to review-uat
+%% Alt: Dry-run prints classifications; normal mode routes mechanical checks through safety, visual checks through independent judges, and human checks to the operator.
+
+flowchart TD
+    A{Invocation mode}
+    A -->|dry-run| B[Classify every step and run nothing]
+    A -->|normal| C{Preconditions and target valid?}
+    C -->|No| D[Stop with the missing requirement]
+    C -->|Yes| E{Step class}
+    E -->|Mechanical| F{Side effect authorized?}
+    F -->|No| G[Ask for the required confirmation]
+    F -->|Yes| H[Execute and capture mechanical evidence]
+    G -->|Approved| H
+    G -->|Denied or unknown| M[Hold the step without execution]
+    E -->|Visual| I[Run UI gates when enabled; otherwise escalate]
+    E -->|Human| J[Ask for the operator observation]
+    H --> N{Step passed?}
+    I --> N
+    J --> N
+    N -->|No| M
+    N -->|Yes| K{More steps?}
+    K -->|Yes| E
+    K -->|No| L[Report pass, fail, and escalated items]

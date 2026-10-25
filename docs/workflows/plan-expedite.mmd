@@ -1,0 +1,22 @@
+%% plan-expedite
+%% Summary: Warn but continue on stale plans, resume only a valid stage prefix, then run the ordered review-to-build handoff chain.
+%% Sources: skills/plan-expedite/core.md
+%% Not shown: state-file schema, project pin checks, exact accepted verdicts, halt template, handoff modes, goal text, and final command rendering
+%% Alt: A plan chain validates its input, warns and continues when stale, resumes a valid prefix or starts fresh, then halts on a failed stage or emits the build handoff.
+
+flowchart TD
+    A[Resolve explicit readable plan] --> B{Input valid?}
+    B -- No --> H[Halt without writing state]
+    B -- Yes --> C{Plan older than 30 days?}
+    C -- Yes --> W[Warn and continue]
+    C -- No --> D[Inspect resume state]
+    W --> D
+    D --> E{Valid completed stage prefix?}
+    E -- No --> F[Start fresh; preserve malformed state if present]
+    E -- Yes --> G[Resume at first incomplete stage]
+    F --> I[Run ordered review, redline, wrap, sync]
+    G --> I
+    I --> J{Every stage accepted?}
+    J -- No --> H2[Persist halt and report evidence]
+    J -- Yes --> K[Write durable build handoff]
+    K --> R[Emit goal and build-phase commands]

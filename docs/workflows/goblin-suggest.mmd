@@ -1,0 +1,16 @@
+%% goblin-suggest
+%% Summary: Validate the invocation, enforce the current safety holds for every mode, and stop before reading project content or launching the workflow.
+%% Sources: skills/goblin-suggest/core.md
+%% Not shown: the disabled future generation pipeline, repair conditions for lifting the hold, known workflow deviations, scoring, and persistence formats
+%% Alt: A suggestion request passes usage and capability checks, then every supported mode ends in a named hold with no project read, workflow launch, or write.
+
+flowchart TD
+    A[Parse project, mode, and numeric flags] --> B{Invocation valid?}
+    B -- No --> U[Stop with usage error]
+    B -- Yes --> C{Workflow capability available?}
+    C -- No --> M[Stop: required_tool_missing]
+    C -- Yes --> D{Selected mode}
+    D -- Small or big --> H[HELD: unsafe atom write path]
+    D -- UAT --> H2[HELD: no production UAT pipeline]
+    H --> N[Nothing read, launched, or written]
+    H2 --> N

@@ -1,0 +1,16 @@
+%% plan-merge
+%% Summary: Compare two overlapping plans, resolve contradictions and sequencing, then write one approved spine and archive the originals.
+%% Sources: skills/plan-merge/core.md
+%% Not shown: overlap table fields, question catalog, merged-plan template, archive naming rules, and external-reference command details
+%% Alt: Two plans are read and compared, contradictions and a merged spine are proposed, hard questions gate writing, and accepted originals are archived.
+
+flowchart TD
+    A[Read both plans in full] --> B[Map overlap and contradictions]
+    B --> C[Propose one dependency-ordered spine]
+    C --> D{Hard questions resolved?}
+    D -- No --> H[Hold before writing]
+    D -- Yes --> E[Write the merged plan]
+    E --> F{Merged plan self-consistent?}
+    F -- No --> B
+    F -- Yes --> G[Archive originals and update references]
+    G --> R[Report review pipeline next]

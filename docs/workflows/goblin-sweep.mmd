@@ -1,0 +1,17 @@
+%% goblin-sweep
+%% Summary: Invoke the deterministic goblin sweep, parse its obligation records, and present every returned atom with a goblin-do handoff.
+%% Sources: skills/goblin-sweep/core.md
+%% Not shown: pinned command text, seven report fields, persistence merge rules, completeness caveats, warning formatting, and engine discovery internals
+%% Alt: A fail-loud wrapper checks three prerequisites, runs the deterministic engine, refuses malformed output, and lists each obligation with its read-only handoff.
+
+flowchart TD
+    A[Validate one project argument] --> B{Three prerequisites pass in order?}
+    B -- No --> H[Stop with exact remediation]
+    B -- Yes --> C[Run pinned deterministic sweep]
+    C --> D{Engine exit zero?}
+    D -- No --> E[Relay stderr and stop]
+    D -- Yes --> F{Expected JSON shape?}
+    F -- No --> H2[Stop without inventing obligations]
+    F -- Yes --> G[Relay warnings and completeness notice]
+    G --> I[List every obligation in engine order]
+    I --> R[Print goblin-do handoff for each atom]

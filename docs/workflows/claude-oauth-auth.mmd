@@ -1,0 +1,17 @@
+%% claude-oauth-auth
+%% Summary: Authenticate the Claude CLI with a subscription token while keeping the credential out of logs and direct API calls.
+%% Sources: skills/claude-oauth-auth/providers/claude.md
+%% Not shown: container and tmux examples, file permission commands, editor-extension credentials, and future bare-mode changes
+%% Alt: A subscription check leads to operator-only token creation, secret storage, a clean CLI launch, and an effect-based authentication check.
+
+flowchart TD
+    A{Active Claude subscription?}
+    A -->|No| H[Use another supported credential]
+    A -->|Yes| B[Operator runs claude setup-token interactively]
+    B --> C[Store token outside repositories]
+    C --> D[Remove competing API-key credentials]
+    D --> E[Load token only into the CLI process]
+    E --> F[Run a non-printing effect check]
+    F -->|Exit 0 in clean environment| G[OAuth path verified]
+    F -->|401 or failure| I[Clear stale token and renew]
+    I --> B

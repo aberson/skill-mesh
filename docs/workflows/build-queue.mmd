@@ -1,0 +1,20 @@
+%% build-queue
+%% Summary: Validate queue and resume authority, run plan-expedite then build-phase per item, park every halt, and continue to a morning summary.
+%% Sources: skills/build-queue/core.md
+%% Not shown: queue parsing, state schema, identity hashes, kill-switch details, acceptance fields, park-issue body, and summary template
+%% Alt: A queue controller validates host and state authority, prepares each plan, runs its phase, checkpoints done or parked status, and drains to a summary.
+
+flowchart TD
+    A[Validate host, queue identity, plans, and state] --> B{Preflight or recovery hold?}
+    B -- Yes --> H[Stop without running queue items]
+    B -- No --> C{Next unprocessed item?}
+    C -- No --> S[Write morning summary and acceptance status]
+    C -- Yes --> D[Checkpoint IN_PROGRESS; run plan-expedite]
+    D --> E{Preparation succeeded?}
+    E -- No --> P[Park item and file best-effort issue]
+    E -- Yes --> F[Checkpoint stage; run build-phase]
+    F --> G{Full phase result accepted?}
+    G -- Yes --> I[Checkpoint DONE with acceptance evidence]
+    G -- No --> P
+    I --> C
+    P --> C

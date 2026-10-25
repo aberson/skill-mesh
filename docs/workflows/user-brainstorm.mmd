@@ -1,0 +1,21 @@
+%% user-brainstorm
+%% Summary: Expand a topic through gap-fill rounds, confirm the resulting structure, and build a grounded reference document set.
+%% Sources: skills/user-brainstorm/core.md
+%% Not shown: tier definitions, file templates, agent prompt text, directory naming, source-quality rules, and end-report wording
+%% Alt: A topic seeds ten areas, repeated gap checks expand and tier them, and operator-confirmed structure fans out to grounded document authors.
+
+flowchart TD
+    A[Capture the topic]
+    A --> B[Seed ten candidate areas]
+    B --> C[Run a gap-fill round]
+    C --> D{Meaningful gaps remain?}
+    D -->|Yes| C
+    D -->|No| E[Aggregate and tier the topic map]
+    E --> F{Operator confirms structure?}
+    F -->|Revise| C
+    F -->|Yes| G[Write meta files]
+    G --> H[Dispatch grounded topic authors]
+    H -->|Capability unavailable| K[Hold with meta files and missing-file report]
+    H --> I{Every planned file exists?}
+    I -->|No| K
+    I -->|Yes| J[Write README and report the completed set]

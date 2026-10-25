@@ -1,0 +1,17 @@
+%% goblin-do
+%% Summary: Resolve one persisted atom, recheck its anchor, and print a goal block or planning seed without executing the work.
+%% Sources: skills/goblin-do/core.md
+%% Not shown: CLI argument details, atom schemas, fuzzy-match ranking, reachability note fields, intake-ledger reroute write-back, and rendered block formats
+%% Alt: A read-only renderer resolves one atom and its project, refuses stale or unverifiable anchors, then prints either a goal block or the atom kind's seed.
+
+flowchart TD
+    A[Resolve exactly one persisted atom] --> B{Project and anchor still live?}
+    B -- No --> H[Refuse and relay the exact CLI failure]
+    B -- Yes --> C{Goal-able with a goal condition?}
+    C -- Yes --> D[Print reachability note and goal block]
+    C -- No --> E{Atom kind}
+    E -- Suggestion or obligation --> P[Print plan-feature style seed]
+    E -- UAT --> U[Print UAT handoff block]
+    D --> R[Print operator-run next step]
+    P --> R
+    U --> R

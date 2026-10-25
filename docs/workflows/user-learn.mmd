@@ -1,0 +1,18 @@
+%% user-learn
+%% Summary: After scope approval, build a grounded hands-on learning folder, re-run its artifacts, and report results without committing.
+%% Sources: skills/user-learn/core.md
+%% Not shown: artifact templates, wave sizing, notebook self-validation commands, example-script prompts, goblin output fields, and file naming
+%% Alt: Topic setup pauses for approval, then grounding and parallel authoring lead to execution checks, indexes, and a report with a suggested next command.
+
+flowchart TD
+    A[Capture the topic and guard the output path]
+    A --> B[Show scope, folder layout, and notebook plan]
+    B --> C{Operator approves?}
+    C -->|No| D[Stop before project-visible writes]
+    C -->|Yes| E[Ground papers, projects, and notebook order]
+    E --> F[Run preflight sync and shared data checks]
+    F -->|Fail| D
+    F -->|Pass| G[Dispatch file authors in bounded waves]
+    G --> H[Re-run notebooks, examples, and link checks]
+    H --> I[Write README and progress tracker]
+    I --> J[Report results and suggest a next command]

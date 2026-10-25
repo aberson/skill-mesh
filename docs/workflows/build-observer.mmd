@@ -1,0 +1,17 @@
+%% build-observer
+%% Summary: Draft a grounded portfolio block, validate it offline, and print a proposal while holding invalid roots or missing tools.
+%% Sources: skills/build-observer/core.md
+%% Not shown: field-by-field prose rules, payload escaping, validator implementation, write mode, and the full redline schema
+%% Alt: A proposal flow locates a project, reads evidence, drafts fields, and either holds on invalid prerequisites or prints a validated block.
+
+flowchart TD
+    A[Resolve coding root and project slug] --> B{Root and registry valid?}
+    B -- No --> H[HELD: report invalid target]
+    B -- Yes --> C[Read verbs and project documentation]
+    C --> D[Draft grounded portfolio fields]
+    D --> E{Offline validator available?}
+    E -- No --> H2[HELD: required tool missing]
+    E -- Yes --> F[Validate and render proposal]
+    F --> I{Validator exit zero?}
+    I -- No --> H3[HELD with captured output and exit code]
+    I -- Yes --> G[Print block and redline report]

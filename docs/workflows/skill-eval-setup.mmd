@@ -1,0 +1,18 @@
+%% skill-eval-setup
+%% Summary: Derive discriminating assertions and scenarios from a skill contract, then build and verify a golden corpus and improvement loop.
+%% Sources: skills/skill-eval-setup/core.md
+%% Not shown: JSON schemas, assertion syntax, slug rules, prompt template, grader implementation, manifest fields, and helper-script interface
+%% Alt: Contract analysis produces assertions, scenarios, eval files, and a loop prompt before golden anchors pass a verification gate or are held.
+
+flowchart TD
+    A[Read and categorize the skill contract]
+    A --> B[Design discriminating assertions]
+    B --> C[Generate realistic test scenarios]
+    C --> D[Write eval and scenario files]
+    D --> E[Generate the self-improvement loop prompt]
+    E --> F{Golden preconditions met?}
+    F -->|No| G[Return a held outcome]
+    F -->|Yes| H[Build known-good and single-defect goldens]
+    H --> I[Run corpus verification]
+    I -->|Fail| G
+    I -->|Pass| J[Report files and runnable loop]

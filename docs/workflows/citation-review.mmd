@@ -1,0 +1,20 @@
+%% citation-review
+%% Summary: Bind an exact calibrated judge, open one review, prepare frozen evidence, resolve each choice by independent votes, and commit only untied complete results.
+%% Sources: skills/citation-review/core.md
+%% Not shown: calibration anchor procedure, extraction and classification prompts, schemas, evidence searches, parse-failure conversion, and report fields
+%% Alt: A model-bound review checks calibration and sibling dispatch, opens once, freezes evidence, expands tied votes from three to seven, and commits only a complete untied payload.
+
+flowchart TD
+    A[Resolve exact judge model] --> B{Calibration and dispatch valid?}
+    B -- No --> H[HELD before review open]
+    B -- Yes --> C[OPEN one run and capture its run id]
+    C --> D[PREPARE and freeze choices with evidence]
+    D --> E[Dispatch three fresh votes per choice]
+    E --> F{Missing vote or model mismatch?}
+    F -- Yes --> U[HELD: run stays open and uncommitted]
+    F -- No --> G{Top-label tie?}
+    G -- Yes, under seven --> I[Add two fresh votes to same array]
+    I --> F
+    G -- Yes, at seven --> U
+    G -- No --> J[Validate payload and COMMIT once]
+    J --> R[Report only the matching committed run]

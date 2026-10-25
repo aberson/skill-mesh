@@ -1,0 +1,21 @@
+%% session-wrap
+%% Summary: Triage and act on a transition moment, or return a read-only verdict and loss report through advise mode.
+%% Sources: skills/session-wrap/core.md
+%% Not shown: scoring constants, task-state schema, git-verb decision table, rendered handoff fields, salvage details, and spawn mechanics
+%% Alt: Collected signals either produce read-only advice or select continue, clear-next, or end-window action with durability gates before closure.
+
+flowchart TD
+    A[Collect context, task, git, and goal signals]
+    A --> M{Invocation mode}
+    M -->|advise| N[Preview salvage and report one verdict without acting]
+    M -->|bare or end| B[Select or force the route and announce it]
+    B --> C{Route}
+    C -->|continue| D[Checkpoint state]
+    D --> E[Return after one composed checkpoint line]
+    C -->|clear-next| F[Write durable handoff state]
+    F --> G[Run the authorized git verb]
+    G --> H[Show Pick-up-here and clear route]
+    C -->|end-window| I[Run wrap, memory, and salvage duties]
+    I --> J{All closure evidence positive?}
+    J -->|No| K[Hold at the failed or pending gate]
+    J -->|Yes| L[Show durable closeout state]

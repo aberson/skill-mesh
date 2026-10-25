@@ -1,0 +1,22 @@
+%% repo-update
+%% Summary: Refresh phase documentation, repair grounded gaps where clear, continue past advisory ambiguity, and conditionally commit, push, and record posterity.
+%% Sources: skills/repo-update/core.md
+%% Not shown: documentation templates, instruction-file matrix, exact withhold reasons, partial recovery commands, tour construction, and observatory details
+%% Alt: A phase closeout proves the completed work, updates documentation, fixes clear drift while recording ambiguous follow-ups, then completes or withholds Git and GitHub steps.
+
+flowchart TD
+    A[Orient and derive completed phase evidence] --> B{Work determinable?}
+    B -- No --> N[NOT RUN before any write]
+    B -- Yes --> C[Update README and canonical plan]
+    C --> D[Run plan-wrap, drift, and wiki checks]
+    D --> E[Fix clear gaps; record ambiguous follow-ups]
+    E --> F[Refresh instructions and memory]
+    F --> G{Git and GitHub preconditions pass?}
+    G -- No --> P[PARTIAL: withhold scoped external steps]
+    G -- Yes --> H[Attempt commit, push, then posterity issue]
+    H --> J{All required external steps succeeded?}
+    J -- No --> P2[PARTIAL with failed-step recovery]
+    J -- Yes --> I[Run advisory tour and observatory refresh]
+    P --> I
+    P2 --> I
+    I --> R[Report COMPLETE or PARTIAL]

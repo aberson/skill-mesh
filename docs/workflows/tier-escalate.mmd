@@ -1,0 +1,21 @@
+%% tier-escalate
+%% Summary: Classify complete skill packages and write or preview a map of seed artifacts that may warrant a stronger operator-selected model tier.
+%% Sources: skills/tier-escalate/core.md
+%% Not shown: host abstraction mapping, package-discovery details, classification rubric wording, output schema, and persistence path resolution
+%% Alt: Complete packages fan out to isolated classifiers, parent verification builds a map, and mode chooses a file write or zero-write preview.
+
+flowchart TD
+    A[Discover complete skill packages]
+    A --> B{Required classification capability available?}
+    B -->|No| C[Return required tool missing]
+    B -->|Yes| D[Dispatch fresh isolated classifications]
+    D --> E[Identify load-bearing seed artifacts]
+    E --> F[Apply the governing escalation rule]
+    F --> G[Parent verifies evidence and disagreements]
+    G --> H{Escalation justified?}
+    H -->|No| I[Keep current tier in the map]
+    H -->|Yes| J[Add a candidate with operator instructions]
+    I --> K{Dry-run mode?}
+    J --> K
+    K -->|Yes| L[Print the full map without writing]
+    K -->|No| M[Write only escalation-map.md]

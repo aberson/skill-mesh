@@ -1,0 +1,20 @@
+%% repo-wrap
+%% Summary: Resolve and classify exactly one target, then execute its ownership rail with scoped secret screening and parked unsafe actions.
+%% Sources: skills/repo-wrap/core.md
+%% Not shown: owner-match algorithm, secrets patterns, per-rail Git commands, backup naming, flags, maintenance procedure, and final report fields
+%% Alt: A closeout router classifies one target, delegates owned projects, or runs coding-root, clone, and backup rails that screen staged paths and park unsafe work.
+
+flowchart TD
+    A[Resolve exactly one target] --> B[Classify ownership and workspace location]
+    B --> C{Classification}
+    C -- Registered project --> D[Delegate to project closeout]
+    C -- Coding root --> E[Screen additions; park anomalies and suspects]
+    C -- Clone --> F[Screen staged paths; protect upstream]
+    C -- Other --> G[Screen paths; guard repo creation]
+    E --> I[Commit safe snapshot; push only to owner]
+    F --> J[Commit locally; push only to owned remote]
+    G --> K[Back up safely or print guarded commands]
+    D --> R[Report delegated result]
+    I --> R
+    J --> R
+    K --> R

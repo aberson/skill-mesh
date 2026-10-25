@@ -1,0 +1,20 @@
+%% build-step
+%% Summary: Isolate one plan step, iterate developer and independent review rounds, then land, verify, and finalize only an authenticated passing candidate.
+%% Sources: skills/build-step/core.md
+%% Not shown: lane-specific commands, model-tier mapping, audit schemas, runtime probes, landed-path archive details, and final report templates
+%% Alt: An isolated build loop develops and tests a candidate, sends it to independent reviewers, retries needs-work results, and fully verifies a passing landing.
+
+flowchart TD
+    A[Preflight and isolate worktree] --> B[Developer implements the step]
+    B --> C[Run mechanical and runtime gates]
+    C --> D{Gates pass?}
+    D -- No --> N{Rounds remain?}
+    D -- Yes --> E[Run independent reviewer lanes]
+    E --> F{Aggregate verdict}
+    F -- Pass --> L[Land; run full gates, restore, and clean up]
+    L --> G{Landing finalization succeeds?}
+    G -- Yes --> P[Write authenticated PASS and report]
+    G -- No --> H[Finalize recovery and report BLOCKED]
+    F -- Needs work --> N
+    N -- Yes --> B
+    N -- No --> H

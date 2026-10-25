@@ -1,0 +1,18 @@
+%% user-orient
+%% Summary: Reconstruct a verified project snapshot, separate proven from unverified state, and recommend the most honest next move.
+%% Sources: skills/user-orient/core.md
+%% Not shown: aside prompt text, quick-mode field reductions, git command details, exact output headings, and project-specific manual checks
+%% Alt: Fresh autonomous asides and repository evidence join into an orientation that separates working, unverified, manual, and next-step information.
+
+flowchart TD
+    A[Read current plans, task state, and git evidence]
+    A --> B[Run autonomous asides in parallel]
+    B --> C[Reconcile claims with current evidence]
+    C --> D[State what is verified working]
+    C --> E[State what is not yet verified]
+    C --> F[List manual checks under one minute]
+    D --> G[Surface useful aside findings]
+    E --> G
+    F --> G
+    G --> H[Sequence the near-term work]
+    H --> I[Give the most honest recommendation]

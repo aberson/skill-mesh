@@ -1,0 +1,15 @@
+%% plan-feature
+%% Summary: Ground a feature plan in the existing codebase, resolve consequential choices, encode triggered obligations, and hand it to review.
+%% Sources: skills/plan-feature/core.md
+%% Not shown: full plan template, field-level step contract, discovery query examples, usage telemetry receipt, and every triggered obligation
+%% Alt: A feature planner fixes the scope, investigates source and consumers, resolves choices, writes structured steps, validates them, and hands off to review.
+
+flowchart TD
+    A[Establish feature boundary and intent] --> B[Inspect source, tests, and consumers]
+    B --> C{Consequential choices resolved?}
+    C -- No --> H[HELD: record blocking decisions]
+    C -- Yes --> D[Author structured plan steps]
+    D --> E[Add triggered runtime and review obligations]
+    E --> F{Plan matches current source?}
+    F -- No --> B
+    F -- Yes --> G[Mark REVIEW-READY and hand to plan-review]

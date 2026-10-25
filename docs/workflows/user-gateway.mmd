@@ -1,0 +1,16 @@
+%% user-gateway
+%% Summary: Convert an operator vent into one evidence-aware work ledger row and ready-to-paste seed per distinct fragment.
+%% Sources: skills/user-gateway/core.md
+%% Not shown: eight-rail taxonomy details, ledger column definitions, seed templates, maintenance hooks, and downstream skill contracts
+%% Alt: A listening pass splits the vent into fragments, routes each into the ledger, creates a seed per row, and closes with explicit next choices.
+
+flowchart TD
+    A[Capture the topic and full operator vent]
+    A --> B[Reflect intent, tensions, and open questions]
+    B --> C[Split the vent into distinct fragments]
+    C --> D[Create one ledger row per fragment]
+    D --> E[Route each row to the appropriate work rail]
+    E --> F[Write one ready-to-paste seed per row]
+    F --> G[Check that every fragment is represented]
+    G -->|Gap found| C
+    G -->|Complete| H[Present ledger, seeds, and closing choices]

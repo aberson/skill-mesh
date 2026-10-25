@@ -1,0 +1,21 @@
+%% judge-ui
+%% Summary: Drive a declared UI flow through mechanical and read-back gates, calibrate one independent vision dispatch, and reduce to PASS, FAIL, or ESCALATE.
+%% Sources: skills/judge-ui/core.md
+%% Not shown: flow-spec field definitions, browser adapter commands, artifact naming, rerun rules, model mapping, and prompt wording
+%% Alt: A UI judge proves dispatch capability, drives each stage with mechanical and read-back checks, inserts calibration anchors, and reduces evidence to a strict verdict.
+
+flowchart TD
+    A[Validate flow and vision capabilities] --> B{Capabilities proven?}
+    B -- No --> H[Stop before bring-up with no verdict]
+    B -- Yes --> C[Drive stages; run mechanics and read-backs]
+    C --> D{Mechanical or capture failure?}
+    D -- Yes --> F[Resolve FAIL with failure classification]
+    D -- No --> E[Dispatch stages and anchors to vision judge]
+    E --> G[Validate calibration and normalize records]
+    G --> I{Reduced result}
+    I -- All corroborated pass --> P[PASS]
+    I -- Evidenced defect --> F
+    I -- Uncertain or uncalibrated --> X[ESCALATE with human asks]
+    P --> R[Write verdict doc and artifact locators]
+    F --> R
+    X --> R

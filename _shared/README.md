@@ -2,8 +2,14 @@
 
 Resources referenced by several skills. Each `.md` file here is either a
 procedure doc the orchestrator-LLM reads at runtime or a shared contract
-multiple skills cite; each `.py` file is a thin wrapper that exposes the same
-procedure programmatically for tests and Python callers.
+multiple skills cite. Python helpers implement mechanical contracts such as
+calibration, verdict handling, scoring and private observation persistence.
+
+This is the canonical shared source directory. Runtime-referenced resources are
+packaged per profile; test modules remain source/release material. Separate utilities are described
+in the [v2 utility integration table](../README.md#how-utility-projects-are-used).
+Use the [workflow catalog](../docs/workflows/README.md) to see where skills invoke
+helpers; a helper's presence does not replace the skill's review or permission gates.
 
 Files in this directory are referenced from sibling skill SKILL.md files via
 relative paths (e.g. `../_shared/score-skill.md`). The directory is NOT a
@@ -11,6 +17,8 @@ skill itself — it has no `SKILL.md`.
 
 | File | Purpose | Consumer |
 |---|---|---|
+| `intent-continuity.md` | Private outcome records, evidenced capability checkpoints and reassessment; optional Drift Ranger CLI with session-state fallback | Planning, build orchestration, `task-handoff`, `session-wrap` |
+| `lesson_observations.py` | Explicit private mistake records and bounded pending-observation reads; automatic lesson publication is unavailable in v2 | `lesson-harvest` |
 | `judge-core.md` | The shared judging doctrine (archetypes, dimensions, rubric method, honesty invariants) every verdict-rendering skill cites | `review-deep`, `review-gauntlet`, `user-uat`, `build-step`, `build-phase` |
 | `skill-pipeline.md` | The routing web: the 8 rails an operator fragment can land on, the re-route edges, and the re-route contract | `user-gateway`, `user-debug`, README workflow maps |
 | `intake-engine.md` | The intake-ledger contract: path formula, row grammar, zero-open check, canonical `/goal` string | `user-gateway` + rail skills writing back re-routes |

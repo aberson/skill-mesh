@@ -1,0 +1,22 @@
+%% tier-offload
+%% Summary: Classify low-stakes judge slices, then write or preview an inventory and inactive candidate Switchboard configuration.
+%% Sources: skills/tier-offload/core.md
+%% Not shown: mode matrix details, gate-evidence rubric, package discovery, inventory fields, Switchboard commands, and persistence locations
+%% Alt: Isolated classifications pass parent gate review, then mode chooses inventory only, inactive config files, or a zero-write preview.
+
+flowchart TD
+    A[Discover complete skill packages]
+    A --> P{Fresh read-only classification available?}
+    P -->|No| Q[Stop with required tool missing]
+    P -->|Yes| B[Dispatch fresh isolated classifications]
+    B --> C[Separate judges, primary roles, and scripts]
+    C --> D[Parent verifies every local gate citation]
+    D --> E{Primary gate is evidenced?}
+    E -->|No| F[Emit false or primary-provider routing]
+    E -->|Yes| G[Add an advisory local candidate]
+    F --> H[Build the verified inventory]
+    G --> H
+    H --> I{Output mode}
+    I -->|dry-run| J[Print inventory and candidate; write nothing]
+    I -->|inventory-only| K[Write inventory.md only]
+    I -->|normal| L[Validate and write inactive candidate files]

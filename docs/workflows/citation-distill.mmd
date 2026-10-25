@@ -1,0 +1,17 @@
+%% citation-distill
+%% Summary: Prove one artifact's active completed review, generate mechanical queue defaults, and refine them only from matching same-run evidence.
+%% Sources: skills/citation-distill/core.md
+%% Not shown: scan and readiness qualifiers, queue schemas, prompt and breakdown fields, ASCII JSON transport, exact receipts, and final evidence reporting
+%% Alt: A distillation flow freezes one completed review identity, writes default queue rows, uses matching evidence to refine eligible rows, and hands decisions to triage.
+
+flowchart TD
+    A[Bind exact completed review and artifact] --> B{Active, same-run, and recorded current?}
+    B -- No --> H[HELD with citation-review next action]
+    B -- Yes --> C[Generate mechanical queue defaults once]
+    C --> D{Same-run evidence and prompt readable?}
+    D -- No --> R[Keep defaults and report evidence not read]
+    D -- Yes --> E[Draft only evidence-backed refinements]
+    E --> F[Validate and persist complete refinement payload]
+    F --> G{Proposal write succeeded?}
+    G -- No --> H2[HELD; defaults remain durable]
+    G -- Yes --> R2[List open rows and hand to citation-triage]

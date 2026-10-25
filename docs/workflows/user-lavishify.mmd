@@ -1,0 +1,22 @@
+%% user-lavishify
+%% Summary: Re-present a dense artifact in a loopback Lavish Editor, collect pinned feedback, and propagate operator decisions to canonical sources.
+%% Sources: skills/user-lavishify/core.md
+%% Not shown: telemetry prefixes, playbook IDs, layout-warning handling, resume commands, issue-ownership proof, and destination-specific edits
+%% Alt: Dense content passes Node and browser checks, becomes scratchpad HTML, loops through pinned browser feedback, then propagates approved decisions.
+
+flowchart TD
+    A[Select named or last substantial artifact]
+    A --> B{Spatial annotation is useful?}
+    B -->|No| C[Stay in chat or ask what to render]
+    B -->|Yes| D{Node 22 or newer available?}
+    D -->|No| E[Stop server if started and hold in chat]
+    D -->|Yes| F[Read playbooks and author scratchpad HTML]
+    F --> G[Open loopback editor and start background poll]
+    G --> M{Browser reaches loopback?}
+    M -->|No| E
+    M -->|Yes| H[Receive element-pinned operator feedback]
+    H --> I[Revise artifact and reply in browser]
+    I -->|Continue| H
+    I -->|Operator ends| J[End session and stop server]
+    J --> K[Propagate decisions to canonical sources]
+    K --> L[Report destinations and unpropagated items]

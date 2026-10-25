@@ -1,0 +1,19 @@
+%% context-slim
+%% Summary: Measure automatically loaded context, classify safe reductions, and apply only high-confidence changes when explicitly requested.
+%% Sources: skills/context-slim/providers/claude.md
+%% Not shown: token-estimation formulas, detailed redundancy heuristics, report template fields, backups, and per-file verification commands
+%% Alt: Discovery fans into instruction, rule, and memory analysis, then joins at a report whose apply branch edits only high-confidence findings.
+
+flowchart TD
+    A[Discover instruction, rule, and memory inputs]
+    A --> B[Measure current auto-load cost]
+    B --> C[Analyze instruction chain]
+    B --> D[Analyze rule files]
+    B --> E[Analyze memory index]
+    C --> F[Rank findings and projected savings]
+    D --> F
+    E --> F
+    F --> G{Apply requested?}
+    G -->|No| H[Return report only]
+    G -->|Yes| I[Apply high-confidence changes]
+    I --> J[Verify and report actual savings]

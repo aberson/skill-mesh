@@ -1,0 +1,17 @@
+%% citation-sweep
+%% Summary: Bind one calibrated judge, open every selected artifact before judging any, commit only complete runs, and generate backlog rows for clean commits.
+%% Sources: skills/citation-sweep/core.md
+%% Not shown: scoped readiness list caps, omitted-count reporting, PREPARE details, k3/5/7 voting, commit payloads, and per-artifact report fields
+%% Alt: A bounded sweep checks calibration and dispatch, selects stale then unreviewed paths, opens all runs as a barrier, judges them, and commits only complete results.
+
+flowchart TD
+    A[Resolve judge, dispatch, and calibration] --> B{Gate valid?}
+    B -- No --> H[HELD before any review open]
+    B -- Yes --> C[Scan and select bounded exact paths]
+    C --> D[OPEN every selected path in order]
+    D --> E{All opens succeeded?}
+    E -- No --> H2[HELD; preserve earlier open runs]
+    E -- Yes --> F[PREPARE and JUDGE possible runs]
+    F --> G[COMMIT only complete untied runs]
+    G --> I[Generate backlog for clean committed runs]
+    I --> R[Report committed, open, and deferred states]

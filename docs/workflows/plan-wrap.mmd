@@ -1,0 +1,20 @@
+%% plan-wrap
+%% Summary: Choose a full forward check or reduced completed-plan audit, auto-fix safe full-pass gaps, and return READY, READY WITH GAPS, or NEEDS WORK.
+%% Sources: skills/plan-wrap/core.md
+%% Not shown: full checklist, reduced documentation branch, output templates, observatory hook, exact autofix classes, and invocation variants
+%% Alt: A completion gate sends fully executed plans to a reduced accuracy audit and all others to the full checklist before the existing three-way verdict.
+
+flowchart TD
+    A[Resolve plan and classify build-unit status] --> B{Every build unit complete?}
+    B -- Yes --> C[Run reduced documentation accuracy pass]
+    B -- No or uncertain --> D[Run full fresh-context checklist]
+    D --> E{Safe full-pass autofixes available?}
+    E -- Yes --> F[Apply fixes and repeat full checks]
+    E -- No --> G[Classify remaining findings]
+    F --> G
+    C --> G
+    G --> H{Blockers remain?}
+    H -- Yes --> N[NEEDS WORK]
+    H -- No --> I{Gaps remain?}
+    I -- Yes --> W[READY WITH GAPS]
+    I -- No --> R[READY]

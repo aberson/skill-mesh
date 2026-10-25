@@ -1,0 +1,22 @@
+%% user-pm
+%% Summary: Present shipped work, outstanding plan items, practical next moves, and credible candidates to cut through a product-management lens.
+%% Sources: skills/user-pm/core.md
+%% Not shown: topic-specific templates, overnight qualification rubric details, Observatory hook fields, tone rules, and plan-discovery commands
+%% Alt: Verified project history and plan state feed a concise overview whose next moves are categorized and checked for scope that should be cut.
+
+flowchart TD
+    A[Resolve the project and current plan]
+    A --> B[Verify shipped history]
+    A --> C[Collect outstanding planned work]
+    B --> D[Explain current project state]
+    C --> D
+    D --> E[Generate concrete next moves]
+    E --> F{Move category}
+    F -->|Test| G[Name an operator check]
+    F -->|Build| H[Name a build action]
+    F -->|Decide| I[Surface required user input]
+    F -->|Overnight or other| J[Apply qualification rules]
+    G --> K[Identify candidates to cut]
+    H --> K
+    I --> K
+    J --> K

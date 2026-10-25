@@ -1,0 +1,18 @@
+%% review-proof
+%% Summary: Verify every material claim against primary sources, require exhaustive evidence for absence claims, and flag unsupported conclusions.
+%% Sources: skills/review-proof/core.md
+%% Not shown: source hierarchy examples, exhaustive-search commands, evidence-chain templates, codifying-test heuristics, and report formatting details
+%% Alt: Each review claim is checked against primary evidence, absence claims trigger exhaustive search, and unsupported claims become explicit findings.
+
+flowchart TD
+    A[Enumerate material claims] --> B{Next claim?}
+    B -- No --> R[Report evidence-backed summary]
+    B -- Yes --> C[Locate primary source evidence]
+    C --> D{Claim asserts absence?}
+    D -- Yes --> E[Run exhaustive bounded search]
+    D -- No --> F{Evidence supports claim?}
+    E --> F
+    F -- No --> G[Record unsupported-claim finding]
+    F -- Yes --> H[Cite evidence inline]
+    G --> B
+    H --> B

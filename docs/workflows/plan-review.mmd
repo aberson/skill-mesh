@@ -1,0 +1,16 @@
+%% plan-review
+%% Summary: Check a plan against source and execution contracts, auto-fix safe gaps, and return a severity-ranked verdict for another review pass.
+%% Sources: skills/plan-review/core.md
+%% Not shown: all 27 review checks, output templates, observatory hook, exact autofix classes, severity examples, and command syntax
+%% Alt: A plan review loads code evidence, checks completeness and build shape, applies safe fixes, then either passes or returns blockers for another round.
+
+flowchart TD
+    A[Resolve plan and review mode] --> B[Inspect plan against current source]
+    B --> C[Check execution shape and missing obligations]
+    C --> D{Safe autofixes available?}
+    D -- Yes --> E[Apply bounded fixes and re-review]
+    D -- No --> F[Rank remaining findings]
+    E --> F
+    F --> G{Any item needs operator input?}
+    G -- Yes --> H[NEEDS WORK with item counts]
+    G -- No --> R[READY and route to plan-redline]

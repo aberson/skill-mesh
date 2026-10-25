@@ -1,0 +1,20 @@
+%% review-uat
+%% Summary: Ground and classify every UAT step, emit the refined script and findings, optionally write an eligible anchored span, then delegate execution to user-uat.
+%% Sources: skills/review-uat/core.md
+%% Not shown: four-axis classification values, canonical step template, ambiguity heuristics, write-back mechanics, execution adapter, and report format
+%% Alt: A UAT review grounds and rewrites each step, always emits findings and a refined script, optionally writes an eligible span, and delegates requested execution.
+
+flowchart TD
+    A[Resolve UAT script and source context] --> B[Ground each step in primary source]
+    B --> C[Classify each step on four axes]
+    C --> D[Rewrite steps in canonical format]
+    D --> E[Emit findings, refined UAT, and diff]
+    E --> F{Apply requested and no questions?}
+    F -- Yes --> W[Recheck and replace eligible anchored span]
+    F -- No --> X{Execution requested?}
+    W --> X
+    X -- Yes --> U[Delegate refined script to user-uat]
+    X -- No --> Q{Clarifying questions open?}
+    U --> Q
+    Q -- Yes --> Z[Wait for answers; no pending write-back]
+    Q -- No --> R[Return final refined UAT]

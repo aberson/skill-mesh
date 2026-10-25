@@ -1,0 +1,20 @@
+%% test-prune
+%% Summary: Identify low-value tests, verify ownership and coverage, and execute only the cleanup actions the operator approves.
+%% Sources: skills/test-prune/core.md
+%% Not shown: candidate heuristics, stable row identifiers, whole-file action syntax, recovery commands, report columns, and relocation details
+%% Alt: Candidate discovery is narrowed by authority and recoverability checks, then an operator gate sends approved rows to cleanup and verification.
+
+flowchart TD
+    A[Identify redundant, trivial, or mock-heavy tests]
+    A --> B[Check each candidate against real coverage]
+    B --> C[Bind stable row identity and file authority]
+    C --> D{Action is recoverable?}
+    D -->|No| E[Hold candidate with reason]
+    D -->|Yes| F[Present proposed action to operator]
+    F --> G{Approved?}
+    G -->|No| E
+    G -->|Yes| H[Delete, relocate, or rewrite as approved]
+    H --> I[Run all declared test, lint, and typecheck gates]
+    I --> K{Gates pass and test counts match?}
+    K -->|No| L[Halt and preserve the partial tree]
+    K -->|Yes| J[Report actions, holds, and evidence]

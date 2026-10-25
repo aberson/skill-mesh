@@ -1,0 +1,18 @@
+%% observatory-doctor
+%% Summary: Run the prepared Dev Observatory static doctor once and relay measured launcher-row health without probing or repairing projects.
+%% Sources: skills/observatory-doctor/core.md
+%% Not shown: PowerShell argument construction, JSON field schema, individual static checks, diagnostic text, and live-probe utility behavior
+%% Alt: Root and runtime validation lead to one static doctor run without live probes, whose valid report branches to measured nothing, pass, warning, or broken rows.
+
+flowchart TD
+    A[Resolve the coding root and registry]
+    A --> B{Prepared runtime is complete?}
+    B -->|No| C[Report doctor unavailable and stop]
+    B -->|Yes| D[Run static doctor: uv offline flags and no probes]
+    D --> E{Invocation and report valid?}
+    E -->|No| F[Report did not complete]
+    E -->|Yes| G{Measured rows and projects?}
+    G -->|No| H[Report measured nothing]
+    G -->|Yes, clean| I[Relay static pass counts]
+    G -->|Warnings| J[Relay every warning]
+    G -->|Broken| K[Relay breaks and operator fix routes]

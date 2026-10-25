@@ -1,0 +1,20 @@
+%% citation-triage
+%% Summary: Present one ranked queue row at a time, bind an explicit operator choice to its frozen identity, and resolve an unchanged row exactly once.
+%% Sources: skills/citation-triage/core.md
+%% Not shown: queue record schema, decision-support field formatting, concurrency checks, persistence commands, and handoff text
+%% Alt: A triage walk freezes each row, shows bounded evidence, waits for a valid row-specific choice, defers changed rows, and records unchanged choices once.
+
+flowchart TD
+    A[List ranked distill queue] --> B{Next unresolved row?}
+    B -- No --> R[Report decisions and handoff]
+    B -- Yes --> C[Present evidence and decision support]
+    C --> D{Explicit row-bound choice?}
+    D -- No --> W[Leave row open; wait, skip, or cancel]
+    D -- Yes --> E[Recheck row and evidence once]
+    E --> F{Displayed identity unchanged?}
+    F -- No --> X[Defer row without recording]
+    F -- Yes --> G[Resolve once with exact valid flag]
+    G --> Q{Operator chooses to continue?}
+    X --> Q
+    Q -- Yes --> B
+    Q -- No --> R

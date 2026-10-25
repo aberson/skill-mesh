@@ -1,0 +1,18 @@
+%% research-prospect
+%% Summary: Scan active projects in parallel and render a grounded menu of high-value research topics, with optional session parking.
+%% Sources: skills/research-prospect/core.md
+%% Not shown: menu field template, project-memory paths, agent prompt text, scoring details, and deep-research invocation syntax
+%% Alt: The resolved project list fans out to isolated scans, joins into a ranked research menu, and optionally parks topics before session triage.
+
+flowchart TD
+    A[Resolve explicit or active project list]
+    A --> B{Any resolved projects?}
+    B -->|No| C[Render empty menu and report skipped names]
+    B -->|Yes| D[Dispatch one isolated scan per project]
+    D --> E[Ground gaps in code, plans, and project state]
+    E --> F[Rank specific research questions]
+    F --> G[Render grouped menu and skipped project names]
+    G --> H{Session-wrap flag set?}
+    H -->|No| I[Return menu]
+    H -->|Yes| J[Park rendered topics in task state]
+    J --> K[Invoke bare session-wrap]

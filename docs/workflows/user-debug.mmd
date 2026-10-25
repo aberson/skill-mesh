@@ -1,0 +1,18 @@
+%% user-debug
+%% Summary: Diagnose a bug from primary evidence, reproduce it independently, design and delegate a fix, then verify against the original repro.
+%% Sources: skills/user-debug/core.md
+%% Not shown: memory citation format, diagnosis templates, stash commands, write-as-you-go artifacts, schema details, and stop-and-audit thresholds
+%% Alt: Primary investigation and independent reproduction meet at a comparison gate before fix design, delegated implementation, original-repro verification, and landing.
+
+flowchart TD
+    A[Preflight repository and cited memory]
+    A --> B[Investigate primary sources and form diagnosis]
+    B --> C[Reproduce independently in fresh context]
+    C --> D{Diagnoses agree enough to design?}
+    D -->|No| E[Stop and reconcile the evidence]
+    D -->|Yes| F[Design the fix without editing code]
+    F --> G[Delegate implementation]
+    G --> H[Verify against the original reproduction]
+    H -->|Fail| I[Return to diagnosis or implementation]
+    I --> B
+    H -->|Pass| J[Land the change and report evidence]

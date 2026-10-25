@@ -1,0 +1,806 @@
+{
+  "schema": "show-your-work.workflows.v1",
+  "generator": "show-your-work 0.1.0",
+  "generated_at": "2026-10-25T16:27:08+00:00",
+  "source_dir": "docs/workflows",
+  "items": [
+    {
+      "id": "build-observer",
+      "label": "build-observer",
+      "summary": "Draft a grounded portfolio block, validate it offline, and print a proposal while holding invalid roots or missing tools.",
+      "alt": "A proposal flow locates a project, reads evidence, drafts fields, and either holds on invalid prerequisites or prints a validated block.",
+      "not_shown": "field-by-field prose rules, payload escaping, validator implementation, write mode, and the full redline schema",
+      "sources": [
+        "skills/build-observer/core.md"
+      ],
+      "source_path": "docs/workflows/build-observer.mmd",
+      "source_sha256": "dd7241d5ffc7fe463faffe711a31f1e2eeef3f8a9a39da86bc299ea249b26b63",
+      "engine": "mermaid",
+      "rasters": null
+    },
+    {
+      "id": "build-phase",
+      "label": "build-phase",
+      "summary": "Parse a plan, run each eligible step through build-step, checkpoint progress, and halt only on the phase contract's named conditions.",
+      "alt": "A phase controller validates a plan, loops through steps, checkpoints successful work, and routes named halt conditions to a preserved blocked state.",
+      "not_shown": "plan grammar details, checkpoint shell snippets, manual UAT formatting, task-state schema, and recovery commands",
+      "sources": [
+        "skills/build-phase/core.md"
+      ],
+      "source_path": "docs/workflows/build-phase.mmd",
+      "source_sha256": "af63e0737d5722fcc16eead329ccdc9ba3a087c279936e16953dbe6eab956cf1",
+      "engine": "mermaid",
+      "rasters": null
+    },
+    {
+      "id": "build-queue",
+      "label": "build-queue",
+      "summary": "Validate queue and resume authority, run plan-expedite then build-phase per item, park every halt, and continue to a morning summary.",
+      "alt": "A queue controller validates host and state authority, prepares each plan, runs its phase, checkpoints done or parked status, and drains to a summary.",
+      "not_shown": "queue parsing, state schema, identity hashes, kill-switch details, acceptance fields, park-issue body, and summary template",
+      "sources": [
+        "skills/build-queue/core.md"
+      ],
+      "source_path": "docs/workflows/build-queue.mmd",
+      "source_sha256": "dc5e84de10a39ef71db87106d89b861db64959300185662f143ab0998b080c8c",
+      "engine": "mermaid",
+      "rasters": null
+    },
+    {
+      "id": "build-step",
+      "label": "build-step",
+      "summary": "Isolate one plan step, iterate developer and independent review rounds, then land, verify, and finalize only an authenticated passing candidate.",
+      "alt": "An isolated build loop develops and tests a candidate, sends it to independent reviewers, retries needs-work results, and fully verifies a passing landing.",
+      "not_shown": "lane-specific commands, model-tier mapping, audit schemas, runtime probes, landed-path archive details, and final report templates",
+      "sources": [
+        "skills/build-step/core.md"
+      ],
+      "source_path": "docs/workflows/build-step.mmd",
+      "source_sha256": "edac3c47e598bab71d5c1631ff73bedd0e3ecc03bc1e550424186d0073ee8536",
+      "engine": "mermaid",
+      "rasters": null
+    },
+    {
+      "id": "citation-distill",
+      "label": "citation-distill",
+      "summary": "Prove one artifact's active completed review, generate mechanical queue defaults, and refine them only from matching same-run evidence.",
+      "alt": "A distillation flow freezes one completed review identity, writes default queue rows, uses matching evidence to refine eligible rows, and hands decisions to triage.",
+      "not_shown": "scan and readiness qualifiers, queue schemas, prompt and breakdown fields, ASCII JSON transport, exact receipts, and final evidence reporting",
+      "sources": [
+        "skills/citation-distill/core.md"
+      ],
+      "source_path": "docs/workflows/citation-distill.mmd",
+      "source_sha256": "411e6e878168e3d0f0f0a7dde2178ed31caac55a0ca22e3be7c31e5c9cea4fb4",
+      "engine": "mermaid",
+      "rasters": null
+    },
+    {
+      "id": "citation-review",
+      "label": "citation-review",
+      "summary": "Bind an exact calibrated judge, open one review, prepare frozen evidence, resolve each choice by independent votes, and commit only untied complete results.",
+      "alt": "A model-bound review checks calibration and sibling dispatch, opens once, freezes evidence, expands tied votes from three to seven, and commits only a complete untied payload.",
+      "not_shown": "calibration anchor procedure, extraction and classification prompts, schemas, evidence searches, parse-failure conversion, and report fields",
+      "sources": [
+        "skills/citation-review/core.md"
+      ],
+      "source_path": "docs/workflows/citation-review.mmd",
+      "source_sha256": "b97d5179fb601a1d6a7f25d5f29e67149922bbf525bdc9539c4901d6ae1c4e2a",
+      "engine": "mermaid",
+      "rasters": null
+    },
+    {
+      "id": "citation-sweep",
+      "label": "citation-sweep",
+      "summary": "Bind one calibrated judge, open every selected artifact before judging any, commit only complete runs, and generate backlog rows for clean commits.",
+      "alt": "A bounded sweep checks calibration and dispatch, selects stale then unreviewed paths, opens all runs as a barrier, judges them, and commits only complete results.",
+      "not_shown": "scoped readiness list caps, omitted-count reporting, PREPARE details, k3/5/7 voting, commit payloads, and per-artifact report fields",
+      "sources": [
+        "skills/citation-sweep/core.md"
+      ],
+      "source_path": "docs/workflows/citation-sweep.mmd",
+      "source_sha256": "32cd44029b4fd9cfcd6a63f4e81695025fa6fcb8ac29aba46bd3755f3c44a808",
+      "engine": "mermaid",
+      "rasters": null
+    },
+    {
+      "id": "citation-triage",
+      "label": "citation-triage",
+      "summary": "Present one ranked queue row at a time, bind an explicit operator choice to its frozen identity, and resolve an unchanged row exactly once.",
+      "alt": "A triage walk freezes each row, shows bounded evidence, waits for a valid row-specific choice, defers changed rows, and records unchanged choices once.",
+      "not_shown": "queue record schema, decision-support field formatting, concurrency checks, persistence commands, and handoff text",
+      "sources": [
+        "skills/citation-triage/core.md"
+      ],
+      "source_path": "docs/workflows/citation-triage.mmd",
+      "source_sha256": "da0a05f5e50325d6cf4dc0f2be82f19acd190ec305695ff4e2c9338c1e30c5be",
+      "engine": "mermaid",
+      "rasters": null
+    },
+    {
+      "id": "claude-oauth-auth",
+      "label": "claude-oauth-auth",
+      "summary": "Authenticate the Claude CLI with a subscription token while keeping the credential out of logs and direct API calls.",
+      "alt": "A subscription check leads to operator-only token creation, secret storage, a clean CLI launch, and an effect-based authentication check.",
+      "not_shown": "container and tmux examples, file permission commands, editor-extension credentials, and future bare-mode changes",
+      "sources": [
+        "skills/claude-oauth-auth/providers/claude.md"
+      ],
+      "source_path": "docs/workflows/claude-oauth-auth.mmd",
+      "source_sha256": "924dd685ccd92c2b3366e9da0f9ae6c74c1e6e7a6a2b8d126c31567d66e06196",
+      "engine": "mermaid",
+      "rasters": null
+    },
+    {
+      "id": "context-slim",
+      "label": "context-slim",
+      "summary": "Measure automatically loaded context, classify safe reductions, and apply only high-confidence changes when explicitly requested.",
+      "alt": "Discovery fans into instruction, rule, and memory analysis, then joins at a report whose apply branch edits only high-confidence findings.",
+      "not_shown": "token-estimation formulas, detailed redundancy heuristics, report template fields, backups, and per-file verification commands",
+      "sources": [
+        "skills/context-slim/providers/claude.md"
+      ],
+      "source_path": "docs/workflows/context-slim.mmd",
+      "source_sha256": "d41ec4d89ef053d9e505c66967926b5f8d7772359316e013f51dd6ddd2c77c67",
+      "engine": "mermaid",
+      "rasters": null
+    },
+    {
+      "id": "goblin-do",
+      "label": "goblin-do",
+      "summary": "Resolve one persisted atom, recheck its anchor, and print a goal block or planning seed without executing the work.",
+      "alt": "A read-only renderer resolves one atom and its project, refuses stale or unverifiable anchors, then prints either a goal block or the atom kind's seed.",
+      "not_shown": "CLI argument details, atom schemas, fuzzy-match ranking, reachability note fields, intake-ledger reroute write-back, and rendered block formats",
+      "sources": [
+        "skills/goblin-do/core.md"
+      ],
+      "source_path": "docs/workflows/goblin-do.mmd",
+      "source_sha256": "317a5e46fb74685283bbda08900fdcceb1787eccb1407c4fbffa48257a48fccd",
+      "engine": "mermaid",
+      "rasters": null
+    },
+    {
+      "id": "goblin-suggest",
+      "label": "goblin-suggest",
+      "summary": "Validate the invocation, enforce the current safety holds for every mode, and stop before reading project content or launching the workflow.",
+      "alt": "A suggestion request passes usage and capability checks, then every supported mode ends in a named hold with no project read, workflow launch, or write.",
+      "not_shown": "the disabled future generation pipeline, repair conditions for lifting the hold, known workflow deviations, scoring, and persistence formats",
+      "sources": [
+        "skills/goblin-suggest/core.md"
+      ],
+      "source_path": "docs/workflows/goblin-suggest.mmd",
+      "source_sha256": "8e3e9a383b61d6f6b9ea46cdeb72a168487122471558e6ccbd01118e9bf0b6b0",
+      "engine": "mermaid",
+      "rasters": null
+    },
+    {
+      "id": "goblin-sweep",
+      "label": "goblin-sweep",
+      "summary": "Invoke the deterministic goblin sweep, parse its obligation records, and present every returned atom with a goblin-do handoff.",
+      "alt": "A fail-loud wrapper checks three prerequisites, runs the deterministic engine, refuses malformed output, and lists each obligation with its read-only handoff.",
+      "not_shown": "pinned command text, seven report fields, persistence merge rules, completeness caveats, warning formatting, and engine discovery internals",
+      "sources": [
+        "skills/goblin-sweep/core.md"
+      ],
+      "source_path": "docs/workflows/goblin-sweep.mmd",
+      "source_sha256": "921af36ee2dc3da42a543494552eab156d9ebe15283ff27634e288d0a6f335ec",
+      "engine": "mermaid",
+      "rasters": null
+    },
+    {
+      "id": "judge-motion",
+      "label": "judge-motion",
+      "summary": "Gate a motion run on session calibration, capture paint-driven evidence, short-circuit mechanical failures, and reduce per-transition verdicts.",
+      "alt": "A motion run checks calibration before bring-up, captures transitions, fails hard mechanical defects without vision, judges residual motion, and reduces the worst result.",
+      "not_shown": "flow-spec fields, capture and frame scripts, binary question battery, auth details, calibration procedure, reduced-motion mode, and artifact schema",
+      "sources": [
+        "skills/judge-motion/providers/claude.md"
+      ],
+      "source_path": "docs/workflows/judge-motion.mmd",
+      "source_sha256": "7745d9c62800e5fdaa5d123e69a3657ed0b9e5167bd1273af1d863b677545ed3",
+      "engine": "mermaid",
+      "rasters": null
+    },
+    {
+      "id": "judge-ui",
+      "label": "judge-ui",
+      "summary": "Drive a declared UI flow through mechanical and read-back gates, calibrate one independent vision dispatch, and reduce to PASS, FAIL, or ESCALATE.",
+      "alt": "A UI judge proves dispatch capability, drives each stage with mechanical and read-back checks, inserts calibration anchors, and reduces evidence to a strict verdict.",
+      "not_shown": "flow-spec field definitions, browser adapter commands, artifact naming, rerun rules, model mapping, and prompt wording",
+      "sources": [
+        "skills/judge-ui/core.md"
+      ],
+      "source_path": "docs/workflows/judge-ui.mmd",
+      "source_sha256": "2d5aea4b8dd3ae6b780502a7f0c6af2b1d366c0c58a985282a38f1be51defee3",
+      "engine": "mermaid",
+      "rasters": null
+    },
+    {
+      "id": "lesson-harvest",
+      "label": "lesson-harvest",
+      "summary": "Record one private observation or produce a privacy-reviewed zero-write lesson preview; automatic publication is unavailable in v2.",
+      "alt": "Invocation splits into private record, unavailable publish, or preview; preview text appears only after a fresh independent privacy review passes.",
+      "not_shown": "exact keyword patterns, five-store dedup details, candidate field schema, bounded repository audits, and record request fields",
+      "sources": [
+        "skills/lesson-harvest/core.md"
+      ],
+      "source_path": "docs/workflows/lesson-harvest.mmd",
+      "source_sha256": "bf0d0292dfbb1978adcd549a40a20391f5493832828f7c3384dedf3b3a6cd7ab",
+      "engine": "mermaid",
+      "rasters": null
+    },
+    {
+      "id": "memory-distill",
+      "label": "memory-distill",
+      "summary": "Review selected feedback memories one at a time, surface broader principles, and apply changes only after explicit approval.",
+      "alt": "A short memory lineup is scanned for themes, reviewed item by item, and held at an approval decision before any durable change is applied.",
+      "not_shown": "memory-location fallbacks, lineup scoring, evidence formatting, robustness checklist details, and individual edit formats",
+      "sources": [
+        "skills/memory-distill/core.md"
+      ],
+      "source_path": "docs/workflows/memory-distill.mmd",
+      "source_sha256": "1099ae2117cd53488efe08fbc724f34d28855d229afc240161f677a8ac616049",
+      "engine": "mermaid",
+      "rasters": null
+    },
+    {
+      "id": "observatory-doctor",
+      "label": "observatory-doctor",
+      "summary": "Run the prepared Dev Observatory static doctor once and relay measured launcher-row health without probing or repairing projects.",
+      "alt": "Root and runtime validation lead to one static doctor run without live probes, whose valid report branches to measured nothing, pass, warning, or broken rows.",
+      "not_shown": "PowerShell argument construction, JSON field schema, individual static checks, diagnostic text, and live-probe utility behavior",
+      "sources": [
+        "skills/observatory-doctor/core.md"
+      ],
+      "source_path": "docs/workflows/observatory-doctor.mmd",
+      "source_sha256": "4828e476ed16ebd819355191ec082edeb3406548d6b7b4f3fda5a5f44e2068c8",
+      "engine": "mermaid",
+      "rasters": null
+    },
+    {
+      "id": "plan-expedite",
+      "label": "plan-expedite",
+      "summary": "Warn but continue on stale plans, resume only a valid stage prefix, then run the ordered review-to-build handoff chain.",
+      "alt": "A plan chain validates its input, warns and continues when stale, resumes a valid prefix or starts fresh, then halts on a failed stage or emits the build handoff.",
+      "not_shown": "state-file schema, project pin checks, exact accepted verdicts, halt template, handoff modes, goal text, and final command rendering",
+      "sources": [
+        "skills/plan-expedite/core.md"
+      ],
+      "source_path": "docs/workflows/plan-expedite.mmd",
+      "source_sha256": "c2d9c6562f25c8114ce2c0f44ba4d87a8ad41f4d5f2f52483f82fb7d104c5a53",
+      "engine": "mermaid",
+      "rasters": null
+    },
+    {
+      "id": "plan-feature",
+      "label": "plan-feature",
+      "summary": "Ground a feature plan in the existing codebase, resolve consequential choices, encode triggered obligations, and hand it to review.",
+      "alt": "A feature planner fixes the scope, investigates source and consumers, resolves choices, writes structured steps, validates them, and hands off to review.",
+      "not_shown": "full plan template, field-level step contract, discovery query examples, usage telemetry receipt, and every triggered obligation",
+      "sources": [
+        "skills/plan-feature/core.md"
+      ],
+      "source_path": "docs/workflows/plan-feature.mmd",
+      "source_sha256": "b3ea5d1267e079546b93a2eaf5d20b676e9a7f41feb2f0dcb5f952a9cb915a92",
+      "engine": "mermaid",
+      "rasters": null
+    },
+    {
+      "id": "plan-init",
+      "label": "plan-init",
+      "summary": "Guide a greenfield planning conversation, resolve architecture and process choices, then save a complete plan and project instructions.",
+      "alt": "A greenfield check leads through seven decision phases, loops on unresolved choices, writes the plan and instructions, and hands off to review.",
+      "not_shown": "detailed question banks, plan template fields, instruction-file text, observatory hook, and stack-specific recommendations",
+      "sources": [
+        "skills/plan-init/core.md"
+      ],
+      "source_path": "docs/workflows/plan-init.mmd",
+      "source_sha256": "fb9338a141996276f3cbee47c822d4d6eb744e52c95b186f44a8f772db0e0a3a",
+      "engine": "mermaid",
+      "rasters": null
+    },
+    {
+      "id": "plan-merge",
+      "label": "plan-merge",
+      "summary": "Compare two overlapping plans, resolve contradictions and sequencing, then write one approved spine and archive the originals.",
+      "alt": "Two plans are read and compared, contradictions and a merged spine are proposed, hard questions gate writing, and accepted originals are archived.",
+      "not_shown": "overlap table fields, question catalog, merged-plan template, archive naming rules, and external-reference command details",
+      "sources": [
+        "skills/plan-merge/core.md"
+      ],
+      "source_path": "docs/workflows/plan-merge.mmd",
+      "source_sha256": "4572fa896f3885eb35f7701e119182dbae8d92bf27097bb1a9e2776f607f1e05",
+      "engine": "mermaid",
+      "rasters": null
+    },
+    {
+      "id": "plan-redline",
+      "label": "plan-redline",
+      "summary": "Turn a plan into a stable proposal, distinguish operator choices from defaults, and fold terse ID-based feedback back into the plan.",
+      "alt": "A plan becomes a stable decision inventory and proposal; publication falls back to local HTML when needed, and later ID feedback updates both.",
+      "not_shown": "HTML design tokens, section-by-section proposal copy, locator migration wording, publication versioning, and feedback examples",
+      "sources": [
+        "skills/plan-redline/core.md"
+      ],
+      "source_path": "docs/workflows/plan-redline.mmd",
+      "source_sha256": "825aa64d6836ca061da806b3d4539f2241a0883868d0fa9ffbb591fe941d40d2",
+      "engine": "mermaid",
+      "rasters": null
+    },
+    {
+      "id": "plan-review",
+      "label": "plan-review",
+      "summary": "Check a plan against source and execution contracts, auto-fix safe gaps, and return a severity-ranked verdict for another review pass.",
+      "alt": "A plan review loads code evidence, checks completeness and build shape, applies safe fixes, then either passes or returns blockers for another round.",
+      "not_shown": "all 27 review checks, output templates, observatory hook, exact autofix classes, severity examples, and command syntax",
+      "sources": [
+        "skills/plan-review/core.md"
+      ],
+      "source_path": "docs/workflows/plan-review.mmd",
+      "source_sha256": "4bad5420e55e226cf7b191c6cec9837f629c946ad040abd2bdaa870008152c98",
+      "engine": "mermaid",
+      "rasters": null
+    },
+    {
+      "id": "plan-trim",
+      "label": "plan-trim",
+      "summary": "Investigate stale plan work, propose evidence-backed cuts, wait for the operator's explicit choice, and apply only the agreed set.",
+      "alt": "A trim pass investigates primary sources, proposes specific cuts, waits without writing, then safely applies approved cuts or ends with the proposal.",
+      "not_shown": "candidate categories, exact retirement prose, cross-reference commands, commit exceptions, issue-sync wording, and report template",
+      "sources": [
+        "skills/plan-trim/core.md"
+      ],
+      "source_path": "docs/workflows/plan-trim.mmd",
+      "source_sha256": "ea5bfcce861f53410cfedc45bf0519cd5b6cd49a7893b642ee5bc7794be58c7a",
+      "engine": "mermaid",
+      "rasters": null
+    },
+    {
+      "id": "plan-wrap",
+      "label": "plan-wrap",
+      "summary": "Choose a full forward check or reduced completed-plan audit, auto-fix safe full-pass gaps, and return READY, READY WITH GAPS, or NEEDS WORK.",
+      "alt": "A completion gate sends fully executed plans to a reduced accuracy audit and all others to the full checklist before the existing three-way verdict.",
+      "not_shown": "full checklist, reduced documentation branch, output templates, observatory hook, exact autofix classes, and invocation variants",
+      "sources": [
+        "skills/plan-wrap/core.md"
+      ],
+      "source_path": "docs/workflows/plan-wrap.mmd",
+      "source_sha256": "b7fb3e1f5bd7edb1ef43af999f8ed6f848494d58cea4365ee79503d175d2100f",
+      "engine": "mermaid",
+      "rasters": null
+    },
+    {
+      "id": "repo-init",
+      "label": "repo-init",
+      "summary": "Check identity and plan before writes, create and push the repository, add README in a second commit, then create issues and backfill plan IDs.",
+      "alt": "A first-publication flow runs read-only identity and plan checks, previews unconfirmed input, pushes a scaffold, pushes README separately, and creates issues.",
+      "not_shown": "sensitive-name patterns, exact Git and gh commands, README and issue templates, partial recovery actions, attribution, and result fields",
+      "sources": [
+        "skills/repo-init/core.md"
+      ],
+      "source_path": "docs/workflows/repo-init.mmd",
+      "source_sha256": "a145aefe769fc0c3dc40845bbdc76c693e55611b7edda111e3dbfb10e30b938c",
+      "engine": "mermaid",
+      "rasters": null
+    },
+    {
+      "id": "repo-sync",
+      "label": "repo-sync",
+      "summary": "Verify review prerequisites and repository identity, compare plan steps with issues, preview the diff, and apply it automatically unless dry-run.",
+      "alt": "A repository sync validates gates and target identity, warns but continues on lean plan context, previews matched issue changes, and applies them unless dry-run.",
+      "not_shown": "supported plan syntaxes, matching regexes, issue body templates, gh commands, temp-file handling, and edge-case catalog",
+      "sources": [
+        "skills/repo-sync/core.md"
+      ],
+      "source_path": "docs/workflows/repo-sync.mmd",
+      "source_sha256": "c386ffd07629d5d40d8dba99191cf6f23f817810c248883eb284d2c32eaff2c0",
+      "engine": "mermaid",
+      "rasters": null
+    },
+    {
+      "id": "repo-update",
+      "label": "repo-update",
+      "summary": "Refresh phase documentation, repair grounded gaps where clear, continue past advisory ambiguity, and conditionally commit, push, and record posterity.",
+      "alt": "A phase closeout proves the completed work, updates documentation, fixes clear drift while recording ambiguous follow-ups, then completes or withholds Git and GitHub steps.",
+      "not_shown": "documentation templates, instruction-file matrix, exact withhold reasons, partial recovery commands, tour construction, and observatory details",
+      "sources": [
+        "skills/repo-update/core.md"
+      ],
+      "source_path": "docs/workflows/repo-update.mmd",
+      "source_sha256": "b83ec30f92317357ed4f4c5dcba247b39413b8228547f378f02188014edc6bf2",
+      "engine": "mermaid",
+      "rasters": null
+    },
+    {
+      "id": "repo-wrap",
+      "label": "repo-wrap",
+      "summary": "Resolve and classify exactly one target, then execute its ownership rail with scoped secret screening and parked unsafe actions.",
+      "alt": "A closeout router classifies one target, delegates owned projects, or runs coding-root, clone, and backup rails that screen staged paths and park unsafe work.",
+      "not_shown": "owner-match algorithm, secrets patterns, per-rail Git commands, backup naming, flags, maintenance procedure, and final report fields",
+      "sources": [
+        "skills/repo-wrap/core.md"
+      ],
+      "source_path": "docs/workflows/repo-wrap.mmd",
+      "source_sha256": "6fdc205d73e7e33de0a9fb695facb3f2508a3aaca54d40655261c347fce91d26",
+      "engine": "mermaid",
+      "rasters": null
+    },
+    {
+      "id": "research-prospect",
+      "label": "research-prospect",
+      "summary": "Scan active projects in parallel and render a grounded menu of high-value research topics, with optional session parking.",
+      "alt": "The resolved project list fans out to isolated scans, joins into a ranked research menu, and optionally parks topics before session triage.",
+      "not_shown": "menu field template, project-memory paths, agent prompt text, scoring details, and deep-research invocation syntax",
+      "sources": [
+        "skills/research-prospect/core.md"
+      ],
+      "source_path": "docs/workflows/research-prospect.mmd",
+      "source_sha256": "3bd5b216bfeab77df697026c7423f851281177f64b78cc16083c06d9aca3ce5a",
+      "engine": "mermaid",
+      "rasters": null
+    },
+    {
+      "id": "review-deep",
+      "label": "review-deep",
+      "summary": "Bind a change set, run deterministic calibration and mechanical gates, dispatch the selected independent lenses, and default-deny incomplete evidence.",
+      "alt": "A deep review binds immutable inputs, runs recorded calibration and mechanical checks, selects code or runtime lenses, then aggregates only complete evidence.",
+      "not_shown": "per-lens prompts, anti-pattern catalog, model-tier mapping, runtime probe tokens, reducer rules, sidecar schema, and UAT deferral details",
+      "sources": [
+        "skills/review-deep/core.md"
+      ],
+      "source_path": "docs/workflows/review-deep.mmd",
+      "source_sha256": "970e2c9d884b95b8683404d8cadecc2fdee76e9770548d816f1803f3f9840e37",
+      "engine": "mermaid",
+      "rasters": null
+    },
+    {
+      "id": "review-gauntlet",
+      "label": "review-gauntlet",
+      "summary": "Run mechanical checks first, dispatch exactly five fresh code lenses, and reduce their evidence to a terse PASS, NEEDS WORK, or UNCERTAIN verdict.",
+      "alt": "A lean review validates prompt and diff, runs mechanics before five independent code lenses, then applies a fixed default-deny three-way reducer.",
+      "not_shown": "detailed lens prompts, optional style offload, command construction, mechanical check catalog, output markdown, and cross-references",
+      "sources": [
+        "skills/review-gauntlet/core.md"
+      ],
+      "source_path": "docs/workflows/review-gauntlet.mmd",
+      "source_sha256": "5c968c2aef84b000c744efd3ca4b650aac491c2cef61e5f01ebb5b70bc8d2fdf",
+      "engine": "mermaid",
+      "rasters": null
+    },
+    {
+      "id": "review-proof",
+      "label": "review-proof",
+      "summary": "Verify every material claim against primary sources, require exhaustive evidence for absence claims, and flag unsupported conclusions.",
+      "alt": "Each review claim is checked against primary evidence, absence claims trigger exhaustive search, and unsupported claims become explicit findings.",
+      "not_shown": "source hierarchy examples, exhaustive-search commands, evidence-chain templates, codifying-test heuristics, and report formatting details",
+      "sources": [
+        "skills/review-proof/core.md"
+      ],
+      "source_path": "docs/workflows/review-proof.mmd",
+      "source_sha256": "3a876c5a8fb21a82045a947dbb8abf74d0d84614608801b96831bf400e389b57",
+      "engine": "mermaid",
+      "rasters": null
+    },
+    {
+      "id": "review-uat",
+      "label": "review-uat",
+      "summary": "Ground and classify every UAT step, emit the refined script and findings, optionally write an eligible anchored span, then delegate execution to user-uat.",
+      "alt": "A UAT review grounds and rewrites each step, always emits findings and a refined script, optionally writes an eligible span, and delegates requested execution.",
+      "not_shown": "four-axis classification values, canonical step template, ambiguity heuristics, write-back mechanics, execution adapter, and report format",
+      "sources": [
+        "skills/review-uat/core.md"
+      ],
+      "source_path": "docs/workflows/review-uat.mmd",
+      "source_sha256": "b96e5ef633bedacc43c02d2bd1153ae42288cdb0769cc2f5343775f6c0aaf227",
+      "engine": "mermaid",
+      "rasters": null
+    },
+    {
+      "id": "session-wrap",
+      "label": "session-wrap",
+      "summary": "Triage and act on a transition moment, or return a read-only verdict and loss report through advise mode.",
+      "alt": "Collected signals either produce read-only advice or select continue, clear-next, or end-window action with durability gates before closure.",
+      "not_shown": "scoring constants, task-state schema, git-verb decision table, rendered handoff fields, salvage details, and spawn mechanics",
+      "sources": [
+        "skills/session-wrap/core.md"
+      ],
+      "source_path": "docs/workflows/session-wrap.mmd",
+      "source_sha256": "eefacfc79ee1ba7e70398ce2d2e76bd4a1356bf297e5b0fffcbf9aa7e44a64f6",
+      "engine": "mermaid",
+      "rasters": null
+    },
+    {
+      "id": "skill-eval-setup",
+      "label": "skill-eval-setup",
+      "summary": "Derive discriminating assertions and scenarios from a skill contract, then build and verify a golden corpus and improvement loop.",
+      "alt": "Contract analysis produces assertions, scenarios, eval files, and a loop prompt before golden anchors pass a verification gate or are held.",
+      "not_shown": "JSON schemas, assertion syntax, slug rules, prompt template, grader implementation, manifest fields, and helper-script interface",
+      "sources": [
+        "skills/skill-eval-setup/core.md"
+      ],
+      "source_path": "docs/workflows/skill-eval-setup.mmd",
+      "source_sha256": "9d3618f6667376efb004dbe4855fea4617d66e1d60d3f3aa30e7d02ca911d83d",
+      "engine": "mermaid",
+      "rasters": null
+    },
+    {
+      "id": "skill-evolve",
+      "label": "skill-evolve",
+      "summary": "Evaluate skill variants in parallel, commit a valid winner locally, and leave every push or pull request to the operator.",
+      "alt": "Preflight and scoring fan into isolated variant runs, join at comparison, and place a valid winner on a local branch without pushing it.",
+      "not_shown": "variants-file grammar, brainstorm prompt, worktree commands, comparison table fields, cleanup details, and analysis appendix",
+      "sources": [
+        "skills/skill-evolve/core.md"
+      ],
+      "source_path": "docs/workflows/skill-evolve.mmd",
+      "source_sha256": "c46f97a428cce670ceb8d522eaf97612ceee2a13233dfcc6e1531c10e3e8dbc4",
+      "engine": "mermaid",
+      "rasters": null
+    },
+    {
+      "id": "skill-iterate",
+      "label": "skill-iterate",
+      "summary": "Hill-climb scorable skills under a lock, accepting only integrity-preserving improvements and stopping at budget or kill-switch boundaries.",
+      "alt": "Discovery and locking lead into a repeated baseline-mutate-grade loop, then a ship gate keeps or rejects each candidate before moving on.",
+      "not_shown": "queue ordering, skip-list entries, calibration, scorer formulas, worktree commands, logs, morning-summary fields, and cleanup mechanics",
+      "sources": [
+        "skills/skill-iterate/core.md"
+      ],
+      "source_path": "docs/workflows/skill-iterate.mmd",
+      "source_sha256": "c0c00b3ca83d36632a5de053748aae317eb6547356681f97dc047903e30a8454",
+      "engine": "mermaid",
+      "rasters": null
+    },
+    {
+      "id": "task-handoff",
+      "label": "task-handoff",
+      "summary": "Persist or resume session task state through explicit checkpoint, boundary, resume, and true-end modes.",
+      "alt": "Invocation mode selects a loop checkpoint, next-task save, read-only resume, or true session end, each with its own state behavior.",
+      "not_shown": "task-state schema fields, result-line wording, rollup derivation, session identity resolution, and exact handoff rendering",
+      "sources": [
+        "skills/task-handoff/core.md"
+      ],
+      "source_path": "docs/workflows/task-handoff.mmd",
+      "source_sha256": "2c7bdeb634b9dfaf05cf4662e2563b08abd634ae254534735311d6f94ad1e73d",
+      "engine": "mermaid",
+      "rasters": null
+    },
+    {
+      "id": "test-prune",
+      "label": "test-prune",
+      "summary": "Identify low-value tests, verify ownership and coverage, and execute only the cleanup actions the operator approves.",
+      "alt": "Candidate discovery is narrowed by authority and recoverability checks, then an operator gate sends approved rows to cleanup and verification.",
+      "not_shown": "candidate heuristics, stable row identifiers, whole-file action syntax, recovery commands, report columns, and relocation details",
+      "sources": [
+        "skills/test-prune/core.md"
+      ],
+      "source_path": "docs/workflows/test-prune.mmd",
+      "source_sha256": "b3e77ed9cb8840ddb7a271e12c343a449d3f681f5c61dcd1904aed7a4692e089",
+      "engine": "mermaid",
+      "rasters": null
+    },
+    {
+      "id": "tier-escalate",
+      "label": "tier-escalate",
+      "summary": "Classify complete skill packages and write or preview a map of seed artifacts that may warrant a stronger operator-selected model tier.",
+      "alt": "Complete packages fan out to isolated classifiers, parent verification builds a map, and mode chooses a file write or zero-write preview.",
+      "not_shown": "host abstraction mapping, package-discovery details, classification rubric wording, output schema, and persistence path resolution",
+      "sources": [
+        "skills/tier-escalate/core.md"
+      ],
+      "source_path": "docs/workflows/tier-escalate.mmd",
+      "source_sha256": "42429cdf4d5296d87e4e544ab9f2ae155156a4ad9c42d506f15438c36b235c9b",
+      "engine": "mermaid",
+      "rasters": null
+    },
+    {
+      "id": "tier-offload",
+      "label": "tier-offload",
+      "summary": "Classify low-stakes judge slices, then write or preview an inventory and inactive candidate Switchboard configuration.",
+      "alt": "Isolated classifications pass parent gate review, then mode chooses inventory only, inactive config files, or a zero-write preview.",
+      "not_shown": "mode matrix details, gate-evidence rubric, package discovery, inventory fields, Switchboard commands, and persistence locations",
+      "sources": [
+        "skills/tier-offload/core.md"
+      ],
+      "source_path": "docs/workflows/tier-offload.mmd",
+      "source_sha256": "b265c2216bdc90a92b08ad4c2dbe06207bb30985266c1d4bb89d90244bfb36a1",
+      "engine": "mermaid",
+      "rasters": null
+    },
+    {
+      "id": "user-afterparty",
+      "label": "user-afterparty",
+      "summary": "Sweep milestone hygiene into one report, walk decisions with the operator, and close approved orphan and rollup duties.",
+      "alt": "Scope resolution launches a report-only hygiene sweep, then an attended decision walk controls cleanup before rollup and consolidated reporting.",
+      "not_shown": "swept-skill interface table, flags, run-report schema, measurement fields, orphan safety checks, archive formats, and commit commands",
+      "sources": [
+        "skills/user-afterparty/core.md"
+      ],
+      "source_path": "docs/workflows/user-afterparty.mmd",
+      "source_sha256": "152e3d757200e20329fd63684c845f69f7e0e4f456413c4ba8828210eadf4556",
+      "engine": "mermaid",
+      "rasters": null
+    },
+    {
+      "id": "user-brainstorm",
+      "label": "user-brainstorm",
+      "summary": "Expand a topic through gap-fill rounds, confirm the resulting structure, and build a grounded reference document set.",
+      "alt": "A topic seeds ten areas, repeated gap checks expand and tier them, and operator-confirmed structure fans out to grounded document authors.",
+      "not_shown": "tier definitions, file templates, agent prompt text, directory naming, source-quality rules, and end-report wording",
+      "sources": [
+        "skills/user-brainstorm/core.md"
+      ],
+      "source_path": "docs/workflows/user-brainstorm.mmd",
+      "source_sha256": "b6ba7e2a28918f98cdf26626f586cbb4ebf1d0e5065f870c8cf50b6aad660879",
+      "engine": "mermaid",
+      "rasters": null
+    },
+    {
+      "id": "user-debug",
+      "label": "user-debug",
+      "summary": "Diagnose a bug from primary evidence, reproduce it independently, design and delegate a fix, then verify against the original repro.",
+      "alt": "Primary investigation and independent reproduction meet at a comparison gate before fix design, delegated implementation, original-repro verification, and landing.",
+      "not_shown": "memory citation format, diagnosis templates, stash commands, write-as-you-go artifacts, schema details, and stop-and-audit thresholds",
+      "sources": [
+        "skills/user-debug/core.md"
+      ],
+      "source_path": "docs/workflows/user-debug.mmd",
+      "source_sha256": "4428005e20d50fb7665d82a876796b98109c10dc2f4a439e3bf9698ac08e8e73",
+      "engine": "mermaid",
+      "rasters": null
+    },
+    {
+      "id": "user-draft",
+      "label": "user-draft",
+      "summary": "Refine rough thoughts into either a ready-to-paste prompt or a measurable goal condition, checkpointing only when useful.",
+      "alt": "Intent detection selects prompt or goal output after an optional state checkpoint and a shared refinement pass, with a gated orientation preamble.",
+      "not_shown": "checkpoint freshness tests, exact output templates, self-orienting preamble fields, prose-quality rules, and caller integrations",
+      "sources": [
+        "skills/user-draft/core.md"
+      ],
+      "source_path": "docs/workflows/user-draft.mmd",
+      "source_sha256": "4e16f1d2c703337c513499ef7466b07858ab1673ec719cd55d2c1fb1a3f4ba52",
+      "engine": "mermaid",
+      "rasters": null
+    },
+    {
+      "id": "user-gateway",
+      "label": "user-gateway",
+      "summary": "Convert an operator vent into one evidence-aware work ledger row and ready-to-paste seed per distinct fragment.",
+      "alt": "A listening pass splits the vent into fragments, routes each into the ledger, creates a seed per row, and closes with explicit next choices.",
+      "not_shown": "eight-rail taxonomy details, ledger column definitions, seed templates, maintenance hooks, and downstream skill contracts",
+      "sources": [
+        "skills/user-gateway/core.md"
+      ],
+      "source_path": "docs/workflows/user-gateway.mmd",
+      "source_sha256": "c21869fc56f29e4bf6e6c98755469c5a0d43a302389da3eb09d08305029d7ff4",
+      "engine": "mermaid",
+      "rasters": null
+    },
+    {
+      "id": "user-lavishify",
+      "label": "user-lavishify",
+      "summary": "Re-present a dense artifact in a loopback Lavish Editor, collect pinned feedback, and propagate operator decisions to canonical sources.",
+      "alt": "Dense content passes Node and browser checks, becomes scratchpad HTML, loops through pinned browser feedback, then propagates approved decisions.",
+      "not_shown": "telemetry prefixes, playbook IDs, layout-warning handling, resume commands, issue-ownership proof, and destination-specific edits",
+      "sources": [
+        "skills/user-lavishify/core.md"
+      ],
+      "source_path": "docs/workflows/user-lavishify.mmd",
+      "source_sha256": "34586e5809ceb3bddf60f9e10a793b54899786a2e8b522450a320b3b2f291eca",
+      "engine": "mermaid",
+      "rasters": null
+    },
+    {
+      "id": "user-learn",
+      "label": "user-learn",
+      "summary": "After scope approval, build a grounded hands-on learning folder, re-run its artifacts, and report results without committing.",
+      "alt": "Topic setup pauses for approval, then grounding and parallel authoring lead to execution checks, indexes, and a report with a suggested next command.",
+      "not_shown": "artifact templates, wave sizing, notebook self-validation commands, example-script prompts, goblin output fields, and file naming",
+      "sources": [
+        "skills/user-learn/core.md"
+      ],
+      "source_path": "docs/workflows/user-learn.mmd",
+      "source_sha256": "4f122479bfe7169864d6aa699bfa978fa6f62641289e3c0baf601a419587f7b5",
+      "engine": "mermaid",
+      "rasters": null
+    },
+    {
+      "id": "user-orient",
+      "label": "user-orient",
+      "summary": "Reconstruct a verified project snapshot, separate proven from unverified state, and recommend the most honest next move.",
+      "alt": "Fresh autonomous asides and repository evidence join into an orientation that separates working, unverified, manual, and next-step information.",
+      "not_shown": "aside prompt text, quick-mode field reductions, git command details, exact output headings, and project-specific manual checks",
+      "sources": [
+        "skills/user-orient/core.md"
+      ],
+      "source_path": "docs/workflows/user-orient.mmd",
+      "source_sha256": "b7ebb5d4209655aa06308b4ce6f3ee6e528eeefab041f7b17d5407c9c92aad6f",
+      "engine": "mermaid",
+      "rasters": null
+    },
+    {
+      "id": "user-pm",
+      "label": "user-pm",
+      "summary": "Present shipped work, outstanding plan items, practical next moves, and credible candidates to cut through a product-management lens.",
+      "alt": "Verified project history and plan state feed a concise overview whose next moves are categorized and checked for scope that should be cut.",
+      "not_shown": "topic-specific templates, overnight qualification rubric details, Observatory hook fields, tone rules, and plan-discovery commands",
+      "sources": [
+        "skills/user-pm/core.md"
+      ],
+      "source_path": "docs/workflows/user-pm.mmd",
+      "source_sha256": "0203fce52a629b87986578530ee3cbe042a5d9e7ffa14bed2ca30df06a5d68cb",
+      "engine": "mermaid",
+      "rasters": null
+    },
+    {
+      "id": "user-project",
+      "label": "user-project",
+      "summary": "Set, show, or clear the session-scoped active-project pin that pipeline skills use to resolve their target repository.",
+      "alt": "Shared root and session resolution lead to set, show, or clear branches, with every unresolved identity or project failure writing nothing.",
+      "not_shown": "registry parsing, session-ID resolution, exact task-state merge rules, statusline integration, path normalization, and consumer precedence exceptions",
+      "sources": [
+        "skills/user-project/core.md"
+      ],
+      "source_path": "docs/workflows/user-project.mmd",
+      "source_sha256": "1c8165f125badc8b810b1306f4ae7763b03544d92d694d003788fd11a6289b60",
+      "engine": "mermaid",
+      "rasters": null
+    },
+    {
+      "id": "user-shakedown",
+      "label": "user-shakedown",
+      "summary": "Work through a just-built tool's open shakedown items one at a time, stopping for unknowns and executing approved closure duties.",
+      "alt": "A resolved shakedown ledger enters a one-item closure loop, where evidence supports a fix or an explicit stop before autonomous closers run.",
+      "not_shown": "ledger derivation format, prerequisite list, git safety commands, item-state schema, closer command details, and goal-mode integration",
+      "sources": [
+        "skills/user-shakedown/core.md"
+      ],
+      "source_path": "docs/workflows/user-shakedown.mmd",
+      "source_sha256": "d6c909f852bb809f4c53c55f9d9a12da270b1c48854fb5b1b15ee2c97c445598",
+      "engine": "mermaid",
+      "rasters": null
+    },
+    {
+      "id": "user-uat",
+      "label": "user-uat",
+      "summary": "Classify a clear UAT script, gate side effects, auto-judge supported checks, and escalate irreducible human experience checks.",
+      "alt": "Dry-run prints classifications; normal mode routes mechanical checks through safety, visual checks through independent judges, and human checks to the operator.",
+      "not_shown": "accepted script syntax, evidence ledger fields, git safety rules, rerun behavior, output wording, and relationships to review-uat",
+      "sources": [
+        "skills/user-uat/core.md"
+      ],
+      "source_path": "docs/workflows/user-uat.mmd",
+      "source_sha256": "306713b455aae6340b06239982432b0d1a033f54b300414617dd1fd74d335cd3",
+      "engine": "mermaid",
+      "rasters": null
+    },
+    {
+      "id": "user-walkthrough",
+      "label": "user-walkthrough",
+      "summary": "Guide attended acceptance of a just-built tool, answer from primary evidence, and fix small in-scope issues during the walkthrough.",
+      "alt": "Orientation establishes an attended loop in which each operator observation is evidenced, fixed when small, or parked when scope expands.",
+      "not_shown": "invocation flags, ledger format, git safety commands, evidence citation syntax, wrap wording, and four-mode comparison details",
+      "sources": [
+        "skills/user-walkthrough/core.md"
+      ],
+      "source_path": "docs/workflows/user-walkthrough.mmd",
+      "source_sha256": "8164a2e5b9b68819970f5d3973f46f319f2a58e37ffb9d14df9da70905367fe9",
+      "engine": "mermaid",
+      "rasters": null
+    },
+    {
+      "id": "user-wrap",
+      "label": "user-wrap",
+      "summary": "Reorient a returning operator, delegate the verdict to session-wrap, and execute exactly the action owned by that verdict.",
+      "alt": "Read-only orientation and delegated advice lead to four verdict branches: continue, recycle, wrap and close, or confirm safe closure.",
+      "not_shown": "task-state fallback rules, orientation block fields, loss-report formatting, closure evidence details, and transition-directory messaging",
+      "sources": [
+        "skills/user-wrap/core.md"
+      ],
+      "source_path": "docs/workflows/user-wrap.mmd",
+      "source_sha256": "8d28fc9df7c82105b8d157f7b357f09ca9f927a750abb492d1b55629e55d0c0d",
+      "engine": "mermaid",
+      "rasters": null
+    }
+  ]
+}

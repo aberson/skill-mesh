@@ -1,0 +1,20 @@
+%% repo-sync
+%% Summary: Verify review prerequisites and repository identity, compare plan steps with issues, preview the diff, and apply it automatically unless dry-run.
+%% Sources: skills/repo-sync/core.md
+%% Not shown: supported plan syntaxes, matching regexes, issue body templates, gh commands, temp-file handling, and edge-case catalog
+%% Alt: A repository sync validates gates and target identity, warns but continues on lean plan context, previews matched issue changes, and applies them unless dry-run.
+
+flowchart TD
+    A[Verify prerequisite gates and target repo] --> B{Inputs valid?}
+    B -- No --> H[NOT RUN before issue mutation]
+    B -- Yes --> C[Read plan; warn and continue if lean]
+    C --> D[Fetch complete issue state]
+    D --> E{Issue state available?}
+    E -- No --> H
+    E -- Yes --> I[Match owned issues and compute diff]
+    I --> J[Preview create, edit, and close actions]
+    J --> F{Dry run?}
+    F -- Yes --> P[Return preview with no mutations]
+    F -- No --> G[Execute each GitHub action independently]
+    G --> K[Refresh umbrella and backfill Issue fields]
+    K --> R[Report successes, failures, and held creates]

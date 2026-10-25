@@ -1,0 +1,18 @@
+%% user-wrap
+%% Summary: Reorient a returning operator, delegate the verdict to session-wrap, and execute exactly the action owned by that verdict.
+%% Sources: skills/user-wrap/core.md
+%% Not shown: task-state fallback rules, orientation block fields, loss-report formatting, closure evidence details, and transition-directory messaging
+%% Alt: Read-only orientation and delegated advice lead to four verdict branches: continue, recycle, wrap and close, or confirm safe closure.
+
+flowchart TD
+    A[Read session state and current git evidence]
+    A --> B[Invoke session-wrap advise]
+    B -->|Delegation fails| C[Report failure and stop]
+    B --> D[Present verdict and loss report verbatim]
+    D --> E{Verdict}
+    E -->|KEEP GOING| F{Fresh plain own-session action?}
+    F -->|Yes| G[Execute the saved next action]
+    F -->|No| H[Hold bundle or remain orientation-only]
+    E -->|RECYCLE WINDOW| I[Invoke bare session-wrap]
+    E -->|WRAP AND CLOSE| J[Invoke session-wrap end]
+    E -->|SAFE TO CLOSE| K[Confirm everything is durable]

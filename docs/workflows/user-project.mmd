@@ -1,0 +1,23 @@
+%% user-project
+%% Summary: Set, show, or clear the session-scoped active-project pin that pipeline skills use to resolve their target repository.
+%% Sources: skills/user-project/core.md
+%% Not shown: registry parsing, session-ID resolution, exact task-state merge rules, statusline integration, path normalization, and consumer precedence exceptions
+%% Alt: Shared root and session resolution lead to set, show, or clear branches, with every unresolved identity or project failure writing nothing.
+
+flowchart TD
+    A[Resolve coding root and session identity]
+    A --> B{Mode}
+    B -->|set name| C{Registered project resolves?}
+    C -->|No| D[Report the reason and write nothing]
+    C -->|Yes| M{Session identity available?}
+    M -->|No| D
+    M -->|Yes| E[Write pin to this session state]
+    E --> F[Confirm target path and ownership]
+    B -->|show| G[Read this session pin]
+    G --> H{Pin exists?}
+    H -->|Yes| I[Show pinned project]
+    H -->|No| J[Show cwd-derived fallback]
+    B -->|clear| N{Session identity available?}
+    N -->|No| D
+    N -->|Yes| K[Remove this session pin if present]
+    K --> L[Confirm cwd-derived routing]

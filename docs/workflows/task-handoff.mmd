@@ -1,0 +1,21 @@
+%% task-handoff
+%% Summary: Persist or resume session task state through explicit checkpoint, boundary, resume, and true-end modes.
+%% Sources: skills/task-handoff/core.md
+%% Not shown: task-state schema fields, result-line wording, rollup derivation, session identity resolution, and exact handoff rendering
+%% Alt: Invocation mode selects a loop checkpoint, next-task save, read-only resume, or true session end, each with its own state behavior.
+
+flowchart TD
+    A[Resolve session identity and task-state paths]
+    A --> B{Invocation mode}
+    B -->|loop| C[Merge and write checkpoint state]
+    C --> D[Refresh the derived rollup]
+    B -->|next-task| E[Save boundary state and refresh the rollup]
+    E --> K[Update memory and revalidate the Git root]
+    K --> L{Safe scoped changes staged?}
+    L -->|No| M[Return the matching incomplete result]
+    L -->|Yes| N[Commit, push, and keep working in-window]
+    B -->|resume| F[Read own state or orientation fallback]
+    F --> G{Plain fresh next action?}
+    G -->|Yes| H[Orient and proceed]
+    G -->|No| I[Orient only or hold locked bundle]
+    B -->|end| J[Delegate true session-end handling]

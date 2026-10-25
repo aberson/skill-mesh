@@ -1,0 +1,18 @@
+%% skill-evolve
+%% Summary: Evaluate skill variants in parallel, commit a valid winner locally, and leave every push or pull request to the operator.
+%% Sources: skills/skill-evolve/core.md
+%% Not shown: variants-file grammar, brainstorm prompt, worktree commands, comparison table fields, cleanup details, and analysis appendix
+%% Alt: Preflight and scoring fan into isolated variant runs, join at comparison, and place a valid winner on a local branch without pushing it.
+
+flowchart TD
+    A[Validate skill, variants, and clean baseline]
+    A -->|Invalid or unsafe| H[Halt with evidence]
+    A --> B[Prepare one fixed scoring run]
+    B --> C[Prepare isolated variant artifacts]
+    C --> D[Run variants in parallel]
+    D --> E[Collect scores and integrity results]
+    E --> F{A valid winner exists?}
+    F -->|No| H
+    F -->|Yes| G[Write winner comparison and analyses]
+    G --> I[Commit winner on a local branch]
+    I --> J[Print operator commands without push or auto-PR]

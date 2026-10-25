@@ -1,0 +1,20 @@
+%% user-afterparty
+%% Summary: Sweep milestone hygiene into one report, walk decisions with the operator, and close approved orphan and rollup duties.
+%% Sources: skills/user-afterparty/core.md
+%% Not shown: swept-skill interface table, flags, run-report schema, measurement fields, orphan safety checks, archive formats, and commit commands
+%% Alt: Scope resolution launches a report-only hygiene sweep, then an attended decision walk controls cleanup before rollup and consolidated reporting.
+
+flowchart TD
+    A[Resolve milestone scope and flags]
+    A --> B[Run each hygiene skill in report mode]
+    B --> C[Consolidate findings and measurements]
+    C --> D[Walk one finding set with the operator]
+    D --> E{Operator disposition}
+    E -->|Keep or defer| F[Record decision without cleanup]
+    E -->|Approve cleanup| G[Execute the approved hygiene action]
+    F --> H{More findings?}
+    G --> H
+    H -->|Yes| D
+    H -->|No| I[Handle orphan-owner duties]
+    I --> J[Commit or archive the current rollup seam]
+    J --> K[Write the consolidated hygiene report]

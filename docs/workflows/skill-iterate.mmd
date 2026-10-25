@@ -1,0 +1,24 @@
+%% skill-iterate
+%% Summary: Hill-climb scorable skills under a lock, accepting only integrity-preserving improvements and stopping at budget or kill-switch boundaries.
+%% Sources: skills/skill-iterate/core.md
+%% Not shown: queue ordering, skip-list entries, calibration, scorer formulas, worktree commands, logs, morning-summary fields, and cleanup mechanics
+%% Alt: Discovery and locking lead into a repeated baseline-mutate-grade loop, then a ship gate keeps or rejects each candidate before moving on.
+
+flowchart TD
+    A[Check concurrency, kill switch, and skip list]
+    A -->|Preflight fails| K[Stop and report the failure]
+    A --> B[Discover and order the skill queue]
+    B -->|Empty| J[Release lock and summarize]
+    B --> C[Take the run lock]
+    C --> D[Create worktree and capture baseline]
+    D --> E[Mutate, grade, and check integrity]
+    E --> F{Strict improvement?}
+    F -->|No| G[Reject candidate and log outcome]
+    F -->|Yes| H[Accept candidate as new baseline]
+    G --> I{Budget, target, or kill boundary?}
+    H --> I
+    I -->|Continue| E
+    I -->|Stop skill| L[Run per-skill ship gate]
+    L --> M{More queued skills?}
+    M -->|Yes| D
+    M -->|No| J

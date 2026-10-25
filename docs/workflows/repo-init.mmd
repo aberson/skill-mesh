@@ -1,0 +1,20 @@
+%% repo-init
+%% Summary: Check identity and plan before writes, create and push the repository, add README in a second commit, then create issues and backfill plan IDs.
+%% Sources: skills/repo-init/core.md
+%% Not shown: sensitive-name patterns, exact Git and gh commands, README and issue templates, partial recovery actions, attribution, and result fields
+%% Alt: A first-publication flow runs read-only identity and plan checks, previews unconfirmed input, pushes a scaffold, pushes README separately, and creates issues.
+
+flowchart TD
+    A[Resolve target and candidate publication inputs] --> B[Run read-only identity and plan checks]
+    B --> C{Conflict or unreadable plan?}
+    C -- Yes --> N[NOT RUN with exact reason]
+    C -- No --> D{Inputs confirmed?}
+    D -- No --> P[Preview defaults; NOT RUN with no writes]
+    D -- Yes --> E[Check sensitive names; init and scaffold commit]
+    E --> F[Create repo; verify visibility; push scaffold]
+    F --> G{Push succeeded?}
+    G -- No --> X[PARTIAL with ordered recovery]
+    G -- Yes --> H[Create README if absent; commit and push it]
+    H --> I[Create one issue per build step]
+    I --> J[Backfill Issue values locally, uncommitted]
+    J --> R[Report plan-expedite next]

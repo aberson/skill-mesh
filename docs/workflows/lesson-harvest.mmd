@@ -1,0 +1,19 @@
+%% lesson-harvest
+%% Summary: Record one private observation or produce a privacy-reviewed zero-write lesson preview; automatic publication is unavailable in v2.
+%% Sources: skills/lesson-harvest/core.md
+%% Not shown: exact keyword patterns, five-store dedup details, candidate field schema, bounded repository audits, and record request fields
+%% Alt: Invocation splits into private record, unavailable publish, or preview; preview text appears only after a fresh independent privacy review passes.
+
+flowchart TD
+    A{Invocation mode}
+    A -->|record| B[Validate and save one private observation]
+    A -->|publish| C[Return publication unavailable]
+    A -->|bare or dry-run| D[Resolve history window and observation inbox]
+    D --> E[Detect signals and reopen evidence]
+    E -->|No signals in both sources| F[Stop with no candidates]
+    E --> G[Extract root cause and deduplicate]
+    G --> H[Draft up to five candidates in memory]
+    H --> I[Dispatch a fresh independent privacy reviewer]
+    I --> J{Review and repository audit pass?}
+    J -->|No| K[Suppress preview and report the gate failure]
+    J -->|Yes| L[Print the zero-write preview]

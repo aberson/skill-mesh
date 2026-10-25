@@ -1,0 +1,16 @@
+%% plan-init
+%% Summary: Guide a greenfield planning conversation, resolve architecture and process choices, then save a complete plan and project instructions.
+%% Sources: skills/plan-init/core.md
+%% Not shown: detailed question banks, plan template fields, instruction-file text, observatory hook, and stack-specific recommendations
+%% Alt: A greenfield check leads through seven decision phases, loops on unresolved choices, writes the plan and instructions, and hands off to review.
+
+flowchart TD
+    A[Confirm project is greenfield] --> B{Greenfield boundary valid?}
+    B -- No --> H[Stop with plan-feature as next action]
+    B -- Yes --> C[Discuss purpose, data, and integrations]
+    C --> D[Discuss stack, concurrency, auth, and process]
+    D --> E{Material choices resolved?}
+    E -- No --> C
+    E -- Yes --> F[Write plan and project instruction file]
+    F --> G[Check completeness and exact commands]
+    G --> R[Report plan-review as next gate]

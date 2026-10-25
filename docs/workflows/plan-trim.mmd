@@ -1,0 +1,17 @@
+%% plan-trim
+%% Summary: Investigate stale plan work, propose evidence-backed cuts, wait for the operator's explicit choice, and apply only the agreed set.
+%% Sources: skills/plan-trim/core.md
+%% Not shown: candidate categories, exact retirement prose, cross-reference commands, commit exceptions, issue-sync wording, and report template
+%% Alt: A trim pass investigates primary sources, proposes specific cuts, waits without writing, then safely applies approved cuts or ends with the proposal.
+
+flowchart TD
+    A[Resolve plan and inspect primary evidence] --> B[Propose three to eight specific cuts]
+    B --> C{Operator explicitly approves rows?}
+    C -- No --> R[End with proposal and no writes]
+    C -- Yes --> D[Recheck every cut for safe application]
+    D --> E{Target clean and tracked?}
+    E -- No --> S[Skip whole cut and record reason]
+    E -- Yes --> F[Update plan, references, and retired docs]
+    S --> G[Report applied and skipped cuts]
+    F --> G
+    G --> H[Commit once when repository state allows]

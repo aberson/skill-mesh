@@ -1,0 +1,22 @@
+%% build-phase
+%% Summary: Parse a plan, run each eligible step through build-step, checkpoint progress, and halt only on the phase contract's named conditions.
+%% Sources: skills/build-phase/core.md
+%% Not shown: plan grammar details, checkpoint shell snippets, manual UAT formatting, task-state schema, and recovery commands
+%% Alt: A phase controller validates a plan, loops through steps, checkpoints successful work, and routes named halt conditions to a preserved blocked state.
+
+flowchart TD
+    A[Parse plan and select phase] --> B{Preflight passes?}
+    B -- No --> H[HALT with evidence]
+    B -- Yes --> C{Next step type?}
+    C -- Operator --> U[Bundle manual UAT and continue]
+    C -- Wait --> H2[Pause phase with resume command]
+    C -- Conditional false --> N[Record skip and continue]
+    C -- Code or conditional true --> D[Invoke build-step]
+    U --> C
+    N --> C
+    C -- No steps remain --> V[Run final verification]
+    D --> E{Step outcome}
+    E -- Passed --> F[Checkpoint plan and landed paths]
+    F --> C
+    E -- Named halt --> H
+    V --> R[Report phase result and next action]

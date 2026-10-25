@@ -1,0 +1,18 @@
+%% review-gauntlet
+%% Summary: Run mechanical checks first, dispatch exactly five fresh code lenses, and reduce their evidence to a terse PASS, NEEDS WORK, or UNCERTAIN verdict.
+%% Sources: skills/review-gauntlet/core.md
+%% Not shown: detailed lens prompts, optional style offload, command construction, mechanical check catalog, output markdown, and cross-references
+%% Alt: A lean review validates prompt and diff, runs mechanics before five independent code lenses, then applies a fixed default-deny three-way reducer.
+
+flowchart TD
+    A[Validate prompt and diff] --> C[Run applicable mechanical checks first]
+    C --> B
+    B[Run exactly five independent code lenses]
+    B --> D{Required result missing?}
+    D -- Yes --> H[NEEDS WORK: incomplete evidence]
+    D -- No --> E[Aggregate findings by severity]
+    E --> F{Failure or NEEDS-WORK result?}
+    F -- Yes --> N[NEEDS WORK with terse findings]
+    F -- No --> G{Any lens UNCERTAIN?}
+    G -- Yes --> U[UNCERTAIN with operator escalation]
+    G -- No --> P[PASS with check evidence]

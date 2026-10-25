@@ -1,5 +1,12 @@
 # Provider Guides
 
+**v2.0.0 is published.** Get the versioned bundle and scoped qualification notes
+from the [release](https://github.com/aberson/skill-mesh/releases/tag/v2.0.0).
+The [installation guide](../../README.md#install-or-upgrade) covers upgrades and
+restoration; the [skill reference](../skill-reference.md) links every packaged
+skill to its individual workflow diagram. Catalog coverage does not establish
+that every host supplies every required native capability.
+
 Per-provider authentication, capabilities, divergences, and installation notes for
 skill-mesh. Provider **selection** and transport **authentication** are separate
 axes (see [`../architecture.md`](../architecture.md) §5): choosing a provider never

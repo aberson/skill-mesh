@@ -1,0 +1,21 @@
+%% user-draft
+%% Summary: Refine rough thoughts into either a ready-to-paste prompt or a measurable goal condition, checkpointing only when useful.
+%% Sources: skills/user-draft/core.md
+%% Not shown: checkpoint freshness tests, exact output templates, self-orienting preamble fields, prose-quality rules, and caller integrations
+%% Alt: Intent detection selects prompt or goal output after an optional state checkpoint and a shared refinement pass, with a gated orientation preamble.
+
+flowchart TD
+    A[Read the rough thoughts]
+    A --> B{Prompt or goal intent?}
+    B --> C{Fresh checkpoint would help?}
+    C -->|Yes| D[Checkpoint current state]
+    C -->|No| E[Refine intent, constraints, and outcome]
+    D --> E
+    E --> F{Output branch}
+    F -->|Prompt| G[Write a ready-to-paste prompt]
+    F -->|Goal| H[Write a measurable goal condition]
+    G --> I{Self-orienting preamble needed?}
+    H --> I
+    I -->|Yes| J[Add grounded project context]
+    I -->|No| K[Return the refined artifact]
+    J --> K

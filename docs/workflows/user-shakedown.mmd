@@ -1,0 +1,19 @@
+%% user-shakedown
+%% Summary: Work through a just-built tool's open shakedown items one at a time, stopping for unknowns and executing approved closure duties.
+%% Sources: skills/user-shakedown/core.md
+%% Not shown: ledger derivation format, prerequisite list, git safety commands, item-state schema, closer command details, and goal-mode integration
+%% Alt: A resolved shakedown ledger enters a one-item closure loop, where evidence supports a fix or an explicit stop before autonomous closers run.
+
+flowchart TD
+    A[Resolve or derive the shakedown ledger]
+    A --> B{Operator prerequisites satisfied?}
+    B -->|No| C[Hold with the missing prerequisite]
+    B -->|Yes| D[Select one open item]
+    D --> E[Exercise the tool and capture evidence]
+    E --> F{Outcome is clear and in scope?}
+    F -->|No| G[Stop and ask rather than guess]
+    F -->|Yes| H[Fix or close the item]
+    H --> I{More open items?}
+    I -->|Yes| D
+    I -->|No| J[Execute tests, docs, and git closers]
+    J --> K[Report remaining limits and completion]

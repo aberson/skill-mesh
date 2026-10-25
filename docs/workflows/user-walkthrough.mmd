@@ -1,0 +1,21 @@
+%% user-walkthrough
+%% Summary: Guide attended acceptance of a just-built tool, answer from primary evidence, and fix small in-scope issues during the walkthrough.
+%% Sources: skills/user-walkthrough/core.md
+%% Not shown: invocation flags, ledger format, git safety commands, evidence citation syntax, wrap wording, and four-mode comparison details
+%% Alt: Orientation establishes an attended loop in which each operator observation is evidenced, fixed when small, or parked when scope expands.
+
+flowchart TD
+    A[Orient to the built tool and acceptance target]
+    A --> B[State the walkthrough contract]
+    B --> C[Take one operator question or observation]
+    C --> D[Answer from primary source evidence]
+    D --> E{Small in-scope fix needed?}
+    E -->|Yes| F[Implement and verify the fix live]
+    E -->|No| G{Larger or uncertain issue?}
+    G -->|Yes| H[Park it with evidence and next step]
+    G -->|No| I[Record the accepted observation]
+    F --> J{More operator turns?}
+    H --> J
+    I --> J
+    J -->|Yes| C
+    J -->|No| K[Ask what was missed and wrap]

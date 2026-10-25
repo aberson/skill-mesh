@@ -1,0 +1,19 @@
+%% memory-distill
+%% Summary: Review selected feedback memories one at a time, surface broader principles, and apply changes only after explicit approval.
+%% Sources: skills/memory-distill/core.md
+%% Not shown: memory-location fallbacks, lineup scoring, evidence formatting, robustness checklist details, and individual edit formats
+%% Alt: A short memory lineup is scanned for themes, reviewed item by item, and held at an approval decision before any durable change is applied.
+
+flowchart TD
+    A[Locate the memory directory]
+    A --> B[Select three to five feedback memories]
+    B --> C[Scan the lineup for shared themes]
+    C --> D[Present one memory and recent evidence]
+    D --> E[Propose and analyze a candidate change]
+    E --> F{Operator approves?}
+    F -->|Revise| D
+    F -->|Skip| G{More memories?}
+    F -->|Approve| H[Record the approved change]
+    H --> G
+    G -->|Yes| D
+    G -->|No| I[Apply approved changes and report principles]

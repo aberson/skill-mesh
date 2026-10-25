@@ -1,0 +1,21 @@
+%% review-deep
+%% Summary: Bind a change set, run deterministic calibration and mechanical gates, dispatch the selected independent lenses, and default-deny incomplete evidence.
+%% Sources: skills/review-deep/core.md
+%% Not shown: per-lens prompts, anti-pattern catalog, model-tier mapping, runtime probe tokens, reducer rules, sidecar schema, and UAT deferral details
+%% Alt: A deep review binds immutable inputs, runs recorded calibration and mechanical checks, selects code or runtime lenses, then aggregates only complete evidence.
+
+flowchart TD
+    A[Bind immutable diff, intent, and optional plan] --> B[Run deterministic calibration gate]
+    B --> C{Calibration passes?}
+    C -- No --> H[Fail closed before model judgment]
+    C -- Yes --> D[Run mandatory mechanical checks]
+    D --> E[Select code, runtime, or full lens set]
+    E --> F{Runtime probe resource available?}
+    F -- No, runtime requested --> H2[Stop: required_tool_missing]
+    F -- Yes or code only --> G[Dispatch required fresh independent lenses]
+    G --> I{Complete valid lens set?}
+    I -- No --> N[NEEDS WORK by default-deny]
+    I -- Yes --> J[Aggregate findings and deferred UAT]
+    J --> K{Any gating NEEDS-WORK evidence?}
+    K -- Yes --> N
+    K -- No --> P[PASS or DEFERRED-TO-UAT with sidecar]
