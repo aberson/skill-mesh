@@ -159,6 +159,8 @@ is historical planning, not proof that every proposed caller is wired.
 
 </details>
 
+**v1 is retired.** Its launchers are removed; the [compressed historical archive](archive/v1/README.md) is for reference only.
+
 ## Install or upgrade
 
 Download the [v2.0.0 release](https://github.com/aberson/skill-mesh/releases/tag/v2.0.0),
@@ -166,6 +168,14 @@ verify its checksum, and choose one host profile.
 
 <details>
 <summary><strong>Installation, upgrades, and restoration</strong></summary>
+
+Of the portable catalog, 54/54 skills are GPT-capable; Claude provides all 57 skills.
+
+| Provider | Discovery root under the chosen home |
+|---|---|
+| claude | `.claude/skills/` |
+| gpt | `.github/skills/` |
+| codex | `.agents/skills/` |
 
 Use Windows PowerShell 5.1. From the extracted bundle, replacing the example home:
 
@@ -197,6 +207,16 @@ a release. Adapt workspace conventions and external utility dependencies to your
 
 [Provider guides](documentation/providers/README.md) ·
 [Source and development](CLAUDE.md) · [Architecture](documentation/architecture.md)
+
+</details>
+
+<details>
+<summary>Historical cutover evidence</summary>
+
+Phase 7 complete: issues #62 and #63 closed; Step 48 is DONE.
+The [historical cutover handoff](documentation/coding-root-cutover-handoff.md)
+preserves that acceptance record. It does not authorize reactivating v1;
+use the current v2 installation guide for active consumers.
 
 </details>
 

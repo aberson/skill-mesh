@@ -7,8 +7,8 @@ calibration, verdict handling, scoring and private observation persistence.
 
 This is the canonical shared source directory. Runtime-referenced resources are
 packaged per profile; test modules remain source/release material. Separate utilities are described
-in the [v2 utility integration table](../README.md#how-utility-projects-are-used).
-Use the [workflow catalog](../docs/workflows/README.md) to see where skills invoke
+in the [v2 utility integration table](https://github.com/aberson/skill-mesh#how-utility-projects-are-used).
+Use the [workflow catalog](https://github.com/aberson/skill-mesh/tree/main/docs/workflows) to see where skills invoke
 helpers; a helper's presence does not replace the skill's review or permission gates.
 
 Files in this directory are referenced from sibling skill SKILL.md files via

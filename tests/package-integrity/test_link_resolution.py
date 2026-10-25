@@ -2068,33 +2068,27 @@ def test_home_anchored_doc_citations_do_not_grow():
 # D-63-B -- the measurement the legacy-package scope decision rests on
 # --------------------------------------------------------------------------- #
 
-def test_legacy_packages_anchored_shared_refs_still_resolve():
-    """The measurement D-63-B rests on. If it stops holding, re-decide the scope.
+def test_v1_archive_is_intact_and_has_no_live_launchers():
+    """V1 retirement supersedes D-63-B's old live-compatibility requirement.
 
-    Section 8's risk row names the ANCHORED one-level `../_shared/` form. Measured:
-    every one of those resolves, because a legacy package sits at
-    `<repo>/<skill>/SKILL.md`. The bare `_shared/x` tokens in the same files DO
-    dangle, but they are class `shared_bare` -- already frozen as permanent residual
-    for `skills/`, so logging them would add no signal and no burn-down.
+    Preserve every archived preimage while preventing accidental rediscovery.
+    Support scripts remain in place for v2; only legacy launchers are retired.
     """
-    legacy = sorted(p for p in REPO_ROOT.glob("*/SKILL.md"))
-    assert len(legacy) >= 40, f"legacy compatibility surface vanished: {len(legacy)}"
-    anchored, dangling = 0, []
-    for md in legacy:
-        text = md.read_text(encoding="utf-8-sig", errors="replace")
-        # One-level only: `"../../_shared/x".count("../_shared/")` is 1, so a plain
-        # substring count lets depth-2 citations satisfy a guard about depth-1 ones.
-        anchored += len(re.findall(r"(?<!\.\./)\.\./_shared/", text))
-        entries, _, _ = scan_file(md, REPO_ROOT, md.relative_to(REPO_ROOT).as_posix())
-        dangling += [e for e in entries if e["class"] == "shared_anchored"]
-    assert anchored >= 40, (
-        f"only {anchored} anchored one-level `../_shared/` citations left in the "
-        "legacy packages -- the measurement below would pass vacuously")
-    assert not dangling, (
-        "a legacy top-level package now carries a DANGLING anchored `_shared` "
-        "reference, so D-63-B's 'the distinct class would be empty' measurement no "
-        "longer holds -- re-decide the scope:\n"
-        + "\n".join(f"  {e['source']}:{e['line']}  {e['raw']}" for e in dangling[:20]))
+    import hashlib
+    import zipfile
+
+    archive = REPO_ROOT / "archive" / "v1"
+    manifest = json.loads((archive / "manifest.json").read_text(encoding="utf-8"))
+    bundle = archive / "legacy-source.zip"
+    assert hashlib.sha256(bundle.read_bytes()).hexdigest() == manifest["archive_sha256"]
+    assert not list(REPO_ROOT.glob("*/SKILL.md")), "v1 launcher reactivated"
+    assert not list(archive.rglob("SKILL.md")), "archive is discoverable"
+    with zipfile.ZipFile(bundle) as saved:
+        assert set(saved.namelist()) == {row["path"] for row in manifest["files"]}
+        launchers = [name for name in saved.namelist() if name.endswith("/SKILL.md")]
+        assert len(launchers) == manifest["legacy_launcher_count"] == 46
+        for row in manifest["files"]:
+            assert hashlib.sha256(saved.read(row["path"])).hexdigest() == row["sha256"]
 
 
 # --------------------------------------------------------------------------- #

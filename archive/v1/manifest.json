@@ -1,0 +1,300 @@
+{
+  "status": "deprecated; never load or install",
+  "source_commit": "1c929f418dfa5a33d0dd02791f1cfe1be8cc3e07",
+  "legacy_launcher_count": 46,
+  "archive_sha256": "8153dd2b4933cf980fc668985a101e53ed17798d9d5b08e30b6fe27721367831",
+  "files": [
+    {
+      "path": "build-phase/SKILL.md",
+      "sha256": "4e0f24c752918c4b58ccac499431a5c258380af23ffc936c9c0246a1b540b857"
+    },
+    {
+      "path": "build-queue/SKILL.md",
+      "sha256": "309ea0f248f57119c24398014eb381a7f352e32129b1af42b4ca83b2b04c7276"
+    },
+    {
+      "path": "build-step/SKILL.md",
+      "sha256": "03dceedda79534adde608defd77fa173047077408e6636a30d44825259f42a17"
+    },
+    {
+      "path": "build-step/scripts/capture_evidence.py",
+      "sha256": "8986e48145f0deea5a7a5b91a71fda9e6d12fca2f77fd355e8d7d7ad7c35a220"
+    },
+    {
+      "path": "claude-oauth-auth/SKILL.md",
+      "sha256": "587aaa69d457a1eb90d36b93e59df6abd267d124d6cabb0a5fe3c3c1efa26ef7"
+    },
+    {
+      "path": "context-slim/SKILL.md",
+      "sha256": "88754fab661d86a9a5c72c1a3bfba3eaf110a18755bce983305ef3046548e410"
+    },
+    {
+      "path": "goblin-do/SKILL.md",
+      "sha256": "b7e100c2c614b67bfdce8ba59bd533760ff75d94f94a80e9e4414da3b8891db3"
+    },
+    {
+      "path": "goblin-suggest/SKILL.md",
+      "sha256": "b2229d9ada845f0a554aecea91bca94268813ee8070c6c035fb44df31f2e1082"
+    },
+    {
+      "path": "judge-ui/SKILL.md",
+      "sha256": "f819a871694d29a459a60e4819f2491cdc2052a3ee3b657b183c56812df8ef9f"
+    },
+    {
+      "path": "lesson-harvest/SKILL.md",
+      "sha256": "746f9fa04427a2789647fe7c13f6f58f444269fd8c717730131bff4c4d5c66bc"
+    },
+    {
+      "path": "memory-distill/SKILL.md",
+      "sha256": "d77f8070e27715ce377ac8627a4f60bc4a891ef425799e70b48610ed5439be60"
+    },
+    {
+      "path": "plan-expedite/SKILL.md",
+      "sha256": "a19a95149dd72e445700440069d400a9ae35b442e13fadb2952f1e65239065db"
+    },
+    {
+      "path": "plan-feature/SKILL.md",
+      "sha256": "a867de8a737ee95519f080bd1d9380afa2134a883c73abd75518bf88f66b3afd"
+    },
+    {
+      "path": "plan-init/SKILL.md",
+      "sha256": "a8b4423101b1a298af58f75fc61abd569b549bc0253e256d52bd5dc480a7fcea"
+    },
+    {
+      "path": "plan-merge/SKILL.md",
+      "sha256": "a7ce90254c4246438be3a349413d34cd7947db4e0651295beee11fcb1c8dee74"
+    },
+    {
+      "path": "plan-review/SKILL.md",
+      "sha256": "b81b8eb8073df403875ef9de904ce03a5cebb7fd3ead0990c5b3b34e98f26373"
+    },
+    {
+      "path": "plan-trim/SKILL.md",
+      "sha256": "6d682f45909f8a4eef88ab49b5958d2daec08bdd54d5937c36c89c201d94d0ae"
+    },
+    {
+      "path": "plan-wrap/SKILL.md",
+      "sha256": "cb275daf43e28caacfea6b32ad1816fcad4b921d86e43b71ff19640326dba3a3"
+    },
+    {
+      "path": "repo-init/SKILL.md",
+      "sha256": "39fea68c421ac6b984a55a943ef179b7c06e437b78569f9592adf334021c066b"
+    },
+    {
+      "path": "repo-sync/SKILL.md",
+      "sha256": "92d53d51073bfe6142ebb3602fac2c9189bec0748978603bba3cbb3d9dc03c38"
+    },
+    {
+      "path": "repo-update/SKILL.md",
+      "sha256": "59e05ea890349daf185ecd924a3bc36dd548bbd6852a71499412026c9e325573"
+    },
+    {
+      "path": "research-prospect/SKILL.md",
+      "sha256": "1c5d7b4d9b147c8346f68cb59699c170356a5c263ac52e8f380286c9bfd329ce"
+    },
+    {
+      "path": "review-deep/SKILL.md",
+      "sha256": "8cc6616d709f2bbad660c266023e86cca92b39905ad1119802e20f681135619a"
+    },
+    {
+      "path": "review-deep/scripts/README.md",
+      "sha256": "413191d1cc38f3eb06ec8649986967cc81c07dac03e72a0c3e60792a42701e4a"
+    },
+    {
+      "path": "review-deep/scripts/aggregate.py",
+      "sha256": "a7e1e4c8d2faf104cc6587580dccab25c9ee286b9873c5a1476161cf8991d1df"
+    },
+    {
+      "path": "review-deep/scripts/auth_gate_probe.sh",
+      "sha256": "1d86c9a14d56e86ea577d16cbc223e742d1b43a1f3f99e13eb62905fe3199201"
+    },
+    {
+      "path": "review-deep/scripts/lint_prepass.sh",
+      "sha256": "16deb9c333f91795362949c95a55d67d69b4234d98954a177db94b6588b2f60a"
+    },
+    {
+      "path": "review-gauntlet/SKILL.md",
+      "sha256": "3bee035bda16bb3f7c7992fa7298824dddc77bfa9f7f2dad3073931906588c38"
+    },
+    {
+      "path": "review-proof/SKILL.md",
+      "sha256": "4c1b1b982ce0d357df9f9f6b957a6e646352b06540ae37c701d57e82183f66ba"
+    },
+    {
+      "path": "review-uat/SKILL.md",
+      "sha256": "982a5f01d5544081164b2beb0c7777981b22a757d016c45b677a2dfec1d52c5d"
+    },
+    {
+      "path": "session-wrap/SKILL.md",
+      "sha256": "1f3b402f7b72838b61be977f4fbc110e88abaabfa4093c0f8772ef74cfcf35ab"
+    },
+    {
+      "path": "skill-eval-setup/SKILL.md",
+      "sha256": "ce4563a60d18ca8095d062c295cd78ba69d675ce06bca6c936deb5245d235a04"
+    },
+    {
+      "path": "skill-eval-setup/scripts/generate_bad_examples.py",
+      "sha256": "be2133ebf1673936af703de2fce06e4ff86ca6ad43a49c94dbb00ded7ed08096"
+    },
+    {
+      "path": "skill-eval-setup/scripts/test_generate_bad_examples.py",
+      "sha256": "0374972e87c15e6ec3764213a8cd9c34a5e470a1e18d5d6c499ab3ded9edcbf2"
+    },
+    {
+      "path": "skill-evolve/SKILL.md",
+      "sha256": "71b22274bee52ad725d8d34ed36fee920bbaa5c886a12bfdfb5070a3976e5e1b"
+    },
+    {
+      "path": "skill-iterate/SKILL.md",
+      "sha256": "bc04bf25e83e4e795f9db817f6a49bd05f3fb813cebcbd4fc7e7581a72ab927e"
+    },
+    {
+      "path": "skill-iterate/scripts/adversarial_calibration.py",
+      "sha256": "57c2ee05682841584bc47353e1ed5d1b929c1275e049e39a6006c519cb891682"
+    },
+    {
+      "path": "skill-iterate/scripts/append_result.py",
+      "sha256": "74bd2dba3bf409f0141ef26ffaf829e05c3e00ef085ab94d80d9b7a297d6945c"
+    },
+    {
+      "path": "skill-iterate/scripts/conftest.py",
+      "sha256": "e2fd58075deb42d4ebaf2ceddc911ab0b71c87b1031dcc2ad90fb24edff05323"
+    },
+    {
+      "path": "skill-iterate/scripts/differential_grader.py",
+      "sha256": "0142b8a34d8b12c8a52867a517e554f6abac1d9cfaebd5ccbbd5fb5b603db339"
+    },
+    {
+      "path": "skill-iterate/scripts/fixtures/degraded.md",
+      "sha256": "c73e0eefd6bf13aa541360f0245eecb8fae8350548a6774a9410e0e8c967d0b4"
+    },
+    {
+      "path": "skill-iterate/scripts/fixtures/well_structured.md",
+      "sha256": "ea646da55bb48707e3217fc39170353e1e4e7c43cb58ab6de7c967ed98aa84d5"
+    },
+    {
+      "path": "skill-iterate/scripts/m2_launcher.py",
+      "sha256": "e1339a5de0d4c415d675f23ea42e89468716a5a08b869d930dd1ee2063b35ea7"
+    },
+    {
+      "path": "skill-iterate/scripts/m2_launcher.workflow.js",
+      "sha256": "e26c9728be2ee8cbba81642ffd052c0b1351baa34b3e00eb52c9e8e9d8ffddff"
+    },
+    {
+      "path": "skill-iterate/scripts/morning_summary.py",
+      "sha256": "4fb46e0bbeb169de9d944b305487c8c8b8ca2c7c066abc722cb12e61a1c93585"
+    },
+    {
+      "path": "skill-iterate/scripts/resolve_queue.py",
+      "sha256": "9fedab1f5c602f8296edf06db6f7495985cd252acb45cdf08f944a93af37898a"
+    },
+    {
+      "path": "skill-iterate/scripts/structural_metrics.py",
+      "sha256": "aa94e3520c6b891f5a6baabc4691fc1eeee872cfd3806f27f2996c25e83037f6"
+    },
+    {
+      "path": "skill-iterate/scripts/test_adversarial_calibration.py",
+      "sha256": "8f135d1c1e2de23e2d6e2a7c24d2270828060a44ef759cd6eb212020a725bdda"
+    },
+    {
+      "path": "skill-iterate/scripts/test_append_result.py",
+      "sha256": "350cf18b2d5ffd01c04716bfdba11d7eccd12e34638f53a6f687e791f57fba77"
+    },
+    {
+      "path": "skill-iterate/scripts/test_differential_grader.py",
+      "sha256": "5801273b03cb37df582e65a7098027bd74e5d2a9a8b30eb67d54f7dee0eddc50"
+    },
+    {
+      "path": "skill-iterate/scripts/test_morning_summary.py",
+      "sha256": "623cfa26282a77c345b51d912cb48394f8d556ce3abfbd12114a676c97f1f3e5"
+    },
+    {
+      "path": "skill-iterate/scripts/test_resolve_queue.py",
+      "sha256": "cbd1e1b43fd885ebcec9a6e2036ebfdd455ba49b4d2dba7ad9c6280d4d83311e"
+    },
+    {
+      "path": "skill-iterate/scripts/test_structural_metrics.py",
+      "sha256": "b5a90e01f66c4c7a56a47269a3a010269e676fafb179df4cd9147217e6033879"
+    },
+    {
+      "path": "task-handoff/SKILL.md",
+      "sha256": "ea0b8bb3c08b4c19e1739373215dd0a4500d36e269e3ccea17a3ae61db1a9f6a"
+    },
+    {
+      "path": "test-prune/SKILL.md",
+      "sha256": "a7f24f82ea2d73d60b0c5b69eedb9093d010e4fe8c36215a6e2b51526ce6e559"
+    },
+    {
+      "path": "tier-escalate/SKILL.md",
+      "sha256": "a664ac577dc5184974555756778dfcd02e9dfc941e38467b7ecd7d39f442b689"
+    },
+    {
+      "path": "tier-escalate/sample-escalate-map.md",
+      "sha256": "387a37beb6fc4bfd04e85745bcc53ae22542a4e686067b6da6e49633de9f8785"
+    },
+    {
+      "path": "tier-offload/SKILL.md",
+      "sha256": "2f74a12f682c4ee68e842d914903ee3cbc2f7806625db89586f10bb309d68c9e"
+    },
+    {
+      "path": "tier-offload/sample-inventory.md",
+      "sha256": "60f8943d934a92efa87ddaacdf29f85bb28fb5647b47aaa228c9f259b4857841"
+    },
+    {
+      "path": "tier-offload/sample-offload-config.json",
+      "sha256": "3df75353abba9e632802defc2b603b39518a90680b71086c71a9814b3ff7f5b6"
+    },
+    {
+      "path": "user-afterparty/SKILL.md",
+      "sha256": "f6d3a506e053a11624327eb6d22184c4d8031aa7e980ae81bb71dd41e9ff76e5"
+    },
+    {
+      "path": "user-brainstorm/SKILL.md",
+      "sha256": "b3464f05039f2aa8f2d6cf309122485ad9ca9752a055a55dead4be42d4701f04"
+    },
+    {
+      "path": "user-debug/SKILL.md",
+      "sha256": "2c921ca51b1908bb7e65b997902505bd45dde5ada3533c33bee041897ae2bd6e"
+    },
+    {
+      "path": "user-draft/SKILL.md",
+      "sha256": "cb83412ffd5cd0b58c6c13e4f2f27913339500e7d2ea541177d99556ca1d14b8"
+    },
+    {
+      "path": "user-gateway/SKILL.md",
+      "sha256": "687e9b4c857cf1ae5f66ba7da3a8dd6301e733cd54bf52077588ff7f6b518fb9"
+    },
+    {
+      "path": "user-lavishify/SKILL.md",
+      "sha256": "aaaf2bde3a64e32486bf67ce60d58969e285dd96eb22d35a6b6d60412cb24983"
+    },
+    {
+      "path": "user-learn/SKILL.md",
+      "sha256": "1b10805d7606983cd068c04cee58c476c31684b36ebf4cafda21a2b30ce2fb18"
+    },
+    {
+      "path": "user-orient/SKILL.md",
+      "sha256": "e42e7ccd1a9afb7464138080bc335373a5345f8bcc074103afe7ba569aff8083"
+    },
+    {
+      "path": "user-pm/SKILL.md",
+      "sha256": "509e87214e3dfe3e6b63723fd1f66ead2bf17bd565bfef30fcadf4e9768ef00d"
+    },
+    {
+      "path": "user-shakedown/SKILL.md",
+      "sha256": "7ad7a1ce1eb367eb1eb4e609b57b625f89fa14c1e027a0f92494d25126880ddf"
+    },
+    {
+      "path": "user-uat/SKILL.md",
+      "sha256": "69a9f335bab7ac815c91ac11c29d64b64e79353a0ace6d4b2a36d562d2a1ed43"
+    },
+    {
+      "path": "user-walkthrough/SKILL.md",
+      "sha256": "9c809933c0529f8a98d5d479fd1608f3d0b0c7be7e1c1822f5de23b8c5ba3225"
+    },
+    {
+      "path": "user-wrap/SKILL.md",
+      "sha256": "818a398d40c45a9292e95c5ce3d18e40a609c7b820ea6c86b9db36c130a96f44"
+    }
+  ]
+}

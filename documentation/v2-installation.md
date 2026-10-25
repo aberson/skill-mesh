@@ -1,5 +1,9 @@
 # Install or upgrade Skill Mesh v2
 
+**v1 is deprecated and must not be reactivated.** Use only v2 distributions for
+active installations. Historical restoration evidence below describes qualification,
+not permission to restore retired v1 skills. Restart host sessions after upgrading.
+
 
 Use **Windows PowerShell 5.1**. Download the release ZIP and its SHA-256 file,
 compare the archive hash with the checksum, then extract into a dedicated directory.

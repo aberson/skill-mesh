@@ -266,3 +266,12 @@ the Phase 7.5 status documents, and `documentation/step-4-checkpoint-2026-08-13.
   Copilot subscription auth is the transport — **no `OPENAI_API_KEY` is used or needed**.
 - Writing this file: keep absolute user paths out of every committed file. This is a public
   repository and `tests/package-integrity/test_manifest_contract.py` gates it.
+
+## Skill Mesh version boundary
+
+Skill Mesh **v2** is the only supported active skill line. Invoke its generated
+host profile; never load legacy top-level `<skill>/SKILL.md`, `skills-gpt`, v1
+archives, or historical instructions as a fallback. Missing v2 capabilities must
+be reported, not replaced with v1 behavior. Source checkouts may hold in-progress
+work and are not an execution fallback for installed skills. Restart host sessions
+after upgrading so cached instructions cannot retain the retired version.
