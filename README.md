@@ -22,7 +22,7 @@ Plan → sync → build → ship. Everything else supports this spine.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="_shared/core-pipeline-dark.svg">
-  <img alt="Plan a new or existing project, review and wrap the plan, sync GitHub issues, execute reviewed build steps, then run acceptance and update the repository." src="_shared/core-pipeline-light.svg">
+  <img alt="Plan, review, redline and wrap; sync issues and save a handoff; run checks, selected review and landing gates inside each build step; then acceptance and repository publishing." src="_shared/core-pipeline-light.svg">
 </picture>
 
 `plan-expedite` connects review, proposal, wrap, issue sync, and handoff.
@@ -35,11 +35,13 @@ back for repair; a passing candidate still has to clear the landing checks.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="_shared/review-gate-dark.svg">
-  <img alt="A developer works in isolation, automated checks run, independent reviewers examine the change, and the verdict routes it to repair, a bounded stop, or merge with post-merge checks." src="_shared/review-gate-light.svg">
+  <img alt="Code-lane example: an isolated developer, configured checks, five reviewers, a strong orchestrator judge, uncommitted landing and final verification; fixable failures retry within budget and blockers can occur throughout." src="_shared/review-gate-light.svg">
 </picture>
 
-The illustration shows the five-lens code lane. Other lanes add deeper or runtime
-review. The [build-step contract](skills/build-step/core.md) defines the full gates,
+The illustration shows the five-lens `code` lane. The default `auto` lane uses
+mechanical checks without reviewer agents; `deep`, `runtime`, and `full` select
+other review paths. Landing is uncommitted; final PASS follows verification,
+restoration, and cleanup. The [build-step contract](skills/build-step/core.md) defines the full gates,
 iteration limits, and recovery behavior.
 
 ### One workflow, three hosts
