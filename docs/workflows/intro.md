@@ -7,25 +7,33 @@ remains authoritative: a diagram does not authorize an action, bypass a hold,
 or establish live qualification. Claude has all 57 packages; Codex and Copilot
 have the 54 portable packages. Native capability gates still apply.
 
-This folder uses [show-your-work](https://github.com/aberson/show-your-work).
-Edit the hand-authored `.mmd` files or `intro.md`, then regenerate the README
-and index. From a workspace containing both project checkouts:
+These diagrams use the same rounded cards, monospace labels, and blue connectors
+as the overview graphics. Blue-bordered **GATE** cards mark decisions; connector
+labels preserve their outcomes. Open a diagram at full size to inspect larger flows.
+Light and dark variants follow your display preference.
+
+The `.mmd` files remain the editable graph sources. [Show Your Work](https://github.com/aberson/show-your-work)
+checks their metadata and builds the source index; the repository's presentation
+script lays out those graphs and publishes native SVG cards. It preserves every
+node, connector, and source reference. Readers need no rendering tools.
+
+From a workspace containing both project checkouts:
+
+```powershell
+uv run --project show-your-work --extra render python skill-mesh/tools/render-workflow-cards.py
+```
+
+Verify all generated output is current without writing:
+
+```powershell
+uv run --project show-your-work --extra render python skill-mesh/tools/render-workflow-cards.py --check
+```
+
+Run the original source/render validation when changing a graph:
 
 ```powershell
 uv run --project show-your-work --extra render show-your-work check skill-mesh/docs/workflows --render
 ```
 
-After a passing check:
-
-```powershell
-uv run --project show-your-work show-your-work render skill-mesh/docs/workflows
-```
-
-Verify generated output is current:
-
-```powershell
-uv run --project show-your-work show-your-work render skill-mesh/docs/workflows --check
-```
-
-The renderer is an authoring dependency only. GitHub displays the generated Mermaid
-blocks directly; readers and installed skills do not need Show Your Work.
+Use the presentation script above instead of plain `show-your-work render`, which
+produces the default Mermaid README rather than this SVG gallery.
