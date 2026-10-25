@@ -157,6 +157,16 @@ $SKILL_ITERATE_RESOURCES = @(
     'scripts/differential_grader.py', 'scripts/morning_summary.py',
     'scripts/resolve_queue.py', 'scripts/structural_metrics.py'
 )
+# judge-motion's reviewed Claude-only runtime closure. Fixed list; never harvest
+# the legacy tests, dependency directories, caches, or run output.
+$JUDGE_MOTION_RESOURCES = @(
+    'package.json', 'package-lock.json',
+    'fixtures/fixtures-flow.json', 'fixtures/janky.html',
+    'fixtures/smooth.html', 'fixtures/README.md',
+    'scripts/calibrate.py', 'scripts/capture_motion.mjs',
+    'scripts/gate_signals.py', 'scripts/reduced_motion_audit.py',
+    'scripts/select_frames.py'
+)
 
 if ([string]::IsNullOrWhiteSpace($ManifestPath)) {
     $ManifestPath = Join-Path $REPO_ROOT 'config\skill-manifest.json'
@@ -635,6 +645,18 @@ foreach ($profile in $profiles) {
                 $skillIterateResources[$resource] = Read-SourceText $resourceAbs
             }
         }
+        $judgeMotionResources = @{}
+        if ($name -eq 'judge-motion') {
+            $packageRoot = Join-Path $SKILLS_ROOT 'judge-motion'
+            foreach ($resource in $JUDGE_MOTION_RESOURCES) {
+                $resourceAbs = Resolve-SafePath -Path (Join-Path $packageRoot $resource) `
+                                               -AllowedRoots @($packageRoot)
+                if (-not (Test-Path -LiteralPath $resourceAbs -PathType Leaf)) {
+                    throw "build-distributions: judge-motion resource source missing: $resource"
+                }
+                $judgeMotionResources[$resource] = Read-SourceText $resourceAbs
+            }
+        }
 
         # -- Launcher (SKILL.md) -- (all sources validated above)
         $adapterBody = Read-SourceText $adapterAbs
@@ -730,6 +752,25 @@ foreach ($profile in $profiles) {
             if ($name -ne 'skill-iterate') { break }
             $resourceLabel = "skills/skill-iterate/$resource"
             $resourceOut = Add-PythonProvenance $skillIterateResources[$resource] $resourceLabel $profile
+            Write-GeneratedFile (Join-Path $skillOutDir $resource) $resourceOut $profileDirAbs
+            $fileCount++
+        }
+
+        foreach ($resource in $JUDGE_MOTION_RESOURCES) {
+            if ($name -ne 'judge-motion') { break }
+            $resourceLabel = "skills/judge-motion/$resource"
+            $resourceBody = $judgeMotionResources[$resource]
+            switch ([System.IO.Path]::GetExtension($resource)) {
+                '.md' { $resourceOut = Add-Provenance $resourceBody $resourceLabel $profile }
+                '.html' { $resourceOut = Add-Provenance $resourceBody $resourceLabel $profile }
+                '.py' { $resourceOut = Add-PythonProvenance $resourceBody $resourceLabel $profile }
+                '.mjs' {
+                    $resourceOut = Add-JsProvenance $resourceBody `
+                        (New-ProvenanceHeader $resourceLabel $profile)
+                }
+                '.json' { $resourceOut = $resourceBody }
+                default { throw "build-distributions: no judge-motion resource emitter for '$resource'." }
+            }
             Write-GeneratedFile (Join-Path $skillOutDir $resource) $resourceOut $profileDirAbs
             $fileCount++
         }

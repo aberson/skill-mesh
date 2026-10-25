@@ -1,0 +1,30 @@
+{
+  "flow": "fixtures-flow",
+  "comment": "Calibration-fixture flow spec for the Step 3 capture harness integration check. Serve first: 'python -m http.server 8765' from this fixtures dir (HTTP is mandatory - file:// breaks PerformanceObserver; use localhost, not 127.0.0.1). Rubric/readback fields are for Steps 5-6; the capture harness tolerates and echoes them.",
+  "transitions": [
+    {
+      "name": "smooth-swap",
+      "url": "http://localhost:8765/smooth.html",
+      "trigger": { "selector": "#nav-to-detail" },
+      "loading": ["#skeleton"],
+      "rubric": {
+        "expectedDurationMs": [250, 900],
+        "easing": "single 300ms eased crossfade (opacity/transform only), settles cleanly with no post-settle movement",
+        "loadingStateIntent": "skeleton only if the load exceeds 300ms and then held >= 500ms; default load is instant so no skeleton should ever show"
+      },
+      "readback": { "kind": "in-page-expression", "handle": "window.__cls" }
+    },
+    {
+      "name": "janky-swap",
+      "url": "http://localhost:8765/janky.html",
+      "trigger": { "selector": "#nav-to-detail" },
+      "loading": ["#spinner"],
+      "rubric": {
+        "expectedDurationMs": [250, 900],
+        "easing": "single eased crossfade expected; stepped/abrupt opacity jumps, blank gaps, or post-settle layout movement are defects",
+        "loadingStateIntent": "no spinner should show for an instant load; any spinner shown must respect delay-before-show and minimum display time"
+      },
+      "readback": { "kind": "in-page-expression", "handle": "window.__cls" }
+    }
+  ]
+}

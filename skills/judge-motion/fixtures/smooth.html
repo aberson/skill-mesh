@@ -1,0 +1,305 @@
+<!doctype html>
+<!--
+  ===========================================================================
+  FROZEN CALIBRATION ANCHOR - do not casually edit this file.
+  judge-motion known-GOOD fixture (smooth.html) - Step 2, issue #346.
+
+  /judge-motion --calibrate depends on the EXACT behaviors and timings here:
+  a single 300ms eased CSS crossfade, a properly-delayed loading skeleton
+  (>300ms delay-before-show, >=500ms min-display), focus moved to the new
+  page heading on the incoming page's opacity transitionend (immediately
+  under reduced motion; dilates correctly under slow-mo capture), zero
+  layout shift, and a genuine prefers-reduced-motion branch. Any edit
+  invalidates calibration; read README.md in this directory before
+  changing anything.
+  ===========================================================================
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>judge-motion fixture: smooth (known-good)</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+         background: #e9edf3; color: #1d2733; }
+  header { max-width: 640px; margin: 0 auto; padding: 20px 4px 12px; }
+  header h2 { margin: 0; font-size: 15px; font-weight: 600; color: #5a6675; }
+
+  .stage { position: relative; width: 640px; height: 420px; margin: 0 auto;
+           background: #ffffff; border-radius: 10px; overflow: hidden;
+           box-shadow: 0 2px 10px rgba(20, 30, 45, 0.10); }
+
+  /* THE swap: one 300ms eased opacity/transform transition, compositor-only
+     (no layout properties animate -> no layout thrash). visibility flips
+     only after the fade-out completes (delayed), instantly on show. */
+  .page { position: absolute; inset: 0; padding: 30px 34px;
+          opacity: 0; transform: translateY(8px); visibility: hidden;
+          transition: opacity 300ms ease, transform 300ms ease,
+                      visibility 0s linear 300ms; }
+  .page.active { opacity: 1; transform: none; visibility: visible;
+                 transition: opacity 300ms ease, transform 300ms ease,
+                             visibility 0s; }
+
+  /* Genuine reduced-motion branch: the swap transition is suppressed
+     entirely when the OS asks for reduced motion. Step 8's audit greps the
+     served CSS for this query and expects a flat diff curve under
+     reducedMotion:'reduce'. */
+  @media (prefers-reduced-motion: reduce) {
+    .page, .page.active { transition: none; }
+  }
+
+  .tag { display: inline-block; font-size: 12px; font-weight: 700;
+         letter-spacing: 1px; padding: 3px 10px; border-radius: 999px;
+         color: #fff; margin-bottom: 14px; }
+  .page h1 { margin: 0 0 18px; font-size: 30px; }
+  .page h1:focus { outline: 2px dashed currentColor; outline-offset: 6px; }
+  .row { height: 44px; border-radius: 6px; background: #eef2f7;
+         margin-bottom: 12px; padding: 12px 14px; font-size: 14px;
+         color: #46525f; }
+  .nav { margin-top: 20px; padding: 10px 18px; font-size: 15px;
+         border: 0; border-radius: 6px; color: #fff; cursor: pointer; }
+
+  #page-home .tag, #page-home .nav { background: #2c5fa8; }
+  #page-home h1 { color: #2c5fa8; }
+  #page-detail .tag, #page-detail .nav { background: #2e7d4f; }
+  #page-detail h1 { color: #2e7d4f; }
+
+  /* Loading skeleton: static gray blocks (deliberately unanimated so
+     screenshots of it are deterministic). Shown/hidden instantly by JS
+     per the delay/min-display contract in the script constants. */
+  #skeleton { position: absolute; inset: 0; padding: 30px 34px;
+              background: #ffffff; display: none; }
+  #skeleton.show { display: block; }
+  .sk-tag { width: 72px; height: 22px; border-radius: 999px;
+            background: #dfe4ea; margin-bottom: 14px; }
+  .sk-title { width: 40%; height: 30px; border-radius: 6px;
+              background: #dfe4ea; margin-bottom: 18px; }
+  .sk-row { height: 44px; border-radius: 6px; background: #e7ebf0;
+            margin-bottom: 12px; }
+
+  /* Debug badge (?debug=1 only): focus target + accumulated CLS. Fixed
+     position AND fixed width with left-aligned text: a right-anchored
+     auto-width box would grow leftward when its text changes and emit its
+     own tiny layout-shift entries. */
+  #debug-badge { position: fixed; right: 10px; bottom: 10px; width: 300px;
+                 text-align: left;
+                 font: 12px/1.5 Consolas, monospace; background: #101820;
+                 color: #e8eef5; padding: 6px 10px; border-radius: 6px;
+                 display: none; z-index: 99; }
+  body.debug #debug-badge { display: block; }
+
+  /* Freeze mode (?freeze=<state>): static verification snapshots only. */
+  body.frozen * { transition: none !important;
+                  animation-play-state: paused !important; }
+</style>
+</head>
+<body>
+<header><h2>judge-motion calibration fixture: SMOOTH (known-good anchor)</h2></header>
+
+<div class="stage">
+  <section class="page active" id="page-home" aria-label="Home page">
+    <span class="tag">HOME</span>
+    <h1 id="home-title" tabindex="-1">Home</h1>
+    <div class="row">Latest activity: 3 new reports this week</div>
+    <div class="row">Pinned: quarterly review draft</div>
+    <div class="row">Team notes: capture harness shipped</div>
+    <button class="nav" id="nav-to-detail" type="button">Open detail -&gt;</button>
+  </section>
+
+  <section class="page" id="page-detail" aria-label="Detail page">
+    <span class="tag">DETAIL</span>
+    <h1 id="detail-title" tabindex="-1">Detail</h1>
+    <div class="row">Owner: calibration team</div>
+    <div class="row">State: settled, no pending writes</div>
+    <div class="row">History: 12 revisions, last on Tuesday</div>
+    <button class="nav" id="nav-to-home" type="button">&lt;- Back to home</button>
+  </section>
+
+  <div id="skeleton" aria-hidden="true">
+    <div class="sk-tag"></div>
+    <div class="sk-title"></div>
+    <div class="sk-row"></div>
+    <div class="sk-row"></div>
+    <div class="sk-row"></div>
+  </div>
+</div>
+
+<div id="debug-badge">focus:- cls:0.0000</div>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ------------------------------------------------------------------
+     ALL timing constants (ms) live here - the single place. Deterministic
+     by design; do not scatter timings below this block.
+     ------------------------------------------------------------------ */
+  var T = {
+    SWAP_MS: 300,           // the single eased CSS transition (matches the CSS above)
+    SWAP_SAFETY_MS: 6000,   // fallback-only completion cap (20x SWAP_MS). transitionend
+                            //   is the primary completion signal; this timer only exists
+                            //   so a missed event can never wedge `busy`. Sized to stay
+                            //   clear of a 10x slow-mo dilated transition (~3000ms).
+    SKELETON_DELAY_MS: 300, // skeleton appears only if the simulated load exceeds this
+    SKELETON_MIN_MS: 500,   // once shown, the skeleton stays visible at least this long
+    DEFAULT_LOAD_MS: 0,     // default simulated load; fast enough that no skeleton shows
+    AUTO_TRIGGER_MS: 50     // ?auto=1 helper: delay before the scripted click
+  };
+
+  var q = new URLSearchParams(location.search);
+  var LOAD_MS = q.has('delay')
+    ? Math.max(0, parseInt(q.get('delay'), 10) || 0)
+    : T.DEFAULT_LOAD_MS;                      // ?delay=<ms> simulates a slow content load
+  var FREEZE = q.get('freeze');               // verification-only static states
+  var AUTO = q.get('auto') === '1';           // scripted home->detail trigger
+  var DEBUG = q.get('debug') === '1';         // corner badge: focus + CLS
+
+  var pages = {
+    home: document.getElementById('page-home'),
+    detail: document.getElementById('page-detail')
+  };
+  var skeleton = document.getElementById('skeleton');
+  var badge = document.getElementById('debug-badge');
+
+  /* Layout-shift accumulator (real layout-instability entries; excludes
+     hadRecentInput per the CLS definition). The smooth fixture must stay
+     at 0 - the swap is opacity/transform only and the skeleton is an
+     absolutely-positioned overlay. */
+  window.__cls = 0;
+  if ('PerformanceObserver' in window) {
+    try {
+      new PerformanceObserver(function (list) {
+        list.getEntries().forEach(function (e) {
+          if (!e.hadRecentInput) {
+            window.__cls += e.value;
+            console.log('[fixture] layout-shift', e.value.toFixed(4),
+                        'cls total', window.__cls.toFixed(4));
+            updateDebug();
+          }
+        });
+      }).observe({ type: 'layout-shift', buffered: true });
+    } catch (err) {
+      console.warn('[fixture] layout-shift observer unavailable:', err.message);
+    }
+  }
+
+  function updateDebug() {
+    if (!DEBUG) { return; }
+    var a = document.activeElement;
+    var label = a ? a.tagName + (a.id ? '#' + a.id : '') : 'none';
+    badge.textContent = 'focus:' + label + ' cls:' + window.__cls.toFixed(4);
+  }
+  if (DEBUG) {
+    document.body.classList.add('debug');
+    document.addEventListener('focusin', updateDebug);
+    document.addEventListener('focusout', updateDebug);
+    updateDebug();
+  }
+
+  /* ---- Freeze mode: hold one named state statically and attach NOTHING
+     else (no timers, no handlers) - so it can never alter normal timing
+     when the param is absent. Verification-only. ---- */
+  if (FREEZE) {
+    document.body.classList.add('frozen');
+    if (FREEZE === 'skeleton') {
+      pages.home.classList.remove('active');
+      skeleton.classList.add('show');
+    } else if (FREEZE === 'detail') {
+      pages.home.classList.remove('active');
+      pages.detail.classList.add('active');
+    } // 'home' (or unknown) keeps the initial home state
+    updateDebug();
+    return;
+  }
+
+  /* ---- Normal interactive behavior ---- */
+  var currentPage = 'home';
+  var busy = false;
+
+  /* Completion signal for the swap. transitionend on the INCOMING page's
+     opacity transition is the primary signal - it dilates correctly under
+     CDP Animation.setPlaybackRate slow-mo, where a raw setTimeout(T.SWAP_MS)
+     would fire ~90% early and truncate the capture. Branches:
+       - reduced motion (transition: none => transitionend never fires):
+         complete IMMEDIATELY, so focus lands with the instant snap;
+       - otherwise: transitionend, with a generous safety-net timeout
+         (T.SWAP_SAFETY_MS) as fallback only. */
+  function onSwapComplete(el, cb) {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      cb();
+      return;
+    }
+    var fired = false;
+    var safety;
+    function fire() {
+      if (fired) { return; }
+      fired = true;
+      clearTimeout(safety);
+      el.removeEventListener('transitionend', onEnd);
+      cb();
+    }
+    function onEnd(ev) {
+      if (ev.target === el && ev.propertyName === 'opacity') { fire(); }
+    }
+    safety = setTimeout(fire, T.SWAP_SAFETY_MS);
+    el.addEventListener('transitionend', onEnd);
+  }
+
+  function navigate(to) {
+    if (busy || to === currentPage) { return; }
+    busy = true;
+    var from = currentPage;
+
+    // Start the eased fade-out immediately (crossfades with the fade-in
+    // when the load is instant - the default).
+    pages[from].classList.remove('active');
+
+    // Properly-delayed skeleton: only shown if the load takes longer than
+    // SKELETON_DELAY_MS...
+    var skeletonShownAt = -1;
+    var skelTimer = setTimeout(function () {
+      skeletonShownAt = performance.now();
+      skeleton.classList.add('show');
+    }, T.SKELETON_DELAY_MS);
+
+    // Simulated content load.
+    setTimeout(function () {
+      clearTimeout(skelTimer);
+      function finish() {
+        skeleton.classList.remove('show');
+        pages[to].classList.add('active');
+        currentPage = to;
+        // After the eased settle, move focus sensibly to the new page
+        // heading (standard accessible route-change pattern). Completion
+        // is TRANSITION-DRIVEN (onSwapComplete above): under slow-mo the
+        // focus move + busy release dilate with the visuals; under
+        // reduced motion they land immediately with the instant snap.
+        onSwapComplete(pages[to], function () {
+          pages[to].querySelector('h1').focus({ preventScroll: true });
+          busy = false;
+          updateDebug();
+        });
+      }
+      if (skeletonShownAt < 0) {
+        finish(); // skeleton never appeared - swap straight in
+      } else {
+        // ...and once shown it stays visible at least SKELETON_MIN_MS.
+        var shownFor = performance.now() - skeletonShownAt;
+        setTimeout(finish, Math.max(0, T.SKELETON_MIN_MS - shownFor));
+      }
+    }, LOAD_MS);
+  }
+
+  document.getElementById('nav-to-detail')
+    .addEventListener('click', function () { navigate('detail'); });
+  document.getElementById('nav-to-home')
+    .addEventListener('click', function () { navigate('home'); });
+
+  if (AUTO) {
+    setTimeout(function () { navigate('detail'); }, T.AUTO_TRIGGER_MS);
+  }
+})();
+</script>
+</body>
+</html>

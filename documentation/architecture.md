@@ -123,6 +123,15 @@ installer ownership and current-byte checks apply. Runtime/calibration resources
 the standalone router's root JSON are unchanged. The source mapping remains unqualified
 until the Phase CD Step 156 installed-host proof and profile refresh.
 
+The existing Claude-only `judge-motion` identity has one separately reviewed package
+exception under the provider-native rebuild plan. Its fixed runtime resources are emitted
+only by the explicit builder allowlist, and exactly three JSON paths require a ledger hash
+that matches their current bytes because JSON cannot carry the shared provenance header.
+Their BOM-free bytes pass a throwing UTF-8 decoder and the built-in Windows JSON serializer
+must return an object; this describes shape and does not claim strict JSON parsing. This does
+not turn manifest `support_assets` into a general emitter or authorize another native
+mutation.
+
 ## 3. Skill package shape
 
 Portable skill:
@@ -142,6 +151,11 @@ skills/<name>/
   providers/
     claude.md             # self-contained; no neutral core, no gpt.md
 ```
+
+A reviewed package exception may add resource files beside a provider-native adapter
+without creating a neutral core. For `judge-motion`, the canonical package contains package
+metadata, fixtures, their README, and runtime scripts; generated Claude output preserves
+those relative paths while legacy tests and dependency or run directories remain excluded.
 
 `core` is `null` in the manifest **only** for provider-native skills. Host-facing
 filenames (`SKILL.md`, `SKILL-claude.md`, `SKILL-gpt.md`) are generated discovery
@@ -349,6 +363,11 @@ Canonical ownership: a skill-local asset at `.claude/skills/<name>/<rel>` (or
 
 Build-output and cache directories are **never** migrated: `node_modules/`,
 `.pytest_cache/`, `__pycache__/`, `tmp/`, and `.judge-motion/` are excluded.
+
+The `judge-motion` support-assets row records legacy migration ownership; it is not an
+emission rule. The current Claude package ships the reviewed package metadata, fixture
+README, HTML and JSON fixtures, and runtime scripts. Legacy `tests/` remains excluded from
+build and install output, as do the dependency, cache, and run directories named above.
 
 Global (cross-skill) assets are recorded in top-level `global_support_assets`:
 

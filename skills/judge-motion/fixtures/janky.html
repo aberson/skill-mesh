@@ -1,0 +1,411 @@
+<!doctype html>
+<!--
+  ===========================================================================
+  FROZEN CALIBRATION ANCHOR - do not casually edit this file.
+  judge-motion known-GARBAGE fixture (janky.html) - Step 2, issue #346.
+
+  /judge-motion --calibrate depends on the EXACT defect behaviors and
+  timings injected here (all ON by default, each toggleable via query
+  param):
+    ?flash=0   disable the ~2-frame white flash mid-swap
+    ?shift=0   disable the layout shift on settle (real CLS entries)
+    ?spinner=0 disable the 80ms spinner flash
+    ?step=0    disable the setTimeout-stepped animation (falls back to a
+               smooth 300ms CSS crossfade)
+    ?focus=0   disable the focus-dropped-to-body defect (focuses the new
+               page heading instead)
+  Any edit invalidates calibration; read README.md in this directory
+  before changing anything. Deliberately NO prefers-reduced-motion branch:
+  this is the garbage anchor.
+  ===========================================================================
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>judge-motion fixture: janky (known-garbage)</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+         background: #e9edf3; color: #1d2733; }
+  header { max-width: 640px; margin: 0 auto; padding: 20px 4px 12px; }
+  header h2 { margin: 0; font-size: 15px; font-weight: 600; color: #5a6675; }
+
+  /* Late banner (defect: layout shift on settle). Lives in normal flow
+     ABOVE the stage; when its height jumps 0 -> 64px everything below
+     moves, producing real layout-instability entries (not transform). */
+  #banner { max-width: 640px; margin: 0 auto; height: 0; overflow: hidden;
+            background: #f5c542; border-radius: 8px; color: #5c4400;
+            font-weight: 700; font-size: 15px; line-height: 64px;
+            text-align: center; }
+
+  .stage { position: relative; width: 640px; height: 420px; margin: 0 auto;
+           background: #ffffff; border-radius: 10px; overflow: hidden;
+           box-shadow: 0 2px 10px rgba(20, 30, 45, 0.10); }
+
+  /* No CSS transition on .page by default: the swap is DRIVEN BY
+     setTimeout STEPS in JS (defect). With ?step=0 the script assigns an
+     inline 300ms ease transition instead. The stage backdrop is pure
+     white, so the mid-swap both-pages-hidden state (defect: white flash)
+     reads as a white card against the gray body. */
+  .page { position: absolute; inset: 0; padding: 30px 34px;
+          opacity: 0; visibility: hidden; }
+
+  .tag { display: inline-block; font-size: 12px; font-weight: 700;
+         letter-spacing: 1px; padding: 3px 10px; border-radius: 999px;
+         color: #fff; margin-bottom: 14px; }
+  .page h1 { margin: 0 0 18px; font-size: 30px; }
+  .page h1:focus { outline: 2px dashed currentColor; outline-offset: 6px; }
+  .row { height: 44px; border-radius: 6px; background: #f6efec;
+         margin-bottom: 12px; padding: 12px 14px; font-size: 14px;
+         color: #5c4a41; }
+  .nav { margin-top: 20px; padding: 10px 18px; font-size: 15px;
+         border: 0; border-radius: 6px; color: #fff; cursor: pointer; }
+
+  #page-home .tag, #page-home .nav { background: #b3542e; }
+  #page-home h1 { color: #b3542e; }
+  #page-detail .tag, #page-detail .nav { background: #7d2e6e; }
+  #page-detail h1 { color: #7d2e6e; }
+
+  /* Spinner overlay (defect: 80ms spinner flash - appears immediately on
+     click, vanishes after ~80ms; violates both delay-before-show and
+     min-display). The ring rotation is cosmetic CSS; its show/hide timing
+     is timeout-driven in JS. */
+  #spinner { position: absolute; inset: 0; display: none;
+             align-items: center; justify-content: center;
+             background: rgba(255, 255, 255, 0.65); }
+  #spinner.show { display: flex; }
+  #spinner .ring { width: 56px; height: 56px; border-radius: 50%;
+                   border: 6px solid #e3d7d0; border-top-color: #b3542e;
+                   animation: spin 800ms linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Debug badge (?debug=1 only): focus target + accumulated CLS. Fixed
+     position AND fixed width with left-aligned text: a right-anchored
+     auto-width box would grow leftward when its text changes and emit its
+     own tiny layout-shift entries. */
+  #debug-badge { position: fixed; right: 10px; bottom: 10px; width: 300px;
+                 text-align: left;
+                 font: 12px/1.5 Consolas, monospace; background: #101820;
+                 color: #e8eef5; padding: 6px 10px; border-radius: 6px;
+                 display: none; z-index: 99; }
+  body.debug #debug-badge { display: block; }
+
+  /* Freeze mode (?freeze=<state>): static verification snapshots only. */
+  body.frozen * { transition: none !important;
+                  animation-play-state: paused !important; }
+</style>
+</head>
+<body>
+<header><h2>judge-motion calibration fixture: JANKY (known-garbage anchor)</h2></header>
+
+<div id="banner">LATE BANNER - this element popping in IS the layout-shift defect</div>
+
+<div class="stage">
+  <section class="page" id="page-home" aria-label="Home page"
+           style="opacity:1;visibility:visible">
+    <span class="tag">HOME</span>
+    <h1 id="home-title" tabindex="-1">Home</h1>
+    <div class="row">Latest activity: 3 new reports this week</div>
+    <div class="row">Pinned: quarterly review draft</div>
+    <div class="row">Team notes: capture harness shipped</div>
+    <button class="nav" id="nav-to-detail" type="button">Open detail -&gt;</button>
+  </section>
+
+  <section class="page" id="page-detail" aria-label="Detail page">
+    <span class="tag">DETAIL</span>
+    <h1 id="detail-title" tabindex="-1">Detail</h1>
+    <div class="row">Owner: calibration team</div>
+    <div class="row">State: settled, no pending writes</div>
+    <div class="row">History: 12 revisions, last on Tuesday</div>
+    <button class="nav" id="nav-to-home" type="button">&lt;- Back to home</button>
+  </section>
+
+  <div id="spinner" aria-hidden="true"><div class="ring"></div></div>
+</div>
+
+<div id="debug-badge">focus:- cls:0.0000</div>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ------------------------------------------------------------------
+     ALL timing constants (ms) live here - the single place. Deterministic
+     by design; do not scatter timings below this block.
+
+     NOTE (Step 3 harness): FLASH_MS / SPINNER_MS / STEP_MS drive
+     setTimeout/rAF, NOT CSS transitions - so under CDP
+     Animation.setPlaybackRate 0.1 they do NOT dilate and stay short in
+     real time. That asymmetry is intentional (see README.md). One
+     exception: the ?step=0 fallback's settle is transitionend-driven
+     (dilates with its CSS crossfade), mirroring smooth.html.
+     ------------------------------------------------------------------ */
+  var T = {
+    SWAP_START_MS: 100,   // click -> swap begin (spinner has already flashed)
+    SWAP_MS: 300,         // CSS crossfade duration, used only with ?step=0
+    SWAP_SAFETY_MS: 6000, // ?step=0 mode: fallback-only settle cap (20x SWAP_MS);
+                          //   transitionend is the primary settle signal there
+    STEP_MS: 90,          // defect: interval between discrete opacity steps
+    N_STEPS: 4,           // defect: steps per fade direction (out, then in)
+    FLASH_MS: 34,         // defect: ~2 frames @60fps with BOTH pages hidden
+    SPINNER_MS: 80,       // defect: spinner visible for only this long
+    SHIFT_AFTER_MS: 300,  // defect: settle -> layout jump delay; also keeps
+                          //   the shift outside the 500ms hadRecentInput
+                          //   exclusion window so it counts toward CLS
+    SHIFT_PX: 64,         // defect: how far content jumps down
+    SETTLE_PAD_MS: 50,    // ?step=0 mode: pad after the CSS crossfade ends
+    DEBUG_SETTLE_MS: 100, // debug badge refresh delay after the layout shift
+                          //   (lets the layout-shift observer callback land)
+    AUTO_TRIGGER_MS: 50   // ?auto=1 helper: delay before the scripted click
+  };
+
+  var q = new URLSearchParams(location.search);
+  // Every defect is ON by default; ?<param>=0 disables that one defect.
+  var D = {
+    flash:   q.get('flash')   !== '0',
+    shift:   q.get('shift')   !== '0',
+    spinner: q.get('spinner') !== '0',
+    step:    q.get('step')    !== '0',
+    focus:   q.get('focus')   !== '0'
+  };
+  var FREEZE = q.get('freeze');               // verification-only static states
+  var AUTO = q.get('auto') === '1';           // scripted home->detail trigger
+  var DEBUG = q.get('debug') === '1';         // corner badge: focus + CLS
+
+  var pages = {
+    home: document.getElementById('page-home'),
+    detail: document.getElementById('page-detail')
+  };
+  var spinner = document.getElementById('spinner');
+  var banner = document.getElementById('banner');
+  var badge = document.getElementById('debug-badge');
+
+  /* Layout-shift accumulator (real layout-instability entries; excludes
+     hadRecentInput per the CLS definition). The shift defect below must
+     register here - that is what the CLS mechanical gate reads. */
+  window.__cls = 0;
+  if ('PerformanceObserver' in window) {
+    try {
+      new PerformanceObserver(function (list) {
+        list.getEntries().forEach(function (e) {
+          if (!e.hadRecentInput) {
+            window.__cls += e.value;
+            console.log('[fixture] layout-shift', e.value.toFixed(4),
+                        'cls total', window.__cls.toFixed(4));
+            updateDebug();
+          }
+        });
+      }).observe({ type: 'layout-shift', buffered: true });
+    } catch (err) {
+      console.warn('[fixture] layout-shift observer unavailable:', err.message);
+    }
+  }
+
+  function updateDebug() {
+    if (!DEBUG) { return; }
+    var a = document.activeElement;
+    var label = a ? a.tagName + (a.id ? '#' + a.id : '') : 'none';
+    badge.textContent = 'focus:' + label + ' cls:' + window.__cls.toFixed(4);
+  }
+  if (DEBUG) {
+    document.body.classList.add('debug');
+    document.addEventListener('focusin', updateDebug);
+    document.addEventListener('focusout', updateDebug);
+    updateDebug();
+  }
+
+  function setPage(el, opacity, visible) {
+    el.style.opacity = String(opacity);
+    el.style.visibility = visible ? 'visible' : 'hidden';
+  }
+
+  /* ---- Freeze mode: hold one named state statically and attach NOTHING
+     else (no timers, no handlers) - so it can never alter normal timing
+     when the param is absent. Verification-only. These styles are applied
+     before first paint, so freeze states generate no layout-shift entries
+     of their own. ---- */
+  if (FREEZE) {
+    document.body.classList.add('frozen');
+    if (FREEZE === 'flash') {
+      // Mid-swap white flash held: both pages hidden, white stage showing.
+      setPage(pages.home, 0, false);
+      setPage(pages.detail, 0, false);
+    } else if (FREEZE === 'step2') {
+      // Stepped-animation mid-state held: fade-out step 2 of N_STEPS -
+      // the outgoing page at the discrete intermediate opacity
+      // 1 - 2/N_STEPS (= 0.5 at N_STEPS 4), incoming page not yet
+      // shown. A static screenshot of one of the stepped defect's
+      // discrete opacity levels.
+      setPage(pages.home, 1 - 2 / T.N_STEPS, true);
+      setPage(pages.detail, 0, false);
+    } else if (FREEZE === 'spinner') {
+      // Spinner held visible over the home page (rotation paused).
+      spinner.classList.add('show');
+    } else if (FREEZE === 'detail') {
+      // Post-swap settled state BEFORE the layout shift (the unshifted
+      // baseline to compare freeze=shifted against).
+      setPage(pages.home, 0, false);
+      setPage(pages.detail, 1, true);
+    } else if (FREEZE === 'shifted') {
+      // Post-layout-shift state: banner expanded, content pushed down.
+      setPage(pages.home, 0, false);
+      setPage(pages.detail, 1, true);
+      banner.style.height = T.SHIFT_PX + 'px';
+    } // 'home' (or unknown) keeps the initial home state
+    updateDebug();
+    return;
+  }
+
+  /* ---- Normal interactive behavior (defect-injected) ---- */
+  var currentPage = 'home';
+  var busy = false;
+
+  function navigate(to) {
+    if (busy || to === currentPage) { return; }
+    busy = true;
+    var from = currentPage;
+
+    if (D.spinner) {
+      // DEFECT: spinner flash. Appears immediately on trigger (no
+      // delay-before-show) and vanishes after only SPINNER_MS (no
+      // min-display). Timeout-driven on purpose: stays 80ms real time
+      // even under slow-mo playback.
+      spinner.classList.add('show');
+      setTimeout(function () { spinner.classList.remove('show'); }, T.SPINNER_MS);
+    }
+
+    setTimeout(function () { swap(from, to); }, T.SWAP_START_MS);
+  }
+
+  function swap(from, to) {
+    if (D.step) {
+      // DEFECT: setTimeout-stepped animation. The swap moves in N_STEPS
+      // discrete opacity jumps every STEP_MS instead of one smooth eased
+      // CSS transition. Because these are timer-driven, CDP slow-mo does
+      // NOT stretch them - the steppiness survives capture.
+      var i;
+      for (i = 1; i <= T.N_STEPS; i++) {
+        (function (step) {
+          setTimeout(function () {
+            setPage(pages[from], 1 - step / T.N_STEPS, step < T.N_STEPS);
+          }, step * T.STEP_MS);
+        })(i);
+      }
+      var outDone = T.N_STEPS * T.STEP_MS;
+      // DEFECT: white flash. With the old page fully hidden and the new
+      // page not yet shown, the bare white stage shows for exactly
+      // FLASH_MS (~2 frames at 60fps) before the fade-in begins. With
+      // ?flash=0 the gap is ZERO: the fade-in's first step shares its
+      // due time with the fade-out's final hide, and because the
+      // fade-out timers were registered first, both run in the same
+      // timer flush - no blank frame is ever painted. This keeps the
+      // flash defect independently toggleable from the step defect.
+      var gap = D.flash ? T.FLASH_MS : 0;
+      // Fade-in: (step - 1) spacing, so the FIRST visible state lands at
+      // exactly outDone + gap - the blank window is `gap` alone.
+      for (i = 1; i <= T.N_STEPS; i++) {
+        (function (step) {
+          setTimeout(function () {
+            setPage(pages[to], step / T.N_STEPS, true);
+          }, outDone + gap + (step - 1) * T.STEP_MS);
+        })(i);
+      }
+      setTimeout(function () { settle(to); },
+                 outDone + gap + (T.N_STEPS - 1) * T.STEP_MS);
+    } else {
+      // ?step=0 fallback: a smooth 300ms eased CSS crossfade (assigned
+      // inline; the stylesheet deliberately has no .page transition).
+      pages[from].style.transition = 'opacity ' + T.SWAP_MS + 'ms ease';
+      pages[to].style.transition = 'opacity ' + T.SWAP_MS + 'ms ease';
+      setPage(pages[to], 0, true);
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () {
+          pages[from].style.opacity = '0';
+          pages[to].style.opacity = '1';
+        });
+      });
+      if (D.flash) {
+        // DEFECT: white flash injected at the crossfade midpoint - both
+        // pages visibility:hidden for FLASH_MS, then restored. (Timer-
+        // driven on purpose: stays real-time even under slow-mo.
+        // visibility is not a transitioned property here, so the toggle
+        // does not cancel the opacity transition.)
+        setTimeout(function () {
+          pages[from].style.visibility = 'hidden';
+          pages[to].style.visibility = 'hidden';
+          setTimeout(function () {
+            pages[from].style.visibility = 'visible';
+            pages[to].style.visibility = 'visible';
+          }, T.FLASH_MS);
+        }, Math.round(T.SWAP_MS / 2));
+      }
+      // Settle: TRANSITION-DRIVEN (transitionend on the incoming page's
+      // opacity, + SETTLE_PAD_MS), so under CDP slow-mo it dilates with
+      // the visuals instead of firing ~90% early on a raw
+      // setTimeout(T.SWAP_MS). T.SWAP_SAFETY_MS is a fallback only. No
+      // reduced-motion branch here on purpose (garbage anchor): the
+      // transition is inline and this file has no media query, so
+      // transitionend always fires.
+      var settled = false;
+      var safety;
+      var finishFallback = function () {
+        if (settled) { return; }
+        settled = true;
+        clearTimeout(safety);
+        pages[to].removeEventListener('transitionend', onCrossfadeEnd);
+        pages[from].style.visibility = 'hidden';
+        settle(to);
+      };
+      var onCrossfadeEnd = function (ev) {
+        if (ev.target === pages[to] && ev.propertyName === 'opacity') {
+          setTimeout(finishFallback, T.SETTLE_PAD_MS);
+        }
+      };
+      safety = setTimeout(finishFallback, T.SWAP_SAFETY_MS);
+      pages[to].addEventListener('transitionend', onCrossfadeEnd);
+    }
+  }
+
+  function settle(to) {
+    currentPage = to;
+    busy = false;
+
+    if (D.focus) {
+      // DEFECT: focus dropped to body. The old page's button already
+      // lost focus when it went visibility:hidden; nothing restores it,
+      // and the explicit blur guarantees the end state regardless of
+      // browser focus-drop behavior.
+      if (document.activeElement && document.activeElement.blur) {
+        document.activeElement.blur();
+      }
+    } else {
+      // ?focus=0 fallback: sensible focus management (mirror of smooth).
+      pages[to].querySelector('h1').focus({ preventScroll: true });
+    }
+
+    if (D.shift) {
+      // DEFECT: layout shift on settle. SHIFT_AFTER_MS after the swap
+      // "completes", the banner pops open and pushes the stage down
+      // SHIFT_PX - a real layout change (height, not transform), so the
+      // PerformanceObserver above records layout-instability entries.
+      setTimeout(function () {
+        banner.style.height = T.SHIFT_PX + 'px';
+        setTimeout(updateDebug, T.DEBUG_SETTLE_MS); // let the observer callback land
+      }, T.SHIFT_AFTER_MS);
+    }
+    updateDebug();
+  }
+
+  document.getElementById('nav-to-detail')
+    .addEventListener('click', function () { navigate('detail'); });
+  document.getElementById('nav-to-home')
+    .addEventListener('click', function () { navigate('home'); });
+
+  if (AUTO) {
+    setTimeout(function () { navigate('detail'); }, T.AUTO_TRIGGER_MS);
+  }
+})();
+</script>
+</body>
+</html>

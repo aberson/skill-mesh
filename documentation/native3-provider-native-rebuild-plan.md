@@ -44,26 +44,52 @@ no claim that OAuth, context cleanup, or a real installed home was exercised.
 ## Stage B: separately gated package work
 
 The same architecture approval permits a later, separately reviewed Stage B for
-`judge-motion`. That stage may ship only the closed runtime package approved for it:
-the named scripts, JSON files, HTML fixtures, package metadata, and fixture README. Legacy
-tests, dependency directories, caches, and run output remain excluded.
+`judge-motion`. That stage ships only this closed eleven-file runtime package:
+`package.json`, `package-lock.json`, `fixtures/fixtures-flow.json`,
+`fixtures/janky.html`, `fixtures/smooth.html`, `fixtures/README.md`,
+`scripts/calibrate.py`, `scripts/capture_motion.mjs`, `scripts/gate_signals.py`,
+`scripts/reduced_motion_audit.py`, and `scripts/select_frames.py`. Legacy tests,
+dependency directories, caches, and run output remain excluded. The builder uses an
+explicit contained allowlist rather than turning manifest `support_assets` into an emitter;
+a missing resource fails before the launcher is written.
 
-Markerless ownership is limited to the approved JSON paths and requires both an ownership
-ledger entry and matching current bytes. It is not a general markerless-file rule. Foreign
-files and unowned neighbors remain untouched. Downgrade requires uninstalling with the
-Native3 installer first or using the backed force route; an older installer must not infer
-ownership of these files.
+Markerless ownership is limited to the Claude discovery paths for
+`judge-motion/package.json`, `judge-motion/package-lock.json`, and
+`judge-motion/fixtures/fixtures-flow.json`. Outside source-shape preflight, each requires a
+valid lowercase ownership-ledger hash equal to the current bytes, plus a regular non-reparse
+file no larger than two MiB. A throwing UTF-8 decoder rejects malformed bytes, the first
+non-whitespace token must open an object, and the built-in `System.Web.Extensions`
+`JavaScriptSerializer.DeserializeObject` result must implement `IDictionary`, with
+`MaxJsonLength` fixed to the same two-MiB ceiling. This is an object-shape check, not a claim
+that the parser enforces strict JSON. The allowlist is append-only while a released ledger
+may own these paths. A marker property was rejected:
+the shared provenance parser requires a multiline header at an emitter-legal line start,
+a JSON-specific parser branch would also affect inspector and migrator decisions, hash
+authority is already independent, and any byte change already invalidates the ledger hash.
+This is not a general markerless-file rule. A hashless ledger grants no authority even when
+the target bytes equal the incoming JSON. Backed force remains the explicit adoption route;
+if an identical foreign JSON is interrupted after adoption, recovery may record it as owned
+only because the verified backup certificate already authorized that exact preimage, even
+though its pre- and post-hashes are equal. Foreign files and unowned neighbors remain
+untouched. Downgrade requires uninstalling with the Native3 installer first or using the
+backed force route; an older installer must not infer ownership of these files.
 
-Stage B also permits only the reviewed source-shape corrections: moving Python metadata
-comments below the module docstring without changing the executable syntax tree, and
-replacing the broken fixture README link with prose. Its builder, installer, resource
-copies, package row, and tests land together only after their own implementation review.
-Nothing in Stage A claims that package has landed or works.
+Stage B permits only two canonical source deltas. In `fixtures/README.md`, the broken
+measurement-validity link becomes prose and no other content changes. In
+`scripts/reduced_motion_audit.py`, the module docstring becomes the first statement and the
+PEP 723 comment block moves below it, leaving the future import as the second statement and
+the executable syntax tree unchanged. The builder, installer, resource copies, package row,
+and tests land together only after their own implementation review. Nothing in Stage A
+claims that package has landed or works.
 
 ## Qualification boundary
 
-Static source and distribution checks establish package shape and documented safety
-boundaries. They do not establish live OAuth, browser capture, calibration quality,
-destructive cleanup behavior, installation into a real home, rollback, or publication.
-Those observations belong to release qualification against the exact integrated release
-candidate.
+Static source checks, deterministic builds, emitted-package fidelity checks, and
+install/reinstall/uninstall tests in disposable homes establish package shape and documented
+ownership boundaries. They do not establish live OAuth, npm dependency installation,
+Chromium availability, browser capture, uv execution, calibration quality, verdict quality,
+destructive cleanup behavior in a real home, rollback, or publication. A supported-host
+smoke against the exact integrated release candidate remains required before release
+qualification. Until then the strongest claim is that a fresh Claude profile built and
+installed by repository tests owns its launcher and the eleven package resources; GPT and
+Codex support, runtime behavior, and live-home activation remain unverified.

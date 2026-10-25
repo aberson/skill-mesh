@@ -36,9 +36,10 @@
     containment, and uninstall semantics to claude and gpt, because all three are
     derived from $DISCOVERY_SUBDIR rather than spelled per provider.
 
-    DESTRUCTIVE AUTHORITY = PATH SCOPE + MARKER + RECORDED CURRENT-BYTE HASH.
-    Every generated file carries the provenance marker from tools/skill-mesh-provenance.ps1
-    (Get-SkillMeshMarker). Every destructive op is gated on the TARGET FILE'S content:
+    DESTRUCTIVE AUTHORITY = PATH SCOPE + OWNED IDENTITY + RECORDED CURRENT-BYTE HASH.
+    Generated text files carry the provenance marker from tools/skill-mesh-provenance.ps1
+    (Get-SkillMeshMarker); the three canonical JSON resources use their path-specific
+    parsed-object identity. Every destructive op is gated on the TARGET FILE'S content:
       - A routine overwrite, stale removal, or uninstall delete requires an exact
         match between the current file hash and `owned_file_hashes[rel]`.
       - A legacy/hashless entry grants no destructive authority. An existing target
@@ -58,7 +59,7 @@
 
     TRANSACTIONAL install (validate-before-mutate): scan for foreign collisions with
     NO change to the install home; a refusal is a TRUE no-op. On a partial-copy
-    failure, a reconciled recovery ledger records only marker-valid candidate files
+    failure, a reconciled recovery ledger records only identity-valid candidate files
     that actually exist on disk, so a retry resumes without -Force.
 
     `created_dirs` remains an audit/back-compat record only. Directory absence at one
@@ -116,7 +117,7 @@
     Mandatory for every mismatching target adopted by -Force or -ForceShared.
 
 .PARAMETER Uninstall
-    Remove a previously-installed provider profile (marker- + ledger-gated).
+    Remove a previously-installed provider profile (identity- + ledger-gated).
 
 .EXAMPLE
     powershell -File tools\install-skill-mesh.ps1 -Provider claude -Home C:\tmp\home
@@ -153,6 +154,13 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
+# Load the Windows PowerShell 5.1-compatible JSON object parser before any path in
+# the consumer home is inspected or changed. Unlike ConvertFrom-Json, this accepts
+# npm lockfiles whose packages map contains the required empty-string key.
+Add-Type -AssemblyName System.Web.Extensions
+$MARKERLESS_JSON_SERIALIZER = New-Object System.Web.Script.Serialization.JavaScriptSerializer
+$MARKERLESS_JSON_SERIALIZER.MaxJsonLength = 2097152
+
 # -- Path resolution ----------------------------------------------------------
 
 $TOOLS_DIR = $PSScriptRoot
@@ -184,6 +192,12 @@ $UTF8_NO_BOM = New-Object System.Text.UTF8Encoding($false)
 # literal map lives in tools/skill-mesh-discovery.ps1 (ONE owner, shared with the
 # inspector and the migrator) -- see that file for why it is not spelled here.
 $DISCOVERY_SUBDIR = Get-SkillMeshDiscoveryRoots
+$CLAUDE_DISCOVERY_REL = ([string]$DISCOVERY_SUBDIR['claude'] -replace '\\', '/').TrimEnd('/')
+$MARKERLESS_JSON_OWNED_RELS = @(
+    ($CLAUDE_DISCOVERY_REL + '/judge-motion/package.json'),
+    ($CLAUDE_DISCOVERY_REL + '/judge-motion/package-lock.json'),
+    ($CLAUDE_DISCOVERY_REL + '/judge-motion/fixtures/fixtures-flow.json')
+)
 
 $LEDGER_NAME = '.skill-mesh-install.json'
 $WRITE_AHEAD_NAME = '.skill-mesh-install.write-ahead.json'
@@ -280,6 +294,55 @@ function Test-FileHasMarker([string]$absPath) {
         return $false
     }
     return (Test-SkillMeshProvenance $head)
+}
+
+function Test-MarkerlessJsonOwnedRel([string]$rel) {
+    foreach ($candidate in $MARKERLESS_JSON_OWNED_RELS) {
+        if ([System.StringComparer]::Ordinal.Equals($rel, [string]$candidate)) {
+            return $true
+        }
+    }
+    return $false
+}
+
+function Test-OwnedIdentity([string]$absPath, [string]$intendedRel, [string]$expectedHash) {
+    # Generated files keep their existing provenance path. Exactly three JSON files
+    # cannot carry that marker, so they use a path-scoped, byte-bound identity instead.
+    if (Test-FileHasMarker $absPath) { return $true }
+    if (-not (Test-MarkerlessJsonOwnedRel $intendedRel) -or
+        $expectedHash -cnotmatch '^[0-9a-f]{64}$' -or
+        -not (Test-Path -LiteralPath $absPath -PathType Leaf)) {
+        return $false
+    }
+    try {
+        $item = Get-Item -LiteralPath $absPath -Force
+        if (($item.Attributes -band [System.IO.FileAttributes]::ReparsePoint) -ne 0 -or
+            $item.Length -gt 2MB) {
+            return $false
+        }
+        $bytes = [System.IO.File]::ReadAllBytes($absPath)
+        if ($bytes.Length -ge 3 -and $bytes[0] -eq 0xEF -and
+            $bytes[1] -eq 0xBB -and $bytes[2] -eq 0xBF) {
+            return $false
+        }
+        $strictUtf8 = New-Object System.Text.UTF8Encoding($false, $true)
+        $text = $strictUtf8.GetString($bytes)
+        # Trim only JSON whitespace. The root-token check is independent of parser
+        # result shape and keeps a singleton array from masquerading as an object.
+        $jsonWhitespace = [char[]]@([char]0x20, [char]0x09, [char]0x0D, [char]0x0A)
+        $rootText = $text.TrimStart($jsonWhitespace)
+        if (-not $rootText.StartsWith('{', [System.StringComparison]::Ordinal)) {
+            return $false
+        }
+        $parsed = $MARKERLESS_JSON_SERIALIZER.DeserializeObject($text)
+        if ($null -eq $parsed -or
+            -not ($parsed -is [System.Collections.IDictionary])) {
+            return $false
+        }
+        return ((Get-SkillMeshFileSha256 $absPath) -ceq $expectedHash)
+    } catch {
+        return $false
+    }
 }
 
 function Resolve-Contained([string]$path, [string]$homeAbs) {
@@ -814,8 +877,9 @@ function Invoke-InstallWriteAheadRecovery([string]$homeAbs, $ledger) {
         }
         $actual = Get-SkillMeshFileSha256 $target
         if ($null -ne $post -and $actual -ceq [string]$post) {
-            if (-not (Test-FileHasMarker $target)) {
-                throw "install-skill-mesh: REFUSING write-ahead recovery -- '$rel' post-state lacks provenance."
+            if (-not (Test-OwnedIdentity $target $rel ([string]$post))) {
+                throw ("install-skill-mesh: REFUSING write-ahead recovery -- '$rel' " +
+                       "post-state lacks valid generated or exact-path JSON identity.")
             }
             $recoveredRels += $rel
             $recoveredHashes[$rel] = [string]$post
@@ -1036,7 +1100,7 @@ function New-TrackedDir([string]$absDir, [string]$homeAbs, $createdSet) {
     }
 }
 
-function New-UninstallIdentityRefusal([string]$rel, [bool]$markerOk, [bool]$hashOk) {
+function New-UninstallIdentityRefusal([string]$rel, [bool]$identityOk, [bool]$hashOk) {
     # ONE wording for the two sites that refuse on installed-file identity, and it
     # must name the condition that ACTUALLY failed. A byte change and a provenance
     # failure are different operator problems: reporting "no longer matches its
@@ -1044,14 +1108,18 @@ function New-UninstallIdentityRefusal([string]$rel, [bool]$markerOk, [bool]$hash
     # operator file that merely mentions the marker token, whose hash the ledger
     # happens to record -- sends the operator hunting for a change that never
     # happened, and hides the real finding (this path is not skill-mesh's).
-    $why = if (-not $hashOk -and -not $markerOk) {
-        'its current bytes do not match a recorded installed-byte hash, and it ' +
+    $identityFailure = if (Test-MarkerlessJsonOwnedRel $rel) {
+        'does not satisfy the exact-path markerless JSON identity contract'
+    } else {
         'carries no well-formed skill-mesh generated header'
+    }
+    $why = if (-not $hashOk -and -not $identityOk) {
+        'its current bytes do not match a recorded installed-byte hash, and it ' +
+        $identityFailure
     } elseif (-not $hashOk) {
         'its current bytes do not match a recorded installed-byte hash'
     } else {
-        'it carries no well-formed skill-mesh generated header, so it is not ' +
-        'provably a skill-mesh installed file'
+        'it ' + $identityFailure + ', so it is not provably a skill-mesh installed file'
     }
     return ("install-skill-mesh: REFUSING uninstall -- '$rel' " + $why +
             "; no files were deleted.")
@@ -1091,10 +1159,10 @@ function Assert-OwnedFilesRemovable([string]$homeAbs, $entry, $removalHashes, $f
         if ($forced -and $ForceShared -and -not $Force) {
             $abs = Resolve-FreshSharedTarget ([string]$rel) $Provider $homeAbs $payloadRootAbs
         }
-        $markerOk = $forced -or (Test-FileHasMarker $abs)
+        $identityOk = $forced -or (Test-OwnedIdentity $abs ([string]$rel) $expected)
         $hashOk = ($actual -ceq $expected)
-        if (-not $markerOk -or -not $hashOk) {
-            throw (New-UninstallIdentityRefusal ([string]$rel) $markerOk $hashOk)
+        if (-not $identityOk -or -not $hashOk) {
+            throw (New-UninstallIdentityRefusal ([string]$rel) $identityOk $hashOk)
         }
     }
 }
@@ -1113,7 +1181,7 @@ function Remove-OwnedFiles([string]$homeAbs, $entry, $removalHashes, $forcedRels
             }
         }
         if ((Get-SkillMeshFileSha256 $safeTarget) -cne $expected -or
-            (-not $forced -and -not (Test-FileHasMarker $safeTarget))) {
+            (-not $forced -and -not (Test-OwnedIdentity $safeTarget ([string]$rel) $expected))) {
             throw ("install-skill-mesh: SECURITY -- '$rel' changed after uninstall " +
                    "preflight; stopping before deleting the changed file.")
         }
@@ -1221,9 +1289,9 @@ function Invoke-Uninstall([string]$homeAbs) {
         if (-not (Test-Path -LiteralPath $abs)) { continue }
         $recorded = Get-OwnedHash $validHashes $rel
         $actual = Get-SkillMeshFileSha256 $abs
-        $markerOk = Test-FileHasMarker $abs
+        $identityOk = Test-OwnedIdentity $abs $rel $recorded
         $hashOk = ($null -ne $recorded -and $actual -ceq $recorded)
-        if ($markerOk -and $hashOk) {
+        if ($identityOk -and $hashOk) {
             $removalHashes[$rel] = $recorded
             continue
         }
@@ -1233,7 +1301,7 @@ function Invoke-Uninstall([string]$homeAbs) {
             catch { $sharedAllowed = $false }
         }
         if (-not $Force -and -not $sharedAllowed) {
-            throw (New-UninstallIdentityRefusal ([string]$rel) $markerOk $hashOk)
+            throw (New-UninstallIdentityRefusal ([string]$rel) $identityOk $hashOk)
         }
         if ([string]::IsNullOrWhiteSpace($BackupDir)) {
             throw "install-skill-mesh: REFUSING forced uninstall -- -BackupDir is required. Nothing was deleted."
@@ -1359,15 +1427,16 @@ function Invoke-Install([string]$homeAbs) {
         $exactIncomingRels = New-CIStringSet
         $producedRels = New-CIStringSet
         foreach ($f in $srcFiles) {
-            if (-not (Test-FileHasMarker $f.FullName)) {
-                throw ("install-skill-mesh: REFUSING source profile -- generated source " +
-                       "file '$($f.Name)' lacks valid skill-mesh provenance. Nothing was written.")
-            }
             $relFromSrc = $f.FullName.Substring($sourceDir.Length).TrimStart('\', '/')
             $normalizedSrcRel = ($relFromSrc -replace '\\', '/').TrimStart('/')
             $rel = $subdir.TrimEnd('/') + '/' + $normalizedSrcRel
             $safeTarget = Assert-ProviderTargetDomain $rel $Provider $homeAbs
             $sourceHash = Get-SkillMeshFileSha256 $f.FullName
+            if (-not (Test-OwnedIdentity $f.FullName $rel $sourceHash)) {
+                throw ("install-skill-mesh: REFUSING source profile -- generated source " +
+                       "file '$($f.Name)' lacks valid generated or exact-path JSON identity. " +
+                       "Nothing was written.")
+            }
             $pairs += , @($f.FullName, $safeTarget, $rel, $sourceHash)
             [void]$producedRels.Add($rel)
             if (-not (Test-Path -LiteralPath $safeTarget)) {
@@ -1378,15 +1447,23 @@ function Invoke-Install([string]$homeAbs) {
                 continue
             }
             $actualHash = Get-SkillMeshFileSha256 $safeTarget
-            if ($actualHash -ceq $sourceHash) {
-                # Exact incoming bytes are a genuine no-op. This is the sole safe
-                # legacy/hashless self-seed path and does not rewrite the target.
-                [void]$exactIncomingRels.Add($rel)
-                continue
-            }
             $recordedHash = Get-OwnedHash $priorOwnedHashes $rel
+            if ($actualHash -ceq $sourceHash) {
+                # Marked files keep the legacy/hashless exact-incoming self-seed.
+                # Markerless JSON requires an already-valid ledger row for these
+                # current bytes; byte equality with source alone grants no authority.
+                $exactOwned = Test-FileHasMarker $safeTarget
+                if (-not $exactOwned -and $null -ne $priorOwnedHashes -and
+                    $null -ne $recordedHash -and $actualHash -ceq $recordedHash) {
+                    $exactOwned = Test-OwnedIdentity $safeTarget $rel $recordedHash
+                }
+                if ($exactOwned) {
+                    [void]$exactIncomingRels.Add($rel)
+                    continue
+                }
+            }
             if ($null -ne $recordedHash -and $actualHash -ceq $recordedHash -and
-                (Test-FileHasMarker $safeTarget)) {
+                (Test-OwnedIdentity $safeTarget $rel $recordedHash)) {
                 $routinePreHashes[$rel] = $recordedHash
                 continue
             }
@@ -1430,7 +1507,8 @@ function Invoke-Install([string]$homeAbs) {
             if (-not (Test-Path -LiteralPath $abs)) { continue }
             $recorded = Get-OwnedHash $priorOwnedHashes ([string]$r)
             $actual = Get-SkillMeshFileSha256 $abs
-            if ($null -ne $recorded -and $actual -ceq $recorded -and (Test-FileHasMarker $abs)) {
+            if ($null -ne $recorded -and $actual -ceq $recorded -and
+                (Test-OwnedIdentity $abs ([string]$r) $recorded)) {
                 $stalePreHashes[[string]$r] = $recorded
             } else {
                 $sharedAllowed = $false
@@ -1594,7 +1672,8 @@ function Invoke-Install([string]$homeAbs) {
                     throw "install-skill-mesh: SECURITY -- forced target '$rel' changed after backup; refusing overwrite."
                 }
             } elseif ($routinePreHashes.ContainsKey($rel)) {
-                if (-not $existsNow -or -not (Test-FileHasMarker $safeTarget) -or
+                if (-not $existsNow -or
+                    -not (Test-OwnedIdentity $safeTarget $rel ([string]$routinePreHashes[$rel])) -or
                     (Get-SkillMeshFileSha256 $safeTarget) -cne [string]$routinePreHashes[$rel]) {
                     throw "install-skill-mesh: SECURITY -- owned target '$rel' changed after preflight; refusing overwrite."
                 }
@@ -1605,15 +1684,16 @@ function Invoke-Install([string]$homeAbs) {
             # Source identity is part of the plan too. A dist file replaced after
             # preflight must not leave markerless/wrong bytes at an owned target.
             if (-not (Test-Path -LiteralPath $a.source -PathType Leaf) -or
-                -not (Test-FileHasMarker $a.source) -or
+                -not (Test-OwnedIdentity $a.source $rel ([string]$a.post_hash)) -or
                 (Get-SkillMeshFileSha256 $a.source) -cne [string]$a.post_hash) {
-                throw "install-skill-mesh: SECURITY -- source '$rel' changed after preflight; refusing copy."
+                throw ("install-skill-mesh: SECURITY -- source '$rel' changed after preflight " +
+                       "or lost valid generated/exact-path JSON identity; refusing copy.")
             }
             $tempLeaf = '.skill-mesh-install-' + $PID + '-' + [Guid]::NewGuid().ToString('N') + '.tmp'
             $safeTemp = Resolve-Contained (Join-Path $safeDir $tempLeaf) $homeAbs
             try {
                 Copy-Item -LiteralPath $a.source -Destination $safeTemp
-                if (-not (Test-FileHasMarker $safeTemp) -or
+                if (-not (Test-OwnedIdentity $safeTemp $rel ([string]$a.post_hash)) -or
                     (Get-SkillMeshFileSha256 $safeTemp) -cne [string]$a.post_hash) {
                     throw "install-skill-mesh: staged target verification failed for '$rel'."
                 }
@@ -1636,7 +1716,8 @@ function Invoke-Install([string]$homeAbs) {
                         throw "install-skill-mesh: SECURITY -- forced target '$rel' changed after backup; refusing replace."
                     }
                 } elseif ($routinePreHashes.ContainsKey($rel)) {
-                    if (-not $freshExists -or -not (Test-FileHasMarker $safeFreshTarget) -or
+                    if (-not $freshExists -or
+                        -not (Test-OwnedIdentity $safeFreshTarget $rel ([string]$routinePreHashes[$rel])) -or
                         (Get-SkillMeshFileSha256 $safeFreshTarget) -cne [string]$routinePreHashes[$rel]) {
                         throw "install-skill-mesh: SECURITY -- owned target '$rel' changed before replace."
                     }
@@ -1687,13 +1768,13 @@ function Invoke-Install([string]$homeAbs) {
             foreach ($pair in $pairs) {
                 $rel = [string]$pair[2]
                 $safeProduced = Assert-ProviderTargetDomain $rel $Provider $homeAbs
-                if (-not (Test-FileHasMarker $safeProduced) -or
+                if (-not (Test-OwnedIdentity $safeProduced $rel ([string]$pair[3])) -or
                     (Get-SkillMeshFileSha256 $safeProduced) -cne [string]$pair[3]) {
                     throw "install-skill-mesh: post-install identity verification failed for '$rel'."
                 }
             }
             # Copy fully succeeded -> remove STALE prior-owned files (owned before but
-            # not produced now), marker-gated + contained; then write the FINAL ledger.
+            # not produced now), identity-gated + contained; then write the FINAL ledger.
             foreach ($r in @($stalePreHashes.Keys)) {
                 $safeStale = Assert-ProviderTargetDomain ([string]$r) $Provider $homeAbs
                 if (-not (Test-Path -LiteralPath $safeStale)) { continue }
@@ -1704,7 +1785,8 @@ function Invoke-Install([string]$homeAbs) {
                         $safeStale = Resolve-FreshSharedTarget ([string]$r) $Provider $homeAbs $payloadRootAbs
                     }
                 }
-                if ((-not $staleForced -and -not (Test-FileHasMarker $safeStale)) -or
+                if ((-not $staleForced -and
+                     -not (Test-OwnedIdentity $safeStale ([string]$r) ([string]$stalePreHashes[$r]))) -or
                     (Get-SkillMeshFileSha256 $safeStale) -cne [string]$stalePreHashes[$r]) {
                     throw "install-skill-mesh: SECURITY -- stale path '$r' changed after preflight; aborting."
                 }
@@ -1715,7 +1797,7 @@ function Invoke-Install([string]$homeAbs) {
             foreach ($pair in $pairs) {
                 $rel = [string]$pair[2]
                 $safe = Assert-ProviderTargetDomain $rel $Provider $homeAbs
-                if (-not (Test-FileHasMarker $safe) -or
+                if (-not (Test-OwnedIdentity $safe $rel ([string]$pair[3])) -or
                     (Get-SkillMeshFileSha256 $safe) -cne [string]$pair[3]) {
                     throw "install-skill-mesh: post-install identity verification failed for '$rel'."
                 }
@@ -1737,7 +1819,7 @@ function Invoke-Install([string]$homeAbs) {
             Write-Host "install-skill-mesh: installed '$Provider' into $installRoot ($($ownedFinal.Count) files)."
         } catch {
             # Partial copy / TOCTOU abort: persist a RECONCILED recovery ledger listing
-            # only marker-valid candidate files that ACTUALLY exist on disk (prior +
+            # only identity-valid candidate files that ACTUALLY exist on disk (prior +
             # written). This is recovery scope, not current-byte identity; the Step
             # 65 installed-hash repair must precede live use.
             $recovered = @()
@@ -1745,15 +1827,16 @@ function Invoke-Install([string]$homeAbs) {
             foreach ($pair in $pairs) {
                 $rel = [string]$pair[2]
                 $safe = Assert-ProviderTargetDomain $rel $Provider $homeAbs
-                if ($null -eq $safe -or -not (Test-Path -LiteralPath $safe) -or
-                    -not (Test-FileHasMarker $safe)) { continue }
+                if ($null -eq $safe -or -not (Test-Path -LiteralPath $safe)) { continue }
                 $actual = Get-SkillMeshFileSha256 $safe
                 $sourceHash = [string]$pair[3]
                 $priorHash = Get-OwnedHash $priorOwnedHashes $rel
-                if ($actual -ceq $sourceHash) {
+                if ($actual -ceq $sourceHash -and
+                    (Test-OwnedIdentity $safe $rel $sourceHash)) {
                     $recovered += $rel
                     $recoveredHashes[$rel] = $sourceHash
-                } elseif ($null -ne $priorHash -and $actual -ceq $priorHash) {
+                } elseif ($null -ne $priorHash -and $actual -ceq $priorHash -and
+                          (Test-OwnedIdentity $safe $rel $priorHash)) {
                     $recovered += $rel
                     $recoveredHashes[$rel] = $priorHash
                 }

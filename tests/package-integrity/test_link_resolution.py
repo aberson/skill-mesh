@@ -2587,6 +2587,19 @@ def test_shipped_leaves_matches_a_real_build(dist_root):
         "scripts/resolve_queue.py",
         "scripts/structural_metrics.py",
     }
+    judge_motion_resources = {
+        "package.json",
+        "package-lock.json",
+        "fixtures/fixtures-flow.json",
+        "fixtures/janky.html",
+        "fixtures/smooth.html",
+        "fixtures/README.md",
+        "scripts/calibrate.py",
+        "scripts/capture_motion.mjs",
+        "scripts/gate_signals.py",
+        "scripts/reduced_motion_audit.py",
+        "scripts/select_frames.py",
+    }
     shared_seen = {}
     seen = set()
     for provider in PROFILES:
@@ -2610,6 +2623,10 @@ def test_shipped_leaves_matches_a_real_build(dist_root):
             if skill_dir.name == "skill-iterate":
                 assert skill_iterate_resources <= paths
                 paths -= skill_iterate_resources
+            if skill_dir.name == "judge-motion":
+                assert provider == "claude"
+                assert judge_motion_resources <= paths
+                paths -= judge_motion_resources
             names = paths
             unlisted = sorted(names - set(SHIPPED_LEAVES))
             assert not unlisted, (

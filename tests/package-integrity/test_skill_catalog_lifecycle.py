@@ -653,6 +653,25 @@ LOCKED_CLAIMS = (
      "that plan are authorized, eligibility remains Claude-only, and every "
      "later native mutation still takes "
      "`PROVIDER_NATIVE_REVIEW_REQUIRED`."),
+    ('fact 3 - judge-motion package exception is closed', GUIDE_REL,
+     "What this guide governs", 'paragraph',
+     "**Reviewed packaging exception: the `judge-motion` runtime resources.** "
+     "The table row's `package.json`, `package-lock.json`, `fixtures/`, and "
+     "`scripts/` entries are the closed runtime package authorized by the "
+     "provider-native rebuild plan. The distribution builder emits exactly "
+     "the approved eleven files only in the Claude profile and fails before "
+     "writing the launcher when an input is missing; legacy tests, dependency "
+     "directories, caches, and run output are excluded. The three JSON objects "
+     "at `package.json`, `package-lock.json`, and "
+     "`fixtures/fixtures-flow.json` remain markerless and are owned only when "
+     "their exact allowlisted home-relative path, a valid ledger hash, and "
+     "current bytes agree. Their BOM-free bytes use a throwing UTF-8 decoder "
+     "and the built-in Windows JSON serializer must return an object; this is "
+     "a shape check, not a claim of strict JSON parsing. Foreign files and "
+     "unowned neighbors remain untouched. This exception does not generalize "
+     "`support_assets` into an "
+     "emission protocol, reopen the grandfathered set, or authorize another "
+     "package file."),
     ('fact 4 - the gate order', GUIDE_REL,
      "recovery rule", 'fence',
      "normalize request -> verify Git checkout and resolve base_ref -> "

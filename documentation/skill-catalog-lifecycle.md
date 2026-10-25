@@ -97,6 +97,7 @@ resource plan as a new grandfathering waiver:
 | `build-step` | `scripts/build_step_tree.py` and `scripts/capture_evidence.py` | The P1 mechanics helper, and an LF copy of the legacy top-level package's capture script; reviewed packaging exception, packet route P2 |
 | `build-observer` | `scaffold_portfolio.py` | LF-normalized copy of the existing validator; reviewed scoped packaging exception for all three generated profiles |
 | `skill-iterate` | six Python files under `scripts/` | Canonical copies of the established evaluation helpers; reviewed scoped packaging exception for all three generated profiles |
+| `judge-motion` | `package.json`, `package-lock.json`, `fixtures/`, `scripts/` | Reviewed Claude-only runtime package authorized by the provider-native rebuild plan |
 | `user-wrap` | `evals/` | Scoped repository-only evaluation plan in `user-wrap-source-evals.md`; not emitted or installed |
 | `user-gateway` | `evals/` | Scoped repository-only evaluation plan in `user-gateway-source-evals.md`; not emitted or installed |
 | `review-uat` | `evals/` | Scoped repository-only evaluation plan in `uat-source-evals.md`; not emitted or installed |
@@ -153,6 +154,19 @@ authorize another package file. Unmarked legacy copies in a consumer home are re
 by operator action after an exact hash check. Unrelated foreign files, including fixtures,
 M2 launchers and tests, are preserved, and rollback restores legacy bytes from the
 take-ownership backup. No unscoped `-Force` is routine or authorized without that check.
+
+**Reviewed packaging exception: the `judge-motion` runtime resources.** The table row's
+`package.json`, `package-lock.json`, `fixtures/`, and `scripts/` entries are the closed
+runtime package authorized by the provider-native rebuild plan. The distribution builder
+emits exactly the approved eleven files only in the Claude profile and fails before writing
+the launcher when an input is missing; legacy tests, dependency directories, caches, and
+run output are excluded. The three JSON objects at `package.json`, `package-lock.json`, and
+`fixtures/fixtures-flow.json` remain markerless and are owned only when their exact
+allowlisted home-relative path, a valid ledger hash, and current bytes agree. Their BOM-free
+bytes use a throwing UTF-8 decoder and the built-in Windows JSON serializer must return an
+object; this is a shape check, not a claim of strict JSON parsing. Foreign files and unowned
+neighbors remain untouched. This exception does not generalize `support_assets`
+into an emission protocol, reopen the grandfathered set, or authorize another package file.
 
 **Scoped source-only resource plan: user-wrap evaluation assets.** The v2
 [user-wrap maintenance plan](user-wrap-source-evals.md) admits

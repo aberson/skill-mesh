@@ -1,0 +1,10 @@
+{
+  "name": "judge-motion",
+  "version": "1.0.0",
+  "description": "Skill-local Node packaging for the judge-motion capture harness (scripts/capture_motion.mjs). Pins playwright >= 1.61.1 for page.screencast.",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "playwright": "^1.61.1"
+  }
+}
