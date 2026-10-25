@@ -8,7 +8,14 @@ See [../core.md](../core.md) for the full specification.
 - Normalize GPT verbosity: do not reveal hidden chain-of-thought; return only required decisions, evidence, artifacts, commands, questions, and the core's closing report.
 - Resolve capability tiers with `config/model-tier-map.json` and the capabilities the current host actually exposes.
 - Map `--deep` to a fresh-context GPT action/task at the lens capability tier. After a visual judge's corroborated PASS, map the strong-final gate to a different fresh-context action/task at the strongest configured gate tier. Child actions do not spawn other graders; this parent invocation owns dispatch and deterministic mapping. If isolated actions or the required tier are unavailable, emit the core's `required_tool_missing` escalation instead of assessing inline or accepting the visual PASS.
-- Human-in-the-loop normalization: return exactly the core's stop/hold message when input, prerequisite or capability resolution halts; otherwise return the step-5 report - one plain-text line per step with the verdicts `AUTO-PASS` / `AUTO-FAIL` / `ESCALATED`, any `Still running:` line, then the exact `Needs you` heading and the closing what's-left line - or, under `--dry-run`, exactly the core's step-2 listing. Add no other result headings (no separate `Done` section), no speculative advice, and no verbose internal deliberation; stop after the operator ask.
+- Human-in-the-loop normalization: return exactly the core's stop/hold message when input,
+  prerequisite or capability resolution halts; otherwise return the complete step-5 report —
+  first the exact classification line for every grounded step, including grounded steps left
+  unexecuted after a stop, then one verdict/evidence line only for each processed step, any
+  `Still running:` line, the exact `Needs you` heading, and the closing what's-left line. Never
+  invent a verdict for an unexecuted step. Under `--dry-run`, return exactly the core's step-2
+  listing. Add no other result headings (no separate `Done` section), no speculative advice,
+  and no verbose internal deliberation; stop after the operator ask.
 - `--ui` delegates through named-skill dispatch to `/judge-ui` / `/judge-motion`. `judge-motion` is Claude-native and absent from the GPT profile; if a needed judge is unavailable or fails its own capability contract on this host, report the step `ESCALATED` with `required_tool_missing: <judge>` and list it in `Needs you` - never view the screen and render a visual verdict yourself.
 
 ## Known GPT limitations

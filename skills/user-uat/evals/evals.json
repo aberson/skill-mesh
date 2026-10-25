@@ -16,7 +16,7 @@
         },
         {
           "id": 2,
-          "statement": "During classification, each successfully grounded step processed before any required stop shows its verify tier: Mechanical, Agent-judgeable, or Human, plus Visual only when --ui is active. An ambiguous or ungroundable item is reported under assertion 3 and need not be assigned a fabricated tier; an absent tier for a grounded processed step grades FALSE.",
+          "statement": "During classification, every successfully grounded step shows its source, action, expectation, and verify tier: Mechanical, Agent-judgeable, or Human, plus Visual only when --ui is active. In an applicable Step 5 report, this classification line remains present for grounded later steps left unexecuted after a required stop; those steps have no invented outcome verdict and are named in the closing what's-left line. An ambiguous or ungroundable item is reported under assertion 3 and need not be assigned a fabricated tier; an absent classification for any grounded step grades FALSE.",
           "source": "core.md, Step 1 and Step 2",
           "defect_type": "structural — classification missing",
           "result": null

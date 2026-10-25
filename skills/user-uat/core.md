@@ -127,8 +127,11 @@ not to a still-frame judge.
    a **readiness probe** (health endpoint, listening port, or an expected log line) before running
    any dependent verify — never block the run on a foreground server. A probe that never comes up
    within its budget is a mechanical **AUTO-FAIL** with the captured log tail as evidence, and
-   stops the run like any other mechanical FAIL. Record each background process this run starts
-   (its command, plus PID/port when known) for the step-5 report.
+   stops the run like any other mechanical FAIL. The step-5 report still includes the Step 1
+   classification line for every grounded later step, but gives an outcome line only to steps
+   that were processed; an unexecuted step receives no invented verdict and is named in the
+   closing what's-left line. Record each background process this run starts (its command, plus
+   PID/port when known) for the step-5 report.
 4. **Judgment tier.** For agent-judgeable / human steps: present the captured evidence + the
    expectation and **escalate** (default). With `--deep`, dispatch a fresh-context assessor for
    each agent-judgeable check with the expectation, captured evidence, source citation and no
@@ -169,7 +172,14 @@ not to a still-frame judge.
    `FAIL`/`NEEDS-WORK` is `AUTO-FAIL`; it stops the run like a mechanical FAIL. Missing judges,
    malformed returns and uncertainty are `ESCALATED` and listed in `Needs you` — never view the
    screen and render a visual verdict yourself.
-5. **Report (terse).** One line per step — **plain text, not a markdown table**:
+5. **Report (terse).** The final report has the classification block and outcome block below —
+   **plain text, not a markdown table**. The Step 1 classification lines are part of this
+   final report, not transient progress:
+   repeat the exact source/action/verify/tier classification line for every grounded step,
+   in source order, before the outcome lines. Include grounded later steps that were not
+   executed because an earlier mechanical failure stopped the run; progress prose does not
+   satisfy this requirement.
+   For each processed step that has an outcome, use one line:
    `step → AUTO-PASS / AUTO-FAIL / ESCALATED → one-line evidence`
    Example: `M4 row 1 → AUTO-PASS → exit 0, stdout contains "shipped"`
    If the run left background processes running, add one `Still running:` line naming each

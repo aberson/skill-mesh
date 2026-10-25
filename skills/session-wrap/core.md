@@ -122,7 +122,7 @@ branch, short SHA, dirty-file count, ahead-of-origin count.
 **Announce, then act.** Print exactly ONE triage line BEFORE acting, so a wrong route
 is visible and correctable immediately:
 
-    triage: <route> | context: <N tokens (~X% assuming 200k)> | boundary: <mid-task | at boundary (<what>)> | git: <n dirty, m ahead[, per-repo]> | goal: <armed | none>
+    triage: <route> | context: <N tokens (~X% assuming 200k)> | boundary: <mid-task | at boundary (<what>) | unknown (<reason>)> | git: <n dirty, m ahead[, per-repo]> | goal: <armed | none>
 
 (substitute the fail-loud contract line for the context segment when the signal is
 absent).
@@ -650,6 +650,23 @@ close this window without losing anything?".
   findings and TODOs written nowhere. Freshness follows the staleness threshold owned
   by `task-state-schema.md`; consistency is
   Step 0's own Session-SHA-vs-HEAD signal.
+- **Current-window provenance defines loss.** A path belongs in `Dies with this window:`
+  when current-window evidence shows that this session created or modified it, when it
+  carries unsaved knowledge owned by this session, or when unknown or conflicting
+  provenance leaves it at risk of carrying current-window work. Only an **untracked**
+  host/runtime installation artifact may be excluded, and only when independent evidence
+  created before the current window and outside this session's write authority names the
+  path and binds its identity and bytes to the current observation. A path or category
+  label, or a ledger writable in the current window, is not proof by itself. `--advise`
+  creates no receipt and never infers session identity or window start from a PID or
+  transcript. Evidence of current-window creation or modification takes precedence over
+  pre-existence evidence; absent or conflicting evidence leaves the path at risk.
+- **Proven exclusions do not rewrite Git state.** The triage line retains Git's raw dirty
+  count. `Already durable:` names the exclusion count and independent proof basis. For
+  `--advise`'s no-op clean-tree predicate only, ignore precisely those proven exclusions;
+  tracked dirt and every other untracked path remain dirty. The exclusions do not establish
+  any other `SAFE TO CLOSE` condition, and fallback or foreign state still cannot prove that
+  verdict.
 - **No work-window gate.** Score rule 1's unattended-window gate is not applied here:
   `--advise` serves the operator who has returned to the window (its one skill caller
   is `/user-wrap`, the sit-back-down front door), so the window is attended; and a
@@ -669,7 +686,7 @@ close this window without losing anything?".
 The triage line still prints first (Step 0's announce contract), with the route
 segment marked as computed-not-acted:
 
-    triage: advise (would route <route>) | context: <N tokens (~X% assuming 200k)> | boundary: <mid-task | at boundary (<what>)> | git: <n dirty, m ahead[, per-repo]> | goal: <armed | none>
+    triage: advise (would route <route>) | context: <N tokens (~X% assuming 200k)> | boundary: <mid-task | at boundary (<what>) | unknown (<reason>)> | git: <n dirty, m ahead[, per-repo]> | goal: <armed | none>
 
 Then the report — one verdict banner plus a two-line loss report, nothing else:
 
@@ -695,17 +712,11 @@ contract, and an empty preview reads exactly `nothing`.
 
 ## Maintenance
 
-The `evals/` suite targets THIS triage contract (rebuilt 2026-07-12, Step 7 / #297;
-`--advise` category added 2026-07-13, Step 3 / #304): **26 assertions** across **6
-categories** in `evals/evals.json` (passing threshold **24/26**), **6 scenarios** in
-`evals/test_scenarios.json` (one per route, the signal-absent fail-loud path, the
-`--advise` SAFE-vs-WRAP close-check, and the end-window runnable-pair handoff), and a golden corpus of 9 goods + 27
-single-defect bads under `evals/golden/` (manifest.json maps each bad to the one
-assertion it trips). v3.2 (2026-07-16) reshaped the Pick-up-here block (digest first,
-fenced Step blocks last, end-window pair/no-pair branches) — assertions 7/8/10 and
-every block-bearing golden updated together. Any edit that changes an output contract here (triage line,
-route output, Pick-up-here block, render invariants, advise verdict banner or loss
-report) must update the affected assertions and goldens in the same diff, keeping
-this footer's numbers equal to `evals.json`'s. Terseness and specificity assertions
-are coupled (see the invariants note) — re-check both sides after any one-sided
-edit.
+There is no skill-local `session-wrap/evals/` corpus in the current catalog. Existing
+repository coverage for the advisory caller boundary lives in `skills/user-wrap/evals/`,
+and structural session contracts live in
+`tests/package-integrity/test_v2_session_contract.py`. Those checks do not replace native
+acceptance, which remains separate and unmeasured. Any edit that changes an output contract
+here (triage line, route output, Pick-up-here block, render invariants, advise verdict banner
+or loss report) must update the affected existing caller assertions, scenarios, goldens and
+repository contract checks in the same diff.

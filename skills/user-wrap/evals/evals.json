@@ -47,7 +47,7 @@
         },
         {
           "id": 5,
-          "statement": "The banner + loss report are re-presented unmangled from --advise: the loss-report lines keep concrete anchors (short SHAs, counts, paths, timestamps) consistent with the output's own reported facts (e.g. the triage line's git segment, when present), and 'Dies with this window:' reads exactly 'nothing' only when nothing is at risk. Hedged or summarized re-presentation ('recent work looks safe', 'some minor items') with the anchors dropped grades FALSE.",
+          "statement": "The banner + loss report are re-presented unmangled from --advise: the loss-report lines keep concrete anchors (short SHAs, counts, paths, timestamps) consistent with the output's own reported facts. The triage line retains Git's raw dirty count; `Already durable:` may explain that a counted subset is excluded only when it names the exclusion count and independent pre-window proof basis, and `Dies with this window:` may read exactly `nothing` when those proven exclusions are the only dirty entries and nothing else is at risk. A rewritten triage count, an unexplained count mismatch, or hedged/summarized re-presentation ('recent work looks safe', 'some minor items') with anchors dropped grades FALSE.",
           "source": "skills/user-wrap/core.md § Step 3; skills/session-wrap/core.md § --advise",
           "defect_type": "content - loss report paraphrased, anchors dropped",
           "result": null
