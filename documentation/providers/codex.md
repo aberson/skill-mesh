@@ -183,8 +183,10 @@ questions separate it from its Claude and GPT siblings:
   claim an OS security boundary. Where a phase verdict is authenticated, fresh child
   dispatch, opaque parent key retention, and a host-caller-scoped, strict JSON-lines
   parent-only sign/write service are separately probed capability gates.
-- **No Artifact tool.** Every artifact a core asks to publish is written as a FILE
-  under the repository (or the operator-named output path) and reported by path.
+- **No Artifact tool, and since v2.0.1 no core needs one.** Operator-facing documents
+  (the plan-redline proposal, the repo-update tour) are written as FILES at
+  `docs/<skill>/` in the project repository on every provider and reported by path;
+  the single owner is `_shared/document-output.md`.
 - **Checkpoint skill invocation.** `build-phase` loads the installed `task-handoff/SKILL.md`
   and its referenced core, then executes the requested mode in the same parent session.
   A separate named-skill tool or slash-command API is unnecessary. Missing session identity,

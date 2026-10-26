@@ -195,7 +195,7 @@
       "claude": true,
       "gpt": true,
       "local": false,
-      "notes": "Ported - GPT uses standalone HTML fallback"
+      "notes": "Ported - every provider writes docs/plan-redline/<plan-slug>-proposal.html (_shared/document-output.md)"
     },
     "plan-review": {
       "default_model": "claude",

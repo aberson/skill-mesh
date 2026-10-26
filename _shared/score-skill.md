@@ -481,7 +481,7 @@ If one or more bads scores `>= good_score`, the verification pass returns
 as the crash sub-class `harness-error: grader sycophancy detected` (per the
 `GRADER_SYCOPHANCY_CRASH_CLASS` constant in `score_skill_composite.py`) and
 park the skill via §Autonomy contract clause 3 in
-[`../skill-iterate/SKILL.md`](https://github.com/aberson/skill-mesh/blob/v2.0.0/skills/skill-iterate/core.md) Phase 2 Step D.
+[`../skill-iterate/SKILL.md`](https://github.com/aberson/skill-mesh/blob/v2.0.1/skills/skill-iterate/core.md) Phase 2 Step D.
 
 The verification function itself does NOT raise on harness-error — it always
 returns a `GoldensStatus` value. The CALLER decides whether to halt; this

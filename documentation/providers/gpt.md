@@ -127,6 +127,10 @@ GPT adapters support `filesystem`, `sub-agent`, and `vision`:
 The GPT peer model for each skill is resolved from `config/model-tier-map.json` at
 invocation time.
 
+Operator-facing documents (the plan-redline proposal, the repo-update tour) are files
+under `docs/<skill>/` in the project repository, identical to the Claude and Codex
+profiles since v2.0.1 (owner: `_shared/document-output.md`).
+
 ## Host-metadata detection
 
 `-Provider auto` detects a GPT/Copilot host via `runtime/providers/copilot-host.ps1`

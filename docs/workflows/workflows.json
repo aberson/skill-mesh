@@ -1,7 +1,7 @@
 {
   "schema": "show-your-work.workflows.v1",
   "generator": "show-your-work 0.1.0",
-  "generated_at": "2026-10-25T16:27:08+00:00",
+  "generated_at": "2026-10-26T16:13:49+00:00",
   "source_dir": "docs/workflows",
   "items": [
     {
@@ -316,13 +316,13 @@
       "id": "plan-redline",
       "label": "plan-redline",
       "summary": "Turn a plan into a stable proposal, distinguish operator choices from defaults, and fold terse ID-based feedback back into the plan.",
-      "alt": "A plan becomes a stable decision inventory and proposal; publication falls back to local HTML when needed, and later ID feedback updates both.",
-      "not_shown": "HTML design tokens, section-by-section proposal copy, locator migration wording, publication versioning, and feedback examples",
+      "alt": "A plan becomes a stable decision inventory and a proposal file under docs/plan-redline; later ID feedback updates both.",
+      "not_shown": "HTML design tokens, section-by-section proposal copy, stale hosted-locator migration wording, publication versioning, and feedback examples",
       "sources": [
         "skills/plan-redline/core.md"
       ],
       "source_path": "docs/workflows/plan-redline.mmd",
-      "source_sha256": "825aa64d6836ca061da806b3d4539f2241a0883868d0fa9ffbb591fe941d40d2",
+      "source_sha256": "d81e9d5e3d04ff318a427ade1a4e657bfb381221a6710b038c8f025b071b193c",
       "engine": "mermaid",
       "rasters": null
     },
@@ -406,7 +406,7 @@
         "skills/repo-update/core.md"
       ],
       "source_path": "docs/workflows/repo-update.mmd",
-      "source_sha256": "b83ec30f92317357ed4f4c5dcba247b39413b8228547f378f02188014edc6bf2",
+      "source_sha256": "426ea6dc7ee2726911ea0014a0961253bfa23118798b175e58ea49aa37a6e9bd",
       "engine": "mermaid",
       "rasters": null
     },

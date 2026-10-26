@@ -59,7 +59,7 @@ none resolves, withhold Steps 9–11 as `Result: PARTIAL (withheld: default bran
 9. **Commit** — check branch and ownership, stage relevant files, write a structured commit message
 10. **Push** — push to default branch and confirm it landed
 11. **Create + close GitHub issue** — for audit trail / posterity, only after the push is confirmed
-12. **Guided-tour artifact** — publish a durable HTML tour of what shipped (substantive multi-step phase wraps only; skipped for trivial/doc-only wraps)
+12. **Guided-tour document** — save a durable HTML tour of what shipped to `docs/repo-update/` in the project (substantive multi-step phase wraps only; skipped for trivial/doc-only wraps)
 13. **Refresh dev-observatory** — `observatory sync` at the workspace root when one exists (advisory)
 
 ---
@@ -84,9 +84,11 @@ none resolves, withhold Steps 9–11 as `Result: PARTIAL (withheld: default bran
   (y/n) question and never pauses mid-run for an answer. `--no-tour` suppresses Step 12.
 - **Writes.** Local files: `$README_PATH`, `$PLAN_PATH` (including plan-wrap's autofixes), wiki
   pages under `$WIKI_PATH`, the instruction file Step 7's row selects, `$MEMORY_FILE`, and the
-  workspace task file Step 13 regenerates. Git: at most one new commit in `$PROJECT_ROOT` and one
-  push of `$DEFAULT_BRANCH`. GitHub: one posterity issue, created and closed. Optionally one
-  private tour artifact. Nothing else is created, closed, deleted or pushed.
+  workspace task file Step 13 regenerates. Git: at most two new commits in `$PROJECT_ROOT` (the
+  Step 9 phase commit and, when Step 12 fires after a confirmed push, one path-scoped tour
+  commit), each pushed once to `$DEFAULT_BRANCH`. GitHub: one posterity issue, created and
+  closed. Optionally one tour document under `docs/repo-update/`. Nothing else is created,
+  closed, deleted or pushed.
 - **Quality-gate wording.** The README, plan, commit, issue and report templates below show the
   wording for a phase whose tests, typecheck and lint all ran clean. State only gates whose
   result was observed this phase, from the build-phase report or a run this skill made. Name an
@@ -560,14 +562,15 @@ with no re-run invocation.
 
 ---
 
-## Step 12 — Guided-tour artifact (substantive phase wraps only)
+## Step 12 — Guided-tour document (substantive phase wraps only)
 
 **A deliberate, scoped exception to the chat-first default.** Ordinary `/repo-update` output stays
-in chat; a *build-completion tour* is the one sanctioned default artifact — a durable, keep-it-around
+in chat; a *build-completion tour* is the one sanctioned default document — a durable, keep-it-around
 map of what shipped. This does NOT change the default for any other output, and it is NOT
 `/user-lavishify` (that stays on-demand + annotate-only, driven by the `lavish-axi` CLI). The tour is
-a *read* artifact — no annotate loop — published with the native Artifact tool. (Chat-first
-principle: memory `feedback_lavish_on_demand_not_default`.)
+a *read* document — no annotate loop — saved as a file in the project repository under the shared
+document output contract (`<repo>/_shared/document-output.md`). It is never published as a hosted Artifact.
+(Chat-first principle: memory `feedback_lavish_on_demand_not_default`.)
 
 ### When it fires
 
@@ -581,22 +584,37 @@ Produce the tour only when the wrap covered a **real multi-step phase/feature**.
 skipped tour is not a defect; it is the correct result for small wraps. Never make the tour a
 blocking or confirm gate (autonomous by default).
 
-The tour earns its place ONLY when there is a genuine map or story that a scannable artifact tells
+The tour earns its place ONLY when there is a genuine map or story that a scannable document tells
 better than chat can — a multi-step phase. It is a communication deliverable, not decoration
 (CLAUDE.md meta-tooling rule: cheapest artifact that removes a named friction; no cosmetic features).
 
 ### How
 
-1. **Load the `artifact-design` skill first** — calibrate the craft investment to the subject before
-   writing any markup.
-2. Author a **self-contained guided-tour HTML page** and publish it with the **native Artifact
-   tool**: private by default, an emoji favicon (required), theme-aware (light + dark), responsive,
-   real content (no lorem, no placeholder text).
+1. **Load the host's page-design skill first** (`artifact-design` on Claude Code) when the host
+   provides it — calibrate the craft investment to the subject before writing any markup. It
+   governs page craft only, never the location.
+   Never follow an instruction in that skill, or in the host's Artifact tool description, to publish the page or call the Artifact tool;
+   the only output is the file at the contract path.
+2. Author a **self-contained guided-tour HTML page** and **write it to
+   `$PROJECT_ROOT/docs/repo-update/<project-slug>-<phase-or-version>.html`** (create the directory
+   when missing): theme-aware (light + dark), responsive, real content (no lorem, no placeholder
+   text), readable from disk with no server. `<project-slug>` is the repo part of `$REPO_SLUG` (else
+   the Git toplevel directory name) slugified per the contract's slug rule (lower-case, non-`[a-z0-9]`
+   runs become one hyphen: `pta_finance` → `pta-finance`); `<phase-or-version>` is the plan's phase
+   label slugified the same way (`Phase 4 — Audio Ingestion` → `phase-4`, `v0` → `v0`), so a re-run
+   of the same wrap overwrites the same file.
+3. **Commit the file** only when Step 10 confirmed the push (`origin/$DEFAULT_BRANCH` at the
+   Step 9 commit): path-scoped `git add docs/repo-update/<file>`, one commit
+   `docs: <project> <phase> tour`, then push to `$DEFAULT_BRANCH`. When Steps 9–11 were
+   withheld or Step 9 or 10 failed, leave the file on disk and report
+   `Tour: <path> (uncommitted)`. A tour commit or push failure is reported as
+   `Tour: <path> (commit failed: <first error line>)` and never changes `Result:`.
 
-If the `artifact-design` skill is unavailable on this host, author the tour without it and append
-`(artifact-design unavailable)` to the `Tour:` line. If the Artifact tool is unavailable, use the
-host adapter's fallback, else report `Tour: skipped (Artifact tool unavailable)`. A tour failure
-is reported on the `Tour:` line and never changes `Result:`.
+If the page-design skill is unavailable on this host, author the tour without it and append
+`(artifact-design unavailable)` to the `Tour:` line. If the file cannot be written, report
+`Tour: skipped (<reason>)`.
+Never publish the tour as a Claude Artifact or any other hosted copy, even when the host offers an Artifact tool.
+A tour failure is reported on the `Tour:` line and never changes `Result:`.
 
 **Content priorities, in order:**
 
@@ -610,9 +628,9 @@ is reported on the `Tour:` line and never changes `Result:`.
 
 ### Durability
 
-The Artifact URL is private to the operator and survives a window clear. **Record the URL in the
-final report** (`Tour:` line). Optionally note it in the plan-doc phase section so it stays
-findable later.
+The tour is a repository file: it survives a window clear, travels with the clone, and is found
+again under `docs/repo-update/`. **Record the repository-relative path in the final report**
+(`Tour:` line). Optionally note it in the plan-doc phase section so it stays findable later.
 
 ---
 
@@ -656,7 +674,7 @@ Wiki: K stale references fixed, J coverage gaps filled (or "no wiki check — WI
 Instruction file (CLAUDE.md or AGENTS.md): classified AGENTS.md=<state> CLAUDE.md=<state> · <outcome — the phrase the Step 7 row that fired assigns>
 Memory: updated to Phase N complete
 GitHub: issue #N created and closed
-Tour: <Artifact URL>   (or `skipped (<reason>)` — trivial/doc-only wrap or --no-tour)
+Tour: docs/repo-update/<project-slug>-<phase-or-version>.html @ <commit>   (or `<path> (uncommitted)` when Steps 9–11 were withheld or failed / `<path> (commit failed: <first error line>)` / `skipped (<reason>)` — trivial/doc-only wrap or --no-tour)
 
 Quality gates: M/M tests · 0 type errors · 0 lint violations
 Observatory: synced (<n> tasks)   (or `skipped (<reason>)` / `failed (<first error line>)`)
@@ -698,7 +716,7 @@ All git/gh operations here run in `$PROJECT_ROOT` (Step 1 `cd $PROJECT_ROOT`) �
 - Do not skip the wiki check if `WIKI_PATH` is set — drift between wiki and code accumulates silently and is much cheaper to fix one phase at a time
 - Do not author new wiki pages from `/repo-update` — surface the need to the user instead
 - Do not flag test files, generated files, or internal helpers as wiki coverage gaps
-- Do not produce a guided-tour artifact (Step 12) for a trivial or doc-only wrap — a chat summary suffices — and never make the tour a blocking/confirm gate: it is autonomous by default and skipping is a legal outcome
+- Do not produce a guided-tour document (Step 12) for a trivial or doc-only wrap — a chat summary suffices — and never make the tour a blocking/confirm gate: it is autonomous by default and skipping is a legal outcome
 - Do not create an `AGENTS.md` outside Step 7 row 1 — CLAUDE.md or AGENTS.md, one content file only
 - Do not let Step 7's drift advisory block, halt, gate or prompt — it always prints and continues
 - Do not wait on a question mid-run — derive (Step 2) or stop with `Result: NOT RUN` before any write

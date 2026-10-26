@@ -11,7 +11,7 @@ See [../core.md](../core.md) for the full specification.
 
 ## Known GPT limitations
 
-- Claude Artifact actions, Claude session JSONL/scratchpad paths, and Claude-only deep links are unavailable unless an explicit adapter supplies them. Use the core's standalone-file or durable-state fallback.
+- Claude Artifact actions, Claude session JSONL/scratchpad paths, and Claude-only deep links are unavailable unless an explicit adapter supplies them, and the core needs none: the Step 12 tour is written as a file at the core's document output contract path (`<repo>/_shared/document-output.md`) and reported by path.
 - On timeout, rate limit, provider 5xx, parse failure, or missing required adapter, return the router reason code and consume at most the shared cross-cloud retry allowance. Never silently omit a core gate.
 
 ## Output normalization

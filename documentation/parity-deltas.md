@@ -429,10 +429,10 @@ columns as the Deltas table so M2 can promote a row unchanged if it re-observes 
 
 | skill | delta | severity | disposition |
 |---|---|---|---|
-| plan-redline | no Artifact tool: the publication mechanism is the core's own standalone-HTML fallback - a print-faithful HTML file beside the plan, with the repository-relative path as the stable Proposal locator; republish overwrites the same file preserving decision IDs | minor | accept |
-| plan-init | the closing line's proposal locator inherits plan-redline's file-path form (the auto-run redline hook publishes through the codex renderer), so operators get a path, not an artifact URL | minor | accept |
+| plan-redline | none since v2.0.1: every provider writes the proposal to `docs/plan-redline/<plan-slug>-proposal.html` under the shared document output contract (`_shared/document-output.md`) and records that path as the Proposal locator; the former Claude-only hosted Artifact path is retired | none | accept |
+| plan-init | none since v2.0.1: the proposal locator is a repository-relative path on every provider | none | accept |
 | plan-expedite | `/goal` and `/clear` are Claude-Code window primitives with no Codex equivalent; the adapter emits the core's continue-command block verbatim for the window that will run the build and never claims a Stop hook is armed - the durable task-state writes (current.md, handoff-prompt.md) are the cross-host handoff | minor | accept |
-| repo-update | core Step 12 publishes the guided tour with the native Artifact tool; on codex the tour is authored as a self-contained HTML FILE in the repository and the final report's `Tour:` line carries that path instead of a private artifact URL; skip semantics unchanged | minor | accept |
+| repo-update | none since v2.0.1: core Step 12 writes the guided tour to `docs/repo-update/<project-slug>-<phase-or-version>.html` on every provider and the `Tour:` line carries that path; skip semantics unchanged | none | accept |
 | user-project | session identity comes from the abstract session-I/O layer; with no stable Codex identity the pin write follows the schema fallback (freshest sessions/*.md) and never mints a session file under a fabricated UUID - with no session file at all, the adapter reports the pin unset in one line and writes nothing (the pin is advisory; honoring skills fall back to cwd) | minor | accept |
 | * | no Cohort B skill is in the manifest's `sub-agent` capability set, so the no-Agent-primitive mapping stays the pilot's single-context fallback with no capability loss for any of the twelve | minor | accept |
 

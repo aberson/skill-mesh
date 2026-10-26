@@ -52,6 +52,11 @@ Claude adapters support the full capability vocabulary: `filesystem`, `sub-agent
 and `vision`. All 54 portable skills and all 3 Claude-native exclusions have a
 Claude adapter.
 
+The Claude host's Artifact tool is never used for operator-facing documents: since
+v2.0.1 the plan-redline proposal and the repo-update tour are files under
+`docs/<skill>/` in the project repository, the same as on every other provider
+(owner: `_shared/document-output.md`).
+
 ### Claude-native skills
 
 `claude-oauth-auth`, `context-slim`, and `judge-motion` are Claude-only. They have

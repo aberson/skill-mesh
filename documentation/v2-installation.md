@@ -12,7 +12,7 @@ The bundle includes generated distributions; installation needs no source build.
 From the directory holding the downloaded archive:
 
 ```powershell
-Get-FileHash .\skill-mesh-v2.0.0.zip -Algorithm SHA256
+Get-FileHash .\skill-mesh-v2.0.1.zip -Algorithm SHA256
 ```
 
 Choose one host profile and an explicit consumer home:

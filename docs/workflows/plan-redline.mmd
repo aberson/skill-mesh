@@ -1,18 +1,15 @@
 %% plan-redline
 %% Summary: Turn a plan into a stable proposal, distinguish operator choices from defaults, and fold terse ID-based feedback back into the plan.
 %% Sources: skills/plan-redline/core.md
-%% Not shown: HTML design tokens, section-by-section proposal copy, locator migration wording, publication versioning, and feedback examples
-%% Alt: A plan becomes a stable decision inventory and proposal; publication falls back to local HTML when needed, and later ID feedback updates both.
+%% Not shown: HTML design tokens, section-by-section proposal copy, stale hosted-locator migration wording, publication versioning, and feedback examples
+%% Alt: A plan becomes a stable decision inventory and a proposal file under docs/plan-redline; later ID feedback updates both.
 
 flowchart TD
     A[Resolve and read canonical plan] --> B[Build stable P and D decision inventory]
     B --> C[Render operator proposal]
-    C --> D{Hosted locator writable?}
-    D -- Yes --> E[Publish or refresh stable locator]
-    D -- No --> F{Local HTML writable?}
-    F -- No --> H[Report unsupported publication]
-    F -- Yes --> G[Write standalone HTML and update locator]
-    E --> I{Operator feedback received?}
-    G --> I
+    C --> F{Proposal file writable under docs/plan-redline?}
+    F -- No --> H[Report reason; no plan edit]
+    F -- Yes --> G[Write standalone HTML and record path locator]
+    G --> I{Operator feedback received?}
     I -- No --> R[Report plan-wrap next]
     I -- Yes --> J[Apply ID-bound edits and republish]

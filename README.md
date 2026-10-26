@@ -7,7 +7,7 @@ workflow for Claude Code, GitHub Copilot, and OpenAI Codex.**
 - **Explicit quality gates.** Automated checks and fresh-context reviewers inform the result; missing required capabilities stop the workflow.
 - **One contract, three hosts.** 57 Claude skills; 54 also packaged for Copilot and Codex through host adapters.
 
-**[v2.0.0 is released](https://github.com/aberson/skill-mesh/releases/tag/v2.0.0)** ·
+**[v2.0.1 is released](https://github.com/aberson/skill-mesh/releases/tag/v2.0.1)** ·
 [Try it](#install-or-upgrade) · [Browse the skills](documentation/skill-reference.md) ·
 [Detailed workflows](docs/workflows/README.md)
 
@@ -163,7 +163,7 @@ is historical planning, not proof that every proposed caller is wired.
 
 ## Install or upgrade
 
-Download the [v2.0.0 release](https://github.com/aberson/skill-mesh/releases/tag/v2.0.0),
+Download the [v2.0.1 release](https://github.com/aberson/skill-mesh/releases/tag/v2.0.1),
 verify its checksum, and choose one host profile.
 
 <details>
@@ -192,8 +192,12 @@ for home resolution, collision handling, and legacy migration.
 
 ## Status & adapting
 
-**v2.0.0 is published:** 42 rebuilds and 15 retained skills, with all-provider
-packaging and installation checks. The [release notes](https://github.com/aberson/skill-mesh/releases/tag/v2.0.0)
+**v2.0.1 is published:** operator-facing documents (the plan-redline proposal and the
+repo-update guided tour) are now saved as files under `docs/<skill>/` in the project
+repository on every host, replacing the Claude-only hosted Artifact and the Codex/Copilot
+`documentation/` default (contract: [`_shared/document-output.md`](_shared/document-output.md)).
+v2.0.0 delivered 42 rebuilds and 15 retained skills, with all-provider packaging and
+installation checks. The [release notes](https://github.com/aberson/skill-mesh/releases/tag/v2.0.1)
 record the exact qualification and its limits.
 
 <details>

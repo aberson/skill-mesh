@@ -133,6 +133,9 @@ EXPECTED_SHARED_PAYLOAD = frozenset({
     # spells it `<repo>/_shared/<leaf>`; see `Repoint-SharedReference`) -- so the
     # independent walk below finds it without being told about it.
     "lesson_observations.py",
+    # v2.0.1 document output contract: enters the closure as a <repo>/_shared/<leaf>
+    # token from the plan-redline and repo-update cores and adapters.
+    "document-output.md",
     "calibrate_judge.py",
     "grader_prompt.py",
     "score_skill_absolute.py",
@@ -799,6 +802,22 @@ def _canonical_vendored_citations():
     return sorted(pairs)
 
 
+def _adapter_vendored_citations():
+    """(profile, skill, leaf) for every `<repo>/_shared/<leaf>` citation in an adapter.
+
+    Adapters are emitted as `dist/<profile>/<skill>/SKILL.md` (build-distributions.ps1
+    runs Repoint-SharedReference over the adapter body too), so their citations must be
+    graded against SKILL.md, not core.md. Derived the same way as the core pairs. First
+    live case: v2.0.1's `_shared/document-output.md`, cited by the plan-redline and
+    repo-update adapters on every provider.
+    """
+    triples = set()
+    for adapter in sorted((REPO_ROOT / "skills").glob("*/providers/*.md")):
+        for leaf in _REPO_ROOTED_SHARED_RE.findall(adapter.read_text(encoding="utf-8")):
+            triples.add((adapter.stem, adapter.parent.parent.name, leaf))
+    return sorted(triples)
+
+
 def test_vendored_reference_citations_reach_the_payload(dist_root):
     """Every Step 66 citation ships as a `../_shared/<leaf>` that RESOLVES, per profile.
 
@@ -822,16 +841,14 @@ def test_vendored_reference_citations_reach_the_payload(dist_root):
         f"floor is {MIN_VENDORED_REFERENCE_CITATIONS}. Either citations were retired "
         "(lower the floor deliberately, in the same commit) or the derivation stopped "
         "seeing them, which would make every assertion below vacuous.")
-    # The derivation reads `skills/*/core.md` only, which is where all of Step 66's
-    # citations live. An adapter carrying one would emit into SKILL.md, not core.md, so
-    # the pair below would check the wrong file -- fail instead of quietly missing it.
-    stray = [p.relative_to(REPO_ROOT).as_posix()
-             for p in sorted((REPO_ROOT / "skills").glob("*/providers/*.md"))
-             if _REPO_ROOTED_SHARED_RE.search(p.read_text(encoding="utf-8"))]
-    assert not stray, (
-        "an ADAPTER now carries a `<repo>/_shared/` citation, which this test's "
-        f"core.md-only derivation cannot grade: {stray}. Extend the derivation to "
-        "SKILL.md before landing it.")
+    # Adapter citations emit into SKILL.md, not core.md, so they are derived separately
+    # and graded against the file they actually land in (same chain: repointed spelling
+    # present, leaf emitted). Only profiles the fixture built are graded; an adapter
+    # citation for a profile outside the fixture would otherwise fail on absence alone.
+    adapter_triples = _adapter_vendored_citations()
+    assert adapter_triples, (
+        "no `<repo>/_shared/` citation found in any skills/*/providers/*.md; v2.0.1's "
+        "document-output contract adapters cite one, so the derivation stopped seeing them")
     missing = []
     for profile in ("claude", "gpt"):
         for skill, leaf in pairs:
@@ -844,6 +861,21 @@ def test_vendored_reference_citations_reach_the_payload(dist_root):
                 missing.append(f"{profile}/{skill}/core.md does not cite ../_shared/{leaf}")
             if not (dist_root / profile / SHARED_DEST / leaf).is_file():
                 missing.append(f"{profile}/_shared/{leaf} was not emitted")
+    built_profiles = {p.name for p in dist_root.iterdir() if p.is_dir()}
+    for profile, skill, leaf in adapter_triples:
+        if profile not in built_profiles:
+            continue
+        skill_md = dist_root / profile / skill / "SKILL.md"
+        if not skill_md.is_file():
+            missing.append(f"{profile}/{skill}/SKILL.md is absent")
+            continue
+        text = skill_md.read_text(encoding="utf-8")
+        if f"../_shared/{leaf}" not in text:
+            missing.append(f"{profile}/{skill}/SKILL.md does not cite ../_shared/{leaf}")
+        if "<repo>/_shared/" in text:
+            missing.append(f"{profile}/{skill}/SKILL.md still carries a <repo>/_shared/ spelling")
+        if not (dist_root / profile / SHARED_DEST / leaf).is_file():
+            missing.append(f"{profile}/_shared/{leaf} was not emitted")
     assert not missing, "vendored-reference citations did not reach the payload:\n" + \
         "\n".join(missing)
 

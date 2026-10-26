@@ -12,7 +12,8 @@ See [../core.md](../core.md) for the full specification.
 
 - Load the core in full before acting. Use Claude Code's Skill tool for named-skill calls and Agent/Workflow tools for isolated agents where the core requires those host abstractions.
 - Preserve the core's gates, retry limits, filesystem safety, and exact output contracts.
-- Use Claude session JSONL, scratchpad identity, Artifact actions, or VS Code deep links only where available and requested by the core.
+- Step 12 tour: write the HTML file with the host's file-write tool at the core's document output contract path (`<repo>/_shared/document-output.md`) and load the `artifact-design` skill first for page craft. Never publish the tour as a Claude Artifact, even though this host has the Artifact tool.
+- Use Claude session JSONL, scratchpad identity, or VS Code deep links only where available and requested by the core.
 
 ## Output normalization
 

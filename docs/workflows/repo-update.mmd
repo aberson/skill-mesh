@@ -16,7 +16,7 @@ flowchart TD
     G -- Yes --> H[Attempt commit, push, then posterity issue]
     H --> J{All required external steps succeeded?}
     J -- No --> P2[PARTIAL with failed-step recovery]
-    J -- Yes --> I[Run advisory tour and observatory refresh]
+    J -- Yes --> I[Save tour under docs/repo-update; refresh observatory]
     P --> I
     P2 --> I
     I --> R[Report COMPLETE or PARTIAL]
