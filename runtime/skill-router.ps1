@@ -626,6 +626,20 @@ function Get-CopilotToken {
     return $null
 }
 
+function Get-CopilotTokenPresence {
+    # Presence-only diagnostic for -DryRun. Reports env-var presence + source class
+    # WITHOUT materializing the token value: it never calls 'gh auth token' (which would
+    # read the operator's real credential from the gh keyring -- issue #51) and never adds
+    # network egress. Per the Protect-SecretsInText contract above, diagnostics report
+    # presence/source only, never the value. The gh-keyring fallback is still used by
+    # Get-CopilotToken at real runtime; a dry-run must not read live credentials, so the
+    # fallback is reported as runtime-only rather than probed here.
+    if ($env:COPILOT_GITHUB_TOKEN) { return 'present (COPILOT_GITHUB_TOKEN)' }
+    if ($env:GH_TOKEN) { return 'present (GH_TOKEN)' }
+    if ($env:GITHUB_TOKEN) { return 'present (GITHUB_TOKEN)' }
+    return 'not in env (COPILOT_GITHUB_TOKEN/GH_TOKEN/GITHUB_TOKEN); gh auth token fallback used at runtime, not probed in dry-run'
+}
+
 function Test-CopilotAvailable {
     $token = Get-CopilotToken
     if (-not $token) {
@@ -905,8 +919,7 @@ function Invoke-SkillRouter {
         Write-Host "skill-router dry-run: --provider $Model --skill $Skill" -ForegroundColor Yellow
         Write-Host ""
         Write-Host "  Key presence:"
-        $copilotToken = Get-CopilotToken
-        Write-Host "    Copilot token:     $(if ($copilotToken) { 'present (COPILOT_GITHUB_TOKEN/GH_TOKEN/GITHUB_TOKEN/gh auth token)' } else { 'absent (COPILOT_GITHUB_TOKEN/GH_TOKEN/GITHUB_TOKEN/gh auth token)' })"
+        Write-Host "    Copilot token:     $(Get-CopilotTokenPresence)"
         Write-Host "    ANTHROPIC_API_KEY: $(if ($env:ANTHROPIC_API_KEY) { 'SET' } else { 'NOT SET' })"
         Write-Host "    OPENAI_API_KEY:    $(if ($env:OPENAI_API_KEY) { 'SET' } else { 'NOT SET' })"
         Write-Host "    SKILL_MESH_CLAUDE_TIER: $(if ($env:SKILL_MESH_CLAUDE_TIER) { $env:SKILL_MESH_CLAUDE_TIER } else { 'NOT SET (default: fable)' })"

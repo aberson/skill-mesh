@@ -314,10 +314,8 @@ def test_copilot_token_resolution_uses_env_var():
     env["COPILOT_GITHUB_TOKEN"] = "test-copilot-token"
     result = _run_router_dry_run(env)
     assert result.returncode == 0, result.stderr
-    assert (
-        "Copilot token:     present "
-        "(COPILOT_GITHUB_TOKEN/GH_TOKEN/GITHUB_TOKEN/gh auth token)"
-    ) in result.stdout
+    # Issue #51: dry-run reports env-var presence + source class, materializing nothing.
+    assert "Copilot token:     present (COPILOT_GITHUB_TOKEN)" in result.stdout
 
 
 def test_router_version_is_updated():
