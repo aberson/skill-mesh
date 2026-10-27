@@ -360,6 +360,7 @@ does not reinterpret that evidence or revive its stopped experiment.
 | Historical Gate A | APPROVED | Terminal action `stop`; no architecture selected |
 | Historical Goal B / Phase 2 / Step 4 | LOCKED | Goal NP may adopt the four preserved files only after Approval 1 and its own gates |
 | Historical Goal P | LOCKED / NOT AUTHORIZED | Not part of Goal NP |
+| Release v2.0.1 — document output contract | RELEASED (2026-10-26) at `cbd6544`; see the section at the end of this file | Nothing — tag `v2.0.1` and the GitHub release are published; live installs cut over |
 
 ## Superseded instruction record (history — do not execute)
 
@@ -1169,3 +1170,42 @@ the follow-up preserves that history and restores the exact canonical sentence. 
 calls still load task-handoff in the parent; Conversation challenge v2 remains calibrated
 and objective. This does not activate deep review. Its separate reviewed proposal remains
 on `plan/codex-deep-review-restoration`; consumer deep flags remain unchanged.
+
+## Release v2.0.1 — document output contract (2026-10-26)
+
+**Patch release over v2.0.0; no plan steps, no issues closed. Gate: `tests/package-integrity`,
+`tests/distributions`, `tests/release`, `tests/router`, `tests/smoke` — 1453 passed / 1 skipped
+(4:41:47, exit 0) at `cbd6544`; the full repo-root suite was not re-run for this patch. Typecheck
+and lint are not configured.**
+
+### What was built
+
+- `_shared/document-output.md` — the single owner of where a skill saves an operator-facing
+  document and how it reports the location: `docs/<skill-name>/<document-slug>.html` in the target
+  repository, repository-relative path as the locator, never a hosted Artifact, on every provider.
+- `plan-redline` — the P/D proposal is `docs/plan-redline/<plan-slug>-proposal.html` on Claude,
+  Codex and Copilot; `--local-only` is a compatibility no-op; locator gates keep a recorded path and
+  replace a stale hosted URL.
+- `repo-update` Step 12 — the guided tour is `docs/repo-update/<project-slug>-<phase-or-version>.html`,
+  committed path-scoped only after a confirmed push; the `Tour:` line carries the path.
+- `plan-expedite` success and halt criteria, provider docs, parity deltas, the model-mapping note,
+  the plan-redline and repo-update workflow cards, and every version link follow the file-based
+  proposal and v2.0.1.
+- Tests: `document-output.md` pinned in `EXPECTED_SHARED_PAYLOAD`; new
+  `tests/package-integrity/test_document_output_contract.py` (6 tests); the vendored-citation test
+  now derives adapter citations and grades them against the emitted `SKILL.md`.
+
+### Where it landed
+
+Tag `v2.0.1` at `cbd6544` (main fast-forwarded from `ca7ab58`). GitHub release
+`skill-mesh-v2.0.1.zip` (440 dist files), SHA-256
+`44c92f74e6b8b2587ef9f66f275c0577ccaf8a183179b63f75f248d191ba23e5`. Live claude, gpt and codex
+installs were cut over from the checksum-verified bundle; restart host sessions after upgrading.
+
+### Fresh context notes
+
+| Issue | Detail |
+|---|---|
+| Adapters may cite `<repo>/_shared/<leaf>` | The link gate accepts only that spelling from `skills/*/providers/*.md`; `../../../_shared/<leaf>` escapes the discovery root. `test_vendored_reference_citations_reach_the_payload` grades adapter citations against `dist/<profile>/<skill>/SKILL.md`. |
+| Not converted | `judge-ui`, `judge-motion`, `tier-escalate`, `tier-offload`, `skill-iterate`, `skill-evolve`, `user-brainstorm` still write documents ad hoc; converting them means adding a row to `_shared/document-output.md` and citing it. |
+| Pre-edit baselines of the slow suites are waste | The two heavy suites take ~3.5–4.5 h; for a doc-format patch run the post-change gate once. |
