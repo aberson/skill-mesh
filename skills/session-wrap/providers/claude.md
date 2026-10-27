@@ -17,11 +17,13 @@ Model: Claude model selected by `.claude/references/model-tiering.md`
 
 ## Output normalization
 - Return only the core's operator-facing report and structured artifacts. Preserve exact locked strings, verdict enums, and exit codes.
-- In `--advise` mode, return exactly four lines: the triage line (including raw Git counts
-  and any unavailable identity/context signal), the verdict banner, `Already durable:`
-  (including any proven-exclusion count and proof basis), and `Dies with this window:`
-  (including every unknown-provenance path), then STOP. Append no reasons, methodology,
-  foreign-state explanation, or action summary.
+- In `--advise` mode, return exactly the core's report: the triage line (including raw Git
+  counts and any unavailable identity/context signal), the verdict banner, the one
+  `What this means:` sentence, and the five labeled sections in the core's order
+  (`Already durable:` including any proven-exclusion count and proof basis,
+  `Dies with this window:` including every unknown-provenance path of this session,
+  `Left alone on purpose:`, `Open work:`, `What I need from you:`), then STOP. Append no
+  methodology, foreign-state explanation beyond the counted line, or action summary.
 
 ## Unsupported capabilities
 - If a required Claude host tool is unavailable, use the core's documented fallback; otherwise halt visibly with `required_tool_missing`. Never weaken a core gate.

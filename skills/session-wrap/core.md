@@ -152,7 +152,10 @@ this exact order — own-session checkpoint first, render second, screen last:
 1. **Write this session's checkpoint** — invoke `task-handoff --loop --no-commit` through the
    host's skill-invocation adapter (read-merge-write per the schema doc, which owns the
    per-field append-vs-overwrite rules). Next Action = the exact command or skill
-   invocation. Both checkpoint calls must resolve the same retained executing-session ID and
+   invocation; when the task is COMPLETE, or no own-file Next Action exists, it is the
+   exact next command of the first open-work item (section below), so finished work never
+   leaves a window with an empty Next Action while planned or filed work still has no
+   owner. Both checkpoint calls must resolve the same retained executing-session ID and
    own path from Step 0; a changed or unprovable identity is non-success, never permission to
    use fallback state. If the library does not return its success line, this turn's state is
    not on disk: the route continues, but the digest carries the flag
@@ -390,6 +393,9 @@ is part of the opener, not an optional prose hint.
      zero-context reader executes a single block sequentially).
   5. Decisions log — N decisions = N bullets, rejected alternatives kept.
   6. Key files + critical gotchas from this session's own file; parked/salvage pointers.
+  7. Open work — one line per open-work inventory item (section above): what it is, where
+     it lives, and its exact next command or the operator decision it waits on. A reader
+     who executes the Next Action and then walks this list leaves nothing orphaned.
 - **No nested code fences anywhere in the render** (invariant 5): commands as
   2-space-indented plain lines, paths and inline code in single backticks.
 - **No flukes, no retry counts** (invariant 6).
@@ -421,7 +427,9 @@ run next is always the bottom of the output (operator contract, 2026-07-16):
 
 - **Digest (<=6 lines), then the pointer line, directly under the heading:** route +
   signal values; the git verb executed (repo, branch, SHA); memory/docs updates by
-  name; invariant flags (`MEMORY.md over budget`, `friction catalog stale`, ...).
+  name; invariant flags (`MEMORY.md over budget`, `friction catalog stale`, ...); the
+  `open work: N items (first: <command>)` line from the open-work inventory (or
+  `open work: none`).
   Exactly ONE owner-bound pointer line to `handoff-prompt.md` (its not-rendered variant when the
   checkpoint was not written, bullet below). Everything longer lives in the render,
   not on screen.
@@ -559,9 +567,9 @@ extension) `spawn failed (<reason>) - use the Pick-up-here block above`.
 
 ---
 
-## Decisions log + salvage sweep (clear-next + end-window)
+## Decisions log, salvage sweep and open-work inventory (clear-next + end-window)
 
-Not a session summary. Two bounded passes:
+Not a session summary. Three bounded passes:
 
 1. **Decisions log.** Enumerate the decisions made this session and the alternatives
    REJECTED — N decisions = N bullets, keeping but/except constraints ("chose X over
@@ -574,6 +582,29 @@ Not a session summary. Two bounded passes:
    `task-handoff --loop --no-commit` call. Never edit a session file or `current.md`
    directly. If checkpointing failed, report each remaining item as unsaved in the
    digest; do not claim durability. Nothing gets a hidden third option.
+3. **Open-work inventory.** Durability is not the only way work is lost: a plan that is
+   written but never reviewed, or synced but never built, is orphaned the moment the
+   window that remembers it closes. Enumerate, from this session's own file and the
+   conversation, every piece of work this session created or named that has **no owner
+   yet**, and give each exactly ONE next command (the pipeline order is owned by the
+   workspace plan-and-issue-flow rule; cite it, never restate it):
+   - a plan file written or changed this session whose steps carry a blank `**Issue:**`
+     (not yet synced) -> the next pipeline stage it has not passed (`/plan-review`,
+     `/plan-redline`, `/plan-wrap`, `/repo-sync`), with its path;
+   - a plan synced this session whose steps are not DONE and that no window is building
+     (per this session's knowledge) -> its `/build-phase --plan <path>`;
+   - an issue filed this session that no plan step carries -> the `/goblin-do` or plan
+     that should own it;
+   - a seed document written this session -> the `/plan-feature` or lifecycle request it
+     seeds;
+   - a `Follow-ups:` line a `/repo-update` run printed this session, and every item still
+     parked in the own file, each with the command or the operator decision it waits on.
+   Items with no runnable command (an operator's yes/no) say so explicitly. The inventory
+   lands in three places: the own file's `Parked` section (through the route's second
+   `task-handoff --loop --no-commit` call), the render's `## Open work` section, and the
+   digest's `open work: N items (first: <command>)` line. An empty inventory reads
+   `open work: none`. The inventory never invents work: an item appears only when this
+   session can name the artifact (path, issue number, seed) it belongs to.
 
 ---
 
@@ -640,14 +671,18 @@ for exactly that. Any future edit to one side must re-check the other.
 ## `--advise` — verdict + loss report (read-only, never acts)
 
 For the returning operator who wants the triage verdict WITHOUT the action — "can I
-close this window without losing anything?".
+close this window without losing anything?" — answered in plain language: what is saved,
+what is not, what is deliberately left alone, what work still has no owner, and what the
+operator has to say or do next.
 
 - **Same triage, plus a preview.** `--advise` runs Step 0 triage exactly as bare mode
   does (same signals, same first-match-wins scoring; Score rule 1's work-window gate
   excepted, next bullet) plus a READ-ONLY preview of the
-  salvage sweep — what `end-window`'s sweep (section above) WOULD find: uncommitted
-  work, unpushed commits, un-checkpointed or git-inconsistent own-session state,
-  findings and TODOs written nowhere. Freshness follows the staleness threshold owned
+  salvage sweep and open-work inventory — what `end-window`'s passes (section above)
+  WOULD find: uncommitted work, unpushed commits, un-checkpointed or git-inconsistent
+  own-session state, findings and TODOs written nowhere, and work with no owner yet
+  (unsynced plans, synced-but-unbuilt plans, unscheduled issues, seeds, parked
+  decisions). Freshness follows the staleness threshold owned
   by `task-state-schema.md`; consistency is
   Step 0's own Session-SHA-vs-HEAD signal.
 - **Current-window provenance defines loss.** A path belongs in `Dies with this window:`
@@ -688,11 +723,25 @@ segment marked as computed-not-acted:
 
     triage: advise (would route <route>) | context: <N tokens (~X% assuming 200k)> | boundary: <mid-task | at boundary (<what>) | unknown (<reason>)> | git: <n dirty, m ahead[, per-repo]> | goal: <armed | none>
 
-Then the report — one verdict banner plus a two-line loss report, nothing else:
+Then the report — one verdict banner, one plain sentence, and five labeled sections in
+this exact order, nothing else. Labels are locked; each section is the label line, then
+one short line per item (a `- ` bullet) or a single value on the label line. Plain words
+on every line: a path, a short SHA, an issue number, a count, a command. No pipe-separated
+runs, no methodology, no reasons beyond the one sentence.
 
     ## <VERDICT>
-    Already durable: <what is safe, with evidence - commits/pushes with short SHAs, own session file Last written timestamp + freshness verdict, Session SHA vs HEAD>
+    What this means: <one sentence a returning operator can act on - e.g. "your work is safe except two files; I will save them, then you can close">
+    Already durable: <what is safe, one item per line: commits/pushes with short SHAs, issues on GitHub, the own session file's Last written timestamp + freshness verdict, Session SHA vs HEAD>
     Dies with this window: <each at-risk salvage-preview item with a count plus a path/SHA/identifier - or exactly `nothing` when the preview is empty>
+    Left alone on purpose: <foreign or unknown-provenance paths as a COUNT per repo with one reason ("edited by other windows"), never listed one by one - or exactly `nothing`>
+    Open work: <each open-work inventory item with its exact next command or the operator decision it waits on - or exactly `none`>
+    What I need from you: <exactly one line: the one answer or action the operator owes, or `nothing`>
+
+`What this means:` is the only sentence of prose; the sections under it carry facts. The
+three facts a returning operator asks for — is my work safe, what dies, what is still
+undone — each have exactly one place to look. Foreign dirt is counted under `Left alone on
+purpose:` so that `Dies with this window:` lists only this session's own loss and never
+becomes a paragraph of other windows' files.
 
 **The four verdicts** — exactly one banner per run, from this closed set:
 
@@ -701,14 +750,15 @@ Then the report — one verdict banner plus a two-line loss report, nothing else
 | `KEEP GOING` | Triage would route `continue`. |
 | `RECYCLE WINDOW` | Triage would route `clear-next`. |
 | `WRAP & CLOSE` | Triage would route `end-window` AND something would die with the window. |
-| `SAFE TO CLOSE` | `end-window` would be a NO-OP — ALL of: this session's own file is fresh (schema-doc threshold) and consistent with git (Session SHA matches HEAD), clean tree in every touched repo, nothing unpushed/ahead anywhere, no armed `/goal`, salvage preview empty. Fallback/foreign state can never prove this verdict. |
+| `SAFE TO CLOSE` | `end-window` would be a NO-OP — ALL of: this session's own file is fresh (schema-doc threshold) and consistent with git (Session SHA matches HEAD), clean tree in every touched repo, nothing unpushed/ahead anywhere, no armed `/goal`, salvage preview empty, and the open-work inventory either empty or already recorded in the own file's `Parked` section with its next commands (recorded open work is not loss; unrecorded open work is). Fallback/foreign state can never prove this verdict. |
 
 The two end-window verdicts partition that route: every no-op condition holds ->
 `SAFE TO CLOSE`; any single failure -> `WRAP & CLOSE`, and the failing item IS the
-loss — it lands on the `Dies with this window:` line, named concretely. The loss
-report is the centerpiece (the operator's real anxiety is losing work): hedged prose
-("some work may be lost") is a defect — SHAs, counts, timestamps, and paths are the
-contract, and an empty preview reads exactly `nothing`.
+loss — it lands on the `Dies with this window:` line (or, for unrecorded open work, the
+`Open work:` section), named concretely. The loss report is the centerpiece (the
+operator's real anxiety is losing work): hedged prose ("some work may be lost") is a
+defect — SHAs, counts, timestamps, and paths are the contract, an empty preview reads
+exactly `nothing`, and an empty inventory reads exactly `none`.
 
 ## Maintenance
 

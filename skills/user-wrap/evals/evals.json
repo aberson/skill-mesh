@@ -26,7 +26,7 @@
         },
         {
           "id": 3,
-          "statement": "user-wrap authors zero triage logic: outside the re-presented --advise report (the advise triage line, the verdict banner, and the two loss-report lines), no line states a token threshold, context ceiling, staleness cutoff, or route-scoring rule as user-wrap's own reasoning ('well under the continue ceiling, so...', 'inside the staleness window, therefore...'). Any user-wrap-authored threshold or scoring prose grades FALSE.",
+          "statement": "user-wrap authors zero triage logic: outside the re-presented --advise report (the advise triage line, the verdict banner, the 'What this means:' sentence and the five labeled sections 'Already durable:', 'Dies with this window:', 'Left alone on purpose:', 'Open work:', 'What I need from you:'), no line states a token threshold, context ceiling, staleness cutoff, or route-scoring rule as user-wrap's own reasoning ('well under the continue ceiling, so...', 'inside the staleness window, therefore...'). Any user-wrap-authored threshold or scoring prose grades FALSE.",
           "source": "skills/user-wrap/core.md § Purpose and complete operating contract; § Step 2",
           "defect_type": "anti-pattern - user-wrap computes its own triage",
           "result": null
@@ -35,13 +35,13 @@
     },
     {
       "name": "Verbatim re-presentation",
-      "description": "The --advise banner + two-line loss report re-presented as the centerpiece: banner first, loss report immediately under it, nothing inserted, nothing paraphrased.",
+      "description": "The --advise banner, its one 'What this means:' sentence and the five labeled sections re-presented as the centerpiece: banner first, the sentence and sections immediately under it in order, nothing inserted, nothing paraphrased.",
       "weight": 0.3,
       "evals": [
         {
           "id": 4,
-          "statement": "The output carries exactly ONE verdict banner — a '## <VERDICT>' heading whose text is exactly one of 'KEEP GOING', 'RECYCLE WINDOW', 'WRAP & CLOSE', 'SAFE TO CLOSE' — with the two loss-report lines immediately under it, labeled exactly and in order: 'Already durable:' then 'Dies with this window:'. A missing, duplicate, or fifth-verdict banner, a missing or relabeled loss-report line, or ANY content inserted between the banner and the loss report grades FALSE.",
-          "source": "skills/user-wrap/core.md § Step 3 — Re-present the delegated report",
+          "statement": "The output carries exactly ONE verdict banner — a '## <VERDICT>' heading whose text is exactly one of 'KEEP GOING', 'RECYCLE WINDOW', 'WRAP & CLOSE', 'SAFE TO CLOSE' — with the report immediately under it in order: an optional single 'What this means:' line, then 'Already durable:', then 'Dies with this window:', then (when --advise printed them) 'Left alone on purpose:', 'Open work:' and 'What I need from you:'. Each label may carry its value on the label line or as '- ' bullets beneath it. A missing, duplicate, or fifth-verdict banner, a missing or relabeled 'Already durable:' or 'Dies with this window:' line, a reordered section, or ANY other content inserted between the banner and the end of the report grades FALSE.",
+          "source": "skills/user-wrap/core.md § Step 3 — Present the verdict SUPER-clearly; skills/session-wrap/core.md § --advise",
           "defect_type": "structural - banner/loss-report block missing, malformed, or interrupted",
           "result": null
         },
