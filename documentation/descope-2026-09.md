@@ -1,5 +1,7 @@
 # Descope decision record — 2026-09
 
+> **Toolkit program authority — 2026-09-24.** For units mapped from this document, the [toolkit program](../../plan.md) owns selection, shared sequencing and current execution/status; the [source-unit ledger](../../documentation/toolkit-program-units.md) identifies that mapped scope. Status and execution instructions retained below for transferred units are source history, not a second dispatch queue. Technical specifications, original IDs, acceptance criteria and evidence remain owned here. Update transferred-unit status in the program only; unmapped local work remains locally owned. Mapping does not complete, reopen or authorize a unit.
+
 **Status:** OPERATOR-APPROVED 2026-09-05 (Abraham Robison, in-session: "Approve A1-6").
 **Authority:** This document supersedes `documentation/phase-prod-rd-first-course-correction.md`
 as the active execution authority for skill-mesh. Where this record is silent, standing repo
@@ -104,6 +106,13 @@ fail-closed `required_tool_missing` halt. The gap's write-up in
 written as of this record; this sentence is the interim record). Any future
 restoration of the codex deep lane starts from the rescue branches under a new reviewed plan
 — it does not reopen Phase RD as written.
+
+**Superseded 2026-10-21 (operator decision):** the fail-closed halt blocked
+autonomous builds whenever the in-chat sibling route ran out of agent slots. The
+core now documents an out-of-process CLI dispatch route (§ Dispatch route ladder in
+`skills/review-deep/core.md`: `codex exec` / `claude -p`, one fresh process per
+lens), and the codex adapter halts `required_tool_missing` only when neither route
+exists. The historical record above is unchanged.
 
 ### DS-D4 — Phase IS tail parked, terminal-unless-recertified
 Step 108P (#162), Step 109 (#153), and stages C2E-C5 are parked indefinitely. #143/#162/#153

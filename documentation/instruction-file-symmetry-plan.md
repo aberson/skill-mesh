@@ -1,5 +1,7 @@
 # Phase IS — instruction-file symmetry
 
+> **Toolkit program authority — 2026-09-24.** For units mapped from this document, the [toolkit program](../../plan.md) owns selection, shared sequencing and current execution/status; the [source-unit ledger](../../documentation/toolkit-program-units.md) identifies that mapped scope. Status and execution instructions retained below for transferred units are source history, not a second dispatch queue. Technical specifications, original IDs, acceptance criteria and evidence remain owned here. Update transferred-unit status in the program only; unmapped local work remains locally owned. Mapping does not complete, reopen or authorize a unit.
+
 **Phase label:** `Phase IS` (instruction-file symmetry). Steps 100–109.
 **Status:** BUILDING — 9 of 11 units landed; 9 of 11 certified DONE. Steps 100–108 are DONE;
 `core-uat-mode` is selected, C2V validation and its #153 seal are pending, Step 108P is blocked

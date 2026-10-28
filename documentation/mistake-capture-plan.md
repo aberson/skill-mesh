@@ -1,5 +1,7 @@
 # Phase LH — explicit mistake capture and harvest
 
+> **Toolkit program authority — 2026-09-24.** For units mapped from this document, the [toolkit program](../../plan.md) owns selection, shared sequencing and current execution/status; the [source-unit ledger](../../documentation/toolkit-program-units.md) identifies that mapped scope. Status and execution instructions retained below for transferred units are source history, not a second dispatch queue. Technical specifications, original IDs, acceptance criteria and evidence remain owned here. Update transferred-unit status in the program only; unmapped local work remains locally owned. Mapping does not complete, reopen or authorize a unit.
+
 ## 1. What This Is
 
 **Current execution amendment (2026-09-23):** the operator selected a bounded

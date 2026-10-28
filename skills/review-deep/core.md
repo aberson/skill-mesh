@@ -3,7 +3,7 @@
 ## Provider-neutral host abstractions
 
 - Resolve supporting assets against the loaded review-deep package directory containing `core.md`, never the project cwd or a different host's discovery root. Generated packages ship `scripts/aggregate.py`, `scripts/lint_prepass.sh`, `scripts/README.md`, and `<loaded-package>/config/model-tier-map.md`; canonical source uses `config/model-tier-map.json`. The Markdown map contains one fenced JSON payload with the same mapping. Missing required code-lane resources return `required_tool_missing`. Runtime auth probing and calibration resources are not installed by this closure; the calibration command below remains repository-only.
-- A named skill call means the host's skill-dispatch primitive. An isolated fresh-context task invocation means an isolated task/action invocation with fresh context and the requested capability tier. Provider wrappers map this role to their native APIs.
+- A named skill call means the host's skill-dispatch primitive. An isolated fresh-context task invocation means an isolated task/action invocation with fresh context and the requested capability tier. Provider wrappers map this role to their native APIs. An out-of-process fresh-context CLI invocation (one new `claude -p` or `codex exec` process per lens, no session resume) also satisfies this role; § Dispatch route ladder governs when it is used.
 - Model tier names in inherited procedures describe capability roles. Resolve them through the loaded package tier map described above; an unavailable required capability returns `required_tool_missing` rather than weakening a gate.
 - Never expose hidden chain-of-thought. Preserve only decisions, evidence, commands, structured artifacts, and operator-facing rationale required by this contract.
 
@@ -104,11 +104,50 @@ plan-conformance lens.
 
 ## Reviewer lenses
 
-The skill spawns six fresh-context sub-agents, one per lens, **in parallel batches bounded by available host slots**. The review parent directly launches every lens as a new sibling with explicit no-history dispatch. Complete each batch before freeing its slots for fresh siblings; never reuse or follow up a lens. All six receive the same immutable diff/intent/context snapshot plus their own lens instructions, never sibling findings or producer reasoning. Aggregate only after the complete required set returns; limited capacity changes scheduling, not independence or completeness. Dispatch each lens with its table-assigned tier (§ Model-tier selection) — arms never inherit an escalated session (tier policy; see workspace conventions under `.claude/rules/`). Each lens is a
+The skill spawns six fresh-context sub-agents, one per lens, **in parallel batches bounded by available host slots**. The review parent directly launches every lens as a new sibling with explicit no-history dispatch, or as an out-of-process CLI process per § Dispatch route ladder when sibling slots are unavailable or exhausted. Complete each batch before freeing its slots for fresh siblings; never reuse or follow up a lens. All six receive the same immutable diff/intent/context snapshot plus their own lens instructions, never sibling findings or producer reasoning. Aggregate only after the complete required set returns; limited capacity changes scheduling, not independence or completeness. Dispatch each lens with its table-assigned tier (§ Model-tier selection) — arms never inherit an escalated session (tier policy; see workspace conventions under `.claude/rules/`). Each lens is a
 single-shot pass; iteration is the orchestrator's job (`/build-step --max-iter`).
 Each lens runs in isolation (no cross-lens chatter) so verdicts aren't biased
 by sibling findings (see `docs/investigations/review-agents/02-reviewer-dimensions.md`
 and `docs/investigations/review-agents/32-prompt-scoping.md`).
+
+### Dispatch route ladder
+
+Lens dispatch has two documented routes and one halt. Walk them in order; the
+walk is automatic, happens inside the run, and never asks the operator.
+
+1. **In-chat fresh siblings (preferred).** The host's isolated agent primitive
+   (Claude Code's Agent tool, Codex `spawn_agent(fork_turns="none")`, a GPT
+   fresh-context action), in parallel batches bounded by the slots the host
+   actually grants this parent.
+2. **Out-of-process fresh-context CLI invocations.** When route 1 is unavailable,
+   its capability probe is absent, failed or inconclusive, or its slots are
+   exhausted (no slot frees for the next batch because the parent is itself a
+   child at the host's nesting or concurrency limit, or another run holds the
+   slots), dispatch every remaining lens as its own new CLI process: `claude -p`
+   or `codex exec`, one process per lens, started fresh (no `--resume`,
+   `--continue`, or session reuse), cwd at the reviewed worktree, read-only
+   tool allowlist or sandbox, `--model` per the tier table where the CLI supports
+   it, and stdout captured to a per-lens file that the parent parses as that
+   lens's single JSON `LensVerdict`. Prefer the host's own CLI (`codex exec` on
+   Codex, `claude -p` on Claude Code) so the configured model is unchanged; use
+   the other only when it is the one installed. A new process inherits nothing
+   from the review conversation, so this route satisfies invariant 1 exactly as
+   route 1 does.
+3. **Halt `required_tool_missing`** only when neither route exists: no isolated
+   agent primitive AND no `claude` or `codex` executable reachable from a shell.
+   Name lens dispatch as the step that could not run.
+
+Route-independent rules: the same immutable diff/intent/context snapshot and
+per-lens instructions go to every lens on either route; never sibling findings
+or producer reasoning; never the verdict path, run id, HMAC key, or parent
+service handle (route 2 launches with none of those in arguments, environment,
+or files). Routes may mix within one run (four lenses on route 1, two on route 2
+after the slots ran out); aggregation still waits for the complete required set
+and each lens still runs exactly once. No route permits serializing lenses into
+the review parent's own context, one lens reviewing for another, or treating a
+slot shortage as a reason to drop a lens. Report the route split in the
+operator-facing report (`Dispatch: siblings=4 cli=2`); the JSON sidecar schema is
+unchanged. § Overload-fallback behavior applies per lens on either route.
 
 **Standing lens list:**
 

@@ -8,11 +8,15 @@ This is the Phase CD source mapping restoring the DS-D3 gap. It is **unqualified
 until Step 156** demonstrates the installed route and refreshes the intended profile.
 It makes no provider-wide support claim. Only `--reviewers code` is mapped here;
 `runtime`, `full`, or unavailable required resources halt `required_tool_missing`.
+Lens dispatch follows the core's § Dispatch route ladder: fresh siblings first;
+the core's out-of-process CLI route (`codex exec`, or `claude -p` where only it is
+installed) when the sibling route is unavailable, its probe is inconclusive, or its
+slots are exhausted; `required_tool_missing` only when neither route exists.
 
 | Contract field | Required Codex mapping |
 |---|---|
-| `capability-probe` | Load the installed build-step Agent-isolation capability contract and build-phase Parent-state capability contract, including Conversation challenge v2, in full. Require their non-mutating probes in this session before lens dispatch: explicit no-history dispatch, calibrated conversation comparisons, opaque parent state, caller-scoped parent-only verdict service and tamper/key-rotation checks. A host that passes may dispatch the code lenses as fresh siblings. Probe absence, failure or inconclusive evidence halts visibly with `required_tool_missing` at isolated lens dispatch; an ordinary Codex CLI without these capabilities remains unsupported. |
-| `six-siblings` | The review parent directly spawns correctness, bugs, security, test-quality, style, plan-conformance as six distinct fresh sibling children with `fork_turns="none"`. Use available-slot batches, releasing completed children before the next batch. No reused child, no child-spawned reviewer, no producer-to-reviewer follow-up, no omitted/default fork mode. Each receives the identical immutable diff/intent/context snapshot and its own core lens instructions. Never pass sibling findings or producer reasoning. |
+| `capability-probe` | Load the installed build-step Agent-isolation capability contract and build-phase Parent-state capability contract, including Conversation challenge v2, in full. Require their non-mutating probes in this session before sibling lens dispatch: explicit no-history dispatch, calibrated conversation comparisons, opaque parent state, caller-scoped parent-only verdict service and tamper/key-rotation checks. A host that passes may dispatch the code lenses as fresh siblings. Probe absence, failure or inconclusive evidence closes the sibling route and sends the lenses to the core's out-of-process CLI route instead of halting; an ordinary Codex CLI without these capabilities stays on that route. Halt visibly with `required_tool_missing` at isolated lens dispatch only when no `codex` or `claude` executable is reachable either: an ordinary Codex CLI with neither these capabilities nor a reachable `codex`/`claude` executable remains unsupported. |
+| `six-siblings` | The review parent directly spawns correctness, bugs, security, test-quality, style, plan-conformance as six distinct fresh sibling children with `fork_turns="none"`. Use available-slot batches, releasing completed children before the next batch. No reused child, no child-spawned reviewer, no producer-to-reviewer follow-up, no omitted/default fork mode. Each receives the identical immutable diff/intent/context snapshot and its own core lens instructions. Never pass sibling findings or producer reasoning. When the sibling route is closed or its slots are exhausted mid-run, dispatch the remaining lenses through the core's out-of-process CLI route (`codex exec` preferred; `claude -p` where only it is installed), one fresh process per lens with the same snapshot and with the read-only and private-channel rows applying unchanged; record the route split in the report. |
 | `read-only` | All lens prompts are read-only: inspect named project/worktree files and return one JSON LensVerdict with cited evidence and recommendations only. No edits, commands that mutate the target, commits, installs or child dispatch. Snapshot project/worktree bytes before dispatch and audit after each batch; reject unexpected reviewer mutation. Shared filesystem/tools are expected, not OS isolation. |
 | `parent-authority` | Parent runs the mechanical phase first, collects evidence, validates the complete raw lens set before any loader can overwrite duplicate lens IDs, and alone invokes the installed deterministic reducer. No child aggregates or signs. Missing, duplicate, extra, malformed or incomplete lens sets are non-passing NEEDS-WORK. UNCERTAIN remains non-passing escalation. Never infer PASS from absent evidence. |
 | `private-channel` | Never pass the verdict path, run id, HMAC key or parent service handle to lenses in prompts, arguments, environment, files, logs or reports. The parent-only verdict service separately authenticates the enclosing build-step result; the review-deep JSON audit is unsigned and cannot authorize advancement. Shared filesystem discovery or tampering can force BLOCKED, never authenticate PASS. |
@@ -22,7 +26,9 @@ Resolve capability roles from the loaded package's `<loaded-package>/config/mode
 single fenced JSON payload matches canonical `config/model-tier-map.json`. Explicit
 overrides win; unavailable required capability returns `required_tool_missing`.
 The map declares no Codex peer: use the closest capability actually provided by the
-configured Codex model without weakening a gate. No automatic model/host fallback.
+configured Codex model without weakening a gate. No automatic model-tier fallback;
+the core's out-of-process CLI route is a dispatch route, not a tier change, and
+`codex exec` keeps the configured model.
 
 ## Parent aggregation from the installed package
 

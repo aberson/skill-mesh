@@ -1,5 +1,7 @@
 # Phase IS C2E — disposable C2N–C4 driver-test environment
 
+> **Toolkit program authority — 2026-09-24.** For units mapped from this document, the [toolkit program](../../plan.md) owns selection, shared sequencing and current execution/status; the [source-unit ledger](../../documentation/toolkit-program-units.md) identifies that mapped scope. Status and execution instructions retained below for transferred units are source history, not a second dispatch queue. Technical specifications, original IDs, acceptance criteria and evidence remain owned here. Update transferred-unit status in the program only; unmapped local work remains locally owned. Mapping does not complete, reopen or authorize a unit.
+
 - **Written:** 2026-08-30
 - **Status:** PLANNED / NOT AUTHORIZED FOR EXECUTION — this document authorizes no virtual-machine creation, software installation, certificate or App Control change, Secure Boot change, boot-configuration change, reboot, host session, GitHub write, or C2N/C3/C4 action.
 - **Owner:** Phase IS completion overlay; preparatory work reports to existing issue #162. Post-C4 disposal is a Phase IS closeout obligation under #143.

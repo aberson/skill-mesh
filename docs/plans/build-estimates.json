@@ -1,0 +1,2225 @@
+{
+  "schema_version": 1,
+  "project": "skill-mesh",
+  "plan_path": "docs/plans/master_plan.md",
+  "plan_sha256": "a33c47064044aba55ca0077c1055244e88f86a407feee71537d98437031dc975",
+  "units": "hours",
+  "estimates": [
+    {
+      "step_id": "E1",
+      "title": "Lock evidence schemas and no-write verifier",
+      "worker_hours": {
+        "low": 12.0,
+        "high": 28.0
+      },
+      "attention_hours": {
+        "low": 0.5,
+        "high": 2.0
+      },
+      "dependencies": [],
+      "rationale": "Strict JCS+LF, safe integers, UTF-8 no BOM; reject duplicate keys, surrogates and wrong RSA profiles. Verify exact closed schemas without mutation.",
+      "type": "code",
+      "status": "held",
+      "basis": "model",
+      "model_id": "Codex session; runtime model not exposed",
+      "confidence": 0.35,
+      "estimated_at": "2026-10-14T17:36:25.648280Z",
+      "waiting_hours": null,
+      "dependency_contract": "fresh selected108P scope; exact graph in archived environment specification (never infer a serial chain)",
+      "work_id": "work_a7d074b9c4eb784224cfa7fdd526d555eb7b56a5a25b21a7c791d0349635345b",
+      "source_digest": "f5be9a4ec2633cf4c1053f45c666694286d5cdff2851b70219bc4a286d16f9ae",
+      "plan_path": "docs/plans/master_plan.md",
+      "hold_reason": "Canonical plan explicitly holds this step: HELD",
+      "enabled": false,
+      "confidence_note": "Original qualitative rating subjective-low; mapped to numeric scale for ForecastEstimate, not empirical calibration.",
+      "unresolved_dependencies": [
+        "fresh selected108P scope",
+        "exact graph in archived environment specification (never infer a serial chain)"
+      ],
+      "source_ref": {
+        "source_id": "src_51e7ceaf188c413e2ec0c6497155fae7be1f81d283907df105a0a32967fbe607",
+        "locator": "skill-mesh/docs/plans/master_plan.md",
+        "digest": "a33c47064044aba55ca0077c1055244e88f86a407feee71537d98437031dc975",
+        "line_start": 1793,
+        "line_end": 1800
+      }
+    },
+    {
+      "step_id": "E2",
+      "title": "Authenticated wait, status and remote markers",
+      "worker_hours": {
+        "low": 12.0,
+        "high": 26.0
+      },
+      "attention_hours": {
+        "low": 0.5,
+        "high": 2.0
+      },
+      "dependencies": [],
+      "rationale": "Signed status/wait envelopes; exact eight-kind allocation closure; exhaustive pagination and key-scoped markers; refusal on incomplete inventory.",
+      "type": "code",
+      "status": "held",
+      "basis": "model",
+      "model_id": "Codex session; runtime model not exposed",
+      "confidence": 0.35,
+      "estimated_at": "2026-10-14T17:36:25.648280Z",
+      "waiting_hours": null,
+      "dependency_contract": "fresh selected108P scope; exact graph in archived environment specification (never infer a serial chain)",
+      "work_id": "work_f9e0ec28edbc553bb2c7093e658b829347a2d287a57ca8b773eab1547e2229c8",
+      "source_digest": "ae768a910deea207a591a852eeee2096a984aff692c5c5873021de3108621e1c",
+      "plan_path": "docs/plans/master_plan.md",
+      "hold_reason": "Canonical plan explicitly holds this step: HELD",
+      "enabled": false,
+      "confidence_note": "Original qualitative rating subjective-low; mapped to numeric scale for ForecastEstimate, not empirical calibration.",
+      "unresolved_dependencies": [
+        "fresh selected108P scope",
+        "exact graph in archived environment specification (never infer a serial chain)"
+      ],
+      "source_ref": {
+        "source_id": "src_51e7ceaf188c413e2ec0c6497155fae7be1f81d283907df105a0a32967fbe607",
+        "locator": "skill-mesh/docs/plans/master_plan.md",
+        "digest": "a33c47064044aba55ca0077c1055244e88f86a407feee71537d98437031dc975",
+        "line_start": 1801,
+        "line_end": 1808
+      }
+    },
+    {
+      "step_id": "E3",
+      "title": "Coordinator non-mutation facts",
+      "worker_hours": {
+        "low": 6.0,
+        "high": 14.0
+      },
+      "attention_hours": {
+        "low": 0.5,
+        "high": 2.0
+      },
+      "dependencies": [],
+      "rationale": "Read-only fact collection must prove coordinator identity and refusal of local mutation, never manufacture host attestations.",
+      "type": "code",
+      "status": "held",
+      "basis": "model",
+      "model_id": "Codex session; runtime model not exposed",
+      "confidence": 0.35,
+      "estimated_at": "2026-10-14T17:36:25.648280Z",
+      "waiting_hours": null,
+      "dependency_contract": "fresh selected108P scope; exact graph in archived environment specification (never infer a serial chain)",
+      "work_id": "work_cfde468466f522ac3a982223f3fdd23bb63bdebcfa65a942cc6b99e017e79792",
+      "source_digest": "17e699bb06f3de57e8f7bbff758c61fe1cd5b2ed8c47d76b592568a3f8e3e786",
+      "plan_path": "docs/plans/master_plan.md",
+      "hold_reason": "Canonical plan explicitly holds this step: HELD",
+      "enabled": false,
+      "confidence_note": "Original qualitative rating subjective-low; mapped to numeric scale for ForecastEstimate, not empirical calibration.",
+      "unresolved_dependencies": [
+        "fresh selected108P scope",
+        "exact graph in archived environment specification (never infer a serial chain)"
+      ],
+      "source_ref": {
+        "source_id": "src_51e7ceaf188c413e2ec0c6497155fae7be1f81d283907df105a0a32967fbe607",
+        "locator": "skill-mesh/docs/plans/master_plan.md",
+        "digest": "a33c47064044aba55ca0077c1055244e88f86a407feee71537d98437031dc975",
+        "line_start": 1809,
+        "line_end": 1816
+      }
+    },
+    {
+      "step_id": "E4",
+      "title": "Provider and retention selection",
+      "worker_hours": {
+        "low": 2.0,
+        "high": 6.0
+      },
+      "attention_hours": {
+        "low": 1.0,
+        "high": 4.0
+      },
+      "dependencies": [],
+      "rationale": "Operator chooses provider, licensing, costs and external key/broker route. Select atomic wait/signer key lifecycle maximum60days and complete pre-resource closure.",
+      "type": "operator",
+      "status": "held",
+      "basis": "model",
+      "model_id": "Codex session; runtime model not exposed",
+      "confidence": 0.35,
+      "estimated_at": "2026-10-14T17:36:25.648280Z",
+      "waiting_hours": null,
+      "dependency_contract": "fresh selected108P scope; exact graph in archived environment specification (never infer a serial chain)",
+      "work_id": "work_f899c95d5057b767ee727e1b682a3e6cbbaa83f353fbd82d9c93e1a9ed806c69",
+      "source_digest": "0d544a0b102a3e057c35d0c8055ecd4a1fc313f05c7d04fe664aa8cdccf3a752",
+      "plan_path": "docs/plans/master_plan.md",
+      "hold_reason": "Canonical plan explicitly holds this step: HELD",
+      "enabled": false,
+      "confidence_note": "Original qualitative rating subjective-low; mapped to numeric scale for ForecastEstimate, not empirical calibration.",
+      "unresolved_dependencies": [
+        "fresh selected108P scope",
+        "exact graph in archived environment specification (never infer a serial chain)"
+      ],
+      "source_ref": {
+        "source_id": "src_51e7ceaf188c413e2ec0c6497155fae7be1f81d283907df105a0a32967fbe607",
+        "locator": "skill-mesh/docs/plans/master_plan.md",
+        "digest": "a33c47064044aba55ca0077c1055244e88f86a407feee71537d98437031dc975",
+        "line_start": 1817,
+        "line_end": 1824
+      }
+    },
+    {
+      "step_id": "E5",
+      "title": "Provider authentication and replay",
+      "worker_hours": {
+        "low": 20.0,
+        "high": 44.0
+      },
+      "attention_hours": {
+        "low": 0.5,
+        "high": 2.0
+      },
+      "dependencies": [],
+      "rationale": "Full authenticated envelopes, RSA3072/PSS32, closed16-operation protocol, durable journals and idempotency across crashes.",
+      "type": "code",
+      "status": "held",
+      "basis": "model",
+      "model_id": "Codex session; runtime model not exposed",
+      "confidence": 0.35,
+      "estimated_at": "2026-10-14T17:36:25.648280Z",
+      "waiting_hours": null,
+      "dependency_contract": "fresh selected108P scope; exact graph in archived environment specification (never infer a serial chain)",
+      "work_id": "work_105f65876133da7b1c8a6c5a0b67ef60ccd39919defe922db8983595e890bdde",
+      "source_digest": "7d3d12cffc7abffe4252479b9e24e9f6909e35a4fdb973ae376e9b298283317b",
+      "plan_path": "docs/plans/master_plan.md",
+      "hold_reason": "Canonical plan explicitly holds this step: HELD",
+      "enabled": false,
+      "confidence_note": "Original qualitative rating subjective-low; mapped to numeric scale for ForecastEstimate, not empirical calibration.",
+      "unresolved_dependencies": [
+        "fresh selected108P scope",
+        "exact graph in archived environment specification (never infer a serial chain)"
+      ],
+      "source_ref": {
+        "source_id": "src_51e7ceaf188c413e2ec0c6497155fae7be1f81d283907df105a0a32967fbe607",
+        "locator": "skill-mesh/docs/plans/master_plan.md",
+        "digest": "a33c47064044aba55ca0077c1055244e88f86a407feee71537d98437031dc975",
+        "line_start": 1825,
+        "line_end": 1832
+      }
+    },
+    {
+      "step_id": "E6",
+      "title": "Lease and complete inventory",
+      "worker_hours": {
+        "low": 12.0,
+        "high": 24.0
+      },
+      "attention_hours": {
+        "low": 0.5,
+        "high": 2.0
+      },
+      "dependencies": [],
+      "rationale": "Atomic lease/inventory;30-minute lease and10-minute renewals; fail closed on incomplete or ambiguous ownership.",
+      "type": "code",
+      "status": "held",
+      "basis": "model",
+      "model_id": "Codex session; runtime model not exposed",
+      "confidence": 0.35,
+      "estimated_at": "2026-10-14T17:36:25.648280Z",
+      "waiting_hours": null,
+      "dependency_contract": "fresh selected108P scope; exact graph in archived environment specification (never infer a serial chain)",
+      "work_id": "work_93f21bb9047d92158786639e5d54d5f7b4e47f53755e3257f655ab72b2842252",
+      "source_digest": "a0ffadc6dd33422b672b4f48a7d80565f97fa557d23ff088eea4d64a5bfecfc8",
+      "plan_path": "docs/plans/master_plan.md",
+      "hold_reason": "Canonical plan explicitly holds this step: HELD",
+      "enabled": false,
+      "confidence_note": "Original qualitative rating subjective-low; mapped to numeric scale for ForecastEstimate, not empirical calibration.",
+      "unresolved_dependencies": [
+        "fresh selected108P scope",
+        "exact graph in archived environment specification (never infer a serial chain)"
+      ],
+      "source_ref": {
+        "source_id": "src_51e7ceaf188c413e2ec0c6497155fae7be1f81d283907df105a0a32967fbe607",
+        "locator": "skill-mesh/docs/plans/master_plan.md",
+        "digest": "a33c47064044aba55ca0077c1055244e88f86a407feee71537d98437031dc975",
+        "line_start": 1833,
+        "line_end": 1840
+      }
+    },
+    {
+      "step_id": "E7",
+      "title": "Typed resource creation",
+      "worker_hours": {
+        "low": 10.0,
+        "high": 22.0
+      },
+      "attention_hours": {
+        "low": 0.5,
+        "high": 2.0
+      },
+      "dependencies": [],
+      "rationale": "Typed resources and volume attach, atomic run tags, containment and collision refusal before mutation.",
+      "type": "code",
+      "status": "held",
+      "basis": "model",
+      "model_id": "Codex session; runtime model not exposed",
+      "confidence": 0.35,
+      "estimated_at": "2026-10-14T17:36:25.648280Z",
+      "waiting_hours": null,
+      "dependency_contract": "fresh selected108P scope; exact graph in archived environment specification (never infer a serial chain)",
+      "work_id": "work_570df5d577276689143b667e41dde5f81c3f7c83b0baaf3c3e719bc683391a04",
+      "source_digest": "a0085935179055faf6761fa63ce2c5c31305d0ac223bcd2df60238fc42f40cce",
+      "plan_path": "docs/plans/master_plan.md",
+      "hold_reason": "Canonical plan explicitly holds this step: HELD",
+      "enabled": false,
+      "confidence_note": "Original qualitative rating subjective-low; mapped to numeric scale for ForecastEstimate, not empirical calibration.",
+      "unresolved_dependencies": [
+        "fresh selected108P scope",
+        "exact graph in archived environment specification (never infer a serial chain)"
+      ],
+      "source_ref": {
+        "source_id": "src_51e7ceaf188c413e2ec0c6497155fae7be1f81d283907df105a0a32967fbe607",
+        "locator": "skill-mesh/docs/plans/master_plan.md",
+        "digest": "a33c47064044aba55ca0077c1055244e88f86a407feee71537d98437031dc975",
+        "line_start": 1841,
+        "line_end": 1848
+      }
+    },
+    {
+      "step_id": "E8",
+      "title": "Power and snapshot lineage",
+      "worker_hours": {
+        "low": 10.0,
+        "high": 22.0
+      },
+      "attention_hours": {
+        "low": 0.5,
+        "high": 2.0
+      },
+      "dependencies": [],
+      "rationale": "Power/snapshot transitions with fresh-session proof and exact ancestry, no reuse of a stale guest identity.",
+      "type": "code",
+      "status": "held",
+      "basis": "model",
+      "model_id": "Codex session; runtime model not exposed",
+      "confidence": 0.35,
+      "estimated_at": "2026-10-14T17:36:25.648280Z",
+      "waiting_hours": null,
+      "dependency_contract": "fresh selected108P scope; exact graph in archived environment specification (never infer a serial chain)",
+      "work_id": "work_e0a508d4586bb96204fe67c064354ff6ebffb8a89f463d114940fbc223f8e4ff",
+      "source_digest": "b139f076825727cc925dfa647475be71df1a1f1ba9381b6d24ad3016a4a1b310",
+      "plan_path": "docs/plans/master_plan.md",
+      "hold_reason": "Canonical plan explicitly holds this step: HELD",
+      "enabled": false,
+      "confidence_note": "Original qualitative rating subjective-low; mapped to numeric scale for ForecastEstimate, not empirical calibration.",
+      "unresolved_dependencies": [
+        "fresh selected108P scope",
+        "exact graph in archived environment specification (never infer a serial chain)"
+      ],
+      "source_ref": {
+        "source_id": "src_51e7ceaf188c413e2ec0c6497155fae7be1f81d283907df105a0a32967fbe607",
+        "locator": "skill-mesh/docs/plans/master_plan.md",
+        "digest": "a33c47064044aba55ca0077c1055244e88f86a407feee71537d98437031dc975",
+        "line_start": 1849,
+        "line_end": 1856
+      }
+    },
+    {
+      "step_id": "E9",
+      "title": "Lifecycle rules and destruction",
+      "worker_hours": {
+        "low": 10.0,
+        "high": 24.0
+      },
+      "attention_hours": {
+        "low": 0.5,
+        "high": 2.0
+      },
+      "dependencies": [],
+      "rationale": "Explicit lifecycle-rule installation and destructive transitions within owned inventory; visible failure and retained safety evidence.",
+      "type": "code",
+      "status": "held",
+      "basis": "model",
+      "model_id": "Codex session; runtime model not exposed",
+      "confidence": 0.35,
+      "estimated_at": "2026-10-14T17:36:25.648280Z",
+      "waiting_hours": null,
+      "dependency_contract": "fresh selected108P scope; exact graph in archived environment specification (never infer a serial chain)",
+      "work_id": "work_497146175e29efd347f117a618c122f111d5dce8eb5063bcaf533cfea384bbc1",
+      "source_digest": "d6a2782c5f19ec193fba8edfebb4e7e6ab8f3c29e843cc21157a4df2ef3bb54e",
+      "plan_path": "docs/plans/master_plan.md",
+      "hold_reason": "Canonical plan explicitly holds this step: HELD",
+      "enabled": false,
+      "confidence_note": "Original qualitative rating subjective-low; mapped to numeric scale for ForecastEstimate, not empirical calibration.",
+      "unresolved_dependencies": [
+        "fresh selected108P scope",
+        "exact graph in archived environment specification (never infer a serial chain)"
+      ],
+      "source_ref": {
+        "source_id": "src_51e7ceaf188c413e2ec0c6497155fae7be1f81d283907df105a0a32967fbe607",
+        "locator": "skill-mesh/docs/plans/master_plan.md",
+        "digest": "a33c47064044aba55ca0077c1055244e88f86a407feee71537d98437031dc975",
+        "line_start": 1857,
+        "line_end": 1864
+      }
+    },
+    {
+      "step_id": "E10",
+      "title": "Authenticated read-only guest dispatch",
+      "worker_hours": {
+        "low": 12.0,
+        "high": 28.0
+      },
+      "attention_hours": {
+        "low": 0.5,
+        "high": 2.0
+      },
+      "dependencies": [],
+      "rationale": "HMAC-bound target/replay with INTENT/APPLIED/RESULT journal; closed operations and no implicit executable prose.",
+      "type": "code",
+      "status": "held",
+      "basis": "model",
+      "model_id": "Codex session; runtime model not exposed",
+      "confidence": 0.35,
+      "estimated_at": "2026-10-14T17:36:25.648280Z",
+      "waiting_hours": null,
+      "dependency_contract": "fresh selected108P scope; exact graph in archived environment specification (never infer a serial chain)",
+      "work_id": "work_9d92232261cfc9b4ae0bb61bb539a0e866074d587e802a0f6ce8ddf2ddd98f9b",
+      "source_digest": "89e23cf873ce155d4582e7eaa2bef06e226bb8711a40aa0bf7fc2d850bbbc957",
+      "plan_path": "docs/plans/master_plan.md",
+      "hold_reason": "Canonical plan explicitly holds this step: HELD",
+      "enabled": false,
+      "confidence_note": "Original qualitative rating subjective-low; mapped to numeric scale for ForecastEstimate, not empirical calibration.",
+      "unresolved_dependencies": [
+        "fresh selected108P scope",
+        "exact graph in archived environment specification (never infer a serial chain)"
+      ],
+      "source_ref": {
+        "source_id": "src_51e7ceaf188c413e2ec0c6497155fae7be1f81d283907df105a0a32967fbe607",
+        "locator": "skill-mesh/docs/plans/master_plan.md",
+        "digest": "a33c47064044aba55ca0077c1055244e88f86a407feee71537d98437031dc975",
+        "line_start": 1865,
+        "line_end": 1872
+      }
+    },
+    {
+      "step_id": "E11",
+      "title": "Content-addressed guest transfer",
+      "worker_hours": {
+        "low": 8.0,
+        "high": 20.0
+      },
+      "attention_hours": {
+        "low": 0.5,
+        "high": 2.0
+      },
+      "dependencies": [],
+      "rationale": "Exact content-addressed manifests and byte hashes with traversal/link/collision refusal; no mutable checkout runtime dependency.",
+      "type": "code",
+      "status": "held",
+      "basis": "model",
+      "model_id": "Codex session; runtime model not exposed",
+      "confidence": 0.35,
+      "estimated_at": "2026-10-14T17:36:25.648280Z",
+      "waiting_hours": null,
+      "dependency_contract": "fresh selected108P scope; exact graph in archived environment specification (never infer a serial chain)",
+      "work_id": "work_9bb440a2305538273d71a6bdc3d14d959f4c26d93c96cf9db847e15cad48ad0f",
+      "source_digest": "9eb5670ff7432e995de6443f3268bc7b4b64ee917ec9fb22eb1c9b87800b22f4",
+      "plan_path": "docs/plans/master_plan.md",
+      "hold_reason": "Canonical plan explicitly holds this step: HELD",
+      "enabled": false,
+      "confidence_note": "Original qualitative rating subjective-low; mapped to numeric scale for ForecastEstimate, not empirical calibration.",
+      "unresolved_dependencies": [
+        "fresh selected108P scope",
+        "exact graph in archived environment specification (never infer a serial chain)"
+      ],
+      "source_ref": {
+        "source_id": "src_51e7ceaf188c413e2ec0c6497155fae7be1f81d283907df105a0a32967fbe607",
+        "locator": "skill-mesh/docs/plans/master_plan.md",
+        "digest": "a33c47064044aba55ca0077c1055244e88f86a407feee71537d98437031dc975",
+        "line_start": 1873,
+        "line_end": 1880
+      }
+    },
+    {
+      "step_id": "E12",
+      "title": "Single-use admin grants",
+      "worker_hours": {
+        "low": 12.0,
+        "high": 28.0
+      },
+      "attention_hours": {
+        "low": 0.5,
+        "high": 2.0
+      },
+      "dependencies": [],
+      "rationale": "Asymmetric grants are image/action bound, one use and non-replayable; no reusable secret in execution guest.",
+      "type": "code",
+      "status": "held",
+      "basis": "model",
+      "model_id": "Codex session; runtime model not exposed",
+      "confidence": 0.35,
+      "estimated_at": "2026-10-14T17:36:25.648280Z",
+      "waiting_hours": null,
+      "dependency_contract": "fresh selected108P scope; exact graph in archived environment specification (never infer a serial chain)",
+      "work_id": "work_219348e5e47f55286d04a49c1c12d391bfc2926dd6b282a24bc98ce41fe424b1",
+      "source_digest": "968efedc10314d89573c86a427a8a42d4bcc652fc29181c4bf3dd1c6d1945d2b",
+      "plan_path": "docs/plans/master_plan.md",
+      "hold_reason": "Canonical plan explicitly holds this step: HELD",
+      "enabled": false,
+      "confidence_note": "Original qualitative rating subjective-low; mapped to numeric scale for ForecastEstimate, not empirical calibration.",
+      "unresolved_dependencies": [
+        "fresh selected108P scope",
+        "exact graph in archived environment specification (never infer a serial chain)"
+      ],
+      "source_ref": {
+        "source_id": "src_51e7ceaf188c413e2ec0c6497155fae7be1f81d283907df105a0a32967fbe607",
+        "locator": "skill-mesh/docs/plans/master_plan.md",
+        "digest": "a33c47064044aba55ca0077c1055244e88f86a407feee71537d98437031dc975",
+        "line_start": 1881,
+        "line_end": 1888
+      }
+    },
+    {
+      "step_id": "E13",
+      "title": "Guest facts and coordinator refusal",
+      "worker_hours": {
+        "low": 6.0,
+        "high": 16.0
+      },
+      "attention_hours": {
+        "low": 0.5,
+        "high": 2.0
+      },
+      "dependencies": [],
+      "rationale": "Execution-guest fact collector refuses coordinator execution and verifies independent instance/context identity.",
+      "type": "code",
+      "status": "held",
+      "basis": "model",
+      "model_id": "Codex session; runtime model not exposed",
+      "confidence": 0.35,
+      "estimated_at": "2026-10-14T17:36:25.648280Z",
+      "waiting_hours": null,
+      "dependency_contract": "fresh selected108P scope; exact graph in archived environment specification (never infer a serial chain)",
+      "work_id": "work_547858bc72ba7c800ee802c01d707bf6e3d107a20e1cc14a5623cd90c9c65b0b",
+      "source_digest": "b5bb40a811646e0a2379c9742f0916c7349323e0f5822468dcf41b9b0450cd7b",
+      "plan_path": "docs/plans/master_plan.md",
+      "hold_reason": "Canonical plan explicitly holds this step: HELD",
+      "enabled": false,
+      "confidence_note": "Original qualitative rating subjective-low; mapped to numeric scale for ForecastEstimate, not empirical calibration.",
+      "unresolved_dependencies": [
+        "fresh selected108P scope",
+        "exact graph in archived environment specification (never infer a serial chain)"
+      ],
+      "source_ref": {
+        "source_id": "src_51e7ceaf188c413e2ec0c6497155fae7be1f81d283907df105a0a32967fbe607",
+        "locator": "skill-mesh/docs/plans/master_plan.md",
+        "digest": "a33c47064044aba55ca0077c1055244e88f86a407feee71537d98437031dc975",
+        "line_start": 1889,
+        "line_end": 1896
+      }
+    },
+    {
+      "step_id": "E14",
+      "title": "S1 toolchain baseline",
+      "worker_hours": {
+        "low": 6.0,
+        "high": 14.0
+      },
+      "attention_hours": {
+        "low": 0.5,
+        "high": 2.0
+      },
+      "dependencies": [],
+      "rationale": "Capture actual S1 toolchain inputs and exact identities; missing tooling halts rather than downloading unstated fallback.",
+      "type": "code",
+      "status": "held",
+      "basis": "model",
+      "model_id": "Codex session; runtime model not exposed",
+      "confidence": 0.35,
+      "estimated_at": "2026-10-14T17:36:25.648280Z",
+      "waiting_hours": null,
+      "dependency_contract": "fresh selected108P scope; exact graph in archived environment specification (never infer a serial chain)",
+      "work_id": "work_22a25954e88fc86c5936715cedefa87459f9930d050621f0e52ed523f93937a5",
+      "source_digest": "774aed0e838223ab2e98c1918473ffd617364f64036064a0b5e31663ec35f312",
+      "plan_path": "docs/plans/master_plan.md",
+      "hold_reason": "Canonical plan explicitly holds this step: HELD",
+      "enabled": false,
+      "confidence_note": "Original qualitative rating subjective-low; mapped to numeric scale for ForecastEstimate, not empirical calibration.",
+      "unresolved_dependencies": [
+        "fresh selected108P scope",
+        "exact graph in archived environment specification (never infer a serial chain)"
+      ],
+      "source_ref": {
+        "source_id": "src_51e7ceaf188c413e2ec0c6497155fae7be1f81d283907df105a0a32967fbe607",
+        "locator": "skill-mesh/docs/plans/master_plan.md",
+        "digest": "a33c47064044aba55ca0077c1055244e88f86a407feee71537d98437031dc975",
+        "line_start": 1897,
+        "line_end": 1904
+      }
+    },
+    {
+      "step_id": "E15",
+      "title": "Isolated signer appliance",
+      "worker_hours": {
+        "low": 20.0,
+        "high": 48.0
+      },
+      "attention_hours": {
+        "low": 0.5,
+        "high": 2.0
+      },
+      "dependencies": [],
+      "rationale": "RSA3072 root/PCA/leaf chain; strict sign policy, no private-key export and no assertion of future binary hashes.",
+      "type": "code",
+      "status": "held",
+      "basis": "model",
+      "model_id": "Codex session; runtime model not exposed",
+      "confidence": 0.35,
+      "estimated_at": "2026-10-14T17:36:25.648280Z",
+      "waiting_hours": null,
+      "dependency_contract": "fresh selected108P scope; exact graph in archived environment specification (never infer a serial chain)",
+      "work_id": "work_a9eb4c42fabe14f12be56e2932439ee5bd77ca6adcb34a015c2f6eba75413d1a",
+      "source_digest": "5a90adc8e88e311c430d1228c7dda74183e98aa1fe10b73f0e8e07329e23192d",
+      "plan_path": "docs/plans/master_plan.md",
+      "hold_reason": "Canonical plan explicitly holds this step: HELD",
+      "enabled": false,
+      "confidence_note": "Original qualitative rating subjective-low; mapped to numeric scale for ForecastEstimate, not empirical calibration.",
+      "unresolved_dependencies": [
+        "fresh selected108P scope",
+        "exact graph in archived environment specification (never infer a serial chain)"
+      ],
+      "source_ref": {
+        "source_id": "src_51e7ceaf188c413e2ec0c6497155fae7be1f81d283907df105a0a32967fbe607",
+        "locator": "skill-mesh/docs/plans/master_plan.md",
+        "digest": "a33c47064044aba55ca0077c1055244e88f86a407feee71537d98437031dc975",
+        "line_start": 1905,
+        "line_end": 1912
+      }
+    },
+    {
+      "step_id": "E16",
+      "title": "Execution public trust and App Control",
+      "worker_hours": {
+        "low": 16.0,
+        "high": 36.0
+      },
+      "attention_hours": {
+        "low": 0.5,
+        "high": 2.0
+      },
+      "dependencies": [],
+      "rationale": "Public trust only; Publisher PCA+leafCN policy with scenarios12/131 and UMCI. Signer keys stay outside execution guest.",
+      "type": "code",
+      "status": "held",
+      "basis": "model",
+      "model_id": "Codex session; runtime model not exposed",
+      "confidence": 0.35,
+      "estimated_at": "2026-10-14T17:36:25.648280Z",
+      "waiting_hours": null,
+      "dependency_contract": "fresh selected108P scope; exact graph in archived environment specification (never infer a serial chain)",
+      "work_id": "work_be783524fba3c1a3df220402559060285b357da5d0bad2d99cd6fbb4f561fe00",
+      "source_digest": "4e04574cfe9d6eca1713dcc001227f448516155804f8c8c32eb9e2db0d8329f9",
+      "plan_path": "docs/plans/master_plan.md",
+      "hold_reason": "Canonical plan explicitly holds this step: HELD",
+      "enabled": false,
+      "confidence_note": "Original qualitative rating subjective-low; mapped to numeric scale for ForecastEstimate, not empirical calibration.",
+      "unresolved_dependencies": [
+        "fresh selected108P scope",
+        "exact graph in archived environment specification (never infer a serial chain)"
+      ],
+      "source_ref": {
+        "source_id": "src_51e7ceaf188c413e2ec0c6497155fae7be1f81d283907df105a0a32967fbe607",
+        "locator": "skill-mesh/docs/plans/master_plan.md",
+        "digest": "a33c47064044aba55ca0077c1055244e88f86a407feee71537d98437031dc975",
+        "line_start": 1913,
+        "line_end": 1920
+      }
+    },
+    {
+      "step_id": "E17",
+      "title": "Clean pre-canary R0 boot",
+      "worker_hours": {
+        "low": 8.0,
+        "high": 20.0
+      },
+      "attention_hours": {
+        "low": 0.5,
+        "high": 2.0
+      },
+      "dependencies": [],
+      "rationale": "SecureBootOff/testsignon/HVCIon at clean R0; freeze baseline before canaries, retain exact measured facts.",
+      "type": "code",
+      "status": "held",
+      "basis": "model",
+      "model_id": "Codex session; runtime model not exposed",
+      "confidence": 0.35,
+      "estimated_at": "2026-10-14T17:36:25.648280Z",
+      "waiting_hours": null,
+      "dependency_contract": "fresh selected108P scope; exact graph in archived environment specification (never infer a serial chain)",
+      "work_id": "work_f474d1c9b49eeb8ed144e7f31ce28f48b12335aeb5e02eaeaac33680fdf724b2",
+      "source_digest": "92a692f4c0453244c33b6120968f5e52b6bff3bc1ee8ead139ea9594ee4551fa",
+      "plan_path": "docs/plans/master_plan.md",
+      "hold_reason": "Canonical plan explicitly holds this step: HELD",
+      "enabled": false,
+      "confidence_note": "Original qualitative rating subjective-low; mapped to numeric scale for ForecastEstimate, not empirical calibration.",
+      "unresolved_dependencies": [
+        "fresh selected108P scope",
+        "exact graph in archived environment specification (never infer a serial chain)"
+      ],
+      "source_ref": {
+        "source_id": "src_51e7ceaf188c413e2ec0c6497155fae7be1f81d283907df105a0a32967fbe607",
+        "locator": "skill-mesh/docs/plans/master_plan.md",
+        "digest": "a33c47064044aba55ca0077c1055244e88f86a407feee71537d98437031dc975",
+        "line_start": 1921,
+        "line_end": 1928
+      }
+    },
+    {
+      "step_id": "E18",
+      "title": "Throwaway admission canaries",
+      "worker_hours": {
+        "low": 16.0,
+        "high": 36.0
+      },
+      "attention_hours": {
+        "low": 0.5,
+        "high": 2.0
+      },
+      "dependencies": [],
+      "rationale": "Positive and negative kernel canaries only in throwaway descendants, external witness; post-kernel guest is untrusted.",
+      "type": "code",
+      "status": "held",
+      "basis": "model",
+      "model_id": "Codex session; runtime model not exposed",
+      "confidence": 0.35,
+      "estimated_at": "2026-10-14T17:36:25.648280Z",
+      "waiting_hours": null,
+      "dependency_contract": "fresh selected108P scope; exact graph in archived environment specification (never infer a serial chain)",
+      "work_id": "work_e9095c8513cfab2054086d4e40b81a0026f50392b61c9246b86627ea2e13a48b",
+      "source_digest": "6abe13b13ba1b6063a22d60acaec8cd7f56b6374c4a102d993ab7f4fe3fad6b1",
+      "plan_path": "docs/plans/master_plan.md",
+      "hold_reason": "Canonical plan explicitly holds this step: HELD",
+      "enabled": false,
+      "confidence_note": "Original qualitative rating subjective-low; mapped to numeric scale for ForecastEstimate, not empirical calibration.",
+      "unresolved_dependencies": [
+        "fresh selected108P scope",
+        "exact graph in archived environment specification (never infer a serial chain)"
+      ],
+      "source_ref": {
+        "source_id": "src_51e7ceaf188c413e2ec0c6497155fae7be1f81d283907df105a0a32967fbe607",
+        "locator": "skill-mesh/docs/plans/master_plan.md",
+        "digest": "a33c47064044aba55ca0077c1055244e88f86a407feee71537d98437031dc975",
+        "line_start": 1929,
+        "line_end": 1936
+      }
+    },
+    {
+      "step_id": "E19",
+      "title": "Lifecycle and rollback",
+      "worker_hours": {
+        "low": 10.0,
+        "high": 26.0
+      },
+      "attention_hours": {
+        "low": 0.5,
+        "high": 2.0
+      },
+      "dependencies": [],
+      "rationale": "Fresh descendant rollback with observed exact lineage/restoration; lifecycle enforcement must remain active.",
+      "type": "code",
+      "status": "held",
+      "basis": "model",
+      "model_id": "Codex session; runtime model not exposed",
+      "confidence": 0.35,
+      "estimated_at": "2026-10-14T17:36:25.648280Z",
+      "waiting_hours": null,
+      "dependency_contract": "fresh selected108P scope; exact graph in archived environment specification (never infer a serial chain)",
+      "work_id": "work_2f484262229765a4d8512687597dae581f28f1bb6ea799b3d5c3a92d8f65caf9",
+      "source_digest": "b5fc89810a2893aa926e6bd8718ced7ea079260864b4564963bb30fbe58c8af2",
+      "plan_path": "docs/plans/master_plan.md",
+      "hold_reason": "Canonical plan explicitly holds this step: HELD",
+      "enabled": false,
+      "confidence_note": "Original qualitative rating subjective-low; mapped to numeric scale for ForecastEstimate, not empirical calibration.",
+      "unresolved_dependencies": [
+        "fresh selected108P scope",
+        "exact graph in archived environment specification (never infer a serial chain)"
+      ],
+      "source_ref": {
+        "source_id": "src_51e7ceaf188c413e2ec0c6497155fae7be1f81d283907df105a0a32967fbe607",
+        "locator": "skill-mesh/docs/plans/master_plan.md",
+        "digest": "a33c47064044aba55ca0077c1055244e88f86a407feee71537d98437031dc975",
+        "line_start": 1937,
+        "line_end": 1944
+      }
+    },
+    {
+      "step_id": "E20",
+      "title": "Normal-control abort",
+      "worker_hours": {
+        "low": 8.0,
+        "high": 18.0
+      },
+      "attention_hours": {
+        "low": 0.5,
+        "high": 2.0
+      },
+      "dependencies": [],
+      "rationale": "Abort-only destruction obeys complete owned inventory; no claim of acceptance from cleanup success.",
+      "type": "code",
+      "status": "held",
+      "basis": "model",
+      "model_id": "Codex session; runtime model not exposed",
+      "confidence": 0.35,
+      "estimated_at": "2026-10-14T17:36:25.648280Z",
+      "waiting_hours": null,
+      "dependency_contract": "fresh selected108P scope; exact graph in archived environment specification (never infer a serial chain)",
+      "work_id": "work_193487e9f59c1e95e6f7bdbdab3955c5025a8840890a5783417c3dc39d504fe2",
+      "source_digest": "7777632084ede99ff6790685d7dfe17d21f6fc7cdaebfc6fbc53549556e38e76",
+      "plan_path": "docs/plans/master_plan.md",
+      "hold_reason": "Canonical plan explicitly holds this step: HELD",
+      "enabled": false,
+      "confidence_note": "Original qualitative rating subjective-low; mapped to numeric scale for ForecastEstimate, not empirical calibration.",
+      "unresolved_dependencies": [
+        "fresh selected108P scope",
+        "exact graph in archived environment specification (never infer a serial chain)"
+      ],
+      "source_ref": {
+        "source_id": "src_51e7ceaf188c413e2ec0c6497155fae7be1f81d283907df105a0a32967fbe607",
+        "locator": "skill-mesh/docs/plans/master_plan.md",
+        "digest": "a33c47064044aba55ca0077c1055244e88f86a407feee71537d98437031dc975",
+        "line_start": 1945,
+        "line_end": 1952
+      }
+    },
+    {
+      "step_id": "E21",
+      "title": "Deterministic emergency builder",
+      "worker_hours": {
+        "low": 18.0,
+        "high": 40.0
+      },
+      "attention_hours": {
+        "low": 0.5,
+        "high": 2.0
+      },
+      "dependencies": [],
+      "rationale": "Native unsigned C++17 emergency shell, existing tools only, /Brepro /MT and closed imports; no live installation.",
+      "type": "code",
+      "status": "held",
+      "basis": "model",
+      "model_id": "Codex session; runtime model not exposed",
+      "confidence": 0.35,
+      "estimated_at": "2026-10-14T17:36:25.648280Z",
+      "waiting_hours": null,
+      "dependency_contract": "fresh selected108P scope; exact graph in archived environment specification (never infer a serial chain)",
+      "work_id": "work_11aaf4a72e151ad8d3d16f5c299077b2288c660e018d2bdefbea1b3c34eda074",
+      "source_digest": "a7f8429ab015222110fc75988d866ec393e18b93da56230788381835e8d1a56e",
+      "plan_path": "docs/plans/master_plan.md",
+      "hold_reason": "Canonical plan explicitly holds this step: HELD",
+      "enabled": false,
+      "confidence_note": "Original qualitative rating subjective-low; mapped to numeric scale for ForecastEstimate, not empirical calibration.",
+      "unresolved_dependencies": [
+        "fresh selected108P scope",
+        "exact graph in archived environment specification (never infer a serial chain)"
+      ],
+      "source_ref": {
+        "source_id": "src_51e7ceaf188c413e2ec0c6497155fae7be1f81d283907df105a0a32967fbe607",
+        "locator": "skill-mesh/docs/plans/master_plan.md",
+        "digest": "a33c47064044aba55ca0077c1055244e88f86a407feee71537d98437031dc975",
+        "line_start": 1953,
+        "line_end": 1960
+      }
+    },
+    {
+      "step_id": "E22",
+      "title": "Image-bound emergency broker",
+      "worker_hours": {
+        "low": 16.0,
+        "high": 38.0
+      },
+      "attention_hours": {
+        "low": 0.5,
+        "high": 2.0
+      },
+      "dependencies": [],
+      "rationale": "External authority bound to exact emergency image, no reusable credentials; independent refusal tests.",
+      "type": "code",
+      "status": "held",
+      "basis": "model",
+      "model_id": "Codex session; runtime model not exposed",
+      "confidence": 0.35,
+      "estimated_at": "2026-10-14T17:36:25.648280Z",
+      "waiting_hours": null,
+      "dependency_contract": "fresh selected108P scope; exact graph in archived environment specification (never infer a serial chain)",
+      "work_id": "work_f4fe143d4bb9965ef8be98514800bb40a7a94500fe336bacd24bec5a06e29493",
+      "source_digest": "3522d28c384a3311578ff88bd087de82ba5b7517e32888fdb6e17d6c279516ee",
+      "plan_path": "docs/plans/master_plan.md",
+      "hold_reason": "Canonical plan explicitly holds this step: HELD",
+      "enabled": false,
+      "confidence_note": "Original qualitative rating subjective-low; mapped to numeric scale for ForecastEstimate, not empirical calibration.",
+      "unresolved_dependencies": [
+        "fresh selected108P scope",
+        "exact graph in archived environment specification (never infer a serial chain)"
+      ],
+      "source_ref": {
+        "source_id": "src_51e7ceaf188c413e2ec0c6497155fae7be1f81d283907df105a0a32967fbe607",
+        "locator": "skill-mesh/docs/plans/master_plan.md",
+        "digest": "a33c47064044aba55ca0077c1055244e88f86a407feee71537d98437031dc975",
+        "line_start": 1961,
+        "line_end": 1968
+      }
+    },
+    {
+      "step_id": "E23",
+      "title": "Direct emergency runner",
+      "worker_hours": {
+        "low": 12.0,
+        "high": 28.0
+      },
+      "attention_hours": {
+        "low": 0.5,
+        "high": 2.0
+      },
+      "dependencies": [],
+      "rationale": "preflight-empty and dispose only; independent of Git/tests/signers; raw safety record is not a signed program-status proof.",
+      "type": "code",
+      "status": "held",
+      "basis": "model",
+      "model_id": "Codex session; runtime model not exposed",
+      "confidence": 0.35,
+      "estimated_at": "2026-10-14T17:36:25.648280Z",
+      "waiting_hours": null,
+      "dependency_contract": "fresh selected108P scope; exact graph in archived environment specification (never infer a serial chain)",
+      "work_id": "work_a97b5cab305c808ce0c2c3efdf894afa536b3b2893edf2a504f5ff629fe61078",
+      "source_digest": "e643988a34fa21fcf58ffae0f2c508edeadc55206d0303be545145cb3156129d",
+      "plan_path": "docs/plans/master_plan.md",
+      "hold_reason": "Canonical plan explicitly holds this step: HELD",
+      "enabled": false,
+      "confidence_note": "Original qualitative rating subjective-low; mapped to numeric scale for ForecastEstimate, not empirical calibration.",
+      "unresolved_dependencies": [
+        "fresh selected108P scope",
+        "exact graph in archived environment specification (never infer a serial chain)"
+      ],
+      "source_ref": {
+        "source_id": "src_51e7ceaf188c413e2ec0c6497155fae7be1f81d283907df105a0a32967fbe607",
+        "locator": "skill-mesh/docs/plans/master_plan.md",
+        "digest": "a33c47064044aba55ca0077c1055244e88f86a407feee71537d98437031dc975",
+        "line_start": 1969,
+        "line_end": 1976
+      }
+    },
+    {
+      "step_id": "E24",
+      "title": "Immutable active-lineage lifecycle",
+      "worker_hours": {
+        "low": 12.0,
+        "high": 26.0
+      },
+      "attention_hours": {
+        "low": 0.5,
+        "high": 2.0
+      },
+      "dependencies": [],
+      "rationale": "Power off five minutes after lease expiry, destroy descendants within60minutes, lineage hardcap30days; cannot silently extend.",
+      "type": "code",
+      "status": "held",
+      "basis": "model",
+      "model_id": "Codex session; runtime model not exposed",
+      "confidence": 0.35,
+      "estimated_at": "2026-10-14T17:36:25.648280Z",
+      "waiting_hours": null,
+      "dependency_contract": "fresh selected108P scope; exact graph in archived environment specification (never infer a serial chain)",
+      "work_id": "work_d581b425307b1310734917901ad5dd6ab21a8922fcf44ca23baadeb0a9205440",
+      "source_digest": "c97340f387012be6bb734a88764ab25bab5d722414afef8a31a3237354fb2efd",
+      "plan_path": "docs/plans/master_plan.md",
+      "hold_reason": "Canonical plan explicitly holds this step: HELD",
+      "enabled": false,
+      "confidence_note": "Original qualitative rating subjective-low; mapped to numeric scale for ForecastEstimate, not empirical calibration.",
+      "unresolved_dependencies": [
+        "fresh selected108P scope",
+        "exact graph in archived environment specification (never infer a serial chain)"
+      ],
+      "source_ref": {
+        "source_id": "src_51e7ceaf188c413e2ec0c6497155fae7be1f81d283907df105a0a32967fbe607",
+        "locator": "skill-mesh/docs/plans/master_plan.md",
+        "digest": "a33c47064044aba55ca0077c1055244e88f86a407feee71537d98437031dc975",
+        "line_start": 1977,
+        "line_end": 1984
+      }
+    },
+    {
+      "step_id": "E25",
+      "title": "C4 PASS retention transition",
+      "worker_hours": {
+        "low": 14.0,
+        "high": 32.0
+      },
+      "attention_hours": {
+        "low": 0.5,
+        "high": 2.0
+      },
+      "dependencies": [],
+      "rationale": "Atomic proof-bound PASS retains only detached private volume; C4+120day hardcap. Otherwise fail/destroy and block C5.",
+      "type": "code",
+      "status": "held",
+      "basis": "model",
+      "model_id": "Codex session; runtime model not exposed",
+      "confidence": 0.35,
+      "estimated_at": "2026-10-14T17:36:25.648280Z",
+      "waiting_hours": null,
+      "dependency_contract": "fresh selected108P scope; exact graph in archived environment specification (never infer a serial chain)",
+      "work_id": "work_e13e61b1e2d34e721d9ca59a68e0b65a528bc9c08314702bad2232f9bb179658",
+      "source_digest": "4803a1af13eff5eda3bfc346d4ee102f600c77f6fb64ea6f5248fb2baf13edb7",
+      "plan_path": "docs/plans/master_plan.md",
+      "hold_reason": "Canonical plan explicitly holds this step: HELD",
+      "enabled": false,
+      "confidence_note": "Original qualitative rating subjective-low; mapped to numeric scale for ForecastEstimate, not empirical calibration.",
+      "unresolved_dependencies": [
+        "fresh selected108P scope",
+        "exact graph in archived environment specification (never infer a serial chain)"
+      ],
+      "source_ref": {
+        "source_id": "src_51e7ceaf188c413e2ec0c6497155fae7be1f81d283907df105a0a32967fbe607",
+        "locator": "skill-mesh/docs/plans/master_plan.md",
+        "digest": "a33c47064044aba55ca0077c1055244e88f86a407feee71537d98437031dc975",
+        "line_start": 1985,
+        "line_end": 1992
+      }
+    },
+    {
+      "step_id": "E26",
+      "title": "Failure quarantine",
+      "worker_hours": {
+        "low": 8.0,
+        "high": 18.0
+      },
+      "attention_hours": {
+        "low": 0.5,
+        "high": 2.0
+      },
+      "dependencies": [],
+      "rationale": "Abort quarantine minimum7days within original30day cap, without retaining active dangerous compute.",
+      "type": "code",
+      "status": "held",
+      "basis": "model",
+      "model_id": "Codex session; runtime model not exposed",
+      "confidence": 0.35,
+      "estimated_at": "2026-10-14T17:36:25.648280Z",
+      "waiting_hours": null,
+      "dependency_contract": "fresh selected108P scope; exact graph in archived environment specification (never infer a serial chain)",
+      "work_id": "work_44a30afc0f544dbb89baa40f8830b6e073665bab7599bc5070fa28a76861f52c",
+      "source_digest": "73a0a4bc8ad39bf8bacac8839453ee3f413d79dcbfa218fddc38e57c51b7fa4b",
+      "plan_path": "docs/plans/master_plan.md",
+      "hold_reason": "Canonical plan explicitly holds this step: HELD",
+      "enabled": false,
+      "confidence_note": "Original qualitative rating subjective-low; mapped to numeric scale for ForecastEstimate, not empirical calibration.",
+      "unresolved_dependencies": [
+        "fresh selected108P scope",
+        "exact graph in archived environment specification (never infer a serial chain)"
+      ],
+      "source_ref": {
+        "source_id": "src_51e7ceaf188c413e2ec0c6497155fae7be1f81d283907df105a0a32967fbe607",
+        "locator": "skill-mesh/docs/plans/master_plan.md",
+        "digest": "a33c47064044aba55ca0077c1055244e88f86a407feee71537d98437031dc975",
+        "line_start": 1993,
+        "line_end": 2000
+      }
+    },
+    {
+      "step_id": "E27",
+      "title": "Parent-only C5 retention shortening",
+      "worker_hours": {
+        "low": 8.0,
+        "high": 20.0
+      },
+      "attention_hours": {
+        "low": 0.5,
+        "high": 2.0
+      },
+      "dependencies": [],
+      "rationale": "One-hour JIT authority; shorten to minimum(intent+90days,hardcap); never prolong retained life.",
+      "type": "code",
+      "status": "held",
+      "basis": "model",
+      "model_id": "Codex session; runtime model not exposed",
+      "confidence": 0.35,
+      "estimated_at": "2026-10-14T17:36:25.648280Z",
+      "waiting_hours": null,
+      "dependency_contract": "fresh selected108P scope; exact graph in archived environment specification (never infer a serial chain)",
+      "work_id": "work_ee1b6ceb67b092d19112e7da1515dc8f2c7be079e4d086c6f24ed9d146c8acbc",
+      "source_digest": "f3130dcd9d00e43c972d104e8b20d51fce57b3070dcba467a5fea4fd7aaec944",
+      "plan_path": "docs/plans/master_plan.md",
+      "hold_reason": "Canonical plan explicitly holds this step: HELD",
+      "enabled": false,
+      "confidence_note": "Original qualitative rating subjective-low; mapped to numeric scale for ForecastEstimate, not empirical calibration.",
+      "unresolved_dependencies": [
+        "fresh selected108P scope",
+        "exact graph in archived environment specification (never infer a serial chain)"
+      ],
+      "source_ref": {
+        "source_id": "src_51e7ceaf188c413e2ec0c6497155fae7be1f81d283907df105a0a32967fbe607",
+        "locator": "skill-mesh/docs/plans/master_plan.md",
+        "digest": "a33c47064044aba55ca0077c1055244e88f86a407feee71537d98437031dc975",
+        "line_start": 2001,
+        "line_end": 2008
+      }
+    },
+    {
+      "step_id": "E28",
+      "title": "Absence verification and key retirement",
+      "worker_hours": {
+        "low": 10.0,
+        "high": 24.0
+      },
+      "attention_hours": {
+        "low": 0.5,
+        "high": 2.0
+      },
+      "dependencies": [],
+      "rationale": "Read-only retained-artifact absence verification; key retirement24hours after automatic PASS plus7days rule as specified.",
+      "type": "code",
+      "status": "held",
+      "basis": "model",
+      "model_id": "Codex session; runtime model not exposed",
+      "confidence": 0.35,
+      "estimated_at": "2026-10-14T17:36:25.648280Z",
+      "waiting_hours": null,
+      "dependency_contract": "fresh selected108P scope; exact graph in archived environment specification (never infer a serial chain)",
+      "work_id": "work_5b902cc30ab8a977cd836d88e27ab362af5c66068dd38dd5bc627d74d853ae6f",
+      "source_digest": "1dffe9b6b9228bead0d06aaefa4ba7a5eae78bfae9f5c060d62cc72f9ec888d4",
+      "plan_path": "docs/plans/master_plan.md",
+      "hold_reason": "Canonical plan explicitly holds this step: HELD",
+      "enabled": false,
+      "confidence_note": "Original qualitative rating subjective-low; mapped to numeric scale for ForecastEstimate, not empirical calibration.",
+      "unresolved_dependencies": [
+        "fresh selected108P scope",
+        "exact graph in archived environment specification (never infer a serial chain)"
+      ],
+      "source_ref": {
+        "source_id": "src_51e7ceaf188c413e2ec0c6497155fae7be1f81d283907df105a0a32967fbe607",
+        "locator": "skill-mesh/docs/plans/master_plan.md",
+        "digest": "a33c47064044aba55ca0077c1055244e88f86a407feee71537d98437031dc975",
+        "line_start": 2009,
+        "line_end": 2016
+      }
+    },
+    {
+      "step_id": "E29",
+      "title": "Provision S1, signer and R0",
+      "worker_hours": {
+        "low": 4.0,
+        "high": 12.0
+      },
+      "attention_hours": {
+        "low": 1.0,
+        "high": 4.0
+      },
+      "dependencies": [],
+      "rationale": "Separate operator approval; two empty-inventory live preflights before environmentID, then lease as first mutation and lifecycle first.",
+      "type": "operator",
+      "status": "held",
+      "basis": "model",
+      "model_id": "Codex session; runtime model not exposed",
+      "confidence": 0.35,
+      "estimated_at": "2026-10-14T17:36:25.648280Z",
+      "waiting_hours": null,
+      "dependency_contract": "fresh selected108P scope; exact graph in archived environment specification (never infer a serial chain)",
+      "work_id": "work_7a5700d93977a24c0df91b2a465365298c2c3deecb513a2f19851c5ad88e1649",
+      "source_digest": "024291cc4592863e83cc471c97d53b1b7dee1871915877e23bf9feebe8200b27",
+      "plan_path": "docs/plans/master_plan.md",
+      "hold_reason": "Canonical plan explicitly holds this step: HELD",
+      "enabled": false,
+      "confidence_note": "Original qualitative rating subjective-low; mapped to numeric scale for ForecastEstimate, not empirical calibration.",
+      "unresolved_dependencies": [
+        "fresh selected108P scope",
+        "exact graph in archived environment specification (never infer a serial chain)"
+      ],
+      "source_ref": {
+        "source_id": "src_51e7ceaf188c413e2ec0c6497155fae7be1f81d283907df105a0a32967fbe607",
+        "locator": "skill-mesh/docs/plans/master_plan.md",
+        "digest": "a33c47064044aba55ca0077c1055244e88f86a407feee71537d98437031dc975",
+        "line_start": 2017,
+        "line_end": 2024
+      }
+    },
+    {
+      "step_id": "E30",
+      "title": "Live connector and fresh-context smoke",
+      "worker_hours": {
+        "low": 6.0,
+        "high": 18.0
+      },
+      "attention_hours": {
+        "low": 1.0,
+        "high": 4.0
+      },
+      "dependencies": [],
+      "rationale": "Real connector, rollback and signer isolation; independent producer/review contexts; no real publication or simulated native PASS.",
+      "type": "operator",
+      "status": "held",
+      "basis": "model",
+      "model_id": "Codex session; runtime model not exposed",
+      "confidence": 0.35,
+      "estimated_at": "2026-10-14T17:36:25.648280Z",
+      "waiting_hours": null,
+      "dependency_contract": "fresh selected108P scope; exact graph in archived environment specification (never infer a serial chain)",
+      "work_id": "work_052a3d2fcc0f95f8cd1ee3a6028c392c773928205dde9d5059a9d9a1f2f5c327",
+      "source_digest": "9b5f6f18a2c0b205b56661a5066c259a8a1bda0172568c906c5d94c301edcf85",
+      "plan_path": "docs/plans/master_plan.md",
+      "hold_reason": "Canonical plan explicitly holds this step: HELD",
+      "enabled": false,
+      "confidence_note": "Original qualitative rating subjective-low; mapped to numeric scale for ForecastEstimate, not empirical calibration.",
+      "unresolved_dependencies": [
+        "fresh selected108P scope",
+        "exact graph in archived environment specification (never infer a serial chain)"
+      ],
+      "source_ref": {
+        "source_id": "src_51e7ceaf188c413e2ec0c6497155fae7be1f81d283907df105a0a32967fbe607",
+        "locator": "skill-mesh/docs/plans/master_plan.md",
+        "digest": "a33c47064044aba55ca0077c1055244e88f86a407feee71537d98437031dc975",
+        "line_start": 2025,
+        "line_end": 2032
+      }
+    },
+    {
+      "step_id": "E31",
+      "title": "Local readiness candidate",
+      "worker_hours": {
+        "low": 8.0,
+        "high": 24.0
+      },
+      "attention_hours": {
+        "low": 0.5,
+        "high": 2.0
+      },
+      "dependencies": [],
+      "rationale": "Build and independently review exact local candidate and its hashes; required gates, no push in this child step.",
+      "type": "code",
+      "status": "held",
+      "basis": "model",
+      "model_id": "Codex session; runtime model not exposed",
+      "confidence": 0.35,
+      "estimated_at": "2026-10-14T17:36:25.648280Z",
+      "waiting_hours": null,
+      "dependency_contract": "fresh selected108P scope; exact graph in archived environment specification (never infer a serial chain)",
+      "work_id": "work_ef10e1c79d7399056e8e2763c96442dfee16b9772a0f528bb5b02f0b7c6ca737",
+      "source_digest": "73361d5abce0eafc0d3969ba552e45d6e5c3087fb6c753a296d174b689fe04d1",
+      "plan_path": "docs/plans/master_plan.md",
+      "hold_reason": "Canonical plan explicitly holds this step: HELD",
+      "enabled": false,
+      "confidence_note": "Original qualitative rating subjective-low; mapped to numeric scale for ForecastEstimate, not empirical calibration.",
+      "unresolved_dependencies": [
+        "fresh selected108P scope",
+        "exact graph in archived environment specification (never infer a serial chain)"
+      ],
+      "source_ref": {
+        "source_id": "src_51e7ceaf188c413e2ec0c6497155fae7be1f81d283907df105a0a32967fbe607",
+        "locator": "skill-mesh/docs/plans/master_plan.md",
+        "digest": "a33c47064044aba55ca0077c1055244e88f86a407feee71537d98437031dc975",
+        "line_start": 2033,
+        "line_end": 2040
+      }
+    },
+    {
+      "step_id": "E32",
+      "title": "Remote seal and readiness",
+      "worker_hours": {
+        "low": 2.0,
+        "high": 8.0
+      },
+      "attention_hours": {
+        "low": 1.0,
+        "high": 4.0
+      },
+      "dependencies": [],
+      "rationale": "Parent performs authorized push, remote reread/seal and readiness status only; no source change during sealing.",
+      "type": "operator",
+      "status": "held",
+      "basis": "model",
+      "model_id": "Codex session; runtime model not exposed",
+      "confidence": 0.35,
+      "estimated_at": "2026-10-14T17:36:25.648280Z",
+      "waiting_hours": null,
+      "dependency_contract": "fresh selected108P scope; exact graph in archived environment specification (never infer a serial chain)",
+      "work_id": "work_cc3f337184ab79b9180449f182cbcf98ef35e5c2a3b7eace81b73252f021d48b",
+      "source_digest": "8d7b959d363dd181805091d130d69b67d2acfefe339d3a0e56a8ea2718ed4fb7",
+      "plan_path": "docs/plans/master_plan.md",
+      "hold_reason": "Canonical plan explicitly holds this step: HELD",
+      "enabled": false,
+      "confidence_note": "Original qualitative rating subjective-low; mapped to numeric scale for ForecastEstimate, not empirical calibration.",
+      "unresolved_dependencies": [
+        "fresh selected108P scope",
+        "exact graph in archived environment specification (never infer a serial chain)"
+      ],
+      "source_ref": {
+        "source_id": "src_51e7ceaf188c413e2ec0c6497155fae7be1f81d283907df105a0a32967fbe607",
+        "locator": "skill-mesh/docs/plans/master_plan.md",
+        "digest": "a33c47064044aba55ca0077c1055244e88f86a407feee71537d98437031dc975",
+        "line_start": 2041,
+        "line_end": 2048
+      }
+    },
+    {
+      "step_id": "E33",
+      "title": "Mandatory terminal disposition",
+      "worker_hours": {
+        "low": 3.0,
+        "high": 12.0
+      },
+      "attention_hours": {
+        "low": 1.0,
+        "high": 4.0
+      },
+      "dependencies": [],
+      "rationale": "Mandatory after C4PASS or any terminal environment: safety first, independent of Git/signers. Retain raw proof. PASS alone allows C5; abort-cleaned is not acceptance.",
+      "type": "operator",
+      "status": "held",
+      "basis": "model",
+      "model_id": "Codex session; runtime model not exposed",
+      "confidence": 0.35,
+      "estimated_at": "2026-10-14T17:36:25.648280Z",
+      "waiting_hours": null,
+      "dependency_contract": "fresh selected108P scope; exact graph in archived environment specification (never infer a serial chain)",
+      "work_id": "work_2f66d017c575c4f9201a0c984263790149660429ceb17c07816eaf6189441b8d",
+      "source_digest": "e19960c72b08151f99a79fc88e752f48e9204201d0d5e1a14ed61f7c0eff8698",
+      "plan_path": "docs/plans/master_plan.md",
+      "hold_reason": "Canonical plan explicitly holds this step: HELD",
+      "enabled": false,
+      "confidence_note": "Original qualitative rating subjective-low; mapped to numeric scale for ForecastEstimate, not empirical calibration.",
+      "unresolved_dependencies": [
+        "fresh selected108P scope",
+        "exact graph in archived environment specification (never infer a serial chain)"
+      ],
+      "source_ref": {
+        "source_id": "src_51e7ceaf188c413e2ec0c6497155fae7be1f81d283907df105a0a32967fbe607",
+        "locator": "skill-mesh/docs/plans/master_plan.md",
+        "digest": "a33c47064044aba55ca0077c1055244e88f86a407feee71537d98437031dc975",
+        "line_start": 2049,
+        "line_end": 2056
+      }
+    },
+    {
+      "step_id": "126",
+      "title": "Make ordinary full review reliable on Codex",
+      "worker_hours": {
+        "low": 10.0,
+        "high": 24.0
+      },
+      "attention_hours": {
+        "low": 0.5,
+        "high": 2.0
+      },
+      "dependencies": [],
+      "rationale": "Independent ordinary-review support and preserved exhausted gate require source reconciliation.",
+      "type": "code",
+      "status": "pending",
+      "basis": "model",
+      "model_id": "Codex session; runtime model not exposed",
+      "confidence": 0.35,
+      "estimated_at": "2026-10-14T17:36:25.648280Z",
+      "waiting_hours": null,
+      "dependency_contract": "qualified native coordinator; repaired main; synchronized M1 issues. No dependency on 120/121.",
+      "work_id": "work_3e1b923853659f410d70f2c0b3cad299e2b3f06331e937bbaa8a6bb81e4a8818",
+      "source_digest": "3707e507b691eb0d18511c934d82394d8ba6f6ebac9fd40386d1312945e19b86",
+      "plan_path": "docs/plans/master_plan.md",
+      "hold_reason": "Canonical plan status is blocked; retain the estimate without selecting this work.",
+      "enabled": false,
+      "confidence_note": "Original qualitative rating subjective-low; mapped to numeric scale for ForecastEstimate, not empirical calibration.",
+      "unresolved_dependencies": [
+        "qualified native coordinator",
+        "repaired main",
+        "synchronized M1 issues. No dependency on 120/121."
+      ],
+      "source_ref": {
+        "source_id": "src_51e7ceaf188c413e2ec0c6497155fae7be1f81d283907df105a0a32967fbe607",
+        "locator": "skill-mesh/docs/plans/master_plan.md",
+        "digest": "a33c47064044aba55ca0077c1055244e88f86a407feee71537d98437031dc975",
+        "line_start": 177,
+        "line_end": 188
+      }
+    },
+    {
+      "step_id": "127",
+      "title": "Resume the intended durable build checkpoint",
+      "worker_hours": {
+        "low": 8.0,
+        "high": 18.0
+      },
+      "attention_hours": {
+        "low": 0.5,
+        "high": 2.0
+      },
+      "dependencies": [
+        "work_3e1b923853659f410d70f2c0b3cad299e2b3f06331e937bbaa8a6bb81e4a8818"
+      ],
+      "rationale": "Explicit durable-session selection plus unrelated-state preservation and fresh resume cases.",
+      "type": "code",
+      "status": "pending",
+      "basis": "model",
+      "model_id": "Codex session; runtime model not exposed",
+      "confidence": 0.35,
+      "estimated_at": "2026-10-14T17:36:25.648280Z",
+      "waiting_hours": null,
+      "dependency_contract": "126",
+      "work_id": "work_3c104b67141920639bb8213db8009cf1b0d4f741829010907812b9c58ce22ebd",
+      "source_digest": "27bfb7ee5621636720bc4c68bf540eac25ed982280682b9d164e8b7b2e1132ff",
+      "plan_path": "docs/plans/master_plan.md",
+      "hold_reason": "",
+      "enabled": true,
+      "confidence_note": "Original qualitative rating subjective-low; mapped to numeric scale for ForecastEstimate, not empirical calibration.",
+      "unresolved_dependencies": [],
+      "source_ref": {
+        "source_id": "src_51e7ceaf188c413e2ec0c6497155fae7be1f81d283907df105a0a32967fbe607",
+        "locator": "skill-mesh/docs/plans/master_plan.md",
+        "digest": "a33c47064044aba55ca0077c1055244e88f86a407feee71537d98437031dc975",
+        "line_start": 189,
+        "line_end": 200
+      }
+    },
+    {
+      "step_id": "128",
+      "title": "Prepare the connected Codex acceptance procedure",
+      "worker_hours": {
+        "low": 6.0,
+        "high": 14.0
+      },
+      "attention_hours": {
+        "low": 0.5,
+        "high": 1.5
+      },
+      "dependencies": [
+        "work_3c104b67141920639bb8213db8009cf1b0d4f741829010907812b9c58ce22ebd"
+      ],
+      "rationale": "Real loopback, pytest and Chromium procedure with named functional negatives.",
+      "type": "code",
+      "status": "pending",
+      "basis": "model",
+      "model_id": "Codex session; runtime model not exposed",
+      "confidence": 0.35,
+      "estimated_at": "2026-10-14T17:36:25.648280Z",
+      "waiting_hours": null,
+      "dependency_contract": "127",
+      "work_id": "work_21082912945af129e42b4137b44644d8884de90b0458fa704b3d2d86f9a7c149",
+      "source_digest": "b403f9bfb55b475cf6ec60a9b35706a486347b9f90f7cf487c447970aa4a750a",
+      "plan_path": "docs/plans/master_plan.md",
+      "hold_reason": "",
+      "enabled": true,
+      "confidence_note": "Original qualitative rating subjective-low; mapped to numeric scale for ForecastEstimate, not empirical calibration.",
+      "unresolved_dependencies": [],
+      "source_ref": {
+        "source_id": "src_51e7ceaf188c413e2ec0c6497155fae7be1f81d283907df105a0a32967fbe607",
+        "locator": "skill-mesh/docs/plans/master_plan.md",
+        "digest": "a33c47064044aba55ca0077c1055244e88f86a407feee71537d98437031dc975",
+        "line_start": 201,
+        "line_end": 212
+      }
+    },
+    {
+      "step_id": "129",
+      "title": "Complete the installed ordinary Codex workflow",
+      "worker_hours": {
+        "low": 2.0,
+        "high": 6.0
+      },
+      "attention_hours": {
+        "low": 2.0,
+        "high": 5.0
+      },
+      "dependencies": [
+        "work_21082912945af129e42b4137b44644d8884de90b0458fa704b3d2d86f9a7c149",
+        "work_25d3252c237109a3428d13fe9de90de31607a3c9abc750e103e468304447291c"
+      ],
+      "rationale": "Six connected installed Codex cases and fresh-session transition; operator time dominates.",
+      "type": "operator",
+      "status": "pending",
+      "basis": "model",
+      "model_id": "Codex session; runtime model not exposed",
+      "confidence": 0.35,
+      "estimated_at": "2026-10-14T17:36:25.648280Z",
+      "waiting_hours": null,
+      "dependency_contract": "128. Claude handoff reconciliation and Step 125 are not prerequisites for M1.",
+      "work_id": "work_7f79f8405dbce7723810f5a932e31f193827d17b162f8370070a23f432955b88",
+      "source_digest": "c1ffd5abc5e69d4827b6ffd48c8aba385a7856a58fefb21b9f4b9fc664a27ab0",
+      "plan_path": "docs/plans/master_plan.md",
+      "hold_reason": "",
+      "enabled": true,
+      "confidence_note": "Original qualitative rating subjective-low; mapped to numeric scale for ForecastEstimate, not empirical calibration.",
+      "unresolved_dependencies": [],
+      "source_ref": {
+        "source_id": "src_51e7ceaf188c413e2ec0c6497155fae7be1f81d283907df105a0a32967fbe607",
+        "locator": "skill-mesh/docs/plans/master_plan.md",
+        "digest": "a33c47064044aba55ca0077c1055244e88f86a407feee71537d98437031dc975",
+        "line_start": 213,
+        "line_end": 394
+      }
+    },
+    {
+      "step_id": "130",
+      "title": "Ship attributable reports and bounded inspection",
+      "worker_hours": {
+        "low": 10.0,
+        "high": 22.0
+      },
+      "attention_hours": {
+        "low": 0.5,
+        "high": 2.0
+      },
+      "dependencies": [],
+      "rationale": "Stable attribution reports, closed disposition contracts and safe bounded orphan inspection.",
+      "type": "code",
+      "status": "pending",
+      "basis": "model",
+      "model_id": "Codex session; runtime model not exposed",
+      "confidence": 0.35,
+      "estimated_at": "2026-10-14T17:36:25.648280Z",
+      "waiting_hours": null,
+      "dependency_contract": "No new feature step. Before catalog mutation, satisfy the current lifecycle preflight described below and reconcile source/target-path ownership with other work.",
+      "work_id": "work_ef9ff1cdfebdc73f8656a0bead6e0c407280c6b3f5145924f49e0a6a178fc92a",
+      "source_digest": "82aef9c5e20795dccd0ca1be23e3befbdcc8aa9601042ccc51e5aa035eecec53",
+      "plan_path": "docs/plans/master_plan.md",
+      "hold_reason": "",
+      "enabled": true,
+      "confidence_note": "Original qualitative rating subjective-low; mapped to numeric scale for ForecastEstimate, not empirical calibration.",
+      "unresolved_dependencies": [
+        "No new feature step. Before catalog mutation",
+        "satisfy the current lifecycle preflight described below",
+        "reconcile source/target-path ownership with other work."
+      ],
+      "source_ref": {
+        "source_id": "src_51e7ceaf188c413e2ec0c6497155fae7be1f81d283907df105a0a32967fbe607",
+        "locator": "skill-mesh/docs/plans/master_plan.md",
+        "digest": "a33c47064044aba55ca0077c1055244e88f86a407feee71537d98437031dc975",
+        "line_start": 395,
+        "line_end": 411
+      }
+    },
+    {
+      "step_id": "131",
+      "title": "Observe the installed skill in a fresh Codex session",
+      "worker_hours": {
+        "low": 2.0,
+        "high": 5.0
+      },
+      "attention_hours": {
+        "low": 1.0,
+        "high": 3.0
+      },
+      "dependencies": [
+        "work_ef9ff1cdfebdc73f8656a0bead6e0c407280c6b3f5145924f49e0a6a178fc92a"
+      ],
+      "rationale": "Installed normal-profile scope/carry/dry-run observations.",
+      "type": "operator",
+      "status": "pending",
+      "basis": "model",
+      "model_id": "Codex session; runtime model not exposed",
+      "confidence": 0.35,
+      "estimated_at": "2026-10-14T17:36:25.648280Z",
+      "waiting_hours": null,
+      "dependency_contract": "Step 130 and its exact candidate/release evidence.",
+      "work_id": "work_a7f67f2d83118bd0a69e93a329017f51bc2919509aa9899d626a45a72779046d",
+      "source_digest": "6ca72d967f01693f02474276e1238e169fd3f41f80b8313b40876e272bdf462d",
+      "plan_path": "docs/plans/master_plan.md",
+      "hold_reason": "",
+      "enabled": true,
+      "confidence_note": "Original qualitative rating subjective-low; mapped to numeric scale for ForecastEstimate, not empirical calibration.",
+      "unresolved_dependencies": [
+        "its exact candidate/release evidence."
+      ],
+      "source_ref": {
+        "source_id": "src_51e7ceaf188c413e2ec0c6497155fae7be1f81d283907df105a0a32967fbe607",
+        "locator": "skill-mesh/docs/plans/master_plan.md",
+        "digest": "a33c47064044aba55ca0077c1055244e88f86a407feee71537d98437031dc975",
+        "line_start": 412,
+        "line_end": 837
+      }
+    },
+    {
+      "step_id": "111",
+      "title": "Make native-born inventory generation hermetic",
+      "worker_hours": {
+        "low": 6.0,
+        "high": 14.0
+      },
+      "attention_hours": {
+        "low": 0.5,
+        "high": 1.5
+      },
+      "dependencies": [
+        "work_a801aa1513eef6b748c85b300a87695eb19e8784a88f563b847a8445a98ed481"
+      ],
+      "rationale": "Hermetic inventory generation and sourceFiles correction.",
+      "type": "code",
+      "status": "pending",
+      "basis": "model",
+      "model_id": "Codex session; runtime model not exposed",
+      "confidence": 0.35,
+      "estimated_at": "2026-10-14T17:36:25.648280Z",
+      "waiting_hours": null,
+      "dependency_contract": "110",
+      "work_id": "work_559dda7de4082218ddb4da6c466fd35ba02d877871288b49ba480216c2839e97",
+      "source_digest": "24bf09f003e505fad1b3e534d695cac42e450edc130f63961a228aa4318a7016",
+      "plan_path": "docs/plans/master_plan.md",
+      "hold_reason": "",
+      "enabled": true,
+      "confidence_note": "Original qualitative rating subjective-low; mapped to numeric scale for ForecastEstimate, not empirical calibration.",
+      "unresolved_dependencies": [],
+      "source_ref": {
+        "source_id": "src_51e7ceaf188c413e2ec0c6497155fae7be1f81d283907df105a0a32967fbe607",
+        "locator": "skill-mesh/docs/plans/master_plan.md",
+        "digest": "a33c47064044aba55ca0077c1055244e88f86a407feee71537d98437031dc975",
+        "line_start": 864,
+        "line_end": 876
+      }
+    },
+    {
+      "step_id": "112",
+      "title": "Enforce one operation-aware catalog truth gate",
+      "worker_hours": {
+        "low": 10.0,
+        "high": 22.0
+      },
+      "attention_hours": {
+        "low": 0.5,
+        "high": 2.0
+      },
+      "dependencies": [
+        "work_559dda7de4082218ddb4da6c466fd35ba02d877871288b49ba480216c2839e97"
+      ],
+      "rationale": "Operation-aware truth validation must precede any destructive generation.",
+      "type": "code",
+      "status": "pending",
+      "basis": "model",
+      "model_id": "Codex session; runtime model not exposed",
+      "confidence": 0.35,
+      "estimated_at": "2026-10-14T17:36:25.648280Z",
+      "waiting_hours": null,
+      "dependency_contract": "111",
+      "work_id": "work_d57b5889f3c77c6752edaf06e18289cd466420e50f19d128eecf7783a2c444a8",
+      "source_digest": "d0bcde8140b650ed430793b213b2dd8653348225104a95366669fa1767ec7393",
+      "plan_path": "docs/plans/master_plan.md",
+      "hold_reason": "",
+      "enabled": true,
+      "confidence_note": "Original qualitative rating subjective-low; mapped to numeric scale for ForecastEstimate, not empirical calibration.",
+      "unresolved_dependencies": [],
+      "source_ref": {
+        "source_id": "src_51e7ceaf188c413e2ec0c6497155fae7be1f81d283907df105a0a32967fbe607",
+        "locator": "skill-mesh/docs/plans/master_plan.md",
+        "digest": "a33c47064044aba55ca0077c1055244e88f86a407feee71537d98437031dc975",
+        "line_start": 877,
+        "line_end": 889
+      }
+    },
+    {
+      "step_id": "113",
+      "title": "Add and dogfood the portable `/skill-crud` front door",
+      "worker_hours": {
+        "low": 10.0,
+        "high": 24.0
+      },
+      "attention_hours": {
+        "low": 1.0,
+        "high": 3.0
+      },
+      "dependencies": [
+        "work_d57b5889f3c77c6752edaf06e18289cd466420e50f19d128eecf7783a2c444a8"
+      ],
+      "rationale": "Portable CRUD front door plus actual provider-compatible dogfood.",
+      "type": "code",
+      "status": "pending",
+      "basis": "model",
+      "model_id": "Codex session; runtime model not exposed",
+      "confidence": 0.35,
+      "estimated_at": "2026-10-14T17:36:25.648280Z",
+      "waiting_hours": null,
+      "dependency_contract": "112",
+      "work_id": "work_7fa82a0d358ad4ed02b2aacb9831795650406ca12bd1709d1d19838c502c2893",
+      "source_digest": "2e5be3c64aa3cbaa3159b188bde892532dfed246401c80f337d345ae44e3629e",
+      "plan_path": "docs/plans/master_plan.md",
+      "hold_reason": "",
+      "enabled": true,
+      "confidence_note": "Original qualitative rating subjective-low; mapped to numeric scale for ForecastEstimate, not empirical calibration.",
+      "unresolved_dependencies": [],
+      "source_ref": {
+        "source_id": "src_51e7ceaf188c413e2ec0c6497155fae7be1f81d283907df105a0a32967fbe607",
+        "locator": "skill-mesh/docs/plans/master_plan.md",
+        "digest": "a33c47064044aba55ca0077c1055244e88f86a407feee71537d98437031dc975",
+        "line_start": 890,
+        "line_end": 902
+      }
+    },
+    {
+      "step_id": "114",
+      "title": "Block legacy single-host mutation paths",
+      "worker_hours": {
+        "low": 6.0,
+        "high": 14.0
+      },
+      "attention_hours": {
+        "low": 0.5,
+        "high": 1.5
+      },
+      "dependencies": [
+        "work_7fa82a0d358ad4ed02b2aacb9831795650406ca12bd1709d1d19838c502c2893"
+      ],
+      "rationale": "Find and block legacy single-host mutation seams without widening eval scope.",
+      "type": "code",
+      "status": "pending",
+      "basis": "model",
+      "model_id": "Codex session; runtime model not exposed",
+      "confidence": 0.35,
+      "estimated_at": "2026-10-14T17:36:25.648280Z",
+      "waiting_hours": null,
+      "dependency_contract": "113",
+      "work_id": "work_5416208e501234b158b9ce2406844bc0ef21ce6de84d208d869821c259921bec",
+      "source_digest": "0af31df150b87d8351c98a2ee20722950a145887aa93878a7954ccf410aec92b",
+      "plan_path": "docs/plans/master_plan.md",
+      "hold_reason": "",
+      "enabled": true,
+      "confidence_note": "Original qualitative rating subjective-low; mapped to numeric scale for ForecastEstimate, not empirical calibration.",
+      "unresolved_dependencies": [],
+      "source_ref": {
+        "source_id": "src_51e7ceaf188c413e2ec0c6497155fae7be1f81d283907df105a0a32967fbe607",
+        "locator": "skill-mesh/docs/plans/master_plan.md",
+        "digest": "a33c47064044aba55ca0077c1055244e88f86a407feee71537d98437031dc975",
+        "line_start": 903,
+        "line_end": 915
+      }
+    },
+    {
+      "step_id": "115",
+      "title": "Prove nondestructive lifecycle transitions",
+      "worker_hours": {
+        "low": 6.0,
+        "high": 16.0
+      },
+      "attention_hours": {
+        "low": 1.0,
+        "high": 2.0
+      },
+      "dependencies": [
+        "work_5416208e501234b158b9ce2406844bc0ef21ce6de84d208d869821c259921bec"
+      ],
+      "rationale": "Nondestructive lifecycle transitions in disposable actual environments.",
+      "type": "code",
+      "status": "pending",
+      "basis": "model",
+      "model_id": "Codex session; runtime model not exposed",
+      "confidence": 0.35,
+      "estimated_at": "2026-10-14T17:36:25.648280Z",
+      "waiting_hours": null,
+      "dependency_contract": "114",
+      "work_id": "work_b6c75a6e03ae65bde30e964e838ab224059558cc175668625eefa19b1029b881",
+      "source_digest": "64b744c56c163ff662203b2b5257ce69ae1d04a10961129889260c9034cc0b0f",
+      "plan_path": "docs/plans/master_plan.md",
+      "hold_reason": "",
+      "enabled": true,
+      "confidence_note": "Original qualitative rating subjective-low; mapped to numeric scale for ForecastEstimate, not empirical calibration.",
+      "unresolved_dependencies": [],
+      "source_ref": {
+        "source_id": "src_51e7ceaf188c413e2ec0c6497155fae7be1f81d283907df105a0a32967fbe607",
+        "locator": "skill-mesh/docs/plans/master_plan.md",
+        "digest": "a33c47064044aba55ca0077c1055244e88f86a407feee71537d98437031dc975",
+        "line_start": 916,
+        "line_end": 928
+      }
+    },
+    {
+      "step_id": "116",
+      "title": "Prove destructive transitions and recovery",
+      "worker_hours": {
+        "low": 10.0,
+        "high": 24.0
+      },
+      "attention_hours": {
+        "low": 1.0,
+        "high": 3.0
+      },
+      "dependencies": [
+        "work_b6c75a6e03ae65bde30e964e838ab224059558cc175668625eefa19b1029b881"
+      ],
+      "rationale": "Destructive/recovery failure matrix including stale identity hardening.",
+      "type": "code",
+      "status": "pending",
+      "basis": "model",
+      "model_id": "Codex session; runtime model not exposed",
+      "confidence": 0.35,
+      "estimated_at": "2026-10-14T17:36:25.648280Z",
+      "waiting_hours": null,
+      "dependency_contract": "115",
+      "work_id": "work_f83b49026e421aacb7f292366cfd52e81bb87f182706d4430625be78342cb575",
+      "source_digest": "01e50f0808490d0d36a244f7c0769cdfbdffbecc6da5ed60865cf9cc90ea087b",
+      "plan_path": "docs/plans/master_plan.md",
+      "hold_reason": "",
+      "enabled": true,
+      "confidence_note": "Original qualitative rating subjective-low; mapped to numeric scale for ForecastEstimate, not empirical calibration.",
+      "unresolved_dependencies": [],
+      "source_ref": {
+        "source_id": "src_51e7ceaf188c413e2ec0c6497155fae7be1f81d283907df105a0a32967fbe607",
+        "locator": "skill-mesh/docs/plans/master_plan.md",
+        "digest": "a33c47064044aba55ca0077c1055244e88f86a407feee71537d98437031dc975",
+        "line_start": 929,
+        "line_end": 941
+      }
+    },
+    {
+      "step_id": "117",
+      "title": "Certify the release candidate and prepare attended acceptance",
+      "worker_hours": {
+        "low": 8.0,
+        "high": 20.0
+      },
+      "attention_hours": {
+        "low": 1.0,
+        "high": 3.0
+      },
+      "dependencies": [
+        "work_f83b49026e421aacb7f292366cfd52e81bb87f182706d4430625be78342cb575"
+      ],
+      "rationale": "Frozen exact candidate, broad existing gates, release record and manual preparation.",
+      "type": "code",
+      "status": "pending",
+      "basis": "model",
+      "model_id": "Codex session; runtime model not exposed",
+      "confidence": 0.35,
+      "estimated_at": "2026-10-14T17:36:25.648280Z",
+      "waiting_hours": null,
+      "dependency_contract": "116",
+      "work_id": "work_0282122e584a31a6216cd0f2803b7e1b7dab17cb29645729918c36defd9a439b",
+      "source_digest": "7bfb7ff619371e8f5f566f79c23c9e48558ad0e1757caee899888e65963fd5f2",
+      "plan_path": "docs/plans/master_plan.md",
+      "hold_reason": "",
+      "enabled": true,
+      "confidence_note": "Original qualitative rating subjective-low; mapped to numeric scale for ForecastEstimate, not empirical calibration.",
+      "unresolved_dependencies": [],
+      "source_ref": {
+        "source_id": "src_51e7ceaf188c413e2ec0c6497155fae7be1f81d283907df105a0a32967fbe607",
+        "locator": "skill-mesh/docs/plans/master_plan.md",
+        "digest": "a33c47064044aba55ca0077c1055244e88f86a407feee71537d98437031dc975",
+        "line_start": 942,
+        "line_end": 954
+      }
+    },
+    {
+      "step_id": "118",
+      "title": "Attended disposable-host acceptance",
+      "worker_hours": {
+        "low": 2.0,
+        "high": 6.0
+      },
+      "attention_hours": {
+        "low": 2.0,
+        "high": 4.0
+      },
+      "dependencies": [
+        "work_0282122e584a31a6216cd0f2803b7e1b7dab17cb29645729918c36defd9a439b"
+      ],
+      "rationale": "Actual Claude/Codex disposable-host attended acceptance.",
+      "type": "operator",
+      "status": "pending",
+      "basis": "model",
+      "model_id": "Codex session; runtime model not exposed",
+      "confidence": 0.35,
+      "estimated_at": "2026-10-14T17:36:25.648280Z",
+      "waiting_hours": null,
+      "dependency_contract": "117",
+      "work_id": "work_b18ee145675e58fbcad810075c82a8855c89de4dffea7af234a800c4eddc8e22",
+      "source_digest": "a78e5e2dce22d85e4c47c4fe2176b8ff44defc7df266f76cc0ff2ebc148aa46f",
+      "plan_path": "docs/plans/master_plan.md",
+      "hold_reason": "",
+      "enabled": true,
+      "confidence_note": "Original qualitative rating subjective-low; mapped to numeric scale for ForecastEstimate, not empirical calibration.",
+      "unresolved_dependencies": [],
+      "source_ref": {
+        "source_id": "src_51e7ceaf188c413e2ec0c6497155fae7be1f81d283907df105a0a32967fbe607",
+        "locator": "skill-mesh/docs/plans/master_plan.md",
+        "digest": "a33c47064044aba55ca0077c1055244e88f86a407feee71537d98437031dc975",
+        "line_start": 955,
+        "line_end": 1178
+      }
+    },
+    {
+      "step_id": "154",
+      "title": "Observe capture and harvest in the installed Codex host",
+      "worker_hours": {
+        "low": 1.0,
+        "high": 4.0
+      },
+      "attention_hours": {
+        "low": 1.0,
+        "high": 2.0
+      },
+      "dependencies": [
+        "work_850e0da64c26c6064851e5c8b006a058c2525cebde2214d13345658c274fe8d5"
+      ],
+      "rationale": "Unchanged-HEAD capture/harvest acceptance and named rejection cases on installed host.",
+      "type": "operator",
+      "status": "pending",
+      "basis": "model",
+      "model_id": "Codex session; runtime model not exposed",
+      "confidence": 0.35,
+      "estimated_at": "2026-10-14T17:36:25.648280Z",
+      "waiting_hours": null,
+      "dependency_contract": "153.",
+      "work_id": "work_045d4f4f812e700d70ee8bc08f7823e16620f2c7dffc9c6b84f96212b46a96d3",
+      "source_digest": "380272642ccda548b2588f698e735affe2e639336abc93469dc12d81d635c0cf",
+      "plan_path": "docs/plans/master_plan.md",
+      "hold_reason": "",
+      "enabled": true,
+      "confidence_note": "Original qualitative rating subjective-low; mapped to numeric scale for ForecastEstimate, not empirical calibration.",
+      "unresolved_dependencies": [],
+      "source_ref": {
+        "source_id": "src_51e7ceaf188c413e2ec0c6497155fae7be1f81d283907df105a0a32967fbe607",
+        "locator": "skill-mesh/docs/plans/master_plan.md",
+        "digest": "a33c47064044aba55ca0077c1055244e88f86a407feee71537d98437031dc975",
+        "line_start": 1193,
+        "line_end": 1562
+      }
+    },
+    {
+      "step_id": "120",
+      "title": "Make deep-review aggregation fail closed",
+      "worker_hours": {
+        "low": 10.0,
+        "high": 24.0
+      },
+      "attention_hours": {
+        "low": 0.5,
+        "high": 2.0
+      },
+      "dependencies": [],
+      "rationale": "Strict closed aggregation, uncertainty stops and source-pinned provenance.",
+      "type": "code",
+      "status": "held",
+      "basis": "model",
+      "model_id": "Codex session; runtime model not exposed",
+      "confidence": 0.35,
+      "estimated_at": "2026-10-14T17:36:25.648280Z",
+      "waiting_hours": null,
+      "dependency_contract": "See shared Toolkit selection and source contract.",
+      "work_id": "work_137f777697fbcc8ab42fcfb476849878ac6e0fca0fafecf1ba260192c59d9b93",
+      "source_digest": "5d30fe22f6f1f9f0d239c1a2848593664cd7083f3e50a04cd9f60ed948c8c7e9",
+      "plan_path": "docs/plans/master_plan.md",
+      "hold_reason": "",
+      "enabled": true,
+      "confidence_note": "Original qualitative rating subjective-low; mapped to numeric scale for ForecastEstimate, not empirical calibration.",
+      "unresolved_dependencies": [],
+      "source_ref": {
+        "source_id": "src_51e7ceaf188c413e2ec0c6497155fae7be1f81d283907df105a0a32967fbe607",
+        "locator": "skill-mesh/docs/plans/master_plan.md",
+        "digest": "a33c47064044aba55ca0077c1055244e88f86a407feee71537d98437031dc975",
+        "line_start": 1563,
+        "line_end": 1574
+      }
+    },
+    {
+      "step_id": "121",
+      "title": "Restore deep review and explicit support assets on both hosts",
+      "worker_hours": {
+        "low": 12.0,
+        "high": 30.0
+      },
+      "attention_hours": {
+        "low": 1.0,
+        "high": 3.0
+      },
+      "dependencies": [
+        "work_137f777697fbcc8ab42fcfb476849878ac6e0fca0fafecf1ba260192c59d9b93"
+      ],
+      "rationale": "Both-host support assets and genuine isolated reviewer capability; rebase accepted CD scope.",
+      "type": "code",
+      "status": "held",
+      "basis": "model",
+      "model_id": "Codex session; runtime model not exposed",
+      "confidence": 0.35,
+      "estimated_at": "2026-10-14T17:36:25.648280Z",
+      "waiting_hours": null,
+      "dependency_contract": "120",
+      "work_id": "work_1c0b0c997f90c4a1a68c9c042e2ddc49cc8f635f5fc36c2328c1363c05144f77",
+      "source_digest": "cd2f8777f73b5a1bfb5fc00a5966fd160c6545a69612e2b69a67a07e3454a33f",
+      "plan_path": "docs/plans/master_plan.md",
+      "hold_reason": "",
+      "enabled": true,
+      "confidence_note": "Original qualitative rating subjective-low; mapped to numeric scale for ForecastEstimate, not empirical calibration.",
+      "unresolved_dependencies": [],
+      "source_ref": {
+        "source_id": "src_51e7ceaf188c413e2ec0c6497155fae7be1f81d283907df105a0a32967fbe607",
+        "locator": "skill-mesh/docs/plans/master_plan.md",
+        "digest": "a33c47064044aba55ca0077c1055244e88f86a407feee71537d98437031dc975",
+        "line_start": 1575,
+        "line_end": 1587
+      }
+    },
+    {
+      "step_id": "125",
+      "title": "Complete the installed Claude workflow and accept both hosts",
+      "worker_hours": {
+        "low": 3.0,
+        "high": 10.0
+      },
+      "attention_hours": {
+        "low": 2.0,
+        "high": 6.0
+      },
+      "dependencies": [],
+      "rationale": "Connected Claude acceptance and two-host evidence after refreshed M1 contracts.",
+      "type": "operator",
+      "status": "held",
+      "basis": "model",
+      "model_id": "Codex session; runtime model not exposed",
+      "confidence": 0.35,
+      "estimated_at": "2026-10-14T17:36:25.648280Z",
+      "waiting_hours": null,
+      "dependency_contract": "123, 124",
+      "work_id": "work_25d3252c237109a3428d13fe9de90de31607a3c9abc750e103e468304447291c",
+      "source_digest": "b2f092818d5bebffa94ff54f351c5a1a7e7f19f3c432fd76e364f08c2a73365d",
+      "plan_path": "docs/plans/master_plan.md",
+      "hold_reason": "",
+      "enabled": true,
+      "confidence_note": "Original qualitative rating subjective-low; mapped to numeric scale for ForecastEstimate, not empirical calibration.",
+      "unresolved_dependencies": [
+        "123",
+        "124"
+      ],
+      "source_ref": {
+        "source_id": "src_51e7ceaf188c413e2ec0c6497155fae7be1f81d283907df105a0a32967fbe607",
+        "locator": "skill-mesh/docs/plans/master_plan.md",
+        "digest": "a33c47064044aba55ca0077c1055244e88f86a407feee71537d98437031dc975",
+        "line_start": 1588,
+        "line_end": 1737
+      }
+    },
+    {
+      "step_id": "S8",
+      "title": "Light proof and ambient Codex soak",
+      "worker_hours": {
+        "low": 3.0,
+        "high": 8.0
+      },
+      "attention_hours": {
+        "low": 3.0,
+        "high": 7.0
+      },
+      "dependencies": [
+        "work_b18ee145675e58fbcad810075c82a8855c89de4dffea7af234a800c4eddc8e22"
+      ],
+      "rationale": "Both real homes, CRUD round trips, calibration and ambient session log; elapsed soak excluded.",
+      "type": "operator",
+      "status": "pending",
+      "basis": "model",
+      "model_id": "Codex session; runtime model not exposed",
+      "confidence": 0.35,
+      "estimated_at": "2026-10-14T17:36:25.648280Z",
+      "waiting_hours": null,
+      "dependency_contract": "118",
+      "work_id": "work_fb2fff6555a78adae7d17e91818354c2ff4a0bbd617dfee3e8d9455b85ecef28",
+      "source_digest": "ffab9cffce9bd1d2ac0edcbca4300be60d072d0c011e02c8066b337f12f334a9",
+      "plan_path": "docs/plans/master_plan.md",
+      "hold_reason": "",
+      "enabled": true,
+      "confidence_note": "Original qualitative rating subjective-low; mapped to numeric scale for ForecastEstimate, not empirical calibration.",
+      "unresolved_dependencies": [],
+      "source_ref": {
+        "source_id": "src_51e7ceaf188c413e2ec0c6497155fae7be1f81d283907df105a0a32967fbe607",
+        "locator": "skill-mesh/docs/plans/master_plan.md",
+        "digest": "a33c47064044aba55ca0077c1055244e88f86a407feee71537d98437031dc975",
+        "line_start": 1738,
+        "line_end": 1745
+      }
+    },
+    {
+      "step_id": "S9",
+      "title": "Closeout and baseline ownership",
+      "worker_hours": {
+        "low": 2.0,
+        "high": 6.0
+      },
+      "attention_hours": {
+        "low": 0.5,
+        "high": 1.5
+      },
+      "dependencies": [
+        "work_fb2fff6555a78adae7d17e91818354c2ff4a0bbd617dfee3e8d9455b85ecef28"
+      ],
+      "rationale": "Evidence and baseline closeout only; no unapproved Track C rebuild.",
+      "type": "code",
+      "status": "pending",
+      "basis": "model",
+      "model_id": "Codex session; runtime model not exposed",
+      "confidence": 0.35,
+      "estimated_at": "2026-10-14T17:36:25.648280Z",
+      "waiting_hours": null,
+      "dependency_contract": "S8",
+      "work_id": "work_3bfb4f21ca0d2bc12e3a2403ea8e69d82d10a6a08cf98c3ba6e510acecddfb23",
+      "source_digest": "0781969c3e45c0534885a12a0a7c2c1c72c33ffdbd22d5dcd7ab0083ca41f54d",
+      "plan_path": "docs/plans/master_plan.md",
+      "hold_reason": "",
+      "enabled": true,
+      "confidence_note": "Original qualitative rating subjective-low; mapped to numeric scale for ForecastEstimate, not empirical calibration.",
+      "unresolved_dependencies": [],
+      "source_ref": {
+        "source_id": "src_51e7ceaf188c413e2ec0c6497155fae7be1f81d283907df105a0a32967fbe607",
+        "locator": "skill-mesh/docs/plans/master_plan.md",
+        "digest": "a33c47064044aba55ca0077c1055244e88f86a407feee71537d98437031dc975",
+        "line_start": 1746,
+        "line_end": 1753
+      }
+    },
+    {
+      "step_id": "47B",
+      "title": "Harden the containment gate honestly (off the cutover critical path)",
+      "worker_hours": {
+        "low": 8.0,
+        "high": 20.0
+      },
+      "attention_hours": {
+        "low": 0.5,
+        "high": 2.0
+      },
+      "dependencies": [],
+      "rationale": "Differential counterexample corpus and enumerated undo identity tripwire.",
+      "type": "code",
+      "status": "held",
+      "basis": "model",
+      "model_id": "Codex session; runtime model not exposed",
+      "confidence": 0.35,
+      "estimated_at": "2026-10-14T17:36:25.648280Z",
+      "waiting_hours": null,
+      "dependency_contract": "47",
+      "work_id": "work_4afc77c450cfbaa5d65a9c1024aa9ab65f2e639df04a592093ff4bf8dcb1cef5",
+      "source_digest": "76a9027aeae76b4c7df7707412ae3f8814d92b0ed725407fd366fa726a5aa8b5",
+      "plan_path": "docs/plans/master_plan.md",
+      "hold_reason": "",
+      "enabled": true,
+      "confidence_note": "Original qualitative rating subjective-low; mapped to numeric scale for ForecastEstimate, not empirical calibration.",
+      "unresolved_dependencies": [
+        "47"
+      ],
+      "source_ref": {
+        "source_id": "src_51e7ceaf188c413e2ec0c6497155fae7be1f81d283907df105a0a32967fbe607",
+        "locator": "skill-mesh/docs/plans/master_plan.md",
+        "digest": "a33c47064044aba55ca0077c1055244e88f86a407feee71537d98437031dc975",
+        "line_start": 1754,
+        "line_end": 1769
+      }
+    },
+    {
+      "step_id": "TM",
+      "title": "Installed tier-map resolution audit",
+      "worker_hours": {
+        "low": 3.0,
+        "high": 10.0
+      },
+      "attention_hours": {
+        "low": 0.5,
+        "high": 2.0
+      },
+      "dependencies": [],
+      "rationale": "Classify145 existing references and prepare scope; implementation remains unpriced.",
+      "type": "code",
+      "status": "held",
+      "basis": "model",
+      "model_id": "Codex session; runtime model not exposed",
+      "confidence": 0.35,
+      "estimated_at": "2026-10-14T17:36:25.648280Z",
+      "waiting_hours": null,
+      "dependency_contract": "fresh program selection and scoped plan",
+      "work_id": "work_6462b478a299270afe6840580c96b8277ccd03a718ea196d3b43f23284333d85",
+      "source_digest": "4b3a7f75d49d30e5a33df039a9bd2fb6503c576e05e180ccc6814edcd3a253ba",
+      "plan_path": "docs/plans/master_plan.md",
+      "hold_reason": "Canonical plan explicitly holds this step: HELD",
+      "enabled": false,
+      "confidence_note": "Original qualitative rating subjective-low; mapped to numeric scale for ForecastEstimate, not empirical calibration.",
+      "unresolved_dependencies": [
+        "fresh program selection",
+        "scoped plan"
+      ],
+      "source_ref": {
+        "source_id": "src_51e7ceaf188c413e2ec0c6497155fae7be1f81d283907df105a0a32967fbe607",
+        "locator": "skill-mesh/docs/plans/master_plan.md",
+        "digest": "a33c47064044aba55ca0077c1055244e88f86a407feee71537d98437031dc975",
+        "line_start": 1770,
+        "line_end": 1776
+      }
+    },
+    {
+      "step_id": "LM",
+      "title": "Legacy migrator hardening",
+      "worker_hours": {
+        "low": 2.0,
+        "high": 6.0
+      },
+      "attention_hours": {
+        "low": 0.5,
+        "high": 2.0
+      },
+      "dependencies": [],
+      "rationale": "Inspect preserved issue/candidate and prepare scoped hardening; destructive implementation unpriced.",
+      "type": "code",
+      "status": "held",
+      "basis": "model",
+      "model_id": "Codex session; runtime model not exposed",
+      "confidence": 0.35,
+      "estimated_at": "2026-10-14T17:36:25.648280Z",
+      "waiting_hours": null,
+      "dependency_contract": "fresh program selection and scoped plan",
+      "work_id": "work_8666c7262546cff12981256b94f69fec42eb4aaf7c81241480983db2259e51d2",
+      "source_digest": "e9372b96e062c1df8d69c0c93e0ab33647b3cd0842a5e35340653575ae6d5f8e",
+      "plan_path": "docs/plans/master_plan.md",
+      "hold_reason": "Canonical plan explicitly holds this step: HELD",
+      "enabled": false,
+      "confidence_note": "Original qualitative rating subjective-low; mapped to numeric scale for ForecastEstimate, not empirical calibration.",
+      "unresolved_dependencies": [
+        "fresh program selection",
+        "scoped plan"
+      ],
+      "source_ref": {
+        "source_id": "src_51e7ceaf188c413e2ec0c6497155fae7be1f81d283907df105a0a32967fbe607",
+        "locator": "skill-mesh/docs/plans/master_plan.md",
+        "digest": "a33c47064044aba55ca0077c1055244e88f86a407feee71537d98437031dc975",
+        "line_start": 1777,
+        "line_end": 1792
+      }
+    },
+    {
+      "step_id": "109",
+      "title": "Attended confirmation of all five D10 rows",
+      "worker_hours": {
+        "low": 3.0,
+        "high": 10.0
+      },
+      "attention_hours": {
+        "low": 3.0,
+        "high": 8.0
+      },
+      "dependencies": [
+        "work_a7d074b9c4eb784224cfa7fdd526d555eb7b56a5a25b21a7c791d0349635345b"
+      ],
+      "rationale": "Five D10 rows in selected isolated substrate plus terminal safety evidence.",
+      "type": "operator",
+      "status": "held",
+      "basis": "model",
+      "model_id": "Codex session; runtime model not exposed",
+      "confidence": 0.35,
+      "estimated_at": "2026-10-14T17:36:25.648280Z",
+      "waiting_hours": null,
+      "dependency_contract": "exact108P packet and E1-E32 readiness; E33 mandatory terminal disposition afterwards",
+      "work_id": "work_0ed2e1111e775677057e08b8bcc6ab853a2a0de67b77351fb9928a4291817b16",
+      "source_digest": "924b82165a273a1fea01d7af5485ac805e408ee7d8a396dc5ca9316dc693fe06",
+      "plan_path": "docs/plans/master_plan.md",
+      "hold_reason": "Canonical plan explicitly holds this step: HELD",
+      "enabled": false,
+      "confidence_note": "Original qualitative rating subjective-low; mapped to numeric scale for ForecastEstimate, not empirical calibration.",
+      "unresolved_dependencies": [
+        "exact108P packet",
+        "E33 mandatory terminal disposition afterwards"
+      ],
+      "source_ref": {
+        "source_id": "src_51e7ceaf188c413e2ec0c6497155fae7be1f81d283907df105a0a32967fbe607",
+        "locator": "skill-mesh/docs/plans/master_plan.md",
+        "digest": "a33c47064044aba55ca0077c1055244e88f86a407feee71537d98437031dc975",
+        "line_start": 2057,
+        "line_end": 2067
+      }
+    }
+  ],
+  "excluded": "Accepted history; superseded NP/GoalA/PE/RD/PROD/HP/BR proposals; CP M3 duplicate; WF122-124; C1-C6 acceptance subcases; S7/108P umbrella; context portfolio cards until executable slices are selected; conditional section history/visibility; external utility/coding-root work. Held rows are excluded from dispatch-ready totals; waiting/calendar time unknown.",
+  "adapter_note": "Use source step IDs; resolve Ambition work_id and source_digest via the importer. These are forecasts, not elapsed observations.",
+  "identity_note": "work_id and source_digest come from Observatory normalization and forecast.fingerprint; raw plan SHA is separate.",
+  "compatibility": "Rows validate as ForecastEstimate. Portable worksheet only: production ForecastConfig is currently restricted to dev-observatory and 100 estimates; no saved forecast was modified.",
+  "assumptions": "Forward remaining effort in hours, including implementation and its checks/review. Operator attention is separate. Elapsed waits, service quotas and hardware availability are not labor. These are model forecasts, not measured history. Held rows remain disabled.",
+  "validated_at": "2026-10-14T17:57:35.266076Z"
+}

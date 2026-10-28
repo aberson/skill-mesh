@@ -444,9 +444,11 @@ REVIEW_DEEP = REPO_ROOT / "skills/review-deep/providers/codex.md"
 ACCEPTANCE = REPO_ROOT / "documentation/codex-deep-review-unblock-acceptance.md"
 DEEP_REQUIREMENTS = {
     "capability-probe": ("Conversation challenge v2", "Parent-state capability contract",
-                         "inconclusive", "required_tool_missing", "ordinary Codex CLI"),
+                         "inconclusive", "required_tool_missing", "ordinary Codex CLI",
+                         "out-of-process CLI route"),
     "six-siblings": ('fork_turns="none"', "six distinct fresh sibling", "available-slot batches",
-                     "No reused child", "Never pass sibling findings or producer reasoning"),
+                     "No reused child", "Never pass sibling findings or producer reasoning",
+                     "out-of-process CLI route"),
     "read-only": ("read-only", "recommendations only", "reject unexpected reviewer mutation", "not OS isolation"),
     "parent-authority": ("complete raw lens set", "duplicate lens IDs", "alone invokes", "UNCERTAIN", "non-passing"),
     "private-channel": ("Never pass", "verdict path", "run id", "HMAC key", "service handle", "unsigned"),

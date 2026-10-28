@@ -1,5 +1,7 @@
 # Host-Native Discovery and Consumer Cutover Plan
 
+> **Toolkit program authority — 2026-09-24.** For units mapped from this document, the [toolkit program](../../plan.md) owns selection, shared sequencing and current execution/status; the [source-unit ledger](../../documentation/toolkit-program-units.md) identifies that mapped scope. Status and execution instructions retained below for transferred units are source history, not a second dispatch queue. Technical specifications, original IDs, acceptance criteria and evidence remain owned here. Update transferred-unit status in the program only; unmapped local work remains locally owned. Mapping does not complete, reopen or authorize a unit.
+
 ## 1. What This Is
 
 **Proposal:** `documentation/step-47-decomposition-proposal.html` (Step 47 revision, 2026-08-05; the original phase proposal `documentation/host-native-discovery-cutover-proposal.html` is a deliberately frozen pre-execution record and is not updated)

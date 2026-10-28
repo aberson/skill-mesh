@@ -258,10 +258,13 @@ See the [receipt](findings/codex-deep-review-bounded-resumption-2026-09-23.md) f
 the exact proof and interrupted-install cleanup limits. Fresh consumers still
 run their own capability preflight; a model label alone establishes no support.
 
-An ordinary Codex CLI without explicit fresh sibling dispatch and caller-scoped
-parent-only verdict authority still returns `required_tool_missing`. A failed or
-inconclusive probe cannot be retried into success, replaced by self-review or
-silently switched to another host/model. Runtime/full review remains unsupported
+Since 2026-10-21 the core documents an out-of-process CLI dispatch route
+(§ Dispatch route ladder in `skills/review-deep/core.md`): when the fresh-sibling
+route is unavailable, its probe fails or is inconclusive, or its agent slots are
+exhausted, each remaining lens runs as its own fresh `codex exec` (or `claude -p`)
+process. `required_tool_missing` now fires only when neither an isolated agent
+primitive nor a reachable `codex`/`claude` executable exists. A failed probe is
+never replaced by self-review or by serializing lenses into the parent context. Runtime/full review remains unsupported
 by this mapping; in-repository calibration is unchanged, not an installed command.
 
 Missing `scripts/aggregate.py`, `scripts/lint_prepass.sh`, `scripts/README.md` or

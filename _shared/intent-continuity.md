@@ -21,6 +21,25 @@ resolve it before claiming readiness. Preserve the intent record locator and a b
 capability summary in private session state. A worker receives the intent and the
 specific missing step its assignment advances, with only the private context it needs.
 
+## Before a next-step decision
+
+Before recommending, selecting, or dispatching the next delivery task, read the
+existing intent record. This includes ordinary conversational "what next?" advice,
+not only skill invocations. Compare the proposed work with the user's outcome,
+actual entry point and definition of done; identify the specific gap it closes.
+Reconcile stale details with current user instructions and observed evidence.
+
+Include one brief receipt in the recommendation or dispatch update:
+"Intent checked: this closes ...; done means ...". Use it only after actually
+reading the record; the receipt is not proof of completion or permission to act.
+If the record is unavailable, disclose that, use saved intent and label the receipt
+"Intent fallback". Do not create a tooling prerequisite. Keep private details out
+of public artifacts; record the check in private session state instead when needed.
+
+Private handoffs carry the exact intent-record path and the latest checked gap,
+so the receiving session can read it before choosing or following Next Action.
+This decision check adds no new approval gate, watcher or dispatch hook.
+
 ## At meaningful work boundaries
 
 Record one checkpoint per completed work unit, not per tool call or repeated handoff:

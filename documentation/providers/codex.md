@@ -250,9 +250,12 @@ its own reported result, never a silently degraded one.
   read-only primary-source scope. This repair does not silently generalize one
   proven mapping.
 - **`review-deep` has a host-conditioned code-only mapping.** Phase CD is the
-  reviewed restoration plan required by DS-D3. The adapter requires fresh sibling
-  dispatch in capacity-limited batches and the existing parent-only authority probes;
-  unsupported or inconclusive hosts halt `required_tool_missing`. All six lenses,
+  reviewed restoration plan required by DS-D3. The adapter dispatches fresh siblings
+  in capacity-limited batches behind the existing parent-only authority probes; when
+  that route is unavailable, inconclusive, or out of slots, the core's out-of-process
+  CLI route (`codex exec`, or `claude -p`) runs the remaining lenses as fresh
+  processes (since 2026-10-21), and `required_tool_missing` is reserved for hosts
+  with neither route. All six lenses,
   installed resources and the separate authenticated enclosing verdict must be proved
   by Step 156 before any consumer relies on this route. On 2026-09-23, Step 156
   proved the installed nested route on the observed Codex collaboration host and

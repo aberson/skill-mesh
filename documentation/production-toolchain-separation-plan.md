@@ -1,11 +1,14 @@
 # Phase PROD — Stable production utility toolchain
 
-**Status:** PAUSED AND SUPERSEDED FOR EXECUTION AFTER STEP 1 (operator decision 2026-09-03).
-Step 1 remains complete and authoritative. Steps 2–7 below are retained as historical design and
-evidence context but MUST NOT be resumed or dispatched. The controlling decision is
-`documentation/phase-prod-rd-first-course-correction.md`: finish Phase RD first, then create and
-review a minimum viable replacement Phase PROD plan. All preserved PROD and RD worktrees remain
-read-only evidence.
+> **Toolkit program authority — 2026-09-24.** For units mapped from this document, the [toolkit program](../../plan.md) owns selection, shared sequencing and current execution/status; the [source-unit ledger](../../documentation/toolkit-program-units.md) identifies that mapped scope. Status and execution instructions retained below for transferred units are source history, not a second dispatch queue. Technical specifications, original IDs, acceptance criteria and evidence remain owned here. Update transferred-unit status in the program only; unmapped local work remains locally owned. Mapping does not complete, reopen or authorize a unit.
+
+**Status:** PAUSED AND SUPERSEDED FOR EXECUTION AFTER STEP 1 (original operator decision 2026-09-03).
+Step 1 remains complete and authoritative. Steps 2–7 are historical design and evidence and
+MUST NOT be resumed or dispatched. The original course correction was superseded for execution
+by [descope-2026-09.md](descope-2026-09.md); DS-D5 cut the MVP replan obligation and parked the
+production/development split. The toolkit program now owns separately selected preservation,
+isolation and later rollout work. This transfer does not revive the old RD-first order, the
+MVP replan obligation or Steps 2–7. Preserved PROD and RD worktrees remain read-only evidence.
 
 **Path notation:** `<dev-root>` and `<prod-root>` are runtime-resolved absolute roots. Their initial
 host shapes are `%USERPROFILE%\dev` and `%USERPROFILE%\prod`; committed contracts never bind a

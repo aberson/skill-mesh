@@ -1757,7 +1757,8 @@ def test_the_fallback_polarity_gate_reds_on_the_one_word_inversion():
 
 def _review_deep_defects(text):
     required = ("unqualified\nuntil Step 156", "DS-D3",
-                "ordinary Codex CLI without these capabilities remains unsupported")
+                "out-of-process CLI route",
+                "nor a reachable `codex`/`claude` executable remains unsupported")
     return ([token for token in required if token not in text]
             + ([] if _is_capability_conditioned(text) else ["missing capability mapping"])
             + ([] if _colocated_halt_lines(text) else ["missing dispatch halt"])
@@ -1770,6 +1771,6 @@ def test_review_deep_is_conditioned_under_the_reviewed_cd_plan():
 
 def test_review_deep_keeps_a_concrete_unsupported_host_boundary():
     text = _adapter_texts()[REVIEW_DEEP]
-    anchor = "ordinary Codex CLI without these capabilities remains unsupported"
+    anchor = "nor a reachable `codex`/`claude` executable remains unsupported"
     assert anchor in text
-    assert _review_deep_defects(text.replace(anchor, "ordinary Codex CLI is supported"))
+    assert _review_deep_defects(text.replace(anchor, "is supported"))
