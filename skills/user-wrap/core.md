@@ -21,8 +21,9 @@ existing contracts and owns ZERO triage logic of its own:
 - **Verdict + loss report** — `/session-wrap --advise`
   ([`../session-wrap/core.md`](../session-wrap/core.md) § `--advise` — verdict +
   loss report) is the ONE owner of triage: signal collection, route scoring, the
-  read-only salvage preview, the 4-verdict banner (KEEP GOING / RECYCLE WINDOW /
-  WRAP & CLOSE / SAFE TO CLOSE), and the two-line loss report.
+  read-only salvage preview and open-work inventory, the 4-verdict banner (KEEP GOING /
+  RECYCLE WINDOW / WRAP & CLOSE / SAFE TO CLOSE), and the plain-language report under
+  it (one sentence plus the five labeled sections).
 - **State fields** — `current.md` and `sessions/<session-id>.md` format, field
   semantics, session identity, path resolution, and staleness are owned by
   `<repo>/_shared/task-state-schema.md`
@@ -106,12 +107,17 @@ unmangled:
 1. The advise triage line, as `--advise` printed it.
 2. The `## <VERDICT>` banner — the first heading after the triage line, visually
    unmissable.
-3. `Already durable:` then `Dies with this window:` immediately under the banner, in
-   that order, with every SHA, count, timestamp, and path preserved.
+3. The `What this means:` sentence, then the five labeled sections in `--advise`'s
+   order — `Already durable:`, `Dies with this window:`, `Left alone on purpose:`,
+   `Open work:`, `What I need from you:` — immediately under the banner, with every
+   SHA, count, timestamp, path, issue number and command preserved.
 
-Nothing may be inserted between the banner and the loss report, and nothing may
-paraphrase or summarize it — the operator's real question is "do I lose anything if
-I close this?", and the loss report exactly as `--advise` wrote it is the answer.
+Nothing may be inserted between the banner and that report, and nothing may paraphrase
+or summarize it. The operator's real questions are "do I lose anything if I close
+this?", "is anything I started still unowned?" and "what do you need from me?", and the
+report exactly as `--advise` wrote it answers all three. In particular, `Open work:` is
+never dropped and never collapsed into the loss lines: a plan written but not reviewed,
+or synced but not built, is the work most easily orphaned by a closed window.
 
 ### Step 4 — Act per verdict
 
