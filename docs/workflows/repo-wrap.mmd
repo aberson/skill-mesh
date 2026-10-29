@@ -1,8 +1,8 @@
 %% repo-wrap
-%% Summary: Resolve and classify exactly one target, then execute its ownership rail with scoped secret screening and parked unsafe actions.
+%% Summary: Resolve and classify one target, execute its ownership rail, and reconcile only proven-redundant build worktrees after a complete owned-project closeout.
 %% Sources: skills/repo-wrap/core.md
-%% Not shown: owner-match algorithm, secrets patterns, per-rail Git commands, backup naming, flags, maintenance procedure, and final report fields
-%% Alt: A closeout router classifies one target, delegates owned projects, or runs coding-root, clone, and backup rails that screen staged paths and park unsafe work.
+%% Not shown: owner-match algorithm, secrets patterns, worktree proof commands, per-rail Git commands, backup naming, flags, maintenance procedure, and final report fields
+%% Alt: A closeout router classifies one target and follows its ownership rail; after a complete owned-project closeout it removes only stale, clean build worktrees whose committed content is already shipped.
 
 flowchart TD
     A[Resolve exactly one target] --> B[Classify ownership and workspace location]
@@ -14,7 +14,10 @@ flowchart TD
     E --> I[Commit safe snapshot; push only to owner]
     F --> J[Commit locally; push only to owned remote]
     G --> K[Back up safely or print guarded commands]
-    D --> R[Report delegated result]
+    D --> H{Closeout complete?}
+    H -- Yes --> L[Reconcile proven-redundant build worktrees]
+    H -- No --> R[Report delegated result]
+    L --> R
     I --> R
     J --> R
     K --> R

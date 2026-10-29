@@ -72,7 +72,7 @@ produces the default Mermaid README rather than this SVG gallery.
 - [repo-init](#repo-init) - Check identity and plan before writes, create and push the repository, add README in a second commit, then create issues and backfill plan IDs.
 - [repo-sync](#repo-sync) - Verify review prerequisites and repository identity, compare plan steps with issues, preview the diff, and apply it automatically unless dry-run.
 - [repo-update](#repo-update) - Refresh phase documentation, repair grounded gaps where clear, continue past advisory ambiguity, and conditionally commit, push, and record posterity.
-- [repo-wrap](#repo-wrap) - Resolve and classify exactly one target, then execute its ownership rail with scoped secret screening and parked unsafe actions.
+- [repo-wrap](#repo-wrap) - Resolve and classify one target, execute its ownership rail, and reconcile only proven-redundant build worktrees after a complete owned-project closeout.
 - [research-prospect](#research-prospect) - Scan active projects in parallel and render a grounded menu of high-value research topics, with optional session parking.
 - [review-deep](#review-deep) - Bind a change set, run deterministic calibration and mechanical gates, dispatch the selected independent lenses, and default-deny incomplete evidence.
 - [review-gauntlet](#review-gauntlet) - Run mechanical checks first, dispatch exactly five fresh code lenses, and reduce their evidence to a terse PASS, NEEDS WORK, or UNCERTAIN verdict.
@@ -772,7 +772,7 @@ Drawn from:
 
 ## repo-wrap
 
-Resolve and classify exactly one target, then execute its ownership rail with scoped secret screening and parked unsafe actions.
+Resolve and classify one target, execute its ownership rail, and reconcile only proven-redundant build worktrees after a complete owned-project closeout.
 
 Source: [`repo-wrap.mmd`](repo-wrap.mmd)
 
@@ -780,13 +780,13 @@ Drawn from:
 
 - [`skills/repo-wrap/core.md`](../../skills/repo-wrap/core.md)
 
-**Alt:** A closeout router classifies one target, delegates owned projects, or runs coding-root, clone, and backup rails that screen staged paths and park unsafe work.
+**Alt:** A closeout router classifies one target and follows its ownership rail; after a complete owned-project closeout it removes only stale, clean build worktrees whose committed content is already shipped.
 
-**Deliberately not shown:** owner-match algorithm, secrets patterns, per-rail Git commands, backup naming, flags, maintenance procedure, and final report fields
+**Deliberately not shown:** owner-match algorithm, secrets patterns, worktree proof commands, per-rail Git commands, backup naming, flags, maintenance procedure, and final report fields
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="cards/repo-wrap-dark.svg">
-  <img alt="A closeout router classifies one target, delegates owned projects, or runs coding-root, clone, and backup rails that screen staged paths and park unsafe work." src="cards/repo-wrap-light.svg">
+  <img alt="A closeout router classifies one target and follows its ownership rail; after a complete owned-project closeout it removes only stale, clean build worktrees whose committed content is already shipped." src="cards/repo-wrap-light.svg">
 </picture>
 
 [Open full size](cards/repo-wrap-dark.svg)

@@ -146,13 +146,13 @@ This is the cheap precursor a future **portable triage advisor** would formalize
 
 ## 10. Where each invariant is already practiced (reference implementations)
 
-- **Independence + deterministic aggregation + primary-owner dedup:** [`review-deep`](https://github.com/aberson/skill-mesh/blob/v2.0.1/skills/review-deep/core.md) (5 parallel lens sub-agents + `scripts/aggregate.py` rules 2/7).
+- **Independence + deterministic aggregation + primary-owner dedup:** [`review-deep`](https://github.com/aberson/skill-mesh/blob/v2.0.2/skills/review-deep/core.md) (5 parallel lens sub-agents + `scripts/aggregate.py` rules 2/7).
 - **Separate vision-judge + read-back + escalate:** the workspace's `judge-ui` skill (not published here).
 - **No-self-grade via Workflow (depth-1):** [`score_skill.workflow.js`](score_skill.workflow.js), [`score-skill.md`](score-skill.md).
-- **Independent reproduction (adversarial):** [`user-debug`](https://github.com/aberson/skill-mesh/blob/v2.0.1/skills/user-debug/core.md) (Explore agent given symptom but not the suspected cause).
+- **Independent reproduction (adversarial):** [`user-debug`](https://github.com/aberson/skill-mesh/blob/v2.0.2/skills/user-debug/core.md) (Explore agent given symptom but not the suspected cause).
 - **Local-never-gates + the cascade:** the workspace's `tier-offload` skill; `06-cross-family-judges`.
-- **Evidence discipline:** [`review-proof`](https://github.com/aberson/skill-mesh/blob/v2.0.1/skills/review-proof/core.md).
+- **Evidence discipline:** [`review-proof`](https://github.com/aberson/skill-mesh/blob/v2.0.2/skills/review-proof/core.md).
 - **Per-dimension reviewer depth:** the workspace's `review-agents/` investigation set (security, performance, adversarial, evidence, determinism, false-positive budget).
 - **Deep advisor (spectrum right end):** Alpha4Gate `improve-bot-advised` (811-line corpus + staleness signal + iteration memory); cheap portable slice: `improve-bot-triage`.
 
-**Wiring status:** the three §10 reference implementations (review-deep, review-gauntlet, and the workspace's judge-ui) each carry an inbound doctrine pointer to this file. Remaining gap: [`review-gauntlet`](https://github.com/aberson/skill-mesh/blob/v2.0.1/skills/review-gauntlet/core.md) narrates its verdict ladder in prose rather than invoking review-deep's deterministic aggregation directly — bring it fully to that pattern as its own change.
+**Wiring status:** the three §10 reference implementations (review-deep, review-gauntlet, and the workspace's judge-ui) each carry an inbound doctrine pointer to this file. Remaining gap: [`review-gauntlet`](https://github.com/aberson/skill-mesh/blob/v2.0.2/skills/review-gauntlet/core.md) narrates its verdict ladder in prose rather than invoking review-deep's deterministic aggregation directly — bring it fully to that pattern as its own change.

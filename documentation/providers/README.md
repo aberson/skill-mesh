@@ -1,7 +1,7 @@
 # Provider Guides
 
-**v2.0.1 is published.** Get the versioned bundle and scoped qualification notes
-from the [release](https://github.com/aberson/skill-mesh/releases/tag/v2.0.1).
+**v2.0.2 is published.** Get the versioned bundle and scoped qualification notes
+from the [release](https://github.com/aberson/skill-mesh/releases/tag/v2.0.2).
 The [installation guide](../../README.md#install-or-upgrade) covers upgrades and
 restoration; the [skill reference](../skill-reference.md) links every packaged
 skill to its individual workflow diagram. Catalog coverage does not establish

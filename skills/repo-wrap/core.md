@@ -27,6 +27,9 @@ never a literal path in this file. **`<login>`** is the operator's own GitHub lo
   (its git-verb router already delegates phase-complete owned repos to `/repo-update`). repo-wrap is
   **repo-scoped, not session-scoped**: it is safe to run outside any wrap moment and writes no task
   state.
+- Build-worktree safety → `<repo>/_shared/worktree-hygiene.md`. Rail A's post-closeout
+  reconciliation applies that contract's dirty-state and committed-content proofs before removing
+  a linked worktree; age, naming, or a completed build report is never proof by itself.
 - Which repo a command lands in → `working-directory.md` (two-repo-layer model; Wrong-directory
   guard).
 - `owned` is an **explicit registry fact, never signal-derived** → `descriptor-contract.md`. No
@@ -182,9 +185,11 @@ State the classification in one line before acting:
 ## Rail A — registered owned project → delegate
 
 Invoke [`/repo-update`](../repo-update/core.md) via the host's named-skill dispatch with the
-effective target's absolute path as its argument. **This skill adds NOTHING to the ceremony** —
-repo-update owns docs, commit, posterity issue, push, and the `observatory sync` hook. If
-repo-update fails partway, surface its failure verbatim; do not improvise a fallback ceremony here.
+effective target's absolute path as its argument. repo-update owns docs, commit, posterity issue,
+push, and the `observatory sync` hook. repo-wrap adds only the post-closeout build-worktree
+reconciliation below. If repo-update fails partway or returns anything other than
+`Result: COMPLETE`, surface its result verbatim and skip reconciliation; do not improvise a fallback
+ceremony here.
 
 **Delegate only when the delegation is exact.** Otherwise print the commands below as a parked
 advisory (execution-context line naming the target directory), invoke nothing, and stop:
@@ -197,6 +202,45 @@ advisory (execution-context line naming the target directory), invoke nothing, a
   and posterity issue against the pinned repo.
 - The operator named a subdirectory (Step 1 widening) → print `/repo-update`. Its ceremony is
   project-wide and cannot honor the subdirectory scope.
+
+### Post-closeout build-worktree reconciliation
+
+Run only after the exact Rail A delegation returned `Result: COMPLETE`. The shipped default branch
+is the remote-tracking ref `origin/<default>` that repo-update resolved and confirmed at the end of
+its push. If that ref is absent or does not equal the pushed commit repo-update reported, keep every
+worktree and report `worktree cleanup skipped — shipped default ref unverified`.
+
+Enumerate the target repository with `git -C <target> worktree list --porcelain`. Exclude the main
+checkout and consider only a linked worktree whose branch leaf starts `build-step-` OR whose path
+leaf starts `worktree_build-step-`. Every other linked worktree is outside this cleanup's ownership
+and is reported as kept. A candidate is removable only when ALL of these checks pass immediately
+before removal:
+
+1. The candidate is not `locked` or `prunable`, its directory still exists, its canonical path is
+   outside the main checkout, and session-wrap's Git-verb router Step A classifies it as stale rather
+   than ACTIVE. A fresh or unreadable activity probe means keep, never remove.
+2. `git -C <worktree> status --porcelain --untracked-files=all` exits zero with empty output. Any
+   tracked, untracked, ignored-status error, submodule dirt, or unreadable tree means keep.
+3. `git -C <target> stash list` is empty. Stashes are repository-shared and this skill cannot prove
+   which worktree owns one, so any stash keeps every candidate.
+4. The candidate's committed content is positively redundant with the shipped default ref under
+   `<repo>/_shared/worktree-hygiene.md` §3: its HEAD is an ancestor of the shipped ref, OR its HEAD
+   tree equals its merge-base tree, OR every nonempty line from
+   `git -C <target> cherry <shipped-ref> <candidate-branch>` begins `-`. A command error, detached
+   HEAD, missing merge base, any `+` line, or any other output means keep and surface the branch/diff
+   for the operator.
+
+For each candidate that passes, run `git -C <target> worktree remove <canonical-path>` WITHOUT
+`--force`, from outside the candidate. Then verify both that the canonical path is absent from a
+fresh `git worktree list --porcelain` and that the directory is absent on disk. Only that double
+absence counts as removed. On failure, keep the branch and report the command's exit/error; never
+retry, prune, `rm`, `Remove-Item`, or delete a branch. This step removes worktree checkouts only —
+local and remote branches remain intact as recovery evidence.
+
+Under `--dry-run`, perform the same classification and proofs but remove nothing. End Rail A's
+report with one line:
+`Worktrees: removed <N> redundant build worktree(s); kept <M> (<reasons>)`
+(or `would remove` under `--dry-run`). Zero candidates is a normal successful result.
 
 ## Rail B — coding-root sync
 
