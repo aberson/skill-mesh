@@ -361,6 +361,7 @@ does not reinterpret that evidence or revive its stopped experiment.
 | Historical Goal B / Phase 2 / Step 4 | LOCKED | Goal NP may adopt the four preserved files only after Approval 1 and its own gates |
 | Historical Goal P | LOCKED / NOT AUTHORIZED | Not part of Goal NP |
 | Release v2.0.1 — document output contract | RELEASED (2026-10-26) at `cbd6544`; see the section at the end of this file | Nothing — tag `v2.0.1` and the GitHub release are published; live installs cut over |
+| Release v2.0.2 — wrap clarity and safe build-worktree cleanup | RELEASED (2026-10-29) at `f6e6c62`; see the section at the end of this file | Nothing — tag `v2.0.2`, GitHub release, and all three live profiles are published |
 
 ## Superseded instruction record (history — do not execute)
 
@@ -1209,3 +1210,25 @@ installs were cut over from the checksum-verified bundle; restart host sessions 
 | Adapters may cite `<repo>/_shared/<leaf>` | The link gate accepts only that spelling from `skills/*/providers/*.md`; `../../../_shared/<leaf>` escapes the discovery root. `test_vendored_reference_citations_reach_the_payload` grades adapter citations against `dist/<profile>/<skill>/SKILL.md`. |
 | Not converted | `judge-ui`, `judge-motion`, `tier-escalate`, `tier-offload`, `skill-iterate`, `skill-evolve`, `user-brainstorm` still write documents ad hoc; converting them means adding a row to `_shared/document-output.md` and citing it. |
 | Pre-edit baselines of the slow suites are waste | The two heavy suites take ~3.5–4.5 h; for a doc-format patch run the post-change gate once. |
+
+## Release v2.0.2 — wrap clarity and safe build-worktree cleanup (2026-10-29)
+
+**Patch release over v2.0.1. Final staged package-integrity gate: 692 passed / 3 skipped;
+440 distribution files checksummed. The broader root suite was stopped at 24% with no failures at
+the operator's request to avoid over-testing.**
+
+### What was built
+
+- `repo-wrap` now reconciles redundant `build-step-*` worktrees only after a successful pushed
+  closeout. It removes only clean, unlocked, stale worktrees with no unique patch, uses ordinary
+  `git worktree remove`, preserves branches, and keeps/reports every uncertain case.
+- The v2.0.2 wrap updates also make `session-wrap` and `user-wrap` surface open work more plainly.
+- Provider packages, workflow artifacts, version references, and focused package-integrity coverage
+  were updated together.
+
+### Where it landed
+
+Tag `v2.0.2` at `f6e6c62`. GitHub release `skill-mesh-v2.0.2.zip`, SHA-256
+`19dd9649381f1ca5fad100b7a6d0455403f61707276687f76c9e53b24c2ae73a`. Live Claude, GPT, and
+Codex installs were cut over from the staged bundle; the installed `repo-wrap/core.md` hashes match
+their respective release payloads. Restart host sessions after upgrading.
