@@ -205,42 +205,22 @@ advisory (execution-context line naming the target directory), invoke nothing, a
 
 ### Post-closeout build-worktree reconciliation
 
-Run only after the exact Rail A delegation returned `Result: COMPLETE`. The shipped default branch
-is the remote-tracking ref `origin/<default>` that repo-update resolved and confirmed at the end of
-its push. If that ref is absent or does not equal the pushed commit repo-update reported, keep every
-worktree and report `worktree cleanup skipped — shipped default ref unverified`.
+Run only after Rail A returns `Result: COMPLETE` and repo-update's pushed
+`origin/<default>` ref is verified. Enumerate linked worktrees with
+`git -C <target> worktree list --porcelain`, excluding the main checkout. Consider only build
+worktrees (branch leaf `build-step-*` or path leaf `worktree_build-step-*`) that session-wrap's
+activity probe classifies as stale. Remove a candidate only when it is unlocked, attached to a
+branch, `git -C <worktree> status --porcelain --untracked-files=all` is empty, and
+`git -C <target> cherry origin/<default> <branch>` contains no `+` line. Those checks apply
+`<repo>/_shared/worktree-hygiene.md` §3: no dirty state and no unique committed patch.
 
-Enumerate the target repository with `git -C <target> worktree list --porcelain`. Exclude the main
-checkout and consider only a linked worktree whose branch leaf starts `build-step-` OR whose path
-leaf starts `worktree_build-step-`. Every other linked worktree is outside this cleanup's ownership
-and is reported as kept. A candidate is removable only when ALL of these checks pass immediately
-before removal:
-
-1. The candidate is not `locked` or `prunable`, its directory still exists, its canonical path is
-   outside the main checkout, and session-wrap's Git-verb router Step A classifies it as stale rather
-   than ACTIVE. A fresh or unreadable activity probe means keep, never remove.
-2. `git -C <worktree> status --porcelain --untracked-files=all` exits zero with empty output. Any
-   tracked, untracked, ignored-status error, submodule dirt, or unreadable tree means keep.
-3. `git -C <target> stash list` is empty. Stashes are repository-shared and this skill cannot prove
-   which worktree owns one, so any stash keeps every candidate.
-4. The candidate's committed content is positively redundant with the shipped default ref under
-   `<repo>/_shared/worktree-hygiene.md` §3: its HEAD is an ancestor of the shipped ref, OR its HEAD
-   tree equals its merge-base tree, OR every nonempty line from
-   `git -C <target> cherry <shipped-ref> <candidate-branch>` begins `-`. A command error, detached
-   HEAD, missing merge base, any `+` line, or any other output means keep and surface the branch/diff
-   for the operator.
-
-For each candidate that passes, run `git -C <target> worktree remove <canonical-path>` WITHOUT
-`--force`, from outside the candidate. Then verify both that the canonical path is absent from a
-fresh `git worktree list --porcelain` and that the directory is absent on disk. Only that double
-absence counts as removed. On failure, keep the branch and report the command's exit/error; never
-retry, prune, `rm`, `Remove-Item`, or delete a branch. This step removes worktree checkouts only —
-local and remote branches remain intact as recovery evidence.
-
-Under `--dry-run`, perform the same classification and proofs but remove nothing. End Rail A's
-report with one line:
-`Worktrees: removed <N> redundant build worktree(s); kept <M> (<reasons>)`
-(or `would remove` under `--dry-run`). Zero candidates is a normal successful result.
+Remove a qualifying candidate from outside it with
+`git -C <target> worktree remove <canonical-path>` (never `--force`), verify it disappeared from
+both the registry and disk, and keep its branch. A failed or uncertain check keeps the worktree and
+reports the reason; never prune, raw-delete, or delete its branch. Under `--dry-run`, report what
+would be removed without mutating. End with
+`Worktrees: removed <N> redundant build worktree(s); kept <M> (<reasons>)` (or `would remove`).
+Zero candidates is a normal result.
 
 ## Rail B — coding-root sync
 
