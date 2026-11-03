@@ -5,17 +5,26 @@ events are authoritative; generated summaries and wiki views are rebuildable. Su
 record bodies are private.
 
 Every event envelope contains `schema_version: 1`, UUID-v4 `event_id` and
-`investigation_id`, increasing UTC `created_at`, `kind`, one of the evidence classes
-`recorded-rationale`, `observed-behavior`, `inference`, or `unknown-history`, Markdown `body`,
+`investigation_id`, increasing UTC `created_at`, `kind`, an `evidence_class` key containing
+one of `recorded-rationale`, `observed-behavior`, `inference`, or `unknown-history`, a
+nonempty Markdown `body`,
 an `evidence_refs` array, `supersedes` (a prior event UUID or null), and a `payload` object.
+`draft` pre-fills `evidence_class` with `unknown-history` and `body` with an empty string;
+replace both honestly before recording.
 Create the initial envelope with `draft PROJECT_UUID --kind request --out PRIVATE_FILE`.
 For every subsequent event use `draft PROJECT_UUID --investigation INVESTIGATION_UUID --kind
-KIND --out PRIVATE_FILE`. Edit only the private draft; append it with
+KIND --out PRIVATE_FILE`. Use a new, nonexistent draft path under the private record root
+reported by `status` for each checkpoint, created when that work happens; never place a draft
+inside the target. Edit only the private draft; append it with
 `record PROJECT_UUID --input PRIVATE_FILE`.
 
 Evidence references contain `locator`, `source_revision` (string or null),
 `content_sha256` (lowercase SHA-256 or null), `observed_at` (UTC), and `method`. Source
-inspection requires a revision or content hash.
+inspection requires a revision or content hash. `method` is exactly one of
+`source-inspection`, `command-execution`, or `operator-report`.
+
+Optional `payload.phase` is exactly `Init`, `Discuss`, `Signoff`, or `Implement`.
+Post-build checking is recorded with kind `verification`, never phase `Verify`.
 
 Required payloads:
 

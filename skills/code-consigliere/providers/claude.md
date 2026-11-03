@@ -15,8 +15,8 @@ See [../core.md](../core.md) for the full specification.
   signoff boundary, private/public split, helper discovery order, and seed handoff.
 - Use structured filesystem and shell tools for reads and helper calls. This core requires no
   isolated agent and no provider router hop.
-- Ask for the target only when the core's ordered resolution leaves a coding root or multiple
-  plausible projects. Do not inspect the toolkit checkout as a silent default.
+- Ask for the target when the core's resolution does not yield exactly one permitted project.
+  Do not inspect the toolkit checkout as a silent default.
 
 ## Output normalization
 

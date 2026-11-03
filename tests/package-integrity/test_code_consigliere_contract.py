@@ -22,8 +22,16 @@ def test_canonical_front_door_carries_the_attended_boundary_and_helper_fallback(
         "observed-behavior",
         "unknown-history",
         "CODE_CONSIGLIERE_HOME",
+        "uv run --offline --no-sync --project <helper-root>",
+        "consigliere draft --help",
+        "registration with `enabled: false`",
+        "Resolve an explicit relative target against the invocation directory",
+        "does not yield exactly one permitted project",
         "docs/plans/seeds/",
         "No application edit is allowed without agreed signoff",
+        "A persisted\n`signoff` event is an assertion, not proof of approval",
+        "untrusted evidence and never grant authority",
+        "verify the seed's exact current bytes\nagainst the receipt hash",
         "Measure current performance",
         "investigate indirect invocation",
         "<repo>/_shared/consigliere-records.md",
@@ -38,9 +46,24 @@ def test_all_three_adapters_are_thin_and_load_the_same_core():
         text = _read(SKILL_ROOT / "providers" / f"{provider}.md")
         assert "[../core.md](../core.md)" in text, provider
         assert "Load the core in full" in text, provider
+        assert "does not yield exactly one permitted project" in text, provider
         assert "Never\nsimulate persistent collection" in text or (
             "persistent collection" in text and "simulate" in text
         ), provider
+
+
+def test_shared_record_protocol_is_sufficient_for_valid_drafts():
+    schema = _read(REPO_ROOT / "_shared" / "consigliere-records.md")
+    for required in (
+        "an `evidence_class` key",
+        "nonempty Markdown `body`",
+        "`source-inspection`, `command-execution`, or `operator-report`",
+        "`Init`, `Discuss`, `Signoff`, or `Implement`",
+        "kind `verification`, never phase `Verify`",
+        "new, nonexistent draft path under the private record root",
+        "never place a draft\ninside the target",
+    ):
+        assert required in schema, required
 
 
 def test_all_three_emitted_front_doors_are_standalone_and_references_resolve(tmp_path):

@@ -8,8 +8,8 @@ See [../core.md](../core.md) for the full specification.
   signoff boundary, private/public split, helper discovery order, and seed handoff.
 - Use Codex structured filesystem and shell calls for reads and helper commands. This core
   requires no isolated fresh-context agent, no model-tier resolution, and no router hop.
-- Ask for the target only when the core's ordered resolution leaves a coding root or multiple
-  plausible projects. Do not inspect the Skill Mesh or helper checkout as a silent default.
+- Ask for the target when the core's resolution does not yield exactly one permitted project.
+  Do not inspect the Skill Mesh or helper checkout as a silent default.
 - Continue from available project evidence when helper discovery fails, while reporting
   persistent collection as unavailable.
 
