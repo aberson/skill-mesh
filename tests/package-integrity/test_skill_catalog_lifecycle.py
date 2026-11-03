@@ -1305,6 +1305,98 @@ LOCKED_GUIDE_HEADINGS = (
     (2, "12. Related documents"),
 )
 
+# The bounded code-consigliere release repaired the known three-artifact producer gap.
+# Keep the old literals above as review history, but replace their active pins with the
+# current contract in the same change that changed the documents.
+LOCKED_CLAIMS = tuple(
+    item for item in LOCKED_CLAIMS
+    if item[0] not in {
+        'fact 5 - the Known-gap warning',
+        'fact 5 - architecture states the inventory position',
+        'fact 5 - regeneration is an explicit step',
+    }
+) + (
+    ('fact 5 - scoped code-consigliere generator exception', GUIDE_REL,
+     "@preamble", 'paragraph',
+     "**Scoped code-consigliere release exception (2026-11-02).** The operator "
+     "authorized one portable `CREATE` in an isolated clean release worktree while "
+     "the original checkout remained dirty and untouched. The same scope authorized "
+     "the necessary generator repair: hermetic `tools/gen_manifest.py` now writes "
+     "the manifest, expected fixture, and inventory together by reusing the existing "
+     "`build_inventory()` projection. The request, base ref, target paths, and "
+     "pre-write hashes were recorded outside the repository before mutation. This "
+     "is authority for the `code-consigliere` release work only; it does not claim "
+     "Phase CL Step 111 or the full phase complete, waive any other lifecycle gate, "
+     "or authorize a commit, push, install, or release. Those actions follow the "
+     "separately authorized caller workflow; this exception does not by itself grant "
+     "them."),
+    ('fact 5 - architecture states three-artifact generation', ARCH_REL,
+     "Catalog mutation authority", 'paragraph',
+     "`skills/inventory.json` is generated in-repo and never hand-authored. Its "
+     "projection remains owned by `build_inventory()` in `tools/gen_skill_tree.py`; "
+     "the hermetic manifest command calls that projection and writes all three "
+     "catalog artifacts in one operation."),
+    ('fact 5 - regeneration is an explicit three-artifact step', GUIDE_REL,
+     "Canonical, generated, and consumer surfaces", 'paragraph',
+     "Regeneration is an explicit step of a mutation, not a side effect. After the "
+     "canonical bytes change, `tools/gen_manifest.py` reproduces the three artifacts "
+     "it owns, and the provider profiles are rebuilt with "
+     "`tools/build-distributions.ps1`, before any verification verdict is trusted."),
+    ('fact 5 - remaining lifecycle scope', GUIDE_REL,
+     "Canonical, generated, and consumer surfaces", 'paragraph',
+     "**Remaining lifecycle scope.** The scoped repair removes the stale-inventory "
+     "obstacle but does not finish Phase CL Step 111 or make count-changing mutations "
+     "routine. The explicit portable, native, description, support-asset, and "
+     "expected-count authorities remain anti-silent-addition guards and must be "
+     "changed deliberately with the canonical package. A later `CREATE`, `DELETE`, "
+     "or `RENAME` still needs its own authority until the phase completes; this "
+     "exception grants none."),
+)
+
+_updated_rows = []
+for _label, _document, _scope, _rows in LOCKED_TABLE_ROWS:
+    _rows = dict(_rows)
+    if _label == 'the surface class table':
+        _rows.pop('Generated, no current producer', None)
+        _rows['Generated in-repo'] = {
+            1: "`config/skill-manifest.json`, "
+               "`tests/package-integrity/expected_inventory.json`, "
+               "`skills/inventory.json`",
+            2: "Never hand-edited; reproduced together by re-running hermetic "
+               "`tools/gen_manifest.py`. The inventory projection reuses "
+               "`build_inventory()` from `tools/gen_skill_tree.py` without invoking "
+               "that module's retired legacy-tree CLI.",
+        }
+    if _label == "architecture's authoring-verdict table":
+        _rows['Generated in-repo'] = {
+            1: "`config/skill-manifest.json`, "
+               "`tests/package-integrity/expected_inventory.json`, "
+               "`skills/inventory.json`",
+            2: "No — reproduced together by `tools/gen_manifest.py` (section 8.5).",
+        }
+    _updated_rows.append((_label, _document, _scope, _rows))
+LOCKED_TABLE_ROWS = tuple(_updated_rows)
+
+_updated_cells = []
+for _label, _document, _scope, _rows in LOCKED_TABLE_CELLS:
+    _rows = dict(_rows)
+    if _label == "architecture's canonical directory table":
+        _rows['Skill inventory'] = {
+            1: "`skills/inventory.json`",
+            2: "Machine-readable per-skill inventory. Committed, generated "
+               "hermetically by `tools/gen_manifest.py` through the established "
+               "`build_inventory()` projection, and graded by "
+               "`tests/package-integrity/test_skill_tree.py`.",
+        }
+        _rows['Skill-tree generator'] = {
+            1: "`tools/gen_skill_tree.py`",
+            2: "Generated the migrated `skills/` tree. Its legacy-tree CLI remains "
+               "retired; `tools/gen_manifest.py` imports its pure "
+               "`build_inventory()` projection for hermetic inventory generation.",
+        }
+    _updated_cells.append((_label, _document, _scope, _rows))
+LOCKED_TABLE_CELLS = tuple(_updated_cells)
+
 # The `Generated, no current producer` row of the guide's boundary table is
 # fully pinned as of iteration 6, RULE cell included. It was the one boundary
 # cell left unpinned, on the reasoning that Phase CL Step 111 makes its
@@ -4183,114 +4275,6 @@ def test_catalog_partition_in_the_guide_matches_the_manifest():
           "one is the defect.")
 
 
-def test_guide_records_that_inventory_regeneration_has_no_current_producer():
-    """The guide is executed BY HAND until Step 113, so an operator must not be
-    told to run a command that does not exist -- nor be told the wrong reason a
-    mutation is blocked.
-
-    Round 4 measured the claim this test used to enforce, and it was FALSE.
-    `build_inventory()` in `tools/gen_skill_tree.py` is a pure function of
-    `config/skill-manifest.json`; called against the committed manifest it
-    reproduces `skills/inventory.json` BYTE-FOR-BYTE. What is retired is the
-    RUNNABLE producer -- the module's CLI exits without `--legacy-source` /
-    `SKILL_MESH_LEGACY_SOURCE`, and the legacy `.claude` tree it wants was
-    overwritten by the Step 50 consumer cutover -- so the true statement is
-    that no command writes the file, not that its content cannot be derived.
-
-    The distinction is not pedantic, because the guide built operator advice on
-    it. The FIRST thing that stops a hand CREATE is not the inventory at all:
-    `tools/gen_manifest.py` carries explicit `PORTABLE` / `NATIVE` / `CODEX`
-    rosters and an expected-count guard, and a 58th skill directory makes it
-    raise `ValueError` and write nothing -- measured. A document that names a
-    false blocker and omits the real one sends an operator to fix the wrong
-    file, so the real one is asserted here.
-    """
-    section = _guide_section("Canonical, generated, and consumer surfaces")
-    flat = _flat(_prose(section))
-    assert "skills/inventory.json" in section, (
-        "the guide no longer mentions `skills/inventory.json`, so a hand "
-        "mutation has no warning that it cannot be regenerated.")
-
-    # Graded on the inventory ROW's own rule cell as well as on the section.
-    # Round-2 mutation measured the row being flipped back to "reproduced by
-    # re-running `tools/gen_manifest.py`" -- which is false at this commit --
-    # while the surviving prose blockquote kept a section-wide search green.
-    # The document then ships both claims at once, and a reader who stops at
-    # the table runs a command that regenerates two artifacts, not three.
-    rows = [row for row in _table_rows(section)
-            if len(row) >= 3 and "skills/inventory.json" in row[1]]
-    assert len(rows) == 1, (
-        f"the boundary table has {len(rows)} rows for `skills/inventory.json`; "
-        f"the gate grades that row's own rule and cannot locate it.")
-    rule = _flat(rows[0][2])
-    # This row's RULE cell is the one boundary cell `LOCKED_TABLE_ROWS`
-    # deliberately leaves unpinned, because Step 111 makes its reproducibility
-    # clause false. Its AUTHORING clause is not time-varying and stays held
-    # here: round-4 review measured a cell that kept the word "retired", lost
-    # "Never hand-edited", and instructed the hand-edit the guide forbids.
-    assert "never hand-edited" in rule, (
-        f"the `skills/inventory.json` boundary row no longer says it is NEVER "
-        f"HAND-EDITED: {rows[0][2]!r}. Step 111 changes whether it can be "
-        f"regenerated; it does not change whether it may be authored, and this "
-        f"is the one boundary rule cell no pin holds.")
-    assert re.search(r"(no command writes|no command regenerates|"
-                     r"retired as a runnable producer)", rule), (
-        f"the boundary row for `skills/inventory.json` reads {rows[0][2]!r}, "
-        f"which implies some command writes it. None does at this commit -- "
-        f"`tools/gen_manifest.py` emits two artifacts, and gen_skill_tree's "
-        f"CLI refuses without the legacy source -- and the guide forbids "
-        f"hand-editing it, so an operator following this row reds "
-        f"test_skill_tree.py with no documented repair.")
-    overclaim = re.search(r"reproduced by|re-running", rule)
-    assert not overclaim, (
-        f"the `skills/inventory.json` row claims it is {overclaim.group(0)!r} "
-        f"some generator. Step 111 is the step that makes that true; until it "
-        f"lands the row and the warning below it must say the same thing.")
-    # The row must not go the OTHER way either. "not reproducible" was the
-    # round-4 falsehood: the content is a pure function of the manifest and
-    # `build_inventory()` emits it byte-for-byte. A gate that accepts the false
-    # statement is how it shipped in the first place.
-    falsehood = re.search(r"not reproducible|cannot be (reproduced|derived)|"
-                          r"nothing regenerates", rule)
-    assert not falsehood, (
-        f"the `skills/inventory.json` row says it is {falsehood.group(0)!r}. "
-        f"That is false and was measured false: `build_inventory()` in "
-        f"`tools/gen_skill_tree.py` reproduces the committed file byte-for-"
-        f"byte from the manifest alone. What is missing is a COMMAND that "
-        f"writes it, which is what the row must say.")
-
-    assert re.search(r"(no command writes|no command regenerates|"
-                     r"retired as a runnable producer)", flat), (
-        "the guide implies some command writes `skills/inventory.json`. None "
-        "does at this commit, and the guide forbids hand-editing it -- an "
-        "operator following this section reds test_skill_tree.py with no "
-        "documented repair. Say so, and name Step 111 as the fix.")
-    assert "step 111" in flat, (
-        "the guide must name Phase CL Step 111 as the step that lands hermetic "
-        "three-artifact generation, so the gap has an owner.")
-
-    # The Known-gap warning is now PINNED verbatim (`fact 5 - the Known-gap
-    # warning`), so its wording is held the way every other contract sentence
-    # is. What a pin cannot do is LOCATE it, so its presence -- exactly one
-    # block, once -- is checked here, and nothing else is. Every phrase check
-    # that used to stand in for the pin was measured satisfiable by a sentence
-    # that contains the phrase and then negates it: round 5 shipped a rewrite
-    # calling the rosters "advisory scaffolding", offering "hand-edit it to
-    # match and move on" as the repair, and asserting "Nothing here forbids
-    # hand-editing the inventory in an emergency", green against all five.
-    #
-    # The locator carries the `>` marker because iteration 7 restored it: a
-    # warning demoted out of its blockquote is a different block, and the
-    # markers are part of the pin (see `_collapsed`).
-    gap = [block for block in _paragraphs(section)
-           if block.startswith("> **Known gap")]
-    assert len(gap) == 1, (
-        f"section 3 carries {len(gap)} Known-gap warnings; it is the block "
-        f"that tells an operator not to hand-execute a count-moving mutation, "
-        f"and the gate cannot locate it. Its wording is pinned -- this checks "
-        f"only that it is still there, exactly once, and still a blockquote.")
-
-
 def test_the_guides_name_pattern_is_the_one_the_repository_enforces():
     """DERIVED, not transcribed -- the guide's regex against the enforced one.
 
@@ -4346,66 +4330,28 @@ def test_the_guides_name_pattern_is_the_one_the_repository_enforces():
         f"one is.")
 
 
-def test_architecture_states_the_same_inventory_position_as_the_guide():
-    """The same three truth checks, applied where round 6 found them missing.
+def test_guide_records_the_scoped_three_artifact_generator_exception():
+    section = _guide_section("Canonical, generated, and consumer surfaces")
+    rows = [row for row in _table_rows(section)
+            if len(row) >= 3 and "skills/inventory.json" in row[1]]
+    assert len(rows) == 1
+    rule = _flat(rows[0][2])
+    assert "never hand-edited" in rule
+    assert "tools/gen_manifest.py" in rule
+    assert "build_inventory()" in rule
+    prose = _flat(_prose(section))
+    assert "three artifacts" in prose
+    assert "does not finish phase cl step 111" in prose
 
-    The guide's `skills/inventory.json` row gets a pin AND three non-pin truth
-    checks above, precisely so the fact cannot be inverted by a rewording. Round
-    6 measured that `architecture.md` -- which states the same fact in two
-    section-2 rows this payload authored -- got neither, and the falsehood
-    shipped green there.
 
-    The cells are pinned now (`LOCKED_TABLE_CELLS`). These checks are what
-    survives a DELIBERATE rewording, including the one Phase CL Step 111 will
-    make: whatever the rows say after that step, they may not claim a command
-    writes the inventory before one does, may not claim its content cannot be
-    derived when `build_inventory()` derives it byte-for-byte, and may not
-    carry the authoring verdict at all -- section 2 says where an artifact
-    LIVES, and section 2.1 and the guide own whether it may be edited. One
-    owner per rule is what keeps the two documents from drifting apart.
-    """
+def test_architecture_records_the_live_inventory_producer():
     section = _section(_read(ARCH_REL), "Canonical directory contract",
                        f"{ARCH_REL} -> section 2")
     rows = {row[1].source: row for table in _tables(section)
             for row in table.rows if len(row) >= 3}
-    inventory = rows.get("`skills/inventory.json`")
-    generator = rows.get("`tools/gen_skill_tree.py`")
-    assert inventory is not None and generator is not None, (
-        f"{ARCH_REL} section 2 no longer carries a row for both "
-        f"`skills/inventory.json` and `tools/gen_skill_tree.py`; the two rows "
-        f"state the Phase CL inventory position and this gate cannot find "
-        f"them.")
-
-    for label, row in (("skills/inventory.json", inventory),
-                       ("tools/gen_skill_tree.py", generator)):
-        note = _flat(row[2].source)
-        falsehood = re.search(r"not reproducible|cannot be (reproduced|"
-                              r"derived)|nothing regenerates", note)
-        assert not falsehood, (
-            f"{ARCH_REL} section 2's {label} row says the inventory is "
-            f"{falsehood.group(0)!r}. That is false and was measured false: "
-            f"`build_inventory()` reproduces the committed file byte-for-byte "
-            f"from the manifest alone. What is missing is a COMMAND that "
-            f"writes it, which is what the row must say -- and the guide's "
-            f"row already says exactly that.")
-        assert "hand-edit" not in note, (
-            f"{ARCH_REL} section 2's {label} row carries an authoring verdict "
-            f"({'hand-edit'!r}). Section 2 states where an artifact LIVES; "
-            f"section 2.1 and the lifecycle guide own whether it may be "
-            f"authored, and a second copy of that rule here is how the two "
-            f"documents drift.")
-
-    note = _flat(inventory[2].source)
-    overclaim = re.search(r"reproduced by|re-running|regenerate it with", note)
-    assert not overclaim, (
-        f"{ARCH_REL} section 2's `skills/inventory.json` row claims it is "
-        f"{overclaim.group(0)!r} some generator. No command writes it at this "
-        f"commit -- `tools/gen_manifest.py` emits two artifacts, and "
-        f"`gen_skill_tree`'s CLI refuses without the legacy source -- so a "
-        f"reader following this row runs something that exits 1.")
-    assert re.search(r"no command writes|no command regenerates|"
-                     r"retired as a runnable producer", note), (
-        f"{ARCH_REL} section 2's `skills/inventory.json` row no longer records "
-        f"that no command writes it. Section 2.1's paragraph says so and is "
-        f"pinned; a row contradicting it is the half of the document a reader "
-        f"scanning the directory table actually reaches.")
+    inventory = _flat(rows["`skills/inventory.json`"][2].source)
+    tree_generator = _flat(rows["`tools/gen_skill_tree.py`"][2].source)
+    assert "tools/gen_manifest.py" in inventory
+    assert "build_inventory()" in inventory
+    assert "legacy-tree cli remains retired" in tree_generator
+    assert "build_inventory()" in tree_generator

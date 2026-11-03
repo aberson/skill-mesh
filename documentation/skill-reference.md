@@ -1,6 +1,6 @@
 # Skill reference
 
-The v2 catalog contains **57 Claude skills** and **54 portable skills** for Codex and GitHub Copilot. Host coverage means an adapter is packaged; required native capabilities and external utilities still apply.
+The v2 catalog contains **58 Claude skills** and **55 portable skills** for Codex and GitHub Copilot. Host coverage means an adapter is packaged; required native capabilities and external utilities still apply.
 
 Each workflow link opens its source-linked diagram. Read the contract for full gates, flags, and omissions. See [installation](../README.md#install-or-upgrade), [utility integrations](../README.md#how-utility-projects-are-used), and [release limitations](https://github.com/aberson/skill-mesh/releases/tag/v2.0.2).
 
@@ -14,6 +14,7 @@ Each workflow link opens its source-linked diagram. Read the contract for full g
 | [citation-review](../skills/citation-review/core.md) | Bind an exact calibrated judge, open one review, prepare frozen evidence, resolve each choice by independent votes, and commit only untied complete results. | Claude, Copilot, Codex | [Diagram](../docs/workflows/README.md#citation-review) |
 | [citation-sweep](../skills/citation-sweep/core.md) | Bind one calibrated judge, open every selected artifact before judging any, commit only complete runs, and generate backlog rows for clean commits. | Claude, Copilot, Codex | [Diagram](../docs/workflows/README.md#citation-sweep) |
 | [citation-triage](../skills/citation-triage/core.md) | Present one ranked queue row at a time, bind an explicit operator choice to its frozen identity, and resolve an unchanged row exactly once. | Claude, Copilot, Codex | [Diagram](../docs/workflows/README.md#citation-triage) |
+| [code-consigliere](../skills/code-consigliere/core.md) | Investigate a project workflow and its rationale, agree any change, hand off a safe build seed, and verify the returned build. | Claude, Copilot, Codex | [Workflow](../docs/workflows/code-consigliere.mmd) |
 | [claude-oauth-auth](../skills/claude-oauth-auth/providers/claude.md) | Authenticate the Claude CLI with a subscription token while keeping the credential out of logs and direct API calls. | Claude only | [Diagram](../docs/workflows/README.md#claude-oauth-auth) |
 | [context-slim](../skills/context-slim/providers/claude.md) | Measure automatically loaded context, classify safe reductions, and apply only high-confidence changes when explicitly requested. | Claude only | [Diagram](../docs/workflows/README.md#context-slim) |
 | [goblin-do](../skills/goblin-do/core.md) | Resolve one persisted atom, recheck its anchor, and print a goal block or planning seed without executing the work. | Claude, Copilot, Codex | [Diagram](../docs/workflows/README.md#goblin-do) |

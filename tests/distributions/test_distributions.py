@@ -122,6 +122,7 @@ SHARED_DEST = "_shared"
 # compares it against a real build, so a builder walk that narrows (or widens) reds
 # there even if this literal were edited to agree with it.
 EXPECTED_SHARED_PAYLOAD = frozenset({
+    "consigliere-records.md",
     # Intent continuity is now cited by the planning/build/session cores. The
     # independent closure walk below still verifies that the source requires it.
     "intent-continuity.md",
@@ -3288,7 +3289,7 @@ def test_codex_profile_holds_exactly_the_declared_cohorts_for_the_committed_mani
     out = tmp_path / "out"
     r = _build(out, provider="codex")
     assert r.returncode == 0, f"{r.stdout}\n{r.stderr}"
-    assert "(54 skills," in r.stdout, r.stdout
+    assert "(55 skills," in r.stdout, r.stdout
     # The manifest declares exactly the spelled cohorts...
     assert sorted(_codex_skills()) == DECLARED_CODEX_SKILLS, _codex_skills()
     # ...and the emitted tree IS that roster: no extra skill dir, none missing. The

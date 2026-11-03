@@ -21,7 +21,7 @@ Codex hosts receive *generated* compatibility layouts built from this source.
 | **shim** | Thin backward-compatible launcher that delegates to a canonical file. |
 | **transport** | Authenticated API or host-native channel used to execute a provider model. |
 | **calibration** | Existing deterministic/rubric comparison that checks adapter parity. |
-| **portable skill** | Skill with a neutral core plus Claude and GPT adapters, all 54 of which additionally carry a Codex adapter — codex capability is ADDITIVE on a portable record, never a third status. 54 total. |
+| **portable skill** | Skill with a neutral core plus Claude and GPT adapters, all 55 of which additionally carry a Codex adapter — codex capability is ADDITIVE on a portable record, never a third status. 55 total. |
 | **provider-native skill** | Skill supported on exactly one host; no neutral core. 3 total. |
 
 `<name>` and `<skill>` in every path template mean the same stable kebab-case
@@ -40,10 +40,10 @@ deprecation window (see `migration.md`), not canonical sources.
 | Skill core (portable) | `skills/<name>/core.md` | One per portable skill; `null` in the manifest for provider-native skills. |
 | Claude adapter | `skills/<name>/providers/claude.md` | Thin host adapter. Self-contained for provider-native skills. |
 | GPT adapter | `skills/<name>/providers/gpt.md` | Thin host adapter; absent for provider-native skills. |
-| Codex adapter | `skills/<name>/providers/codex.md` | Thin host adapter; absent for provider-native skills. One per portable skill (54). |
+| Codex adapter | `skills/<name>/providers/codex.md` | Thin host adapter; absent for provider-native skills. One per portable skill (55). |
 | Shared prose assets | `_shared/` (repo root) | Cross-skill cores/prose referenced by multiple skills. The manifest declares `skills/_shared/` as the eventual canonical home; that directory does not exist yet, so today's references resolve to the repo-root tree. The divergence is deliberate and locked by `tests/package-integrity/test_skill_tree.py::test_shared_dest_divergence_is_intentional`. |
 | Skill manifest | `config/skill-manifest.json` | Single source for distribution, install, integrity, and README counts. |
-| Skill inventory | `skills/inventory.json` | Machine-readable per-skill inventory. Committed, and graded by `tests/package-integrity/test_skill_tree.py`. Its content is a pure function of the manifest, but no command writes it at this commit — see section 2.1 and Phase CL Step 111. |
+| Skill inventory | `skills/inventory.json` | Machine-readable per-skill inventory. Committed, generated hermetically by `tools/gen_manifest.py` through the established `build_inventory()` projection, and graded by `tests/package-integrity/test_skill_tree.py`. |
 | Model capability mapping | `config/model-mapping.json` | Per-skill provider/local capability booleans (Step 34). |
 | Model tier peer mapping | `config/model-tier-map.json` | Claude-tier to GPT-peer mapping (Step 34). |
 | Runtime router | `runtime/skill-router.ps1` | Provider-neutral CLI router (Step 34). |
@@ -70,8 +70,8 @@ deprecation window (see `migration.md`), not canonical sources.
 | Generated GPT layout | `dist/gpt/` | Build artifact only; never committed. |
 | Generated Codex layout | `dist/codex/` | Build artifact only; never committed. Emitted by `-Provider codex` or `-Provider all`. |
 | Path guard | `runtime/path-guard.ps1` | Canonical real-path resolution shared by the router and release tooling. |
-| Manifest generator | `tools/gen_manifest.py` | Generates `config/skill-manifest.json` + `tests/package-integrity/expected_inventory.json`. |
-| Skill-tree generator | `tools/gen_skill_tree.py` | Generated the migrated `skills/` tree and `skills/inventory.json`. Retired as a *runnable* producer: its CLI refuses without the legacy `.claude` source the Step 50 consumer cutover overwrote, so no command writes the inventory at this commit — even though its content is a pure function of the manifest (see section 2.1 and Phase CL Step 111). |
+| Manifest generator | `tools/gen_manifest.py` | Generates `config/skill-manifest.json`, `tests/package-integrity/expected_inventory.json`, and `skills/inventory.json`. |
+| Skill-tree generator | `tools/gen_skill_tree.py` | Generated the migrated `skills/` tree. Its legacy-tree CLI remains retired; `tools/gen_manifest.py` imports its pure `build_inventory()` projection for hermetic inventory generation. |
 | Release checker | `tools/release_checks.py` | Static release-gate logic used by `tests/package-integrity/test_release_gates.py`. |
 | Router shim generator | `tools/gen-router-shim.ps1` | Generates backward-compatible launcher shims for retired router paths. |
 | Install provenance | `tools/skill-mesh-provenance.ps1` | Install-provenance stamping shared by the builder and installer. |
@@ -89,15 +89,13 @@ class, not a restatement of every row above:
 | Class | Examples | May a change be authored here? |
 |---|---|---|
 | Canonical authoring | cores, adapters, `_shared/` prose, `config/model-mapping.json`, the runtime, the tools | Yes — this is the only class a catalog change edits. |
-| Generated in-repo | `config/skill-manifest.json`, `tests/package-integrity/expected_inventory.json` | No — reproduced by `tools/gen_manifest.py`, which owns exactly these two (section 8.5). |
+| Generated in-repo | `config/skill-manifest.json`, `tests/package-integrity/expected_inventory.json`, `skills/inventory.json` | No — reproduced together by `tools/gen_manifest.py` (section 8.5). |
 | Generated / consumer output | `dist/claude`, `dist/gpt`, `dist/codex`, `release-stage/`, and an installed consumer discovery root (`.claude/skills`, `.agents/skills`, `.github/skills`) | No — build, release, and install output. Never an authoring surface, and never the way to effect a catalog change. |
 | Legacy compatibility | the top-level `<skill>/SKILL.md` packages at the repository root | No — non-canonical content in a deprecation window, never the target of a catalog mutation. |
 
-`skills/inventory.json` is deliberately absent from the four classes above: it is neither
-hand-authored nor reproducible by any command at this commit, even though its content is a
-pure function of the manifest. Section 2 carries its row, as that section's own closing
-rule requires. The consequence for a hand-executed mutation is recorded once, in the guide
-cited below.
+`skills/inventory.json` is generated in-repo and never hand-authored. Its projection remains
+owned by `build_inventory()` in `tools/gen_skill_tree.py`; the hermetic manifest command calls
+that projection and writes all three catalog artifacts in one operation.
 
 **The required-provider set is owned elsewhere, and does not redefine `portable`.** Section
 1's Vocabulary row is the definition of the manifest *status* `portable`, and this section
@@ -189,7 +187,7 @@ each skill's legacy contract, not inferred from a single shared wrapper line.
 
 | Capability | Count | Skills |
 |---|---|---|
-| `filesystem` | 57 | all skills |
+| `filesystem` | 58 | all skills |
 | `sub-agent` | 20 | build-step, citation-review, citation-sweep, context-slim, goblin-suggest, judge-motion, judge-ui, lesson-harvest, research-prospect, review-deep, review-gauntlet, skill-evolve, skill-iterate, test-prune, tier-escalate, tier-offload, user-brainstorm, user-debug, user-learn, user-uat |
 | `vision` | 2 | judge-ui, judge-motion |
 
@@ -306,8 +304,8 @@ those steps must satisfy.
 
 Every skill has a machine-readable migration entry in `config/skill-manifest.json`
 (the `migration` + `support_assets` blocks per skill, plus top-level
-`global_support_assets`), covering **all 54 portable skills plus the 3
-Claude-native exclusions (57 total)**.
+`global_support_assets`), covering **all 55 portable skills plus the 3
+Claude-native exclusions (58 total)**.
 
 **Migration root.** All `source` / `legacy_*` paths are relative to **coding-root**
 (`aberson/coding-root` — the operator's `dev` checkout), READ-ONLY during Steps
@@ -488,11 +486,12 @@ repo-root command; that is the drift the single-owner rule exists to stop.
 
 ### 8.5 Regenerating the manifest
 
-`config\skill-manifest.json` and `tests\package-integrity\expected_inventory.json`
+`config\skill-manifest.json`, `tests\package-integrity\expected_inventory.json`, and
+`skills\inventory.json`
 are generated by `tools\gen_manifest.py` from authoritative constants plus the
 committed `skills\<name>\` tree. **Generation is hermetic** (Step 67): it reads
 nothing outside this repository, takes no argument and no environment variable, and
-reproduces both artifacts exactly. Regenerate only when one of those constants
+reproduces all three artifacts exactly. Regenerate only when one of those constants
 changes:
 
 ```powershell
@@ -508,7 +507,7 @@ non-derivable by design and each says why at its own definition: `LOCAL_CAPABLE`
 `SUB_AGENT`, `VISION`, `DESCRIPTIONS`. `PORTABLE` and `NATIVE` are re-derived from
 the committed tree on every run and asserted equal.
 
-Both artifacts are written with the platform line ending, matching this repository's
+All three artifacts are written with the platform line ending, matching this repository's
 checkout convention (no `.gitattributes`, `core.autocrlf=true`), so a regeneration
 leaves `git status` clean on Windows and on POSIX alike. Any comparison against a
 committed copy normalizes first (BOM stripped, CRLF/CR to LF) on both sides -- the
@@ -558,7 +557,7 @@ seam (defaults to this repository) that must be a git working tree.
 
 `tests/package-integrity/test_manifest_contract.py` fails on any of:
 
-- Skill count != 57, portable != 54, provider-native != 3, sub-agent != 20,
+- Skill count != 58, portable != 55, provider-native != 3, sub-agent != 20,
   vision != 2 (each set checked exactly against the committed
   `tests/package-integrity/expected_inventory.json` fixture — the package tests
   need no private source).
@@ -584,7 +583,7 @@ seam (defaults to this repository) that must be a git working tree.
   architecture, provider docs, generator, or this test.
 - The normalized build/install/test command lines or the "lint/typecheck not
   configured" statement missing from this document.
-- A regeneration that does not reproduce both committed artifacts, compared with
+- A regeneration that does not reproduce all three committed artifacts, compared with
   line endings normalized on both sides (section 8.5). This replaced an optional
   legacy-source verification that skipped unless `SKILL_MESH_LEGACY_SOURCE` was set:
   the Step 50 cutover overwrote that source, leaving a check whose only outcomes were

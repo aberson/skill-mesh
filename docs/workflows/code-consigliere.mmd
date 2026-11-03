@@ -1,0 +1,25 @@
+%% code-consigliere
+%% Summary: Resolve a target project, preserve private evidence, investigate together, hand off an agreed seed, and verify the returned build.
+%% Sources: skills/code-consigliere/core.md
+%% Not shown: helper discovery, record schemas, evidence methods, indirect usage checks, privacy review, and host permission limits
+%% Alt: A target enters private setup and workflow discovery, then discussion and signoff before a seed or explicitly agreed implementation; a returned build is verified and knowledge revised.
+
+flowchart TD
+    A[Resolve target and project rules] --> B{Target unambiguous?}
+    B -- No --> C[Ask which project]
+    C --> A
+    B -- Yes --> D{Collection available and enabled?}
+    D -- Yes --> E[Equip and recover private records]
+    D -- No --> F[Disclose limited persistence]
+    E --> G[Init: inventory and select workflow]
+    F --> G
+    G --> H[Discuss reality and recorded rationale]
+    H --> I{Change agreed within boundaries?}
+    I -- No --> J[Preserve findings and discuss next step]
+    I -- Yes --> K[Record signoff and acceptance checks]
+    K --> L[Write safe seed or expressly agreed change]
+    L --> M[Return after project build]
+    M --> N[Verify downstream code tests and docs]
+    N --> O{Agreement satisfied?}
+    O -- No --> H
+    O -- Yes --> P[Revise private wiki and terminology]

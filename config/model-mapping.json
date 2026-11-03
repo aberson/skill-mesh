@@ -92,6 +92,13 @@
       "local": false,
       "notes": "Promoted at Phase CP Step 10 - operator-decision recorder over the distill queue."
     },
+    "code-consigliere": {
+      "default_model": "claude",
+      "claude": true,
+      "gpt": true,
+      "local": false,
+      "notes": "Portable attended investigation front door; optional external private helper, no isolated agent."
+    },
     "claude-oauth-auth": {
       "default_model": "claude",
       "claude": true,

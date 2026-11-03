@@ -1,16 +1,16 @@
 {
   "note": "Authoritative expected inventory for package-integrity tests. Committed so the public package tests need no private/legacy source. Regenerate with tools/gen_manifest.py.",
   "counts": {
-    "total": 57,
-    "portable": 54,
+    "total": 58,
+    "portable": 55,
     "provider_native": 3,
-    "claude": 57,
-    "gpt": 54,
-    "codex": 54,
+    "claude": 58,
+    "gpt": 55,
+    "codex": 55,
     "local_capable": 21,
     "sub_agent": 20,
     "vision": 2,
-    "filesystem": 57
+    "filesystem": 58
   },
   "portable": [
     "build-observer",
@@ -21,6 +21,7 @@
     "citation-review",
     "citation-sweep",
     "citation-triage",
+    "code-consigliere",
     "goblin-do",
     "goblin-suggest",
     "goblin-sweep",
@@ -82,6 +83,7 @@
     "citation-review",
     "citation-sweep",
     "citation-triage",
+    "code-consigliere",
     "goblin-do",
     "goblin-suggest",
     "goblin-sweep",
@@ -353,6 +355,21 @@
           "dest": "skills/claude-oauth-auth/evals/"
         }
       ]
+    },
+    {
+      "name": "code-consigliere",
+      "status": "portable",
+      "local_capable": false,
+      "capabilities": [
+        "filesystem"
+      ],
+      "migration": {
+        "legacy_core": ".claude/skills-gpt/code-consigliere/SKILL-core.md",
+        "legacy_claude_launcher": ".claude/skills/code-consigliere/SKILL.md",
+        "legacy_claude_adapter": ".claude/skills/code-consigliere/SKILL-claude.md",
+        "legacy_gpt": ".claude/skills-gpt/code-consigliere/SKILL-gpt.md"
+      },
+      "support_assets": []
     },
     {
       "name": "context-slim",

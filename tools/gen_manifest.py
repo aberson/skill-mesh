@@ -1,11 +1,11 @@
-"""Generate config/skill-manifest.json and tests/package-integrity/expected_inventory.json.
+"""Generate the manifest, expected fixture, and public skill inventory.
 
 HERMETIC (Step 67). Generation reads nothing outside this repository. Every input is
 either a checked-in constant below or the committed skills/<name>/ tree, so
 
     python tools/gen_manifest.py
 
-reproduces both committed artifacts with NO environment set and no argument passed.
+reproduces all three committed artifacts with NO environment set and no argument passed.
 
 WHY hermetic. This generator used to SCAN an external legacy root for each skill's
 support assets (<coding-root>/.claude/{skills,skills-gpt}/<name>). The Step 50
@@ -62,6 +62,7 @@ SKILLS_DIR = REPO_ROOT / "skills"
 PORTABLE = [
     "build-observer", "build-phase", "build-queue", "build-step",
     "citation-distill", "citation-review", "citation-sweep", "citation-triage",
+    "code-consigliere",
     "goblin-do", "goblin-suggest", "goblin-sweep", "judge-ui",
     "lesson-harvest", "memory-distill", "observatory-doctor", "plan-expedite",
     "plan-feature", "plan-init", "plan-merge", "plan-redline", "plan-review",
@@ -84,9 +85,9 @@ NATIVE = ["claude-oauth-auth", "context-slim", "judge-motion"]
 # what `status`, `counts["portable"]`, `counts["provider_native"]` and the README's
 # GPT-capable line all mean. A codex adapter is ADDITIVE on top of a record that is
 # already portable-or-native: it never moves a skill between those two buckets, so
-# EXPECTED_TOTAL / EXPECTED_PORTABLE / EXPECTED_NATIVE stay 57/54/3 and every existing
+# EXPECTED_TOTAL / EXPECTED_PORTABLE / EXPECTED_NATIVE are 58/55/3 and every existing
 # count keeps its exact meaning. Modelling codex as a third status instead would
-# redefine `portable` for all 57 records and invalidate every committed tally.
+# redefine `portable` for all catalog records and invalidate every committed tally.
 #
 # Derivable from the tree exactly like PORTABLE/NATIVE, and CHECKED against it by
 # `derived_skill_sets()` on every run, so the spelled-out copy cannot drift.
@@ -112,6 +113,7 @@ NATIVE = ["claude-oauth-auth", "context-slim", "judge-motion"]
 CODEX = [
     "build-observer", "build-phase", "build-queue", "build-step",
     "citation-distill", "citation-review", "citation-sweep", "citation-triage",
+    "code-consigliere",
     "goblin-do", "goblin-suggest", "goblin-sweep", "judge-ui",
     "lesson-harvest", "memory-distill", "observatory-doctor", "plan-expedite",
     "plan-feature", "plan-init", "plan-merge", "plan-redline", "plan-review",
@@ -209,7 +211,7 @@ VISION = {"judge-ui", "judge-motion"}
 # each skill's own SKILL contract (its legacy `.claude/skills/<name>/SKILL.md`
 # description and canonical core.md purpose).
 #
-# NON-DERIVABLE BY DESIGN, and measurably so: all 57 committed
+# NON-DERIVABLE BY DESIGN, and measurably so: all committed
 # skills/<name>/providers/claude.md files carry a `description:` that is LAUNCHER
 # boilerplate ("Claude provider entry point for <name>; loads the canonical shared
 # core."), which is not what the manifest publishes; and skills/<name>/providers/
@@ -234,6 +236,7 @@ DESCRIPTIONS = {
     "citation-review": "Evidence-check one LLM-facing artifact through Citation Needed's calibrated review pipeline.",
     "citation-sweep": "Bounded project-wide Citation Needed rigor pass producing a citation-backed distill backlog.",
     "citation-triage": "Walk Citation Needed's ranked distill queue and record keep, cut, or rewrite decisions.",
+    "code-consigliere": "Investigate project workflows and rationale, agree a change, and hand off a build seed for later verification.",
     "claude-oauth-auth": "How to authenticate with Claude using a subscription OAuth token instead of an API key.",
     "context-slim": "Audit a project's auto-loaded context files and produce a prioritized progressive-disclosure plan to cut per-turn token cost.",
     "goblin-do": "Render the next step for one persisted Goblin atom after a read-only liveness check.",
@@ -312,7 +315,7 @@ DESCRIPTIONS = {
 # .claude/skills/<name>/ tree each was promoted out of: build-observer's three
 # scaffold assets and goblin-sweep's evals/ directory, and an explicit empty list for
 # the five that genuinely ship no assets.
-# All 57 skills carry a key -- an empty list where a skill has no assets -- so adding
+# All skills carry a key -- an empty list where a skill has no assets -- so adding
 # a skill without deciding its assets is a loud KeyError, never a silent empty record.
 SUPPORT_ASSETS = {
     "build-observer": [
@@ -330,6 +333,7 @@ SUPPORT_ASSETS = {
     "citation-review": [],
     "citation-sweep": [],
     "citation-triage": [],
+    "code-consigliere": [],
     "claude-oauth-auth": [("skills", "evals/")],
     "context-slim": [("skills", "evals/")],
     "goblin-do": [
@@ -421,7 +425,7 @@ SUPPORT_ASSETS = {
 
 # Spelled-out expectations for the tree enumeration below. The same three numbers are
 # asserted independently by tests/package-integrity/test_manifest_contract.py.
-EXPECTED_TOTAL, EXPECTED_PORTABLE, EXPECTED_NATIVE = 57, 54, 3
+EXPECTED_TOTAL, EXPECTED_PORTABLE, EXPECTED_NATIVE = 58, 55, 3
 
 
 def skill_support_assets(name: str):
@@ -561,7 +565,7 @@ def build():
         "total": len(skills),
         "portable": sum(1 for s in skills if s["status"] == "portable"),
         "provider_native": sum(1 for s in skills if s["status"] == "provider-native"),
-        # Per-provider adapter tallies. `claude` is every skill (all 57 carry one) and
+        # Per-provider adapter tallies. `claude` is every skill and
         # `gpt` equals `portable` TODAY -- both are spelled out anyway so the codex
         # tally is read on the same axis as its siblings rather than being the one
         # count with no peer, and so a future divergence between "is portable" and
@@ -725,18 +729,31 @@ def build():
 
 
 def serialize(doc) -> str:
-    """The ONE serializer for both artifacts: UTF-8, no BOM, 2-space indent, trailing
+    """The ONE serializer for all three artifacts: UTF-8, no BOM, 2-space indent, trailing
     newline. Returns TEXT with "\\n" separators; the writer below decides the bytes."""
     return json.dumps(doc, indent=2) + "\n"
 
 
-# The two generated artifacts, relative to the tree they are written into.
+# The three generated artifacts, relative to the tree they are written into.
 ARTIFACTS = ("config/skill-manifest.json",
-             "tests/package-integrity/expected_inventory.json")
+             "tests/package-integrity/expected_inventory.json",
+             "skills/inventory.json")
+
+
+def _build_inventory(manifest: dict) -> dict:
+    """Load and reuse the established inventory projection without running its
+    retired legacy-tree CLI."""
+    import importlib.util
+
+    path = REPO_ROOT / "tools" / "gen_skill_tree.py"
+    spec = importlib.util.spec_from_file_location("gen_skill_tree_inventory", path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module.build_inventory(manifest)
 
 
 def write_artifacts(out_root: Path):
-    """Build and write both artifacts under `out_root`. Returns the manifest.
+    """Build and write all three artifacts under `out_root`. Returns the manifest.
 
     `out_root` is a parameter so the regeneration gate can drive the REAL production
     write path into a temporary tree instead of over the committed files.
@@ -753,7 +770,8 @@ def write_artifacts(out_root: Path):
     `dist/`.
     """
     manifest, fixture = build()
-    for rel, doc in zip(ARTIFACTS, (manifest, fixture)):
+    inventory = _build_inventory(manifest)
+    for rel, doc in zip(ARTIFACTS, (manifest, fixture, inventory)):
         path = out_root / rel
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(serialize(doc), encoding="utf-8")
@@ -765,8 +783,8 @@ def main():
     # empty argument set on purpose, so a stale invocation still carrying the retired
     # --legacy-source flag fails loudly ("unrecognized arguments") instead of being
     # silently accepted and ignored.
-    argparse.ArgumentParser(description="Regenerate the skill manifest + fixture "
-                                        "from this repository alone.").parse_args()
+    argparse.ArgumentParser(description="Regenerate the skill manifest, fixture, and "
+                                        "inventory from this repository alone.").parse_args()
     manifest = write_artifacts(REPO_ROOT)
     print(f"counts: {manifest['counts']}")
     print("wrote " + " and ".join(ARTIFACTS))

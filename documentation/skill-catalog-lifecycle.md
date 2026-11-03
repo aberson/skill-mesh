@@ -24,6 +24,17 @@ host-only artifact, not a catalog member. Inside a Skill Mesh source checkout th
 the authority, and a host-only creator's output is treated as raw material for a real
 `CREATE`, never as a finished portable skill.
 
+**Scoped code-consigliere release exception (2026-11-02).** The operator authorized one
+portable `CREATE` in an isolated clean release worktree while the original checkout remained
+dirty and untouched. The same scope authorized the necessary generator repair: hermetic
+`tools/gen_manifest.py` now writes the manifest, expected fixture, and inventory together by
+reusing the existing `build_inventory()` projection. The request, base ref, target paths, and
+pre-write hashes were recorded outside the repository before mutation. This is authority for
+the `code-consigliere` release work only; it does not claim Phase CL Step 111 or the full phase
+complete, waive any other lifecycle gate, or authorize a commit, push, install, or release.
+Those actions follow the separately authorized caller workflow; this exception does not by
+itself grant them.
+
 ## 1. Prerequisite preflight — recorded evidence
 
 Phase CL execution is gated on four facts, all four checked and satisfied for Step 110. The
@@ -221,8 +232,7 @@ there is a drift to fix, not a disagreement to interpret.
 | Class | Examples | Lifecycle rule |
 |---|---|---|
 | Canonical authoring | `skills/<name>/core.md`, `skills/<name>/providers/<host>.md`, the `_shared/` prose a core cites, the skill's row in `config/model-mapping.json`, and the runtime and tools a change reaches — the same class [`architecture.md`](architecture.md) section 2.1 names | The only bytes a mutation edits by hand. A catalog member with no model-mapping row is routed as Claude-only, so the row is part of the change, not a follow-up. |
-| Generated in-repo | `config/skill-manifest.json`, `tests/package-integrity/expected_inventory.json` | Never hand-edited; reproduced by re-running `tools/gen_manifest.py`, which owns exactly these two and is hermetic. |
-| Generated, no current producer | `skills/inventory.json` | Never hand-edited. Its content is a pure function of the manifest, but no command writes it at this commit: `tools/gen_skill_tree.py` is retired as a runnable producer — its CLI refuses without the legacy `.claude` source the Step 50 consumer cutover overwrote. See the warning below. |
+| Generated in-repo | `config/skill-manifest.json`, `tests/package-integrity/expected_inventory.json`, `skills/inventory.json` | Never hand-edited; reproduced together by re-running hermetic `tools/gen_manifest.py`. The inventory projection reuses `build_inventory()` from `tools/gen_skill_tree.py` without invoking that module's retired legacy-tree CLI. |
 | Generated distribution | `dist/claude`, `dist/gpt`, `dist/codex` | Build output. Uncommitted, disposable, never an authoring surface. |
 | Release staging | `release-stage/` | Release output. Uncommitted, disposable, never an authoring surface. |
 | Consumer discovery roots | a consumer home's `.claude/skills`, `.agents/skills`, `.github/skills` | Install output owned by the installer ledger. Never edited to effect a catalog change. |
@@ -257,33 +267,15 @@ checkout that it is not one, and would attach the "no single-host fallback" advi
 request that never needed it.
 
 Regeneration is an explicit step of a mutation, not a side effect. After the canonical bytes
-change, `tools/gen_manifest.py` reproduces the two artifacts it owns, and the provider
+change, `tools/gen_manifest.py` reproduces the three artifacts it owns, and the provider
 profiles are rebuilt with `tools/build-distributions.ps1`, before any verification verdict is
 trusted.
 
-> **Known gap — a CREATE, DELETE, or RENAME cannot be completed by hand today**, and the
-> first thing that stops one is not the inventory. `tools/gen_manifest.py` carries explicit
-> `PORTABLE`, `NATIVE`, and `CODEX` rosters plus an expected-count guard, so a tree whose
-> skill count has moved makes it `raise` and write nothing: regeneration aborts before the
-> manifest changes, and `DESCRIPTIONS` and `SUPPORT_ASSETS` raise in turn after it. Editing
-> those constants is itself a canonical-authoring edit — `architecture.md` section 2.1 puts
-> the tools in that class. Phase CL Step 111 keeps the explicit portable roster and the exact
-> native set deliberately, as anti-silent-addition guards; it does **not** keep `CODEX`,
-> which that step derives from `PORTABLE` so that no independent Codex membership authority
-> remains.
-> `skills/inventory.json` is the second obstacle, and a different one. Its content is a pure
-> function of the manifest — `build_inventory()` in `tools/gen_skill_tree.py` reproduces the
-> committed file byte-for-byte from `config/skill-manifest.json` alone — but **no command
-> writes it at this commit**: `tools/gen_manifest.py` emits two artifacts, not three, and
-> `tools/gen_skill_tree.py` is retired as a runnable producer, its CLI refusing without the
-> legacy `.claude` source the Step 50 consumer cutover overwrote. A change that moved the
-> count would therefore leave the inventory stale, which reds
-> `tests/package-integrity/test_skill_tree.py`, and this guide
-> forbids hand-editing the inventory.
-> **Do not perform a CREATE, DELETE, or RENAME by hand until Phase CL Step 111 lands
-> hermetic three-artifact generation** (that step's `Produces:` includes "one hermetic
-> three-artifact producer"). `READ`, and an `UPDATE` that changes no skill name, are
-> unaffected — they move no count, touch no roster, and need no inventory change.
+**Remaining lifecycle scope.** The scoped repair removes the stale-inventory obstacle but does
+not finish Phase CL Step 111 or make count-changing mutations routine. The explicit portable,
+native, description, support-asset, and expected-count authorities remain anti-silent-addition
+guards and must be changed deliberately with the canonical package. A later `CREATE`, `DELETE`,
+or `RENAME` still needs its own authority until the phase completes; this exception grants none.
 
 ## 4. Portable means a core plus every required provider
 
@@ -333,7 +325,7 @@ review, and qualification gates in that plan are authorized, eligibility remains
 Claude-only, and every later native mutation still takes
 `PROVIDER_NATIVE_REVIEW_REQUIRED`.
 
-The catalog at the time of writing is 57 skills: 54 portable and 3 provider-native.
+The catalog at the time of writing is 58 skills: 55 portable and 3 provider-native.
 
 ## 5. The five operations
 

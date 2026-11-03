@@ -223,7 +223,7 @@ NEIGHBOUR_GATE = Path(__file__).with_name("test_codex_agent_isolation_contract.p
 # reviewable. The floor below is the separate guard against a mis-rooted glob
 # making every assertion in this module vacuous; both are asserted because they
 # fail for different reasons.
-EXPECTED_ADAPTERS = 54
+EXPECTED_ADAPTERS = 55
 MIN_ADAPTERS = 50
 
 # One owner per threshold. Each of these was an inline literal duplicated across

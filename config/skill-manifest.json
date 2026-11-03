@@ -67,16 +67,16 @@
     }
   },
   "counts": {
-    "total": 57,
-    "portable": 54,
+    "total": 58,
+    "portable": 55,
     "provider_native": 3,
-    "claude": 57,
-    "gpt": 54,
-    "codex": 54,
+    "claude": 58,
+    "gpt": 55,
+    "codex": 55,
     "local_capable": 21,
     "sub_agent": 20,
     "vision": 2,
-    "filesystem": 57
+    "filesystem": 58
   },
   "global_support_assets": [
     {
@@ -351,6 +351,28 @@
           "dest": "skills/claude-oauth-auth/evals/"
         }
       ]
+    },
+    {
+      "name": "code-consigliere",
+      "status": "portable",
+      "description": "Investigate project workflows and rationale, agree a change, and hand off a build seed for later verification.",
+      "core": "skills/code-consigliere/core.md",
+      "providers": {
+        "claude": "skills/code-consigliere/providers/claude.md",
+        "gpt": "skills/code-consigliere/providers/gpt.md",
+        "codex": "skills/code-consigliere/providers/codex.md"
+      },
+      "capabilities": [
+        "filesystem"
+      ],
+      "local_capable": false,
+      "migration": {
+        "legacy_core": ".claude/skills-gpt/code-consigliere/SKILL-core.md",
+        "legacy_claude_launcher": ".claude/skills/code-consigliere/SKILL.md",
+        "legacy_claude_adapter": ".claude/skills/code-consigliere/SKILL-claude.md",
+        "legacy_gpt": ".claude/skills-gpt/code-consigliere/SKILL-gpt.md"
+      },
+      "support_assets": []
     },
     {
       "name": "context-slim",

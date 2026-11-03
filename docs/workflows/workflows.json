@@ -1,7 +1,7 @@
 {
   "schema": "show-your-work.workflows.v1",
   "generator": "show-your-work 0.1.0",
-  "generated_at": "2026-10-29T22:00:28+00:00",
+  "generated_at": "2026-11-03T03:18:57+00:00",
   "source_dir": "docs/workflows",
   "items": [
     {
@@ -127,6 +127,20 @@
       ],
       "source_path": "docs/workflows/claude-oauth-auth.mmd",
       "source_sha256": "924dd685ccd92c2b3366e9da0f9ae6c74c1e6e7a6a2b8d126c31567d66e06196",
+      "engine": "mermaid",
+      "rasters": null
+    },
+    {
+      "id": "code-consigliere",
+      "label": "code-consigliere",
+      "summary": "Resolve a target project, preserve private evidence, investigate together, hand off an agreed seed, and verify the returned build.",
+      "alt": "A target enters private setup and workflow discovery, then discussion and signoff before a seed or explicitly agreed implementation; a returned build is verified and knowledge revised.",
+      "not_shown": "helper discovery, record schemas, evidence methods, indirect usage checks, privacy review, and host permission limits",
+      "sources": [
+        "skills/code-consigliere/core.md"
+      ],
+      "source_path": "docs/workflows/code-consigliere.mmd",
+      "source_sha256": "fd3475034e1f0bb68accedbf210b047c9dbf8f9f28764e5d2316a10c8f7cd684",
       "engine": "mermaid",
       "rasters": null
     },
