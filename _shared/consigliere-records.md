@@ -1,5 +1,9 @@
 # Code Consigliere private record protocol
 
+An event's `evidence_class` applies to every claim in its body. Record claims with
+different evidence statuses as separate events; never label an inference as recorded
+rationale merely because it accompanies an observation or quotation.
+
 Use this protocol only through a discovered and validated `consigliere` helper. The helper's
 events are authoritative; generated summaries and wiki views are rebuildable. Success JSON and
 record bodies are private.

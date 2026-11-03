@@ -123,7 +123,9 @@ with exactly one evidence status:
 - `inference`: the evidence supports a reason but no source records it; or
 - `unknown-history`: the reason is not recoverable from inspected evidence.
 
-Plausibility is not provenance. Cite the method and revision or content hash for inspected
+Plausibility is not provenance. Record claims with different evidence statuses as separate
+events so each event's `evidence_class` applies to every claim in its body.
+Cite the method and revision or content hash for inspected
 source; distinguish command execution from source inspection and operator report. A bounded
 search proves only its stated scope.
 
