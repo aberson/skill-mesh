@@ -3264,13 +3264,16 @@ COHORT_D_CODEX_SKILLS = ["memory-distill", "observatory-doctor", "research-prosp
 # The seven workspace-custom skills promoted at Phase CP Step 10 (issue #127). Not a
 # cohort in the earlier sense: these are NEW catalog members authored core-plus-three-
 # adapters in one commit, so they enter the portable roster and the codex roster
-# together and the two stay equal at 54.
+# together and the two reached 54.
 STEP10_PROMOTED_SKILLS = ["build-observer", "citation-distill", "citation-review",
                           "citation-sweep", "citation-triage", "goblin-sweep",
                           "repo-wrap"]
+# The separately approved code-consigliere addition extends both explicit rosters to 55.
+CODE_CONSIGLIERE_ADDITION = ["code-consigliere"]
 DECLARED_CODEX_SKILLS = sorted(PILOT_CODEX_SKILLS + COHORT_B_CODEX_SKILLS
                                + COHORT_C_CODEX_SKILLS + COHORT_D_CODEX_SKILLS
-                               + STEP10_PROMOTED_SKILLS)
+                               + STEP10_PROMOTED_SKILLS
+                               + CODE_CONSIGLIERE_ADDITION)
 
 
 def test_codex_profile_holds_exactly_the_declared_cohorts_for_the_committed_manifest(
@@ -3281,7 +3284,8 @@ def test_codex_profile_holds_exactly_the_declared_cohorts_for_the_committed_mani
     exactly the pilot five, Step 6 enlarged the roster to seventeen, Step 7 to
     thirty-three, Step 8 closed it at the then-full portable catalog of forty-seven,
     and Step 10's seven promotions carried catalog and roster together to fifty-four.
-    It grades the whole emission contract for the real cohorts at once,
+    The separately approved code-consigliere addition carries both to fifty-five. It
+    grades the whole emission contract for the real cohorts at once,
     because the parts are only correct together: a launcher without its co-located
     core.md is a package Codex can list and cannot run, and an unstamped file is one
     the installer cannot own or uninstall.
