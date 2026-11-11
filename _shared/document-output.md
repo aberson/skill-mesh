@@ -62,6 +62,7 @@ every provider now writes the same file to the same place.
 |---|---|---|---|
 | `plan-redline` | P/D proposal | `docs/plan-redline/<plan-slug>-proposal.html` | `Proposal:` in the plan and the chat report |
 | `repo-update` | Build-completion guided tour | `docs/repo-update/<project-slug>-<phase-or-version>.html` | `Tour:` in the final report |
+| `user-dr` | Decision register (Markdown) | `docs/user-dr/<project-slug>-register.md` | `Register:` in the closing report |
 
 A new document-producing skill adds a row here and cites this file instead of restating
 the rules.

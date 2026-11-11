@@ -71,7 +71,7 @@ PORTABLE = [
     "review-proof", "review-uat", "session-wrap", "skill-eval-setup",
     "skill-evolve", "skill-iterate", "task-handoff", "test-prune",
     "tier-escalate", "tier-offload", "user-afterparty", "user-brainstorm",
-    "user-debug", "user-draft", "user-gateway", "user-lavishify", "user-learn",
+    "user-debug", "user-dr", "user-draft", "user-gateway", "user-lavishify", "user-learn",
     "user-orient", "user-pm", "user-project", "user-shakedown", "user-uat",
     "user-walkthrough", "user-wrap",
 ]
@@ -85,7 +85,7 @@ NATIVE = ["claude-oauth-auth", "context-slim", "judge-motion"]
 # what `status`, `counts["portable"]`, `counts["provider_native"]` and the README's
 # GPT-capable line all mean. A codex adapter is ADDITIVE on top of a record that is
 # already portable-or-native: it never moves a skill between those two buckets, so
-# EXPECTED_TOTAL / EXPECTED_PORTABLE / EXPECTED_NATIVE are 58/55/3 and every existing
+# EXPECTED_TOTAL / EXPECTED_PORTABLE / EXPECTED_NATIVE are 59/56/3 and every existing
 # count keeps its exact meaning. Modelling codex as a third status instead would
 # redefine `portable` for all catalog records and invalidate every committed tally.
 #
@@ -122,7 +122,7 @@ CODEX = [
     "review-proof", "review-uat", "session-wrap", "skill-eval-setup",
     "skill-evolve", "skill-iterate", "task-handoff", "test-prune",
     "tier-escalate", "tier-offload", "user-afterparty", "user-brainstorm",
-    "user-debug", "user-draft", "user-gateway", "user-lavishify", "user-learn",
+    "user-debug", "user-dr", "user-draft", "user-gateway", "user-lavishify", "user-learn",
     "user-orient", "user-pm", "user-project", "user-shakedown", "user-uat",
     "user-walkthrough", "user-wrap",
 ]
@@ -228,60 +228,61 @@ VISION = {"judge-ui", "judge-motion"}
 # wipes a hand-tuned value. ASCII-only, one line, no newlines (kept safe for a YAML
 # scalar; the builder still double-quotes when it emits the frontmatter).
 DESCRIPTIONS = {
-    "build-observer": "Propose a dev-observatory portfolio registry block for one project, validated and print-only.",
+    "build-observer": "Propose a dev-observatory registry block for one project, validated and print-only.",
     "build-phase": "Run every step of a plan phase through build-step in order, gating quality between steps.",
-    "build-queue": "Run multiple pending phase plans unattended, each in its own worktree, parking halts as issues.",
-    "build-step": "Execute one build step: a developer agent writes the change, isolated reviewers gate it, it merges.",
+    "build-queue": "Run pending phase plans unattended, each in its own worktree; halts become issues.",
+    "build-step": "Run one build step: an agent writes it, isolated reviewers gate it, it merges.",
     "citation-distill": "Turn a committed Citation Needed review into evidence-backed trim or rewrite proposals.",
     "citation-review": "Evidence-check one LLM-facing artifact through Citation Needed's calibrated review pipeline.",
-    "citation-sweep": "Bounded project-wide Citation Needed rigor pass producing a citation-backed distill backlog.",
+    "citation-sweep": "Project-wide Citation Needed rigor pass producing a citation-backed distill backlog.",
     "citation-triage": "Walk Citation Needed's ranked distill queue and record keep, cut, or rewrite decisions.",
-    "code-consigliere": "Investigate project workflows and rationale, agree a change, and hand off a build seed for later verification.",
+    "code-consigliere": "Investigate a project's workflows and rationale, agree a change, hand off a build seed.",
     "claude-oauth-auth": "How to authenticate with Claude using a subscription OAuth token instead of an API key.",
     "context-slim": "Audit a project's auto-loaded context files and produce a prioritized progressive-disclosure plan to cut per-turn token cost.",
     "goblin-do": "Render the next step for one persisted Goblin atom after a read-only liveness check.",
-    "goblin-suggest": "Produce a grounded, ranked improvement shortlist for a project as goblin suggestion atoms.",
-    "goblin-sweep": "List one project's discovered obligation atoms from the goblin engine and route to goblin-do.",
+    "goblin-suggest": "Produce a grounded, ranked improvement shortlist for a project as goblin atoms.",
+    "goblin-sweep": "List a project's obligation atoms from the goblin engine and route them to goblin-do.",
     "judge-motion": "Capture a UI transition as a slow-motion filmstrip and have a vision-judge render a PASS/FAIL/ESCALATE verdict on motion defects.",
-    "judge-ui": "Drive a web UI through a flow, capture screenshots, and have a vision-judge render a verdict.",
-    "lesson-harvest": "Scan git history and recorded observations for un-codified regressions and produce an independently reviewed local preview.",
+    "judge-ui": "Drive a web UI through a flow, screenshot it, and have a vision judge give a verdict.",
+    "lesson-harvest": "Find un-codified regressions in git history and notes; output an independently reviewed preview.",
     "memory-distill": "Review recent feedback memories one at a time and surface the principles they point at.",
     "observatory-doctor": "Health-check every dev-observatory launcher button and report which project verbs work.",
     "plan-expedite": "Chain plan-review, plan-wrap, repo-sync, and task-handoff into one prep step before build.",
     "plan-feature": "Plan a new feature or phase for an existing project by reading its code and docs.",
     "plan-init": "Guide creation of a new project plan through a structured conversation about stack and tooling.",
     "plan-merge": "Merge two overlapping plans into one, resolving sequencing and deleting subsumed phases.",
-    "plan-redline": "Render a plan as an operator proposal, labeling each choice operator-picked or agent-defaulted.",
-    "plan-review": "Review a plan for gaps, unresolved decisions, and risks, validating claims against the code.",
+    "plan-redline": "Render a plan as an operator proposal, marking each choice operator- or agent-picked.",
+    "plan-review": "Review a plan for gaps, open decisions and risks, checking claims against the code.",
     "plan-trim": "Investigate a project and propose plan items to cut or fold, then execute the trim.",
     "plan-wrap": "Check whether a plan is self-contained for a fresh model with no conversation history.",
-    "repo-init": "Publish a local project to GitHub: init git, create the remote, add a README, file issues.",
+    "repo-init": "Publish a local project to GitHub: git init, create remote, README, issues.",
     "repo-sync": "Sync GitHub issues to match a plan's structure with rich, fresh-context bodies.",
-    "repo-update": "End-to-end docs and git update after a phase: refresh README and plan, commit, and push.",
+    "repo-update": "Post-phase docs and git update: refresh README and plan, commit, and push.",
     "repo-wrap": "Close out any repo by ownership class: owned project, coding root, third-party clone, backup.",
     "research-prospect": "Scan active projects and surface high-value research topics per project for hand-off.",
-    "review-deep": "Six-lens code review (correctness, bugs, security, tests, style, plan-conformance) with evidence.",
+    "review-deep": "Six-lens code review (correctness, bugs, security, tests, style, plan fit) with evidence.",
     "review-gauntlet": "Lean multi-lens profile over review-deep's engine emitting a terse PASS/NEEDS-WORK verdict.",
-    "review-proof": "Enforce evidence-based answers by requiring primary-source verification before any claim.",
+    "review-proof": "Require primary-source verification before any claim in an answer.",
     "review-uat": "Refine a UAT script so every step is unambiguous and only real human checks stay human.",
     "session-wrap": "Session-transition front door: triage context, task state, and git, then act on the verdict.",
     "skill-eval-setup": "Generate an evaluation framework for a skill from its contract, plus a self-improvement loop.",
-    "skill-evolve": "A/B-test variant mutations of a skill in parallel worktrees and push the winner for review.",
+    "skill-evolve": "A/B-test skill variants in parallel worktrees and push the winner for review.",
     "skill-iterate": "Serial hill-climb every scorable skill autonomously, capped by wall-clock or iterations.",
-    "task-handoff": "Checkpoint library orchestrators call to save session state and rebuild the current-task rollup.",
+    "task-handoff": "Checkpoint library: save session state and rebuild the current-task rollup.",
     "test-prune": "Audit a suite for redundant, trivial, or mock-theater tests; relocate sole-coverage ones.",
     "tier-escalate": "Find which load-bearing seed-artifact phase warrants a higher-tier model, and emit a map.",
-    "tier-offload": "Find which sub-tasks are safe to offload to a local model; emit an inventory and router config.",
+    "tier-offload": "Find sub-tasks safe to offload to a local model; emit an inventory and router config.",
     "user-afterparty": "Milestone hygiene front door chaining the hygiene skills into one report plus cleanup.",
     "user-brainstorm": "Brainstorm a topic through gap-fill rounds, then write a reference doc set per topic.",
     "user-debug": "Diagnose and fix a bug end-to-end with forced primary-source investigation first.",
+    "user-dr": "Theme-grouped decision register across plans and seeds; checks conflicts and records answers.",
     "user-draft": "Refine rough thoughts into a polished prompt or a ready-to-paste goal condition.",
-    "user-gateway": "Intake gateway turning an operator vent into routed, ledger-backed work with a seed per row.",
+    "user-gateway": "Turn an operator vent into routed, ledger-backed work with a seed per row.",
     "user-lavishify": "Escalate the last output into a richer deliverable without changing the default style.",
-    "user-learn": "Scaffold a learning ramp for a topic: knowledge base, notebooks, exercises, progress tracker.",
+    "user-learn": "Scaffold a learning ramp: knowledge base, notebooks, exercises, progress tracker.",
     "user-orient": "Re-orient on the session axis with a verified snapshot of the work and what is left.",
     "user-pm": "PM-lens project overview: what shipped, what is planned, what is next, what could be cut.",
-    "user-project": "Pin the session's active project so pipeline skills target the right repo regardless of cwd.",
+    "user-project": "Pin the session's active project so pipeline skills target the right repo.",
     "user-shakedown": "Shake down a just-built tool to surface rough edges before formal acceptance.",
     "user-uat": "Run an already-clear UAT block, executing steps and auto-judging the mechanical checks.",
     "user-walkthrough": "Attended acceptance of a just-built tool: answer from primary source, fix small things live.",
@@ -410,6 +411,7 @@ SUPPORT_ASSETS = {
     "user-afterparty": [],
     "user-brainstorm": [("skills", "evals/")],
     "user-debug": [("skills", "evals/")],
+    "user-dr": [],
     "user-draft": [("skills", "evals.seed/")],
     "user-gateway": [("skills", "evals/")],
     "user-lavishify": [],
@@ -425,7 +427,7 @@ SUPPORT_ASSETS = {
 
 # Spelled-out expectations for the tree enumeration below. The same three numbers are
 # asserted independently by tests/package-integrity/test_manifest_contract.py.
-EXPECTED_TOTAL, EXPECTED_PORTABLE, EXPECTED_NATIVE = 58, 55, 3
+EXPECTED_TOTAL, EXPECTED_PORTABLE, EXPECTED_NATIVE = 59, 56, 3
 
 
 def skill_support_assets(name: str):

@@ -35,6 +35,15 @@ complete, waive any other lifecycle gate, or authorize a commit, push, install, 
 Those actions follow the separately authorized caller workflow; this exception does not by
 itself grant them.
 
+**Scoped user-dr release exception (2026-11-11).** The operator authorized one portable
+`CREATE` of `user-dr` in an isolated worktree from `origin/main` while the original checkout
+remained dirty and untouched, and authorized shortening other portable skills' descriptions to
+restore Codex catalog headroom; no release-report skill's description changed. The
+request, base ref, target paths, and pre-write hashes were recorded outside the repository
+before mutation. This is authority for the `user-dr` release work only; it does not claim
+Phase CL Step 111 or the full phase complete, waive any other lifecycle gate, or authorize any
+other catalog change.
+
 ## 1. Prerequisite preflight — recorded evidence
 
 Phase CL execution is gated on four facts, all four checked and satisfied for Step 110. The
@@ -325,7 +334,7 @@ review, and qualification gates in that plan are authorized, eligibility remains
 Claude-only, and every later native mutation still takes
 `PROVIDER_NATIVE_REVIEW_REQUIRED`.
 
-The catalog at the time of writing is 58 skills: 55 portable and 3 provider-native.
+The catalog at the time of writing is 59 skills: 56 portable and 3 provider-native.
 
 ## 5. The five operations
 

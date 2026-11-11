@@ -67,16 +67,16 @@
     }
   },
   "counts": {
-    "total": 58,
-    "portable": 55,
+    "total": 59,
+    "portable": 56,
     "provider_native": 3,
-    "claude": 58,
-    "gpt": 55,
-    "codex": 55,
+    "claude": 59,
+    "gpt": 56,
+    "codex": 56,
     "local_capable": 21,
     "sub_agent": 20,
     "vision": 2,
-    "filesystem": 58
+    "filesystem": 59
   },
   "global_support_assets": [
     {
@@ -119,7 +119,7 @@
     {
       "name": "build-observer",
       "status": "portable",
-      "description": "Propose a dev-observatory portfolio registry block for one project, validated and print-only.",
+      "description": "Propose a dev-observatory registry block for one project, validated and print-only.",
       "core": "skills/build-observer/core.md",
       "providers": {
         "claude": "skills/build-observer/providers/claude.md",
@@ -181,7 +181,7 @@
     {
       "name": "build-queue",
       "status": "portable",
-      "description": "Run multiple pending phase plans unattended, each in its own worktree, parking halts as issues.",
+      "description": "Run pending phase plans unattended, each in its own worktree; halts become issues.",
       "core": "skills/build-queue/core.md",
       "providers": {
         "claude": "skills/build-queue/providers/claude.md",
@@ -208,7 +208,7 @@
     {
       "name": "build-step",
       "status": "portable",
-      "description": "Execute one build step: a developer agent writes the change, isolated reviewers gate it, it merges.",
+      "description": "Run one build step: an agent writes it, isolated reviewers gate it, it merges.",
       "core": "skills/build-step/core.md",
       "providers": {
         "claude": "skills/build-step/providers/claude.md",
@@ -285,7 +285,7 @@
     {
       "name": "citation-sweep",
       "status": "portable",
-      "description": "Bounded project-wide Citation Needed rigor pass producing a citation-backed distill backlog.",
+      "description": "Project-wide Citation Needed rigor pass producing a citation-backed distill backlog.",
       "core": "skills/citation-sweep/core.md",
       "providers": {
         "claude": "skills/citation-sweep/providers/claude.md",
@@ -355,7 +355,7 @@
     {
       "name": "code-consigliere",
       "status": "portable",
-      "description": "Investigate project workflows and rationale, agree a change, and hand off a build seed for later verification.",
+      "description": "Investigate a project's workflows and rationale, agree a change, hand off a build seed.",
       "core": "skills/code-consigliere/core.md",
       "providers": {
         "claude": "skills/code-consigliere/providers/claude.md",
@@ -434,7 +434,7 @@
     {
       "name": "goblin-suggest",
       "status": "portable",
-      "description": "Produce a grounded, ranked improvement shortlist for a project as goblin suggestion atoms.",
+      "description": "Produce a grounded, ranked improvement shortlist for a project as goblin atoms.",
       "core": "skills/goblin-suggest/core.md",
       "providers": {
         "claude": "skills/goblin-suggest/providers/claude.md",
@@ -466,7 +466,7 @@
     {
       "name": "goblin-sweep",
       "status": "portable",
-      "description": "List one project's discovered obligation atoms from the goblin engine and route to goblin-do.",
+      "description": "List a project's obligation atoms from the goblin engine and route them to goblin-do.",
       "core": "skills/goblin-sweep/core.md",
       "providers": {
         "claude": "skills/goblin-sweep/providers/claude.md",
@@ -536,7 +536,7 @@
     {
       "name": "judge-ui",
       "status": "portable",
-      "description": "Drive a web UI through a flow, capture screenshots, and have a vision-judge render a verdict.",
+      "description": "Drive a web UI through a flow, screenshot it, and have a vision judge give a verdict.",
       "core": "skills/judge-ui/core.md",
       "providers": {
         "claude": "skills/judge-ui/providers/claude.md",
@@ -569,7 +569,7 @@
     {
       "name": "lesson-harvest",
       "status": "portable",
-      "description": "Scan git history and recorded observations for un-codified regressions and produce an independently reviewed local preview.",
+      "description": "Find un-codified regressions in git history and notes; output an independently reviewed preview.",
       "core": "skills/lesson-harvest/core.md",
       "providers": {
         "claude": "skills/lesson-harvest/providers/claude.md",
@@ -758,7 +758,7 @@
     {
       "name": "plan-redline",
       "status": "portable",
-      "description": "Render a plan as an operator proposal, labeling each choice operator-picked or agent-defaulted.",
+      "description": "Render a plan as an operator proposal, marking each choice operator- or agent-picked.",
       "core": "skills/plan-redline/core.md",
       "providers": {
         "claude": "skills/plan-redline/providers/claude.md",
@@ -789,7 +789,7 @@
     {
       "name": "plan-review",
       "status": "portable",
-      "description": "Review a plan for gaps, unresolved decisions, and risks, validating claims against the code.",
+      "description": "Review a plan for gaps, open decisions and risks, checking claims against the code.",
       "core": "skills/plan-review/core.md",
       "providers": {
         "claude": "skills/plan-review/providers/claude.md",
@@ -870,7 +870,7 @@
     {
       "name": "repo-init",
       "status": "portable",
-      "description": "Publish a local project to GitHub: init git, create the remote, add a README, file issues.",
+      "description": "Publish a local project to GitHub: git init, create remote, README, issues.",
       "core": "skills/repo-init/core.md",
       "providers": {
         "claude": "skills/repo-init/providers/claude.md",
@@ -924,7 +924,7 @@
     {
       "name": "repo-update",
       "status": "portable",
-      "description": "End-to-end docs and git update after a phase: refresh README and plan, commit, and push.",
+      "description": "Post-phase docs and git update: refresh README and plan, commit, and push.",
       "core": "skills/repo-update/core.md",
       "providers": {
         "claude": "skills/repo-update/providers/claude.md",
@@ -1001,7 +1001,7 @@
     {
       "name": "review-deep",
       "status": "portable",
-      "description": "Six-lens code review (correctness, bugs, security, tests, style, plan-conformance) with evidence.",
+      "description": "Six-lens code review (correctness, bugs, security, tests, style, plan fit) with evidence.",
       "core": "skills/review-deep/core.md",
       "providers": {
         "claude": "skills/review-deep/providers/claude.md",
@@ -1061,7 +1061,7 @@
     {
       "name": "review-proof",
       "status": "portable",
-      "description": "Enforce evidence-based answers by requiring primary-source verification before any claim.",
+      "description": "Require primary-source verification before any claim in an answer.",
       "core": "skills/review-proof/core.md",
       "providers": {
         "claude": "skills/review-proof/providers/claude.md",
@@ -1173,7 +1173,7 @@
     {
       "name": "skill-evolve",
       "status": "portable",
-      "description": "A/B-test variant mutations of a skill in parallel worktrees and push the winner for review.",
+      "description": "A/B-test skill variants in parallel worktrees and push the winner for review.",
       "core": "skills/skill-evolve/core.md",
       "providers": {
         "claude": "skills/skill-evolve/providers/claude.md",
@@ -1233,7 +1233,7 @@
     {
       "name": "task-handoff",
       "status": "portable",
-      "description": "Checkpoint library orchestrators call to save session state and rebuild the current-task rollup.",
+      "description": "Checkpoint library: save session state and rebuild the current-task rollup.",
       "core": "skills/task-handoff/core.md",
       "providers": {
         "claude": "skills/task-handoff/providers/claude.md",
@@ -1315,7 +1315,7 @@
     {
       "name": "tier-offload",
       "status": "portable",
-      "description": "Find which sub-tasks are safe to offload to a local model; emit an inventory and router config.",
+      "description": "Find sub-tasks safe to offload to a local model; emit an inventory and router config.",
       "core": "skills/tier-offload/core.md",
       "providers": {
         "claude": "skills/tier-offload/providers/claude.md",
@@ -1431,6 +1431,28 @@
       ]
     },
     {
+      "name": "user-dr",
+      "status": "portable",
+      "description": "Theme-grouped decision register across plans and seeds; checks conflicts and records answers.",
+      "core": "skills/user-dr/core.md",
+      "providers": {
+        "claude": "skills/user-dr/providers/claude.md",
+        "gpt": "skills/user-dr/providers/gpt.md",
+        "codex": "skills/user-dr/providers/codex.md"
+      },
+      "capabilities": [
+        "filesystem"
+      ],
+      "local_capable": false,
+      "migration": {
+        "legacy_core": ".claude/skills-gpt/user-dr/SKILL-core.md",
+        "legacy_claude_launcher": ".claude/skills/user-dr/SKILL.md",
+        "legacy_claude_adapter": ".claude/skills/user-dr/SKILL-claude.md",
+        "legacy_gpt": ".claude/skills-gpt/user-dr/SKILL-gpt.md"
+      },
+      "support_assets": []
+    },
+    {
       "name": "user-draft",
       "status": "portable",
       "description": "Refine rough thoughts into a polished prompt or a ready-to-paste goal condition.",
@@ -1460,7 +1482,7 @@
     {
       "name": "user-gateway",
       "status": "portable",
-      "description": "Intake gateway turning an operator vent into routed, ledger-backed work with a seed per row.",
+      "description": "Turn an operator vent into routed, ledger-backed work with a seed per row.",
       "core": "skills/user-gateway/core.md",
       "providers": {
         "claude": "skills/user-gateway/providers/claude.md",
@@ -1509,7 +1531,7 @@
     {
       "name": "user-learn",
       "status": "portable",
-      "description": "Scaffold a learning ramp for a topic: knowledge base, notebooks, exercises, progress tracker.",
+      "description": "Scaffold a learning ramp: knowledge base, notebooks, exercises, progress tracker.",
       "core": "skills/user-learn/core.md",
       "providers": {
         "claude": "skills/user-learn/providers/claude.md",
@@ -1591,7 +1613,7 @@
     {
       "name": "user-project",
       "status": "portable",
-      "description": "Pin the session's active project so pipeline skills target the right repo regardless of cwd.",
+      "description": "Pin the session's active project so pipeline skills target the right repo.",
       "core": "skills/user-project/core.md",
       "providers": {
         "claude": "skills/user-project/providers/claude.md",

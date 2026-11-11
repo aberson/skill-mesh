@@ -5,9 +5,9 @@ workflow for Claude Code, GitHub Copilot, and OpenAI Codex.**
 
 - **A connected pipeline.** Turn an idea into a plan, a bounded build, an independently reviewed change, and a release.
 - **Explicit quality gates.** Automated checks and fresh-context reviewers inform the result; missing required capabilities stop the workflow.
-- **One contract, three hosts.** 58 Claude skills; 55 also packaged for Copilot and Codex through host adapters.
+- **One contract, three hosts.** 59 Claude skills; 56 also packaged for Copilot and Codex through host adapters.
 
-**[v2.0.3 is released](https://github.com/aberson/skill-mesh/releases/tag/v2.0.3)** ·
+**[v2.0.4 is released](https://github.com/aberson/skill-mesh/releases/tag/v2.0.4)** ·
 [Try it](#install-or-upgrade) · [Browse the skills](documentation/skill-reference.md) ·
 [Detailed workflows](docs/workflows/README.md)
 
@@ -51,7 +51,7 @@ host's capabilities; installation puts the generated skills where the host finds
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="_shared/host-profiles-dark.svg">
-  <img alt="Shared Skill Mesh contracts generate three host profiles: 58 Claude skills and 55 portable skills each for GitHub Copilot and OpenAI Codex." src="_shared/host-profiles-light.svg">
+  <img alt="Shared Skill Mesh contracts generate three host profiles: 59 Claude skills and 56 portable skills each for GitHub Copilot and OpenAI Codex." src="_shared/host-profiles-light.svg">
 </picture>
 
 ### The routing web
@@ -84,7 +84,7 @@ from this skill catalog. [Routing contract](_shared/skill-pipeline.md).
 | Evidence & improvement | `citation-review`, `lesson-harvest`, `skill-evolve`, `tier-offload` |
 
 <details>
-<summary><strong>Explore all 58 skills and their workflow documentation</strong></summary>
+<summary><strong>Explore all 59 skills and their workflow documentation</strong></summary>
 
 The [complete reference table](documentation/skill-reference.md) lists each skill's
 purpose, host coverage, source contract, and individual workflow. The
@@ -163,13 +163,13 @@ is historical planning, not proof that every proposed caller is wired.
 
 ## Install or upgrade
 
-Download the [v2.0.3 release](https://github.com/aberson/skill-mesh/releases/tag/v2.0.3),
+Download the [v2.0.4 release](https://github.com/aberson/skill-mesh/releases/tag/v2.0.4),
 verify its checksum, and choose one host profile.
 
 <details>
 <summary><strong>Installation, upgrades, and restoration</strong></summary>
 
-Of the portable catalog, 55/55 skills are GPT-capable; Claude provides all 58 skills.
+Of the portable catalog, 56/56 skills are GPT-capable; Claude provides all 59 skills.
 
 | Provider | Discovery root under the chosen home |
 |---|---|
@@ -192,11 +192,11 @@ for home resolution, collision handling, and legacy migration.
 
 ## Status & adapting
 
-**v2.0.3 adds /code-consigliere [target]:** start a private, evidence-backed project
-investigation from any working directory. Resolve the target, establish optional private
-collection, discuss findings, agree a seed, and verify the returned build. Persistent
-records require the separate local consigliere helper; missing persistence is disclosed.
-The [release notes](https://github.com/aberson/skill-mesh/releases/tag/v2.0.3)
+**v2.0.4 adds /user-dr:** build a plain-language decision register for any project.
+It collects open and decided items from plans, seeds and decision records, groups them by
+theme, shows what a theme-level answer would change and which earlier answers it goes
+against, then asks theme-first and records your words. v2.0.3 added /code-consigliere.
+The [release notes](https://github.com/aberson/skill-mesh/releases/tag/v2.0.4)
 record qualification and installation limits.
 
 <details>

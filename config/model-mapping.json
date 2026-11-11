@@ -365,6 +365,13 @@
       "local": false,
       "notes": "Requires independent fresh-context diagnosis arms; local fallback unavailable"
     },
+    "user-dr": {
+      "default_model": "claude",
+      "claude": true,
+      "gpt": true,
+      "local": false,
+      "notes": "Portable attended decision register; optional parallel read-only source readers with an in-session fallback."
+    },
     "user-draft": {
       "default_model": "claude",
       "claude": true,

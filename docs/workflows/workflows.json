@@ -1,7 +1,7 @@
 {
   "schema": "show-your-work.workflows.v1",
   "generator": "show-your-work 0.1.0",
-  "generated_at": "2026-11-03T03:18:57+00:00",
+  "generated_at": "2026-11-11T20:37:55+00:00",
   "source_dir": "docs/workflows",
   "items": [
     {
@@ -659,6 +659,20 @@
       ],
       "source_path": "docs/workflows/user-debug.mmd",
       "source_sha256": "4428005e20d50fb7665d82a876796b98109c10dc2f4a439e3bf9698ac08e8e73",
+      "engine": "mermaid",
+      "rasters": null
+    },
+    {
+      "id": "user-dr",
+      "label": "user-dr",
+      "summary": "Find a project's decision sources, collect open and decided items, check implied live state, group by theme, then ask theme-first and record each answer.",
+      "alt": "A project's plans, seeds and decision records become a theme-grouped register; each theme answer is checked for consequences and conflicts, confirmed if it reverses an earlier one, recorded verbatim, then filed or handed off.",
+      "not_shown": "per-item brief fields, reader batching and fallback, term explanations, register document rules, and the closing report shape",
+      "sources": [
+        "skills/user-dr/core.md"
+      ],
+      "source_path": "docs/workflows/user-dr.mmd",
+      "source_sha256": "e33f104e58e8715db40d2f244accd6c634561c0787482b8e80e92202e8f09a98",
       "engine": "mermaid",
       "rasters": null
     },

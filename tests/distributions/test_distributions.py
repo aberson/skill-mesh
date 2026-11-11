@@ -3270,10 +3270,13 @@ STEP10_PROMOTED_SKILLS = ["build-observer", "citation-distill", "citation-review
                           "repo-wrap"]
 # The separately approved code-consigliere addition extends both explicit rosters to 55.
 CODE_CONSIGLIERE_ADDITION = ["code-consigliere"]
+# The separately authorized user-dr addition extends both explicit rosters to 56.
+USER_DR_ADDITION = ["user-dr"]
 DECLARED_CODEX_SKILLS = sorted(PILOT_CODEX_SKILLS + COHORT_B_CODEX_SKILLS
                                + COHORT_C_CODEX_SKILLS + COHORT_D_CODEX_SKILLS
                                + STEP10_PROMOTED_SKILLS
-                               + CODE_CONSIGLIERE_ADDITION)
+                               + CODE_CONSIGLIERE_ADDITION
+                               + USER_DR_ADDITION)
 
 
 def test_codex_profile_holds_exactly_the_declared_cohorts_for_the_committed_manifest(
@@ -3284,7 +3287,8 @@ def test_codex_profile_holds_exactly_the_declared_cohorts_for_the_committed_mani
     exactly the pilot five, Step 6 enlarged the roster to seventeen, Step 7 to
     thirty-three, Step 8 closed it at the then-full portable catalog of forty-seven,
     and Step 10's seven promotions carried catalog and roster together to fifty-four.
-    The separately approved code-consigliere addition carries both to fifty-five. It
+    The separately approved code-consigliere addition carries both to fifty-five, and
+    the separately authorized user-dr addition to fifty-six. It
     grades the whole emission contract for the real cohorts at once,
     because the parts are only correct together: a launcher without its co-located
     core.md is a package Codex can list and cannot run, and an unstamped file is one
@@ -3293,7 +3297,7 @@ def test_codex_profile_holds_exactly_the_declared_cohorts_for_the_committed_mani
     out = tmp_path / "out"
     r = _build(out, provider="codex")
     assert r.returncode == 0, f"{r.stdout}\n{r.stderr}"
-    assert "(55 skills," in r.stdout, r.stdout
+    assert "(56 skills," in r.stdout, r.stdout
     # The manifest declares exactly the spelled cohorts...
     assert sorted(_codex_skills()) == DECLARED_CODEX_SKILLS, _codex_skills()
     # ...and the emitted tree IS that roster: no extra skill dir, none missing. The

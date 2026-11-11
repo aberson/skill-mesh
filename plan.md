@@ -1,5 +1,22 @@
 # Skill Mesh plan
 
+## Maintenance - user-dr (2026-11-11)
+
+The operator requested a new portable decision-register skill on 2026-11-09:
+"let's make it a high level skill in dev/skill-mesh called "user-dr", it should
+be general enough to use in all projects." On 2026-11-11 they authorized building
+it in an isolated worktree from `origin/main` while the original checkout stays
+dirty, shortening other portable skills' descriptions by about 300 characters to
+restore Codex catalog headroom, and releasing and installing it as v2.0.4.
+
+`user-dr` builds a plain-language register of open and decided items, groups it
+by theme, analyses theme-answer consequences and conflicts, and records answers.
+It has all three provider adapters, a workflow diagram, and no package resources.
+Twenty-one other descriptions were shortened; none belongs to a provider-native
+or release-report skill. Codex catalog headroom is 577 characters. This scoped
+CREATE does not complete Phase CL Step 111 or authorize other catalog changes. No
+numbered step is advanced.
+
 ## Step 153 accepted under scoped closeout exception (2026-09-24)
 
 Step 153/#219 is **DONE under operator-approved LH-E1**, recorded in the

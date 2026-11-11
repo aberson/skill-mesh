@@ -1,0 +1,25 @@
+%% user-dr
+%% Summary: Find a project's decision sources, collect open and decided items, check implied live state, group by theme, then ask theme-first and record each answer.
+%% Sources: skills/user-dr/core.md
+%% Not shown: per-item brief fields, reader batching and fallback, term explanations, register document rules, and the closing report shape
+%% Alt: A project's plans, seeds and decision records become a theme-grouped register; each theme answer is checked for consequences and conflicts, confirmed if it reverses an earlier one, recorded verbatim, then filed or handed off.
+
+flowchart TD
+    A[Resolve project root and scope] --> B{Exactly one project?}
+    B -- No, ask which project --> A
+    B -- Yes --> D[Find sources, collect items, flag live-state drift]
+    D --> F[Group items by theme and show the register]
+    F --> I[Show what each theme answer touches, keeps and loses]
+    I --> G[Ask theme-first, then exceptions; five per round]
+    G --> H{Operator losing the thread?}
+    H -- Yes --> F
+    H -- No --> J{Answer goes against an earlier one?}
+    J -- Yes --> K[Confirm explicitly before recording]
+    J -- No --> L[Record the operator's words verbatim]
+    K --> L
+    L --> M{Caller may edit the owning document?}
+    M -- Yes --> N[File the decision there]
+    M -- No --> O[Write a handoff note in the register]
+    N --> P[Close the round: decided, open, conflicts, handoffs]
+    O --> P
+    P -- More items open --> I
