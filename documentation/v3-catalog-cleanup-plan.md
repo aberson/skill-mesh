@@ -155,7 +155,7 @@ limit is already gone; if so, Step 10 passes at once on resume.
 pre-write hashes recorded before the first write, and nothing yet records them. The headroom estimates above come
 from a planning-time read and must be re-measured on the real base.
 **Type:** code
-**Issue:**
+**Issue:** #257
 **Flags:** `--reviewers` default
 **Produces:**
 - A sibling worktree on a new branch from `v3/main`, and a record file in
@@ -198,7 +198,7 @@ explained. No catalog gate runs here (no catalog bytes change).
 **Problem:** The operator never used it and does not like it (decision log round 2). It is the smallest delete and
 frees headroom ahead of the create, so it goes first.
 **Type:** code
-**Issue:**
+**Issue:** #258
 **Flags:** `--reviewers` default
 **Produces:** a lifecycle request (`operation: DELETE`, `skill_name: user-lavishify`, one disposition per reported
 occurrence), then: the skill folder removed; its rows removed from `tools/gen_manifest.py` constants (portable
@@ -227,7 +227,7 @@ operation on the mesh. `dev-observatory/` has no nested `.git` (its git top leve
 checked at review time and re-checked here), so the commit lands in the coding-root repository: anchor git there
 and use path-scoped `git add dev-observatory/...` only, never `git add -A`.
 **Type:** code
-**Issue:**
+**Issue:** #259
 **Flags:** `--reviewers` default (gate: dev-observatory's own test command; the mesh gate does not apply)
 **Produces:** in `<coding-root>/dev-observatory/.claude/skills/`: `build-observer/` (the skill assembled from the
 mesh core and Claude adapter, plus `scaffold_portfolio.py` from the mesh and `sample-dry-run.md` and
@@ -243,7 +243,7 @@ the copied bytes differ from the mesh sources only where the step's notes say.
 **Problem:** After Step 3, the mesh copy is retired. It carries a reviewed packaging exception for its validator
 script, special-cased in the build tooling, the guide and the tests.
 **Type:** code
-**Issue:**
+**Issue:** #260
 **Flags:** `--reviewers` default
 **Produces:** a lifecycle request (`DELETE`, with `resource_paths` listing the one tracked resource,
 `skills/build-observer/scaffold_portfolio.py`), then: the skill folder removed; the `build-observer` branch
@@ -267,7 +267,7 @@ on Claude. A prepared packet lives in `<coding-root>/docs/investigations/gates-a
 (core, three adapters, create request, model-mapping row, preparation check); it was checked at an older base and
 is re-checked here, not trusted.
 **Type:** code
-**Issue:**
+**Issue:** #261
 **Flags:** `--reviewers` default
 **Produces:** a lifecycle request (`CREATE`, `capabilities: ["filesystem"]`, `resource_paths: []`,
 `reference_dispositions: []`, a one-line manifest `description`, fresh `base_ref`); preconditions checked first:
@@ -293,7 +293,7 @@ names it in the batch and the exception record (Step 1) names it explicitly (ope
 (Playwright script folder, fixtures, tests, `package.json`, `package-lock.json`) is the largest resource removal
 in the batch.
 **Type:** code
-**Issue:**
+**Issue:** #262
 **Flags:** `--reviewers` default
 **Produces:** a lifecycle request (`DELETE`, native identity, `resource_paths` listing every file under
 `skills/judge-motion/`); the skill folder removed; the `judge-motion` branch of `tools/build-distributions.ps1`
@@ -318,7 +318,7 @@ occurrences; the build and install tooling carry no judge-motion special case; c
 
 **Problem:** After Step 3 it lives in dev-observatory.
 **Type:** code
-**Issue:**
+**Issue:** #263
 **Flags:** `--reviewers` default
 **Produces:** a lifecycle request (`DELETE`, no resources); folder, constants, mapping row, generated files,
 workflow card and count pins updated as in Step 2; current documentation (`README.md`,
@@ -332,7 +332,7 @@ records historical-preserve by listing.
 **Problem:** `plan-trim` folds into `plan-merge` (decision item 13): one skill, a `--trim` mode, user-pm's board
 routes plan clean-up there. The mode must exist, with the trim contract intact, before `plan-trim` is deleted.
 **Type:** code
-**Issue:**
+**Issue:** #264
 **Flags:** `--reviewers` default
 **Produces:** a lifecycle request (`UPDATE`, `skill_name: plan-merge`); `skills/plan-merge/core.md` gains a
 `--trim [<plan-path>]` mode that carries `skills/plan-trim/core.md`'s contract as written (investigate first,
@@ -353,7 +353,7 @@ the profiles build; headroom unchanged; gate named and green. `plan-trim` still 
 **Problem:** `user-shakedown` folds into `user-walkthrough` as a flag (decision 11/11, F2). Both already share
 `_shared/shakedown-engine.md`, the same ledger file and a hand-off between them. The flag must land before the delete.
 **Type:** code
-**Issue:**
+**Issue:** #265
 **Flags:** `--reviewers` default
 **Produces:** a lifecycle request (`UPDATE`, `skill_name: user-walkthrough`); the core gains `--shakedown`, which
 runs the engine's autonomous mode (the agent closes the ledger to zero open items) with `user-shakedown`'s
@@ -371,7 +371,7 @@ file only; the others are Step 12's); the profiles build; headroom unchanged; ga
 Step 5 has landed on `v3/main`, so goblin's job has its new home. (b) The catalog gate plan's Step 8 has removed
 the `headroom < 900` upper limit, because Step 13 is the first predicted breach. This plan never edits that guard.
 **Type:** wait
-**Issue:**
+**Issue:** #266
 **Flags:** none (halting is the point of a wait step)
 **Produces:** a checkpoint recording, with the date, the base the worktree is rebased onto, and the result of two
 predicates, both read from `v3/main`: (a) `grep -c "single pass, unjudged" skills/user-pm/core.md` reports at
@@ -394,7 +394,7 @@ class-map test passes; the same duty applies to the test files Steps 15 and 18 a
 single place all of that changes, so each later DELETE finds no gateway occurrence. Its evals and golden files
 cite the old names in many files.
 **Type:** code
-**Issue:**
+**Issue:** #267
 **Flags:** `--reviewers` default
 **Produces:** a lifecycle request (`UPDATE`, `skill_name: user-gateway`); core routes: ideas to `user-pm`;
 "do it" to `user-pm`, which routes by `user-build-route`'s rules, with no queue wording because the queue is v4
@@ -416,7 +416,7 @@ and new route tables side by side); the profiles build; headroom unchanged; gate
 `skills/user-uat/core.md`, `skills/user-walkthrough/` (core and Codex adapter prose), `_shared/skill-pipeline.md`,
 `_shared/intake-engine.md` (no change expected), docs, tests and the calibration port list.
 **Type:** code
-**Issue:**
+**Issue:** #268
 **Flags:** `--reviewers` default
 **Produces:** a lifecycle request (`DELETE`, no `resource_paths`: no `evals/` are tracked); folder, constants, mapping row, generated files, workflow card and count pins updated; callers repointed
 to `user-walkthrough --shakedown`; `_shared/shakedown-engine.md` stays and its header text (names the two skills)
@@ -432,7 +432,7 @@ here (Step 16).
 (its hygiene list), and `plan-feature` and `_shared/skill-pipeline.md` name it. This is the first predicted
 headroom-over-900 step, which is why Step 10 waits.
 **Type:** code
-**Issue:**
+**Issue:** #269
 **Flags:** `--reviewers` default
 **Produces:** a lifecycle request (`DELETE`, no `resource_paths`: no `evals/` are tracked); folder,
 constants, mapping row, generated files, workflow card, count pins; `skills/user-afterparty/core.md`'s chain and
@@ -457,7 +457,7 @@ cleaner than three half-referencing ones. Callers: `skills/plan-feature/core.md`
 `tests/distributions/legacy_install_fixtures.py` also name them at the base), and the legacy
 `tier-offload/` sample files (historical-preserve).
 **Type:** code
-**Issue:**
+**Issue:** #270
 **Flags:** `--reviewers` default
 **Produces:** three lifecycle requests in one commit (each `DELETE`; no `resource_paths`: the goblin skills have
 no tracked `evals/` or `*.workflow.js` files); `_shared/goblin-second-brain.md` removed after a grep shows no remaining
@@ -485,7 +485,7 @@ unreachable from an installed caller. `_shared/` IS emitted (`dist/<p>/_shared/<
 support asset entry, so the script lives at `_shared/user-project.ps1`, callers cite it as `../_shared/user-project.ps1`
 and no new manifest field is invented.
 **Type:** code
-**Issue:**
+**Issue:** #271
 **Flags:** `--reviewers` default
 **Produces:** `_shared/user-project.ps1` (Windows PowerShell 5.1, ASCII only, no BOM; see the location note
 below) implementing SET, SHOW and
@@ -520,7 +520,7 @@ at the script. Callers: `lesson-harvest`, `plan-expedite` (core and Codex adapte
 rewritten to read the script; `test_skill_tree.py` and the distribution tests name it). The pin file format and
 the task-state field do not change.
 **Type:** code
-**Issue:**
+**Issue:** #272
 **Flags:** `--reviewers` default
 **Produces:** a lifecycle request (`DELETE`); folder, constants, mapping row, generated files, workflow card, count
 pins; callers changed from "run `/user-project`" to "run `../_shared/user-project.ps1` with the wrapper-bound session id" (a
@@ -538,7 +538,7 @@ active project", and the statusline and hooks may name the slash command. They m
 same wiring promise item 15 gave. This edits the coding-root repository, not skill-mesh, so anchor git to that
 repository and add by path.
 **Type:** code
-**Issue:**
+**Issue:** #273
 **Flags:** `--reviewers` default (gate: the coding-root repository's own checks)
 **Produces:** edits in `<coding-root>/.claude/rules/working-directory.md`,
 `<coding-root>/.claude/references/working-directory.md` and any other coding-root file the grep finds, naming the
@@ -559,7 +559,7 @@ the repository as `../../../skill-mesh` from its own folder to read `config/skil
 `events.jsonl` and writes `usage.json` beside itself. Packaged in a skill folder it would write into the installed
 tree, so this step makes the manifest path, the events file and the output folder explicit parameters.
 **Type:** code
-**Issue:**
+**Issue:** #274
 **Flags:** `--reviewers` default
 **Produces:** a lifecycle request (`UPDATE`, `skill_name: user-afterparty`, `resource_paths` listing the files
 to be added: `skills/user-afterparty/scripts/scan_usage.py`, `aggregate.py` and their test); the two scripts packaged as the
@@ -583,7 +583,7 @@ unchanged; gate named and green.
 canonical bytes and generated files, count pins and prose agree everywhere, the release-candidate report matches,
 and the full gate has run once.
 **Type:** code
-**Issue:**
+**Issue:** #275
 **Flags:** `--reviewers` default
 **Produces:** a final `python tools/gen_manifest.py` (no diff expected; any diff is a defect in an earlier step);
 `python tests/smoke/gen_release_candidate_report.py` (no diff expected after Step 14); a build of all three profiles;
@@ -606,7 +606,7 @@ the recovery rule applies.
 ledger; nothing is hand-deleted. `user-fermize` already exists as a personal, unledgered Codex skill and will
 collide with the generated one.
 **Type:** operator
-**Issue:**
+**Issue:** #276
 **Flags:** none (operator step; produces no code)
 **Produces:** the operator installs the Claude and Codex profiles from the merged result, in this order and with the
 exact commands below, run separately and in the operator's window, with the dry run first:
