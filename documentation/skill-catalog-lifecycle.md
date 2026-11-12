@@ -44,6 +44,8 @@ before mutation. This is authority for the `user-dr` release work only; it does 
 Phase CL Step 111 or the full phase complete, waive any other lifecycle gate, or authorize any
 other catalog change.
 
+**Scoped v3 catalog exception (2026-11-12).** The operator authorized one scoped exception for the v3 catalog cleanup batch: retiring `goblin-suggest`, `goblin-sweep`, `goblin-do`, `judge-motion` and `user-lavishify`; folding `user-shakedown` into `user-walkthrough` and `plan-trim` into `plan-merge`; moving `build-observer` and `observatory-doctor` out; creating `user-fermize`; updating `user-afterparty`; replacing `user-project` with a script; and deleting `user-orient` (see [the v3 catalog cleanup plan](v3-catalog-cleanup-plan.md) and [the v3 user-pm plan](v3-user-pm-revamp-plan.md)). Each mutation runs in an isolated worktree from `origin/main` while the original checkout stays dirty and untouched, and the request, base ref, target paths and pre-write hashes are recorded outside the repository before any write. Whether it also covers the `user-pm` core rewrite and the skill inbox hooks UPDATEs awaits the operator's confirmation; no such mutation runs before it. It does not claim Phase CL Step 111 or the full phase complete, waive any other lifecycle gate, or authorize a push, install or release.
+
 **Scoped operator exception (2026-10-31):** the operator authorized creation of
 `user-build-route`, including the inventory-generation changes needed to register
 and validate it. The work was first written in a checkout that predates v2.0.3 and
