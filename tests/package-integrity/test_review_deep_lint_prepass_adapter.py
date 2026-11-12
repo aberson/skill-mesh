@@ -21,6 +21,20 @@ findings carrying the payload's own rule, file:line and message; the old script
 returns zero findings and reds here. The known-clean anchor (the tool runs and
 prints an empty result) must still yield no findings, so a script that invented
 findings fails too.
+
+Three further behaviours are pinned here (morning item 62):
+
+- Non-ASCII text. Linters print UTF-8. Without UTF-8 mode, python on Windows
+  decodes stdin with the locale code page (cp1252), so both python calls -- the
+  adapter and `json_escape` -- turned a message such as `café` into mojibake.
+  Every run sets `PYTHONUTF8=0` and drops `PYTHONIOENCODING`, so the script
+  must get this right on its own, whatever the host's settings or python
+  version.
+- Option guard. A changed file whose name starts with `-` must reach ruff,
+  mypy and eslint as a path, after a `--`, never as an option. The fakes record
+  their argv so the test reads exactly what each tool was handed.
+- `--help` (and `-h`) prints usage on stdout and exits 0. The usage-error
+  anchor keeps the error paths at exit 2 with usage on stderr.
 """
 
 import json
@@ -28,6 +42,8 @@ import os
 import subprocess
 import sys
 from pathlib import Path
+
+import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SCRIPT = REPO_ROOT / "skills" / "review-deep" / "scripts" / "lint_prepass.sh"
@@ -67,11 +83,35 @@ def _fake_tool(bin_dir: Path, name: str, output: str, exit_code: int) -> None:
     """A PATH executable that prints `output` verbatim and exits `exit_code`.
 
     The payload lives beside the script and is read back with `cat`, so no
-    payload byte passes through shell quoting."""
+    payload byte passes through shell quoting. Each argument the tool received
+    is recorded, one per line, in `<name>.argv` beside it."""
     _write(bin_dir / f"{name}.out", output)
     tool = bin_dir / name
-    _write(tool, f'#!/bin/sh\ncat "$(dirname "$0")/{name}.out"\nexit {exit_code}\n')
+    _write(tool, "#!/bin/sh\n"
+                 f"printf '%s\\n' \"$@\" > \"$(dirname \"$0\")/{name}.argv\"\n"
+                 f'cat "$(dirname "$0")/{name}.out"\nexit {exit_code}\n')
     tool.chmod(0o755)
+
+
+def _invoke(cwd: Path, args: list[str], bin_dir: Path | None = None) -> subprocess.CompletedProcess:
+    """Run the script under Git Bash from `cwd` with `args`.
+
+    PATH puts the fakes first (when given), then this interpreter, which the
+    script runs as `python`. `PYTHONUTF8=0` and no `PYTHONIOENCODING` model
+    python's Windows default, the locale code page, on every host and python
+    version: the script has to ask for UTF-8 itself."""
+    assert GIT_BASH.is_file(), "Git Bash is required to run review-deep's lint pre-pass"
+    env = dict(os.environ)
+    env.pop("PYTHONIOENCODING", None)
+    env["PYTHONUTF8"] = "0"
+    path = [str(Path(sys.executable).parent), env.get("PATH", "")]
+    if bin_dir is not None:
+        path.insert(0, str(bin_dir))
+    env["PATH"] = os.pathsep.join(path)
+    return subprocess.run(
+        [str(GIT_BASH), SCRIPT.as_posix(), *args],
+        cwd=cwd, env=env, capture_output=True, text=True, encoding="utf-8",
+        errors="replace", timeout=180)
 
 
 def _run(tmp_path: Path, diff_paths: list[str], tools: dict[str, tuple[str, int]],
@@ -81,7 +121,6 @@ def _run(tmp_path: Path, diff_paths: list[str], tools: dict[str, tuple[str, int]
     `tools` maps a tool name to (output, exit_code); `configs` are file names
     created empty in the project root (the script's config-ancestry probe only
     checks that they exist)."""
-    assert GIT_BASH.is_file(), "Git Bash is required to run review-deep's lint pre-pass"
     project = tmp_path / "project"
     for rel in diff_paths:
         _write(project / rel, "x = 1\n")
@@ -92,15 +131,8 @@ def _run(tmp_path: Path, diff_paths: list[str], tools: dict[str, tuple[str, int]
     for name, (output, exit_code) in tools.items():
         _fake_tool(bin_dir, name, output, exit_code)
     out = tmp_path / "out"
-    env = dict(os.environ)
-    # Fakes first; then this interpreter, which the script's adapter runs as `python`.
-    env["PATH"] = os.pathsep.join(
-        [str(bin_dir), str(Path(sys.executable).parent), env.get("PATH", "")])
-    proc = subprocess.run(
-        [str(GIT_BASH), SCRIPT.as_posix(), "--output-dir", out.as_posix(),
-         "--diff-paths", ",".join(diff_paths)],
-        cwd=project, env=env, capture_output=True, text=True, encoding="utf-8",
-        errors="replace", timeout=180)
+    proc = _invoke(project, ["--output-dir", out.as_posix(),
+                             "--diff-paths", ",".join(diff_paths)], bin_dir)
     assert proc.returncode == 0, proc.stdout + proc.stderr
     return json.loads((out / "lint-findings.json").read_text(encoding="utf-8"))
 
@@ -154,3 +186,58 @@ def test_clean_tool_output_yields_no_findings(tmp_path: Path) -> None:
     result = _run(tmp_path, [PY_SOURCE], {"ruff": ("[]", 0)})
     assert "ruff" in result["tools_run"], result
     assert _findings(result, "ruff") == [], result
+
+
+# Latin-1 (2 bytes), curly quotes (U+201D's UTF-8 holds 0x9D, a byte cp1252
+# leaves undefined), an arrow, CJK (3 bytes) and an emoji outside the BMP.
+# The final `à` is UTF-8 C3 A0, and cp1252 reads A0 as a no-break space. The
+# adapter strips each message, so without UTF-8 mode the adapter, not only
+# `json_escape`, cuts that byte and breaks the last character.
+NON_ASCII_MESSAGE = "café “quoted” → 中文 \U0001F600 voilà"
+
+
+def test_non_ascii_message_survives_end_to_end(tmp_path: Path) -> None:
+    payload = [{"code": "E501", "filename": PY_SOURCE, "location": {"row": 3},
+                "message": NON_ASCII_MESSAGE}]
+    # Raw UTF-8 on the wire, as ruff and eslint print it, not \u escapes.
+    raw = json.dumps(payload, ensure_ascii=False)
+    assert not raw.isascii()
+    result = _run(tmp_path, [PY_SOURCE], {"ruff": (raw, 1)})
+    assert "ruff" in result["tools_run"], result
+    assert _findings(result, "ruff") == [
+        {"tool": "ruff", "rule": "E501", "file_line": f"{PY_SOURCE}:3",
+         "message": NON_ASCII_MESSAGE},
+    ], result
+
+
+def test_dash_file_names_reach_every_tool_as_paths_not_options(tmp_path: Path) -> None:
+    py_name, js_name = "--fix.py", "--debug.js"
+    result = _run(tmp_path, [py_name, js_name],
+                  {"ruff": ("[]", 0), "mypy": ("", 0), "eslint": ("[]", 0)},
+                  configs=("mypy.ini", ".eslintrc.json"))
+    assert result["tools_run"] == ["ruff", "mypy", "eslint"], result
+    for tool, name in (("ruff", py_name), ("mypy", py_name), ("eslint", js_name)):
+        argv = (tmp_path / "fakebin" / f"{tool}.argv").read_text(encoding="utf-8").splitlines()
+        assert "--" in argv, (tool, argv)
+        end = argv.index("--")
+        assert name not in argv[:end], (tool, argv)
+        assert argv[end + 1:] == [name], (tool, argv)
+
+
+@pytest.mark.parametrize("flag", ["--help", "-h"])
+def test_help_exits_zero_with_usage_on_stdout(tmp_path: Path, flag: str) -> None:
+    proc = _invoke(tmp_path, [flag])
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    assert proc.stdout.startswith("usage: bash lint_prepass.sh --output-dir"), proc.stdout
+    assert proc.stderr == "", proc.stderr
+    assert list(tmp_path.iterdir()) == []  # help writes nothing
+
+
+@pytest.mark.parametrize("args", [["--bogus"], []], ids=["unknown-argument", "no-output-dir"])
+def test_usage_errors_still_exit_two_with_usage_on_stderr(tmp_path: Path, args: list[str]) -> None:
+    # Anchor for the --help change: usage now prints to stdout, and the error
+    # paths must still send it to stderr with exit 2.
+    proc = _invoke(tmp_path, args)
+    assert proc.returncode == 2, proc.stdout + proc.stderr
+    assert proc.stdout == "", proc.stdout
+    assert "usage: bash lint_prepass.sh" in proc.stderr, proc.stderr
