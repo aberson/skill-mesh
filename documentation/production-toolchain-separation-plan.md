@@ -1,6 +1,6 @@
 # Phase PROD — Stable production utility toolchain
 
-> **Toolkit program authority — 2026-09-24.** For units mapped from this document, the [toolkit program](../../plan.md) owns selection, shared sequencing and current execution/status; the [source-unit ledger](../../documentation/toolkit-program-units.md) identifies that mapped scope. Status and execution instructions retained below for transferred units are source history, not a second dispatch queue. Technical specifications, original IDs, acceptance criteria and evidence remain owned here. Update transferred-unit status in the program only; unmapped local work remains locally owned. Mapping does not complete, reopen or authorize a unit.
+> **Status owner — reworded 2026-11-12.** Execution status for skill-mesh work, including units mapped from this document, is owned by this repository's [plan.md](../plan.md); the workspace Toolkit program owns only cross-project selection and sequencing (v3 decision sheet item 1, 2026-11-11). Status and execution instructions retained below for mapped units are source history, not a second dispatch queue. Technical specifications, original IDs, acceptance criteria and evidence remain owned here. Mapping does not complete, reopen or authorize a unit.
 
 **Status:** PAUSED AND SUPERSEDED FOR EXECUTION AFTER STEP 1 (original operator decision 2026-09-03).
 Step 1 remains complete and authoritative. Steps 2–7 are historical design and evidence and

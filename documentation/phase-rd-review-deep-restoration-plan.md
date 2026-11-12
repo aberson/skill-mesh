@@ -1,5 +1,7 @@
 # Phase RD — Restore review-deep calibration and resume the Codex capability slice
 
+> **Archived (recorded 2026-11-12, v3 decision sheet item 3).** Kept in place as a historical record; not an active execution plan. Current skill-mesh status lives in [plan.md](../plan.md).
+
 **Status:** CUT 2026-09-05 by `documentation/descope-2026-09.md` DS-D3 (operator-approved).
 Phase RD as written is not an executable queue; RD-lite (corpus import + calibration
 resolution fix, no installer machinery) replaces it, and the codex deep lane is a known gap

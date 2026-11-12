@@ -1,5 +1,7 @@
 # Provider-Neutral Skill Mesh Plan
 
+> **Archived (recorded 2026-11-12, v3 decision sheet item 3).** Kept in place as a historical record; not an active execution plan. Current skill-mesh status lives in [plan.md](../plan.md).
+
 ## 1. What This Feature Does
 
 **Proposal:** `documentation/provider-neutral-skill-mesh-proposal.html`

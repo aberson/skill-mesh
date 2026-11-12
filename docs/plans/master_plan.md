@@ -1,6 +1,6 @@
 # Skill Mesh master plan
 
-Canonical technical requirements consolidated 2026-10-14. **The [workspace Toolkit program](../../../plan.md) owns selection, sequencing and current status of every mapped unit.** Its [unit ledger](../../../documentation/toolkit-program-units.json) owns mutable status; this master is a technical contract and dated source-status projection, not a competing dispatch queue. No build, installation, native qualification, release, issue mutation or exhausted-attempt reset is authorized by this cleanup.
+Canonical technical requirements consolidated 2026-10-14. **Execution status for all skill-mesh work, including units mapped from this master, is owned by this repository's [plan.md](../../plan.md).** The workspace Toolkit program in the coding root owns only cross-project selection and sequencing. This follows the workspace workflow plan's decision D7, "child masters retain execution status", and was confirmed as v3 decision sheet item 1 on 2026-11-11. This master is a technical contract and dated source-status projection, not a competing dispatch queue. Where a later section says the Toolkit program or its unit ledger owns status or dispatch (for example the completion map's root plan.md row, the M1 and S8 status notes, and decision DOC-P2), read it as cross-project selection and sequencing only. No build, installation, native qualification, release, issue mutation or exhausted-attempt reset is authorized by this cleanup.
 
 ## Intent continuity: current skills and v2 (2026-10-19)
 
@@ -155,6 +155,24 @@ host behavior once in a disposable real-host probe; then retain a separate atten
 observation of the actual entry point before user acceptance. No live native build,
 settings change, issue creation or deployment is authorized by this planning update.
 
+### Toolkit unit links (2026-11-12)
+
+v3 decision sheet item 8. Unit IDs come from the workspace Toolkit unit ledger
+(`documentation/toolkit-program-units.md` in the coding root). That ledger has no unit
+for any VI item, searched by ID and by topic on 2026-11-12; each item still needs a unit
+or a bounded step at selection, as the paragraph above requires.
+
+- VI-1 (reviewer independence): no unit.
+- VI-2 (outcome-to-acceptance contract): no unit.
+- VI-3 (completion evidence separate from orchestration status): no unit.
+- VI-4 (model provenance and report-only pin ledger): no unit. The nearest row,
+  `tu-70a06b6fb4996038` (the held installed tier-map resolution audit), has a different scope.
+- VI-5 (private context convention): no unit.
+- VI-6 (deterministic guard capability spike, then scoped controls): no unit.
+- VI-7 (sanctioned small-work route): no unit.
+- VI-8 (outcome-based baseline method): no unit.
+- VI-9 (example-based specification): no unit.
+
 ### Decision Inventory
 
 | ID | P/D | Choice | Status |
@@ -187,9 +205,33 @@ review; fresh-context wrap checks this as roadmap scope, not a dispatch-ready pl
 Full implementation step contracts remain deliberately deferred until selection.
 Review record: [technical review, decision publication and roadmap wrap](v2-improvements-20261019-planning-check.md).
 
+## Planned catalog change: Copilot deprecation (decided 2026-11-11)
+
+**Status:** PLANNED, not started. v3 decision sheet item 28, with item 25 (Copilot is
+deprecated, so its build lane closes). This section is a plan only: nothing in the catalog,
+the adapters, the manifest, the tools, the runtime or the tests changes until the release
+that carries it. It runs as one catalog change under the
+[catalog lifecycle guide](../../documentation/skill-catalog-lifecycle.md), whose section 4
+owns the required provider set.
+
+1. **First v3 release.** Ships the GPT (Copilot) profile one last time, with a deprecation
+   note.
+2. **The release after it.** In one catalog change:
+   - drops `providers/gpt.md` from every portable skill;
+   - drops the `.github/skills` install target;
+   - drops the GPT build rows (`tools/build-distributions.ps1 -Provider gpt`, `dist/gpt`)
+     and the GPT rows of the release-candidate report;
+   - re-points the frontmatter gate (`tests/package-integrity/frontmatter_contract.py`,
+     which today grades `providers/{claude,gpt}.md` and models Copilot CLI's YAML scan)
+     at the profiles that remain.
+3. Other GPT references (the router's Copilot host provider
+   `runtime/providers/copilot-host.ps1`, `config/model-mapping.json`, and the README,
+   architecture and host-discovery text) are inventoried when the change is drafted, before
+   the second release.
+
 ## Scope and preserved decisions
 
-One authored portable core plus explicit native-host adapters and reproducible distributions remains the product. Canonical `skills/<name>/core.md` and `providers/` are sources; generated/installed packages are outputs. PowerShell 5.1 is the executable floor; Python/pytest own source checks. Use [project instructions](../../CLAUDE.md), [architecture](../architecture.md), [catalog lifecycle](../skill-catalog-lifecycle.md) and [product charter](../product-charter.md). No server, new account, port, runtime service, linter or typechecker is added here.
+One authored portable core plus explicit native-host adapters and reproducible distributions remains the product. Canonical `skills/<name>/core.md` and `providers/` are sources; generated/installed packages are outputs. PowerShell 5.1 is the executable floor; Python/pytest own source checks. Use [project instructions](../../CLAUDE.md), [architecture](../../documentation/architecture.md), [catalog lifecycle](../../documentation/skill-catalog-lifecycle.md) and [product charter](../../documentation/product-charter.md). No server, new account, port, runtime service, linter or typechecker is added here.
 
 The full repository-root `python -m pytest` remains the default DONE gate; a path-limited suite is only an iteration check. Existing CD-D5 and LH-E1 exceptions apply only to their exact historical source/evidence. This reconciliation advances no implementation status. Frozen findings and archives keep original bytes, paths inside payloads, commits, failed runs and limitations. The move map resolves current locations.
 
@@ -215,7 +257,7 @@ Source statuses below are dated history for mapped work. Always read the current
 | BR147-152 archived candidate | Preserved source proposal and failed qualification history; shared Toolkit program owns any successor work. No revival of expired overnight allowance. |
 | IS108P/C2E/C2N/C2P/C3/C4/C5 | Held containment program; compact contracts below and unchanged archived detailed schemas. Requires fresh repricing/selection; no local-host execution. |
 
-The seven protected PROD/RD evidence worktrees and their binding digests remain unchanged under [course correction section3](../phase-prod-rd-first-course-correction.md) and [DS-D11](../descope-2026-09.md). No rescue, edit, prune, merge or deletion follows. The parked `tools/run-goal-np-terra-bootstrap.ps1` is not invoked or renamed.
+The seven protected PROD/RD evidence worktrees and their binding digests remain unchanged under [course correction section3](../../documentation/phase-prod-rd-first-course-correction.md) and [DS-D11](../../documentation/descope-2026-09.md). No rescue, edit, prune, merge or deletion follows. The parked `tools/run-goal-np-terra-bootstrap.ps1` is not invoked or renamed.
 
 ## Ordinary Codex workflow (M1)
 
@@ -1803,7 +1845,7 @@ These are scope cards, not new reserved build steps. Projects1/2 are subsumed ab
 
 **Result:** a fresh session resumes the intended durable checkpoint, next command, prerequisite and wait state.
 
-**Reuse:** [M1 Steps 127–129](../archived-plans/documentation/codex-ordinary-build-milestone-plan.md), following Step 126 and its accepted continuation rules. Step 127 already owns canonical checkpoint support, explicit prior-session selection, intended-plan validation and preservation of unrelated state. Steps 128–129 prepare and observe acceptance. Do not duplicate them here.
+**Reuse:** [M1 Steps 127–129](../../documentation/codex-ordinary-build-milestone-plan.md), following Step 126 and its accepted continuation rules. Step 127 already owns canonical checkpoint support, explicit prior-session selection, intended-plan validation and preservation of unrelated state. Steps 128–129 prepare and observe acceptance. Do not duplicate them here.
 
 **Residual risk:** coding-root's default hook resolver can select the freshest foreign session when its own file is missing. M1 retains default-resume compatibility; explicit selection does not prove every default hook route safe. Reproduce the residual path after reconciling M1, then scope a small coding-root fix if needed. A visible missing checkpoint is preferable to silently adopting another window's next action.
 
@@ -1843,7 +1885,7 @@ Dry-run is read-only: no disposition/cursor advance, skill mutation or trial lau
 
 **Effort:** 1–2 active workdays plus required gates. Preparation creates one cohesive implementation unit and a separate attended acceptance unit. Packaging-topology changes are outside this estimate.
 
-**Preparation started 2026-09-19:** [Phase LH executable slice](../archived-plans/documentation/mistake-capture-plan.md) now defines Steps 153–154, exact helper/storage interfaces and installed-host acceptance. It refines private storage to Git metadata and uses the existing shared Python emitter. This does not start implementation or resolve Project 3's evaluator qualification.
+**Preparation started 2026-09-19:** [Phase LH executable slice](../../documentation/mistake-capture-plan.md) now defines Steps 153–154, exact helper/storage interfaces and installed-host acceptance. It refines private storage to Git metadata and uses the existing shared Python emitter. This does not start implementation or resolve Project 3's evaluator qualification.
 
 ### Project 3 — One automatic isolated trial
 
@@ -1897,11 +1939,11 @@ Two optional follow-ups; either can ship without the other.
 
 Project cards are not executable step reservations. Extract only the selected project's repository-scoped plan, freeze command/storage contracts, reconcile unmerged numbering, then run plan-review → plan-redline → plan-wrap → repo-sync. Dispatch build-phase on that prepared slice, never this portfolio.
 
-Canonical sources are skills/name/core.md and provider adapters. Generated/installed copies are outputs. The [catalog lifecycle guide](../skill-catalog-lifecycle.md) governs mutations and support-resource topology.
+Canonical sources are skills/name/core.md and provider adapters. Generated/installed copies are outputs. The [catalog lifecycle guide](../../documentation/skill-catalog-lifecycle.md) governs mutations and support-resource topology.
 
 Current requirements: Windows PowerShell 5.1, Python 3, pytest, PyYAML and markdown-it-py; jsonschema applies only to the existing declarative-schema path. [CLAUDE.md](../../CLAUDE.md) owns installation requirements and exact build/install commands. Skill Mesh has no development server or configured lint/typecheck commands. Capture needs no new account, port or secret.
 
-For implementation, use focused behavioral tests during iteration, required provider builds and repo-root `python -m pytest` for the DONE gate. Narrow collections do not replace it. Budget the [historical full-gate duration](../phase-75-baseline.md) separately. Route review by actual diff risk. CL's shared batch-head gate exception is CL-specific; it does not relax M1 or these follow-ups.
+For implementation, use focused behavioral tests during iteration, required provider builds and repo-root `python -m pytest` for the DONE gate. Narrow collections do not replace it. Budget the [historical full-gate duration](../../documentation/phase-75-baseline.md) separately. Route review by actual diff risk. CL's shared batch-head gate exception is CL-specific; it does not relax M1 or these follow-ups.
 
 Prepare an acceptance procedure in the implementation unit, then observe the changed runtime skill/helper on the real selected host in a separate attended unit. Hook changes additionally require coding-root's hook smoke and self-test. One full relevant cycle and named failures replace arbitrary observation quotas; later real-use evidence is needed for reliability claims.
 
@@ -1970,7 +2012,7 @@ For this documentation revision: validate local links, decision IDs, HTML struct
 
 IS100-108 remain accepted history, not new work. The single normative owner is plan-init's stateOwner contract: AGENTS.md contains primary instructions; CLAUDE.md is exactly `@AGENTS.md` plus LF. Preserve all five D10 rows, consumer reads, the scoped write-surface deferral, exact-classification evidence and the sealed Route2 choice. C2V09e7f4d and C2A2f6c7b87 are historical selections, not fresh authorization.
 
-108P is the enclosing containment packet and not additive to its E1-E33 implementation estimates. C0/C0R/C0A/C1/C2/C2V/C2A are historical overlays; C2E/C2N/C2P/C3/C4/C5 are held phase boundaries. Full field schemas, authentication transcripts, exact executable closures, failure branches, build inputs and operator command blocks remain in the byte-preserved [completion plan](../archived-plans/documentation/phase-is-completion-plan.md) and [disposable-environment specification](../archived-plans/documentation/phase-is-disposable-c2n-c4-environment-plan.md). Read those before repricing or selection. This master preserves the actionable contract summaries; it is not claiming this held architecture is fresh build-ready.
+108P is the enclosing containment packet and not additive to its E1-E33 implementation estimates. C0/C0R/C0A/C1/C2/C2V/C2A are historical overlays; C2E/C2N/C2P/C3/C4/C5 are held phase boundaries. Full field schemas, authentication transcripts, exact executable closures, failure branches, build inputs and operator command blocks remain in the byte-preserved [completion plan](../../documentation/phase-is-completion-plan.md) and [disposable-environment specification](../../documentation/phase-is-disposable-c2n-c4-environment-plan.md). Read those before repricing or selection. This master preserves the actionable contract summaries; it is not claiming this held architecture is fresh build-ready.
 
 Global safety contract: never execute driver/toolchain/trust/signing experiments on the coordinator host. Separate S1 execution guest, signer appliance and read-only coordinator. Closed schemas, safe-integer JCS plus LF, UTF-8 without BOM, duplicate-key/surrogate rejection; RSA3072 PSS32 and exact HMAC domain separation. No fallback identity, secret export, self-authored acceptance or guessed completion. Strict append-only request journals, replay/idempotency receipts and exact input closure. Explicit provider/license/cost selection precedes mutation. Every created resource belongs to complete inventory and immutable lifecycle enforcement. Evidence failure never postpones emergency safety; raw safety proof cannot advance program acceptance. A terminal environment always requires E33, even after failure.
 
@@ -2265,8 +2307,8 @@ Completed technical detail and historical run logs remain in original copies lis
 
 | ID | P/D | Choice | Status |
 |---|---|---|---|
-| DOC-P1 | P | Standard docs layout, preserve originals, repair affected references | accepted 2026-10-14 |
-| DOC-P2 | P | Preserve shared Toolkit execution/status ownership for mapped work | accepted 2026-10-14 |
+| DOC-P1 | P | Standard docs layout, preserve originals, repair affected references | accepted 2026-10-14; layout part superseded 2026-11-11 by v3 decision sheet item 2 (keep `documentation/` for v3) |
+| DOC-P2 | P | Preserve shared Toolkit execution/status ownership for mapped work | accepted 2026-10-14; superseded 2026-11-11 by v3 decision sheet item 1 (skill-mesh `plan.md` owns execution status) |
 | DOC-D1 | D | Fold superseded ordinary-workflow and context aliases into their existing leaves. | applied 2026-10-14 |
 | DOC-D2 | D | Keep held environment leaves under108P without an additive parent forecast. | applied 2026-10-14 |
 | DOC-D3 | D | Retain frozen evidence and historical proposal command blocks byte-for-byte; repair current consumers. | applied 2026-10-14 |

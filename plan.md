@@ -1275,3 +1275,14 @@ Tag `v2.0.2` at `f6e6c62`. GitHub release `skill-mesh-v2.0.2.zip`, SHA-256
 `19dd9649381f1ca5fad100b7a6d0455403f61707276687f76c9e53b24c2ae73a`. Live Claude, GPT, and
 Codex installs were cut over from the staged bundle; the installed `repo-wrap/core.md` hashes match
 their respective release payloads. Restart host sessions after upgrading.
+
+## v3 program (2026-11-12)
+
+- Execution status for skill-mesh v3 work is owned here, in this `plan.md` (v3 decision
+  sheet item 1, approved 2026-11-11). The workspace Toolkit program keeps only cross-project
+  selection and sequencing.
+- The v3 program plan and its decisions live in the coding root's
+  `docs/skill-mesh-3-review/` folder (decision sheet of 2026-11-11; the folder README is
+  the decision notebook).
+- Nothing has been built for v3 yet. The 2026-11-12 docs housekeeping (decision items 1, 2,
+  3, 7, 8 and 28) records decisions only.
