@@ -121,6 +121,7 @@ that `review.py` passes text through and parses no `--json`; this step confirms 
 key list before any core edit can change it.
 **Type:** code
 **Issue:** #226
+- **Status:** DONE 2026-11-12 as a direct task (its output lives outside this repository, so build-step could not land it). Evidence: `<coding-root>/docs/skill-mesh-3-review/user-pm-revamp-wire-audit-2026-11-12.md`: 25 consumer rows (19 OK, 6 already handled, 0 needs fix); no production code parses `--json`; baseline key lists dated before Step 3.
 **Flags:** `--reviewers` default
 **Produces:** a consumer table in `<coding-root>/docs/skill-mesh-3-review/user-pm-revamp-wire-audit-2026-11-12.md` with one
 row per live call site of `user-pm` output (`dev-observatory` `review.py`, `web/app.py`,
