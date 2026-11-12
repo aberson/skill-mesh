@@ -17,6 +17,32 @@ or release-report skill. Codex catalog headroom is 577 characters. This scoped
 CREATE does not complete Phase CL Step 111 or authorize other catalog changes. No
 numbered step is advanced.
 
+## Release v2.0.4 - user-dr (2026-11-11)
+
+Released from `2ae2661`: tag `v2.0.4`, with `origin/main` fast-forwarded from
+`dcfe927`. The archive `skill-mesh-v2.0.4.zip` holds 1,324 files and has SHA-256
+`d06fde86b7adff6b6a2e3c6ea5af8d1d0d44a288d96761c7d141fca471f9877d`. Its
+`CHECKSUMS.txt` covers 455 `dist/` files.
+
+Gate evidence, accepted by the operator for this release only:
+
+- The repo-root `python -m pytest` was stopped by the operator after about 80
+  minutes, at 690 passed, 1 skipped and 0 failed of 2,156 collected. It is
+  recorded as incomplete.
+- In its place the operator accepted three runs:
+  - `tests/distributions/test_distributions.py`, `tests/smoke` and
+    `tests/release`: 229 passed, in 5:02:06.
+  - `tests/router` and `tests/telemetry`: 68 passed, 1 skipped.
+  - The staged package-integrity run inside `release.ps1 -Provider all`: 696
+    passed, 3 skipped.
+- This is not a repository-wide gate change. Scoping the gate to the kind of
+  change is captured as a seed, not decided.
+
+Installed from the staged `dist/` into the coding root's Claude and GPT profiles
+(161 and 147 files) and the user home's Codex profile (147 files). Every file in
+each released profile is present and byte-identical after install. No
+real-project trial of `user-dr` has run yet.
+
 ## Step 153 accepted under scoped closeout exception (2026-09-24)
 
 Step 153/#219 is **DONE under operator-approved LH-E1**, recorded in the
