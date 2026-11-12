@@ -1,6 +1,6 @@
 # Skill Mesh master plan
 
-Canonical technical requirements consolidated 2026-10-14. **Execution status for all skill-mesh work, including units mapped from this master, is owned by this repository's [plan.md](../../plan.md).** The workspace Toolkit program in the coding root owns only cross-project selection and sequencing. This follows the workspace workflow plan's decision D7, "child masters retain execution status", and was confirmed as v3 decision sheet item 1 on 2026-11-11. This master is a technical contract and dated source-status projection, not a competing dispatch queue. Where a later section says the Toolkit program or its unit ledger owns status or dispatch (for example the completion map's root plan.md row, the M1 and S8 status notes, and decision DOC-P2), read it as cross-project selection and sequencing only. No build, installation, native qualification, release, issue mutation or exhausted-attempt reset is authorized by this cleanup.
+Canonical technical requirements consolidated 2026-10-14. **Execution status for all skill-mesh work, including units mapped from this master, is owned by this repository's [plan.md](../../plan.md).** The workspace Toolkit program in the coding root owns only cross-project selection and sequencing. This follows the workspace workflow plan's decision D7, "child masters retain execution status", and was confirmed as v3 decision sheet item 1 on 2026-11-11. This master is a technical contract and dated source-status projection, not a competing dispatch queue. The later sentences that gave the Toolkit program status or dispatch ownership (the V2 improvement status note, the completion map's root plan.md and BR147-152 rows, the M1 note and the S8 status) were reworded to this split on 2026-11-12; decision DOC-P2 is kept as superseded history. No build, installation, native qualification, release, issue mutation or exhausted-attempt reset is authorized by this cleanup.
 
 ## Intent continuity: current skills and v2 (2026-10-19)
 
@@ -28,7 +28,8 @@ and reduce avoidable skill ceremony without weakening ownership or safety.
 **Status:** roadmap scope selected under the operator's delegated judgment; the items
 below are PLANNED unless explicitly described as already implemented. This is a
 requirements amendment, not a new executable build queue or release acceptance.
-The Toolkit program and its unit ledger retain selection/dispatch ownership.
+Skill-mesh `plan.md` owns execution status; the Toolkit program and its unit ledger keep
+cross-project selection and sequencing.
 Proposal: [decision view](v2-improvements-20261019-proposal.html).
 Source: [seed collection](../../../docs/skill-mesh-2-review/video-improvements-2026-10-19.md).
 
@@ -243,7 +244,7 @@ Source statuses below are dated history for mapped work. Always read the current
 
 | Source | Disposition and preserved requirement |
 |---|---|
-| Root plan.md | Status/history archived; current local technical scope consolidated here; shared Toolkit authority retained. |
+| Root plan.md | Owns execution status for skill-mesh work (v3 decision sheet item 1); current local technical scope consolidated here; the Toolkit program keeps cross-project selection and sequencing. |
 | WF 122 / 123 / 124 | Superseded by 126+127 / 128 / 129 respectively, not duplicate work. |
 | Context Project 1 / 2 | M1 127-129 / LH 153-154; residual default-hook investigation remains conditional after M1. |
 | CL S7 / issue192 | S7 is umbrella for CL119,110-118; destructive stale-path hardening folds into116. |
@@ -254,14 +255,14 @@ Source statuses below are dated history for mapped work. Always read the current
 | HP70-71 | Superseded by descope; do not dispatch historical live cutover. |
 | Goal A72-78 | Completed experiment activity ending in a terminal stop, not architecture acceptance. Unapproved79-89/95-97 remain historical. |
 | Goal NP1-41 | Closed, unapproved proposal; exhaustive matrix and launcher are historical, not requirements reopened by consolidation. |
-| BR147-152 archived candidate | Preserved source proposal and failed qualification history; shared Toolkit program owns any successor work. No revival of expired overnight allowance. |
+| BR147-152 archived candidate | Preserved source proposal and failed qualification history; any successor work is selected and sequenced by the Toolkit program, with execution status in skill-mesh `plan.md`. No revival of expired overnight allowance. |
 | IS108P/C2E/C2N/C2P/C3/C4/C5 | Held containment program; compact contracts below and unchanged archived detailed schemas. Requires fresh repricing/selection; no local-host execution. |
 
 The seven protected PROD/RD evidence worktrees and their binding digests remain unchanged under [course correction section3](../../documentation/phase-prod-rd-first-course-correction.md) and [DS-D11](../../documentation/descope-2026-09.md). No rescue, edit, prune, merge or deletion follows. The parked `tools/run-goal-np-terra-bootstrap.ps1` is not invoked or renamed.
 
 ## Ordinary Codex workflow (M1)
 
-The old 3/3 Step126 attempt is exhausted and its deadline closed. No fourth iteration, new eight-hour window, restored parent authority or automatic restart is implied. Source publication4 remains the acceptance contract; shared Toolkit status is authoritative. C1-C6 below are subcases of129, not additional estimated units.
+The old 3/3 Step126 attempt is exhausted and its deadline closed. No fourth iteration, new eight-hour window, restored parent authority or automatic restart is implied. Source publication4 remains the acceptance contract; skill-mesh `plan.md` owns execution status. C1-C6 below are subcases of129, not additional estimated units.
 
 #### Contract: 2. Verified starting point
 
@@ -1964,7 +1965,7 @@ For this documentation revision: validate local links, decision IDs, HTML struct
 
 ### Step S8: Light proof and ambient Codex soak
 - **Type:** operator
-- **Status:** PENDING ACCEPTANCE (source projection; Toolkit owns status)
+- **Status:** PENDING ACCEPTANCE (source projection; skill-mesh `plan.md` owns status)
 - **Depends on:** 118
 - **Issue:** #131, #132, #133
 - **Contract:** build all providers, install Claude and Codex into the explicitly selected real consumer home, one skill-crud round trip on each host, one in-repository Claude review-deep calibration run. Record a one-page acceptance note stating the accepted evidence bar. Keep one line per genuine Codex-hosted session; about five clean ambient sessions close the soak. No artificial session quota or fresh formal CP-M3 grading. Required exact-target authorization is unchanged; cleanup executes none of this.

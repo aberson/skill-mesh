@@ -6,8 +6,9 @@
 Step 1 remains complete and authoritative. Steps 2–7 are historical design and evidence and
 MUST NOT be resumed or dispatched. The original course correction was superseded for execution
 by [descope-2026-09.md](descope-2026-09.md); DS-D5 cut the MVP replan obligation and parked the
-production/development split. The toolkit program now owns separately selected preservation,
-isolation and later rollout work. This transfer does not revive the old RD-first order, the
+production/development split. Separately selected preservation, isolation and later rollout
+work is selected and sequenced by the toolkit program; its execution status lives in
+[plan.md](../plan.md). This transfer does not revive the old RD-first order, the
 MVP replan obligation or Steps 2–7. Preserved PROD and RD worktrees remain read-only evidence.
 
 **Path notation:** `<dev-root>` and `<prod-root>` are runtime-resolved absolute roots. Their initial
