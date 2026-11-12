@@ -87,16 +87,18 @@ emit_finding() {
   findings+=( "{\"tool\":\"$et\",\"rule\":\"$er\",\"file_line\":\"$ef\",\"message\":\"$em\"}" )
 }
 
-# Parse tool output through a python adapter that emits TSV rule\tfile_line\tmessage,
-# then push each row into findings via emit_finding. $1 = tool name (also drives
-# adapter dispatch), $2 = raw tool output (may be empty).
-parse_into_findings() {
-  local tool="$1" raw="$2"
-  while IFS=$'\t' read -r rule file_line message; do
-    [ -z "$rule" ] && [ -z "$file_line" ] && continue
-    emit_finding "$tool" "$rule" "$file_line" "$message"
-  done < <(printf %s "$raw" | python - "$tool" <<'PY'
+# The tool-output adapter: reads raw tool output on stdin, emits TSV
+# rule\tfile_line\tmessage. It is held in a variable and run with `python -c`
+# so that python's stdin stays free for the tool output. Never feed it as
+# `python - <<'PY'` behind a pipe: the heredoc replaces the pipe as stdin,
+# python reads its PROGRAM from the heredoc, sys.stdin.read() returns "", and
+# every finding is silently dropped ("findings": [] on every run).
+# `read -d ''` returns 1 at end of input, hence `|| true` under `set -e`.
+IFS= read -r -d '' LINT_ADAPTER <<'PY' || true
 import json, sys
+# LF rows on every platform: Windows text-mode stdout ends each row in CRLF, and
+# `read` would leave the CR on the last field, the message.
+sys.stdout.reconfigure(newline="\n")
 tool = sys.argv[1]
 raw = sys.stdin.read()
 rows = []
@@ -134,7 +136,16 @@ for rule, fl, msg in rows:
     msg = msg.replace("\n", " ").replace("\t", " ").strip()
     sys.stdout.write(f"{rule}\t{fl}\t{msg}\n")
 PY
-  )
+
+# Parse tool output through the adapter above, then push each row into findings
+# via emit_finding. $1 = tool name (also drives adapter dispatch), $2 = raw tool
+# output (may be empty).
+parse_into_findings() {
+  local tool="$1" raw="$2"
+  while IFS=$'\t' read -r rule file_line message; do
+    [ -z "$rule" ] && [ -z "$file_line" ] && continue
+    emit_finding "$tool" "$rule" "$file_line" "$message"
+  done < <(printf %s "$raw" | python -c "$LINT_ADAPTER" "$tool")
 }
 
 # Tool runners. Each appends to tools_run / tools_skipped and parses any
