@@ -120,7 +120,7 @@ of `user-pm` output must be enumerated before any shape change. The first read (
 that `review.py` passes text through and parses no `--json`; this step confirms it and captures the baseline
 key list before any core edit can change it.
 **Type:** code
-**Issue:**
+**Issue:** #226
 **Flags:** `--reviewers` default
 **Produces:** a consumer table in `<coding-root>/docs/skill-mesh-3-review/user-pm-revamp-wire-audit-2026-11-12.md` with one
 row per live call site of `user-pm` output (`dev-observatory` `review.py`, `web/app.py`,
@@ -140,7 +140,7 @@ the dirty main checkout is the collision named in the brief, so builds run from 
 `origin/main` as commit `5924e27`. Recorded result: `git show 5924e27:skills/user-build-route/core.md` contains
 the heading "Check the route can run" (line 42).
 **Type:** wait
-**Issue:**
+**Issue:** #227
 **Flags:** none
 **Produces:** a checkpoint record of the integration checkout (branch `v3/main`), its `git rev-parse HEAD`, and
 the output of `git ls-files skills/user-build-route/core.md` in it.
@@ -153,7 +153,7 @@ checkout has `git status --porcelain` empty at the start of each build step; and
 **Problem:** The current core reads one plan plus `git log`, with no live-status view, no route labels and no
 issue/PR reading.
 **Type:** code
-**Issue:**
+**Issue:** #228
 **Flags:** `--reviewers` default
 **Produces:** edits to `skills/user-pm/core.md` only:
 1. Status view absorbed from `user-orient` (F6): current state observed this run is evidence; memory,
@@ -182,7 +182,7 @@ no named-skill call, and the fetched-text-is-data rule.
 **Problem:** The Overnight rubric misses a dirty no-commit checkout, host capability and agent capacity, the
 exact incident behind `user-build-route` (brief section 0). This is the must-fix.
 **Type:** code
-**Issue:**
+**Issue:** #229
 **Flags:** `--reviewers` default (independent review is deliberate here: the section gates overnight runs)
 **Produces:** edits to the core's Overnight rubric adding three checks that cite `skills/user-build-route/core.md`
 "Check the route can run" rather than copy it: (a) dirty checkout or stash that must not be committed, or a
@@ -200,7 +200,7 @@ route-compat section.
 **Problem:** There is no idea shortlist (F5), and the old rule "do not invent moves not derivable from plan +
 git log + archive markers" blocks it.
 **Type:** code
-**Issue:**
+**Issue:** #230
 **Flags:** `--reviewers` default
 **Produces:** a shortlist section: 3 to 5 ideas, each with an anchor (issue reference or tracked path,
 optionally `:line`; prose anchors refused, the idea is dropped instead), labelled "single pass, unjudged". The
@@ -215,7 +215,7 @@ anchor rule and the Codex-window label in the core.
 **Problem:** A mocked prose test cannot see drift between the rubric and `user-build-route`; a test must fail
 when the rubric stops citing the route-compat section or the section is renamed.
 **Type:** code
-**Issue:**
+**Issue:** #231
 **Flags:** `--reviewers` default
 **Produces:** `tests/package-integrity/test_user_pm_readiness_citation.py` asserting: (a) the user-pm core
 cites `skills/user-build-route/core.md` and the heading "Check the route can run"; (b) that heading exists in
@@ -242,7 +242,7 @@ text and source (`src/passing_notes/cli.py`):
   `PASSING_NOTES_ROOT` (absolute path) overrides it. Measured on an empty temporary store: both read verbs
   exit 0 and print only `diagnostics: 0`.
 **Type:** wait
-**Issue:**
+**Issue:** #232
 **Flags:** none
 **Produces:** a checkpoint record of the committed tool path, its commit id, and the `--help` read verbs.
 **Done when:** the tool is committed (its commit id is recorded) and `--help` output listing the read verbs is
@@ -265,7 +265,7 @@ utilities enumerated in `.claude/references/advisory-call-convention.md`, so the
 convention's eight points by analogy and adds no convention entry (item 34, default taken; the tool has
 since landed, and a convention entry would be its own later change). Inbox checks inside skills are owned by this v3 plan, not by the Passing Notes tool plan.
 **Type:** code
-**Issue:**
+**Issue:** #233
 **Flags:** `--reviewers` default
 **Produces:** a "Lanes" section in `skills/user-pm/core.md`, a `--lanes` topic mode, and tests, specified as:
 
@@ -336,7 +336,7 @@ overnight qualification as "recommendation text, never auto-dispatched work", an
 has 577 characters of headroom after `user-dr` (brief section 1.6). Host differences exist for `gh` access,
 process timeouts and agent capacity.
 **Type:** code
-**Issue:**
+**Issue:** #234
 **Flags:** `--reviewers` default
 **Produces:** updated `skills/user-pm/providers/claude.md`, `codex.md`, `gpt.md` (gpt under its deprecation
 note) that bind only host facts; no gate weakened. The description in `tools/gen_manifest.py` `DESCRIPTIONS`
@@ -350,7 +350,7 @@ diff review shows no adapter text restating a core gate.
 `what_it_is`, `history`, `outstanding`, `possible_next` (each item with `category`), `cut_candidates`,
 optional `notes`; topic mode has `project`, `topic`, `context`, `unblocks`, `work`. Nothing parses this today.
 **Type:** code
-**Issue:**
+**Issue:** #235
 **Flags:** `--reviewers` default
 **Produces:** the core's `--json` section extended with new optional top-level keys, each omitted when empty:
 `status` (`verified`, `not_yet_verified`, `manual_checks`), `board` (array of `{item, source, route, owner,
@@ -375,7 +375,7 @@ caller is dev-observatory's review path, which sends `/user-pm` or `/user-pm --g
 stores the prose reply and allows 300 seconds (see "Consumer facts"). A JSON fixture or a live `claude -p`
 run would test the wrong contract (nondeterministic, spends quota, crosses repositories).
 **Type:** code
-**Issue:**
+**Issue:** #236
 **Flags:** `--reviewers` default (no runtime lens: no app start; the live run is Step 15)
 **Produces:** (a) a test in `<coding-root>/dev-observatory/tests/` (new `test_review_user_pm_contract.py`)
 driving `dev_observatory.review.run_review` through its runner seam for each of `_VALID_MODES`, asserting the
@@ -406,7 +406,7 @@ split, whose row 5 (catalog cleanup batch) runs under one scoped lifecycle excep
 changes (split proposal, Q1). The `user-orient` DELETE (Step 13) runs inside that batch. Option (b), waiting for
 skill-mesh Steps 111 to 113, is not taken. Step 12 stays as a recorded decision, citing that approval.
 **Type:** operator
-**Issue:**
+**Issue:** #237
 **Flags:** none
 **Produces:** a recorded operator decision only (no code): the scoped lifecycle exception from the batch
 approval, naming the base ref, target paths, pre-write hashes and the isolated worktree for the `user-orient`
@@ -425,7 +425,7 @@ belong to decision items 14 and R1 (other lanes) and are not done here, but the 
 are. The count guards (now 60 records on `origin/main`, `EXPECTED_TOTAL` 60 in `tools/gen_manifest.py`; re-read) have no supported-path update yet, so under a
 scoped exception they are edited by hand within its stated scope.
 **Type:** code
-**Issue:**
+**Issue:** #238
 **Flags:** `--reviewers` default
 **Produces:** a lifecycle request (guide section 11 template) with `operation: DELETE`,
 `skill_name: user-orient`, and one `reference_dispositions` record for every old-name occurrence the
@@ -452,7 +452,7 @@ applies (stop, revert the whole mutation) and a checkpoint is recorded after the
 **Problem:** Generated surfaces (`dist/`, manifest, inventory, workflow card) must be regenerated, and the DONE
 gate is the full suite, not a subset (`code-quality.md` gate scope; `skill-mesh/CLAUDE.md`).
 **Type:** code
-**Issue:**
+**Issue:** #239
 **Flags:** none
 **Produces:** regenerated `config/skill-manifest.json`, `tests/package-integrity/expected_inventory.json`,
 `skills/inventory.json`, the `user-pm` workflow card (`docs/workflows/`) and `dist/`; a checkpoint naming
@@ -466,7 +466,7 @@ summary line and the available-memory reading before it (gate-reds on a memory-s
 **Problem:** The shape is accepted only by the operator after seeing real output; the new sections cannot be
 judged from tests.
 **Type:** operator
-**Issue:**
+**Issue:** #240
 **Flags:** none
 **Produces:** a recorded operator decision only (no code): "accept" or "amend" the shape, and authority (or
 not) to install the refreshed profiles on Claude and Codex (release and install need separate authority per
@@ -484,7 +484,7 @@ neither run wrote a file.
 
 **Problem:** Installing binds the new profile and uninstalls the retired `user-orient` through the ledger.
 **Type:** code
-**Issue:**
+**Issue:** #241
 **Flags:** none
 **Produces:** a refreshed install of the Claude and Codex profiles via `tools/install-skill-mesh.ps1`
 (only if Step 15 granted install authority) and an inspection record from `tools/inspect-host-install.ps1`.
@@ -499,7 +499,7 @@ yet exercised by any real project; `skills/user-dr/core.md`, "Show the register"
 adapter for `user-fermize` (Codex-only with no catalog record today; brief section 1.5). Binding to an unproven
 format would make it a contract by accident.
 **Type:** wait
-**Issue:**
+**Issue:** #242
 **Flags:** none
 **Produces:** operator-owned: one real `docs/user-dr/<slug>-register.md` from a real project run, the
 operator's note "format accepted" or the amended format, and the catalog CREATE of `user-fermize` with a
@@ -515,7 +515,7 @@ no-register line and Codex-window label.
 using the paths recorded in Step 17. The workflow plan also needs one line naming user-pm as each project's
 read-only view and route entry (item 11); the user-gateway repoint is owned by item 14.
 **Type:** code
-**Issue:**
+**Issue:** #243
 **Flags:** `--reviewers` default
 **Produces:** a small UPDATE of `user-pm` that reads the accepted register (count decided and open items, do
 not re-ask decided ones, emit `/user-dr <project> open only` when several are open or a conflict is flagged),
