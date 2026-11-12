@@ -5,10 +5,16 @@ PowerShell for most of its tests. On a machine with little free memory, or
 while another pytest run is competing for it, random subprocess tests go red
 and pass again in isolation, so a red gate on such a machine is not evidence.
 This tool refuses to approve a full gate under those conditions and prints the
-two measured numbers so the gate record can carry them.
+measured numbers so the gate record can carry them.
 
 Exit codes: 0 approved, 3 refused, 2 a probe failed (also a refusal, because
 an unmeasured machine is not approved).
+
+The process probe fails closed. A process list that does not contain this
+process is incomplete, so it is a probe failure. A python or pytest process
+whose command line cannot be read might be a pytest run, so it refuses the
+gate like one; other processes with unreadable command lines (system
+services, elevated tools) are not counted.
 
 Windows only, like the rest of this repository's tooling. Standard library only.
 """
@@ -37,6 +43,10 @@ PREFIX = "gate-preflight:"
 # word: `python -m pytest`, `pytest.exe`, `py.test`. `pytest_notes.txt` does not.
 PYTEST_RE = re.compile(r"(?<![\w-])py\.?test(?![\w])", re.IGNORECASE)
 
+# Image names that can host a pytest run: python.exe, pythonw.exe, python3.14.exe,
+# pytest.exe, py.test.exe.
+PYTHON_IMAGE_RE = re.compile(r"^(?:python|py\.?test)[\w.-]*$", re.IGNORECASE)
+
 
 class ProbeError(RuntimeError):
     """A machine measurement could not be taken."""
@@ -47,10 +57,16 @@ class ProcessInfo:
     pid: int
     ppid: int
     command_line: str
+    name: str = ""
 
 
 def is_pytest_command(command_line: str) -> bool:
     return bool(command_line) and PYTEST_RE.search(command_line) is not None
+
+
+def is_unreadable_python(process: ProcessInfo) -> bool:
+    """A python or pytest image whose command line the probe could not read."""
+    return not process.command_line.strip() and PYTHON_IMAGE_RE.match(process.name) is not None
 
 
 def own_tree(self_pid: int, processes: Iterable[ProcessInfo]) -> set[int]:
@@ -77,6 +93,14 @@ def other_pytest_processes(self_pid: int, processes: Iterable[ProcessInfo]) -> l
     procs = list(processes)
     mine = own_tree(self_pid, procs)
     return [p for p in procs if p.pid not in mine and is_pytest_command(p.command_line)]
+
+
+def other_unreadable_python_processes(
+    self_pid: int, processes: Iterable[ProcessInfo]
+) -> list[ProcessInfo]:
+    procs = list(processes)
+    mine = own_tree(self_pid, procs)
+    return [p for p in procs if p.pid not in mine and is_unreadable_python(p)]
 
 
 # -- real probes (Windows) ---------------------------------------------------
@@ -111,7 +135,7 @@ def available_memory_mb() -> int:
 _PROCESS_QUERY = (
     "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; "
     "@(Get-CimInstance Win32_Process | "
-    "Select-Object ProcessId,ParentProcessId,CommandLine) | ConvertTo-Json -Compress"
+    "Select-Object ProcessId,ParentProcessId,Name,CommandLine) | ConvertTo-Json -Compress"
 )
 
 
@@ -133,7 +157,7 @@ def parse_process_json(text: str) -> list[ProcessInfo]:
             ppid = int(row.get("ParentProcessId") or 0)
         except (KeyError, TypeError, ValueError) as exc:
             raise ProbeError(f"process row has no usable ids: {exc}") from exc
-        out.append(ProcessInfo(pid, ppid, str(row.get("CommandLine") or "")))
+        out.append(ProcessInfo(pid, ppid, str(row.get("CommandLine") or ""), str(row.get("Name") or "")))
     return out
 
 
@@ -169,19 +193,33 @@ def main(
     pid = os.getpid() if self_pid is None else self_pid
     try:
         memory_mb = int(memory_probe())
-        others = other_pytest_processes(pid, process_probe())
+        processes = process_probe()
+        if pid not in {p.pid for p in processes}:
+            raise ProbeError(f"own pid {pid} is not in the process list, so the list is incomplete")
+        others = other_pytest_processes(pid, processes)
+        unreadable = other_unreadable_python_processes(pid, processes)
     except ProbeError as exc:
         print(f"{PREFIX} PROBE-FAILED -- {exc}", file=out)
         print(f"{PREFIX} REFUSED -- the machine could not be measured", file=out)
         return EXIT_PROBE_FAILED
 
-    print(f"{PREFIX} available_memory_mb={memory_mb} other_pytest_processes={len(others)}", file=out)
+    print(
+        f"{PREFIX} available_memory_mb={memory_mb} other_pytest_processes={len(others)}"
+        f" unreadable_python_processes={len(unreadable)}",
+        file=out,
+    )
     reasons = []
     if memory_mb < MIN_AVAILABLE_MB:
         reasons.append(f"available memory {memory_mb} MB is under {MIN_AVAILABLE_MB} MB")
     if others:
         pids = ",".join(str(p.pid) for p in sorted(others, key=lambda p: p.pid))
         reasons.append(f"{len(others)} other pytest process(es) running (pids {pids})")
+    if unreadable:
+        pids = ",".join(str(p.pid) for p in sorted(unreadable, key=lambda p: p.pid))
+        reasons.append(
+            f"{len(unreadable)} python process(es) whose command line could not be read,"
+            f" so they may be pytest runs (pids {pids})"
+        )
     for reason in reasons:
         print(f"{PREFIX} REFUSED -- {reason}", file=out)
     if reasons:
