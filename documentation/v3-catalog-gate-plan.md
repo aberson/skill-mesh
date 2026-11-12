@@ -102,7 +102,7 @@ class list.
   which suites are fast. Recorded full gates run 3 h 07 min to 4 h 41 min. The catalog gate must also decide
   whether it covers tree emission and staging (the `release.ps1` staged package checks), which needs a cost.
 - **Type:** code
-- **Issue:** #
+- **Issue:** #245
 - **Flags:** `--reviewers code`. Starts only after part 1 (`v3/test-gate-scope-1`) has merged into `v3/main`,
   so the measurement reflects the S-SLOW installer fix. Run from a disposable worktree of `v3/main` (the
   integration checkout's branch); never from the main checkout. The full-suite run is 3 to 5 hours, so it is
@@ -130,7 +130,7 @@ class list.
   router scan was missed. A directory glob would repeat the failure: a new scan dropped into `tests/router/`
   would be classified by the glob and the completeness test would stay green.
 - **Type:** code
-- **Issue:** #
+- **Issue:** #246
 - **Flags:** `--reviewers code`. Touches test infrastructure, so it is itself gated by the full suite.
 - **Produces:**
   - `tests/gate-classes.json`: an object keyed by **exact file path** (no globs, no directory entries, the
@@ -179,7 +179,7 @@ class list.
   can also break tree emission or leave a new skill file untracked (release staging uses `git ls-files`), which
   no catalog test sees.
 - **Type:** code
-- **Issue:** #
+- **Issue:** #247
 - **Flags:** `--reviewers code`.
 - **Produces:** `tests/gate/select_gate.py`, a deterministic function from a changed-path list (`git diff
   --name-only <base>...HEAD`) to `catalog` or `full`. It takes `--root <tree>` (default: the repository root)
@@ -224,7 +224,7 @@ class list.
   artifact: run the production selector and production gate command, not a stand-in). The proof must fail on
   the real miss, not on the class-map test.
 - **Type:** code
-- **Issue:** #
+- **Issue:** #248
 - **Flags:** `--reviewers code`. Disposable worktrees only; remove them with `git -C <root> worktree remove`
   after checking `status --porcelain`. Nothing is pushed.
 - **Mechanism (how the replay stays attributable):** The selector, the catalog gate command and the
@@ -273,7 +273,7 @@ class list.
 
 - **Problem:** "Fits a working window" needs a number set from data.
 - **Type:** code
-- **Issue:** #
+- **Issue:** #249
 - **Flags:** `--reviewers code`.
 - **Produces:** the catalog gate's measured wall clock (three runs, quiet machine, machine check passing
   each time) with median and worst case, written to `catalog-gate-timing.md` beside `proof-replay.md`; a
@@ -293,7 +293,7 @@ class list.
   shortened 21 other skills' descriptions to stay above 400. This step only decides and evidences; it does
   not edit the guard, because the edit follows the operator's choice (Step 8).
 - **Type:** code
-- **Issue:** #
+- **Issue:** #250
 - **Flags:** `--reviewers code`. The decision note and scripts are documentation and shell only. No file
   under `tests/package-integrity/` changes in this step.
 - **Produces:** `<evidence>/item-51-decision.md` with measured current
@@ -333,7 +333,7 @@ class list.
   run ends here as a normal phase end, and Phase 2 is a separate run started after the answers exist. It is
   not a halt inside a run.
 - **Type:** operator
-- **Issue:** #
+- **Issue:** #251
 - **Flags:** none. Produces no code; the operator (or an operator-authorized change) writes the answers file.
 - **Produces:** `<evidence>/operator-answers.json` (shape above), dated, recording the operator's answers:
   adopt the catalog gate as a standing DONE gate for content-only changes (sheet item 14: **yes**, on the
@@ -361,7 +361,7 @@ Step 10 and then Step 11.
 - **Type:** conditional
 - **Condition:** `bash ../../docs/skill-mesh-3-review/builds/catalog-gate/conditions/item51_chosen.sh` (run
   by build-phase from the `v3-main` project root; exit 0 run, exit 1 skip, exit 2 with stderr is a predicate defect).
-- **Issue:** #
+- **Issue:** #252
 - **Flags:** `--reviewers code`. A test edit to `tests/package-integrity/test_codex_budgets.py`, gated by the
   full suite (the selector returns `full` for it).
 - **Produces:** the one edit the answers file names (remove / raise / keep), on its own commit.
@@ -377,7 +377,7 @@ Step 10 and then Step 11.
 - **Type:** conditional
 - **Condition:** `bash ../../docs/skill-mesh-3-review/builds/catalog-gate/conditions/adopted.sh` (resolved
   from the `v3-main` project root; every Condition below uses that form).
-- **Issue:** #
+- **Issue:** #253
 - **Flags:** `--reviewers code`. Edits skill-mesh docs and tests on the Phase 2 branch; the workspace rule
   file lives outside the skill-mesh repo and is delivered as a diff for the operator to apply.
 - **Produces:** (1) `documentation/skill-catalog-lifecycle.md`: a standing "Catalog gate" section holding the
@@ -408,7 +408,7 @@ Step 10 and then Step 11.
   ../../docs/skill-mesh-3-review/builds/catalog-gate/conditions/no_inflight_build_skill_edit.sh` (a skip here
   means an in-flight build touches those skills; the step is re-evaluated at the next resume, and Step 11
   skips with it).
-- **Issue:** #
+- **Issue:** #254
 - **Flags:** `--reviewers code`. `build-phase` is a representative skill, so `release-candidate-report.md`
   must be regenerated in the same change. Goes through the catalog lifecycle guide's UPDATE operation. The
   change set includes provider adapters, so the gate is whichever the selector returns, with the suites that
@@ -429,7 +429,7 @@ Step 10 and then Step 11.
 - **Condition:** `bash ../../docs/skill-mesh-3-review/builds/catalog-gate/conditions/adopted.sh && bash
   ../../docs/skill-mesh-3-review/builds/catalog-gate/conditions/step10_ran.sh` (Step 11 skips whenever Step 10
   skipped, so a skipped Step 10 is never a mid-run failure).
-- **Issue:** #
+- **Issue:** #255
 - **Flags:** `--reviewers code`. Read-only check plus the hand-off of the workspace diff.
 - **Produces:** one tabulated grep over all four owners (lifecycle guide, skill-mesh `CLAUDE.md`, workspace
   `code-quality.md` draft, `build-step` and `build-phase` cores) showing the same gate sentence, and the
