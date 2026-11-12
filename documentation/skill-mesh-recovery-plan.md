@@ -1,5 +1,7 @@
 # Skill Mesh recovery and completion plan
 
+> **Archived (recorded 2026-11-12, v3 decision sheet item 3).** Kept in place as a historical record; not an active execution plan. Current skill-mesh status lives in [plan.md](../plan.md).
+
 **Status:** FINAL PLAN — ready for Abraham's execution approval; no phase has started
 
 **Approved by:** Abraham Robison, 2026-08-13 (`Approve D1-D15 as written`)

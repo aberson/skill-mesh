@@ -1,5 +1,7 @@
 # Native Claude/Codex Skill Parity and Maintenance Plan
 
+> **Archived (recorded 2026-11-12, v3 decision sheet item 3).** Kept in place as a historical record; not an active execution plan. Current skill-mesh status lives in [plan.md](../plan.md).
+
 **Status:** READY FOR OPERATOR — AWAITING APPROVAL 1
 
 **Planning branch:** `plan/native-codex-skill-parity`

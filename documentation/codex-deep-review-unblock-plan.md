@@ -1,5 +1,7 @@
 # Phase CD — Codex code-deep review unblock plan
 
+> **Archived as completed (recorded 2026-11-12, v3 decision sheet item 3).** Kept in place as a historical record; not an active execution plan. Current skill-mesh status lives in [plan.md](../plan.md).
+
 **Status:** Steps 155 and 156 DONE for the scoped code-only nested route on the
 observed Codex collaboration host. The operator explicitly authorized a further
 Sol/Terra attempt: corrected verifier launch passed, six fresh lenses passed, the

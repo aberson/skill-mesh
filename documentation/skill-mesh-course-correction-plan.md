@@ -1,5 +1,7 @@
 # Skill Mesh course-correction plan
 
+> **Archived (recorded 2026-11-12, v3 decision sheet item 3).** Kept in place as a historical record; not an active execution plan. Current skill-mesh status lives in [plan.md](../plan.md).
+
 **Status:** REDLINE APPROVED — SUPERSEDED FOR EXECUTION (2026-08-13)
 
 **Recommendation:** make targeted changes, then proceed
