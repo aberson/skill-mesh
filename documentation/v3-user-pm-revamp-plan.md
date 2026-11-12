@@ -142,6 +142,7 @@ the dirty main checkout is the collision named in the brief, so builds run from 
 the heading "Check the route can run" (line 42).
 **Type:** wait
 **Issue:** #227
+- **Status:** DONE 2026-11-12 (wait met). `git ls-tree origin/main skills/user-build-route/core.md` lists the file; its core contains "Check the route can run"; the integration worktree `skill-mesh-wt/v3-main` (branch v3/main) equals `origin/main` 1c0cae5 with an empty `git status --porcelain`.
 **Flags:** none
 **Produces:** a checkpoint record of the integration checkout (branch `v3/main`), its `git rev-parse HEAD`, and
 the output of `git ls-files skills/user-build-route/core.md` in it.
