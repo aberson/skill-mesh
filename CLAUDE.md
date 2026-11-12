@@ -46,6 +46,10 @@ root, and report its real summary line:
 python -m pytest
 ```
 
+Before starting it, run `python tools/gate_preflight.py` and put its measured line in the gate
+record: it refuses (exit 3) when available memory is under 2048 MB or another pytest process is
+running, because either makes a red full gate untrustworthy.
+
 A path argument narrows collection. `python -m pytest tests/` reaches only the eight suites
 under `tests/`; it never collects the three root-only test roots — `_shared/`,
 `skill-iterate/scripts/`, and `skill-eval-setup/scripts/` — so it cannot see a regression

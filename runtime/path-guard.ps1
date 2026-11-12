@@ -73,8 +73,31 @@ function Get-CanonicalRealPath {
         $current = $current + [System.IO.Path]::DirectorySeparatorChar
     }
 
+    # Fast path. Every segment is still probed on every call -- nothing is cached
+    # across calls, so a junction planted between two calls is always seen. What is
+    # skipped is only the cmdlet-heavy probe below for a segment it provably would not
+    # change: an ordinary directory (Directory attribute set, ReparsePoint attribute
+    # clear) whose prefix already carries the provider's own spelling. That probe sets
+    # $current to Get-Item's FullName, which re-spells the drive prefix (a 'c:' input
+    # comes back as 'C:') and keeps the rest verbatim. So the fast path starts at once
+    # only under an upper-case drive root; otherwise (lower-case drive, UNC) the first
+    # existing segment takes the full probe. The first segment after a reparse
+    # resolution, and every file, reparse point, missing or unreadable segment always
+    # take the full probe. (This walk dominated install time; see the installer
+    # slow-path seed.)
+    $providerSpelled = ($current -cmatch '^[A-Z]:\\$')
     foreach ($seg in $segments) {
         $current = [System.IO.Path]::Combine($current, $seg)
+        if ($providerSpelled) {
+            $attrs = $null
+            try { $attrs = [System.IO.File]::GetAttributes($current) } catch { $attrs = $null }
+            if ($null -ne $attrs -and
+                ($attrs -band [System.IO.FileAttributes]::Directory) -ne 0 -and
+                ($attrs -band [System.IO.FileAttributes]::ReparsePoint) -eq 0) {
+                continue
+            }
+        }
+        $providerSpelled = $false
         if (Test-Path -LiteralPath $current) {
             $item = Get-Item -LiteralPath $current -Force
             $linkTarget = $null
@@ -91,6 +114,7 @@ function Get-CanonicalRealPath {
                 $current = Get-CanonicalRealPath -InputPath $linkTarget -Depth ($Depth + 1)
             } else {
                 $current = $item.FullName
+                $providerSpelled = $true
             }
         }
     }
