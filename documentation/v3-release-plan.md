@@ -3,7 +3,7 @@
 This is the execution copy for build-phase, copied 2026-11-12 from the operator's planning records in the coding root (`<coding-root>/docs/skill-mesh-3-review/`), where its reviews and the operator's answers live. Step status is recorded here from now on.
 
 Date: 2026-11-12. Status: PLAN ONLY, nothing built, tagged, published or installed.
-Covers row 8 of the approved [v3 and v4 split](v3-v4-split-proposal-2026-11-12.md): "Release v3.0.0 and check
+Covers row 8 of the approved v3 and v4 split (`<coding-root>/docs/skill-mesh-3-review/v3-v4-split-proposal-2026-11-12.md`): "Release v3.0.0 and check
 that installed equals released. The GPT adapters ship one last time under their deprecation note."
 
 **Roots.** Skill-mesh paths are repo-relative. `<coding-root>` is the workspace folder that holds the skill-mesh
