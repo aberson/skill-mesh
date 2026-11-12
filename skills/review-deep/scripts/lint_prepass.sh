@@ -4,23 +4,38 @@
 # deterministic lint-findings.json the Bugs/Style/Test-quality lenses can
 # cite in Step 4. Tools auto-selected by file extension; gracefully skipped
 # when not installed / not configured. Contract: scripts/README.md.
-# Exit 0 = wrote valid JSON (findings: [] is valid); exit 2 = usage error.
+# Exit 0 = wrote valid JSON (findings: [] is valid), or printed usage for
+# --help; exit 2 = usage error.
 
 set -euo pipefail
 
 usage() {
-  echo "usage: bash lint_prepass.sh --output-dir <dir> [--diff-paths <comma-or-space-separated>]" >&2
+  # Prints to STDOUT: for --help the usage is the answer, not a diagnostic.
+  # The error paths below redirect it to stderr themselves.
+  cat <<'USAGE'
+usage: bash lint_prepass.sh --output-dir <dir> [--diff-paths <comma-or-space-separated>]
+       bash lint_prepass.sh --help
+
+Runs ruff/mypy/eslint over the changed files and writes
+<output-dir>/lint-findings.json. With no --diff-paths, the file list comes from
+`git diff --name-only HEAD`.
+
+Exit codes:
+  0  wrote valid JSON (findings: [] is valid), or printed this usage
+  2  usage error
+USAGE
 }
 
 output_dir=""; diff_paths_raw=""
 while [ $# -gt 0 ]; do
   case "$1" in
+    --help|-h)     usage; exit 0 ;;
     --output-dir)  output_dir="${2:-}"; shift 2 ;;
     --diff-paths)  diff_paths_raw="${2:-}"; shift 2 ;;
-    *) echo "lint_prepass.sh: unknown argument: $1" >&2; usage; exit 2 ;;
+    *) echo "lint_prepass.sh: unknown argument: $1" >&2; usage >&2; exit 2 ;;
   esac
 done
-[ -z "$output_dir" ] && { usage; exit 2; }
+[ -z "$output_dir" ] && { usage >&2; exit 2; }
 mkdir -p "$output_dir"
 
 # File list: from --diff-paths (commas and/or whitespace) or git diff HEAD.
@@ -72,8 +87,11 @@ declare -a tools_run=() tools_skipped=() findings=()
 
 # JSON-escape via Python (stdlib; universally available). Reads stdin, prints
 # the escaped body WITHOUT surrounding quotes — callers wrap.
+# Both python calls in this script run in UTF-8 mode (`-X utf8`). Linters print
+# UTF-8, but python on Windows otherwise decodes piped text with the locale
+# code page (cp1252), so a non-ASCII message would come out as mojibake.
 json_escape() {
-  python -c 'import json,sys;sys.stdout.write(json.dumps(sys.stdin.read())[1:-1])'
+  python -X utf8 -c 'import json,sys;sys.stdout.write(json.dumps(sys.stdin.read())[1:-1])'
 }
 
 emit_skipped() {
@@ -145,7 +163,7 @@ parse_into_findings() {
   while IFS=$'\t' read -r rule file_line message; do
     [ -z "$rule" ] && [ -z "$file_line" ] && continue
     emit_finding "$tool" "$rule" "$file_line" "$message"
-  done < <(printf %s "$raw" | python -c "$LINT_ADAPTER" "$tool")
+  done < <(printf %s "$raw" | python -X utf8 -c "$LINT_ADAPTER" "$tool")
 }
 
 # Tool runners. Each appends to tools_run / tools_skipped and parses any
@@ -178,9 +196,14 @@ run_tool() {
   parse_into_findings "$tool" "$raw"
 }
 
+# A `--` precedes the file list on every tool invocation below. The list comes
+# from the diff (`git diff --name-only HEAD` or --diff-paths), and a changed
+# file may have a name that starts with `-`. Without the `--`, the tool would
+# read that name as an option instead of a path. After `--`, every word is a
+# path.
 if [ "${#py_files[@]}" -gt 0 ]; then
   if command -v ruff >/dev/null 2>&1; then
-    run_tool "ruff" ruff check --output-format=json "${py_files[@]}"
+    run_tool "ruff" ruff check --output-format=json -- "${py_files[@]}"
   else
     echo "lint_prepass.sh: ruff not installed; skipping" >&2
     emit_skipped "ruff" "not installed"
@@ -191,7 +214,7 @@ if [ "${#py_files[@]}" -gt 0 ]; then
     echo "lint_prepass.sh: mypy not installed; skipping" >&2
     emit_skipped "mypy" "not installed"
   else
-    run_tool "mypy" mypy --output json "${py_files[@]}"
+    run_tool "mypy" mypy --output json -- "${py_files[@]}"
   fi
 fi
 if [ "${#js_files[@]}" -gt 0 ]; then
@@ -201,7 +224,7 @@ if [ "${#js_files[@]}" -gt 0 ]; then
     echo "lint_prepass.sh: eslint not installed; skipping" >&2
     emit_skipped "eslint" "not installed"
   else
-    run_tool "eslint" eslint -f json "${js_files[@]}"
+    run_tool "eslint" eslint -f json -- "${js_files[@]}"
   fi
 fi
 

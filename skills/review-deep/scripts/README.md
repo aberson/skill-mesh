@@ -65,7 +65,10 @@ Pre-pass linter run that produces a deterministic finding list before any LLM le
 
 ```bash
 bash lint_prepass.sh --output-dir <dir> [--diff-paths <comma-or-space-separated>]
+bash lint_prepass.sh --help
 ```
+
+`--help` (or `-h`) prints usage on stdout and exits 0.
 
 Invoke from the project root (cwd), NOT from the script's own directory — the config-file ancestry probe and the default `git diff --name-only HEAD` are both cwd-relative. When `--diff-paths` is omitted, the script falls back to `git diff --name-only HEAD` (the current uncommitted changes against HEAD).
 
@@ -77,6 +80,8 @@ Invoke from the project root (cwd), NOT from the script's own directory — the 
 | `.ts`, `.tsx`, `.js`, `.jsx` | `eslint -f json` (requires `.eslintrc*` in cwd or any ancestor up to git root) |
 
 Files whose extension isn't recognized are silently skipped (no entry in `tools_run`, no entry in `tools_skipped` — they're irrelevant). Files that don't exist (e.g., a stale `--diff-paths` entry) are logged to stderr and skipped without failing the script.
+
+Each tool gets its file list after a `--`, so a changed file whose name starts with `-` reaches the tool as a path, never as an option. Both python calls run in UTF-8 mode (`python -X utf8`), so a non-ASCII linter message keeps its characters on Windows, where python otherwise decodes piped text with the locale code page.
 
 **Output schema** (`<output-dir>/lint-findings.json`):
 
@@ -93,7 +98,7 @@ Files whose extension isn't recognized are silently skipped (no entry in `tools_
 
 **Exit codes:**
 
-- `0` — wrote a valid `lint-findings.json` (even if every tool was skipped or `findings: []`).
+- `0` — wrote a valid `lint-findings.json` (even if every tool was skipped or `findings: []`), or printed usage for `--help`.
 - `2` — usage error (missing `--output-dir`, unknown flag).
 
 **Dependencies:** `bash`, `git` (for the default file list and the ancestor-config walk), `python` (used internally for JSON-string escaping and adapter parsing of ruff/mypy/eslint output — no third-party packages). Optionally `ruff` / `mypy` / `eslint` (gracefully skipped when missing). **No `jq` dependency** — the workspace's prevailing convention but `jq` is not universally installed on fresh Windows + Git Bash, so the script does its own JSON assembly via python.
