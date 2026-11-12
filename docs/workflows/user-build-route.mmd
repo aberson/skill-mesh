@@ -1,0 +1,23 @@
+%% user-build-route
+%% Summary: Ground a task, choose a direct task, bounded goal or core pipeline, check the route can run here, then return advice and one ready-to-paste prompt.
+%% Sources: skills/user-build-route/core.md
+%% Not shown: the route criteria table, capacity and per-role support checks, bounded-goal prompt fields, deadline and blocker rules, and the exact output shape
+%% Alt: A task is grounded in read-only evidence, given one of three routes, checked for conflicts or unknown capability on the host, and returned as advice with one ready-to-paste prompt; nothing is started.
+
+flowchart TD
+    A[Read the task, project instructions and plan] --> B{Task missing, or an answer would change the route?}
+    B -- Yes, ask the operator --> A
+    B -- No --> C[Weigh uncertainty, risk, scope and acceptance]
+    C --> D{Which slice comes next?}
+    D -- Direct task --> E[Contained, reversible, simple check]
+    D -- Bounded goal --> F[Finite question with an observable finish line]
+    D -- Core pipeline --> G[Delivery needs design, sequencing or review]
+    E --> H{Route compatible with the task and host?}
+    F --> H
+    G --> H
+    H -- Known conflict --> I[Name the conflict; offer the smallest supported route]
+    H -- Unknown capability --> J[Make the prompt qualify first, stop on failure]
+    H -- Compatible --> K[Prepare the route's next prompt with its gates]
+    I --> K
+    J --> K
+    K --> L[Return Decision, Why, Next and one prompt; start nothing]

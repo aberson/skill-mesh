@@ -3,12 +3,12 @@
 
 These diagrams summarize the **Skill Mesh v2.0.4** contracts. Use the
 [skill reference](../../documentation/skill-reference.md) for a compact table
-of all 59 skills, purposes, host coverage and direct diagram links.
+of all 60 skills, purposes, host coverage and direct diagram links.
 
 Each diagram declares its source and omitted detail. The linked source contract
 remains authoritative: a diagram does not authorize an action, bypass a hold,
-or establish live qualification. Claude has all 59 packages; Codex and Copilot
-have the 56 portable packages. Native capability gates still apply.
+or establish live qualification. Claude has all 60 packages; Codex and Copilot
+have the 57 portable packages. Native capability gates still apply.
 
 These diagrams use the same rounded cards, monospace labels, and blue connectors
 as the overview graphics. Blue-bordered **GATE** cards mark decisions; connector
@@ -89,6 +89,7 @@ produces the default Mermaid README rather than this SVG gallery.
 - [tier-offload](#tier-offload) - Classify low-stakes judge slices, then write or preview an inventory and inactive candidate Switchboard configuration.
 - [user-afterparty](#user-afterparty) - Sweep milestone hygiene into one report, walk decisions with the operator, and close approved orphan and rollup duties.
 - [user-brainstorm](#user-brainstorm) - Expand a topic through gap-fill rounds, confirm the resulting structure, and build a grounded reference document set.
+- [user-build-route](#user-build-route) - Ground a task, choose a direct task, bounded goal or core pipeline, check the route can run here, then return advice and one ready-to-paste prompt.
 - [user-debug](#user-debug) - Diagnose a bug from primary evidence, reproduce it independently, design and delegate a fix, then verify against the original repro.
 - [user-dr](#user-dr) - Find a project's decision sources, collect open and decided items, check implied live state, group by theme, then ask theme-first and record each answer.
 - [user-draft](#user-draft) - Refine rough thoughts into either a ready-to-paste prompt or a measurable goal condition, checkpointing only when useful.
@@ -1160,6 +1161,29 @@ Drawn from:
 </picture>
 
 [Open full size](cards/user-brainstorm-dark.svg)
+
+---
+
+## user-build-route
+
+Ground a task, choose a direct task, bounded goal or core pipeline, check the route can run here, then return advice and one ready-to-paste prompt.
+
+Source: [`user-build-route.mmd`](user-build-route.mmd)
+
+Drawn from:
+
+- [`skills/user-build-route/core.md`](../../skills/user-build-route/core.md)
+
+**Alt:** A task is grounded in read-only evidence, given one of three routes, checked for conflicts or unknown capability on the host, and returned as advice with one ready-to-paste prompt; nothing is started.
+
+**Deliberately not shown:** the route criteria table, capacity and per-role support checks, bounded-goal prompt fields, deadline and blocker rules, and the exact output shape
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="cards/user-build-route-dark.svg">
+  <img alt="A task is grounded in read-only evidence, given one of three routes, checked for conflicts or unknown capability on the host, and returned as advice with one ready-to-paste prompt; nothing is started." src="cards/user-build-route-light.svg">
+</picture>
+
+[Open full size](cards/user-build-route-dark.svg)
 
 ---
 
