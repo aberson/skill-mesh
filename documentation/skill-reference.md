@@ -1,6 +1,6 @@
 # Skill reference
 
-The v2 catalog contains **59 Claude skills** and **56 portable skills** for Codex and GitHub Copilot. Host coverage means an adapter is packaged; required native capabilities and external utilities still apply.
+The v2 catalog contains **60 Claude skills** and **57 portable skills** for Codex and GitHub Copilot. Host coverage means an adapter is packaged; required native capabilities and external utilities still apply.
 
 Each workflow link opens its source-linked diagram. Read the contract for full gates, flags, and omissions. See [installation](../README.md#install-or-upgrade), [utility integrations](../README.md#how-utility-projects-are-used), and [release limitations](https://github.com/aberson/skill-mesh/releases/tag/v2.0.2).
 
@@ -52,6 +52,7 @@ Each workflow link opens its source-linked diagram. Read the contract for full g
 | [tier-offload](../skills/tier-offload/core.md) | Classify low-stakes judge slices, then write or preview an inventory and inactive candidate Switchboard configuration. | Claude, Copilot, Codex | [Diagram](../docs/workflows/README.md#tier-offload) |
 | [user-afterparty](../skills/user-afterparty/core.md) | Sweep milestone hygiene into one report, walk decisions with the operator, and close approved orphan and rollup duties. | Claude, Copilot, Codex | [Diagram](../docs/workflows/README.md#user-afterparty) |
 | [user-brainstorm](../skills/user-brainstorm/core.md) | Expand a topic through gap-fill rounds, confirm the resulting structure, and build a grounded reference document set. | Claude, Copilot, Codex | [Diagram](../docs/workflows/README.md#user-brainstorm) |
+| [user-build-route](../skills/user-build-route/core.md) | Recommend the core pipeline, a bounded goal, or a direct task, with rationale and a pasteable next step. | Claude, Copilot, Codex | Read-only decision; see the source contract. |
 | [user-debug](../skills/user-debug/core.md) | Diagnose a bug from primary evidence, reproduce it independently, design and delegate a fix, then verify against the original repro. | Claude, Copilot, Codex | [Diagram](../docs/workflows/README.md#user-debug) |
 | [user-dr](../skills/user-dr/core.md) | Build a plain-language decision register of open and decided items across plans, seeds and decision records, grouped by theme with consequence and conflict checks, then record the operator's answers. | Claude, Copilot, Codex | [Workflow](../docs/workflows/user-dr.mmd) |
 | [user-draft](../skills/user-draft/core.md) | Refine rough thoughts into either a ready-to-paste prompt or a measurable goal condition, checkpointing only when useful. | Claude, Copilot, Codex | [Diagram](../docs/workflows/README.md#user-draft) |

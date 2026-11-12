@@ -7,15 +7,21 @@
 `/plan-expedite --plan <path>` runs the full plan -> review -> redline -> wrap -> sync ->
 handoff pipeline as one autonomous step, in the order the workspace plan-and-issue-flow rule
 owns (`.claude/rules/plan-and-issue-flow.md`: plan-review -> plan-redline -> plan-wrap ->
-repo-sync). Default output: TWO continue commands in order — first a `/goal
-"<condition>"` line that arms the Stop hook over the agent-completable span, then the
-`/build-phase --plan <path>` command — both to run **in the same window** — no forced
-`/compact`, because auto-compaction handles
-context on its own when it fills and the `SessionStart` re-inject hook reloads `current.md`
-afterward. (A focused `/compact` before the long build is optional — see step 5.) Add
-`--new-window` to hand off to a fresh window instead: a durable `current.md` write
-(`task-handoff --next-task`), then `/session-wrap --end` renders the handoff to disk
-(`.claude/task-state/handoff-prompt.md`) and prints the Pick-up-here block.
+repo-sync). Preparation and execution are separate results: a read-only route
+compatibility check (Flow) runs before any write and again at the later boundaries, and the
+final output depends on its classification and the destination host. An incompatible build
+halts before preparation. A compatible build gets the build continuation; when its runtime
+capability is unqualified, the output says preparation succeeded and gives a
+qualification-first prompt instead of a goal. On a verified Claude destination with a
+qualified route, the default is TWO continue commands **in the same window** — first a
+`/goal "<condition>"` line the operator types to set the Stop hook over the
+agent-completable span, then the `/build-phase --plan <path>` command — no forced
+`/compact`, because auto-compaction handles context on its own when it fills and the
+`SessionStart` re-inject hook reloads `current.md` afterward. (A focused `/compact` before
+the long build is optional — see step 5.) Add `--new-window` to hand off to a fresh window
+instead: a durable `current.md` write (`task-handoff --next-task`), then `/session-wrap
+--end` renders the handoff to disk (`.claude/task-state/handoff-prompt.md`) and prints the
+Pick-up-here block.
 
 ---
 
@@ -25,11 +31,11 @@ This skill's whole reason to exist is that the operator does not want to type `/
 
 1. **Execute, do not advise.** When invoked, you MUST invoke each sub-skill through the host's skill-invocation adapter in the order specified in the "Sub-skill chain" section. Do NOT respond by emitting the chain as text (e.g. "Next: `/plan-review` → `/plan-redline` → `/plan-wrap` → `/repo-sync` → `/session-wrap` → `/build-phase`"). That listing-the-steps response is the single most common failure mode for this skill — if you find yourself about to type that sentence, stop and invoke the next sub-skill through the adapter instead.
 
-2. **No mid-run confirmations.** Do not ask "Should I run /plan-review now?", "Apply autofixes?", "Any feedback on the proposal before I continue?", "Proceed to /plan-wrap?", "Ready to sync issues?", or any other (y/n) gate, and do not wait for redline feedback. The operator opted into the chain by invoking `/plan-expedite`. Halt only on the cases the "Halt template" section enumerates — sub-skill non-zero exit, a result the "Reading a sub-skill result" rules do not accept (a remaining Blocker, genuine ambiguity requiring operator judgment, or no determinable success), a missing sub-skill, or a failed input check. Everything else proceeds.
+2. **No mid-run confirmations.** Do not ask "Should I run /plan-review now?", "Apply autofixes?", "Any feedback on the proposal before I continue?", "Proceed to /plan-wrap?", "Ready to sync issues?", or any other (y/n) gate, and do not wait for redline feedback. The operator opted into the chain by invoking `/plan-expedite`. Halt only on the cases the "Halt template" section enumerates — sub-skill non-zero exit, a result the "Reading a sub-skill result" rules do not accept (a remaining Blocker, genuine ambiguity requiring operator judgment, or no determinable success), a missing sub-skill, or a failed input check (including an incompatible build route). Everything else proceeds.
 
 3. **Minimal between-step narration.** Between sub-skill invocations, one brief sentence is enough ("plan-review returned READY with 3 autofixes applied; invoking plan-redline"). Do not re-describe what the next sub-skill is going to do — its own core handles that.
 
-4. **Final output is the continue command(s) (or, with `--new-window`, the Pick-up-here block), verbatim.** On default success, the final output is the `/clear`-first recycle shape: on Claude, one `Run in:` execution-context line (other hosts omit it; see step 5), a fenced `/clear` block, then a fenced pair — `/goal "<condition>"` (scoped to the agent-completable automated span, per step 5 of the chain) followed by `/build-phase --plan <path>` — no summary, paraphrase, or "here's what to do next" preamble. With `--new-window`, the Pick-up-here block that `/session-wrap --end` prints (exact next command + digest + pointer to the rendered `handoff-prompt.md`) IS the final output; emit it as-is.
+4. **Final output is the continuation (or, with `--new-window`, the Pick-up-here block), per step 5.** On default success with a qualified route and a verified Claude destination, the final output is the `/clear`-first recycle shape: one `Run in:` execution-context line, a fenced `/clear` block, then a fenced pair — `/goal "<condition>"` (scoped to the agent-completable automated span, per step 5 of the chain) followed by `/build-phase --plan <path>` — no summary, paraphrase, or "here's what to do next" preamble. Any other destination host gets its verified native invocation or a portable plain-language continuation, and an unqualified route gets the one-line preparation result plus the qualification-first prompt (step 5). Never start or set a goal yourself, and never claim one is armed. With `--new-window`, the Pick-up-here block that `/session-wrap --end` prints (exact next command + digest + pointer to the rendered `handoff-prompt.md`) IS the final output, emitted with its content intact and only the window steps the destination supports (step 5).
 
 ---
 
@@ -61,6 +67,85 @@ Before anything else, confirm `--plan` was given and names a readable file. If n
 bare `/plan-expedite`), emit the halt template with `<sub-skill name>` = `input`, `Plan state:
 unchanged` and `GitHub state: unchanged`; invoke no sub-skill and write no state file. Never
 guess a plan: a guessed plan would flow into repo-sync's issue mutation.
+
+### Route compatibility check
+
+Right after the input check, and still before any state write, rename or stage invocation,
+check read-only whether this run and the build it prepares can run under the plan's and the
+operator's constraints. Read the plan, the project instructions it cites, and the installed
+adapters and cores of the stages and of `build-phase`/`build-step` for the destination host
+(the host running this session unless the operator named another). Run no probe, dispatch no
+agent and start no service for this check; never spend capacity the build needs.
+
+- **Preparation effects:** the autofix plan edits, plan-redline's proposal file, repo-sync's
+  issue creation and edits, the commit and push `task-handoff --next-task` performs, and with
+  `--new-window` session-wrap's render and Git step (which may commit code changes and
+  push) — against restrictions on writes, publication, preserving existing dirty work,
+  commits or pushes. Inspect the actual scoped Git behavior of both handoff skills.
+- **Build constraints:** build-step's worktree, stash and pre-dirty-path handling and
+  build-phase's checkpoint commits against a preserved dirty checkout or a no-stage/no-commit
+  rule; test and validation time against the authorized budget or deadline; and whether the
+  fresh-context agents and required independent review the destination adapters require are
+  available. Note capacity only when observable: lifetime or thread capacity differs from
+  active concurrency, finished agents may still count, and no release tool is assumed.
+  Do not suggest an undocumented thread-limit or setting change. Name a capacity
+  control only when its supported mechanism is known; a fresh session is conditional
+  recovery, not proof of capacity. Assess capabilities per role: a documented
+  reviewer-only CLI route may satisfy the required review contract. Do not narrow
+  dispatch options the selected review adapter permits, or require build-orchestration
+  capabilities for a non-pipeline experiment.
+
+Classify the build route:
+
+- **Incompatible** — a documented effect conflicts with a stated constraint, a required runtime capability has an unresolved failure observed in the
+  destination session (for example its current dispatch error), or the authorized deadline has passed.
+  Halt with the halt template (`input`; on a fresh run `Plan state: unchanged`, `GitHub state:
+  unchanged`, no state file). The Reason names the conflict and an alternative through
+  `user-build-route`, or the constraint change or new time authorization needed. An alternative
+  is supported only when its required capabilities (including independent review) are evidenced
+  on its named host; otherwise label it conditional and name what must be established.
+  A reviewer-only CLI fallback is not evidence for build orchestration. This run starts none
+  of the alternatives. Never relax an operator restriction to make the route fit.
+- **Unqualified** — compatible, but a required capability depends on a runtime acceptance
+  gate not observed passing in the session that will run the build. With `--new-window` that
+  is always a fresh session: a qualification from this or an earlier session certifies
+  nothing there. A failure from a different session is retained as historical evidence, not a
+  permanent incompatibility: a fresh destination is unqualified unless a session-independent
+  conflict remains. A reported change is not proof of recovery; its native gate must pass.
+  Preparation proceeds; step 5 separates its success from the unqualified build.
+- **Qualified** — compatible, and the destination adapter documents every required capability
+  as host-provided, or its runtime gate was observed passing in this same session, which will
+  run the build. This is not a capacity certificate: build-phase's native gates still
+  revalidate at dispatch.
+
+Repeat the check, rerunning no completed stage, on every resume (including one where every
+stage is already completed), immediately before `repo-sync`, before `task-handoff`, and before
+the final output, because autofix, a fold or the host can change the facts. An incompatible
+recheck halts with the halt template (`input`, with the actual plan and GitHub state) and
+sets `halted_at` to the stage about to run, or `final-output` after the last stage;
+completed stages stay completed. An unqualified build never invalidates completed preparation.
+
+**Reconcile an already-written continuation.** On a late recheck or all-completed resume,
+compare the newly selected continuation with this session's saved Next Action. If it changes,
+use one authorized `task-handoff --loop` checkpoint to replace that owned Next Action (or its
+whole locked bundle) with the safe continuation or blocked recovery instruction, retaining
+scope, deadline and review obligations. This is a material-change checkpoint, not a repeated
+preparation stage; do not invoke `--next-task` again or repeat issue mutations. Verify the
+checkpoint result before emitting a runnable continuation. If identity, the write permission,
+or the checkpoint is unavailable, emit the halt template with `halted_at: final-output`,
+explicitly state that the saved Next Action is superseded and must not be run, and print no
+build/goal continuation. Never borrow another session's state or hand-edit the derived rollup.
+An unchanged blocker creates no duplicate checkpoint. All-completed resume handles
+`final-output` by this reconciliation, never by inventing a sub-skill of that name.
+In new-window mode, a changed continuation also supersedes any already-rendered
+`handoff-prompt.md`; a session checkpoint alone does not refresh that file. Across sessions,
+the old session's Next Action is likewise superseded and is never this session's write target.
+Unless the applicable rendered handoff has been refreshed through the supported session-wrap
+path with its side effects authorized, halt at `final-output`, name the stale rendered handoff
+and old Next Action as superseded and not to be run, and emit no build/goal continuation.
+Do not automatically rerun `session-wrap --end` or preparation to repair the stale rendering.
+Record these invalidations once in the current session's checkpoint when allowed, otherwise
+in the halt response; never claim the stale bytes were removed or updated when they were not.
 
 ### Stale-plan check (per BPA plan section 5 D9)
 
@@ -100,7 +185,7 @@ advisory pin inside the plan→repo boundary, not a stage, and is never recorded
 
 Logic:
 - If file does not exist: fresh run, execute every stage in the stage list, in order.
-- If file exists AND `abs(current_mtime - state.plan_mtime) <= 1.0` AND the `skill` names in `completed[]` are, in order, an exact prefix of the stage list for the recorded `handoff_mode`: skip those stages. Start from the first stage after the prefix (or from where `halted_at` left off).
+- If file exists AND `abs(current_mtime - state.plan_mtime) <= 1.0` AND the `skill` names in `completed[]` are, in order, an exact prefix of the stage list for the recorded `handoff_mode`: skip those stages. Start from the first stage after the prefix (or from where `halted_at` left off). When the prefix is the whole stage list, run no stage: after the route compatibility recheck, emit the continuation step 5 assigns to the current classification. If that differs from the saved Next Action, apply "Reconcile an already-written continuation" before rendering; never rerun a preparation stage to rewrite it.
 - If file exists BUT the mtime difference exceeds 1 second: plan was edited since last run; discard the resume state and start fresh.
 - If `completed[]` is not an in-order prefix of the stage list — for example a state file written before plan-redline joined the chain, which lists `plan-wrap` without `plan-redline` — discard the resume state and start fresh. Never run a stage out of order, and never run plan-redline after plan-wrap without re-running plan-wrap.
 - **Malformed state file:** if `.plan-expedite-state` exists but is invalid JSON, missing required keys (`plan_path`, `plan_mtime`, `completed`, `halted_at`), or has the wrong shape (e.g., `plan_mtime` not numeric, `completed` not a list), log a warning citing the malformation, rename the bad file to `.plan-expedite-state.malformed-<timestamp>` for forensics, and treat as a fresh run (proceed with every stage). Do NOT halt — an autonomous prep skill should self-heal from corrupted resume state, not require operator intervention to clear it.
@@ -171,18 +256,66 @@ Call each sub-skill below through the host's skill-invocation adapter, in order.
    borrow another session's identity, or pass a plan to a conflicting mutation target.
    With no conflicting pin and a verified plan repo, continue even if the optional pin failed.
    Nothing is recorded in `.plan-expedite-state` (the pin lives in task-state).
+   After the target is verified, repeat the route compatibility check before `repo-sync`.
 
 4. **Invoke `repo-sync` through the host's skill-invocation adapter** with `args: "--plan <plan-path>"` (autonomous default per Step 6 — no `--dry-run`).
    - Same success / halt criteria (the result rules above).
 
-5. **Invoke the final sub-skill, then emit the continue command** — depends on `--new-window`:
+5. **Invoke the final sub-skill, then emit the continuation** — depends on `--new-window` and on
+   the classification from the route compatibility recheck that runs before `task-handoff`
+   (an incompatible result has already halted).
+
+   **Choose the continuation.** The written Next Action and the screen carry the same one:
+   - **Qualified route, verified Claude destination:** the `/clear`-first shape below, with the
+     operator-typed `/goal` + `/build-phase` pair.
+   - **Qualified route, any other destination:** `build-phase` for `<plan-path>` in the
+     destination host's verified native invocation, or a portable plain-language prompt naming
+     the skill and plan. Include a goal command only when that host's goal support is verified
+     (its installed adapter, or the active host's own goal tools); otherwise carry the
+     `<condition>` as text. Never claim a host lacks goal support it may have, and never
+     render Claude's `/clear`, `Run in:` line or tier there.
+   - **Unqualified route:** first one line, `Preparation complete; build not yet qualified on
+     <host>: <capability and gate that must pass>`, then ONE fenced qualification-first prompt:
+     run `build-phase` for `<plan-path>` attended, in that host's verified invocation or plain
+     language, so its own preflight and acceptance gates qualify the route at dispatch; on a
+     failed gate, stop and report the blocker. It contains no goal command; it may give the
+     `<condition>` as text for a goal the operator sets only after those gates pass.
+   - **Continuation obligations (every continuation and written Next Action).** Keep the plan's
+     scope, required independent reviews and acceptance, and any absolute deadline or budget
+     the plan or operator already authorized, with elapsed time from its original start. Never
+     print unchecked elapsed/remaining-time arithmetic: carry the exact start and deadline and
+     have the runner calculate from its current clock, or report only verified calculations.
+     Preserve the selected stages' gates by reference instead of copying their probe protocol
+     or inventing narrower reviewer-dispatch requirements in the continuation.
+     Never
+     invent a deadline, and never let `/clear`, a resume, a restart or a new window reset one.
+     When a deadline exists, tell the runner to track it before starting and throughout execution,
+     including at step boundaries; stop work at the deadline, allowing only owned-resource
+     cleanup and a bounded status handoff. Start no new work after it, record the blocker and
+     name the new time authorization needed. If it cannot track the deadline, stop before work. A qualification-first prompt never changes
+     workflow or substitutes self-review. The `<condition>` stays the success condition only;
+     halting is never part of it. A continuation a host may run as a persistent goal also
+     carries, in the written Next Action (and in the prompt text when plain language), this
+     failure rule: on a blocker, record ONE compact blocker — stage, actual error, unfinished
+     checks, completed work, original deadline, cleanup, external change needed — in this
+     session's existing private state through a supported no-commit checkpoint
+     (`task-handoff --loop`), or in chat when that is unavailable or the plan forbids the
+     write; never assume another session's identity. Respect the host's own blocked-goal
+     threshold (three consecutive blocked goal turns where the host uses that rule): before
+     it, only cheap read-only state revalidation and genuinely independent allowed work, with
+     no repeated probes, issues, handoffs or status messages; at it, mark the goal blocked
+     once when the host's full blocked conditions are met, including inability to make
+     meaningful independent progress. Never mark the unfinished objective complete. A user resume restarts only the
+     host's audit, not the deadline. None of this changes build-phase's gates.
 
    **Default (no `--new-window`):** Invoke `task-handoff` through the host's skill-invocation adapter with
    `args: "--next-task build-phase"` (it writes current.md + MEMORY + push — the durable
-   handoff state).
-   - Then emit the continue commands verbatim as the `/plan-expedite` final output — the
+   handoff state), with the written Next Action set to the chosen continuation and its
+   obligations.
+   - Then emit the chosen continuation as the `/plan-expedite` final output. For the qualified
+     Claude case it is the
      **`/clear`-first recycle shape** (operator preference, folded 2026-07-21 from
-     `feedback_plan_expedite_clear_before_build`): on Claude, one execution-context line, then
+     `feedback_plan_expedite_clear_before_build`): one execution-context line, then
      TWO fenced blocks in order, no preamble, no summary. The execution-context line
      (`command-presentation.md`) is the Claude rendering: emit it only on the Claude host,
      where `/clear` is a window primitive and `model-tiering.md` owns the tier. It sits
@@ -192,21 +325,27 @@ Call each sub-skill below through the host's skill-invocation adapter, in order.
      `dev` for coding-root work, an absolute path when the short name is ambiguous. `<tier>` is
      `Opus (default)` unless that tiering policy selects otherwise; never name a
      fable tier for this build-bearing pair. The line is control metadata, not a summary or
-     preamble. Any other host omits the line and emits the two blocks alone (the canonical
-     no-preamble output); it never describes its own session as `this window after /clear`
-     and never names a Claude tier as its model. Block 1 is the fresh-context recycle — safe
+     preamble. Any other destination emits the continuation chosen above instead; it never
+     describes its own session as `this window after /clear` and never names a Claude tier
+     as its model. Block 1 is the fresh-context recycle — safe
      because `task-handoff --next-task` just wrote the durable state and the `SessionStart`
      hook (matcher `compact|resume|clear`) re-injects it after the clear:
      ```
      /clear
      ```
-     Block 2 — pasted after the resume echo appears — is the pair (goal first: the `/goal`
-     arms the Stop hook over the automated span and is user-typed, a skill cannot arm
-     `/goal` itself, so it sits above `/build-phase`):
+     Block 2 — pasted after the resume echo appears — is the pair (goal first: the operator
+     types the `/goal` to set the Stop hook over the automated span; a skill cannot set
+     `/goal` itself and never reports it armed, so it sits above `/build-phase`):
      ```
      /goal "<condition>"
      /build-phase --plan <plan-path>
      ```
+     Keep the slash-command block to exactly the two commands. Put deadline and failure/re-drive
+     obligations in the saved Next Action and in a short plain-text paragraph immediately before
+     Block 2 (an exception to the no-preamble rule). Do not append prose as command arguments
+     or mix failure instructions into the goal's success condition. If that host cannot receive
+     the commands with their surrounding obligations reliably, emit one self-contained
+     plain-language continuation instead of a slash-command block.
      Two separate blocks, never one — the `/clear` is an observation point (wait for the
      resume echo) per `command-presentation.md`.
    - **Derive the `<condition>` from the plan, scoped to the AGENT-COMPLETABLE slice.**
@@ -239,18 +378,20 @@ Call each sub-skill below through the host's skill-invocation adapter, in order.
 
    **`--new-window` mode:** TWO invocations, in this order — the durable write MUST land
    before session-wrap runs because `handoff-prompt.md` is a RENDERING of `current.md`:
-   the render can only carry state already on disk. The default transition RECYCLES this
-   window: `/clear` fires the SessionStart re-inject hook (matcher: `compact|resume|clear`),
-   then the operator pastes the pair. The rendered handoff + fresh-window opener remain
-   the closed-window alternative (the hook does not fire on plain startup):
+   the render can only carry state already on disk. On Claude the default transition RECYCLES
+   this window: `/clear` fires the SessionStart re-inject hook (matcher:
+   `compact|resume|clear`), then the operator pastes the continuation. The rendered handoff +
+   fresh-window opener remain the closed-window alternative (the hook does not fire on plain
+   startup). The window that runs the build is a fresh session, so its runtime qualification
+   is never inherited from this one (route compatibility check):
 
    1. **Invoke `task-handoff` through the host's skill-invocation adapter** with `args: "--next-task build-phase"`
       — the durable `current.md` write (finished prep lands in Completed; WIP, Next
       Action, and Status repoint at the build; MEMORY.md updated; commit + push). Set the
-      written Next Action to the SAME agent-completable `/goal "<condition>"` line
-      (derived per the Default-branch bullet above) followed by the `/build-phase --plan
-      <plan-path>` command, goal line first, so the rendered handoff carries the armed
-      pair.
+      written Next Action to the continuation chosen above with its obligations — for the
+      qualified Claude case, the agent-completable `/goal "<condition>"` line (derived per
+      the Default-branch bullet above) followed by the `/build-phase --plan <plan-path>`
+      command, goal line first — so the rendered handoff carries it.
    2. **Invoke `session-wrap` through the host's skill-invocation adapter** with `args: "--end <plan-path>"` —
       `--end` explicitly, never bare: end-window is the route `--new-window` wants, and a
       bare invocation triages and may route `continue`. session-wrap renders the handoff
@@ -259,16 +400,20 @@ Call each sub-skill below through the host's skill-invocation adapter, in order.
       screen contract: digest + pointer first, then numbered Step blocks — Step 1
       `/clear`, an optional `/model <pinned-default>` step when the session's model was
       explicitly overridden this session, and the FINAL fenced block carrying the
-      `/goal` + `/build-phase` pair verbatim (goal line first). No word floor.
+      written continuation verbatim (for the qualified Claude case, the `/goal` +
+      `/build-phase` pair, goal line first). No word floor.
       session-wrap's route step 1 checkpoint must preserve step 1's Next Action
-      verbatim (its no-regress clause) — the pair survives into the render and into
-      the final Step block.
-   - Emit session-wrap's Pick-up-here block verbatim as the `/plan-expedite` final
-     output. Do not paraphrase, do not summarize, do not add a preamble. VERIFY the
-     `/goal` + `/build-phase` pair is the block's final fenced Step — the last lines on
-     screen are what the operator runs. If the block arrived without the pair
-     (defensive), append a final Step carrying both lines in ONE fenced code block —
-     never as bare indented lines.
+      verbatim (its no-regress clause) — the continuation survives into the render and
+      into the final Step block.
+   - Emit session-wrap's Pick-up-here block as the `/plan-expedite` final output. Do not
+     paraphrase, do not summarize, do not add a preamble (the unqualified-route line above
+     the final Step is the one exception). Keep its digest, locators and Next Action exact,
+     but render only window steps the destination supports: the `/clear` and `/model` steps
+     only on a Claude destination, and a goal command only per "Choose the continuation";
+     drop an unsupported step rather than translating it into an invented command. VERIFY
+     the chosen continuation is the block's final fenced Step — the last lines on screen
+     are what the operator runs. If the block arrived without it (defensive), append a
+     final Step carrying it in ONE fenced code block — never as bare indented lines.
    - Record `handoff_mode: "new-window"` in `.plan-expedite-state`.
 
    The `--new-window` flag is the escape hatch for users who want the next step in a
@@ -288,7 +433,7 @@ To resume: fix the cited issue, then re-run /plan-expedite --plan <path>
            (already-completed sub-skills are skipped via state inference from .plan-expedite-state)
 ```
 
-Stop without producing the final continue command / Pick-up-here block after printing. The `.plan-expedite-state` records `halted_at: <sub-skill name>` for resume (a failed input check writes no state).
+Stop without producing the final continue command / Pick-up-here block after printing. The `.plan-expedite-state` records `halted_at: <sub-skill name>` for resume (a failed input check before the first stage writes no state; a failed route compatibility recheck later records the stage about to run, or `final-output` after the last stage).
 
 Use the same five-line template regardless of which sub-skill fails (plan-review, plan-redline, plan-wrap, repo-sync, task-handoff, session-wrap) or whether the input check failed; per-sub-skill diagnostic detail belongs in the cited stderr, not in `/plan-expedite`'s template.
 
@@ -303,12 +448,14 @@ Use the same five-line template regardless of which sub-skill fails (plan-review
 | `/user-project` | Advisory project pin at the plan→repo boundary (never a stage) |
 | `/task-handoff` | Durable boundary write (`--next-task build-phase`) in both modes |
 | `/session-wrap` | End-window handoff sub-skill (`--new-window` only, invoked `--end` AFTER the durable `task-handoff --next-task` write; renders `handoff-prompt.md` + prints the Pick-up-here block) |
-| `/build-phase` | Continues in-window from the `/goal` + `/build-phase` commands /plan-expedite emits (the `/goal` arms the Stop hook over the automated span; or, with `--new-window`, the fresh window opens from the rendered handoff carrying both) |
+| `/build-phase` | Runs from the continuation /plan-expedite emits: on a verified Claude destination with a qualified route, the operator-typed `/goal` + `/build-phase` pair; elsewhere the host's verified invocation or a plain-language prompt; when unqualified, an attended qualification-first run with no goal (with `--new-window`, the fresh window opens from the rendered handoff carrying it). Its native gates revalidate at dispatch |
+| `/user-build-route` | Recommendation-only router; a halt Reason may name it for a supported alternative route, never run by this skill |
 | `/build-queue` | Invokes `/plan-expedite --plan <abs-path>` per queue item; a halt parks the item |
 
 ## Limitations
 
 - Resume state lives in a single `.plan-expedite-state` file in the project root. Multiple concurrent `/plan-expedite` invocations on the same plan have undefined behavior — don't do that.
 - Concurrent operator edits to `.plan-expedite-state` during a run have undefined behavior. Don't edit the file while `/plan-expedite` is running.
+- The route compatibility check reads documentation and observable state only; it cannot certify capacity or runtime capability, which build-phase's native gates establish at dispatch.
 - Sub-skill failures halt the chain; resume requires manual operator inspection. By design — autofix's promise is to handle the boring cases, not the surprising ones.
 - Redline feedback is asynchronous: the chain publishes the proposal and continues, so agent-defaulted items flow into wrap, issues and the build as written. Feedback that arrives after repo-sync costs issue edits (the N+1 cost): through a `/plan-expedite` re-run before the build starts, or through `/plan-review` + `/plan-wrap` + `/repo-sync` after it starts (never a `/plan-expedite` re-run mid-build). To fold feedback before issues are minted, use the review → redline → expedite path under "When NOT to use".

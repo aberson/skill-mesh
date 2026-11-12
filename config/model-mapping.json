@@ -358,6 +358,13 @@
       "local": false,
       "notes": "Ported - shared core + GPT/Claude wrappers"
     },
+    "user-build-route": {
+      "default_model": "claude",
+      "claude": true,
+      "gpt": true,
+      "local": false,
+      "notes": "Recommendation-only routing; core plus all three host adapters. Local capability not assessed."
+    },
     "user-debug": {
       "default_model": "claude",
       "claude": true,

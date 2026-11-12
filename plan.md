@@ -1,5 +1,35 @@
 # Skill Mesh plan
 
+## Maintenance - user-build-route rebased onto v2.0.4 (2026-11-12)
+
+The `user-build-route` CREATE and `plan-expedite` UPDATE recorded below (2026-10-31
+and 2026-11-01) were written in a checkout that predates v2.0.3 and v2.0.4 and were
+never committed. As the operator directed, they were rebased onto `origin/main`
+(`2f451d5`) in an isolated worktree. The original checkout was left untouched, and a
+frozen copy of the work, with SHA-256 hashes, was kept outside the repository.
+
+The hand-written sources applied unchanged; the three new provider adapters were
+normalized to LF. The generator rosters gained `user-build-route` beside
+`code-consigliere` and `user-dr`, and `python tools/gen_manifest.py` regenerated the
+three catalog artifacts. The catalog is 60 skills: 57 portable and 3 provider-native.
+Codex catalog headroom is 421 characters. The 2026-10-31 entry's statement that the
+manifest writer now produces all three artifacts is superseded: v2.0.3 already
+supplied that writer, and this change keeps only its own LF output.
+
+Gate evidence, each suite run on its own:
+
+- `tests/package-integrity`: 698 passed, 1 failed. The failure was an artifact of
+  the rebase: unmerged index entries the source-authority check refuses. After the
+  resolved files were staged, that test file passed (34 passed).
+- `tests/router`: 63 passed, 1 skipped.
+- `tests/distributions/test_distributions.py`: 176 passed.
+- `tests/telemetry`: 5 passed.
+
+`tests/smoke`, `tests/release` and `release.ps1`'s staged package checks were not run
+before this record. The full repository-root suite was not run and is INCOMPLETE.
+Which gate this content-only catalog change needs is the operator's choice. No
+numbered step is advanced; nothing is installed, pushed or released.
+
 ## Maintenance - user-dr (2026-11-11)
 
 The operator requested a new portable decision-register skill on 2026-11-09:
@@ -42,6 +72,35 @@ Installed from the staged `dist/` into the coding root's Claude and GPT profiles
 (161 and 147 files) and the user home's Codex profile (147 files). Every file in
 each released profile is present and byte-identical after install. No
 real-project trial of `user-dr` has run yet.
+## Maintenance - capability-aware routing (2026-11-01)
+
+The operator authorized the seed repair using Opus workers. `user-build-route`
+now checks execution compatibility separately from workload fit; `plan-expedite`
+checks constraints before mutations and emits destination-appropriate,
+qualification-first continuations when runtime support is unknown. Recovery
+preserves original deadlines, review obligations and the host's blocked audit;
+stale saved or rendered continuations are explicitly invalidated.
+
+The [repair record](documentation/capability-aware-routing-repair.md) owns the
+scope, independent Opus review, generated-profile behavioral observations and
+limitations. All three distributions built; 97 focused tests passed. Validation
+uses a disposable installed profile. No numbered step is advanced, daily profile
+updated, commit or push made, or full repository-root DONE gate claimed.
+
+## Maintenance - user-build-route (2026-10-31)
+
+Added a recommendation-only routing skill for the core pipeline, bounded goals
+and direct tasks, with all three provider adapters. The operator authorized a
+scoped catalog exception including inventory generation: the manifest writer now
+reuses the existing pure inventory builder to produce all three artifacts. This
+is not completion of Phase CL Step 111 and does not authorize other catalog changes.
+
+The [validation record](documentation/user-build-route-validation.md) owns the
+request, manual routing examples, checks and limitations. No numbered step is
+advanced; no installed profile is changed. All three profiles built. The initial
+catalog run had 693 passes and two failures; both repairs passed in the 117-test
+focused rerun. Final lifecycle checks passed 44 tests and distribution checks
+passed 3. The full repository-root suite was not run.
 
 ## Step 153 accepted under scoped closeout exception (2026-09-24)
 

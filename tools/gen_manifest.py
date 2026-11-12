@@ -15,15 +15,8 @@ regeneration fed skill-mesh's build product back into skill-mesh's manifest: 47 
 losing `.claude/skills-gpt/judge-ui/calibration-notes.md`. An input that a
 consumer-side install can mutate is not a generator input.
 
-LINE ENDINGS. This repository has no .gitattributes and core.autocrlf=true, so ONE
-git blob is CRLF in a Windows checkout and LF in a POSIX one. `write_artifacts`
-therefore writes the PLATFORM line ending, matching whatever the checkout produced,
-and the raw bytes of a regenerated artifact are a property of the CLONE rather than
-of its content. Any comparison against a committed copy must normalize (strip a
-UTF-8 BOM, then CRLF/CR -> LF) on BOTH sides -- the same rule the release tooling
-already applies to `dist/`. The regeneration gate in
-tests/package-integrity/test_manifest_contract.py does exactly that, so it cannot
-pass in a worktree and fail in the main checkout.
+LINE ENDINGS. Generation emits UTF-8 LF on every host. Regeneration checks normalize
+older checkout artifacts (strip BOM, then CRLF/CR -> LF), as release tooling does.
 
 Authoritative structural data (names, status, local_capable, capabilities,
 descriptions, support assets) is encoded here as checked-in constants. Four of those
@@ -71,7 +64,8 @@ PORTABLE = [
     "review-proof", "review-uat", "session-wrap", "skill-eval-setup",
     "skill-evolve", "skill-iterate", "task-handoff", "test-prune",
     "tier-escalate", "tier-offload", "user-afterparty", "user-brainstorm",
-    "user-debug", "user-dr", "user-draft", "user-gateway", "user-lavishify", "user-learn",
+    "user-build-route", "user-debug", "user-dr", "user-draft", "user-gateway",
+    "user-lavishify", "user-learn",
     "user-orient", "user-pm", "user-project", "user-shakedown", "user-uat",
     "user-walkthrough", "user-wrap",
 ]
@@ -85,7 +79,7 @@ NATIVE = ["claude-oauth-auth", "context-slim", "judge-motion"]
 # what `status`, `counts["portable"]`, `counts["provider_native"]` and the README's
 # GPT-capable line all mean. A codex adapter is ADDITIVE on top of a record that is
 # already portable-or-native: it never moves a skill between those two buckets, so
-# EXPECTED_TOTAL / EXPECTED_PORTABLE / EXPECTED_NATIVE are 59/56/3 and every existing
+# EXPECTED_TOTAL / EXPECTED_PORTABLE / EXPECTED_NATIVE are 60/57/3 and every existing
 # count keeps its exact meaning. Modelling codex as a third status instead would
 # redefine `portable` for all catalog records and invalidate every committed tally.
 #
@@ -122,7 +116,8 @@ CODEX = [
     "review-proof", "review-uat", "session-wrap", "skill-eval-setup",
     "skill-evolve", "skill-iterate", "task-handoff", "test-prune",
     "tier-escalate", "tier-offload", "user-afterparty", "user-brainstorm",
-    "user-debug", "user-dr", "user-draft", "user-gateway", "user-lavishify", "user-learn",
+    "user-build-route", "user-debug", "user-dr", "user-draft", "user-gateway",
+    "user-lavishify", "user-learn",
     "user-orient", "user-pm", "user-project", "user-shakedown", "user-uat",
     "user-walkthrough", "user-wrap",
 ]
@@ -274,6 +269,7 @@ DESCRIPTIONS = {
     "tier-offload": "Find sub-tasks safe to offload to a local model; emit an inventory and router config.",
     "user-afterparty": "Milestone hygiene front door chaining the hygiene skills into one report plus cleanup.",
     "user-brainstorm": "Brainstorm a topic through gap-fill rounds, then write a reference doc set per topic.",
+    "user-build-route": "Recommend pipeline, bounded goal, or direct task with rationale and a pasteable prompt; advice only.",
     "user-debug": "Diagnose and fix a bug end-to-end with forced primary-source investigation first.",
     "user-dr": "Theme-grouped decision register across plans and seeds; checks conflicts and records answers.",
     "user-draft": "Refine rough thoughts into a polished prompt or a ready-to-paste goal condition.",
@@ -410,6 +406,7 @@ SUPPORT_ASSETS = {
     ],
     "user-afterparty": [],
     "user-brainstorm": [("skills", "evals/")],
+    "user-build-route": [],
     "user-debug": [("skills", "evals/")],
     "user-dr": [],
     "user-draft": [("skills", "evals.seed/")],
@@ -427,7 +424,7 @@ SUPPORT_ASSETS = {
 
 # Spelled-out expectations for the tree enumeration below. The same three numbers are
 # asserted independently by tests/package-integrity/test_manifest_contract.py.
-EXPECTED_TOTAL, EXPECTED_PORTABLE, EXPECTED_NATIVE = 59, 56, 3
+EXPECTED_TOTAL, EXPECTED_PORTABLE, EXPECTED_NATIVE = 60, 57, 3
 
 
 def skill_support_assets(name: str):
@@ -732,7 +729,7 @@ def build():
 
 def serialize(doc) -> str:
     """The ONE serializer for all three artifacts: UTF-8, no BOM, 2-space indent, trailing
-    newline. Returns TEXT with "\\n" separators; the writer below decides the bytes."""
+    newline. Returns TEXT with "\\n" separators; the writer emits UTF-8 LF."""
     return json.dumps(doc, indent=2) + "\n"
 
 
@@ -760,23 +757,15 @@ def write_artifacts(out_root: Path):
     `out_root` is a parameter so the regeneration gate can drive the REAL production
     write path into a temporary tree instead of over the committed files.
 
-    LINE ENDINGS -- deliberate, and the reason every comparison against these files
-    normalizes. `write_text` emits the PLATFORM line ending, which is the same
-    convention git's checkout applies here: this repository has no .gitattributes and
-    core.autocrlf=true, so the committed copies are CRLF in a Windows checkout and LF
-    in a POSIX one. Matching the platform is what keeps `git status` clean after a
-    regeneration on either. It also means the raw bytes of a regenerated artifact are
-    a property of the CHECKOUT, never of the content -- so a gate that compares them
-    raw passes in one clone and fails in another. Normalize (strip a UTF-8 BOM, then
-    CRLF/CR -> LF) on BOTH sides, exactly as the release tooling already does for
-    `dist/`.
+    Emit UTF-8 LF consistently on every host. Consumers and regeneration checks
+    continue normalizing line endings for older checkout artifacts.
     """
     manifest, fixture = build()
     inventory = _build_inventory(manifest)
     for rel, doc in zip(ARTIFACTS, (manifest, fixture, inventory)):
         path = out_root / rel
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(serialize(doc), encoding="utf-8")
+        path.write_bytes(serialize(doc).encode("utf-8"))
     return manifest
 
 

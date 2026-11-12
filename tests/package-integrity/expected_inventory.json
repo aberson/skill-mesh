@@ -1,16 +1,16 @@
 {
   "note": "Authoritative expected inventory for package-integrity tests. Committed so the public package tests need no private/legacy source. Regenerate with tools/gen_manifest.py.",
   "counts": {
-    "total": 59,
-    "portable": 56,
+    "total": 60,
+    "portable": 57,
     "provider_native": 3,
-    "claude": 59,
-    "gpt": 56,
-    "codex": 56,
+    "claude": 60,
+    "gpt": 57,
+    "codex": 57,
     "local_capable": 21,
     "sub_agent": 20,
     "vision": 2,
-    "filesystem": 59
+    "filesystem": 60
   },
   "portable": [
     "build-observer",
@@ -56,6 +56,7 @@
     "tier-offload",
     "user-afterparty",
     "user-brainstorm",
+    "user-build-route",
     "user-debug",
     "user-dr",
     "user-draft",
@@ -119,6 +120,7 @@
     "tier-offload",
     "user-afterparty",
     "user-brainstorm",
+    "user-build-route",
     "user-debug",
     "user-dr",
     "user-draft",
@@ -1152,6 +1154,21 @@
           "dest": "skills/user-brainstorm/evals/"
         }
       ]
+    },
+    {
+      "name": "user-build-route",
+      "status": "portable",
+      "local_capable": false,
+      "capabilities": [
+        "filesystem"
+      ],
+      "migration": {
+        "legacy_core": ".claude/skills-gpt/user-build-route/SKILL-core.md",
+        "legacy_claude_launcher": ".claude/skills/user-build-route/SKILL.md",
+        "legacy_claude_adapter": ".claude/skills/user-build-route/SKILL-claude.md",
+        "legacy_gpt": ".claude/skills-gpt/user-build-route/SKILL-gpt.md"
+      },
+      "support_assets": []
     },
     {
       "name": "user-debug",

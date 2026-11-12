@@ -44,6 +44,15 @@ before mutation. This is authority for the `user-dr` release work only; it does 
 Phase CL Step 111 or the full phase complete, waive any other lifecycle gate, or authorize any
 other catalog change.
 
+**Scoped operator exception (2026-10-31):** the operator authorized creation of
+`user-build-route`, including the inventory-generation changes needed to register
+and validate it. The work was first written in a checkout that predates v2.0.3 and
+v2.0.4; on 2026-11-12 it was rebased onto `origin/main` in an isolated worktree,
+where the code-consigliere exception above already supplies the three-artifact
+writer. The one generator change it keeps is that `tools/gen_manifest.py` writes
+UTF-8 LF on every host. The exception does not complete Step 111 or open
+unrestricted catalog mutations. See [the validation record](user-build-route-validation.md).
+
 ## 1. Prerequisite preflight — recorded evidence
 
 Phase CL execution is gated on four facts, all four checked and satisfied for Step 110. The
@@ -334,7 +343,7 @@ review, and qualification gates in that plan are authorized, eligibility remains
 Claude-only, and every later native mutation still takes
 `PROVIDER_NATIVE_REVIEW_REQUIRED`.
 
-The catalog at the time of writing is 59 skills: 56 portable and 3 provider-native.
+The catalog at the time of writing is 60 skills: 57 portable and 3 provider-native.
 
 ## 5. The five operations
 

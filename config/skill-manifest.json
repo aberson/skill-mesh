@@ -67,16 +67,16 @@
     }
   },
   "counts": {
-    "total": 59,
-    "portable": 56,
+    "total": 60,
+    "portable": 57,
     "provider_native": 3,
-    "claude": 59,
-    "gpt": 56,
-    "codex": 56,
+    "claude": 60,
+    "gpt": 57,
+    "codex": 57,
     "local_capable": 21,
     "sub_agent": 20,
     "vision": 2,
-    "filesystem": 59
+    "filesystem": 60
   },
   "global_support_assets": [
     {
@@ -1401,6 +1401,28 @@
           "dest": "skills/user-brainstorm/evals/"
         }
       ]
+    },
+    {
+      "name": "user-build-route",
+      "status": "portable",
+      "description": "Recommend pipeline, bounded goal, or direct task with rationale and a pasteable prompt; advice only.",
+      "core": "skills/user-build-route/core.md",
+      "providers": {
+        "claude": "skills/user-build-route/providers/claude.md",
+        "gpt": "skills/user-build-route/providers/gpt.md",
+        "codex": "skills/user-build-route/providers/codex.md"
+      },
+      "capabilities": [
+        "filesystem"
+      ],
+      "local_capable": false,
+      "migration": {
+        "legacy_core": ".claude/skills-gpt/user-build-route/SKILL-core.md",
+        "legacy_claude_launcher": ".claude/skills/user-build-route/SKILL.md",
+        "legacy_claude_adapter": ".claude/skills/user-build-route/SKILL-claude.md",
+        "legacy_gpt": ".claude/skills-gpt/user-build-route/SKILL-gpt.md"
+      },
+      "support_assets": []
     },
     {
       "name": "user-debug",
