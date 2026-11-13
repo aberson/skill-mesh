@@ -44,7 +44,7 @@ before mutation. This is authority for the `user-dr` release work only; it does 
 Phase CL Step 111 or the full phase complete, waive any other lifecycle gate, or authorize any
 other catalog change.
 
-**Scoped v3 catalog exception (2026-11-12).** The operator authorized one scoped exception for the v3 catalog cleanup batch: retiring `goblin-suggest`, `goblin-sweep`, `goblin-do`, `judge-motion` and `user-lavishify`; folding `user-shakedown` into `user-walkthrough` and `plan-trim` into `plan-merge`; moving `build-observer` and `observatory-doctor` out; creating `user-fermize`; updating `user-afterparty`; replacing `user-project` with a script; and deleting `user-orient` (see [the v3 catalog cleanup plan](v3-catalog-cleanup-plan.md) and [the v3 user-pm plan](v3-user-pm-revamp-plan.md)). Each mutation runs in an isolated worktree from `origin/main` while the original checkout stays dirty and untouched, and the request, base ref, target paths and pre-write hashes are recorded outside the repository before any write. Whether it also covers the `user-pm` core rewrite and the skill inbox hooks UPDATEs awaits the operator's confirmation; no such mutation runs before it. It does not claim Phase CL Step 111 or the full phase complete, waive any other lifecycle gate, or authorize a push, install or release.
+**Scoped v3 catalog exception (2026-11-12).** The operator authorized one scoped exception for the v3 catalog cleanup batch: retiring `goblin-suggest`, `goblin-sweep`, `goblin-do`, `judge-motion` and `user-lavishify`; folding `user-shakedown` into `user-walkthrough` and `plan-trim` into `plan-merge`; moving `build-observer` and `observatory-doctor` out; creating `user-fermize`; updating `user-afterparty`; replacing `user-project` with a script; and deleting `user-orient` (see [the v3 catalog cleanup plan](v3-catalog-cleanup-plan.md) and [the v3 user-pm plan](v3-user-pm-revamp-plan.md)). Each mutation runs in an isolated worktree from `origin/main` while the original checkout stays dirty and untouched, and the request, base ref, target paths and pre-write hashes are recorded outside the repository before any write. On 2026-11-12 the operator confirmed that it also covers the `user-pm` core rewrite and the skill inbox hooks UPDATEs, with the same safeguards. It does not claim Phase CL Step 111 or the full phase complete, waive any other lifecycle gate, or authorize a push, install or release.
 
 **Scoped operator exception (2026-10-31):** the operator authorized creation of
 `user-build-route`, including the inventory-generation changes needed to register
@@ -53,7 +53,9 @@ v2.0.4; on 2026-11-12 it was rebased onto `origin/main` in an isolated worktree,
 where the code-consigliere exception above already supplies the three-artifact
 writer. The one generator change it keeps is that `tools/gen_manifest.py` writes
 UTF-8 LF on every host. The exception does not complete Step 111 or open
-unrestricted catalog mutations. See [the validation record](user-build-route-validation.md).
+unrestricted catalog mutations. On 2026-11-12 the operator also authorized one UPDATE
+of `user-build-route` that fixes four defects a smoke test found after install, with
+the same safeguards. See [the validation record](user-build-route-validation.md).
 
 ## 1. Prerequisite preflight — recorded evidence
 

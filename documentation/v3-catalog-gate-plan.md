@@ -2,6 +2,19 @@
 
 This is the execution copy for build-phase, copied 2026-11-12 from the operator's planning records in the coding root (`<coding-root>/docs/skill-mesh-3-review/`), where its reviews and the operator's answers live. Step status is recorded here from now on.
 
+> **Amended 2026-11-12 (evening), operator answer to afternoon sheet item 44:** "yes, the default
+> is what I want here." The guard plan's section "Reconciliation with the catalog gate plan",
+> points 1 to 6 (`documentation/v3-guard-plan.md` in skill-mesh), overrides this plan where they
+> differ. In short: (1) the selector and class table stay, as the chooser of each change's focused
+> set: `catalog` means the catalog tests, `full` means a larger named focused set, never the
+> repo-root suite; (2) no step and no merge here is gated by a full suite: Phase 1 and Steps 2 to
+> 7, 9 and 11 use their focused set plus the quick repo-wide checks, with saved evidence; (3) the
+> full sweep is one per-release background check, and Step 1's `--durations=0` run is one
+> background run, not a gate (it may count as that sweep); (4) the guard plan's rule wording lands
+> first, and Steps 9 and 11 edit it to add the class table and selector instead of writing a second
+> rule. Where a step below still names a full suite as its gate, read it this way. The step text is
+> not rewritten.
+
 > **Final review (2026-11-12 10:55):** `plan-review` found one blocker, Condition paths that did not
 > resolve from the build-phase project root; fixed in the roots paragraph and Steps 6 and 8 to 11. Record:
 > `catalog-gate-plan-2026-11-12-final-review.md`.
