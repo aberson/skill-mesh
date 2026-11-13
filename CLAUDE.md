@@ -101,6 +101,9 @@ SHA-256 every file under the generated `dist/`:
 powershell -File tools/release.ps1
 ```
 
+The staged run of `tests/package-integrity` inside `tools/release.ps1` is the release's package
+gate, so do not run that suite separately before it.
+
 Regenerate the manifest. **Hermetic since Step 67** — it reads nothing outside this repository, takes
 no argument and no environment variable, and reproduces `config/skill-manifest.json` plus
 `tests/package-integrity/expected_inventory.json` and `skills/inventory.json` exactly. Re-run only when one of the authoritative

@@ -362,6 +362,10 @@ behavior for a portable skill:
 | `DELETE` | Enumerate and disposition every caller, link, asset, fixture, mapping, and installed-ledger effect before removing the canonical identity. Regenerate, verify absence, and let the installer's ledger-owned stale cleanup remove a host profile rather than hand-deleting one. |
 | `RENAME` | Treat the change as one catalog migration: reject collisions, create the new identity, update every live consumer, remove the old identity, regenerate, and prove exact absence of the old name. **A directory move alone is not a rename.** |
 
+A prose-only update cites the shared contract it relies on instead of restating it, and adds no
+new test file; extend an existing contract test only when the update adds a rule that a later
+edit could silently drop.
+
 ## 6. The lifecycle request
 
 Operator prose is normalized into one in-memory request before anything acts on it. The
@@ -473,7 +477,7 @@ normalize request
   -> inspect impact and enumerate references
   -> enforce prerequisite / source / native / resource / collision stops
   -> edit canonical authoring surfaces
-  -> regenerate the derived in-repo artifacts
+  -> regenerate the derived in-repo artifacts whose inputs changed (`tools/gen_manifest.py` only when its constants change)
   -> operation-specific verification
   -> build every required provider profile
   -> focused tests
