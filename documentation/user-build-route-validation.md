@@ -124,3 +124,29 @@ The broad run was not repeated after the repairs; the affected checks were rerun
 as listed. The full repository-root suite was not run. This maintenance change
 advances no numbered plan step and claims no full repository-root DONE gate.
 No commit, push, live installation or recommended task execution occurred.
+
+## UPDATE 2026-11-12: four defects from the post-install smoke test
+
+Authority: afternoon sheet item 45 (2026-11-12) authorized one UPDATE of this
+skill, recorded in the scoped operator exception of
+[the catalog lifecycle](skill-catalog-lifecycle.md). It ran in an isolated
+worktree from base `6b04192eb2efc656d8dcea11e7f60b65fa826f53`; the main checkout
+was not touched. The request, target paths and pre-write hashes were recorded
+outside the repository before the first write. Operation `UPDATE`; no
+description, capability, resource or reference change.
+
+A smoke test of the installed skill on 2026-11-12 found four contract defects.
+Each fix is the smallest change in the existing section; no heading changed.
+
+| Defect | Change |
+|---|---|
+| The output shape left no room for an execution-context line a workspace requires above a next-step block. | Output: the shape carries one optional execution-context line directly above the fenced block, printed only when the instructions in force require it, in their format, from verified destination facts. The three adapters' output normalization now names that line. |
+| The known-conflict rule had no outcome for a conflict that clears by itself. | Check the route can run, known-conflict bullet: a short-lived conflict keeps the route behind a read-only check that stops and reports; no shrinking, constraint change, polling or stopping other work. |
+| Qualify first assumed the entry skill has its own gate. | Unknown-capability bullet: with no separate gate, qualification is an attended first run, after any project-mandated preflight the entry skill does not call. |
+| The route checks did not mention the machine's own state. | Check the route can run: when the route runs on this machine, compare other test or build runs and free memory or disk with what the gates need; reading them is inspection, not a probe. |
+
+`python tools/gen_manifest.py` was re-run and left its three artifacts
+unchanged; all three provider profiles were rebuilt. Focused tests and the
+`tests/router` and `tests/package-integrity` iteration checks ran; their summary
+lines are in the commit message. The full repository-root suite was not run,
+and no push, install or live behavioral trial is claimed.

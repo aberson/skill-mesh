@@ -48,21 +48,35 @@ task's constraints; inspect only, never probe, dispatch an agent or spend
 capacity to answer routing advice. Compare what the route does with what the
 task allows: stash/worktree handling of pre-existing dirty paths, checkpoint
 commits, the commit and push `task-handoff --next-task` performs, issue or other
-publication, test and validation time against the budget, and whether required
-independent review is available on that host.
+publication, test and validation time against the budget, whether required
+independent review is available on that host, and, when the route runs on this
+machine, its current state: other test or build runs already going, and free
+memory or disk against what the route's gates need. Reading the process list
+and resource counters is inspection, not a probe.
 
 - **Known conflict or observed failure** (for example build-phase checkpoint
   commits against a no-commit, preserved dirty checkout, or a recorded dispatch
-  error in the destination session): give no unconditional continuation of that route. Name the conflict and
+  error in the destination session): give no unconditional continuation of that route.
+  Unless the conflict is short-lived (below), name the conflict and
   recommend the smallest supported route that keeps the contract, or the
   constraint change the operator must authorize. Label any alternative whose
   required capabilities or independent review are unverified as conditional.
+  A conflict that clears by itself with no change to the task or its
+  constraints (for example another test run on the same machine that will end)
+  is short-lived: keep the route, and make the next prompt start with a
+  read-only check of that condition that stops and reports if it still holds.
+  Do not shrink the route or ask for a constraint change because of it, and do
+  not poll, wait in a loop or stop the other work.
 - **Unknown runtime capability** (required by the adapter but not observable
   without a probe; this includes a fresh destination after another session's
   failure unless a session-independent conflict remains): recommend the route
   conditionally. The next prompt qualifies
   first through the entry skill's own gate, stops and reports on failure, and
-  starts no unattended goal until that gate passes. Unknown is not a ban.
+  starts no unattended goal until that gate passes. If the entry skill has no
+  separate gate and checks only at dispatch, qualification is an attended first
+  run: the prompt first runs any project-mandated preflight the entry skill does
+  not call, then starts the entry skill attended and stops and reports at the
+  first failed check. Unknown is not a ban.
 - **Capacity:** lifetime or thread capacity differs from active concurrency;
   finished agents may still count. Do not assume a release tool the host does
   not expose or prove capacity by consuming slots the work needs. The native
@@ -164,6 +178,15 @@ Next: <one or two sentences stating the immediate step and any later transition>
 
 Copy and paste:
 ```
+
+One optional line may follow `Copy and paste:`: an execution-context line. When
+the project or workspace instructions in force require a line above a next-step
+block naming where and on what model it runs (for example a `Run in:` line),
+print exactly one such line, in the format those instructions give, directly
+above the fenced block. Fill it from verified facts about the destination and
+use no window or model term the destination host lacks. Otherwise omit it, with
+no placeholder or blank line in its place; put nothing else between
+`Copy and paste:` and the block.
 
 Follow with one fenced block containing the complete next prompt or command.
 Use the current host's verified invocation syntax when known; otherwise use a
