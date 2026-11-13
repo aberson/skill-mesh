@@ -42,6 +42,17 @@ the operator's bounded-unblock request, not a repository-wide gate change.
 If the operator limits testing further, drop optional checks, but never the release script's
 staged checks or the installer's safety checks, and record which suites ran.
 
+**Per-change pack — the quick repo-wide checks as one command.** It runs exactly the pack's
+selection, writes the evidence file the rule asks for (command, files selected, summary line;
+`--evidence <file>` picks the path) and exits with pytest's code. Add `--roster` for a catalog
+CREATE or DELETE, and `--rc-report` when one of the four representative skills' `core.md`
+changes. `--focused` prints the focused-tests-by-change table (which tests a change needs on top
+of the pack); `tools/change_pack.py` is that table's one owner:
+
+```
+python tools/change_pack.py
+```
+
 **Per-release sweep — the repo-root invocation, with no path argument.** This is the one full
 sweep the rule runs per release, not the per-step gate. It is slow (the release, distribution,
 and smoke suites shell out to PowerShell once or more per test);
@@ -126,8 +137,8 @@ both the smoke scenarios and the generator consume.
 
 `tests/smoke/test_release_candidate_report.py` regenerates the report and diffs it, so a stale
 report is a hard red. It lives in the **smoke** suite, which a `tests/package-integrity` iteration
-gate never collects — meaning the failure surfaces only in the repo-root per-release sweep, long
-after the edit that caused it. When you edit one of the four, regenerate in the same change, before
+gate never collects — meaning, unless the change pack runs with `--rc-report`, the failure surfaces
+only in the repo-root per-release sweep, long after the edit that caused it. When you edit one of the four, regenerate in the same change, before
 the sweep, not after (Phase IS Steps 100 and 101 each paid for this):
 
 ```
