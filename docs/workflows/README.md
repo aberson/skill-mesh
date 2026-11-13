@@ -1356,7 +1356,7 @@ Drawn from:
 
 **Alt:** Orientation establishes an attended loop in which each operator observation is evidenced, fixed when small, or parked when scope expands.
 
-**Deliberately not shown:** invocation flags, ledger format, git safety commands, evidence citation syntax, wrap wording, and four-mode comparison details
+**Deliberately not shown:** invocation flags, ledger format, git safety commands, evidence citation syntax, wrap wording, four-mode comparison details, and the autonomous --shakedown mode
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="cards/user-walkthrough-dark.svg">

@@ -26,15 +26,23 @@ reconstruct the grammar from memory. Other workspace policy references cited bel
 context; if one is unavailable, say so, apply this core's complete local rule, and never
 reconstruct the missing document.
 
+With `--shakedown`, the same skill instead runs the engine's autonomous mode, which closes the
+ledger to zero open items by itself: see **Shakedown mode (`--shakedown`)**. Everything outside
+that section describes the attended mode.
+
 ## When to use / not
 
 - **Use:** a tool or feature was just built (post-`/build-phase`, post-`/build-step`, or a
   fresh `/user-debug`) and you want to poke it yourself — ask how it works, try things, surface
   issues — with the agent answering from source, fixing small breakage live, and tracking what
   got covered. You want to be in the driver's seat.
-- **Don't use** when you want the agent to close out UAT autonomously (that is
-  `/user-shakedown`), to execute an already-written UAT block for you (`/user-uat`), or to
-  refine a fuzzy UAT script (`/review-uat`). If you have no build to poke yet, there is nothing
+- **Use `--shakedown`:** UAT needs to be *closed out* on a just-built feature and you want the
+  agent to do it autonomously — ideally armed under a `/goal` so it re-drives itself every
+  turn until the ledger is clean. Good for draining a walkthrough's leftover open rows, or a
+  fresh closure pass.
+- **Don't use** the attended mode when you want the agent to close out UAT autonomously (that
+  is `--shakedown`). Don't use either mode to execute an already-written UAT block for you
+  (`/user-uat`) or to refine a fuzzy UAT script (`/review-uat`). If you have no build to poke yet, there is nothing
   to walk through.
 
 ## Invocation
@@ -42,13 +50,15 @@ reconstruct the missing document.
 ```text
 /user-walkthrough <tool/feature>     # attended walkthrough of the named build
 /user-walkthrough export-button      # slug resolves the ledger per the engine's slug rule
+/user-walkthrough --shakedown <tool/feature>     # autonomous closure (Shakedown mode below)
 ```
 
-Use the argument a later `/user-shakedown` will use: the slug keys off the raw argument
+Use the argument a later `--shakedown` run will use: the slug keys off the raw argument
 (engine §1), so a near-miss starts a second ledger.
 
-The skill has no flags; invoked bare, it runs in this same attended, offer-only mode. With no
-argument it never computes an empty slug and never writes a ledger: if exactly one
+Its one flag is `--shakedown` (**Shakedown mode** below). Without it, it runs in this same
+attended, offer-only mode, including when invoked bare. With no argument the attended mode
+never computes an empty slug and never writes a ledger: if exactly one
 `shakedown-*.md` ledger exists under `<git-root>/.claude/task-state/`, offer it by path but load
 it only after the operator confirms that it is the intended feature scope (a lone ledger is not
 identity proof); otherwise ask once which feature to walk through, and yield.
@@ -203,7 +213,7 @@ red. Then **offer** — do not execute — three closers:
    body, marker and failure rules apply to any filing transport, including a host GitHub tool
    used instead of `gh`.
 3. **Emit the canonical `/goal` string** from the engine to hand autonomous closure to
-   `/user-shakedown`:
+   this skill's `--shakedown` mode (`/user-walkthrough --shakedown <same argument>`):
    `/goal "shakedown ledger for <feature-slug> has zero open items"`
 
 The operator picks which closers to run — this is the attended mode; the operator decides.
@@ -213,11 +223,12 @@ reason).
 
 ## Constraints
 
-- **MUST NOT arm a `/goal` DURING the loop.** A `/goal` arms a Stop hook that re-prompts the
+- **MUST NOT arm a `/goal` DURING the attended loop.** A `/goal` arms a Stop hook that re-prompts the
   *agent* every turn until its condition holds — which makes the session agent-paced and
   destroys the operator-driven dynamic (the agent would keep working instead of yielding to
   you). The `/goal` string is **emitted at wrap only**, opt-in, for the operator to paste. This
-  is the single hardest rule in this skill.
+  is the single hardest rule in this skill's attended mode; `--shakedown` is the mode designed
+  to be armed (**Designed for /goal**).
 - **Never block on a (y/n) for the skill's own small fixes.** Make the fix, run the narrowest
   test, report it. The operator is already in the loop every turn; a confirmation gate is noise.
 - **Never write into any plan's `## Manual UAT` block.** That block is append-only and owned by
@@ -234,6 +245,192 @@ reason).
   paths only — no home-directory paths, bare local usernames as path segments, private harness
   metadata paths or slugs, or paths that leave the target repository (`../…`).
 
+## Shakedown mode (`--shakedown`)
+
+Autonomous **ledger closure**. Where the attended mode yields to the operator each turn,
+`--shakedown` drives itself: it works down the ledger's open items — verifying,
+quick-fixing, or logging each — until the ledger has zero open items. It is
+**pipeline-autonomous**: no confirmation prompts, and at wrap it EXECUTES the closers rather
+than offering them. It STOPS (by logging, never guessing) on anything that genuinely needs
+operator judgment. It uses the same engine, slug rule and ledger file as the attended mode,
+so it resolves the **same** ledger an attended walkthrough may have started and picks up
+mid-stream (load-before-derive per the engine — never re-seed). The engine requirement and
+the **Local git safety rules** above apply to this mode in full. Everything outside this
+section describes the attended mode.
+
+```text
+/user-walkthrough --shakedown <tool/feature>     # autonomous closure of the named build's ledger
+```
+
+Invoke it with the same argument a prior attended walkthrough used; the slug keys off the raw
+argument (engine §1).
+
+### Shakedown inputs, writes, and re-runs
+
+- **Inputs:** the `<tool/feature>` argument; the existing ledger, else the feature's plan per the
+  engine's checklist-derivation rules; the working tree the rows exercise.
+- **Writes (only these):** the ledger file; live-tree small-fix edits (including an accurately
+  reported retained edit whose verification failed and which is never eligible for commit); disposable
+  verification and test state (never committed); at wrap, one local commit of this run's fix
+  files and, only in an operator-owned target repository, one GitHub issue per unfiled `logged`
+  row. Never push, never open a pull request, never write into a plan.
+- **Re-runs.** An existing ledger is loaded, never re-seeded. A closed ledger probes nothing and
+  goes straight to wrap, where a run that edited nothing makes no commit and a row whose evidence
+  ends with a `filed #<n>` marker is never filed again. One gap remains: if GitHub creates an
+  issue but the marker is never written (`gh` errors after creation, or the session ends first),
+  the next wrap files that row again.
+
+### S1. Entry — resolve or derive the ledger; check operator prerequisites
+
+Compute the feature-slug and resolve the ledger path via `git rev-parse --show-toplevel` per the
+engine reference. Before resolving or writing a ledger, honor the engine's identity rules. An
+empty normalized slug or ambiguous near-match is an **identity hold**: request the specific slug
+or scope clarification the engine requires, write nothing, skip wrap, and stop this run. **Load
+the ledger if it exists** (never re-seed); else derive it per the engine's checklist-derivation
+rules. Because the slug rule is shared, this is the exact file an attended `/user-walkthrough
+<same feature>` would have written.
+
+Run the engine's structural and zero-open check before the closure loop. A missing or unreadable
+ledger, check abort, invalid header/separator/order, read failure, or any malformed data row is an
+**integrity hold**: report the exact failure or malformed row, change no ledger row or live-tree
+file, skip wrap, and stop this run. A malformed non-`open` row is not an ordinary loop candidate;
+never re-drive an empty loop around it or invent its intended status. The operator may correct the
+ledger or clarify its source, then re-run. `UNSATISFIED == 0` is completion only when the check
+exits successfully.
+
+**Operator-started prerequisites.** When the plan, an M-step, or the project instructions name
+the operator as the actor who starts a server, device, or session ("run X from a fresh
+PowerShell window"), treat it as a precondition of the `open` rows that need it. Probe only the
+prerequisites at least one `open` row needs; a closed ledger probes nothing. Check each only with
+a plainly read-only probe (port, HTTP status, process list); never start, spawn, or background
+it, not even to probe. If the probe shows it down, this is a **prerequisite hold**: report the
+service, its documented start command, and the target directory; leave every row unchanged; skip
+the wrap; stop. If no read-only probe can check it, say so in the report and continue; a row that
+then cannot be verified without it is parked per the STOP-not-guess rule with the prerequisite
+named, and is filed at wrap like any other `logged` row.
+
+### S2. Closure loop — one open item at a time
+
+For each row still `open`, choose exactly one disposition and record evidence:
+
+- **Verify → `satisfied`.** Exercise the behavior, capture the result, mark the row `satisfied`
+  with concrete evidence (command output / observed result / `file:line`). Never a bare flip.
+  Verification runs against the local working tree and disposable state. Never run an
+  outward-facing or hard-to-reverse action to verify — a deploy, an external send, a `git push`,
+  a publish, a write or drop on non-disposable data, or a tool run that writes into a sibling
+  repository. Prefer the step's
+  own `--dry-run`/preview; otherwise park the row per the STOP-not-guess rule with the action
+  named. When reversibility or outward-facing-ness is unclear, treat it as outward-facing.
+- **Quick-fix in-tree → `fixed`.** If the item is a small, unambiguous defect and its candidate
+  file passes the own-change boundary: edit the live tree (uncommitted) and run the NARROWEST
+  applicable test. Mark the row `fixed` only when that test succeeds, with the edited path,
+  command, and passing result as evidence. No applicable test, a missing/erroring test, or a red
+  result never earns `fixed`. Record the failure truthfully and undo only this activity's exact
+  patch when it can be reversed without altering concurrent work. If it cannot, retain and
+  report the edit but exclude it from the commit set. Keep the row `open` only for another
+  bounded small attempt; otherwise mark it `logged` with the unresolved diagnosis. A prerequisite
+  or environment failure that prevents the test is a hold, not proof of a product defect. No
+  worktree (per the engine's small-fix path).
+- **Log → `logged`.** If it is too big to fix inline, OR it needs operator judgment (see the
+  STOP-not-guess rule), append a one-line diagnosis and mark the row `logged`. Do not
+  rabbit-hole.
+
+Repeat until the engine's zero-open check reports `UNSATISFIED == 0` — that is the **only**
+completion condition. Re-run the check each pass; when it returns 0, the ledger is closed.
+
+Identity, integrity, prerequisite, and required-capability holds do not complete anything. They
+are finite fail-closed outcomes, not zero-open success; follow the applicable no-write or
+action-specific failure rule above and in the provider adapter.
+
+### S3. STOP-not-guess rule (the escape hatch)
+
+Anything that needs operator judgment — an ambiguous expectation, a design call, a
+visual/credentialed/real-device check the agent cannot drive, an outward-facing action the
+verify step must not run — is **parked as `logged` with the judgment question recorded in the
+evidence cell**, never auto-resolved with a fabricated verdict.
+Logging IS the no-guess escape hatch: it keeps zero-open reachable without the agent inventing a
+pass it can't stand behind. A guessed verdict is a contract violation; a logged question is
+correct behavior.
+
+### S4. Wrap — EXECUTE the closers (autonomous)
+
+Runs only after the zero-open check returns 0. Because this mode is pipeline-autonomous and the
+operator's standing default is to file sibling issues without asking, at wrap it EXECUTES rather
+than offers:
+
+1. **Batch-commit the verified live fixes** as one reviewable diff under **Local git safety
+   rules**, using scoped `git add <paths>` only after the before-staging checks (never
+   `git add -A`). No eligible files → no commit. A red, erroring, missing-test, retained,
+   mixed-change, or patch-mismatch file is ineligible. Never stage the ledger or sweep changes
+   this run did not make (for example a prior walkthrough's live fixes), and never include
+   unrelated pre-existing staged work in an ordinary commit; list every exclusion or commit
+   hold in the report. Never bypass hooks; if staging verification or commit fails, report the
+   error verbatim and leave the live tree and index intact.
+2. **File each unfiled `logged` row as a GitHub sibling issue** via `gh issue create` with
+   `--repo <owner/name>`, `--title`, and `--body-file` (the body carries the one-line diagnosis /
+   judgment question), feeding `/plan-feature` or `/build-step`. Title shape:
+   `user-walkthrough --shakedown <feature-slug> <row id>: <first clause of the diagnosis or question>`.
+   - **Target.** Resolve it once, before filing: the `owner/name` of the `origin` GitHub remote
+     of the ledger's git root. No such remote → each row is `not filed: no GitHub remote`.
+   - **Ownership gate (fail closed).** File only into an operator-owned target: every entry of
+     the workspace registry (`.claude/observatory/registry.toml`, when readable; `owned` per
+     `.claude/references/descriptor-contract.md` §2) whose `repo_url` names the target or whose
+     `path` is this git root says `owned = true`; or, when no entry matches, the target owner
+     equals the authenticated `gh` login. Otherwise, or when the check cannot complete, file
+     nothing: each row is `not filed: target repo not operator-owned (<owner/name>)`.
+   - **Marker.** A row is already filed when its evidence cell ends with `filed #<n>` (the
+     trailing token, as in the engine's fixture); skip it. A `filed #<n>` elsewhere in the
+     diagnosis does not count. After each successful filing, append `filed #<n>` as the evidence
+     cell's last token; the status does not change.
+   - **Failure.** If filing fails (no GitHub remote, a target not operator-owned, `gh` missing or
+     unauthenticated, an API error), leave the row unmarked, report it as `not filed: <reason>`,
+     and continue. Never invent an issue number.
+
+Then report the final ledger state and confirm `UNSATISFIED == 0`, with the commit hash (or why
+there is none), the target repository, the issues filed (number or URL), skipped, or not filed
+(with the reason), and any uncommitted changes left for the operator.
+
+### Designed for /goal
+
+This mode is built to run **armed under a `/goal`**. The canonical arm command (copy-paste,
+from the engine) is:
+
+```text
+/goal "shakedown ledger for <feature-slug> has zero open items"
+```
+
+The condition is checkable **every turn** by running the engine's zero-open check block and
+asserting `UNSATISFIED == 0`. The Stop hook re-drives this mode each turn until the ledger is
+clean — the termination condition IS the goal condition, which is exactly why the autonomous
+mode is the one designed to be armed (the inverse of the attended mode, which must never arm a
+`/goal` mid-loop).
+
+Arm it only once every operator-started prerequisite the open rows need is running: a finish line
+that waits on the operator cannot be driven to true by the agent. On a prerequisite hold under an
+armed goal, each re-driven turn re-probes once, repeats the one-line hold report, and recommends
+`/goal clear`; it never polls.
+
+### Shakedown constraints
+
+- **No routine confirmation prompts.** A `(y/n)` gate during valid autonomous row closure is a defect here (per
+  `plan-and-issue-flow.md` § autonomous-by-default).
+  The skill decides and acts; it does not check in mid-run. Engine-required slug/scope
+  clarification is permitted before closure because no safe ledger identity exists. Integrity,
+  prerequisite, and capability holds report and stop rather than guessing.
+- **Never guess a verdict.** Judgment items are `logged` with the question, not auto-passed.
+- **Evidence on every status change.** A flip with no evidence cell content is a contract
+  violation (the engine's coverage-marking rule).
+- **Never write into any plan's `## Manual UAT` block.** Append-only, owned by `/build-phase`;
+  the ledger is a separate task-state artifact.
+- **Small fixes in the live tree, no worktree; scoped commit at wrap.** Never `git add -A`.
+- **Never start an operator-started prerequisite or run an outward-facing action to verify.**
+  Report and stop (Entry), or park the row (Verify).
+- **Never file into a repository the operator does not own.** The wrap's ownership gate fails
+  closed and reports `not filed`.
+- **No secrets in the ledger or in issue titles and bodies.** Record metadata or a redacted
+  excerpt, never a credential or secret file's contents. Issues leave the machine: use
+  repo-relative paths, never home-directory paths or private harness metadata paths and slugs.
+
 ## Limitations — four-mode disambiguation
 
 Four sibling UAT modes; pick by who drives and what shape the input is:
@@ -242,11 +439,11 @@ Four sibling UAT modes; pick by who drives and what shape the input is:
 |---|---|
 | `/user-uat` | EXECUTES an already-clear UAT script FOR you under its own evidence and confirmation gates. |
 | `/review-uat` | REFINES a fuzzy UAT script until every step is unambiguous. |
-| `/user-walkthrough` | **This skill.** The operator DRIVES exploration; the agent answers, fixes small, logs big. |
-| `/user-shakedown` | The agent AUTONOMOUSLY CLOSES the ledger to zero open items (same engine). |
+| `/user-walkthrough` | **This skill** (attended mode). The operator DRIVES exploration; the agent answers, fixes small, logs big. |
+| `/user-walkthrough --shakedown` | **This skill** (autonomous mode). The agent AUTONOMOUSLY CLOSES the ledger to zero open items (same engine). |
 
-`/user-walkthrough` and `/user-shakedown` share the same ledger file (same slug rule → same
-path), so a walkthrough can hand a half-filled ledger to a shakedown mid-stream.
+The two modes share one ledger file (same slug rule → same path), so `--shakedown` can pick up
+a walkthrough's half-filled ledger and drive it to zero.
 
 ## Canonical example — one loop turn
 
@@ -269,4 +466,4 @@ path), so a walkthrough can hand a half-filled ledger to a shakedown mid-stream.
 > "streaming/pagination needed for large exports; synchronous path blocks." **Stops.**
 >
 > At wrap: reports `M1` satisfied, the label fixed, the timeout logged; offers to batch-commit
-> the label fix, file the timeout as a sibling issue, and emit the `/goal` string for shakedown.
+> the label fix, file the timeout as a sibling issue, and emit the `/goal` string for `--shakedown`.

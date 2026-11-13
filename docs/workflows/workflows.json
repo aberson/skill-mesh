@@ -1,7 +1,7 @@
 {
   "schema": "show-your-work.workflows.v1",
   "generator": "show-your-work 0.1.0",
-  "generated_at": "2026-11-13T10:22:03+00:00",
+  "generated_at": "2026-11-13T10:26:47+00:00",
   "source_dir": "docs/workflows",
   "items": [
     {
@@ -765,12 +765,12 @@
       "label": "user-walkthrough",
       "summary": "Guide attended acceptance of a just-built tool, answer from primary evidence, and fix small in-scope issues during the walkthrough.",
       "alt": "Orientation establishes an attended loop in which each operator observation is evidenced, fixed when small, or parked when scope expands.",
-      "not_shown": "invocation flags, ledger format, git safety commands, evidence citation syntax, wrap wording, and four-mode comparison details",
+      "not_shown": "invocation flags, ledger format, git safety commands, evidence citation syntax, wrap wording, four-mode comparison details, and the autonomous --shakedown mode",
       "sources": [
         "skills/user-walkthrough/core.md"
       ],
       "source_path": "docs/workflows/user-walkthrough.mmd",
-      "source_sha256": "8164a2e5b9b68819970f5d3973f46f319f2a58e37ffb9d14df9da70905367fe9",
+      "source_sha256": "ea5f3adbb0b44b173b0372e797de28cd88a63f5e87d81f38de378eb4f4e765b4",
       "engine": "mermaid",
       "rasters": null
     },
