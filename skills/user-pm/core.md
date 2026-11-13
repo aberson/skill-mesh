@@ -171,7 +171,7 @@ Each candidate's result on those three decides its run line:
 
 - **All clear:** the normal Run line.
 - **Unknown** on any of the three: a `qualify first` line, never a go. It is the qualify-first prompt that section describes, through the entry skill's own gate.
-- **Known conflict** (for example build-phase checkpoint commits against a dirty checkout that must not be committed): no unconditional route. A `conflict:` line names the conflict and the smallest supported route that keeps the constraint (labelled conditional where its capability is unverified), or the constraint change the operator must authorize.
+- **Known conflict** (for example build-phase checkpoint commits against a dirty checkout that must not be committed): no unconditional route. A `conflict:` line names the conflict and the smallest supported route that keeps the constraint (labelled conditional where its capability is unverified), or the constraint change the operator must authorize. A short-lived conflict follows the short-lived rule of `skills/user-build-route/core.md`, "Check the route can run", instead of this bullet.
 
 Close the Overnight block with these lines, each only when it has content:
 
