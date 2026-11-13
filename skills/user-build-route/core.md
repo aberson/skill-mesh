@@ -56,7 +56,8 @@ and resource counters is inspection, not a probe.
 
 - **Known conflict or observed failure** (for example build-phase checkpoint
   commits against a no-commit, preserved dirty checkout, or a recorded dispatch
-  error in the destination session): give no unconditional continuation of that route. Name the conflict and
+  error in the destination session): give no unconditional continuation of that route.
+  Unless the conflict is short-lived (below), name the conflict and
   recommend the smallest supported route that keeps the contract, or the
   constraint change the operator must authorize. Label any alternative whose
   required capabilities or independent review are unverified as conditional.
@@ -176,17 +177,16 @@ Why: <one or two sentences identifying the decisive facts and any assumption>
 Next: <one or two sentences stating the immediate step and any later transition>
 
 Copy and paste:
-
-<execution-context line, only when the instructions in force require one>
 ```
 
-The execution-context line is the only optional line in this shape. When the
-project or workspace instructions in force require a line above a next-step
+One optional line may follow `Copy and paste:`: an execution-context line. When
+the project or workspace instructions in force require a line above a next-step
 block naming where and on what model it runs (for example a `Run in:` line),
 print exactly one such line, in the format those instructions give, directly
 above the fenced block. Fill it from verified facts about the destination and
-use no window or model term the destination host lacks. Otherwise omit it; put
-nothing else between `Copy and paste:` and the block.
+use no window or model term the destination host lacks. Otherwise omit it, with
+no placeholder or blank line in its place; put nothing else between
+`Copy and paste:` and the block.
 
 Follow with one fenced block containing the complete next prompt or command.
 Use the current host's verified invocation syntax when known; otherwise use a
