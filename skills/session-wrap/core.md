@@ -182,6 +182,26 @@ this exact order — own-session checkpoint first, render second, screen last:
 3. **Cheap memory subset only:** correct the project's MEMORY.md status pointer line
    if this session made it wrong, and park unfiled TODOs; the full
    memory/lessons/friction passes are end-window-only.
+
+**Lane inbox (lane windows only), between steps 3 and 4.** When the operator declared a lane for
+this window, run the block below once, after the checkpoint writes and before the render. The
+lane and project rules, gates, calls, limits and the one line are owned by
+`<repo>/_shared/lane-inbox-hooks.md`; with no declared lane there is no call, and a lane is never
+inferred. `<state>` is `waiting` on `clear-next` (so the lane's next window can replace the card)
+and `idle` on `end-window`. Pass `--task-file` only with this session's own file, and only when
+both checkpoint calls returned their success line (the card's item and next action come from that
+write); otherwise omit it and the call checks the inbox only. `<skill-dir>`, `<project-dir>`,
+`<host>` and `<token>` are as in the wrapper.
+
+```text
+lane-inbox-call: session-wrap-wrap
+python -B <skill-dir>/../_shared/lane_inbox.py card --point session-wrap-wrap --root <project-dir> --host <host> --lane <lane> --state <state> [--window <token>] [--task-file <own-task-file>]
+```
+
+The block's output (zero or one line) rides the digest's invariant-flags line as one more flag,
+never a new digest line, so the digest keeps its <=6-line cap. It never changes the route, the
+rendered Next Action or the git verb, adds no prompt, and never fails or halts the wrap.
+
 4. **Render `handoff-prompt.md`** from this session's just-written own file + the decisions
    log (rendering contract below) — skipped when either checkpoint call flagged
    `checkpoint not written`.
@@ -299,7 +319,9 @@ files is the ALWAYS-RUN base action unless explicitly delegated:
   the vacuous all-DONE of a step-less pointer plan), OR a build-phase
   completion report was produced this session. Action: invoke `/repo-update`
   through the host's skill-invocation adapter — it owns shipping (README/docs updates, commit, push,
-  posterity issue); this skill duplicates none of that work. (Task-state is now
+  posterity issue); this skill duplicates none of that work. In a lane window, tell it that this
+  wrap already ran its lane inbox check, so the delegated skill's own `lane-inbox-call` adds
+  `--nested` and prints nothing: one wrap prints at most one inbox line. (Task-state is now
   gitignored, so nothing sweeps in `current.md`; route step 1's session-file write
   is already durable on disk.) If `/repo-update` fails
   partway, run the base action below so nothing is stranded, and surface the
@@ -427,7 +449,8 @@ run next is always the bottom of the output (operator contract, 2026-07-16):
 
 - **Digest (<=6 lines), then the pointer line, directly under the heading:** route +
   signal values; the git verb executed (repo, branch, SHA); memory/docs updates by
-  name; invariant flags (`MEMORY.md over budget`, `friction catalog stale`, ...); the
+  name; invariant flags (`MEMORY.md over budget`, `friction catalog stale`, the one
+  `[lane-inbox]` line of a lane window, ...); the
   `open work: N items (first: <command>)` line from the open-work inventory (or
   `open work: none`).
   Exactly ONE owner-bound pointer line to `handoff-prompt.md` (its not-rendered variant when the

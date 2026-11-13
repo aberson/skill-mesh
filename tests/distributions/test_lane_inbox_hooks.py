@@ -38,6 +38,7 @@ SHARED_ASSETS = ("lane-inbox-hooks.md", "lane_inbox.py")
 # Skill -> its insertion points. Grows with each plan step; build-step waits on Step 5.
 HOOKED = {
     "task-handoff": ("task-handoff-resume",),
+    "session-wrap": ("session-wrap-wrap",),
 }
 PRIMARY = ("task-handoff-resume", "session-wrap-wrap")
 
@@ -367,3 +368,75 @@ def test_anchor_core_without_block_fails(dist, skill, point, profile):
     stripped = MARKER_RE.sub("", core)
     with pytest.raises(AssertionError):
         block_for(stripped, point)
+
+
+# --------------------------------------------------------------------------- #
+# session-wrap (inbox hooks Step 4)
+# --------------------------------------------------------------------------- #
+
+def _section(core, start, end):
+    a = core.index(start)
+    b = core.index(end, a + len(start)) if end else len(core)
+    return core[a:b]
+
+
+@pytest.mark.parametrize("profile", PROFILES)
+def test_session_wrap_continue_and_advise_make_no_call(dist, profile):
+    core = _core(dist, profile, "session-wrap")
+    continue_route = _section(core, "## Route: `continue`", "## Route: `clear-next`")
+    advise = _section(core, "## `--advise`", "## Maintenance")
+    for text in (continue_route, advise):
+        assert "lane-inbox" not in text and "lane_inbox" not in text
+    assert extract_blocks(core) == {"session-wrap-wrap": block_for(core, "session-wrap-wrap")}
+    clear_next = _section(core, "## Route: `clear-next`", "## Route: `end-window`")
+    assert "lane-inbox-call: session-wrap-wrap" in clear_next
+
+
+@pytest.mark.parametrize("profile", PROFILES)
+def test_session_wrap_line_rides_the_digest_flag_line(dist, profile):
+    core = _core(dist, profile, "session-wrap")
+    assert "rides the digest's invariant-flags line as one more flag" in core
+    assert "never a new digest line, so the digest keeps its <=6-line cap" in core
+    assert "<digest: <=6 lines>" in core
+    assert "`[lane-inbox]` line of a lane window" in core
+
+
+@pytest.mark.parametrize("route,state", [("clear-next", "waiting"), ("end-window", "idle")])
+@pytest.mark.parametrize("profile", PROFILES)
+def test_session_wrap_routes_write_their_card_state_and_one_flag(dist, lane, profile, route,
+                                                                 state):
+    lane.scenario_set({"inbox": {"stdout_file": "inbox-five.txt"}})
+    argv = fill(block_for(_core(dist, profile, "session-wrap"), "session-wrap-wrap"),
+                dist / profile / "session-wrap", lane.project, profile, window="wrap-w",
+                task_file=lane.task_file(), state=_state_for("session-wrap-wrap", route))
+    out = run_block(argv, lane.env)
+    # One flag line (the digest's 6-line cap holds: the hook adds no line of its own).
+    assert out.count("\n") == 1 and len(out.encode("utf-8")) <= 2048
+    assert out.startswith("[lane-inbox] art-lane@demo-proj: 5 unread ")
+    assert lane.verbs() == ["inbox", "card show", "card set"]
+    assert lane.stored_card()["state"] == state
+    assert lane.stored_card()["next_checkpoint"] == "/build-step --problem next"
+
+
+@pytest.mark.parametrize("profile", PROFILES)
+def test_clear_next_then_fresh_window_resume_replaces_the_card(dist, lane, profile):
+    lane.scenario_set({"inbox": {"stdout_file": "inbox-empty.txt"}})
+    wrap = fill(block_for(_core(dist, profile, "session-wrap"), "session-wrap-wrap"),
+                dist / profile / "session-wrap", lane.project, profile, window="old-window",
+                task_file=lane.task_file(), state="waiting")
+    assert run_block(wrap, lane.env) == ""
+    assert lane.stored_card()["state"] == "waiting"
+    resume = fill(block_for(_core(dist, profile, "task-handoff"), "task-handoff-resume"),
+                  dist / profile / "task-handoff", lane.project, profile, window="new-window",
+                  task_file=lane.task_file(name="new-window.md"))
+    out = run_block(resume, lane.env)
+    assert "card-held-by-another-window" not in out
+    stored = lane.stored_card()
+    assert stored["state"] == "active" and stored["window"] == "new-window"
+
+
+@pytest.mark.parametrize("profile", PROFILES)
+def test_session_wrap_tells_a_delegated_repo_update_it_is_nested(dist, profile):
+    core = _core(dist, profile, "session-wrap")
+    router = _section(core, "## Git-verb router", "## Rendering contract")
+    assert "adds\n  `--nested` and prints nothing" in router.replace("\r\n", "\n")
