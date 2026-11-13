@@ -1,6 +1,6 @@
 # Skill Mesh Codex adapter
 
-Load and follow `CLAUDE.md` in full. It is the shared project instruction source.
+Load and follow `CLAUDE.md` in full. It is the shared project instruction source, including its "Agent coordination (Passing Notes)" section for working alongside other agents in this project.
 
 Use `plan.md` for current execution status. This adapter does not enumerate skills, select models,
 or duplicate volatile project state.
