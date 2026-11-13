@@ -191,6 +191,59 @@ def _tree_digest(root: Path):
 
 
 # --------------------------------------------------------------------------- #
+# One inspector run per shape, shared by the per-shape checks (v3 guard Step 10)
+# --------------------------------------------------------------------------- #
+
+# The four output modes the read-only proof covers. JSON with home-relative paths
+# runs FIRST, on the untouched home, and is the report the per-shape checks read.
+INSPECT_MODES = (("json", False), ("json", True), ("text", False), ("text", True))
+
+
+@pytest.fixture(scope="module")
+def shape_run(tmp_path_factory):
+    """`shape_run(kind)` -> one materialized home per shape, inspected once per mode.
+
+    Before Step 10 every per-shape check built its own home and launched the
+    inspector again: the read-only check four times, then the ledger-shape, evidence-
+    class and bounded-report checks once each. The three report checks only READ the
+    default JSON report, so they now read this shared run's. The read-only check
+    keeps all four launches (text and JSON, relative and absolute) with the home's
+    digest taken before the first and after the last, so no output mode loses the
+    "the inspector must not mutate a home" proof.
+
+    A junction shape that cannot be created here skips every check that asks for it,
+    exactly as `_materialize` did per test.
+    """
+    cache = {}
+
+    def get(kind):
+        if kind not in cache:
+            try:
+                home = _materialize(kind, tmp_path_factory.mktemp("shape") / "home")
+            except pytest.skip.Exception as exc:
+                cache[kind] = ("skip", str(exc))
+            else:
+                before = _tree_digest(home)
+                runs = {mode: _run_inspect(home, fmt=mode[0], absolute=mode[1])
+                        for mode in INSPECT_MODES}
+                cache[kind] = ("ok", {"before": before, "after": _tree_digest(home),
+                                      "runs": runs})
+        state, value = cache[kind]
+        if state == "skip":
+            pytest.skip(value)
+        return value
+
+    return get
+
+
+def _shape_report(shape_run, kind):
+    """The default (JSON, home-relative) report for `kind`, as `_inspect_json` returns."""
+    r = shape_run(kind)["runs"][("json", False)]
+    assert r.returncode == 0, f"inspect failed:\n{r.stdout}\n{r.stderr}"
+    return json.loads(r.stdout)
+
+
+# --------------------------------------------------------------------------- #
 # Tooling + synthesizer self-check
 # --------------------------------------------------------------------------- #
 
@@ -272,15 +325,12 @@ def test_file_home_is_rejected(tmp_path):
 # --------------------------------------------------------------------------- #
 
 @pytest.mark.parametrize("kind", ALL_SHAPES)
-def test_inspector_is_read_only(kind, tmp_path):
-    home = _materialize(kind, tmp_path / "home")
-    before = _tree_digest(home)
-    for fmt in ("text", "json"):
-        for absolute in (False, True):
-            r = _run_inspect(home, fmt=fmt, absolute=absolute)
-            assert r.returncode == 0, f"{kind}/{fmt}: {r.stderr}"
-    after = _tree_digest(home)
-    assert before == after, f"{kind}: inspector mutated the tree"
+def test_inspector_is_read_only(kind, shape_run):
+    run = shape_run(kind)
+    assert len(run["runs"]) == 4, "the read-only proof must cover all four output modes"
+    for (fmt, absolute), r in run["runs"].items():
+        assert r.returncode == 0, f"{kind}/{fmt}/absolute={absolute}: {r.stderr}"
+    assert run["before"] == run["after"], f"{kind}: inspector mutated the tree"
 
 
 # --------------------------------------------------------------------------- #
@@ -316,10 +366,10 @@ def test_schema_shape_is_stable(tmp_path):
 
 
 @pytest.mark.parametrize("kind", ALL_SHAPES)
-def test_ledger_shape_is_stable_across_every_state(kind, tmp_path):
+def test_ledger_shape_is_stable_across_every_state(kind, shape_run):
     """`unrecognized_provider_count` must exist on the absent and corrupt branches
     too, or a consumer keying off it breaks exactly when the ledger is broken."""
-    d = _inspect_json(_materialize(kind, tmp_path / "home"))
+    d = _shape_report(shape_run, kind)
     assert d["ledger"]["state"] in LEDGER_STATES
     assert isinstance(d["ledger"]["unrecognized_provider_count"], int)
     assert isinstance(d["ledger"]["providers"], list)
@@ -568,14 +618,14 @@ def test_every_eligibility_class_is_reachable(tmp_path):
 # --------------------------------------------------------------------------- #
 
 @pytest.mark.parametrize("kind", ALL_SHAPES)
-def test_evidence_class_is_never_observed(kind, tmp_path):
+def test_evidence_class_is_never_observed(kind, shape_run):
     """`observed` means THE HOST EXPOSED runtime provenance. This inspector only runs
     Test-Path, so it may never make that claim -- reporting `observed` from file
     presence is precisely the confusion Step 43 existed to disprove.
 
     Parametrized over every shape so the guarantee cannot hold for one fixture and
     lapse for another."""
-    d = _inspect_json(_materialize(kind, tmp_path / "home"))
+    d = _shape_report(shape_run, kind)
     for f in d["instruction_files"]:
         assert f["evidence_class"] != "observed", (
             f"{kind}/{f['rel_path']}: evidence_class upgraded to 'observed'")
@@ -749,8 +799,8 @@ def _assert_report_is_bounded(d, where):
 
 
 @pytest.mark.parametrize("kind", ALL_SHAPES)
-def test_every_shape_emits_a_bounded_report(kind, tmp_path):
-    _assert_report_is_bounded(_inspect_json(_materialize(kind, tmp_path / "home")), kind)
+def test_every_shape_emits_a_bounded_report(kind, shape_run):
+    _assert_report_is_bounded(_shape_report(shape_run, kind), kind)
 
 
 def test_hostile_home_is_fully_bounded(tmp_path):
