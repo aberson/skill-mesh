@@ -4,10 +4,12 @@ See [../core.md](../core.md) for the full specification.
 
 ## Codex invocation differences
 
-- Load the core in full before acting and follow it verbatim. Use Codex's structured tool/action calls for filesystem, shell, git, and named-skill operations. This wrapper only maps host abstractions; it never weakens a gate the core defines. The PM-lens report shape (shipped / planned / next / could-cut) and its evidence bar stay exactly as the core states them.
+- Load the core in full before acting and follow it verbatim. Use Codex's structured tool/action calls for filesystem, shell and git operations. This wrapper only maps host abstractions; it never weakens a gate the core defines. The report's sections, its sources and its evidence bar stay exactly as the core states them.
 - This skill uses no model tier and spawns nothing, so no tier resolution or router override applies. If a lookup capability is unavailable, follow the core's one-line degrade behavior rather than weakening its evidence bar.
-- The overview is read-only project-axis work -- the core's sources only (plan docs, git history, archive markers) through Codex's own shell and file tools -- and runs natively. It runs no tests or builds, and every command it proposes is for the operator. Overnight-qualification stays a heuristic rendered as recommendation text, never as auto-dispatched work.
-- The dev-observatory hook is the core's additive `--json` output mode only: it changes the rendering, not the sources. Do not read the observatory registry or snapshot to fill the overview; every move stays derivable from the plan, git log, and archive markers.
+- The overview is read-only work that runs natively, through Codex's own shell and file tools: every source the core's steps name, including its `gh` and Passing Notes reads. It runs no tests or builds, and every command it proposes is for the operator. Overnight qualification and lane planning are recommendation text, never auto-dispatched work.
+- Give each `gh` and `passing-notes` call the shell tool's own timeout, set to the core's numeric limit. When this run's sandbox blocks network access, the `gh` reads fail: that is the core's `gh`-unavailable case, so add its note and do not ask for escalated permissions. The Passing Notes calls only read the store and need no writable sandbox root; a command or store folder the sandbox cannot see is the core's absent case.
+- A thread-limit or dispatch error that this window has already reported is observed evidence for the core's agent capacity check.
+- The dev-observatory hook is the core's additive `--json` output mode only: it changes the rendering, not the sources. Do not read the observatory registry or snapshot to fill the overview.
 - Normalize verbosity: do not reveal hidden chain-of-thought; return only required decisions, evidence, artifacts, commands, questions, and the core's closing report.
 
 ## Known Codex limitations
