@@ -154,6 +154,8 @@ fragment belongs on stays the web's call):
 - **plan** → the FULL `/plan-feature` seed paragraph in the gateway output (problem +
   voiced constraints, scope strictly as voiced); the ledger disposition keeps only the
   one-line form (intake-engine §2 owns that rule — the ledger never holds paragraphs).
+  When the web's plan rail names `/code-consigliere` for the fragment, the seed is one
+  `/code-consigliere <target>` line instead.
 - **investigate** → external/multi-source: a deep-research charter for the receiving
   window to dispatch via `Workflow({name: "deep-research-pinned"})` — never the built-in
   name (CLAUDE.md's dispatch rule, echoed by the web); codebase-local: a scoped
@@ -170,10 +172,10 @@ fragment belongs on stays the web's call):
   (a bare build command on a freshly-voiced task) is wrong.
 - **draft** → a `/user-draft <the operator's rough thoughts>` line.
 - **review** → one line for the review skill the web's review rail names for the fragment,
-  carrying the change as voiced: `/review-gauntlet '<intent as voiced>' <PR #N or diff>`
-  by default, `/review-deep --prompt '<intent as voiced>' --diff <PR #N or diff>` for high
-  stakes, `/code-consigliere <target>`, or `/review-proof` with the answer whose claims
-  need sources.
+  carrying the change as voiced, in that skill's shape:
+  `/review-gauntlet '<intent as voiced>' <PR #N or diff>`,
+  `/review-deep --prompt '<intent as voiced>' --diff <PR #N or diff>`, or `/review-proof`
+  with the answer whose claims need sources.
 - **research** → `/research-prospect --projects <project>`, or the first link of the
   citation chain the web names: `/citation-review <workspace-relative path>` (one
   artifact) or `/citation-sweep <project-slug>` (project-wide).
@@ -185,10 +187,12 @@ fragment belongs on stays the web's call):
 - **learn** → `/user-learn <topic as voiced>` or `/user-brainstorm <topic as voiced>`.
 - **decide** → NOT a work seed: the row parks with the open question stated verbatim in
   its disposition, which also carries one register line so the question lands in the
-  decision register — `/user-dr sources: <ledger path>; record F<n>: '<the question as
-  voiced>'`, or, for a complex scope or first-milestone choice,
-  `/user-fermize <plan path or excerpt>; outcome: '<the outcome as voiced>'`. The line
-  records the question; it decides nothing. Never answer it, never pick a side, never
+  decision register — `/user-dr open only <project root>; sources: <ledger path>` (user-dr's
+  scope and project path, plus the ledger as a named source: the parked row there carries
+  the question), or, when the web's decide rail names `/user-fermize` for the fragment,
+  `/user-fermize <plan path, or the voiced fragment as the excerpt>; decision: '<the
+  question as voiced>'; intended outcome: '<the outcome as voiced>'`. The line records or
+  frames the question; it decides nothing. Never answer it, never pick a side, never
   convert it into work — parked rows wait for the operator (intake-engine §2/§3 own
   parked semantics; deciding is the one thing the gateway must never do for them).
 

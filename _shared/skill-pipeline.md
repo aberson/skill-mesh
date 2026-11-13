@@ -26,20 +26,20 @@ skills cite this section; no skill hardcodes its own routing table.
 ## The rails
 
 Entry condition = what the operator's fragment sounds like. Every catalog skill is either
-named in this table or listed under § Not vent targets, never both
+named in a rail's Chain cell or listed under § Not vent targets, never both
 (`tests/package-integrity/test_routing_web_coverage.py` checks it).
 
 | Rail | Sounds like | Chain |
 |---|---|---|
 | **bug** | "X is broken / erroring / behaving wrong" — a symptom in hand | `/user-debug --symptom '...'` |
 | **do** | "just do X" — a small concrete task | `/user-pm` (its board routes the task by `user-build-route`'s rules) |
-| **plan** | "add / build capability X" — multi-step work needing steps + review | `/plan-feature` (or `/plan-init` for a brand-new project) → `/plan-expedite` → `/build-phase` → `/repo-update` (the build rail — detail below) |
+| **plan** | "add / build capability X" — multi-step work needing steps + review; "before building, help me understand why this project works this way and agree the change" | `/plan-feature` (or `/plan-init` for a brand-new project) → `/plan-expedite` → `/build-phase` → `/repo-update` (the build rail — detail below); understand first and agree the change → `/code-consigliere` (hands off a build seed) |
 | **investigate** | "what's true about X? why does X happen?" — a question, not yet work | `/deep-research` via `Workflow({name: "deep-research-pinned"})` (never the built-in name — CLAUDE.md's dispatch rule) for external/multi-source; an Explore-agent sweep for codebase-local questions |
 | **verify** | "does X actually work? / I don't trust X" — distrust without a reproducible symptom | `/review-uat` (refine a fuzzy block) / `/user-uat` (mechanical tier) / `/user-walkthrough --shakedown` (autonomous closure) / `/user-walkthrough` (attended) — four-mode detail below |
 | **trim** | "the plan feels bloated / what can we cut" — plan-borne cruft-smell | `/plan-merge --trim` (plan documents only; non-plan cruft-smell routes **investigate** first — assess, then `investigate→plan` or `investigate→do`) |
 | **decide** | "should we do A or B?" — an operator-only choice | never decided for the operator: parked with the open question stated, and recorded with `/user-dr` (decision register: records, groups, checks conflicts); a complex scope or first-milestone choice → `/user-fermize` |
 | **draft** | "here are rough thoughts" — wants a usable prompt or goal, not work done | `/user-draft` → `/goal` |
-| **review** | "look this over / is this change OK / review PR #N" — judge a change before it lands | `/review-gauntlet` (default) / `/review-deep` (high stakes) / `/code-consigliere` (understand a project's workflows and agree a change before building) / `/review-proof` (an answer's claims need primary sources) |
+| **review** | "look this over / is this change OK / review PR #N" — judge a change before it lands | `/review-gauntlet` (default) / `/review-deep` (high stakes) / `/review-proof` (an answer's claims need primary sources) |
 | **research** | "what should we research? / are this doc's claims backed?" — pick topics or check evidence, not answer a question | `/research-prospect` (topics per project); LLM-facing artifact rigor: `/citation-review` (one artifact) or `/citation-sweep` (project-wide) → `/citation-triage` → `/citation-distill` |
 | **tend** | "context feels bloated / tests are slow / we keep repeating mistakes / this skill misbehaves" — workspace care | context bloat → `/context-slim` (Claude host); slow or redundant tests → `/test-prune`; repeated mistakes → `/lesson-harvest`; messy memory → `/memory-distill`; a skill misbehaving → `/skill-iterate` (variants: `/skill-evolve`; no evals yet: `/skill-eval-setup`); model cost or weakness → `/tier-offload` / `/tier-escalate`; milestone cleanup → `/user-afterparty`; close out a repo → `/repo-wrap` (detail below) |
 | **session** | "I'm back / keep going or close? / wrap up / where does this stand?" — the window or the project's state, not new work | `/user-wrap`; resume a saved task → `/task-handoff --resume`; "where does this project stand?" → `/user-pm` |

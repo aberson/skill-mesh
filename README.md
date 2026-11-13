@@ -64,7 +64,7 @@ and routes each to a useful next step.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="_shared/routing-web-dark.svg">
-  <img alt="An operator's notes enter user-gateway and split across eight routes, from debugging and planning to verification and drafting." src="_shared/routing-web-light.svg">
+  <img alt="An operator's notes enter user-gateway and split across the core routes, from debugging and planning to verification and drafting." src="_shared/routing-web-light.svg">
 </picture>
 
 The `do` route hands a small task to `user-pm`, whose board picks its build route; the

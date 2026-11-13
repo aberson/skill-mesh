@@ -1,7 +1,7 @@
 """Every catalog skill is reachable from an operator vent, or deliberately is not.
 
 `_shared/skill-pipeline.md` (the routing web) is the one owner of the rails. A skill is a
-*rail entry* when the rail table names it as a backticked `/skill` invocation, and a
+*rail entry* when a rail row's Chain cell names it as a backticked `/skill` invocation, and a
 *not-vent target* when it has a row in the web's "Not vent targets" table. The
 `/user-gateway` core's Step 3 gives one seed shape per rail.
 
@@ -92,12 +92,13 @@ def _table_rows(section: list[str]) -> list[list[str]]:
 
 
 def parse_rails(pipeline_text: str) -> dict[str, set[str]]:
-    """Rail name -> the skills its row names as `/skill` invocations."""
+    """Rail name -> the skills its Chain cell (the row's last cell) names as `/skill`
+    invocations. A `/skill` in the "Sounds like" cell does not make it a rail entry."""
     rails = {}
     for row in _table_rows(_section(_visible_lines(pipeline_text), RAILS_HEADING)):
         m = _RAIL_CELL_RE.match(row[0])
         if m:
-            rails[m.group(1)] = set(_SLASH_CODE_RE.findall(" | ".join(row[1:])))
+            rails[m.group(1)] = set(_SLASH_CODE_RE.findall(row[-1]))
     return rails
 
 
@@ -251,3 +252,16 @@ def test_anchor_missing_seed_shape_is_reported() -> None:
     assert missing_seed_shapes(rails, shapes) == ["learn"]
     shapes = parse_seed_shapes(gateway.replace("`/user-dr", "`/user-xx"))
     assert missing_seed_shapes(rails, shapes) == ["decide (no /user-dr register line)"]
+
+
+def test_anchor_skill_named_only_in_sounds_like_is_not_a_rail_entry() -> None:
+    text = _pipeline()
+    row = next(line for line in text.splitlines() if line.startswith("| **learn** |"))
+    cells = row.split("|")
+    moved = "|".join(cells[:2] + [cells[2] + " `/user-brainstorm` "] + cells[3:])
+    moved = moved.replace("; explore an idea → `/user-brainstorm`", "")
+    assert moved != row and moved.count("`/user-brainstorm`") == 1
+    rails = parse_rails(text.replace(row, moved))
+    not_vent, host = parse_not_vent(text)
+    report = classify(_manifest_names(), rails, not_vent, host)
+    assert report["neither"] == ["user-brainstorm"], report
