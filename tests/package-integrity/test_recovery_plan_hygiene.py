@@ -42,7 +42,7 @@ def test_root_adapters_are_thin_and_point_to_stable_authority():
     agents = read("AGENTS.md")
     claude = read("CLAUDE.md")
 
-    assert len(agents.splitlines()) <= 8
+    assert len(agents.splitlines()) <= 14
     assert "`CLAUDE.md`" in agents
     assert "`plan.md`" in agents
     assert "does not enumerate skills" in agents

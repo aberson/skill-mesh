@@ -18,7 +18,7 @@ installed skill tree. Installing produces a host-native discovery tree in a cons
 | Manifest / config | JSON — `config/skill-manifest.json` (authoritative skill inventory) |
 | Build / install / release tooling | Windows PowerShell 5.1 floor (`powershell`) — `tools/*.ps1` |
 | Manifest + release checks | Python 3 — `tools/gen_manifest.py`, `tools/release_checks.py` |
-| Tests | pytest — 8 suites under `tests/` plus 3 root-only test roots; the DONE gate is the repo-root `python -m pytest` (see Key commands) |
+| Tests | pytest — 8 suites under `tests/` plus 3 root-only test roots; per change, focused tests plus the quick repo-wide checks; the repo-root `python -m pytest` is the once-per-release sweep (see Key commands) |
 | Lint / typecheck | **Not configured** (deliberate — see Key commands) |
 
 ## Key commands
@@ -37,10 +37,28 @@ full suite remains INCOMPLETE and deferred. Qualification and normal profile
 activation get one 20-minute total attempt. This is an agent-selected response to
 the operator's bounded-unblock request, not a repository-wide gate change.
 
-**Default DONE gate — the full suite is the repo-root invocation, with no path argument.** It is slow
-(the release, distribution, and smoke suites shell out to PowerShell once or more per test);
+**Testing rule (adopted 2026-11-12).** Per change, run the focused tests for what the change touches plus the quick repo-wide checks, and save the command, the files it selected and its summary line to a file. Reviewers check that saved evidence and do not re-run suites. Install early, then test and fix against the installed profiles. Run one full sweep per release, in the background; it is a release-candidate check, not a per-step or merge gate. Name which suites ran: an unnamed subset count is not gate evidence. Never claim a check passed without running it.
+
+If the operator limits testing further, drop optional checks, but never the release script's
+staged checks or the installer's safety checks, and record which suites ran.
+
+**Per-change pack — the quick repo-wide checks as one command.** It runs exactly the pack's
+selection, writes the evidence file the rule asks for (command, files selected, summary line;
+`--evidence <file>` picks the path) and exits with pytest's code. Add `--roster` for a catalog
+CREATE or DELETE, and `--rc-report` when one of the four representative skills' `core.md`
+changes. `--focused` prints the focused-tests-by-change table (which tests a change needs on top
+of the pack); `tools/change_pack.py` is that table's one owner:
+
+```
+python tools/change_pack.py
+```
+
+**Per-release sweep — the repo-root invocation, with no path argument.** This is the one full
+sweep the rule runs per release, not the per-step gate. It is slow (the release, distribution,
+and smoke suites shell out to PowerShell once or more per test);
 `documentation/phase-75-baseline.md` owns the measured wall clock. Run it from the repository
-root, and report its real summary line:
+root, detached in the background after the profiles are installed, and report its real summary
+line:
 
 ```
 python -m pytest
@@ -48,16 +66,16 @@ python -m pytest
 
 Before starting it, run `python tools/gate_preflight.py` and put its measured line in the gate
 record: it refuses (exit 3) when available memory is under 2048 MB or another pytest process is
-running, because either makes a red full gate untrustworthy.
+running, because either makes a red full sweep untrustworthy.
 
 A path argument narrows collection. `python -m pytest tests/` reaches only the eight suites
 under `tests/`; it never collects the three root-only test roots — `_shared/`,
 `skill-iterate/scripts/`, and `skill-eval-setup/scripts/` — so it cannot see a regression
 there. Those roots are real production code (the shared verdict engine and the two
-calibration/eval script packages), so a `tests/`-only run is an iteration gate, never the
-gate that flips a step or a phase DONE.
+calibration/eval script packages), so a `tests/`-only run never stands in for the per-release
+sweep.
 
-Fast iteration gates — use these while developing, never as the DONE gate:
+Fast iteration gates — use these while developing; neither is the per-release sweep:
 
 ```
 python -m pytest tests/
@@ -94,6 +112,9 @@ SHA-256 every file under the generated `dist/`:
 powershell -File tools/release.ps1
 ```
 
+The staged run of `tests/package-integrity` inside `tools/release.ps1` is the release's package
+gate, so do not run that suite separately before it.
+
 Regenerate the manifest. **Hermetic since Step 67** — it reads nothing outside this repository, takes
 no argument and no environment variable, and reproduces `config/skill-manifest.json` plus
 `tests/package-integrity/expected_inventory.json` and `skills/inventory.json` exactly. Re-run only when one of the authoritative
@@ -116,9 +137,9 @@ both the smoke scenarios and the generator consume.
 
 `tests/smoke/test_release_candidate_report.py` regenerates the report and diffs it, so a stale
 report is a hard red. It lives in the **smoke** suite, which a `tests/package-integrity` iteration
-gate never collects — meaning the failure surfaces only in the two-hour repo-root gate, hours after
-the edit that caused it. When you edit one of the four, regenerate in the same change, before the
-gate, not after (Phase IS Steps 100 and 101 each paid for this):
+gate never collects — meaning, unless the change pack runs with `--rc-report`, the failure surfaces
+only in the repo-root per-release sweep, long after the edit that caused it. When you edit one of the four, regenerate in the same change, before
+the sweep, not after (Phase IS Steps 100 and 101 each paid for this):
 
 ```
 python tests/smoke/gen_release_candidate_report.py

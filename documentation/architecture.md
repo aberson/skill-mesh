@@ -436,18 +436,21 @@ roots are owned by [`host-discovery.md`](host-discovery.md).
 or substitute the pinned interpreter path via your own environment — do not hardcode
 a private absolute path).
 
-**The DONE gate is the repo-root invocation.** Run from the repository root with no
-path argument, so collection reaches the eight suites under `tests` *and* the three
-test roots a `tests`-scoped run never touches — `_shared`, `skill-iterate/scripts`,
-and `skill-eval-setup/scripts`, all of which hold production modules this project
-edits:
+**The repo-root invocation is the per-release sweep.** The per-change gate is the
+testing rule in the root `CLAUDE.md` (focused tests for what the change touches plus
+the quick repo-wide checks, with saved evidence); the repo-root run is the one full
+sweep per release, in the background, not a per-step or merge gate. Run it from the
+repository root with no path argument, so collection reaches the eight suites under
+`tests` *and* the three test roots a `tests`-scoped run never touches — `_shared`,
+`skill-iterate/scripts`, and `skill-eval-setup/scripts`, all of which hold production
+modules this project edits:
 
 ```powershell
 python -m pytest
 ```
 
-A path-scoped run is a fast iteration gate, never the gate that flips a step or a
-phase DONE — it cannot observe a regression in the root-only roots. The measured
+A path-scoped run never stands in for the per-release sweep — it cannot observe a
+regression in the root-only roots. The measured
 collected / passed / failed / skipped counts for both invocations, and the date they
 were measured, are owned by [`phase-75-baseline.md`](phase-75-baseline.md); it is the
 single source and no other document restates them.
