@@ -611,6 +611,11 @@ verdict. The one report-derived input a parent uses is the `landed-paths.json` f
    - an untracked path that collides with an operator-tree change is a merge conflict;
    - any other path is copied with its bytes, or deleted when the change deleted it.
 
+   Every path lands in its working-tree form under the attribute rules the landing leaves in place:
+   when the change adds, edits or deletes a `.gitattributes`, that file lands first and every other
+   path's bytes are recomputed under it, so a change that adds `*.md -text` lands its LF-only files
+   byte-exact on a `core.autocrlf=true` machine.
+
    Never use `merge --squash` (it drops uncommitted and untracked work), `git apply --3way` (it writes
    the index), or a full-file copy over a shared file. On a merge conflict: `land-rollback` and end
    the run.

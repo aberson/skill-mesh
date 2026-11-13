@@ -388,6 +388,42 @@ def test_autocrlf_true_landing_uses_working_tree_bytes_and_blob_ids(env, tmp_pat
     assert git(repo, "status", "--porcelain", "--", "keep.txt") == ""
 
 
+def _payload_adding_gitattributes(env, tmp_path) -> tuple:
+    """core.autocrlf=true operator tree; the payload adds `*.md -text`, two LF-only .md files (one
+    in a subdirectory), an LF edit of a tracked .md, and a .txt the new rules do not cover."""
+    repo = make_repo(tmp_path / "repo", {"old.md": "was\n", "keep.txt": "k\n"}, autocrlf=True)
+    assert (repo / "old.md").read_bytes() == b"was\r\n"
+    branch, _ = env.prepare(env.owner(), repo, {
+        ".gitattributes": b"*.md -text\n", "doc.md": b"one\ntwo\n", "old.md": b"was\nnow\n",
+        "sub/deep.md": b"deep\n", "n.txt": b"new\n"})
+    want = {"doc.md": b"one\ntwo\n", "old.md": b"was\nnow\n", "sub/deep.md": b"deep\n", "n.txt": b"new\r\n"}
+    return repo, branch, want
+
+
+def test_landing_applies_the_gitattributes_the_payload_adds(env, tmp_path):
+    """A payload that adds `*.md -text` beside LF-only .md files must land them byte-exact under
+    core.autocrlf=true: the landed bytes follow the attribute rules the landing leaves in place,
+    not the operator tree's rules from before it.  Files the new rules do not cover still get the
+    autocrlf working-tree form, and landed-paths.json records the blob ids Git reports after."""
+    repo, branch, want = _payload_adding_gitattributes(env, tmp_path)
+    assert env.cli("land", "--run", branch)["status"] == "ok"
+    assert {rel: (repo / rel).read_bytes() for rel in want} == want
+    assert env.cli("verify-landed", "--run", branch)["status"] == "ok"
+    doc = json.loads(Path(env.cli("archive", "--run", branch)["landed_paths"]).read_text(encoding="utf-8"))
+    states = {p["path"]: p["state"] for p in doc["paths"]}
+    for rel in want:
+        assert states[rel] == git(repo, "hash-object", "--", rel), rel
+
+
+def test_preview_applies_the_gitattributes_the_payload_adds(env, tmp_path):
+    """Preview writes the same bytes the landing will, then rolls back to the raw prior bytes."""
+    repo, branch, want = _payload_adding_gitattributes(env, tmp_path)
+    assert env.cli("preview-apply", "--run", branch)["status"] == "ok"
+    assert {rel: (repo / rel).read_bytes() for rel in want} == want
+    assert env.cli("preview-rollback", "--run", branch)["status"] == "ok"
+    assert (repo / "old.md").read_bytes() == b"was\r\n" and not (repo / ".gitattributes").exists()
+
+
 # ------------------------------------------------------------------------------------------
 # Stash, finalize, cleanup guards, T12
 # ------------------------------------------------------------------------------------------
