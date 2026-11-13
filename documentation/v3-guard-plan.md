@@ -74,6 +74,8 @@ Red-on-garbage (Steps 6 to 12): wherever a test is moved, merged, folded, delete
 
 ### Step 1: Write the adopted testing rule into CLAUDE.md
 
+**Status:** DONE 2026-11-12. Commit 531e498. Reviewed APPROVE after one correction round (`<coding-root>/docs/skill-mesh-3-review/builds/guard-rule-review.md`).
+
 - **Problem:** The only test rule Codex reads calls the multi-hour repo-root suite "the DONE gate", with no scope and no ask-first. Astra ran about 7.5 hours of it to add one skill (11/03). The 10/29 session started it on a patch release, four minutes before the operator said stop. The operator has now adopted a rule that answers this directly (the canonical text above), so the earlier ask-first interim paragraph is replaced by the rule itself.
 - **Type:** code
 - **Issue:** #
@@ -87,6 +89,8 @@ Red-on-garbage (Steps 6 to 12): wherever a test is moved, merged, folded, delete
   - No test is added: new wording tests are the pattern this plan is trying to stop. Red-on-garbage does not apply.
 
 ### Step 2: Name the release script's staged check as the release's package gate; fix the regenerate wording
+
+**Status:** DONE 2026-11-12. Commit 0e89065. Reviewed APPROVE after one correction round (`<coding-root>/docs/skill-mesh-3-review/builds/guard-rule-review.md`).
 
 - **Problem:** `tools/release.ps1` already runs `tests/package-integrity` on the staged tree, but nothing says so where agents look, so they run it first (697 tests, then 692, 7 to 9 minutes). The lifecycle guide says to "regenerate the derived in-repo artifacts", while `CLAUDE.md` says to re-run `tools/gen_manifest.py` only when its constants change. That caused an unneeded manifest run and a line-ending clean-up. Separately, the 10/29 first draft restated a shared contract in 40 lines and pinned it with a new wording-test file, then was rewritten 17 minutes later.
 - **Type:** code
@@ -104,6 +108,8 @@ Red-on-garbage (Steps 6 to 12): wherever a test is moved, merged, folded, delete
   - No test is added.
 
 ### Step 3: The testing rule's short form, a wait-and-report rule and the skill-creator boundary, for Codex only
+
+**Status:** DONE 2026-11-12. Commit d8f22fb. Reviewed APPROVE after one correction round (`<coding-root>/docs/skill-mesh-3-review/builds/guard-rule-review.md`).
 
 - **Problem:** Codex waits by short polls and narrates each one, gives no estimate, and calls unfinished steps "final". Astra produced about 209 "still active" messages in one release; the 10/29 session sent 17 updates for 3 real changes while a 19-minute install ran. The host's built-in skill-creator is also loaded and run in a repo whose `CLAUDE.md` says it is not this repo's authority (duplicate validation, a false failure). Claude has the waiting rule in `.claude/rules/subagent-economy.md`; Codex never loads that file.
 - **Type:** code
@@ -138,6 +144,8 @@ Red-on-garbage (Steps 6 to 12): wherever a test is moved, merged, folded, delete
 
 ### Step 5: Name the per-change pack and time it once
 
+**Status:** DONE 2026-11-12. Commit 41ae009, 41edb54. Reviewed APPROVE after one correction round (`<coding-root>/docs/skill-mesh-3-review/builds/guard-rule-review.md`).
+
 - **Problem:** The rule says "the quick repo-wide checks", but nothing names them as one command, so an agent cannot run or cite them. The audit assembled the pack from measured spans (about 530 tests, about 1.5 minutes) but never ran it as one command, and one part (package-integrity without its five behavioural files, 511 tests, about 70 to 80 seconds) was not timed as one command.
 - **Type:** code
 - **Issue:** #
@@ -151,6 +159,8 @@ Red-on-garbage (Steps 6 to 12): wherever a test is moved, merged, folded, delete
   - The saved evidence file for this step is itself an example of the file format the rule asks reviewers to read.
 
 ### Step 6: Move the five behavioural files out of package-integrity (audit rank 1)
+
+**Status:** DONE 2026-11-13. Commit 6d06707. Steps 6 to 10 and 12 reviewed APPROVE after one correction round (`<coding-root>/docs/skill-mesh-3-review/builds/guard-pack-review.md`).
 
 - **Problem:** `tools/release.ps1` runs all of `tests/package-integrity` in the staged tree, and the release tests run `release.ps1` 11 times, so the five behavioural files (363 s of the 425 s nested run) run 12 times per sweep. Measured: the first release test took 454 s, 425 s of it the nested run.
 - **Type:** code
@@ -166,6 +176,8 @@ Red-on-garbage (Steps 6 to 12): wherever a test is moved, merged, folded, delete
 
 ### Step 7: Restructure the release tests to share one release run (audit rank 2)
 
+**Status:** DONE 2026-11-13. Commit e83c4e6, 3a14272. Steps 6 to 10 and 12 reviewed APPROVE after one correction round (`<coding-root>/docs/skill-mesh-3-review/builds/guard-pack-review.md`).
+
 - **Problem:** 8 tests (`:117`, `:140`, `:158`, `:179`, `:191`, `:230`, `:251`, `:329`) make 11 runs of the whole release script, at about 91 s each once Step 6 lands (about 461 s each before it). `test_release_script.py:117`, `:140` and `:158` each need only a stage to inspect.
 - **Type:** code
 - **Issue:** #
@@ -178,6 +190,8 @@ Red-on-garbage (Steps 6 to 12): wherever a test is moved, merged, folded, delete
   - The four refusal tests at `:272` to `:311` are unchanged and pass.
 
 ### Step 8: Install the full catalog fewer times in test_distributions (audit rank 3)
+
+**Status:** DONE 2026-11-13. Commit 9026aea, 1a6226a. Steps 6 to 10 and 12 reviewed APPROVE after one correction round (`<coding-root>/docs/skill-mesh-3-review/builds/guard-pack-review.md`).
 
 - **Problem:** 30 tests in `tests/distributions/test_distributions.py` each install the full catalog (about 160 files) and took 2,426 s of the file's 2,691 s (51 to 230 s each). The same file already has one-skill versions of the same lifecycle checks that take 5 to 12 s. Install, not build, is the cost.
 - **Type:** code
@@ -192,6 +206,8 @@ Red-on-garbage (Steps 6 to 12): wherever a test is moved, merged, folded, delete
 
 ### Step 9: Delete the duplicate codex install tests and fold the duplicates (audit ranks 4 and 6)
 
+**Status:** DONE 2026-11-13. Commit e2ebee0. Steps 6 to 10 and 12 reviewed APPROVE after one correction round (`<coding-root>/docs/skill-mesh-3-review/builds/guard-pack-review.md`).
+
 - **Problem:** `test_codex_install_path.py:398`, `:432` (x4), `:453` and `:469` re-prove for codex what `test_distributions.py` proves for claude through the same provider-neutral installer code (357.7 s measured). Three more `test_distributions.py` tests duplicate others (`:2178`, `:2963`, `:1602`; 92.9, 79.2 and 55.4 s; line numbers are from 79edff2). `test_legacy_migration.py:4385` is a subset of `:2837` and `:1806` asserts the test's own constant.
 - **Type:** code
 - **Issue:** #
@@ -204,6 +220,8 @@ Red-on-garbage (Steps 6 to 12): wherever a test is moved, merged, folded, delete
   - The claim that both providers go through the same provider-neutral installer code is checked, not asserted: a grep of `tools/install-skill-mesh.ps1` for provider conditionals on the refusal and ledger paths finds none (or each is listed and its codex test is kept).
 
 ### Step 10: Run the host inspector once per shape in test_host_inspect (audit rank 7)
+
+**Status:** DONE 2026-11-13. Commit 8ee5bf6. Steps 6 to 10 and 12 reviewed APPROVE after one correction round (`<coding-root>/docs/skill-mesh-3-review/builds/guard-pack-review.md`).
 
 - **Problem:** `test_host_inspect.py:318` (x25) and `:570` (x25) each launch the inspector again for checks `:751` (x25) could make on its own run, and `:274` (x25) launches it four times per shape (222 s total file; 47 s measured for `:318` plus `:570`; `:274` is 74 s and is a security check, see Produces).
 - **Type:** code
@@ -231,6 +249,8 @@ Red-on-garbage (Steps 6 to 12): wherever a test is moved, merged, folded, delete
   - Red-on-garbage: for each polled condition, in a scratch copy where the condition never becomes true, confirm the test fails at its timeout and does not pass; confirm green on the real file. Run the file three times and record no flake (it is a timing change).
 
 ### Step 12: Stop a test writing into the checkout's own dist/codex (audit side finding)
+
+**Status:** DONE 2026-11-13. Commit 26e1c9b. Steps 6 to 10 and 12 reviewed APPROVE after one correction round (`<coding-root>/docs/skill-mesh-3-review/builds/guard-pack-review.md`).
 
 - **Problem:** `tests/package-integrity/test_user_debug_codex_contract.py:130` runs `build-distributions.ps1 -Provider codex` without `-OutputDir`. Every run writes into the checkout's own `dist/codex`, and inside `release.ps1`'s staged check it rebuilds the stage's `dist/codex` just before the checksums are taken. The bytes should be identical, but a test is writing into the artifact it checks.
 - **Type:** code
