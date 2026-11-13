@@ -1,23 +1,9 @@
 {
   "schema": "show-your-work.workflows.v1",
   "generator": "show-your-work 0.1.0",
-  "generated_at": "2026-11-13T05:50:07+00:00",
+  "generated_at": "2026-11-13T08:24:06+00:00",
   "source_dir": "docs/workflows",
   "items": [
-    {
-      "id": "build-observer",
-      "label": "build-observer",
-      "summary": "Draft a grounded portfolio block, validate it offline, and print a proposal while holding invalid roots or missing tools.",
-      "alt": "A proposal flow locates a project, reads evidence, drafts fields, and either holds on invalid prerequisites or prints a validated block.",
-      "not_shown": "field-by-field prose rules, payload escaping, validator implementation, write mode, and the full redline schema",
-      "sources": [
-        "skills/build-observer/core.md"
-      ],
-      "source_path": "docs/workflows/build-observer.mmd",
-      "source_sha256": "dd7241d5ffc7fe463faffe711a31f1e2eeef3f8a9a39da86bc299ea249b26b63",
-      "engine": "mermaid",
-      "rasters": null
-    },
     {
       "id": "build-phase",
       "label": "build-phase",
@@ -705,6 +691,20 @@
       "rasters": null
     },
     {
+      "id": "user-fermize",
+      "label": "user-fermize",
+      "summary": "Read one complex build decision read-only, tie the release promise to its checks and gaps, and advise on a smaller useful milestone when one is supported.",
+      "alt": "A plan and one decision are read read-only in about ten minutes; each promise is tied to its condition, check and gap; a smaller milestone is shown only when supported; the result is short advice.",
+      "not_shown": "the Relevance, Evidence and Control lenses in detail, costly-check rerun rules, failed-gate readings, and the report's wording rules",
+      "sources": [
+        "skills/user-fermize/core.md"
+      ],
+      "source_path": "docs/workflows/user-fermize.mmd",
+      "source_sha256": "a4f1fb2ca20c189c512460b6cb189ccfdbabc89a3ef392850df6ff261556a698",
+      "engine": "mermaid",
+      "rasters": null
+    },
+    {
       "id": "user-gateway",
       "label": "user-gateway",
       "summary": "Convert an operator vent into one evidence-aware work ledger row and ready-to-paste seed per distinct fragment.",
@@ -715,20 +715,6 @@
       ],
       "source_path": "docs/workflows/user-gateway.mmd",
       "source_sha256": "c21869fc56f29e4bf6e6c98755469c5a0d43a302389da3eb09d08305029d7ff4",
-      "engine": "mermaid",
-      "rasters": null
-    },
-    {
-      "id": "user-lavishify",
-      "label": "user-lavishify",
-      "summary": "Re-present a dense artifact in a loopback Lavish Editor, collect pinned feedback, and propagate operator decisions to canonical sources.",
-      "alt": "Dense content passes Node and browser checks, becomes scratchpad HTML, loops through pinned browser feedback, then propagates approved decisions.",
-      "not_shown": "telemetry prefixes, playbook IDs, layout-warning handling, resume commands, issue-ownership proof, and destination-specific edits",
-      "sources": [
-        "skills/user-lavishify/core.md"
-      ],
-      "source_path": "docs/workflows/user-lavishify.mmd",
-      "source_sha256": "34586e5809ceb3bddf60f9e10a793b54899786a2e8b522450a320b3b2f291eca",
       "engine": "mermaid",
       "rasters": null
     },

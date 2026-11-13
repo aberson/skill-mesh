@@ -582,8 +582,7 @@ with no re-run invocation.
 
 **A deliberate, scoped exception to the chat-first default.** Ordinary `/repo-update` output stays
 in chat; a *build-completion tour* is the one sanctioned default document — a durable, keep-it-around
-map of what shipped. This does NOT change the default for any other output, and it is NOT
-`/user-lavishify` (that stays on-demand + annotate-only, driven by the `lavish-axi` CLI). The tour is
+map of what shipped. This does NOT change the default for any other output. The tour is
 a *read* document — no annotate loop — saved as a file in the project repository under the shared
 document output contract (`<repo>/_shared/document-output.md`). It is never published as a hosted Artifact.
 (Chat-first principle: memory `feedback_lavish_on_demand_not_default`.)

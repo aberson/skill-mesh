@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "description": "Per-skill model capability mapping for the provider-neutral skill-mesh router. Transformed faithfully from the legacy .claude/references/model-mapping.md table (Step 34). Consumed by runtime/skill-router.ps1 to decide claude/gpt/local capability. Note text was ASCII-normalized (em-dash -> hyphen); the boolean capability data is preserved exactly, one row per legacy row. Phase CP Step 10 added seven rows that have no legacy row: the promoted workspace-custom skills (build-observer, the four citation-* skills, goblin-sweep, repo-wrap). Their claude/gpt booleans state the adapters this package actually ships for them; local=false records 'not yet assessed' rather than a measured no, matching their deliberate absence from the manifest's LOCAL_CAPABLE set. Without a row here the router warns and falls back to Claude-only for a skill the manifest declares portable.",
+  "description": "Per-skill model capability mapping for the provider-neutral skill-mesh router. Transformed faithfully from the legacy .claude/references/model-mapping.md table (Step 34). Consumed by runtime/skill-router.ps1 to decide claude/gpt/local capability. Note text was ASCII-normalized (em-dash -> hyphen); the boolean capability data is preserved exactly, one row per legacy row. Phase CP Step 10 added seven rows that have no legacy row: the promoted workspace-custom skills (the four citation-* skills, goblin-sweep, repo-wrap, and a portfolio-block proposer whose row left with it when the v3 catalog cleanup moved it to dev-observatory). Their claude/gpt booleans state the adapters this package actually ships for them; local=false records 'not yet assessed' rather than a measured no, matching their deliberate absence from the manifest's LOCAL_CAPABLE set. Without a row here the router warns and falls back to Claude-only for a skill the manifest declares portable.",
   "default_provider": "auto",
   "providers": {
     "claude": {
@@ -36,13 +36,6 @@
     "local": "Can run on local code-30b, text-only, no vision/sub-agents (legacy local-capable=Y)."
   },
   "skills": {
-    "build-observer": {
-      "default_model": "claude",
-      "claude": true,
-      "gpt": true,
-      "local": false,
-      "notes": "Promoted at Phase CP Step 10 - proposal-only observatory scaffolder; core + three adapters."
-    },
     "build-phase": {
       "default_model": "claude",
       "claude": true,
@@ -386,18 +379,18 @@
       "local": true,
       "notes": "Ported - shared core + GPT/Claude wrappers"
     },
+    "user-fermize": {
+      "default_model": "claude",
+      "claude": true,
+      "gpt": true,
+      "local": false,
+      "notes": "Created in the v3 catalog cleanup (Step 5) from the personal Codex skill: neutral core plus Claude, Copilot and Codex adapters; local capability not assessed."
+    },
     "user-gateway": {
       "default_model": "claude",
       "claude": true,
       "gpt": true,
       "local": true,
-      "notes": "Ported - shared core + GPT/Claude wrappers"
-    },
-    "user-lavishify": {
-      "default_model": "claude",
-      "claude": true,
-      "gpt": true,
-      "local": false,
       "notes": "Ported - shared core + GPT/Claude wrappers"
     },
     "user-learn": {

@@ -1,4 +1,4 @@
-"""Focused contract checks for the Skill Mesh v2 authoring trio.
+"""Focused contract checks for the Skill Mesh v2 authoring skills.
 
 These skills primarily implement behavior in prose.  The checks below pin the
 safety and handoff clauses whose omission would change observable behavior.
@@ -50,30 +50,10 @@ def test_user_learn_preflights_before_fanout_and_rechecks_real_outputs() -> None
     assert "never let those arms inherit the coordinator model" in codex
 
 
-def test_user_lavishify_keeps_egress_loopback_and_issue_writes_bounded() -> None:
-    core = _core("user-lavishify")
-    codex = _codex("user-lavishify")
-
-    for guard in (
-        "LAVISH_AXI_TELEMETRY=0",
-        "Never run `lavish-axi share`",
-        "Never run `lavish-axi setup hooks`",
-        "no tunnel, relay or port-forward",
-    ):
-        assert guard in core
-
-    assert "resolve the target once" in core
-    assert "normalized absolute paths; separator- and case-insensitive on Windows" in core
-    assert "either a matching `repo_url` names the target" in core
-    assert "never rely on the tool's default repository" in core
-    assert "not the checked target (<owner/name>)" in core
-    assert "never run `lavish-axi setup hooks`" in codex
-
-
 def test_native_codex_failure_mapping_uses_core_semantics_without_router_failover() -> None:
     adapters = {
         skill: _codex(skill)
-        for skill in ("user-brainstorm", "user-learn", "user-lavishify")
+        for skill in ("user-brainstorm", "user-learn")
     }
 
     for skill, adapter in adapters.items():
@@ -83,5 +63,3 @@ def test_native_codex_failure_mapping_uses_core_semantics_without_router_failove
 
     assert "assign no second writer" in adapters["user-brainstorm"]
     assert "a still-running or unknown arm receives no second writer" in adapters["user-learn"]
-    assert "follow the core's held-state rule" in adapters["user-lavishify"]
-    assert "this is not transport failover" in adapters["user-lavishify"]

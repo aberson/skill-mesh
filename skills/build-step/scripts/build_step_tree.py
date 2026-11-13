@@ -63,7 +63,11 @@ Agent defaults [AD]:
     (``--binary --full-index --no-renames --no-ext-diff --no-textconv``, fixed prefixes and
     algorithm).  Symlink and submodule changes are refused (``halt``, unsupported path type).
   * Writing a payload path uses ``git cat-file --filters --path=<p> <blob>`` so the operator tree
-    receives working-tree form bytes (autocrlf, attributes).  Snapshots, rollback and
+    receives working-tree form bytes (autocrlf, attributes).  When the payload writes or deletes a
+    ``.gitattributes``, preview and landing compute that form under the rules the write leaves in
+    place (a scratch work tree holding the landed ``.gitattributes`` files, read through
+    ``--work-tree``), and landing writes the ``.gitattributes`` paths first, so a change that adds
+    ``*.md -text`` lands its LF files byte-exact under ``core.autocrlf=true``.  Snapshots, rollback and
     verify-landed compare raw byte sha256 (AV-28); only ``landed-paths.json`` uses the filtered
     blob id from ``git hash-object -- <path>`` taken right after the write under the lock.
   * This helper never writes any index, so a snapshot's recorded written index entry always
@@ -568,8 +572,43 @@ def hash_object_bytes(git_root: str, rel: str, data: bytes) -> str:
     return git_out(["hash-object", "--stdin", f"--path={rel}"], git_root, input=data)
 
 
-def worktree_form(git_root: str, rel: str, oid: str) -> bytes:
-    return git(["cat-file", "--filters", f"--path={rel}", oid], git_root).stdout
+def worktree_form(git_root: str, rel: str, oid: str, attr_tree: Optional[str] = None) -> bytes:
+    """Working-tree form of a blob at rel.  With attr_tree (see attr_overlay) the in-tree
+    .gitattributes rules are read from that scratch work tree instead of the operator tree."""
+    if attr_tree is None:
+        return git(["cat-file", "--filters", f"--path={rel}", oid], git_root).stdout
+    git_dir = git_out(["rev-parse", "--absolute-git-dir"], git_root)
+    return git([f"--git-dir={git_dir}", f"--work-tree={attr_tree}", "cat-file", "--filters",
+                f"--path={rel}", oid], attr_tree).stdout
+
+
+def is_gitattributes(rel: str) -> bool:
+    return rel.rsplit("/", 1)[-1] == ".gitattributes"
+
+
+def attr_overlay(git_root: str, rdir: Path, rels: list, landed: dict) -> str:
+    """A scratch work tree holding the .gitattributes files the operator tree will hold once the
+    payload lands: for each directory on the path of every rel, ``landed[<dir>/.gitattributes]``
+    when the payload writes (bytes) or deletes (None) it, else the operator tree's current file.
+    A .gitattributes missing here applies no rules, even when the operator index still holds it:
+    Git reads no index copy for this lookup, the same as for a file deleted from the operator tree."""
+    overlay = Path(tempfile.mkdtemp(prefix="attr-", dir=str(rdir)))
+    dirs = {""}
+    for rel in rels:
+        parts = rel.split("/")[:-1]
+        dirs.update("/".join(parts[:i]) for i in range(1, len(parts) + 1))
+    for d in sorted(dirs):
+        ga = f"{d}/.gitattributes" if d else ".gitattributes"
+        if ga in landed:
+            data = landed[ga]
+        else:
+            src = fs_path(git_root, ga)
+            data = src.read_bytes() if src.is_file() and not path_is_link_like(src) else None
+        if data is not None:
+            dst = overlay / ga
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            dst.write_bytes(data)
+    return str(overlay)
 
 
 # ---------------------------------------------------------------------------------------------
@@ -1776,10 +1815,23 @@ def _write_entry(st: dict, snap: dict, entry: dict, exec_bit: bool) -> None:
     entry["status"] = "written"
 
 
-def _payload_bytes(st: dict, entry: dict) -> Optional[bytes]:
+def _payload_bytes(st: dict, entry: dict, attr_tree: Optional[str] = None) -> Optional[bytes]:
     if entry["new"] is None:
         return None
-    return worktree_form(st["git_root"], entry["path"], entry["new"]["oid"])
+    return worktree_form(st["git_root"], entry["path"], entry["new"]["oid"], attr_tree)
+
+
+def _preview_plan(ctx: Context, st: dict, entries: list) -> list:
+    """[(rel, bytes|None)] in the working-tree form the attribute rules after the write give: when
+    the payload writes or deletes a .gitattributes, every path is recomputed under those rules."""
+    landed = {e["path"]: _payload_bytes(st, e) for e in entries if is_gitattributes(e["path"])}
+    if not landed:
+        return [(e["path"], _payload_bytes(st, e)) for e in entries]
+    overlay = attr_overlay(st["git_root"], run_dir(ctx, st["branch"]), [e["path"] for e in entries], landed)
+    try:
+        return [(e["path"], _payload_bytes(st, e, overlay)) for e in entries]
+    finally:
+        shutil.rmtree(overlay, ignore_errors=True)
 
 
 def cmd_preview_apply(ctx: Context, st: dict, args: argparse.Namespace) -> dict:
@@ -1791,7 +1843,7 @@ def cmd_preview_apply(ctx: Context, st: dict, args: argparse.Namespace) -> dict:
         if active_snapshots(st):  # RF-5: re-validated on state reloaded after a lock wait
             halt("active snapshot", snapshots=[s["id"] for s in active_snapshots(st)])
         payload = _require_payload(st)
-        plan = [(e["path"], _payload_bytes(st, e)) for e in payload["entries"]]
+        plan = _preview_plan(ctx, st, payload["entries"])
         snap = _new_snapshot(ctx, st, "preview", plan)
     except BaseException:
         release_tree_if_inactive(st)
@@ -1882,12 +1934,32 @@ def cmd_land_rollback(ctx: Context, st: dict, args: argparse.Namespace) -> dict:
 
 
 def _classify_landing(ctx: Context, st: dict, payload: dict) -> tuple:
-    """Pure read: returns ([(rel, bytes|None, exec)], conflicts)."""
+    """Pure read of the operator tree: returns ([(rel, bytes|None, exec)], conflicts).  When the
+    payload writes or deletes a .gitattributes, those paths are classified first and every path
+    is then classified again with the working-tree form their landed rules give (attr_overlay);
+    the plan lists the .gitattributes paths first so they are written before the rest."""
+    entries = payload["entries"]
+    first = [e for e in entries if is_gitattributes(e["path"])]
+    if not first:
+        return _classify_entries(ctx, st, entries, None)
+    plan, conflicts = _classify_entries(ctx, st, first, None)
+    if conflicts:
+        return _classify_entries(ctx, st, entries, None)
+    landed = {rel: data for rel, data, _x in plan}
+    overlay = attr_overlay(st["git_root"], run_dir(ctx, st["branch"]), [e["path"] for e in entries], landed)
+    try:
+        plan, conflicts = _classify_entries(ctx, st, entries, overlay)
+    finally:
+        shutil.rmtree(overlay, ignore_errors=True)
+    return sorted(plan, key=lambda p: not is_gitattributes(p[0])), conflicts
+
+
+def _classify_entries(ctx: Context, st: dict, entries: list, attr_tree: Optional[str]) -> tuple:
     root, base = st["git_root"], st["baseline"]
     idx = index_map(root)
     rdir = run_dir(ctx, st["branch"]) / "merge"
     plan, conflicts = [], []
-    for e in payload["entries"]:
+    for e in entries:
         rel, new, old = e["path"], e["new"], e["old"]
         dst = fs_path(root, rel)
         exists = os.path.lexists(dst)
@@ -1900,7 +1972,7 @@ def _classify_landing(ctx: Context, st: dict, payload: dict) -> tuple:
             cur_blob = hash_object(root, rel) if exists else None
             changed = old is None or ient["oid"] != old["oid"] or ient["stage"] != "0" or cur_blob != old["oid"]
             if not changed:
-                plan.append((rel, None if new is None else worktree_form(root, rel, new["oid"]), exec_bit))
+                plan.append((rel, None if new is None else worktree_form(root, rel, new["oid"], attr_tree), exec_bit))
                 continue
             if new is None:
                 if not exists:
@@ -1911,7 +1983,7 @@ def _classify_landing(ctx: Context, st: dict, payload: dict) -> tuple:
             if not exists:
                 conflicts.append({"path": rel, "why": "operator tree deleted a file the payload changes"})
                 continue
-            theirs = worktree_form(root, rel, new["oid"])
+            theirs = worktree_form(root, rel, new["oid"], attr_tree)
             with open(dst, "rb") as handle:
                 ours = handle.read()
             if old is None:
@@ -1920,7 +1992,7 @@ def _classify_landing(ctx: Context, st: dict, payload: dict) -> tuple:
                 else:
                     conflicts.append({"path": rel, "why": "both sides added different content"})
                 continue
-            basebytes = worktree_form(root, rel, old["oid"])
+            basebytes = worktree_form(root, rel, old["oid"], attr_tree)
             rdir.mkdir(parents=True, exist_ok=True)
             tag = secrets.token_hex(4)
             fo, fb, ft = rdir / f"{tag}.ours", rdir / f"{tag}.base", rdir / f"{tag}.theirs"
@@ -1947,7 +2019,7 @@ def _classify_landing(ctx: Context, st: dict, payload: dict) -> tuple:
                 else:
                     conflicts.append({"path": rel, "why": "operator tree removed a file the payload changes"})
             elif new is not None:
-                plan.append((rel, worktree_form(root, rel, new["oid"]), exec_bit))
+                plan.append((rel, worktree_form(root, rel, new["oid"], attr_tree), exec_bit))
     return plan, conflicts
 
 

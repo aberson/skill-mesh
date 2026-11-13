@@ -1,19 +1,18 @@
 {
   "note": "Authoritative expected inventory for package-integrity tests. Committed so the public package tests need no private/legacy source. Regenerate with tools/gen_manifest.py.",
   "counts": {
-    "total": 59,
-    "portable": 56,
+    "total": 58,
+    "portable": 55,
     "provider_native": 3,
-    "claude": 59,
-    "gpt": 56,
-    "codex": 56,
+    "claude": 58,
+    "gpt": 55,
+    "codex": 55,
     "local_capable": 20,
     "sub_agent": 20,
     "vision": 2,
-    "filesystem": 59
+    "filesystem": 58
   },
   "portable": [
-    "build-observer",
     "build-phase",
     "build-queue",
     "build-step",
@@ -60,8 +59,8 @@
     "user-debug",
     "user-dr",
     "user-draft",
+    "user-fermize",
     "user-gateway",
-    "user-lavishify",
     "user-learn",
     "user-pm",
     "user-project",
@@ -76,7 +75,6 @@
     "judge-motion"
   ],
   "codex": [
-    "build-observer",
     "build-phase",
     "build-queue",
     "build-step",
@@ -123,8 +121,8 @@
     "user-debug",
     "user-dr",
     "user-draft",
+    "user-fermize",
     "user-gateway",
-    "user-lavishify",
     "user-learn",
     "user-pm",
     "user-project",
@@ -182,34 +180,6 @@
     "judge-ui"
   ],
   "skills": [
-    {
-      "name": "build-observer",
-      "status": "portable",
-      "local_capable": false,
-      "capabilities": [
-        "filesystem"
-      ],
-      "migration": {
-        "legacy_core": ".claude/skills-gpt/build-observer/SKILL-core.md",
-        "legacy_claude_launcher": ".claude/skills/build-observer/SKILL.md",
-        "legacy_claude_adapter": ".claude/skills/build-observer/SKILL-claude.md",
-        "legacy_gpt": ".claude/skills-gpt/build-observer/SKILL-gpt.md"
-      },
-      "support_assets": [
-        {
-          "source": ".claude/skills/build-observer/sample-dry-run.md",
-          "dest": "skills/build-observer/sample-dry-run.md"
-        },
-        {
-          "source": ".claude/skills/build-observer/scaffold_portfolio.py",
-          "dest": "skills/build-observer/scaffold_portfolio.py"
-        },
-        {
-          "source": ".claude/skills/build-observer/test_scaffold_portfolio.py",
-          "dest": "skills/build-observer/test_scaffold_portfolio.py"
-        }
-      ]
-    },
     {
       "name": "build-phase",
       "status": "portable",
@@ -1224,6 +1194,21 @@
       ]
     },
     {
+      "name": "user-fermize",
+      "status": "portable",
+      "local_capable": false,
+      "capabilities": [
+        "filesystem"
+      ],
+      "migration": {
+        "legacy_core": ".claude/skills-gpt/user-fermize/SKILL-core.md",
+        "legacy_claude_launcher": ".claude/skills/user-fermize/SKILL.md",
+        "legacy_claude_adapter": ".claude/skills/user-fermize/SKILL-claude.md",
+        "legacy_gpt": ".claude/skills-gpt/user-fermize/SKILL-gpt.md"
+      },
+      "support_assets": []
+    },
+    {
       "name": "user-gateway",
       "status": "portable",
       "local_capable": true,
@@ -1242,21 +1227,6 @@
           "dest": "skills/user-gateway/evals/"
         }
       ]
-    },
-    {
-      "name": "user-lavishify",
-      "status": "portable",
-      "local_capable": false,
-      "capabilities": [
-        "filesystem"
-      ],
-      "migration": {
-        "legacy_core": ".claude/skills-gpt/user-lavishify/SKILL-core.md",
-        "legacy_claude_launcher": ".claude/skills/user-lavishify/SKILL.md",
-        "legacy_claude_adapter": ".claude/skills/user-lavishify/SKILL-claude.md",
-        "legacy_gpt": ".claude/skills-gpt/user-lavishify/SKILL-gpt.md"
-      },
-      "support_assets": []
     },
     {
       "name": "user-learn",

@@ -477,13 +477,13 @@ def test_build_file_counts_match_manifest(dist_root):
     # `test_shared_payload_matches_an_independent_closure_walk` is what proves the
     # SET, from a re-walk rather than from this literal.
     # The trailing literals are the four reviewed package exceptions: + 4 review-deep
-    # resources (Phase CD), + 2 build-step scripts (packet route P2), + 1
-    # build-observer validator, + 6 skill-iterate helpers, and + 11 Claude-only
-    # judge-motion resources. Their focused
-    # resource tests prove each exact SET.
+    # resources (Phase CD), + 2 build-step scripts (packet route P2), + 6
+    # skill-iterate helpers, and + 11 Claude-only judge-motion resources. (The
+    # portfolio validator's + 1 ended with its skill, v3 catalog cleanup Step 4.)
+    # Their focused resource tests prove each exact SET.
     shared = len(EXPECTED_SHARED_PAYLOAD)
-    assert len(claude_files) == len(portable) * 2 + len(native) * 1 + 2 + shared + 4 + 2 + 1 + 6 + 11
-    assert len(gpt_files) == len(portable) * 2 + 2 + shared + 4 + 2 + 1 + 6
+    assert len(claude_files) == len(portable) * 2 + len(native) * 1 + 2 + shared + 4 + 2 + 6 + 11
+    assert len(gpt_files) == len(portable) * 2 + 2 + shared + 4 + 2 + 6
 
 
 # --------------------------------------------------------------------------- #
@@ -3261,17 +3261,20 @@ COHORT_C_CODEX_SKILLS = ["build-phase", "build-queue", "build-step", "goblin-do"
                          "skill-eval-setup", "skill-evolve", "skill-iterate",
                          "test-prune", "tier-escalate", "tier-offload"]
 # Cohort D, the remainder of the then-portable catalog (Phase CP Step 8, issue #125)
-# -- with it the declared roster became the portable roster, all 47.
+# -- with it the declared roster became the portable roster, all 47. The v3 catalog
+# cleanup retired its Lavish Editor presentation skill (plan Step 2, #258).
 COHORT_D_CODEX_SKILLS = ["memory-distill", "observatory-doctor", "research-prospect",
                          "user-afterparty", "user-brainstorm", "user-debug",
-                         "user-draft", "user-gateway", "user-lavishify",
+                         "user-draft", "user-gateway",
                          "user-learn", "user-pm", "user-shakedown", "user-uat",
                          "user-walkthrough"]
 # The seven workspace-custom skills promoted at Phase CP Step 10 (issue #127). Not a
 # cohort in the earlier sense: these are NEW catalog members authored core-plus-three-
 # adapters in one commit, so they enter the portable roster and the codex roster
 # together and the two reached 54.
-STEP10_PROMOTED_SKILLS = ["build-observer", "citation-distill", "citation-review",
+# The v3 catalog cleanup moved the seventh, a portfolio-block proposer, to
+# dev-observatory (plan Step 4, #260), so six remain.
+STEP10_PROMOTED_SKILLS = ["citation-distill", "citation-review",
                           "citation-sweep", "citation-triage", "goblin-sweep",
                           "repo-wrap"]
 # The separately approved code-consigliere addition extends both explicit rosters to 55.
@@ -3280,12 +3283,15 @@ CODE_CONSIGLIERE_ADDITION = ["code-consigliere"]
 USER_DR_ADDITION = ["user-dr"]
 # The separately authorized user-build-route addition extends both explicit rosters to 57.
 USER_BUILD_ROUTE_ADDITION = ["user-build-route"]
+# The v3 catalog cleanup's user-fermize CREATE (plan Step 5, #261) adds one more.
+USER_FERMIZE_ADDITION = ["user-fermize"]
 DECLARED_CODEX_SKILLS = sorted(PILOT_CODEX_SKILLS + COHORT_B_CODEX_SKILLS
                                + COHORT_C_CODEX_SKILLS + COHORT_D_CODEX_SKILLS
                                + STEP10_PROMOTED_SKILLS
                                + CODE_CONSIGLIERE_ADDITION
                                + USER_DR_ADDITION
-                               + USER_BUILD_ROUTE_ADDITION)
+                               + USER_BUILD_ROUTE_ADDITION
+                               + USER_FERMIZE_ADDITION)
 
 
 def test_codex_profile_holds_exactly_the_declared_cohorts_for_the_committed_manifest(
@@ -3299,7 +3305,9 @@ def test_codex_profile_holds_exactly_the_declared_cohorts_for_the_committed_mani
     The separately approved code-consigliere addition carries both to fifty-five, and
     the separately authorized user-dr addition to fifty-six, and the separately
     authorized user-build-route addition to fifty-seven; retiring the orientation skill
-    into user-pm brought it to fifty-six. It
+    into user-pm brought it to fifty-six, retiring the Lavish Editor presentation skill
+    to fifty-five, moving the portfolio-block proposer out to fifty-four, and creating
+    user-fermize back to fifty-five. It
     grades the whole emission contract for the real cohorts at once,
     because the parts are only correct together: a launcher without its co-located
     core.md is a package Codex can list and cannot run, and an unstamped file is one
@@ -3308,7 +3316,7 @@ def test_codex_profile_holds_exactly_the_declared_cohorts_for_the_committed_mani
     out = tmp_path / "out"
     r = _build(out, provider="codex")
     assert r.returncode == 0, f"{r.stdout}\n{r.stderr}"
-    assert "(56 skills," in r.stdout, r.stdout
+    assert "(55 skills," in r.stdout, r.stdout
     # The manifest declares exactly the spelled cohorts...
     assert sorted(_codex_skills()) == DECLARED_CODEX_SKILLS, _codex_skills()
     # ...and the emitted tree IS that roster: no extra skill dir, none missing. The

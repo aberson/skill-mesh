@@ -3,12 +3,12 @@
 
 These diagrams summarize the **Skill Mesh v2.0.4** contracts. Use the
 [skill reference](../../documentation/skill-reference.md) for a compact table
-of all 59 skills, purposes, host coverage and direct diagram links.
+of all 58 skills, purposes, host coverage and direct diagram links.
 
 Each diagram declares its source and omitted detail. The linked source contract
 remains authoritative: a diagram does not authorize an action, bypass a hold,
-or establish live qualification. Claude has all 59 packages; Codex and Copilot
-have the 56 portable packages. Native capability gates still apply.
+or establish live qualification. Claude has all 58 packages; Codex and Copilot
+have the 55 portable packages. Native capability gates still apply.
 
 These diagrams use the same rounded cards, monospace labels, and blue connectors
 as the overview graphics. Blue-bordered **GATE** cards mark decisions; connector
@@ -43,7 +43,6 @@ produces the default Mermaid README rather than this SVG gallery.
 
 ## Contents
 
-- [build-observer](#build-observer) - Draft a grounded portfolio block, validate it offline, and print a proposal while holding invalid roots or missing tools.
 - [build-phase](#build-phase) - Parse a plan, run each eligible step through build-step, checkpoint progress, and halt only on the phase contract's named conditions.
 - [build-queue](#build-queue) - Validate queue and resume authority, run plan-expedite then build-phase per item, park every halt, and continue to a morning summary.
 - [build-step](#build-step) - Isolate one plan step, iterate developer and independent review rounds, then land, verify, and finalize only an authenticated passing candidate.
@@ -93,8 +92,8 @@ produces the default Mermaid README rather than this SVG gallery.
 - [user-debug](#user-debug) - Diagnose a bug from primary evidence, reproduce it independently, design and delegate a fix, then verify against the original repro.
 - [user-dr](#user-dr) - Find a project's decision sources, collect open and decided items, check implied live state, group by theme, then ask theme-first and record each answer.
 - [user-draft](#user-draft) - Refine rough thoughts into either a ready-to-paste prompt or a measurable goal condition, checkpointing only when useful.
+- [user-fermize](#user-fermize) - Read one complex build decision read-only, tie the release promise to its checks and gaps, and advise on a smaller useful milestone when one is supported.
 - [user-gateway](#user-gateway) - Convert an operator vent into one evidence-aware work ledger row and ready-to-paste seed per distinct fragment.
-- [user-lavishify](#user-lavishify) - Re-present a dense artifact in a loopback Lavish Editor, collect pinned feedback, and propagate operator decisions to canonical sources.
 - [user-learn](#user-learn) - After scope approval, build a grounded hands-on learning folder, re-run its artifacts, and report results without committing.
 - [user-pm](#user-pm) - Present shipped work, outstanding plan items, practical next moves, and credible candidates to cut through a product-management lens.
 - [user-project](#user-project) - Set, show, or clear the session-scoped active-project pin that pipeline skills use to resolve their target repository.
@@ -102,29 +101,6 @@ produces the default Mermaid README rather than this SVG gallery.
 - [user-uat](#user-uat) - Classify a clear UAT script, gate side effects, auto-judge supported checks, and escalate irreducible human experience checks.
 - [user-walkthrough](#user-walkthrough) - Guide attended acceptance of a just-built tool, answer from primary evidence, and fix small in-scope issues during the walkthrough.
 - [user-wrap](#user-wrap) - Reorient a returning operator, delegate the verdict to session-wrap, and execute exactly the action owned by that verdict.
-
----
-
-## build-observer
-
-Draft a grounded portfolio block, validate it offline, and print a proposal while holding invalid roots or missing tools.
-
-Source: [`build-observer.mmd`](build-observer.mmd)
-
-Drawn from:
-
-- [`skills/build-observer/core.md`](../../skills/build-observer/core.md)
-
-**Alt:** A proposal flow locates a project, reads evidence, drafts fields, and either holds on invalid prerequisites or prints a validated block.
-
-**Deliberately not shown:** field-by-field prose rules, payload escaping, validator implementation, write mode, and the full redline schema
-
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="cards/build-observer-dark.svg">
-  <img alt="A proposal flow locates a project, reads evidence, drafts fields, and either holds on invalid prerequisites or prints a validated block." src="cards/build-observer-light.svg">
-</picture>
-
-[Open full size](cards/build-observer-dark.svg)
 
 ---
 
@@ -1255,6 +1231,29 @@ Drawn from:
 
 ---
 
+## user-fermize
+
+Read one complex build decision read-only, tie the release promise to its checks and gaps, and advise on a smaller useful milestone when one is supported.
+
+Source: [`user-fermize.mmd`](user-fermize.mmd)
+
+Drawn from:
+
+- [`skills/user-fermize/core.md`](../../skills/user-fermize/core.md)
+
+**Alt:** A plan and one decision are read read-only in about ten minutes; each promise is tied to its condition, check and gap; a smaller milestone is shown only when supported; the result is short advice.
+
+**Deliberately not shown:** the Relevance, Evidence and Control lenses in detail, costly-check rerun rules, failed-gate readings, and the report's wording rules
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="cards/user-fermize-dark.svg">
+  <img alt="A plan and one decision are read read-only in about ten minutes; each promise is tied to its condition, check and gap; a smaller milestone is shown only when supported; the result is short advice." src="cards/user-fermize-light.svg">
+</picture>
+
+[Open full size](cards/user-fermize-dark.svg)
+
+---
+
 ## user-gateway
 
 Convert an operator vent into one evidence-aware work ledger row and ready-to-paste seed per distinct fragment.
@@ -1275,29 +1274,6 @@ Drawn from:
 </picture>
 
 [Open full size](cards/user-gateway-dark.svg)
-
----
-
-## user-lavishify
-
-Re-present a dense artifact in a loopback Lavish Editor, collect pinned feedback, and propagate operator decisions to canonical sources.
-
-Source: [`user-lavishify.mmd`](user-lavishify.mmd)
-
-Drawn from:
-
-- [`skills/user-lavishify/core.md`](../../skills/user-lavishify/core.md)
-
-**Alt:** Dense content passes Node and browser checks, becomes scratchpad HTML, loops through pinned browser feedback, then propagates approved decisions.
-
-**Deliberately not shown:** telemetry prefixes, playbook IDs, layout-warning handling, resume commands, issue-ownership proof, and destination-specific edits
-
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="cards/user-lavishify-dark.svg">
-  <img alt="Dense content passes Node and browser checks, becomes scratchpad HTML, loops through pinned browser feedback, then propagates approved decisions." src="cards/user-lavishify-light.svg">
-</picture>
-
-[Open full size](cards/user-lavishify-dark.svg)
 
 ---
 

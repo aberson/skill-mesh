@@ -53,7 +53,7 @@ SKILLS_DIR = REPO_ROOT / "skills"
 # inequality, so the spelled-out copy cannot drift away from the tree.
 
 PORTABLE = [
-    "build-observer", "build-phase", "build-queue", "build-step",
+    "build-phase", "build-queue", "build-step",
     "citation-distill", "citation-review", "citation-sweep", "citation-triage",
     "code-consigliere",
     "goblin-do", "goblin-suggest", "goblin-sweep", "judge-ui",
@@ -64,8 +64,8 @@ PORTABLE = [
     "review-proof", "review-uat", "session-wrap", "skill-eval-setup",
     "skill-evolve", "skill-iterate", "task-handoff", "test-prune",
     "tier-escalate", "tier-offload", "user-afterparty", "user-brainstorm",
-    "user-build-route", "user-debug", "user-dr", "user-draft", "user-gateway",
-    "user-lavishify", "user-learn",
+    "user-build-route", "user-debug", "user-dr", "user-draft", "user-fermize",
+    "user-gateway", "user-learn",
     "user-pm", "user-project", "user-shakedown", "user-uat",
     "user-walkthrough", "user-wrap",
 ]
@@ -79,7 +79,7 @@ NATIVE = ["claude-oauth-auth", "context-slim", "judge-motion"]
 # what `status`, `counts["portable"]`, `counts["provider_native"]` and the README's
 # GPT-capable line all mean. A codex adapter is ADDITIVE on top of a record that is
 # already portable-or-native: it never moves a skill between those two buckets, so
-# EXPECTED_TOTAL / EXPECTED_PORTABLE / EXPECTED_NATIVE are 59/56/3 and every existing
+# EXPECTED_TOTAL / EXPECTED_PORTABLE / EXPECTED_NATIVE are 58/55/3 and every existing
 # count keeps its exact meaning. Modelling codex as a third status instead would
 # redefine `portable` for all catalog records and invalidate every committed tally.
 #
@@ -94,7 +94,8 @@ NATIVE = ["claude-oauth-auth", "context-slim", "judge-motion"]
 # research-prospect, and the user-* conversational family) closed the gap: every
 # portable skill now carries a codex adapter, so this list EQUALS PORTABLE by
 # value. Phase CP Step 10 (issue #127) promoted seven workspace-custom skills --
-# build-observer, the four citation-* skills, goblin-sweep and repo-wrap -- each
+# a portfolio-block proposer (moved to dev-observatory by the v3 catalog cleanup,
+# Step 4), the four citation-* skills, goblin-sweep and repo-wrap -- each
 # authored portable AND codex-capable in one commit, so the two lists grew together
 # from 47 to 54 and the equality survived. It stays a SEPARATE spelled list anyway --
 # equality is a fact about
@@ -105,7 +106,7 @@ NATIVE = ["claude-oauth-auth", "context-slim", "judge-motion"]
 # here without the matching skills/<name>/providers/codex.md (or the reverse)
 # raises instead of shipping.
 CODEX = [
-    "build-observer", "build-phase", "build-queue", "build-step",
+    "build-phase", "build-queue", "build-step",
     "citation-distill", "citation-review", "citation-sweep", "citation-triage",
     "code-consigliere",
     "goblin-do", "goblin-suggest", "goblin-sweep", "judge-ui",
@@ -116,8 +117,8 @@ CODEX = [
     "review-proof", "review-uat", "session-wrap", "skill-eval-setup",
     "skill-evolve", "skill-iterate", "task-handoff", "test-prune",
     "tier-escalate", "tier-offload", "user-afterparty", "user-brainstorm",
-    "user-build-route", "user-debug", "user-dr", "user-draft", "user-gateway",
-    "user-lavishify", "user-learn",
+    "user-build-route", "user-debug", "user-dr", "user-draft", "user-fermize",
+    "user-gateway", "user-learn",
     "user-pm", "user-project", "user-shakedown", "user-uat",
     "user-walkthrough", "user-wrap",
 ]
@@ -194,7 +195,7 @@ SUB_AGENT = {
 # render a verdict without it. Nothing on disk marks that difference.
 #
 # Unchanged by Phase CP Step 10: none of the seven promoted skills reads an image.
-# build-observer renders TOML from text sources, the citation-* family grades prose,
+# The portfolio-block proposer rendered TOML from text sources, the citation-* family grades prose,
 # goblin-sweep parses JSON, and repo-wrap runs git -- all text-only end to end.
 VISION = {"judge-ui", "judge-motion"}
 
@@ -223,7 +224,6 @@ VISION = {"judge-ui", "judge-motion"}
 # wipes a hand-tuned value. ASCII-only, one line, no newlines (kept safe for a YAML
 # scalar; the builder still double-quotes when it emits the frontmatter).
 DESCRIPTIONS = {
-    "build-observer": "Propose a dev-observatory registry block for one project, validated and print-only.",
     "build-phase": "Run every step of a plan phase through build-step in order, gating quality between steps.",
     "build-queue": "Run pending phase plans unattended, each in its own worktree; halts become issues.",
     "build-step": "Run one build step: an agent writes it, isolated reviewers gate it, it merges.",
@@ -272,9 +272,9 @@ DESCRIPTIONS = {
     "user-build-route": "Recommend pipeline, bounded goal, or direct task with rationale and a pasteable prompt; advice only.",
     "user-debug": "Diagnose and fix a bug end-to-end with forced primary-source investigation first.",
     "user-dr": "Theme-grouped decision register across plans and seeds; checks conflicts and records answers.",
+    "user-fermize": "Weigh one complex build decision: a smaller useful milestone, what can wait, what to prove.",
     "user-draft": "Refine rough thoughts into a polished prompt or a ready-to-paste goal condition.",
     "user-gateway": "Turn an operator vent into routed, ledger-backed work with a seed per row.",
-    "user-lavishify": "Escalate the last output into a richer deliverable without changing the default style.",
     "user-learn": "Scaffold a learning ramp: knowledge base, notebooks, exercises, progress tracker.",
     "user-pm": "PM-lens project overview: what shipped, what is planned, what is next, what could be cut.",
     "user-project": "Pin the session's active project so pipeline skills target the right repo.",
@@ -308,17 +308,13 @@ DESCRIPTIONS = {
 #
 # Order within a skill is the committed order and is load-bearing for byte-identity.
 # Phase CP Step 10's seven promotions were captured the same way, from the legacy
-# .claude/skills/<name>/ tree each was promoted out of: build-observer's three
-# scaffold assets and goblin-sweep's evals/ directory, and an explicit empty list for
-# the five that genuinely ship no assets.
+# .claude/skills/<name>/ tree each was promoted out of: the portfolio-block proposer's
+# three scaffold assets (gone with that skill, v3 catalog cleanup Step 4) and
+# goblin-sweep's evals/ directory, and an explicit empty list for the five that
+# genuinely ship no assets.
 # All skills carry a key -- an empty list where a skill has no assets -- so adding
 # a skill without deciding its assets is a loud KeyError, never a silent empty record.
 SUPPORT_ASSETS = {
-    "build-observer": [
-        ("skills", "sample-dry-run.md"),
-        ("skills", "scaffold_portfolio.py"),
-        ("skills", "test_scaffold_portfolio.py"),
-    ],
     "build-phase": [("skills", "evals/")],
     "build-queue": [("skills", "evals/")],
     "build-step": [
@@ -408,9 +404,9 @@ SUPPORT_ASSETS = {
     "user-build-route": [],
     "user-debug": [("skills", "evals/")],
     "user-dr": [],
+    "user-fermize": [],
     "user-draft": [("skills", "evals.seed/")],
     "user-gateway": [("skills", "evals/")],
-    "user-lavishify": [],
     "user-learn": [("skills", "evals/")],
     "user-pm": [("skills", "evals/")],
     "user-project": [],
@@ -423,7 +419,7 @@ SUPPORT_ASSETS = {
 # Spelled-out expectations for the tree enumeration below. The same three numbers are
 # asserted independently by tests/package-integrity/test_manifest_contract.py.
 # 59/56/3 since the v3 user-pm plan's Step 13 (#238) retired the orientation skill into user-pm.
-EXPECTED_TOTAL, EXPECTED_PORTABLE, EXPECTED_NATIVE = 59, 56, 3
+EXPECTED_TOTAL, EXPECTED_PORTABLE, EXPECTED_NATIVE = 58, 55, 3
 
 
 def skill_support_assets(name: str):

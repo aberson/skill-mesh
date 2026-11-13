@@ -2,7 +2,7 @@
 
 ## Project overview
 
-skill-mesh is a provider-neutral collection of 59 agent skills for planning, building, reviewing,
+skill-mesh is a provider-neutral collection of 58 agent skills for planning, building, reviewing,
 and shipping software. Each skill is authored once as a shared behavior contract (`core.md`) plus
 thin per-host adapters, so the same skill runs on Claude Code, GitHub Copilot CLI, and the OpenAI
 Codex CLI.
@@ -152,8 +152,8 @@ phase — pytest is the only automated gate this repository has.
 ## Directory layout
 
 ```
-skills/<name>/          Canonical source: core.md + providers/{claude,gpt,codex}.md (59 skills;
-                        all 59 have claude.md, the 56 portable ones also have gpt.md + codex.md)
+skills/<name>/          Canonical source: core.md + providers/{claude,gpt,codex}.md (58 skills;
+                        all 58 have claude.md, the 55 portable ones also have gpt.md + codex.md)
 archive/v1/             The retired v1 launchers (46) as an inert ZIP + manifest + hashes;
                         never an execution fallback (see Skill Mesh version boundary)
 _shared/                Shared cores (judge-core, intake-engine), grader/verdict engines,
@@ -184,11 +184,11 @@ tests/                  calibration, distributions, experiments, package-integri
 
 - **One behavior contract per skill.** `skills/<name>/core.md` is provider-independent; each
   `providers/<host>.md` wrapper loads the core in full and maps host abstractions onto it. A wrapper
-  may never weaken a gate defined in the core. All 56 portable skills additionally carry a
+  may never weaken a gate defined in the core. All 55 portable skills additionally carry a
   `providers/codex.md` adapter (grown from the Phase CP five-skill pilot across cohorts B–D, then
   with Step 10's seven workspace-custom promotions) — codex capability is ADDITIVE on a portable
   record, never a third status, so the portable/native counts below keep their exact meaning.
-  56 skills are portable (both adapters); 3 are
+  55 skills are portable (both adapters); 3 are
   provider-native Claude-only (`claude-oauth-auth`, `context-slim`, `judge-motion`) and carry
   `core: null` in the manifest.
 - **Manifest-driven build.** `tools/build-distributions.ps1` reads `config/skill-manifest.json` and

@@ -67,16 +67,16 @@
     }
   },
   "counts": {
-    "total": 59,
-    "portable": 56,
+    "total": 58,
+    "portable": 55,
     "provider_native": 3,
-    "claude": 59,
-    "gpt": 56,
-    "codex": 56,
+    "claude": 58,
+    "gpt": 55,
+    "codex": 55,
     "local_capable": 20,
     "sub_agent": 20,
     "vision": 2,
-    "filesystem": 59
+    "filesystem": 58
   },
   "global_support_assets": [
     {
@@ -116,41 +116,6 @@
     }
   ],
   "skills": [
-    {
-      "name": "build-observer",
-      "status": "portable",
-      "description": "Propose a dev-observatory registry block for one project, validated and print-only.",
-      "core": "skills/build-observer/core.md",
-      "providers": {
-        "claude": "skills/build-observer/providers/claude.md",
-        "gpt": "skills/build-observer/providers/gpt.md",
-        "codex": "skills/build-observer/providers/codex.md"
-      },
-      "capabilities": [
-        "filesystem"
-      ],
-      "local_capable": false,
-      "migration": {
-        "legacy_core": ".claude/skills-gpt/build-observer/SKILL-core.md",
-        "legacy_claude_launcher": ".claude/skills/build-observer/SKILL.md",
-        "legacy_claude_adapter": ".claude/skills/build-observer/SKILL-claude.md",
-        "legacy_gpt": ".claude/skills-gpt/build-observer/SKILL-gpt.md"
-      },
-      "support_assets": [
-        {
-          "source": ".claude/skills/build-observer/sample-dry-run.md",
-          "dest": "skills/build-observer/sample-dry-run.md"
-        },
-        {
-          "source": ".claude/skills/build-observer/scaffold_portfolio.py",
-          "dest": "skills/build-observer/scaffold_portfolio.py"
-        },
-        {
-          "source": ".claude/skills/build-observer/test_scaffold_portfolio.py",
-          "dest": "skills/build-observer/test_scaffold_portfolio.py"
-        }
-      ]
-    },
     {
       "name": "build-phase",
       "status": "portable",
@@ -1502,6 +1467,28 @@
       ]
     },
     {
+      "name": "user-fermize",
+      "status": "portable",
+      "description": "Weigh one complex build decision: a smaller useful milestone, what can wait, what to prove.",
+      "core": "skills/user-fermize/core.md",
+      "providers": {
+        "claude": "skills/user-fermize/providers/claude.md",
+        "gpt": "skills/user-fermize/providers/gpt.md",
+        "codex": "skills/user-fermize/providers/codex.md"
+      },
+      "capabilities": [
+        "filesystem"
+      ],
+      "local_capable": false,
+      "migration": {
+        "legacy_core": ".claude/skills-gpt/user-fermize/SKILL-core.md",
+        "legacy_claude_launcher": ".claude/skills/user-fermize/SKILL.md",
+        "legacy_claude_adapter": ".claude/skills/user-fermize/SKILL-claude.md",
+        "legacy_gpt": ".claude/skills-gpt/user-fermize/SKILL-gpt.md"
+      },
+      "support_assets": []
+    },
+    {
       "name": "user-gateway",
       "status": "portable",
       "description": "Turn an operator vent into routed, ledger-backed work with a seed per row.",
@@ -1527,28 +1514,6 @@
           "dest": "skills/user-gateway/evals/"
         }
       ]
-    },
-    {
-      "name": "user-lavishify",
-      "status": "portable",
-      "description": "Escalate the last output into a richer deliverable without changing the default style.",
-      "core": "skills/user-lavishify/core.md",
-      "providers": {
-        "claude": "skills/user-lavishify/providers/claude.md",
-        "gpt": "skills/user-lavishify/providers/gpt.md",
-        "codex": "skills/user-lavishify/providers/codex.md"
-      },
-      "capabilities": [
-        "filesystem"
-      ],
-      "local_capable": false,
-      "migration": {
-        "legacy_core": ".claude/skills-gpt/user-lavishify/SKILL-core.md",
-        "legacy_claude_launcher": ".claude/skills/user-lavishify/SKILL.md",
-        "legacy_claude_adapter": ".claude/skills/user-lavishify/SKILL-claude.md",
-        "legacy_gpt": ".claude/skills-gpt/user-lavishify/SKILL-gpt.md"
-      },
-      "support_assets": []
     },
     {
       "name": "user-learn",
