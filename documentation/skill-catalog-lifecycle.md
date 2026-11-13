@@ -65,8 +65,14 @@ its Codex adapter, its aggregator script and README (with the byte-identical leg
 its evaluation statements, the build-step core sentence that restated the old threshold, and
 the tests that pinned it. It runs in an isolated worktree from `origin/main` while the original
 checkout stays untouched, and the base ref, target paths and pre-write hashes were recorded
-outside the repository before any write. The golden calibration labels are not changed. The
-exception does not complete Step 111 or open unrestricted catalog mutations, and it does not
+outside the repository before any write. The golden calibration labels are not changed. On
+the same day the operator extended it, with the same safeguards, to a follow-up that makes
+`review-gauntlet` (which runs review-deep's severity rules unchanged) treat Nits as advisory,
+makes a missed edge case the prompt implies a Block in the review-deep Correctness lens, and
+edits two golden-sample texts without changing any label: the two lens lines in `good.md` that
+reported `NEEDS-WORK` with only a Nit now read `PASS`, and `bad_unnamed_9.md` quotes the new
+threshold. The release-candidate report is regenerated because `review-gauntlet` is a
+representative skill. The exception does not complete Step 111 or open unrestricted catalog mutations, and it does not
 authorize a push, install or release.
 
 ## 1. Prerequisite preflight — recorded evidence

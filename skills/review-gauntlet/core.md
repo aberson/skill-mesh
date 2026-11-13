@@ -272,7 +272,9 @@ are review-deep's, verbatim.
 **Verdict logic:** normalize review-deep's evidence/severity outcomes into each
 lens verdict, then apply the fixed reducer above. `NO-EVIDENCE` and `FAILED`
 normalize to `NEEDS-WORK` (review-deep rules 4 and 5); an evidence-backed `Block`
-or `Nit` normalizes to `NEEDS-WORK`.
+normalizes to `NEEDS-WORK`. `Nit` and `FYI` findings are advisory, as in review-deep:
+they are listed in the report, and a lens whose only findings are `Nit` or `FYI` is
+`PASS`.
 There is no `DEFERRED-TO-UAT`, since runtime/auth-gate deferral is a
 review-deep-only path.
 

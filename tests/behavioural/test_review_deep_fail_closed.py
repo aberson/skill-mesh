@@ -349,6 +349,19 @@ def test_core_rubric_makes_a_medium_severity_bug_a_block_and_nit_advisory():
     assert "or medium blast radius (degraded UX, error in rare path)" in rubric.split("`Nit`", 1)[0], rubric
 
 
+def test_core_correctness_lens_makes_a_missed_implied_edge_case_a_block():
+    """Operator decision 2026-11-13: a diff that does what is asked but misses
+    an edge case the prompt implies is a Block, not an advisory Nit."""
+    text = CORE.read_text(encoding="utf-8")
+    lens = text.split("### Correctness lens", 1)[1].split("### Bugs lens", 1)[0]
+    rubric = " ".join(lens.split("**Severity rubric:**", 1)[1].split("**Output format:**", 1)[0].split())
+    block, _, nit = rubric.partition("`Nit`")
+    assert block.startswith("`Block` if the diff fails to do what its prompt claims"), rubric
+    assert "misses an edge case the prompt implies" in block, rubric
+    assert "misses an edge case" not in nit, rubric
+    assert "(advisory)" in nit, rubric
+
+
 def test_core_verdict_threshold_is_block_only_and_uniform_across_six_lenses():
     text = CORE.read_text(encoding="utf-8")
     marker = "**Verdict threshold (uniform across all six lenses).**"
@@ -370,6 +383,16 @@ def test_build_step_deep_lane_states_the_block_only_threshold():
     text = " ".join(BUILD_STEP_CORE.read_text(encoding="utf-8").split())
     assert "single Nit already makes a lens NEEDS-WORK" not in text
     assert "under which only a Block makes a lens NEEDS-WORK" in text
+
+
+def test_review_gauntlet_normalizes_only_a_block_to_needs_work():
+    """review-gauntlet runs review-deep's severity rules unchanged, so its
+    verdict logic must not let a Nit fail a lens either."""
+    gauntlet = REPO_ROOT / "skills" / "review-gauntlet" / "core.md"
+    text = " ".join(gauntlet.read_text(encoding="utf-8").split())
+    assert "an evidence-backed `Block` normalizes to `NEEDS-WORK`." in text
+    assert "or `Nit` normalizes to `NEEDS-WORK`" not in text
+    assert "`Nit` and `FYI` findings are advisory, as in review-deep" in text
 
 
 def test_malformed_lens_record_writes_no_verdict(tmp_path):

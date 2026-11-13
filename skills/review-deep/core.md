@@ -203,9 +203,10 @@ file:line — <one-line summary>
 ```
 
 **Severity rubric:** `Block` if the diff fails to do what its prompt claims,
-OR if a Done-when from `--plan-step` is unmet by the diff. `Nit` if the diff
-does what's asked but misses an edge case the prompt implies. `FYI` for
-observation-only ("the prompt is ambiguous about X; assumed Y").
+OR if it does what's asked but misses an edge case the prompt implies, OR if a
+Done-when from `--plan-step` is unmet by the diff. `Nit` (advisory) for code
+that meets the intent, edge cases included, in a suboptimal but functional way.
+`FYI` for observation-only ("the prompt is ambiguous about X; assumed Y").
 
 **Output format:** A bulleted list of findings in evidence shape, ending with
 one of:

@@ -1,5 +1,5 @@
 <!-- BAD OUTPUT — DEFECT: lens emits PASS despite containing both Block and Nit findings (verdict threshold violation) -->
-<!-- Violates SKILL.md line 158, 200, 244, 283, 336: "Emit PASS if and only if findings contains zero Block AND zero Nit entries" — bugs lens here has a Block but emits PASS -->
+<!-- Violates SKILL.md line 158, 200, 244, 283, 336: "Emit PASS only when the lens is confident AND findings contains zero Block entries (Nit and FYI are advisory)" — bugs lens here has a Block but emits PASS -->
 
 # review-deep: NEEDS-WORK
 
