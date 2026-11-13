@@ -49,11 +49,11 @@
       <text class="hub-sub" x="60" y="300">skill-pipeline.md</text></g>
   <g>
     <g class="rail"><rect x="470" y="36" width="330" height="52" rx="11"/><text class="rail-name" x="488" y="58">bug</text><text class="rail-dest" x="488" y="76">/user-debug</text></g>
-    <g class="rail"><rect x="470" y="100" width="330" height="52" rx="11"/><text class="rail-name" x="488" y="122">do</text><text class="rail-dest" x="488" y="140">/goblin-do</text></g>
+    <g class="rail"><rect x="470" y="100" width="330" height="52" rx="11"/><text class="rail-name" x="488" y="122">do</text><text class="rail-dest" x="488" y="140">/user-pm</text></g>
     <g class="rail"><rect x="470" y="164" width="330" height="52" rx="11"/><text class="rail-name" x="488" y="186">plan</text><text class="rail-sub" x="488" y="204">forks by project age →</text></g>
     <g class="rail"><rect x="470" y="228" width="330" height="52" rx="11"/><text class="rail-name" x="488" y="250">investigate</text><text class="rail-dest" x="488" y="268">/deep-research  ·  Explore</text></g>
-    <g class="rail"><rect x="470" y="292" width="330" height="52" rx="11"/><text class="rail-name" x="488" y="314">verify</text><text class="rail-dest" x="488" y="332">/user-uat  ·  /user-shakedown</text></g>
-    <g class="rail"><rect x="470" y="356" width="330" height="52" rx="11"/><text class="rail-name" x="488" y="378">trim</text><text class="rail-dest" x="488" y="396">/plan-trim</text></g>
+    <g class="rail"><rect x="470" y="292" width="330" height="52" rx="11"/><text class="rail-name" x="488" y="314">verify</text><text class="rail-dest" x="488" y="332">/user-uat  ·  /user-walkthrough --shakedown</text></g>
+    <g class="rail"><rect x="470" y="356" width="330" height="52" rx="11"/><text class="rail-name" x="488" y="378">trim</text><text class="rail-dest" x="488" y="396">/plan-merge --trim</text></g>
     <g class="rail"><rect x="470" y="420" width="330" height="52" rx="11"/><text class="rail-name" x="488" y="442">decide</text><text class="rail-dest" x="488" y="460">surfaced  ·  parked for you</text></g>
     <g class="rail"><rect x="470" y="484" width="330" height="52" rx="11"/><text class="rail-name" x="488" y="506">draft</text><text class="rail-dest" x="488" y="524">/user-draft  →  /goal</text></g>
   </g>

@@ -34,7 +34,7 @@ of its own:
 **Pinned posture: CONVERT, DON'T PROPOSE.** Every ledger row and every seed traces to a
 fragment the operator voiced (or to their answer to a clarifying question). The gateway
 never invents work the operator didn't voice — generating improvement ideas is
-[`/goblin-suggest`](../goblin-suggest/core.md)'s job, and the boundary is hard: an
+[`/user-pm`](../user-pm/core.md)'s job (its improvement shortlist), and the boundary is hard: an
 unprompted suggestion in gateway output ("while we're in there…", "you should also…") is
 a DEFECT, not a bonus.
 
@@ -72,7 +72,8 @@ or an unstructured vent about a topic.
 - **A single, already-clear fragment** → go straight to its rail (one broken thing →
   `/user-debug`; one capability wish → `/plan-feature`; …). The gateway earns its
   overhead only when fragments are plural or tangled.
-- **Wanting IDEAS** ("what should I improve?") → `/goblin-suggest`. The gateway converts
+- **Wanting IDEAS** ("what should I improve?") → `/user-pm` (its improvement shortlist).
+  The gateway converts
   what was said; it does not generate what wasn't.
 - **Refining ONE prompt or goal** → `/user-draft`.
 
@@ -158,16 +159,15 @@ fragment belongs on stays the web's call):
   name (CLAUDE.md's dispatch rule, echoed by the web); codebase-local: a scoped
   Explore-agent framing (what to sweep, what a finding looks like).
 - **verify** → the applicable invocation among the verify rail's four modes —
-  `/review-uat` / `/user-uat` / `/user-shakedown` / `/user-walkthrough` — chosen per the
+  `/review-uat` / `/user-uat` / `/user-walkthrough --shakedown` / `/user-walkthrough` — chosen per the
   web's verify-rail detail section.
-- **trim** → a `/plan-trim` invocation naming the plan document. (Cruft-smell that is
+- **trim** → a `/plan-merge --trim <plan-path>` invocation naming the plan document. (Cruft-smell that is
   NOT about a plan document is not trim's — the web's trim note routes it
   investigate-first.)
-- **do** → the two-step pair matching the do rail's real mechanics: `1.` a
-  `/goblin-suggest --small <project>` line (persists the atom — the voiced task text
-  guides which atom to pick, or confirms it appears), then `2.` a
-  `/goblin-do <matching atom id or fuzzy text>` line. `/goblin-do` resolves persisted
-  atoms only — a bare `/goblin-do` on a freshly-voiced task fails to resolve.
+- **do** → one `/user-pm Context: do '<the task as voiced>'` line. `/user-pm` puts the
+  task on its board and routes it by `user-build-route`'s rules, so the gateway never
+  picks a build route or writes a build prompt itself — a seed that skips `/user-pm`
+  (a bare build command on a freshly-voiced task) is wrong.
 - **draft** → a `/user-draft <the operator's rough thoughts>` line.
 - **decide** → NOT a seed: the row parks with the open question stated verbatim in its
   disposition. Never answer it, never pick a side, never convert it into work — parked
@@ -184,8 +184,8 @@ Three elements, always:
    file's slug) — the string is defined ONCE in intake-engine §3; emit it exactly, never
    author a variant. (Arming it is the operator's choice.)
 3. **QUICK COPY** — every routed row's seed, one paste-able line each (the plan rail's
-   line invokes `/plan-feature` with a compact form, the full paragraph staying above;
-   the do rail contributes its two-step pair as two lines). Parked rows are questions,
+   line invokes `/plan-feature` with a compact form, the full paragraph staying above).
+   Parked rows are questions,
    not seeds — they appear above with their open question, never in QUICK COPY. On a
    loaded ledger, QUICK COPY holds only rows routed in this pass (a parked row this pass
    routed included); earlier `routed` rows and `already F<n>` echoes keep their seed
@@ -198,6 +198,11 @@ Three elements, always:
 Rows may later re-route: a rail skill that discovers wrong-rail work mid-run follows the
 web's re-route contract and writes back to this ledger per intake-engine §5. The gateway
 plays no part in that — it ends at the closing block.
+
+Finished intake goes to `/user-pm`: once the ledger has zero open items, the operator runs
+`/user-pm Context: intake ledger <ledger path>` in the same repository, and its board takes
+the routed rows as leads for the next move. The gateway prints the ledger path and runs
+nothing (Contract).
 
 ---
 

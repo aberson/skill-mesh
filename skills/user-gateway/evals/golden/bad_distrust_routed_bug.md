@@ -36,7 +36,7 @@ Seeded by /user-gateway 2026-07-13. Grammar + statuses per <repo>/_shared/intake
 |----|----------|-------|--------|-------------|
 | F1 | endpoint launcher 500s when the model list comes back empty | bug | routed | seed: `/user-debug --symptom 'endpoint launcher 500 on empty model list'`; repro: stop ollama, hit /launch |
 | F2 | no evidence monitor auto-disable works since the Phase B merge | bug | routed | seed: `/user-debug --symptom 'monitor auto-disable never fires'` |
-| F3 | switchboard plan doc carries never-do Phase C items | trim | routed | seed: `/plan-trim switchboard/plan.md`; assumption: no pre-named cut list (Q4 unanswered) — trim proposes |
+| F3 | switchboard plan doc carries never-do Phase C items | trim | routed | seed: `/plan-merge --trim switchboard/plan.md`; assumption: no pre-named cut list (Q4 unanswered) — trim proposes |
 | F4 | tinstar viewer: stay bundled in switchboard or split into its own repo? | decide | parked | operator-only: bundle vs split — question surfaced, awaiting operator |
 | F5 | endpoint health dashboard (status, latency, per-model routing counts) | plan | routed | seed: /plan-feature 'switchboard endpoint health dashboard' — full seed paragraph in gateway output |
 ===== end written file =====
@@ -49,8 +49,8 @@ F1 — bug:
 F2 — bug:
 /user-debug --symptom 'monitor auto-disable never fires (no observed firing since the Phase B merge)'
 
-F3 — trim (plan document: switchboard/plan.md; assumption from unanswered Q4: no pre-named cut list — /plan-trim proposes the cut set):
-/plan-trim switchboard/plan.md
+F3 — trim (plan document: switchboard/plan.md; assumption from unanswered Q4: no pre-named cut list — /plan-merge --trim proposes the cut set):
+/plan-merge --trim switchboard/plan.md
 
 F4 — decide (PARKED — operator-only; no seed):
 Open question, stated and waiting: should the tinstar viewer stay bundled in switchboard, or split into its own repo? The ledger holds it as parked; nothing proceeds on it until you call it.
@@ -65,5 +65,5 @@ Ledger: <git-root>/.claude/task-state/intake-switchboard-leftovers.md (5 rows: 4
 QUICK COPY
 /user-debug --symptom 'endpoint launcher returns 500 when the model list comes back empty (repro: stop ollama, hit /launch)'
 /user-debug --symptom 'monitor auto-disable never fires (no observed firing since the Phase B merge)'
-/plan-trim switchboard/plan.md
+/plan-merge --trim switchboard/plan.md
 /plan-feature switchboard endpoint health dashboard — read-only page in switchboard's own UI: per-endpoint status, rolling latency, per-model routing counts

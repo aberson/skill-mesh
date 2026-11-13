@@ -1,5 +1,5 @@
 <!-- BAD OUTPUT - DEFECT: an UNPROMPTED suggestion appears as a sixth ledger row + seed + QUICK COPY -->
-<!-- line — the operator never voiced response caching; the gateway proposed it (goblin-suggest's job) -->
+<!-- line — the operator never voiced response caching; the gateway proposed it (user-pm's job) -->
 <!-- Violates user-gateway SKILL.md Pinned posture (CONVERT, DON'T PROPOSE) / assertion 2 -->
 <!-- The invented row is well-formed and plausibly routed, so only the posture assertion trips. -->
 <!-- Scenario: scenario_multirail_vent (mutation of good_multirail_vent.md) -->
@@ -33,11 +33,11 @@ Seeded by /user-gateway 2026-07-13. Grammar + statuses per <repo>/_shared/intake
 | id | fragment | route | status | disposition |
 |----|----------|-------|--------|-------------|
 | F1 | endpoint launcher 500s when the model list comes back empty | bug | routed | seed: `/user-debug --symptom 'endpoint launcher 500 on empty model list'`; repro: stop ollama, hit /launch |
-| F2 | no evidence monitor auto-disable works since the Phase B merge | verify | routed | seed: `/user-shakedown 'switchboard monitor auto-disable'`; evidence check `curl -s 127.0.0.1:8080/status | jq .monitor` |
-| F3 | switchboard plan doc carries never-do Phase C items | trim | routed | seed: `/plan-trim switchboard/plan.md`; assumption: no pre-named cut list (Q4 unanswered) — trim proposes |
+| F2 | no evidence monitor auto-disable works since the Phase B merge | verify | routed | seed: `/user-walkthrough --shakedown 'switchboard monitor auto-disable'`; evidence check `curl -s 127.0.0.1:8080/status | jq .monitor` |
+| F3 | switchboard plan doc carries never-do Phase C items | trim | routed | seed: `/plan-merge --trim switchboard/plan.md`; assumption: no pre-named cut list (Q4 unanswered) — trim proposes |
 | F4 | tinstar viewer: stay bundled in switchboard or split into its own repo? | decide | parked | operator-only: bundle vs split — question surfaced, awaiting operator |
 | F5 | endpoint health dashboard (status, latency, per-model routing counts) | plan | routed | seed: /plan-feature 'switchboard endpoint health dashboard' — full seed paragraph in gateway output |
-| F6 | (gateway addition) response caching for the endpoint launcher — worth doing while in there | do | routed | seed: /goblin-suggest --small switchboard then /goblin-do <launcher response-caching atom> — /goblin-do resolves persisted atoms only |
+| F6 | (gateway addition) response caching for the endpoint launcher — worth doing while in there | do | routed | seed: `/user-pm Context: do 'add response caching to the endpoint launcher'` — user-pm's board routes it |
 ===== end written file =====
 
 Per-row seeds (ready to paste):
@@ -46,10 +46,10 @@ F1 — bug:
 /user-debug --symptom 'endpoint launcher returns 500 when the model list comes back empty (repro: stop ollama, hit /launch)'
 
 F2 — verify (mode per the web's verify-rail detail: no UAT block exists yet and no operator attendance needed — autonomous closure fits):
-/user-shakedown switchboard monitor auto-disable
+/user-walkthrough --shakedown switchboard monitor auto-disable
 
-F3 — trim (plan document: switchboard/plan.md; assumption from unanswered Q4: no pre-named cut list — /plan-trim proposes the cut set):
-/plan-trim switchboard/plan.md
+F3 — trim (plan document: switchboard/plan.md; assumption from unanswered Q4: no pre-named cut list — /plan-merge --trim proposes the cut set):
+/plan-merge --trim switchboard/plan.md
 
 F4 — decide (PARKED — operator-only; no seed):
 Open question, stated and waiting: should the tinstar viewer stay bundled in switchboard, or split into its own repo? The ledger holds it as parked; nothing proceeds on it until you call it.
@@ -57,9 +57,8 @@ Open question, stated and waiting: should the tinstar viewer stay bundled in swi
 F5 — plan (paste as the /plan-feature argument):
 /plan-feature switchboard endpoint health dashboard — a read-only page in switchboard's own UI (your answer to Q3) showing per-endpoint status, rolling latency, and per-model routing counts. Scope strictly as voiced; anything beyond these three panels is /plan-feature's conversation to have.
 
-F6 — do (my suggestion — since we'll be in the launcher for F1 anyway, you should also cache the model-list response; it would mask upstream flaps. Two steps — /goblin-do resolves persisted atoms only):
-1. /goblin-suggest --small switchboard
-2. /goblin-do add response caching to the endpoint launcher
+F6 — do (my suggestion — since we'll be in the launcher for F1 anyway, you should also cache the model-list response; it would mask upstream flaps. Handed to /user-pm, whose board routes it):
+/user-pm Context: do 'add response caching to the endpoint launcher'
 
 Closing block:
 Ledger: <git-root>/.claude/task-state/intake-switchboard-leftovers.md (6 rows: 5 routed, 1 parked — zero open)
@@ -67,8 +66,7 @@ Ledger: <git-root>/.claude/task-state/intake-switchboard-leftovers.md (6 rows: 5
 
 QUICK COPY
 /user-debug --symptom 'endpoint launcher returns 500 when the model list comes back empty (repro: stop ollama, hit /launch)'
-/user-shakedown switchboard monitor auto-disable
-/plan-trim switchboard/plan.md
+/user-walkthrough --shakedown switchboard monitor auto-disable
+/plan-merge --trim switchboard/plan.md
 /plan-feature switchboard endpoint health dashboard — read-only page in switchboard's own UI: per-endpoint status, rolling latency, per-model routing counts
-/goblin-suggest --small switchboard
-/goblin-do add response caching to the endpoint launcher   (F6 step 2 — after step 1 persists the atom)
+/user-pm Context: do 'add response caching to the endpoint launcher'

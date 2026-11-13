@@ -36,8 +36,8 @@ Seeded by /user-gateway 2026-07-13. Grammar + statuses per <repo>/_shared/intake
 | id | fragment | route | status | disposition |
 |----|----------|-------|--------|-------------|
 | F1 | endpoint launcher 500s when the model list comes back empty | bug | routed | seed: `/user-debug --symptom 'endpoint launcher 500 on empty model list'`; repro: stop ollama, hit /launch |
-| F2 | no evidence monitor auto-disable works since the Phase B merge | verify | routed | seed: `/user-shakedown 'switchboard monitor auto-disable'`; evidence check `curl -s 127.0.0.1:8080/status | jq .monitor` |
-| F3 | switchboard plan doc carries never-do Phase C items | trim | routed | seed: `/plan-trim switchboard/plan.md`; assumption: no pre-named cut list (Q4 unanswered) — trim proposes |
+| F2 | no evidence monitor auto-disable works since the Phase B merge | verify | routed | seed: `/user-walkthrough --shakedown 'switchboard monitor auto-disable'`; evidence check `curl -s 127.0.0.1:8080/status | jq .monitor` |
+| F3 | switchboard plan doc carries never-do Phase C items | trim | routed | seed: `/plan-merge --trim switchboard/plan.md`; assumption: no pre-named cut list (Q4 unanswered) — trim proposes |
 | F4 | tinstar viewer: stay bundled in switchboard or split into its own repo? | plan | routed | decided: split — separate repo is cleaner; seed: /plan-feature 'split tinstar viewer into its own repo' — full paragraph in output |
 | F5 | endpoint health dashboard (status, latency, per-model routing counts) | plan | routed | seed: /plan-feature 'switchboard endpoint health dashboard' — full seed paragraph in gateway output |
 ===== end written file =====
@@ -48,10 +48,10 @@ F1 — bug:
 /user-debug --symptom 'endpoint launcher returns 500 when the model list comes back empty (repro: stop ollama, hit /launch)'
 
 F2 — verify (mode per the web's verify-rail detail: no UAT block exists yet and no operator attendance needed — autonomous closure fits):
-/user-shakedown switchboard monitor auto-disable
+/user-walkthrough --shakedown switchboard monitor auto-disable
 
-F3 — trim (plan document: switchboard/plan.md; assumption from unanswered Q4: no pre-named cut list — /plan-trim proposes the cut set):
-/plan-trim switchboard/plan.md
+F3 — trim (plan document: switchboard/plan.md; assumption from unanswered Q4: no pre-named cut list — /plan-merge --trim proposes the cut set):
+/plan-merge --trim switchboard/plan.md
 
 F4 — plan (decision made: split; paste as the /plan-feature argument):
 /plan-feature split the tinstar viewer out of switchboard into its own repo — new repo scaffold, move the viewer code and its launch verbs, update the observatory registry entry.
@@ -65,7 +65,7 @@ Ledger: <git-root>/.claude/task-state/intake-switchboard-leftovers.md (5 rows: 5
 
 QUICK COPY
 /user-debug --symptom 'endpoint launcher returns 500 when the model list comes back empty (repro: stop ollama, hit /launch)'
-/user-shakedown switchboard monitor auto-disable
-/plan-trim switchboard/plan.md
+/user-walkthrough --shakedown switchboard monitor auto-disable
+/plan-merge --trim switchboard/plan.md
 /plan-feature split the tinstar viewer out of switchboard into its own repo — scaffold, move viewer code + launch verbs, update registry
 /plan-feature switchboard endpoint health dashboard — read-only page in switchboard's own UI: per-endpoint status, rolling latency, per-model routing counts

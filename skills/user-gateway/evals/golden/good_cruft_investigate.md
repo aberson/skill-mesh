@@ -23,7 +23,7 @@ Seeded by /user-gateway 2026-07-13. Grammar + statuses per <repo>/_shared/intake
 | id | fragment | route | status | disposition |
 |----|----------|-------|--------|-------------|
 | F1 | toybox repo cruft: dead scripts / experiment folders, live-vs-dead unknown | investigate | routed | seed: Explore sweep (codebase-local) — framing in gateway output; findings re-route per the web's edges |
-| F2 | rename stale JUDGE_MODE env var to JUDGE_PROFILE everywhere | do | routed | seed: /goblin-suggest --small toybox then /goblin-do <JUDGE_MODE rename atom> — /goblin-do resolves persisted atoms only |
+| F2 | rename stale JUDGE_MODE env var to JUDGE_PROFILE everywhere | do | routed | seed: `/user-pm Context: do 'rename JUDGE_MODE to JUDGE_PROFILE across toybox'` — user-pm's board routes it |
 | F3 | overnight goal for the eval sweep keeps coming out mushy | draft | routed | seed: `/user-draft overnight goal for the toybox eval sweep` |
 ===== end written file =====
 
@@ -32,9 +32,8 @@ Per-row seeds (ready to paste):
 F1 — investigate (codebase-local -> Explore framing; an external/multi-source question would instead get a deep-research charter for the receiving window to dispatch via Workflow({name: "deep-research-pinned"}), never the built-in name):
 Explore (read-only, medium thoroughness): sweep toybox's top-level scripts and experiment folders; classify each path live (imported or invoked from production code, CI, or a skill) vs dead (no inbound references); return one row per path: path -> verdict -> evidence. Finding shape: a cut-candidate list — findings then re-route to plan or do per the web's edges.
 
-F2 — do (two steps — /goblin-do resolves persisted atoms only, so the atom is persisted first):
-1. /goblin-suggest --small toybox   (the voiced rename — JUDGE_MODE to JUDGE_PROFILE — should surface as a small atom; confirm it appears)
-2. /goblin-do rename JUDGE_MODE to JUDGE_PROFILE across toybox
+F2 — do (handed to /user-pm, whose board routes it by user-build-route's rules):
+/user-pm Context: do 'rename JUDGE_MODE to JUDGE_PROFILE across toybox'
 
 F3 — draft:
 /user-draft overnight goal for the toybox eval sweep — rough thought: "keep going until the evals are all good"; needs a checkable stop condition
@@ -45,6 +44,5 @@ Ledger: <git-root>/.claude/task-state/intake-toybox-cleanup.md (3 rows: 3 routed
 
 QUICK COPY
 Explore (F1): classify toybox top-level scripts + experiment folders live-vs-dead; return path -> verdict -> evidence per row
-/goblin-suggest --small toybox
-/goblin-do rename JUDGE_MODE to JUDGE_PROFILE across toybox   (F2 step 2 — after step 1 persists the atom)
+/user-pm Context: do 'rename JUDGE_MODE to JUDGE_PROFILE across toybox'
 /user-draft overnight goal for the toybox eval sweep — rough: "keep going until the evals are all good"

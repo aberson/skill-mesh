@@ -35,7 +35,7 @@ Seeded by /user-gateway 2026-07-13. Grammar + statuses per <repo>/_shared/intake
 | id | fragment | route | status | disposition |
 |----|----------|-------|--------|-------------|
 | F1 | endpoint launcher 500s when the model list comes back empty | bug | routed | seed: `/user-debug --symptom 'endpoint launcher 500 on empty model list'`; repro: stop ollama, hit /launch |
-| F2 | no evidence monitor auto-disable works since the Phase B merge | verify | routed | seed: `/user-shakedown 'switchboard monitor auto-disable'`; evidence check `curl -s 127.0.0.1:8080/status | jq .monitor` |
+| F2 | no evidence monitor auto-disable works since the Phase B merge | verify | routed | seed: `/user-walkthrough --shakedown 'switchboard monitor auto-disable'`; evidence check `curl -s 127.0.0.1:8080/status | jq .monitor` |
 | F3 | switchboard plan doc carries never-do Phase C items | - | open | not yet routed |
 | F4 | tinstar viewer: stay bundled in switchboard or split into its own repo? | decide | parked | operator-only: bundle vs split — question surfaced, awaiting operator |
 | F5 | endpoint health dashboard (status, latency, per-model routing counts) | plan | routed | seed: /plan-feature 'switchboard endpoint health dashboard' — full seed paragraph in gateway output |
@@ -47,7 +47,7 @@ F1 — bug:
 /user-debug --symptom 'endpoint launcher returns 500 when the model list comes back empty (repro: stop ollama, hit /launch)'
 
 F2 — verify (mode per the web's verify-rail detail: no UAT block exists yet and no operator attendance needed — autonomous closure fits):
-/user-shakedown switchboard monitor auto-disable
+/user-walkthrough --shakedown switchboard monitor auto-disable
 
 F4 — decide (PARKED — operator-only; no seed):
 Open question, stated and waiting: should the tinstar viewer stay bundled in switchboard, or split into its own repo? The ledger holds it as parked; nothing proceeds on it until you call it.
@@ -61,5 +61,5 @@ Ledger: <git-root>/.claude/task-state/intake-switchboard-leftovers.md (5 rows: 3
 
 QUICK COPY
 /user-debug --symptom 'endpoint launcher returns 500 when the model list comes back empty (repro: stop ollama, hit /launch)'
-/user-shakedown switchboard monitor auto-disable
+/user-walkthrough --shakedown switchboard monitor auto-disable
 /plan-feature switchboard endpoint health dashboard — read-only page in switchboard's own UI: per-endpoint status, rolling latency, per-model routing counts
