@@ -292,7 +292,8 @@ verdict initialization (0.1) and the run state that `scope` creates (0.3). In or
    `helper failure`.
 4. **Commands.** Read the project's declared commands from its `CLAUDE.md`/`AGENTS.md`
    (`## Commands`, `## Key commands` or `## Package manager`), else the package manifest's scripts:
-   the primary test command, any further DONE-gate suites the project declares, an optional narrower
+   the primary test command, the per-change pack and focused-tests table the project's testing rule
+   names (if any), any further DONE-gate suites the project declares, an optional narrower
    iteration test command (default: the primary test command), lint, typecheck, dependency install,
    and the shell (the project's declared Shell line, else the host default). Lint or typecheck declared
    "not configured" is skipped and reported. A primary test command that is missing, declared not
@@ -637,13 +638,20 @@ run proceeds to item 2 whatever it prints.
    Never use `merge --squash` (it drops uncommitted and untracked work), `git apply --3way` (it writes
    the index), or a full-file copy over a shared file. On a merge conflict: `land-rollback` and end
    the run.
-4. **DONE gate.** In `PROJECT_ROOT`, run the primary test command and every further suite the project
-   declares, not the iteration subset, judging each on its exit code. Record which suites ran and their
-   counts. A nonzero exit from any suite is a failure whatever its count. When the primary command
-   exits 0, `test-count` must read its count: zero fails, and an unreadable count is
-   `required_tool_missing`; further suites may report `count unknown`. If the full suite is too slow
-   here, say so instead of reporting a subset as the gate. On failure print `POST_MERGE_HALT:` with the
-   failing tests, `land-rollback`, and end the run.
+4. **DONE gate.** In `PROJECT_ROOT`, apply the project's testing rule (workspace owner
+   `dev/.claude/rules/code-quality.md` § "Gate scope"), whose first sentence is:
+   Per change, run the focused tests for what the change touches plus the quick repo-wide checks, and save the command, the files it selected and its summary line to a file.
+   Run the focused tests for the payload (the tests it adds or changes and the tests covering the
+   files it touches; the project's focused-tests table when it declares one) plus the quick
+   repo-wide checks the project's rule names (its per-change pack; a project that names none runs
+   its primary test command and the further DONE-gate suites it declares), judging each on its exit
+   code. Save each command, the files it selected and its summary line under `.build-step/`, and
+   record which suites ran and their counts; an unnamed subset count is not gate evidence. A nonzero
+   exit from any command is a failure whatever its count. When the primary test command ran and exits
+   0, `test-count` must read its count: zero fails, and an unreadable count is
+   `required_tool_missing`; other commands may report `count unknown`. The per-release sweep is not
+   started here. On failure print `POST_MERGE_HALT:` with the failing tests, `land-rollback`, and end
+   the run.
 5. **Final ship gate.** Run `ship-gate` again; on overlap, `land-rollback` and end the run.
 6. **Verify.** Run `verify-landed` against the recorded written states. On failure, `land-rollback`
    (which restores only paths still holding this run's bytes) and end the run as `landing verification

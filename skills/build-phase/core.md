@@ -45,7 +45,7 @@ This skill's default posture, by strong operator preference:
 The 5 conditions under which `/build-phase` is permitted to halt mid-run. Anything else is a defect — surface it as a finding upstream (`/plan-review`, `/plan-wrap`), not a mid-run halt. Long-form rationale + the workspace-wide source-of-truth lives in `dev/.claude/rules/code-quality.md § "Build-phase halt contract"`; this section inlines a 1-sentence summary per item so an operator reading SKILL.md cold doesn't have to navigate out. Reference investigation `02-halt-contract.md`.
 
 1. **Conditional-step predicate errored or returned non-binary.** A `Type: conditional` step's `Condition:` shell expression exited with a code build-phase cannot interpret as run-or-skip (command-not-found ≥126, syntax error, signal-terminated ≥128, or a predicate that outputs but never exits). See "Conditional step handling" below for the dispatch table.
-2. **Quality-gate hard fail.** typecheck error count > 0, test count regressed below baseline, lint produced a blocker-class finding — OR (per Step 1's race-condition defense in sections 2d/2e) `origin` advanced with commits overlapping the step's modified file set. All four are integrity-class failures: the worktree's claim that "this step ships these changes against this baseline" no longer holds. The race-condition extension is documented as a sub-case of this halt class, NOT a new (6th) halt class — preserves the 5-item allowlist.
+2. **Quality-gate hard fail.** typecheck error count > 0, the per-change pack's test count regressed below its baseline over the same named suites (a drop explained by a deleted-test line in the step's Done-when is not a halt), lint produced a blocker-class finding — OR (per Step 1's race-condition defense in sections 2d/2e) `origin` advanced with commits overlapping the step's modified file set. All four are integrity-class failures: the worktree's claim that "this step ships these changes against this baseline" no longer holds. The race-condition extension is documented as a sub-case of this halt class, NOT a new (6th) halt class — preserves the 5-item allowlist.
 3. **Stop-and-audit triggered.** Third instance of the same bug-shape in this session, per `/build-step`'s stop-and-audit rule. Whack-a-mole is wasting time; STOP iterating, audit the codebase for siblings, and fix the shared structural invariant in one refactor rather than re-patching each named line.
 4. **Wait-type step reached.** A step declared `Type: wait` is long-running observation work (a soak test, a benchmark run). The orchestrator halts intentionally so wall-clock waiting doesn't burn context window. Resume in a fresh session via `--resume <next-step>` after the wait completes.
 5. **Worktree merge conflict.** A surgical-edit conflict from earlier steps overlapping the current step's files. Requires human resolution before continuing.
@@ -263,7 +263,7 @@ After printing the step list and any summary notes, transition directly to Step 
    ```bash
    <typecheck_command> && <lint_command> && <test_command>
    ```
-3. **Record baseline test count.**
+3. **Record baseline test count** and the suites it covers (the per-change pack's, §2f).
 4. **Resolve the commit scope, persist it, and record pre-existing state.** The invocation
    directory is the project root: `PROJECT_ROOT=$(pwd -P)`, the same directory `/build-step`'s
    `scope` resolves as its `PROJECT_ROOT`; it accepts and lands only changes below that
@@ -1088,23 +1088,28 @@ checkpoint commit:
 <typecheck_command> && <lint_command> && <test_command>
 ```
 
-> Scope: `<test_command>` here runs the FULL suite — every test root/suite the project
-> declares, not the subset the step iterated against. `count >= baseline` over a subset
-> cannot see a cross-suite regression; the step report names WHICH suites ran, and if
-> the full suite is too slow per-step, the checkpoint states that explicitly instead of
-> quoting a subset count as the gate (see workspace memory
-> `feedback_subset_gate_hides_cross_suite_regression`).
+> Scope: the project's testing rule (workspace owner `dev/.claude/rules/code-quality.md`
+> § "Gate scope"), whose first sentence is:
+> Per change, run the focused tests for what the change touches plus the quick repo-wide checks, and save the command, the files it selected and its summary line to a file.
+> Here `<test_command>` is the quick repo-wide checks the project's rule names (its
+> per-change pack; a project that names none runs its declared test suites), run together
+> with the focused tests for what the step's change touches, each judged on its exit code.
+> The step report names WHICH suites ran and their counts; an unnamed subset count is not
+> gate evidence. The per-release sweep is never started per step.
 
-- If gates pass and test count >= baseline: update baseline, continue.
+- If gates pass and the per-change pack's test count >= baseline over the same named suites:
+  update baseline, continue.
 - If gates fail: post the failure to the issue (if any), leave the step without `Status: DONE`
   and uncommitted, stop (halt class #2), report which gate failed, suggest fix.
-- If test count decreased: stop, report which tests were lost.
+- If the per-change pack's test count decreased: stop, report which tests were lost — unless a
+  deleted-test line in the step's Done-when explains the drop; then record that line, update the
+  baseline and continue.
 
 #### 2g. Stop conditions
 
 - **BLOCKED** from build-step: update plan (uncommitted; no checkpoint commit, 2e), post to issue, stop, wait for user.
 - **Quality gates fail after merge**: post to issue, stop, wait for user.
-- **Test count decreased**: post to issue, stop, wait for user.
+- **Test count decreased** (not explained by a deleted-test line, §2f): post to issue, stop, wait for user.
 
 Every stop applies this paragraph — a BLOCKED verdict, any halt class 1-5 (including the class-2
 race sub-case) and the Step 1 capability halt: report which steps completed and which are still
@@ -1120,7 +1125,9 @@ After all steps complete:
 <typecheck_command> && <lint_command> && <test_command>
 ```
 
-> Scope: FULL suite, same rule as §2f — the final report names which suites ran.
+> Scope: the per-change gate, same rule as §2f, over the phase's changes (the focused tests for
+> what the phase touched plus the quick repo-wide checks); the per-release sweep is not started
+> here. The final report names which suites ran.
 
 ### Step 4 -- Report
 
@@ -1141,7 +1148,7 @@ Steps completed: 5/5
 Quality gates:
   typecheck: PASS (0 errors)
   lint:      PASS (0 violations)
-  test:      173/173 passing (was 147 at start, +26 new)
+  test:      173/173 passing (suites: <names that ran>; was 147 at start, +26 new)
 
 Checkpoint commits: 5 (<first-sha>..<last-sha>)
 Issues closed by build-step: #44, #45, #46, #47, #48   [or: "none"; "unknown: #N" when the state could not be read]
