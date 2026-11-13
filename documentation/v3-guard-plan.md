@@ -285,6 +285,8 @@ Red-on-garbage (Steps 6 to 12): wherever a test is moved, merged, folded, delete
 
 ### Step 14: Time the next full sweep and confirm the savings (wait step)
 
+**Status:** DONE 2026-11-13. The v3.0.0 sweep on `b67ee86` exited 0: 2517 passed, 2 skipped in 1 h 04 min 54 s (the audit total was about 3 h 46 min, and the projection after ranks 1 to 4 was about 1 h 51 min). The release suite fell from 5,071 s to about 332 s, and the direct package-integrity run from 418 s to about 51 s. No timed row missed its claimed saving and no redline is fed back. Deviation: the runner passed `--durations=50`, not `--durations=0`, and the distribution files have no per-file time. Record: `<evidence>/sweep-timing.md`. The sweep worktree is removed.
+
 - **Problem:** Every figure in Steps 5 to 12 comes from one sweep on a shared machine, and the audit's per-sweep totals are arithmetic. The first per-release sweep after the merges is the measurement that replaces them. This is observation, so it produces no code.
 - **Type:** wait (halt class 4: the sweep takes hours, so the orchestrator halts intentionally; resume in a fresh session after the sweep ends and read the sweep's exit-code file)
 - **Issue:** #
