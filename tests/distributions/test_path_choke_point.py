@@ -229,8 +229,8 @@ FILE_EXEMPT = {
         "consumer-home installer.",
     "_shared/user-project.ps1":
         "The session pin script (v3 catalog cleanup Step 15). Like the router above it "
-        "writes only its own session-state file, <coding-root>/.claude/task-state/"
-        "sessions/<id>.md, and creates that folder; it takes no -Home and never touches "
+        "writes only its own session-state file, sessions/<id>.md in the coding root's "
+        "task-state folder, and creates that folder; it takes no -Home and never touches "
         "an installed skill tree. The id is restricted to one path segment, and "
         "Assert-SessionTarget refuses a junction or symlink anywhere between the coding "
         "root and the file before any write (proven by _shared/test_user_project.py). "
