@@ -315,6 +315,8 @@ deep-dive line "Run in: a Codex window"; that file belongs to the user-pm plan a
 
 ### Step 6: DELETE `judge-motion` (provider-native)
 
+**Status:** DONE 2026-11-13. Commit e2506ed; correction ec5699f. Steps 6 to 9 reviewed APPROVE with one correction round (`<coding-root>/docs/skill-mesh-3-review/builds/cleanup-2-review.md`); focused tests plus the per-change pack under the adopted testing rule.
+
 **Problem:** Retired by decision (2 uses in 6 weeks; motion checking now lives in the projects' own skills). It is
 provider-native, so the guide's `PROVIDER_NATIVE_REVIEW_REQUIRED` stop applies to any request; the Q1 approval
 names it in the batch and the exception record (Step 1) names it explicitly (open item 6). Its runtime package
@@ -352,6 +354,8 @@ separate decision, once no consumer home still records them.
 
 ### Step 7: DELETE `observatory-doctor` from the mesh
 
+**Status:** DONE 2026-11-13. Commit 9c98097; correction ec5699f. Steps 6 to 9 reviewed APPROVE with one correction round (`<coding-root>/docs/skill-mesh-3-review/builds/cleanup-2-review.md`); focused tests plus the per-change pack under the adopted testing rule.
+
 **Problem:** After Step 3 it lives in dev-observatory.
 **Type:** code
 **Issue:** #263
@@ -365,6 +369,8 @@ records historical-preserve by listing.
 base); gate named and green.
 
 ### Step 8: UPDATE `plan-merge` (add `--trim`)
+
+**Status:** DONE 2026-11-13. Commit 9fd2565; correction ec5699f. Steps 6 to 9 reviewed APPROVE with one correction round (`<coding-root>/docs/skill-mesh-3-review/builds/cleanup-2-review.md`); focused tests plus the per-change pack under the adopted testing rule.
 
 **Problem:** `plan-trim` folds into `plan-merge` (decision item 13): one skill, a `--trim` mode, user-pm's board
 routes plan clean-up there. The mode must exist, with the trim contract intact, before `plan-trim` is deleted.
@@ -386,6 +392,8 @@ clause; `plan-merge`'s merge mode is unchanged (diff shows additions only to the
 the profiles build; headroom unchanged; gate named and green. `plan-trim` still exists and works.
 
 ### Step 9: UPDATE `user-walkthrough` (add `--shakedown`)
+
+**Status:** DONE 2026-11-13. Commit 9828f85; correction ec5699f. Steps 6 to 9 reviewed APPROVE with one correction round (`<coding-root>/docs/skill-mesh-3-review/builds/cleanup-2-review.md`); focused tests plus the per-change pack under the adopted testing rule.
 
 **Problem:** `user-shakedown` folds into `user-walkthrough` as a flag (decision 11/11, F2). Both already share
 `_shared/shakedown-engine.md`, the same ledger file and a hand-off between them. The flag must land before the delete.
