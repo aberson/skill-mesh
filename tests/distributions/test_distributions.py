@@ -157,6 +157,10 @@ EXPECTED_SHARED_PAYLOAD = frozenset({
     # The independent closure walk below finds both without being told about them.
     "lane-inbox-hooks.md",
     "lane_inbox.py",
+    # v3 catalog cleanup Step 15 (#271): the session pin script that replaced the
+    # project-pin skill, cited as `<repo>/_shared/user-project.ps1`. The first .ps1
+    # leaf in the payload; it ships under Add-PowerShellProvenance.
+    "user-project.ps1",
 })
 
 # A `_shared/<leaf>` asset reference in any spelling the canonical sources use: bare,
@@ -272,6 +276,12 @@ def _strip_provenance_header(text, name):
         head, rest = text[:i + 3], text[i + 3:]
         assert rest.startswith("\n" + _PROV_OPEN), rest[:80]
         return head + rest[rest.index("-->") + 3:]
+    if name.endswith(".ps1"):
+        # Add-PowerShellProvenance: `<#` + header + `#>` + blank, prepended.
+        assert text.startswith("<#\n" + _PROV_OPEN), text[:80]
+        head, sep, body = text.partition("\n#>\n\n")
+        assert sep, "the PowerShell provenance comment is not terminated as emitted"
+        return body
     # Add-Provenance (markdown): prepended, then a blank line. No `_shared/` asset opens
     # with YAML frontmatter today; assert that premise instead of quietly taking the
     # other branch, which would strip nothing and make the comparison lie.

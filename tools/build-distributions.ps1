@@ -762,6 +762,11 @@ foreach ($profile in $profiles) {
             # without it the shipped payload is foreign to install, absent from
             # owned_files, and undeletable by uninstall.
             $sharedOut = Add-JsProvenance $sharedBody (New-ProvenanceHeader $sharedLabel $profile)
+        } elseif ($ext -eq '.ps1') {
+            # v3 catalog cleanup Step 15: the project pin script ships here so an
+            # installed caller can run '../_shared/user-project.ps1'. Same verbatim
+            # header, wrapped in a <# #> block comment (skill-mesh-provenance.ps1).
+            $sharedOut = Add-PowerShellProvenance $sharedBody (New-ProvenanceHeader $sharedLabel $profile)
         } else {
             # Fail LOUD. Every shipped file must carry a provenance marker or the
             # installer cannot own it; silently copying an unstampable extension

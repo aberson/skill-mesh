@@ -2,7 +2,7 @@
 
 ## Provider-neutral host abstractions
 
-- This skill has no supporting scripts or runtime assets; the PowerShell blocks below are the whole procedure.
+- The procedure below is also shipped as a script, `<repo>/_shared/user-project.ps1` (SET, SHOW and CLEAR with the outputs this contract defines; the caller passes its own session id as `-SessionId`). The PowerShell blocks below remain the contract the script implements.
 - It invokes no other skill, spawns no agent and uses no model tier: every step is deterministic work in the invoking session.
 - Session identity comes only from the host session-I/O adapter (§ Session identity). A host that cannot supply it gets the identity-unavailable outputs below; it never weakens the identity rule.
 - Never expose hidden chain-of-thought. Return only the output lines this contract defines.

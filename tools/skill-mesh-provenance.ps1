@@ -111,6 +111,24 @@ function Add-ShellProvenance([string]$body, [string]$header) {
     return $block + $body
 }
 
+function Add-PowerShellProvenance([string]$body, [string]$header) {
+    # Stamp a PowerShell payload (a shared .ps1 script) with the generated-file header.
+    #
+    # Same rule as Add-JsProvenance: the builder's header is embedded VERBATIM, only
+    # wrapped in a <# #> block comment so the script still parses and runs. A block
+    # comment may precede param() and comment-based help, so prepending is legal for
+    # every script this emitter is given (PowerShell has no hashbang line to keep).
+    if ([string]::IsNullOrEmpty($header)) {
+        throw "skill-mesh-provenance: Add-PowerShellProvenance requires a provenance header"
+    }
+    if ($header.Contains('#>')) {
+        # A '#>' inside the header would close the comment early and leave the rest
+        # of the marker as script text.
+        throw "skill-mesh-provenance: provenance header contains '#>' and cannot be wrapped as a PowerShell comment"
+    }
+    return "<#`n" + $header + "`n#>`n`n" + $body
+}
+
 function Test-SkillMeshHeaderPreamble([string]$pre) {
     # Is $pre an EMITTER-LEGAL run of bytes in front of the header block?
     #
@@ -135,6 +153,8 @@ function Test-SkillMeshHeaderPreamble([string]$pre) {
     if ($frontmatter.Success -and $frontmatter.Length -eq $pre.Length) { return $true }
     # Add-JsProvenance: `/*` at the top, after a line-1 hashbang when there is one.
     if ([regex]::IsMatch($pre, '^(?:#![^\r\n]*\r?\n)?/\*\r?\n$')) { return $true }
+    # Add-PowerShellProvenance: `<#` alone on the first line.
+    if ([regex]::IsMatch($pre, '^<#\r?\n$')) { return $true }
     # Add-ShellProvenance; Get-SkillMeshHeaderSpan also checks its terminator.
     if ([regex]::IsMatch($pre, "^(?:#![^\r\n]*\r?\n)?: <<'SKILL_MESH_PROVENANCE_END'\r?\n$")) { return $true }
     # Add-PythonProvenance: inserted after the FIRST '"""', which that emitter
