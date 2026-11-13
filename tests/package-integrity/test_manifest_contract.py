@@ -108,11 +108,11 @@ def test_counts_match_fixture_and_array():
     assert m["counts"] == derived, (m["counts"], derived)
     assert fx["counts"] == derived, (fx["counts"], derived)
     # spelled-out expectations
-    assert derived["total"] == 58
-    assert derived["portable"] == 55
+    assert derived["total"] == 57
+    assert derived["portable"] == 54
     assert derived["provider_native"] == 3
-    assert derived["claude"] == 58, "every skill carries a Claude adapter"
-    assert derived["gpt"] == 55, "the gpt adapter set IS the portable set"
+    assert derived["claude"] == 57, "every skill carries a Claude adapter"
+    assert derived["gpt"] == 54, "the gpt adapter set IS the portable set"
     # 54 at Phase CP Step 10. It was 0 at Step 3 (the generation rails ship before
     # any codex adapter is authored), 5 at Step 4, 17 at Step 6, 33 at Step 7, and
     # Step 8 closed it at the then-portable catalog of 47. Step 10 (issue #127)
@@ -120,7 +120,7 @@ def test_counts_match_fixture_and_array():
     # one commit, so this grew WITH `portable` rather than apart from it. A value
     # here without a matching skills/*/providers/codex.md on disk is caught by
     # gen_manifest.py's CODEX-vs-tree guard.
-    assert derived["codex"] == 55
+    assert derived["codex"] == 54
     # user-debug requires independent fresh-context diagnosis arms, so it is no
     # longer eligible for text-only local fallback and joins the sub-agent set.
     # user-uat requires isolated deep assessment and strong final visual review;
@@ -128,7 +128,7 @@ def test_counts_match_fixture_and_array():
     assert derived["local_capable"] == 20
     assert derived["sub_agent"] == 20
     assert derived["vision"] == 2
-    assert derived["filesystem"] == 58
+    assert derived["filesystem"] == 57
 
 
 def test_exact_skill_names_and_statuses():
@@ -719,13 +719,13 @@ def test_derived_skill_sets_match_the_spelled_out_rosters():
     assert portable == sorted(gm.PORTABLE)
     assert native == sorted(gm.NATIVE)
     assert codex == sorted(gm.CODEX)
-    assert (len(portable), len(native)) == (55, 3)
+    assert (len(portable), len(native)) == (54, 3)
     # 54 at Phase CP Step 10: the Step 8 catalog of 47 plus the seven promoted
     # workspace-custom skills (issue #127), each landing portable and codex in the
     # same commit. Spelled, like its siblings above, so any step that grows the
     # roster must come here and state the new number rather than letting a glob
     # silently redefine it.
-    assert len(codex) == 55
+    assert len(codex) == 54
     # Codex is an ORTHOGONAL axis, not a third bucket -- every codex name is also
     # portable, and the 54/3 partition is unaffected by codex membership. This is the
     # invariant that lets counts["portable"], the README's GPT-capable line and the
@@ -734,7 +734,7 @@ def test_derived_skill_sets_match_the_spelled_out_rosters():
     assert not set(codex) & set(native)
 
 
-def _plant_skill_tree(root, portable=55, native=3, extras=(), codex=0,
+def _plant_skill_tree(root, portable=54, native=3, extras=(), codex=0,
                       codex_on_native=0):
     """A synthetic skills/ tree: `portable` dirs with providers/gpt.md, `native`
     without, plus whatever non-skill entries the caller wants to prove are skipped.
@@ -778,7 +778,7 @@ def test_enumeration_skips_inventory_json_and_the_shared_namespace(tmp_path):
     _plant_skill_tree(root, extras=("inventory.json", "_shared/"))
     (root / "_shared" / "judge-core.md").write_text("x", encoding="utf-8")
     portable, native, codex = gm.derived_skill_sets(root)
-    assert (len(portable), len(native)) == (55, 3)
+    assert (len(portable), len(native)) == (54, 3)
     assert codex == []
     assert "inventory.json" not in portable + native
     assert "_shared" not in portable + native
@@ -797,7 +797,7 @@ def test_codex_enumeration_is_orthogonal_to_the_portable_native_partition(tmp_pa
     root = tmp_path / "skills"
     _plant_skill_tree(root, codex=5)
     portable, native, codex = gm.derived_skill_sets(root)
-    assert (len(portable), len(native)) == (55, 3)
+    assert (len(portable), len(native)) == (54, 3)
     assert len(codex) == 5
     assert set(codex) <= set(portable)
 
@@ -840,8 +840,8 @@ def test_enumeration_reds_when_the_tree_disagrees_with_the_counts(tmp_path):
     strip them; catching ValueError here keeps that property under test.
     """
     gm = _load_gen_manifest()
-    for kwargs in ({"portable": 56}, {"native": 4}, {"portable": 54},
-                   {"portable": 56, "native": 2}):
+    for kwargs in ({"portable": 55}, {"native": 4}, {"portable": 53},
+                   {"portable": 55, "native": 2}):
         root = tmp_path / ("skills-" + "-".join(f"{k}{v}" for k, v in sorted(kwargs.items())))
         _plant_skill_tree(root, **kwargs)
         try:

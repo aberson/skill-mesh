@@ -128,7 +128,6 @@ resource plan as a new grandfathering waiver:
 | `judge-ui` | `calibration-notes.md` | Authored in the pre-migration GPT tree; rescued into `skills/` at commit `72356fb` |
 | `review-deep` | a `config/`, `evals/`, and `scripts/` support tree | Authored at commit `e36a03e`, landed on `main` with RD-lite (issue #177) via merge `8a1b501` — the merge section 1 records as a prerequisite |
 | `build-step` | `scripts/build_step_tree.py` and `scripts/capture_evidence.py` | The P1 mechanics helper, and an LF copy of the legacy top-level package's capture script; reviewed packaging exception, packet route P2 |
-| `build-observer` | `scaffold_portfolio.py` | LF-normalized copy of the existing validator; reviewed scoped packaging exception for all three generated profiles |
 | `skill-iterate` | six Python files under `scripts/` | Canonical copies of the established evaluation helpers; reviewed scoped packaging exception for all three generated profiles |
 | `judge-motion` | `package.json`, `package-lock.json`, `fixtures/`, `scripts/` | Reviewed Claude-only runtime package authorized by the provider-native rebuild plan |
 | `user-wrap` | `evals/` | Scoped repository-only evaluation plan in `user-wrap-source-evals.md`; not emitted or installed |
@@ -163,17 +162,11 @@ missing input fails generation. Like Phase CD, this does not generalize `support
 an emission protocol, does not reopen the grandfathered set, and authorizes no other package
 file.
 
-**Reviewed packaging exception: the `build-observer` validator.** The file in the table's
-`build-observer` row entered through a scoped resource plan for the 2026-10-23 isolated release.
-The distribution builder emits exactly `scaffold_portfolio.py` into every profile's
-`build-observer/` package, at the `<skill-dir>/scaffold_portfolio.py` path the core invokes, with
-Python provenance inside its module docstring; a missing input fails generation. This does not
-generalize `support_assets` into an emission protocol, reopen the grandfathered set, or authorize
-another package file. The coding-root Claude home may contain a foreign legacy helper: normal
-install must refuse that collision. Release qualification uses operator-owned relocation only after
-an exact hash check, preserves unrelated foreign sample/test files, and restores legacy helper bytes
-from the take-ownership backup after rollback. No unscoped `-Force` is routine or authorized without
-that check.
+**Ended: the portfolio validator's packaging exception.** The scoped resource plan of the
+2026-10-23 isolated release let the distribution builder emit `scaffold_portfolio.py` into
+every profile for the dev-observatory portfolio-block proposer. It ended at the v3 catalog
+cleanup (plan Step 4, issue #260), when that skill moved to dev-observatory as a project-local
+skill: the builder no longer carries that resource step, and no catalog skill ships the file.
 
 **Reviewed packaging exception: the `skill-iterate` scripts.** Exactly
 `adversarial_calibration.py`, `append_result.py`, `differential_grader.py`,
@@ -347,7 +340,7 @@ review, and qualification gates in that plan are authorized, eligibility remains
 Claude-only, and every later native mutation still takes
 `PROVIDER_NATIVE_REVIEW_REQUIRED`.
 
-The catalog at the time of writing is 58 skills: 55 portable and 3 provider-native.
+The catalog at the time of writing is 57 skills: 54 portable and 3 provider-native.
 
 ## 5. The five operations
 

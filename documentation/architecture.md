@@ -21,7 +21,7 @@ Codex hosts receive *generated* compatibility layouts built from this source.
 | **shim** | Thin backward-compatible launcher that delegates to a canonical file. |
 | **transport** | Authenticated API or host-native channel used to execute a provider model. |
 | **calibration** | Existing deterministic/rubric comparison that checks adapter parity. |
-| **portable skill** | Skill with a neutral core plus Claude and GPT adapters, all 55 of which additionally carry a Codex adapter — codex capability is ADDITIVE on a portable record, never a third status. 55 total. |
+| **portable skill** | Skill with a neutral core plus Claude and GPT adapters, all 54 of which additionally carry a Codex adapter — codex capability is ADDITIVE on a portable record, never a third status. 54 total. |
 | **provider-native skill** | Skill supported on exactly one host; no neutral core. 3 total. |
 
 `<name>` and `<skill>` in every path template mean the same stable kebab-case
@@ -40,7 +40,7 @@ deprecation window (see `migration.md`), not canonical sources.
 | Skill core (portable) | `skills/<name>/core.md` | One per portable skill; `null` in the manifest for provider-native skills. |
 | Claude adapter | `skills/<name>/providers/claude.md` | Thin host adapter. Self-contained for provider-native skills. |
 | GPT adapter | `skills/<name>/providers/gpt.md` | Thin host adapter; absent for provider-native skills. |
-| Codex adapter | `skills/<name>/providers/codex.md` | Thin host adapter; absent for provider-native skills. One per portable skill (55). |
+| Codex adapter | `skills/<name>/providers/codex.md` | Thin host adapter; absent for provider-native skills. One per portable skill (54). |
 | Shared prose assets | `_shared/` (repo root) | Cross-skill cores/prose referenced by multiple skills. The manifest declares `skills/_shared/` as the eventual canonical home; that directory does not exist yet, so today's references resolve to the repo-root tree. The divergence is deliberate and locked by `tests/package-integrity/test_skill_tree.py::test_shared_dest_divergence_is_intentional`. |
 | Skill manifest | `config/skill-manifest.json` | Single source for distribution, install, integrity, and README counts. |
 | Skill inventory | `skills/inventory.json` | Machine-readable per-skill inventory. Committed, generated hermetically by `tools/gen_manifest.py` through the established `build_inventory()` projection, and graded by `tests/package-integrity/test_skill_tree.py`. |
@@ -187,7 +187,7 @@ each skill's legacy contract, not inferred from a single shared wrapper line.
 
 | Capability | Count | Skills |
 |---|---|---|
-| `filesystem` | 58 | all skills |
+| `filesystem` | 57 | all skills |
 | `sub-agent` | 20 | build-step, citation-review, citation-sweep, context-slim, goblin-suggest, judge-motion, judge-ui, lesson-harvest, research-prospect, review-deep, review-gauntlet, skill-evolve, skill-iterate, test-prune, tier-escalate, tier-offload, user-brainstorm, user-debug, user-learn, user-uat |
 | `vision` | 2 | judge-ui, judge-motion |
 
@@ -304,8 +304,8 @@ those steps must satisfy.
 
 Every skill has a machine-readable migration entry in `config/skill-manifest.json`
 (the `migration` + `support_assets` blocks per skill, plus top-level
-`global_support_assets`), covering **all 55 portable skills plus the 3
-Claude-native exclusions (58 total)**.
+`global_support_assets`), covering **all 54 portable skills plus the 3
+Claude-native exclusions (57 total)**.
 
 **Migration root.** All `source` / `legacy_*` paths are relative to **coding-root**
 (`aberson/coding-root` — the operator's `dev` checkout), READ-ONLY during Steps
@@ -555,7 +555,7 @@ seam (defaults to this repository) that must be a git working tree.
 
 `tests/package-integrity/test_manifest_contract.py` fails on any of:
 
-- Skill count != 58, portable != 55, provider-native != 3, sub-agent != 20,
+- Skill count != 57, portable != 54, provider-native != 3, sub-agent != 20,
   vision != 2 (each set checked exactly against the committed
   `tests/package-integrity/expected_inventory.json` fixture — the package tests
   need no private source).

@@ -1,19 +1,18 @@
 {
   "note": "Authoritative expected inventory for package-integrity tests. Committed so the public package tests need no private/legacy source. Regenerate with tools/gen_manifest.py.",
   "counts": {
-    "total": 58,
-    "portable": 55,
+    "total": 57,
+    "portable": 54,
     "provider_native": 3,
-    "claude": 58,
-    "gpt": 55,
-    "codex": 55,
+    "claude": 57,
+    "gpt": 54,
+    "codex": 54,
     "local_capable": 20,
     "sub_agent": 20,
     "vision": 2,
-    "filesystem": 58
+    "filesystem": 57
   },
   "portable": [
-    "build-observer",
     "build-phase",
     "build-queue",
     "build-step",
@@ -75,7 +74,6 @@
     "judge-motion"
   ],
   "codex": [
-    "build-observer",
     "build-phase",
     "build-queue",
     "build-step",
@@ -180,34 +178,6 @@
     "judge-ui"
   ],
   "skills": [
-    {
-      "name": "build-observer",
-      "status": "portable",
-      "local_capable": false,
-      "capabilities": [
-        "filesystem"
-      ],
-      "migration": {
-        "legacy_core": ".claude/skills-gpt/build-observer/SKILL-core.md",
-        "legacy_claude_launcher": ".claude/skills/build-observer/SKILL.md",
-        "legacy_claude_adapter": ".claude/skills/build-observer/SKILL-claude.md",
-        "legacy_gpt": ".claude/skills-gpt/build-observer/SKILL-gpt.md"
-      },
-      "support_assets": [
-        {
-          "source": ".claude/skills/build-observer/sample-dry-run.md",
-          "dest": "skills/build-observer/sample-dry-run.md"
-        },
-        {
-          "source": ".claude/skills/build-observer/scaffold_portfolio.py",
-          "dest": "skills/build-observer/scaffold_portfolio.py"
-        },
-        {
-          "source": ".claude/skills/build-observer/test_scaffold_portfolio.py",
-          "dest": "skills/build-observer/test_scaffold_portfolio.py"
-        }
-      ]
-    },
     {
       "name": "build-phase",
       "status": "portable",

@@ -28,9 +28,9 @@ identical; only host-specific exceptions differ.
 
 Counts derived from `config/skill-manifest.json`; the per-host runtime behavior
 in the Codex cells below from the `skills/<name>/providers/codex.md` adapters and
-[`../parity-deltas.md`](../parity-deltas.md). 55 skills are portable and carry all
+[`../parity-deltas.md`](../parity-deltas.md). 54 skills are portable and carry all
 three adapters — Claude, GPT, and Codex (`counts.gpt` and `counts.codex` are both
-55); 3 are Claude-native exclusions with a `claude` adapter only. Codex coverage is
+54); 3 are Claude-native exclusions with a `claude` adapter only. Codex coverage is
 additive on a portable record, not a third status: the manifest's only `status`
 values are `portable` and `provider-native`.
 

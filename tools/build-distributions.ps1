@@ -146,10 +146,6 @@ $REVIEW_DEEP_RESOURCES = @(
 $BUILD_STEP_RESOURCES = @(
     'scripts/build_step_tree.py', 'scripts/capture_evidence.py'
 )
-# build-observer's reviewed package exception: the one validator imported by the
-# core at `<skill-dir>/scaffold_portfolio.py`. This is not manifest support_assets
-# expansion and does not authorize resources for another skill.
-$BUILD_OBSERVER_RESOURCES = @('scaffold_portfolio.py')
 # skill-iterate's reviewed package exception: the exact runtime closure named by
 # its core and by the shared composite scorer. Fixed list; never harvest scripts/.
 $SKILL_ITERATE_RESOURCES = @(
@@ -621,18 +617,6 @@ foreach ($profile in $profiles) {
                 $buildStepResources[$resource] = Read-SourceText $resourceAbs
             }
         }
-        $buildObserverResources = @{}
-        if ($name -eq 'build-observer') {
-            $packageRoot = Join-Path $SKILLS_ROOT 'build-observer'
-            foreach ($resource in $BUILD_OBSERVER_RESOURCES) {
-                $resourceAbs = Resolve-SafePath -Path (Join-Path $packageRoot $resource) `
-                                               -AllowedRoots @($packageRoot)
-                if (-not (Test-Path -LiteralPath $resourceAbs -PathType Leaf)) {
-                    throw "build-distributions: build-observer resource source missing: $resource"
-                }
-                $buildObserverResources[$resource] = Read-SourceText $resourceAbs
-            }
-        }
         $skillIterateResources = @{}
         if ($name -eq 'skill-iterate') {
             $packageRoot = Join-Path $SKILLS_ROOT 'skill-iterate'
@@ -736,14 +720,6 @@ foreach ($profile in $profiles) {
             if ($name -ne 'build-step') { break }
             $resourceLabel = "skills/build-step/$resource"
             $resourceOut = Add-PythonProvenance $buildStepResources[$resource] $resourceLabel $profile
-            Write-GeneratedFile (Join-Path $skillOutDir $resource) $resourceOut $profileDirAbs
-            $fileCount++
-        }
-
-        foreach ($resource in $BUILD_OBSERVER_RESOURCES) {
-            if ($name -ne 'build-observer') { break }
-            $resourceLabel = "skills/build-observer/$resource"
-            $resourceOut = Add-PythonProvenance $buildObserverResources[$resource] $resourceLabel $profile
             Write-GeneratedFile (Join-Path $skillOutDir $resource) $resourceOut $profileDirAbs
             $fileCount++
         }

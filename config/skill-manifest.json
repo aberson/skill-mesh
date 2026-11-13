@@ -67,16 +67,16 @@
     }
   },
   "counts": {
-    "total": 58,
-    "portable": 55,
+    "total": 57,
+    "portable": 54,
     "provider_native": 3,
-    "claude": 58,
-    "gpt": 55,
-    "codex": 55,
+    "claude": 57,
+    "gpt": 54,
+    "codex": 54,
     "local_capable": 20,
     "sub_agent": 20,
     "vision": 2,
-    "filesystem": 58
+    "filesystem": 57
   },
   "global_support_assets": [
     {
@@ -116,41 +116,6 @@
     }
   ],
   "skills": [
-    {
-      "name": "build-observer",
-      "status": "portable",
-      "description": "Propose a dev-observatory registry block for one project, validated and print-only.",
-      "core": "skills/build-observer/core.md",
-      "providers": {
-        "claude": "skills/build-observer/providers/claude.md",
-        "gpt": "skills/build-observer/providers/gpt.md",
-        "codex": "skills/build-observer/providers/codex.md"
-      },
-      "capabilities": [
-        "filesystem"
-      ],
-      "local_capable": false,
-      "migration": {
-        "legacy_core": ".claude/skills-gpt/build-observer/SKILL-core.md",
-        "legacy_claude_launcher": ".claude/skills/build-observer/SKILL.md",
-        "legacy_claude_adapter": ".claude/skills/build-observer/SKILL-claude.md",
-        "legacy_gpt": ".claude/skills-gpt/build-observer/SKILL-gpt.md"
-      },
-      "support_assets": [
-        {
-          "source": ".claude/skills/build-observer/sample-dry-run.md",
-          "dest": "skills/build-observer/sample-dry-run.md"
-        },
-        {
-          "source": ".claude/skills/build-observer/scaffold_portfolio.py",
-          "dest": "skills/build-observer/scaffold_portfolio.py"
-        },
-        {
-          "source": ".claude/skills/build-observer/test_scaffold_portfolio.py",
-          "dest": "skills/build-observer/test_scaffold_portfolio.py"
-        }
-      ]
-    },
     {
       "name": "build-phase",
       "status": "portable",

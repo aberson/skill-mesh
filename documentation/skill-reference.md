@@ -1,12 +1,11 @@
 # Skill reference
 
-The v2 catalog contains **58 Claude skills** and **55 portable skills** for Codex and GitHub Copilot. Host coverage means an adapter is packaged; required native capabilities and external utilities still apply.
+The v2 catalog contains **57 Claude skills** and **54 portable skills** for Codex and GitHub Copilot. Host coverage means an adapter is packaged; required native capabilities and external utilities still apply.
 
 Each workflow link opens its source-linked diagram. Read the contract for full gates, flags, and omissions. See [installation](../README.md#install-or-upgrade), [utility integrations](../README.md#how-utility-projects-are-used), and [release limitations](https://github.com/aberson/skill-mesh/releases/tag/v2.0.2).
 
 | Skill | Purpose | Hosts | Workflow |
 |---|---|---|---|
-| [build-observer](../skills/build-observer/core.md) | Draft a grounded portfolio block, validate it offline, and print a proposal while holding invalid roots or missing tools. | Claude, Copilot, Codex | [Diagram](../docs/workflows/README.md#build-observer) |
 | [build-phase](../skills/build-phase/core.md) | Parse a plan, run each eligible step through build-step, checkpoint progress, and halt only on the phase contract's named conditions. | Claude, Copilot, Codex | [Diagram](../docs/workflows/README.md#build-phase) |
 | [build-queue](../skills/build-queue/core.md) | Validate queue and resume authority, run plan-expedite then build-phase per item, park every halt, and continue to a morning summary. | Claude, Copilot, Codex | [Diagram](../docs/workflows/README.md#build-queue) |
 | [build-step](../skills/build-step/core.md) | Isolate one plan step, iterate developer and independent review rounds, then land, verify, and finalize only an authenticated passing candidate. | Claude, Copilot, Codex | [Diagram](../docs/workflows/README.md#build-step) |
