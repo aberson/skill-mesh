@@ -412,6 +412,8 @@ file only; the others are Step 12's); the profiles build; headroom unchanged; ga
 
 ### Step 10: Wait for the two outside prerequisites
 
+**Status:** 2026-11-13: predicate (b) is now met by commit `dd01309` (catalog gate plan Step 8, option "remove": `tests/package-integrity/test_codex_budgets.py` has no `assert headroom <` line). Predicate (a) was already met by user-pm Step 5. Both prerequisites hold once that commit is on `v3/main`, so Step 10 can run.
+
 **Problem:** Two things outside this plan must be true before the remaining steps. (a) The user-pm revamp plan's
 Step 5 has landed on `v3/main`, so goblin's job has its new home. (b) The catalog gate plan's Step 8 has removed
 the `headroom < 900` upper limit, because Step 13 is the first predicted breach. This plan never edits that guard.

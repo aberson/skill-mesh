@@ -303,9 +303,10 @@ def test_catalog_floor_reds_when_the_catalog_grows_past_it():
     headroom, so the step trimmed DESCRIPTIONS catalog-wide (mean row 163 -> 137, total
     7,684 over 47 -> 7,401 over 54). The warning below is that warning RE-PINNED at the
     post-trim catalog and stated in CHARACTERS OF HEADROOM against the real total --
-    the unit the budget is actually spent in -- so that neither a silent description
-    bloat nor a silently generous floor can go unnoticed, and so that neither bound
-    sits a rounding error away from today's catalog.
+    the unit the budget is actually spent in -- so that a silent description bloat
+    cannot go unnoticed, and so that the bound does not sit a rounding error away from
+    today's catalog. A silently generous floor is caught by a direct pin on the floor
+    constant, not by a headroom ceiling (catalog gate plan Step 8, issue #252).
 
     The anchor calls the SAME `_fits_under_floor` helper the real gate
     (`test_whole_catalog_initial_list_estimate_is_under_the_unknown_context_floor`)
@@ -329,30 +330,43 @@ def test_catalog_floor_reds_when_the_catalog_grows_past_it():
     # today's 7,401, against the real gate's 599. It would have reded CI on any
     # ~+48-character description edit anywhere in the catalog -- roughly 12x sooner than
     # the budget it claims to warn about -- and told the next engineer to re-pin two
-    # magic constants. Both bounds below are deliberately loose against the real gate.
+    # magic constants. The bound below is deliberately loose against the real gate.
     #
-    # Which bound catches what:
+    # What each check catches:
     #   * headroom > 400 is the BLOAT guard. Descriptions growing back toward the
     #     pre-trim 163-char mean shrink the headroom, and this reds while ~400 chars of
     #     real budget remain. This is the early warning proper.
-    #   * headroom < 900 is what keeps that warning honest, and is the bound that
-    #     catches a silently INFLATED CATALOG_FLOOR: buying room by raising the floor
-    #     instead of trimming opens the headroom and reds here. (It also reds on an
-    #     over-trim that leaves the warning describing a catalog that no longer
-    #     exists.) It is the old `not _fits_under_floor(per_skill_mean * 59)` check
-    #     restated in characters -- algebraically that form was `headroom <= 678`, tight
-    #     enough to red on a trim smaller than the -283 Step 10 itself made.
+    #   * There is deliberately NO upper bound on headroom (catalog gate plan Step 8,
+    #     issue #252, operator choice "remove"). The old `headroom < 900` ceiling did
+    #     two jobs. It caught a silently INFLATED floor, which the pin below now catches
+    #     directly. It also reded on an over-trim, which is not a defect: a roomier
+    #     catalog is harmless, and retiring skills must not turn this guard red or force
+    #     unrelated descriptions to be padded or batched with creates.
+    #   * The floor pin: CATALOG_FLOOR is the published 8,000-char unknown-context
+    #     limit; the gate's predicate reads that constant by name and carries no
+    #     numeric literal of its own (so it cannot hold a second copy of the floor,
+    #     even an equal one); and the predicate's boundary sits at it. Buying room by
+    #     raising the floor, or by hard-coding any number into the predicate, reds
+    #     here instead of opening the headroom unnoticed.
     assert headroom > 400, (
         f"catalog headroom is down to {headroom} chars ({total} over {len(sizes)} rows, "
         f"floor {CATALOG_FLOOR}) -- descriptions have grown since the Phase CP Step 10 "
         "trim. Trim DESCRIPTIONS in tools/gen_manifest.py. Do NOT raise CATALOG_FLOOR "
         "and do NOT relax this bound to buy room.")
-    assert headroom < 900, (
-        f"catalog headroom has opened to {headroom} chars ({total} over {len(sizes)} "
-        f"rows, floor {CATALOG_FLOOR}) -- either CATALOG_FLOOR was raised instead of the "
-        "catalog being trimmed, or a trim landed that this warning no longer describes. "
-        "Confirm the floor is still the real unknown-context limit, then re-measure and "
-        "re-state both bounds here in one edit.")
+    floor_msg = (
+        "CATALOG_FLOOR must stay the published 8,000-char unknown-context limit and be "
+        "the single constant the catalog gate's predicate uses. Do NOT raise it, and do "
+        "NOT give _fits_under_floor its own bound, to buy room: trim DESCRIPTIONS in "
+        "tools/gen_manifest.py instead.")
+    assert CATALOG_FLOOR == 8_000, floor_msg
+    gate_code = _fits_under_floor.__code__
+    assert "CATALOG_FLOOR" in gate_code.co_names, floor_msg
+    gate_literals = [c for c in gate_code.co_consts
+                     if isinstance(c, (int, float)) and not isinstance(c, bool)
+                     and abs(c) >= 1_000]
+    assert gate_literals == [], floor_msg
+    assert _fits_under_floor(CATALOG_FLOOR - 1) is True, floor_msg
+    assert _fits_under_floor(CATALOG_FLOOR) is False, floor_msg
 
 
 # Cohort B, the pipeline family (Phase CP Step 6, issue #123). SPELLED here -- like the
