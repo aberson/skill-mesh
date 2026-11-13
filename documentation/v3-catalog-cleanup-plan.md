@@ -165,6 +165,8 @@ limit is already gone; if so, Step 10 passes at once on resume.
 
 ### Step 1: Record the scoped exception, create the isolated worktree, measure
 
+**Status:** DONE 2026-11-13. records only (`<coding-root>/docs/skill-mesh-3-review/builds/cleanup/`). Steps 1 to 5 reviewed APPROVE with one correction round (`<coding-root>/docs/skill-mesh-3-review/builds/cleanup-1-review.md`); focused tests plus the per-change pack under the adopted testing rule.
+
 **Problem:** Q1 approved one scoped exception for the whole batch. The guide requires the base ref, target paths and
 pre-write hashes recorded before the first write, and nothing yet records them. The headroom estimates above come
 from a planning-time read and must be re-measured on the real base.
@@ -209,6 +211,8 @@ explained. No catalog gate runs here (no catalog bytes change).
 
 ### Step 2: DELETE `user-lavishify`
 
+**Status:** DONE 2026-11-13. commit b090907. Steps 1 to 5 reviewed APPROVE with one correction round (`<coding-root>/docs/skill-mesh-3-review/builds/cleanup-1-review.md`); focused tests plus the per-change pack under the adopted testing rule.
+
 **Problem:** The operator never used it and does not like it (decision log round 2). It is the smallest delete and
 frees headroom ahead of the create, so it goes first.
 **Type:** code
@@ -235,6 +239,8 @@ cleanup removing the host profile) is left to Step 20.
 
 ### Step 3: Copy `build-observer` and `observatory-doctor` into dev-observatory (other repository)
 
+**Status:** DONE 2026-11-13. coding-root commit 484f68c0 (local). Steps 1 to 5 reviewed APPROVE with one correction round (`<coding-root>/docs/skill-mesh-3-review/builds/cleanup-1-review.md`); focused tests plus the per-change pack under the adopted testing rule.
+
 **Problem:** Both skills move to dev-observatory as project-local skills (maintenance M1, M2). The copy must land
 and be committed there before the mesh deletes anything, or the move leaves a gap. This is not a catalog
 operation on the mesh. `dev-observatory/` has no nested `.git` (its git top level is the coding-root repository,
@@ -253,6 +259,8 @@ live there. Both keep their current behavior; the only edits are path references
 the copied bytes differ from the mesh sources only where the step's notes say.
 
 ### Step 4: DELETE `build-observer` from the mesh
+
+**Status:** DONE 2026-11-13. commit 291fe96. Steps 1 to 5 reviewed APPROVE with one correction round (`<coding-root>/docs/skill-mesh-3-review/builds/cleanup-1-review.md`); focused tests plus the per-change pack under the adopted testing rule.
 
 **Problem:** After Step 3, the mesh copy is retired. It carries a reviewed packaging exception for its validator
 script, special-cased in the build tooling, the guide and the tests.
@@ -276,6 +284,8 @@ historical-preserve occurrences; the three profiles build without the build-obse
 base) and above 400; gate named and green.
 
 ### Step 5: CREATE `user-fermize`
+
+**Status:** DONE 2026-11-13. commit 8b9b239. Steps 1 to 5 reviewed APPROVE with one correction round (`<coding-root>/docs/skill-mesh-3-review/builds/cleanup-1-review.md`); focused tests plus the per-change pack under the adopted testing rule.
 
 **Problem:** `user-fermize` exists only as a personal Codex skill (19 uses in 6 weeks). The user-pm revamp needs it
 on Claude. A prepared packet lives in `<coding-root>/docs/investigations/gates-and-drift/catalog-preparation/`
