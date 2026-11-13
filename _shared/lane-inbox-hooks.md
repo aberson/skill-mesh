@@ -119,6 +119,16 @@ When the inbox check fails, the card refresh is not attempted.
   `owns` and `holds`). The missing-card result is exit 3 with error code `not-found`: only that
   result means "no card yet" (the refresh then creates the card with empty lists and an empty
   body). Exit 3 with any other code, including `card-invalid`, skips the write.
+- **Escaped text is never carried forward.** `card show` prints every line through the tool's
+  escape rule, so a character it treats as unsafe (for example a variation selector or a
+  zero-width character) arrives as escape text such as `\ufe0f`, and there is no raw read verb.
+  If the body, `owns`, `holds`, `checkout` or `branch` holds a `\uXXXX`, `\UXXXXXXXX` or `\xXX`
+  escape, or a U+FFFD replacement character, the write is skipped with `card-unreadable`: re-sending
+  it would replace the lane's text for good. A card that legitimately holds such a literal costs
+  one missed refresh, never data. The helper runs the tool with `PYTHONIOENCODING=utf-8` and
+  `PYTHONUTF8=1` set for that child only, so every other non-ASCII character arrives intact (a
+  piped Python tool otherwise prints in the locale encoding). A raw card read in Passing Notes
+  would remove this limit.
 - Text from the card or from notes is never echoed into the line.
 
 ### Task-state file shape (the only fields the helper reads)

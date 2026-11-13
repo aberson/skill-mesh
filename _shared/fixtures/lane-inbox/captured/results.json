@@ -9,6 +9,9 @@
     "exit": 3,
     "stdout_empty": true
   },
+  "card-show-lane-symbols.txt": {
+    "exit": 0
+  },
   "card-show-lane.txt": {
     "exit": 0
   },

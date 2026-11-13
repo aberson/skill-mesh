@@ -88,6 +88,13 @@ CARD_KEYS = (
 CARD_LIST_KEYS = ("owns", "holds")
 CARD_REQUIRED = ("lane", "project", "host", "item", "state", "updated_utc")
 ERROR_LINE_RE = re.compile(r"^passing-notes: error: ([a-z0-9-]+):")
+# The tool is a Python program that prints in the locale encoding when piped
+# (cp1252 on Windows), which would garble every non-ASCII character it does not
+# escape. These child-only settings make its output UTF-8; the helper reads no
+# environment variable for them.
+TOOL_ENV = {"PYTHONIOENCODING": "utf-8", "PYTHONUTF8": "1"}
+# What the tool's escape rule (Python ascii()) prints for an unsafe character.
+ESCAPE_RE = re.compile(r"\\(?:u[0-9a-f]{4}|U[0-9a-f]{8}|x[0-9a-f]{2})")
 
 IS_WINDOWS = os.name == "nt"
 
@@ -182,7 +189,7 @@ def kill_tree(proc):
         pass
 
 
-def spawn(argv, timeout, stdin_bytes=None):
+def spawn(argv, timeout, stdin_bytes=None, env=None):
     """Run argv (a list, never a shell string) with a timeout and an output cap.
 
     Returns a Result. Raises Failure('timeout') or Failure('output-too-large')
@@ -198,6 +205,7 @@ def spawn(argv, timeout, stdin_bytes=None):
         stdin=subprocess.PIPE if stdin_bytes is not None else subprocess.DEVNULL,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
+        env=env,
         **kwargs
     )
     lock = threading.Lock()
@@ -415,7 +423,9 @@ def find_tool():
 
 def call_tool(exe, args, budget, stdin_bytes=None):
     try:
-        return spawn([exe] + list(args), budget.next_timeout(), stdin_bytes)
+        env = dict(os.environ)
+        env.update(TOOL_ENV)
+        return spawn([exe] + list(args), budget.next_timeout(), stdin_bytes, env=env)
     except OSError:
         raise Failure("unparseable")
 
@@ -563,6 +573,22 @@ def is_control(ch):
     return unicodedata.category(ch) in ("Cc", "Cf", "Zl", "Zp", "Cs")
 
 
+def carries_escapes(card):
+    """True when carried-forward card text holds an escape that `card show` printed.
+
+    `card show` prints every line through the tool's escape rule, so a non-ASCII
+    symbol (for example a warning sign and its variation selector) arrives as the
+    ASCII text of its escape. There is no raw read verb, so re-sending that text
+    would replace the lane's symbols with escape text for good. Such a card is not
+    rewritten; a card that legitimately holds such a literal costs one missed
+    refresh, never data.
+    """
+    texts = [card.get("body") or "", card.get("checkout") or "", card.get("branch") or ""]
+    texts += list(card.get("owns") or []) + list(card.get("holds") or [])
+    # U+FFFD means text was already lost in decoding; never re-send it either.
+    return any(ESCAPE_RE.search(text) or "\ufffd" in text for text in texts)
+
+
 def card_refresh(exe, project, lane, args, budget, now):
     """Returns None on success or a silent skip, else a Failure reason."""
     fields = read_task_file(args.task_file)
@@ -585,6 +611,8 @@ def card_refresh(exe, project, lane, args, budget, now):
                 if occupied_by_another_window(existing, args.host, window, now):
                     return "card-held-by-another-window"
             except ValueError:
+                return "card-unreadable"
+            if carries_escapes(existing):
                 return "card-unreadable"
         argv = [
             "card", "set", "--project", project, "--lane", lane,

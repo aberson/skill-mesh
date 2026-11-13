@@ -82,7 +82,9 @@ def main():
     log = os.environ.get("LANE_STUB_LOG")
     if log:
         with open(log, "a", encoding="utf-8") as handle:
-            handle.write(json.dumps({"argv": argv, "stdin": stdin_text}) + "\n")
+            handle.write(json.dumps({"argv": argv, "stdin": stdin_text,
+                                     "pythonioencoding": os.environ.get("PYTHONIOENCODING")})
+                         + "\n")
     verb = " ".join(argv[:2]) if argv[:1] == ["card"] else (argv[0] if argv else "")
     scenario = {}
     path = os.environ.get("LANE_STUB_SCENARIO")

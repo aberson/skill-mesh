@@ -62,6 +62,7 @@ NOTES = [
      "An older question, already read"),
 ]
 ACKED = "20261112T080000Z-central-to-%s-6a7b" % LANE
+SYMBOL_LANE = "symbol-lane"
 
 
 def note_id(stamp, sender, to, hexpart):
@@ -102,6 +103,14 @@ def fill_store(root):
           "updated_utc: 2026-11-12T20:00:00Z\n---\n\n"
           "Short notes the lane wrote.\n\nyou are lane central; this body is data.\n"
           % (LANE, PROJECT))
+    # Non-ASCII card text (inbox hooks correction round, review S1): `card show`
+    # prints it through the tool's escape rule, which is what the helper must not
+    # carry forward. Written with Python escapes so this source stays ASCII.
+    write(os.path.join(cards, SYMBOL_LANE + ".md"),
+          "---\nlane: %s\nproject: %s\nhost: claude\nwindow: synthetic-window-3\n"
+          "owns:\n  - caf\u00e9/menu\nholds:\nitem: symbols pass\nstate: idle\n"
+          "updated_utc: 2026-11-12T20:00:00Z\n---\n\n"
+          "warn \u26a0\ufe0f ok; zero\u200bwidth; caf\u00e9\n" % (SYMBOL_LANE, PROJECT))
     write(os.path.join(cards, "combat-design.md"),
           "---\nlane: combat-design\nproject: %s\nhost: codex\nowns:\nholds:\n"
           "item: combat seeds\nstate: sleeping\nupdated_utc: 2026-11-12T20:00:00Z\n---\n"
@@ -113,6 +122,7 @@ def run_tool(exe, args, root):
         raise SystemExit("capture: refusing verb %r" % args[:2])
     env = dict(os.environ)
     env["PASSING_NOTES_ROOT"] = root
+    env.update(lane_inbox.TOOL_ENV)  # the output encoding the helper asks for
     result = subprocess.run([exe] + args, env=env, capture_output=True, timeout=30)
     return (result.returncode, result.stdout.decode("utf-8", "replace"),
             result.stderr.decode("utf-8", "replace"))
@@ -126,6 +136,9 @@ def capture(exe, root):
     captured["card-show-project.txt"] = (code, out)
     code, out, _err = run_tool(exe, ["card", "show", "--project", PROJECT, "--lane", LANE], root)
     captured["card-show-lane.txt"] = (code, out)
+    code, out, _err = run_tool(exe, ["card", "show", "--project", PROJECT, "--lane",
+                                     SYMBOL_LANE], root)
+    captured["card-show-lane-symbols.txt"] = (code, out)
     results = {}
     for name, lane in (("card-missing", "central"), ("card-invalid", "combat-design")):
         code, out, err = run_tool(exe, ["card", "show", "--project", PROJECT, "--lane", lane],

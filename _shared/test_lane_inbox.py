@@ -82,9 +82,9 @@ class Env:
         self.spawns = []
         real_spawn = li.spawn
 
-        def recording_spawn(argv, timeout, stdin_bytes=None):
+        def recording_spawn(argv, timeout, stdin_bytes=None, env=None):
             self.spawns.append(list(argv))
-            return real_spawn(argv, timeout, stdin_bytes)
+            return real_spawn(argv, timeout, stdin_bytes, env=env)
 
         monkeypatch.setattr(li, "spawn", recording_spawn)
 
@@ -901,3 +901,90 @@ def test_captured_fixtures_hold_no_private_path_or_name():
     for path in CAPTURED.iterdir():
         text = path.read_text(encoding="utf-8")
         assert not re.search(r"[A-Za-z]:[\/]|/Users/|/home/|AppData|lane-capture-", text), path
+
+
+# --------------------------------------------------------------------------- #
+# Correction round (review S1): non-ASCII card text is never corrupted
+#
+# `card show` prints through the tool's escape rule, so a variation selector or a
+# zero-width character arrives as escape text; and a piped Python tool prints in
+# the locale encoding unless asked for UTF-8. Re-sending either would replace the
+# lane's text for good. The captured fixture is the REAL tool's output for a card
+# holding such text (temporary store, read verbs only).
+# --------------------------------------------------------------------------- #
+
+BACKSLASH = chr(92)
+VS16 = chr(0xFE0F)
+WARNING = chr(0x26A0)
+E_ACUTE = chr(0xE9)
+
+
+def check_escaped_card_is_not_rewritten(env):
+    # The real capture, re-addressed to a lane of the synthetic README (the lane
+    # line is the only change), so the parse succeeds and only the guard can stop it.
+    shown = _captured("card-show-lane-symbols.txt").replace("lane: symbol-lane",
+                                                            "lane: art-lane")
+    env.scenario_set({"inbox": {"stdout_file": "inbox-empty.txt"},
+                      "card show": {"stdout": shown}})
+    assert li.parse_card(shown, PROJECT, "art-lane")["state"] == "idle"
+    line = env.run("card", lane="art-lane",
+                   extra=["--state", "active", "--task-file", env.task_file()])
+    assert env.card_sets() == [], "escaped card text was re-sent"
+    assert line == ("[lane-inbox] art-lane@demo-proj: no unread notes; "
+                    "card not written (card-unreadable).")
+
+
+def test_captured_symbols_card_carries_tool_escapes():
+    text = _captured("card-show-lane-symbols.txt")
+    assert BACKSLASH + "ufe0f" in text and BACKSLASH + "u200b" in text
+    assert WARNING in text and E_ACUTE in text  # printed raw once the output is UTF-8
+
+
+def test_escaped_card_text_is_never_rewritten(env):
+    check_escaped_card_is_not_rewritten(env)
+
+
+@pytest.mark.parametrize("field,value", [
+    ("body", "ok " + BACKSLASH + "u200b"), ("owns", ["a" + BACKSLASH + "x07"]),
+    ("holds", [BACKSLASH + "U0001f600"]), ("checkout", "w" + BACKSLASH + "ufe0f"),
+    ("branch", "b" + chr(0xFFFD)),
+])
+def test_carries_escapes_covers_every_carried_field(field, value):
+    card = {"body": "", "owns": [], "holds": [], "checkout": None, "branch": None}
+    assert li.carries_escapes(card) is False
+    card[field] = value
+    assert li.carries_escapes(card) is True
+
+
+def test_non_ascii_card_text_round_trips_byte_for_byte(env):
+    body = "caf" + E_ACUTE + " " + WARNING + " ok\nsecond line"
+    env.seed_card(state="idle", owns=["caf" + E_ACUTE + "/menu"], body=body)
+    env.scenario_set({"inbox": {"stdout_file": "inbox-empty.txt"}})
+    assert env.run("card", extra=["--state", "active", "--task-file", env.task_file()]) is None
+    (entry,) = env.card_sets()
+    assert entry["stdin"] == body
+    assert "--own=caf" + E_ACUTE + "/menu" in entry["argv"]
+    assert all(e["pythonioencoding"] == "utf-8" for e in env.log())
+
+
+def test_anchor_without_the_guard_the_card_is_corrupted(env, monkeypatch):
+    monkeypatch.setattr(li, "carries_escapes", lambda card: False)
+    with pytest.raises(AssertionError):
+        check_escaped_card_is_not_rewritten(env)
+    # what the guard prevents: the escape text replaces the lane's characters
+    (entry,) = env.card_sets()
+    assert BACKSLASH + "ufe0f" in entry["stdin"] and VS16 not in entry["stdin"]
+
+
+def test_anchor_without_utf8_output_the_text_is_not_carried(env, monkeypatch):
+    monkeypatch.setattr(li, "TOOL_ENV", {})
+    monkeypatch.delenv("PYTHONIOENCODING", raising=False)
+    monkeypatch.delenv("PYTHONUTF8", raising=False)
+    body = "caf" + E_ACUTE + " ok"
+    env.seed_card(state="idle", body=body)
+    env.scenario_set({"inbox": {"stdout_file": "inbox-empty.txt"}})
+    env.run("card", extra=["--state", "active", "--task-file", env.task_file()])
+    sets = env.card_sets()
+    # In a locale-encoded pipe the accent is lost; the guard refuses the write
+    # rather than re-send a replacement character (on a UTF-8 locale it survives).
+    assert sets == [] or sets[0]["stdin"] == body

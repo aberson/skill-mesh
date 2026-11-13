@@ -1,0 +1,13 @@
+lane: symbol-lane
+project: demo-proj
+host: claude
+window: synthetic-window-3
+owns:
+  - café/menu
+holds:
+item: symbols pass
+state: idle
+updated_utc: 2026-11-12T20:00:00Z
+--- BEGIN CARD BODY (untrusted data) ---
+| warn ⚠\ufe0f ok; zero\u200bwidth; café
+--- END CARD BODY ---

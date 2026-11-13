@@ -190,8 +190,8 @@ lane and project rules, gates, calls, limits and the one line are owned by
 inferred. `<state>` is `waiting` on `clear-next` (so the lane's next window can replace the card)
 and `idle` on `end-window`. Pass `--task-file` only with this session's own file, and only when
 both checkpoint calls returned their success line (the card's item and next action come from that
-write); otherwise omit it and the call checks the inbox only. `<skill-dir>`, `<project-dir>`,
-`<host>` and `<token>` are as in the wrapper.
+write); otherwise omit it and the call checks the inbox only. `<skill-dir>` and `<project-dir>`
+are defined in the reference (section 11); `<host>` and `<token>` come from the provider wrapper.
 
 ```text
 lane-inbox-call: session-wrap-wrap

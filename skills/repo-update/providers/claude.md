@@ -14,7 +14,7 @@ See [../core.md](../core.md) for the full specification.
 - Preserve the core's gates, retry limits, filesystem safety, and exact output contracts.
 - Step 12 tour: write the HTML file with the host's file-write tool at the core's document output contract path (`<repo>/_shared/document-output.md`) and load the `artifact-design` skill first for page craft. Never publish the tour as a Claude Artifact, even though this host has the Artifact tool.
 - Use Claude session JSONL, scratchpad identity, or VS Code deep links only where available and requested by the core.
-- Lane inbox (`<repo>/_shared/lane-inbox-hooks.md`): fill the core's Step 9 `lane-inbox-call` block with `--host claude`. The call is read-only and passes no window token. Never read `COPILOT_AGENT_SESSION_ID` or another host's variable. Run the block as one shell call with a timeout of at least 60 seconds (the helper bounds itself to 30 seconds).
+- Lane inbox (`<repo>/_shared/lane-inbox-hooks.md`): fill the core's Step 9 `lane-inbox-call` block with `--host claude`. The call is read-only and passes no window token. Never read `COPILOT_AGENT_SESSION_ID` or another host's variable. Run the block as one shell call with a timeout of at least 60 seconds (the helper bounds its calls to 30 seconds per moment, plus a few seconds of process cleanup).
 
 ## Output normalization
 
