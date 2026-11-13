@@ -590,7 +590,8 @@ def attr_overlay(git_root: str, rdir: Path, rels: list, landed: dict) -> str:
     """A scratch work tree holding the .gitattributes files the operator tree will hold once the
     payload lands: for each directory on the path of every rel, ``landed[<dir>/.gitattributes]``
     when the payload writes (bytes) or deletes (None) it, else the operator tree's current file.
-    Git falls back to the operator index for a file missing here, as it does in the operator tree."""
+    A .gitattributes missing here applies no rules, even when the operator index still holds it:
+    Git reads no index copy for this lookup, the same as for a file deleted from the operator tree."""
     overlay = Path(tempfile.mkdtemp(prefix="attr-", dir=str(rdir)))
     dirs = {""}
     for rel in rels:
