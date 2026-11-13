@@ -23,8 +23,9 @@ Usage (from anywhere; paths resolve against this checkout):
 
 Everything after ``--`` is passed to pytest (for example ``-- --durations=25``).
 
-Exit code: pytest's exit code. Exit 4 (before pytest starts) when a selected
-file no longer exists: a missing file fails the pack rather than being skipped.
+Exit code: pytest's exit code (0 to 5). Exit 6, before pytest starts, when a
+selected file no longer exists: a missing file fails the pack rather than being
+skipped.
 """
 
 import argparse
@@ -167,7 +168,7 @@ def main(argv=None):
     if missing:
         for item in missing:
             sys.stderr.write("change_pack: selected path does not exist: %s\n" % item)
-        return 4
+        return 6
 
     command = [sys.executable, "-m", "pytest"] + targets
     command += ["--ignore=%s" % p for p in ignores]
@@ -175,6 +176,7 @@ def main(argv=None):
 
     if args.evidence:
         evidence = Path(args.evidence)
+        evidence.parent.mkdir(parents=True, exist_ok=True)
     else:
         stamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
         evidence = Path(tempfile.gettempdir()) / ("skill-mesh-change-pack-%s.txt" % stamp)
@@ -202,6 +204,10 @@ def main(argv=None):
         out.write("checkout: %s\n" % REPO_ROOT.name)
         out.write("command: %s\n" % " ".join(
             ["python"] + command[1:]))
+        out.write("extra_args: %s\n" % (" ".join(extra) if extra else "none"))
+        if extra:
+            out.write("note: extra args may narrow the run; 'files selected' is the pack's "
+                      "selection, not pytest's collection\n")
         out.write("targets:\n")
         for t in targets:
             out.write("  %s\n" % t)
