@@ -21,7 +21,7 @@ Questions (ONE round, 3 targeted — answer what you can; I proceed either way):
 
 [operator]: 1) yes — stop ollama, hit /launch, 500 every time. 2) nothing has failed, I've just never seen it fire. 3) switchboard's own UI, read-only.
 
-Routes chosen by consulting the routing web (skill-pipeline.md § "The 8 rails", tiebreak applied — cited, not restated): (b) lands verify, not bug — distrust with no failing check in hand; (d) is an operator-only choice -> parked, never ground through.
+Routes chosen by consulting the routing web (skill-pipeline.md § "The rails", tiebreak applied — cited, not restated): (b) lands verify, not bug — distrust with no failing check in hand; (d) is an operator-only choice -> parked, never ground through.
 
 ===== written file: .claude/task-state/intake-switchboard-leftovers.md =====
 # Intake ledger — switchboard-leftovers
@@ -32,7 +32,7 @@ Seeded by /user-gateway 2026-07-13. Grammar + statuses per <repo>/_shared/intake
 |----|----------|-------|--------|-------------|
 | F1 | endpoint launcher 500s when the model list comes back empty | bug | routed | seed: `/user-debug --symptom 'endpoint launcher 500 on empty model list'`; repro: stop ollama, hit /launch |
 | F2 | no evidence monitor auto-disable works since the Phase B merge | verify | routed | seed: `/user-walkthrough --shakedown 'switchboard monitor auto-disable'`; evidence check `curl -s 127.0.0.1:8080/status | jq .monitor` |
-| F3 | tinstar viewer: stay bundled in switchboard or split into its own repo? | decide | parked | operator-only: bundle vs split — question surfaced, awaiting operator |
+| F3 | tinstar viewer: stay bundled in switchboard or split into its own repo? | decide | parked | operator-only: bundle vs split — question surfaced, awaiting operator; register: `/user-dr sources: <git-root>/.claude/task-state/intake-switchboard-leftovers.md; record F3: 'bundle vs split'` |
 | F4 | endpoint health dashboard (status, latency, per-model routing counts) | plan | routed | seed: /plan-feature 'switchboard endpoint health dashboard' — full seed paragraph in gateway output |
 ===== end written file =====
 
@@ -44,8 +44,9 @@ F1 — bug:
 F2 — verify (mode per the web's verify-rail detail: no UAT block exists yet and no operator attendance needed — autonomous closure fits):
 /user-walkthrough --shakedown switchboard monitor auto-disable
 
-F3 — decide (PARKED — operator-only; no seed):
+F3 — decide (PARKED — operator-only; no work seed):
 Open question, stated and waiting: should the tinstar viewer stay bundled in switchboard, or split into its own repo? The ledger holds it as parked; nothing proceeds on it until you call it.
+Record it in the decision register: `/user-dr sources: <git-root>/.claude/task-state/intake-switchboard-leftovers.md; record F3: 'should the tinstar viewer stay bundled in switchboard, or split into its own repo?'`
 
 F4 — plan (paste as the /plan-feature argument):
 /plan-feature switchboard endpoint health dashboard — a read-only page in switchboard's own UI (your answer to Q3) showing per-endpoint status, rolling latency, and per-model routing counts. Scope strictly as voiced; anything beyond these three panels is /plan-feature's conversation to have.

@@ -20,7 +20,7 @@ skill itself — it has no `SKILL.md`.
 | `intent-continuity.md` | Private outcome records, evidenced capability checkpoints and reassessment; optional Drift Ranger CLI with session-state fallback | Planning, build orchestration, `task-handoff`, `session-wrap` |
 | `lesson_observations.py` | Explicit private mistake records and bounded pending-observation reads; automatic lesson publication is unavailable in v2 | `lesson-harvest` |
 | `judge-core.md` | The shared judging doctrine (archetypes, dimensions, rubric method, honesty invariants) every verdict-rendering skill cites | `review-deep`, `review-gauntlet`, `user-uat`, `build-step`, `build-phase` |
-| `skill-pipeline.md` | The routing web: the 8 rails an operator fragment can land on, the re-route edges, and the re-route contract | `user-gateway`, `user-debug`, README workflow maps |
+| `skill-pipeline.md` | The routing web: the rails an operator fragment can land on, the re-route edges, and the re-route contract | `user-gateway`, `user-debug`, README workflow maps |
 | `intake-engine.md` | The intake-ledger contract: path formula, row grammar, zero-open check, canonical `/goal` string | `user-gateway` + rail skills writing back re-routes |
 | `document-output.md` | Where operator-facing documents are saved (`docs/<skill>/` in the project repo, never a hosted Artifact) and how the locator is reported (v2.0.1) | `plan-redline`, `repo-update` |
 | `calibrate_judge.py` | Deterministic per-commit judge-calibration gate (freshness / discrimination / agreement over a recorded snapshot) | `review-deep` § Calibration; `judge-core.md` §7 |

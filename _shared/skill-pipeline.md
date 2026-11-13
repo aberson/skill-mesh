@@ -15,16 +15,19 @@
 > sign-off, recorded with the full list of link dispositions in this repository's Step 66
 > decision record, is the only class-level authority.
 
-This file is the routing web: the 8 rails an operator fragment can land on (entry
-condition + skill chain), the re-route edges between them, and the re-route contract.
+This file is the routing web: the rails an operator fragment can land on (entry
+condition + skill chain), the re-route edges between them, the re-route contract, and the
+catalog skills that are deliberately not vent targets.
 It is the ONE owner of the rails and of the `re-route:` line format — `/user-gateway` consults this web to route intake fragments, and rail
 skills cite this section; no skill hardcodes its own routing table.
 
 ---
 
-## The 8 rails
+## The rails
 
-Entry condition = what the operator's fragment sounds like.
+Entry condition = what the operator's fragment sounds like. Every catalog skill is either
+named in this table or listed under § Not vent targets, never both
+(`tests/package-integrity/test_routing_web_coverage.py` checks it).
 
 | Rail | Sounds like | Chain |
 |---|---|---|
@@ -34,13 +37,22 @@ Entry condition = what the operator's fragment sounds like.
 | **investigate** | "what's true about X? why does X happen?" — a question, not yet work | `/deep-research` via `Workflow({name: "deep-research-pinned"})` (never the built-in name — CLAUDE.md's dispatch rule) for external/multi-source; an Explore-agent sweep for codebase-local questions |
 | **verify** | "does X actually work? / I don't trust X" — distrust without a reproducible symptom | `/review-uat` (refine a fuzzy block) / `/user-uat` (mechanical tier) / `/user-walkthrough --shakedown` (autonomous closure) / `/user-walkthrough` (attended) — four-mode detail below |
 | **trim** | "the plan feels bloated / what can we cut" — plan-borne cruft-smell | `/plan-merge --trim` (plan documents only; non-plan cruft-smell routes **investigate** first — assess, then `investigate→plan` or `investigate→do`) |
-| **decide** | "should we do A or B?" — an operator-only choice | surfaced-only: parked with the open question stated; never ground through autonomously |
+| **decide** | "should we do A or B?" — an operator-only choice | never decided for the operator: parked with the open question stated, and recorded with `/user-dr` (decision register: records, groups, checks conflicts); a complex scope or first-milestone choice → `/user-fermize` |
 | **draft** | "here are rough thoughts" — wants a usable prompt or goal, not work done | `/user-draft` → `/goal` |
+| **review** | "look this over / is this change OK / review PR #N" — judge a change before it lands | `/review-gauntlet` (default) / `/review-deep` (high stakes) / `/code-consigliere` (understand a project's workflows and agree a change before building) / `/review-proof` (an answer's claims need primary sources) |
+| **research** | "what should we research? / are this doc's claims backed?" — pick topics or check evidence, not answer a question | `/research-prospect` (topics per project); LLM-facing artifact rigor: `/citation-review` (one artifact) or `/citation-sweep` (project-wide) → `/citation-triage` → `/citation-distill` |
+| **tend** | "context feels bloated / tests are slow / we keep repeating mistakes / this skill misbehaves" — workspace care | context bloat → `/context-slim` (Claude host); slow or redundant tests → `/test-prune`; repeated mistakes → `/lesson-harvest`; messy memory → `/memory-distill`; a skill misbehaving → `/skill-iterate` (variants: `/skill-evolve`; no evals yet: `/skill-eval-setup`); model cost or weakness → `/tier-offload` / `/tier-escalate`; milestone cleanup → `/user-afterparty`; close out a repo → `/repo-wrap` (detail below) |
+| **session** | "I'm back / keep going or close? / wrap up / where does this stand?" — the window or the project's state, not new work | `/user-wrap`; resume a saved task → `/task-handoff --resume`; "where does this project stand?" → `/user-pm` |
+| **learn** | "teach me X / I want to learn X / let's explore an idea" — understanding, not delivery | `/user-learn` (a hands-on learning ramp); explore an idea → `/user-brainstorm` |
 
 **Tiebreak:** when a fragment plausibly fits two rails, pick the rail with the cheaper
 commitment and let a re-route edge correct it. The common tie — **bug vs verify** — splits
 on evidence: a reproducible symptom in hand → **bug**; distrust without one → **verify**
 (and `verify→bug` upgrades it the moment a check fails).
+**review vs verify** splits on the object: a change or diff not yet accepted → **review**;
+a built feature's behavior → **verify**.
+**research vs investigate** splits on the ask: a question to answer → **investigate**;
+choosing what to study, or checking an artifact's cited claims → **research**.
 
 ---
 
@@ -102,6 +114,8 @@ First-time setup: `/repo-init` once before first `/plan-expedite`.
 - **Homes.** `[dev-root]` = coding-root work — plan-doc skills (`/plan-init`, `/plan-feature`, `/plan-redline`, and plan-expedite's `plan-review`/`plan-wrap` legs) run from anywhere; planning is dev-root-fine. `[project]` = anchored to the project's own repo — everything from `repo-sync` / `/build-phase` / `/build-step` / `/repo-update` onward. `[dev-root → project]` on `/plan-expedite` is the ONE context-switch seam: it announces the switch and pins the project (`/user-project`) at the plan→repo boundary so build + ship target the right repo regardless of cwd.
 - **Suggested window-recycle (`/clear`) points `◇` — SUGGESTIONS, never requirements, and NEVER mid-build:** (1) after `/plan-expedite`, before `/build-phase`; (2) after a phase's `/build-phase` + `/repo-update`, before the next phase or its operator UAT; (3) at a `Type: wait` handoff, where `/build-phase` halts anyway (halt-contract class #4). Each is a prompt you can ignore — auto-compaction + the armed `/goal` keep a `/build-phase` running continuously in one window, and interrupting mid-build strands it. **`/session-wrap` owns the actual `/clear` routing** (its `clear-next` route); this map only annotates where the clean boundaries are.
 
+`/build-queue --queue <path>` — meta-orchestrator: drains a queue of N pending plans, invokes `/plan-expedite` + `/build-phase` per item, parks halts as GitHub issues (does not retry), polls a kill-switch file between items, emits a morning summary.
+
 Task state schema (write-as-you-go): [`task-state-schema.md`](./task-state-schema.md) — field definitions, write discipline, path resolution contract, lifecycle.
 
 ---
@@ -145,11 +159,7 @@ Visual tier: `/user-uat --ui` delegates single-frame screen states to `/judge-ui
 
 ---
 
-## Supporting skills
-
-`/review-proof`, `/test-prune`, `/skill-eval-setup`, `/skill-iterate`,
-`/memory-distill`,
-`/user-brainstorm`, `/user-learn`, `/context-slim`, `/lesson-harvest`.
+## Tend rail detail
 
 `/repo-wrap [<path-or-slug>] [--dry-run]` — the repo close-out router for targets `/repo-update`
 doesn't fit: classifies ONE target and runs the matching rail (owned project → delegates to
@@ -166,8 +176,37 @@ none of their logic: it runs the autonomous set into one report (`/lesson-harves
 orphan-`worktree_*` cleanup and the derived-`current.md` rollup commit/archive seam. Flags:
 `--only` / `--skip` / `--dry-run` / `--all-projects`.
 
-`/build-queue --queue <path>` — meta-orchestrator: drains a queue of N pending plans, invokes `/plan-expedite` + `/build-phase` per item, parks halts as GitHub issues (does not retry), polls a kill-switch file between items, emits a morning summary.
-
 `/skill-evolve --skill <name> --variants <path-or-inline>` — A/B-tests N variant mutations of a skill in parallel worktrees, scored against the skill's existing `evals/` suite. Winner branch is pushed and a `gh pr create` command is printed (no auto-PR); losers are cleaned up and analyzed under `docs/investigations/skill-evolve/`. Requires `/skill-eval-setup` to have set up the target skill's evals first.
 
+---
+
+## dev-observatory hooks
+
 dev-observatory hooks (additive, degradable — the control plane works on best-guess without them): `/plan-init` registers a new owned project (`observatory register`); `/repo-update` refreshes verbs/ports + tasks (`observatory sync`); `/build-step --ui` port pre-flight (`observatory ports`); `/user-pm` gains a `--json` mode; `/plan-review` + `/plan-wrap` check a scrapable goal + port collisions. Full contract: `descriptor-contract.md`.
+
+---
+
+## Not vent targets
+
+Catalog skills an operator vent never lands on directly: each is a chain member a rail
+skill invokes, a session utility, or a reference. A fragment about one routes to the rail
+that owns it.
+
+| Skill | Why not a vent target |
+|---|---|
+| `build-step` | plan rail chain (build-phase runs it) |
+| `build-queue` | plan rail chain, unattended batches |
+| `plan-review` | plan rail chain (plan-expedite) |
+| `plan-redline` | plan rail chain (plan-expedite) |
+| `plan-wrap` | plan rail chain (plan-expedite) |
+| `repo-init` | plan rail chain, first-time setup |
+| `repo-sync` | plan rail chain (plan-expedite) |
+| `judge-ui` | verify rail chain (user-uat --ui) |
+| `user-build-route` | do rail chain (user-pm routes) |
+| `session-wrap` | session rail chain (user-wrap delegates) |
+| `user-project` | session setup, not work |
+| `user-gateway` | the vent door itself |
+| `claude-oauth-auth` | reference doc |
+
+**Host commands, not catalog skills:** `/goal`, `/deep-research` — named in the rail table,
+owned by the host.
