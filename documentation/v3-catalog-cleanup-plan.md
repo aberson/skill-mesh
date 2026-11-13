@@ -538,6 +538,8 @@ Step 10 promotion rosters and the fixed-cost pin equals the recomputed sum over 
 
 ### Step 15: Create the `user-project` script (runtime, with its own test)
 
+**Status:** DONE 2026-11-13. commit 22e097c, fixes b9ca498 and f20687a; correction e0ac1e6 (session-id allowlist). Steps 15 to 18 reviewed APPROVE after one correction round (`<coding-root>/docs/skill-mesh-3-review/builds/cleanup-4-review.md`).
+
 **Problem:** `user-project` stops being a skill (decision item 15). It is a deterministic PowerShell procedure
 that writes a session pin; ten skills read the pin and several call it. The script must exist, be tested and be
 wired before the skill goes, and must be listed in the manifest so it cannot quietly disappear. Location note
@@ -575,6 +577,8 @@ named and green. Headroom unchanged.
 
 ### Step 16: DELETE `user-project` and repoint its callers
 
+**Status:** DONE 2026-11-13. commit 92a2bee (floors derived from the manifest in a456c53). Steps 15 to 18 reviewed APPROVE after one correction round (`<coding-root>/docs/skill-mesh-3-review/builds/cleanup-4-review.md`).
+
 **Problem:** After Step 15, the skill is deleted and its ten reading skills and the shared task-state schema point
 at the script. Callers: `lesson-harvest`, `plan-expedite` (core and Codex adapter), `repo-init`, `repo-sync`,
 `repo-update`, `repo-wrap` (core, Claude and Codex adapters), `task-handoff`, `user-afterparty`, `user-walkthrough`
@@ -596,6 +600,8 @@ headroom recorded (predicted ~1467; ~1599 from the build base); gate named and g
 
 ### Step 17: Point coding-root references at the script (other repository)
 
+**Status:** DONE 2026-11-13. coding-root commit 05da3d12 (local). Follow-up: `.claude/references/task-state-schema.md` and `.claude/workspace-instructions.md` still mention the old command descriptively (another session has uncommitted edits there); close before Step 20. Steps 15 to 18 reviewed APPROVE after one correction round (`<coding-root>/docs/skill-mesh-3-review/builds/cleanup-4-review.md`).
+
 **Problem:** The workspace working-directory rule and its reference say "use `/user-project <name>` to pin the
 active project", and the statusline and hooks may name the slash command. They must name the script, with the
 same wiring promise item 15 gave. This edits the coding-root repository, not skill-mesh, so anchor git to that
@@ -612,6 +618,8 @@ invocation of the script from the coding-root works and prints the SHOW output; 
 the coding-root repository.
 
 ### Step 18: UPDATE `user-afterparty` (monthly cadence and usage telemetry)
+
+**Status:** DONE 2026-11-13. commit 40fdc9c; correction e0ac1e6 (35-day nudge). Steps 15 to 18 reviewed APPROVE after one correction round (`<coding-root>/docs/skill-mesh-3-review/builds/cleanup-4-review.md`).
 
 **Problem:** Decided 11/11 (K1, K2): afterparty runs monthly and owns the monthly usage snapshot, because Claude
 keeps only about six weeks of transcripts so a monthly snapshot is the only lasting record. The survey scripts
