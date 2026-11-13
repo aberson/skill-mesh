@@ -156,6 +156,7 @@ checkout has `git status --porcelain` empty at the start of each build step; and
 issue/PR reading.
 **Type:** code
 **Issue:** #228
+- **Checkpoint (2026-11-12, build):** user-orient's `--quick` thread recap and its session-length word budgets (the ~250 and ~600 word targets and the compressed short-session form) were dropped, not absorbed. No recap without lookups remains; the core's Limitations route that need to `task-handoff --resume` and `user-wrap` (brief section 3).
 **Flags:** `--reviewers` default
 **Produces:** edits to `skills/user-pm/core.md` only:
 1. Status view absorbed from `user-orient` (F6): current state observed this run is evidence; memory,
