@@ -70,15 +70,20 @@ def _init_repo(root):
     return root
 
 
-def _parse_checksums(path):
-    """{relpath: sha256hex} from a release.ps1-produced CHECKSUMS.txt."""
+def _parse_checksums_text(text):
+    """{relpath: sha256hex} from the text of a release.ps1-produced CHECKSUMS.txt."""
     out = {}
-    for line in path.read_text(encoding="utf-8").splitlines():
+    for line in text.splitlines():
         if not line or line.startswith("#"):
             continue
         h, _, rel = line.partition("  ")
         out[rel] = h
     return out
+
+
+def _parse_checksums(path):
+    """{relpath: sha256hex} from a release.ps1-produced CHECKSUMS.txt."""
+    return _parse_checksums_text(path.read_text(encoding="utf-8"))
 
 
 @pytest.fixture(scope="module")
@@ -111,23 +116,92 @@ def test_release_script_exists():
 
 
 # --------------------------------------------------------------------------- #
+# The shared release run (v3 guard Step 7)
+#
+# Five properties used to cost seven full release runs (each one stages, builds
+# both profiles and runs tests/package-integrity inside the stage). They are all
+# properties of an ordinary successful release, so one fixture makes two runs
+# and the five tests below read its record:
+#
+#   run 1  into a fresh stage, from a clone of `source_repo` with an UNTRACKED
+#          scratch file and an UNSTAGED README edit (a broken link) planted;
+#   run 2  into the SAME stage, from the same planted clone.
+#
+# Run 1 grades the happy path, tracked-only staging and index-bytes staging.
+# Run 2 grades reuse of the script's own prior stage, and comparing the two
+# CHECKSUMS.txt grades reproducibility. Reproducibility across two DIFFERENT
+# stage paths (a build that embeds its output path) is still graded by
+# test_release_checksums_unchanged_across_source_line_ending_variants, which
+# releases into two different stages and compares their checksum entries.
+# --------------------------------------------------------------------------- #
+
+_UNTRACKED_NAME = "UNTRACKED_SCRATCH.txt"
+_UNSTAGED_README_TAIL = (
+    b"\n[unstaged release leak](documentation/DOES_NOT_EXIST_UNSTAGED.md)\n"
+)
+
+
+def _stage_record(stage, result):
+    """What a test needs from one run, captured before the next run clears it."""
+    checksums = stage / "CHECKSUMS.txt"
+    return {
+        "result": result,
+        "has_dist_claude": (stage / "dist" / "claude").is_dir(),
+        "has_dist_gpt": (stage / "dist" / "gpt").is_dir(),
+        "has_readme": (stage / "README.md").is_file(),
+        "has_release_script": (stage / "tools" / "release.ps1").is_file(),
+        "has_release_checks": (stage / "tools" / "release_checks.py").is_file(),
+        "has_git": (stage / ".git").exists(),
+        "has_pycache": any(stage.rglob("__pycache__")),
+        "has_pytest_cache": any(stage.rglob(".pytest_cache")),
+        "has_untracked": (stage / _UNTRACKED_NAME).exists(),
+        "readme_bytes": (stage / "README.md").read_bytes()
+        if (stage / "README.md").is_file() else None,
+        "checksums_text": checksums.read_text(encoding="utf-8")
+        if checksums.is_file() else None,
+    }
+
+
+@pytest.fixture(scope="module")
+def shared_release(source_repo, tmp_path_factory):
+    """Two release runs into one stage, from a planted clone of source_repo."""
+    work = tmp_path_factory.mktemp("shared-release")
+    planted = _clone_repo(source_repo, work / "planted")
+    (planted / _UNTRACKED_NAME).write_text("do not ship me", encoding="utf-8")
+    readme = planted / "README.md"
+    readme.write_bytes(readme.read_bytes() + _UNSTAGED_README_TAIL)
+    index_readme = subprocess.run(
+        ["git", "show", ":README.md"], cwd=planted, capture_output=True, check=True
+    ).stdout
+    assert readme.read_bytes() != index_readme, "the README edit was not planted"
+
+    stage = work / "stage"
+    first = _stage_record(stage, _run(["-SourceRoot", str(planted), "-StageDir", str(stage)]))
+    second = _stage_record(stage, _run(["-SourceRoot", str(planted), "-StageDir", str(stage)]))
+    return {"first": first, "second": second, "index_readme": index_readme}
+
+
+def _assert_ok(record, what):
+    r = record["result"]
+    assert r.returncode == 0, f"{what} failed:\n{r.stdout}\n{r.stderr}"
+
+
+# --------------------------------------------------------------------------- #
 # Happy path: stage (tracked-only) + build + check + checksum
 # --------------------------------------------------------------------------- #
 
-def test_release_builds_stages_and_checksums(source_repo, tmp_path):
-    stage = tmp_path / "stage"
-    r = _run(["-SourceRoot", str(source_repo), "-StageDir", str(stage)])
-    assert r.returncode == 0, f"release failed:\n{r.stdout}\n{r.stderr}"
+def test_release_builds_stages_and_checksums(shared_release):
+    first = shared_release["first"]
+    _assert_ok(first, "release")
 
-    assert (stage / "dist" / "claude").is_dir()
-    assert (stage / "dist" / "gpt").is_dir()
-    assert (stage / "README.md").is_file()
-    assert (stage / "tools" / "release.ps1").is_file()
-    assert (stage / "tools" / "release_checks.py").is_file()
+    assert first["has_dist_claude"]
+    assert first["has_dist_gpt"]
+    assert first["has_readme"]
+    assert first["has_release_script"]
+    assert first["has_release_checks"]
 
-    checksums = stage / "CHECKSUMS.txt"
-    assert checksums.is_file()
-    entries = _parse_checksums(checksums)
+    assert first["checksums_text"] is not None, "CHECKSUMS.txt was not written"
+    entries = _parse_checksums_text(first["checksums_text"])
     assert len(entries) > 100, "implausibly few files in the release checksum manifest"
     # CHECKSUMS.txt covers ONLY dist/ -- the deterministically-generated
     # artifact -- never the raw (line-ending-sensitive) source tree.
@@ -137,55 +211,42 @@ def test_release_builds_stages_and_checksums(source_repo, tmp_path):
         assert len(h) == 64 and all(c in "0123456789abcdef" for c in h)
 
 
-def test_release_stage_excludes_vcs_and_untracked_content(source_repo, tmp_path):
+def test_release_stage_excludes_vcs_and_untracked_content(shared_release):
     """The stage contains git-tracked content only: no .git, no cache dirs, and
     -- unlike a whole-working-dir mirror -- no file the fixture deliberately
     left untracked (proving staging is git-ls-files-driven, not a denylist)."""
-    (source_repo / "UNTRACKED_SCRATCH.txt").write_text("do not ship me", encoding="utf-8")
-    try:
-        stage = tmp_path / "stage"
-        r = _run(["-SourceRoot", str(source_repo), "-StageDir", str(stage)])
-        assert r.returncode == 0, r.stderr
-        assert not (stage / ".git").exists()
-        assert not any(stage.rglob("__pycache__"))
-        assert not any(stage.rglob(".pytest_cache"))
-        assert not (stage / "UNTRACKED_SCRATCH.txt").exists(), \
-            "an untracked working-tree file leaked into the release stage"
-    finally:
-        (source_repo / "UNTRACKED_SCRATCH.txt").unlink()
+    for key in ("first", "second"):
+        run = shared_release[key]
+        _assert_ok(run, f"release ({key} run)")
+        assert not run["has_git"]
+        assert not run["has_pycache"]
+        assert not run["has_pytest_cache"]
+        assert not run["has_untracked"], \
+            f"an untracked working-tree file leaked into the release stage ({key} run)"
 
 
-def test_release_stages_index_bytes_not_unstaged_worktree_bytes(source_repo, tmp_path):
+def test_release_stages_index_bytes_not_unstaged_worktree_bytes(shared_release):
     """A tracked, unstaged README defect must neither leak into stage nor fail it."""
-    mutated = _clone_repo(source_repo, tmp_path / "mutated")
-    readme = mutated / "README.md"
-    readme.write_bytes(
-        readme.read_bytes()
-        + b"\n[unstaged release leak](documentation/DOES_NOT_EXIST_UNSTAGED.md)\n"
-    )
-    expected = subprocess.run(
-        ["git", "show", ":README.md"], cwd=mutated, capture_output=True, check=True
-    ).stdout
-    stage = tmp_path / "stage"
-    r = _run(["-SourceRoot", str(mutated), "-StageDir", str(stage)])
-    assert r.returncode == 0, f"unstaged worktree bytes leaked into release:\n{r.stdout}\n{r.stderr}"
-    assert (stage / "README.md").read_bytes() == expected
+    expected = shared_release["index_readme"]
+    for key in ("first", "second"):
+        run = shared_release[key]
+        r = run["result"]
+        assert r.returncode == 0, (
+            f"unstaged worktree bytes leaked into release ({key} run):\n{r.stdout}\n{r.stderr}")
+        assert run["readme_bytes"] == expected
 
 
 # --------------------------------------------------------------------------- #
 # Determinism
 # --------------------------------------------------------------------------- #
 
-def test_release_is_reproducible_across_two_runs(source_repo, tmp_path):
-    stage_a = tmp_path / "a"
-    stage_b = tmp_path / "b"
-    ra = _run(["-SourceRoot", str(source_repo), "-StageDir", str(stage_a)])
-    assert ra.returncode == 0, ra.stderr
-    rb = _run(["-SourceRoot", str(source_repo), "-StageDir", str(stage_b)])
-    assert rb.returncode == 0, rb.stderr
-    text_a = (stage_a / "CHECKSUMS.txt").read_text(encoding="utf-8")
-    text_b = (stage_b / "CHECKSUMS.txt").read_text(encoding="utf-8")
-    assert text_a == text_b, "CHECKSUMS.txt differs across two runs over an unchanged tree"
+def test_release_is_reproducible_across_two_runs(shared_release):
+    first, second = shared_release["first"], shared_release["second"]
+    _assert_ok(first, "release (first run)")
+    _assert_ok(second, "release (second run)")
+    assert first["checksums_text"] is not None and second["checksums_text"] is not None
+    assert first["checksums_text"] == second["checksums_text"], \
+        "CHECKSUMS.txt differs across two runs over an unchanged tree"
 
 
 def test_release_checksums_unchanged_across_source_line_ending_variants(source_repo, tmp_path):
@@ -326,16 +387,16 @@ def test_release_refuses_nonempty_foreign_stage_dir_without_marker(tmp_path):
     assert (foreign_stage / "operator-content.txt").read_text(encoding="utf-8") == "precious"
 
 
-def test_release_reuses_its_own_prior_stage_dir_without_refusing(source_repo, tmp_path):
+def test_release_reuses_its_own_prior_stage_dir_without_refusing(shared_release):
     """A StageDir this script created on a PRIOR run (marker present) may be
     reused (cleared + re-staged) without -Force or any special flag -- the
-    marker is proof of ownership, not a one-shot lock."""
-    stage = tmp_path / "stage"
-    r1 = _run(["-SourceRoot", str(source_repo), "-StageDir", str(stage)])
-    assert r1.returncode == 0, r1.stderr
-    r2 = _run(["-SourceRoot", str(source_repo), "-StageDir", str(stage)])
+    marker is proof of ownership, not a one-shot lock. The shared fixture's
+    second run goes into the first run's stage."""
+    _assert_ok(shared_release["first"], "release (first run)")
+    second = shared_release["second"]
+    r2 = second["result"]
     assert r2.returncode == 0, f"re-run over its own prior stage was refused:\n{r2.stdout}\n{r2.stderr}"
-    assert (stage / "CHECKSUMS.txt").is_file()
+    assert second["checksums_text"] is not None, "the reused stage has no CHECKSUMS.txt"
 
 
 def _all_tests():
