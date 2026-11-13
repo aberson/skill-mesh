@@ -20,20 +20,33 @@ are planned. This is the public statement on github.com/aberson, "Where it's hea
 |---|---|---|---|
 | V4-1 | The driver, which runs skill changes in rounds, and its pilot | skill-mesh | Plan drafted and reviewed: `<coding-root>/docs/skill-mesh-3-review/driver-plan-2026-11-12.md` (17 steps). The pilot must be picked again, because v3 did the user-fermize promotion and the shakedown fold by hand. The operator's answers to BQ3 (items 10 to 12) apply. |
 | V4-2 | The optimization loop, measured model pins, and the tier skills folded into the pin path | switchboard and measure-twice; skill-mesh reads the pins | No plan yet. memory-distill stays the optimization pilot. |
-| V4-3 | Forge's queue and admission (R21 to R24): the execution queue formalized from you-asked-for-it's queue skills, and user-pm handing work to Forge | Forge master (R23); Skill Mesh master for route policy (R21) | No plan yet. Proposed substrate, awaiting the operator: swarm-forge's Forge kernel (`forge_kernel` / `forge_orch`, branch `forge-api-staging` at `25176495`). swarm-forge's stale deferred queue would be archived. |
+| V4-3 | Hand approved plans to swarm-forge (R21 to R24): the execution queue formalized from you-asked-for-it's queue skills, and user-pm handing approved work on | swarm-forge, its own project, for admission and running (R03, R04, R23); Skill Mesh master for route policy and the hand-off (R21) | No plan yet. Operator, 2026-11-13: swarm-forge stays its own project. In the v4 pipeline it is the optimization and deployment step: it receives approved plans and works on them as time, credits and RAM allow. Skill Mesh's part is the hand-off, not absorbing Forge. |
 | V4-4 | Firstmate-style central and per-project coordinators | workflow plan (a candidate, not adopted) | No plan yet. |
 | V4-5 | Observatory's lane board (R25) and derived views, including dev-observatory reading user-pm `--json` | Observatory and Toolkit, outside skill-mesh | skill-mesh's part is to keep user-pm `--json` additive. |
-| V4-6 | The catalog create-and-delete rail (`/skill-crud`) | skill-mesh Phase CL ([master plan](docs/plans/master_plan.md), "Catalog lifecycle (CL)") | Step 110 is DONE at `c350102`. Steps 111 to 117 (#169 to #175) and the attended Step 118 (#176) are open. |
+| V4-6 | The catalog create-and-delete rail (`/skill-crud`) and the held catalog-safety issues | skill-mesh Phase CL ([master plan](docs/plans/master_plan.md), "Catalog lifecycle (CL)") | Started 2026-11-13 by the operator ("a solid activity to do; go for it"), as lane `catalog-safety`. Step 110 is DONE at `c350102`. Steps 111 to 117 (#169 to #175) and the attended Step 118 (#176) are open, as are #182, #192 and #193. The lane first re-checks the September plan against the v3 catalog. |
 | V4-7 | Remove the GPT adapters | skill-mesh | Due one release after v3.0.0, which carried the deprecation note (D5). |
 | V4-8 | v3 follow-ups folded into v4 | skill-mesh | Catalog gate Steps 1 to 7 and 9 to 11 (#245 to #255). user-pm Steps 17 and 18 (#242, #243): Step 17's second condition is met (user-fermize has a Claude adapter, `8b9b239`, and is installed); a real `user-dr` register is still missing. Phase WF (#196 to #204). |
+| V4-9 | Codex host qualification findings (2026-11-13, from the coding-root system-revamp window; Q0 guest qualification, Codex 0.162 under MXC) | skill-mesh build-phase core and Codex provider docs | **F1:** build-phase's "Non-mutating host acceptance probe" assumes a temp folder shared across the parent's separate commands. Step 5 tampers with the sidecar and step 6 checks it is gone, but under Codex MXC each sandboxed command gets its own private temp, deleted at exit, so the probe cannot PASS. Q0 discloses a shared temp: decide whether that disclosure counts as substitution, and whether the Codex adapter names the requirement. **F3:** Codex 0.162 needs `multi_agent_v2`, and by default an app-server daemon can serve sessions from an unpinned, self-updating build. For pinned-builder qualification, name `--no-daemon`, `daemon_auto_start=false` and `check_for_update_on_startup=false` in the provider docs. |
 
 **Done in this change:** the stale v2 and Copilot wording in `documentation/skill-reference.md` and
 `documentation/v2-installation.md`, and `/user-dr` in the routing diagram's decide box.
 
 **Open for the operator:**
 - Relabel #245 to #255 from `deferred: v3.1` to `deferred: v4`. This is a tracker write, so it is not done here.
-- Decide the swarm-forge disposition for V4-3.
 - Choose the first v4 workstream to plan.
+
+## v3.0.1 fix list - opened 2026-11-13
+
+Fixes small or urgent enough for a patch release. Findings F2, F4, F5 and F6 came from the coding-root
+hook-enforcement and system-revamp windows. F1 and F3 are v4 work (V4-9).
+
+| ID | Fix | Where | Why now |
+|---|---|---|---|
+| P1 | Install the merged `user-pm --lanes` change (`43869be`). The installed cores still print starter lines rather than the `/lane-open` block | release and install, Claude and Codex profiles | Merged and pushed but not installed. Release and install wait on the operator's word |
+| F6 | Add a SAFETY block to the build-step and review-deep agent prompts, including review-deep lenses that "may run experiments": no `-Credential`, `Read-Host` or other prompt sources; every configured path under Temp; nothing at a drive root | `skills/build-step/core.md`, `skills/review-deep/core.md` and its lens prompts | Seen live: a developer ran `Remove-Item -Credential`, which opened a desktop credential prompt, and a reviewer created a folder at a drive root |
+| F4 | The build-step and build-phase Codex adapters cite `config/model-tier-map.json`, which the installed Codex profile does not ship. Checked 2026-11-13: no such file under the installed Codex skills | `skills/build-step/providers/codex.md:10`, `skills/build-phase/providers/codex.md:8` | A Codex session is told to resolve tiers from a file it cannot read. Related: #182 |
+| F2 | Carry the earlier Windows finding into the Codex provider adapter: an `exec_command` service without a tty prints its ready line and then exits (codex-deep-review-bounded-resumption, 2026-09-23) | the Codex provider docs or adapter | A known failure mode is missing from the adapter that needs it |
+| F5 | Decide a Nit policy for the build-step deep lane. "One Nit on any lens = BLOCKED" did not converge in 10 rounds (hook-enforcement Phase HE Step 2 is BLOCKED), and a style finding oscillated. Candidates: a Nit tolerance, or no new Nits from fresh lenses on unchanged code | operator decision first, then a `skills/build-step/core.md` UPDATE | It blocks a live build. Oscillation means an undecided policy, so write the decision before patching |
 
 ## Release v3.0.0 - catalog cleanup, user-pm revamp, tests sized to the change (2026-11-13)
 
