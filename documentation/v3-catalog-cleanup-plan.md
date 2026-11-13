@@ -339,8 +339,16 @@ plan is historical-preserve where it records past authorization). Callers repoin
 (the Visual-tier qualifier and sibling section) and `skills/user-uat/providers/codex.md` and `gpt.md`: transition
 steps are reported as manual-check steps, not silently dropped (open item 10).
 **Done when:** pre- and post-DELETE reports recorded; zero `judge-motion` outside listed historical-preserve
-occurrences; the build and install tooling carry no judge-motion special case; counts read 58 total, 56 portable,
+occurrences and the accepted exception below; the builder emits nothing for it, and the installer carries only
+the ledger-removal paths named in the exception; counts read 58 total, 56 portable,
 2 native (57, 55 and 2 from the build base); headroom unchanged at about 554 (~686 from the build base) (not codex-eligible); the three profiles build; gate named and green.
+**Accepted exception (review `cleanup-2-review.md` S1, 2026-11-13):** the three markerless JSON paths of the retired
+package in `tools/install-skill-mesh.ps1` (`MARKERLESS_JSON_OWNED_RELS`) and the `RETIRED_JSON_PACKAGE` constant in
+`tests/distributions/test_distributions.py` stay, recorded as disposition class `retained-installed-ledger-effect`.
+Reason: an install made before the retirement records those files in its ledger, and JSON cannot carry the
+provenance marker, so without the exact paths a normal install refuses the whole run instead of removing them
+(evidence: `<coding-root>/docs/skill-mesh-3-review/builds/cleanup/step6/stale-refusal-demo.txt`). Removal is a later,
+separate decision, once no consumer home still records them.
 
 ### Step 7: DELETE `observatory-doctor` from the mesh
 
@@ -657,7 +665,10 @@ Read its collision list. Then the same command for `-Provider codex` with that p
 collisions are inspected one by one; the personal `user-fermize` file is preserved and adopted through the
 installer's backup procedure (never `-Force` across unrelated collisions, never a hand-edited ledger), and the
 install is re-run without `-Force` once the list is empty. The operator then runs `tools/inspect-host-install.ps1`
-for both profiles.
+for both profiles. Expected on the Claude home: the normal, non-`-Force` install removes the retired `judge-motion`
+package's ledger-owned files, including its three markerless JSON files (Step 6's accepted exception), and leaves
+the unowned `node_modules/`, `.judge-motion/` and `.pytest_cache/` in that folder. The leftover folder holds no
+`SKILL.md`, so the skill is not discoverable; it is not a failed removal.
 **Done when:** the inspection reports the installed catalog equals the released one; none of the ten retired
 names, nor `user-orient` if its plan has landed, is discoverable in either host root; `user-fermize` loads from the
 catalog on both hosts and the personal copy is retired as an authoring source; the two moved skills are

@@ -631,7 +631,7 @@
     {
       "name": "plan-merge",
       "status": "portable",
-      "description": "Merge overlapping plans into one; --trim proposes cuts to one plan, applies agreed ones.",
+      "description": "Merge plans into one resolving overlap and sequencing; --trim proposes and applies cuts.",
       "core": "skills/plan-merge/core.md",
       "providers": {
         "claude": "skills/plan-merge/providers/claude.md",
