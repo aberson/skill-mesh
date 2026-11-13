@@ -1,5 +1,11 @@
 # Release v3.0.0 (plan)
 
+> **Amended 2026-11-13, operator decisions:** (1) Row 3 (the catalog gate) counts as done for this release with
+> catalog gate plan Step 8 alone (`dd01309`); its Steps 1 to 7 and 9 to 11 are v3.1 work. In the operator's words:
+> "step 8 should be enough. A catalog gate as the very last step sounds reasonable." Step 1's entry check reads row 3
+> that way. (2) `lane-open`, `lane-close` and `lane-handoff` stay in the passing-notes repository and are not
+> added to the catalog for v3.0.0. (3) Guard plan Step 13 (the Codex replay) is cut.
+
 This is the execution copy for build-phase, copied 2026-11-12 from the operator's planning records in the coding root (`<coding-root>/docs/skill-mesh-3-review/`), where its reviews and the operator's answers live. Step status is recorded here from now on.
 
 Date: 2026-11-12. Status: PLAN ONLY, nothing built, tagged, published or installed.

@@ -486,6 +486,9 @@ summary line and the available-memory reading before it (gate-reds on a memory-s
 
 ### Step 15: Operator review of one real run
 
+**Status:** DONE 2026-11-13. The operator reviewed two real default-mode runs on skill-mesh and approved: "user-pm
+looked good. You can get rid of user-orient." That answer grants Step 16's install authority.
+
 **Problem:** The shape is accepted only by the operator after seeing real output; the new sections cannot be
 judged from tests.
 **Type:** operator
@@ -504,6 +507,12 @@ the first reviewed the existing split, the second proposed one that keeps the sp
 neither run wrote a file.
 
 ### Step 16: Install refreshed profiles and verify
+
+**Status:** DONE 2026-11-13. Built fresh from v3/main `d38104a` and installed without `-Force`: Claude
+(home = coding root, 136 files, exit 0; coding-root commit b9c205c1) and Codex (home = user profile, 134 files,
+exit 0). `user-orient` is gone from both homes (its leftover folder was removed at the operator's request).
+Post-install inspector exit 0 on both, ledgers valid; evidence in
+`<coding-root>/docs/skill-mesh-3-review/builds/install-20261113/`. The GPT profile was not reinstalled.
 
 **Problem:** Installing binds the new profile and uninstalls the retired `user-orient` through the ledger.
 **Type:** code

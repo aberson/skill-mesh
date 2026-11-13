@@ -300,7 +300,10 @@ Afternoon sheet answers (operator, 2026-11-12 22:29 clock, "BQ1 yes", defaults):
 
 ### Step 8: Workspace convention amendment (private workspace repository; outside the build sequence)
 
-**Status:** OPEN (operator). Operator step in the private workspace; not done by the build.
+**Status:** DONE 2026-11-13 (operator: "do whatever your recommendation is"). Coding-root commit 669ec1a4 (local):
+a `passing-notes` row in sections 2 and 3 of the advisory-call convention, pointing at `_shared/lane-inbox-hooks.md`,
+plus one line in the advisory-calls rule. Point 7 unchanged; the mechanics live only in the reference.
+
 - **Problem:** The advisory-call convention is the one owner of hookup shape. These hooks are a new advisory tool (`passing-notes`) with one documented deviation, and a second description of that deviation would break the one-owner rule. Both files live in the operator's private workspace repository, not in this one, so a skill-mesh build step cannot land them (a payload outside the plan's own repository is a scope escape, and `repo-sync` would open a public issue for private work).
 - **Type:** operator (run in the workspace repository by its own flow; the produced files are Markdown, not code; **not part of the skill-mesh build-phase sequence and not part of the phase-end Manual UAT bundle (it is work, not observation)**, and no other step depends on it)
 - **Issue:** none (no skill-mesh issue is created for it)
@@ -331,7 +334,9 @@ Afternoon sheet answers (operator, 2026-11-12 22:29 clock, "BQ1 yes", defaults):
 
 ### Step 10: Cross-host acceptance handoff
 
-**Status:** OPEN (operator). Needs the operator and live hosts; not done by the build.
+**Disposition 2026-11-13:** not a v3.0.0 release blocker. It runs after the release install, as part of
+Passing Notes' own Step 4 acceptance, because it needs a live Claude lane and a live Codex lane.
+
 - **Problem:** The hooks are only proven when a real Claude lane and a real Codex lane exchange notes through them. That is Passing Notes' Step 4 (issue #2, Manual UAT M1; its Step 3 headless smoke already passed), and the Codex window-token self-proof has never run inside a live Codex thread.
 - **Type:** operator
 - **Issue:**
