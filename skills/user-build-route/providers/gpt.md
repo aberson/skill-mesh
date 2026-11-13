@@ -15,5 +15,6 @@ See [../core.md](../core.md) for the full specification.
 
 ## Output normalization
 
-Return only the core-defined decision, brief rationale, next step and copy block.
+Return only the core-defined output shape: decision, brief rationale, next step,
+any execution-context line the core allows, and copy block.
 Do not reveal hidden chain-of-thought. Do not create durable artifacts.
