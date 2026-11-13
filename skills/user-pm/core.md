@@ -380,6 +380,37 @@ Be honest in **What this unblocks**. If completing this topic doesn't unblock an
 
 ## dev-observatory hook (additive; see `.claude/rules/descriptor-contract.md`)
 
-**`--json` output mode (additive).** When invoked with `--json`, emit the snapshot as ONE structured JSON object instead of prose, so a tool (e.g. dev-observatory's on-demand goal-vs-reality review) can render it: each default section (`history`, `outstanding`, `possible_next`, `cut_candidates`) and any topic-mode payload becomes a top-level key; prose bullets become arrays of objects. The prose modes are unchanged when `--json` is absent.
+**`--json` output mode (additive).** When invoked with `--json`, emit the snapshot as ONE structured JSON object instead of prose, so a tool (e.g. dev-observatory's on-demand goal-vs-reality review) can render it: each section becomes the top-level key the table below names, and prose bullets become arrays of objects. The prose modes are unchanged when `--json` is absent. `--json` has no production caller today: dev-observatory's review, this skill's one production caller, runs the prose modes and stores the reply as text.
 
-Emit only the JSON object, with no fence or prose around it. A default-mode object also carries `project` and `what_it_is`, and each `possible_next` item carries its `category` (`test`, `build`, `decide`, `overnight`, or `other`). A topic-mode object carries `project`, `topic`, `context`, `unblocks`, and `work`. One-line notes go in a `notes` array of strings, omitted when empty. Selection, ordering, count, and omission rules are the same as in prose; an omitted section is an omitted key.
+Emit only the JSON object, with no fence or prose around it. Selection, ordering, count, and omission rules are the same as in prose; an omitted section is an omitted key. The key list is additive only: no key below is ever renamed, removed or retyped. Keys marked optional were added later, and a reader treats each as possibly absent.
+
+| Key | Mode | Presence | Shape |
+|---|---|---|---|
+| `project` | default, topic | always | as in prose |
+| `what_it_is` | default | always | as in prose |
+| `history` | default | when the section is printed | array of objects |
+| `outstanding` | default | when the section is printed | array of objects |
+| `possible_next` | default | when the section is printed | array of objects, each with `category`: `test`, `build`, `decide`, `overnight` or `other` |
+| `cut_candidates` | default | when the section is printed | array of objects |
+| `topic` | topic | always | as in prose |
+| `context` | topic | always | the part headed Context |
+| `unblocks` | topic | always | the part headed What this unblocks |
+| `work` | topic | always | the part headed The work |
+| `notes` | default, topic | omitted when empty | array of strings |
+| `status` | default | optional, omitted when empty | object: `verified`, `not_yet_verified`, `manual_checks` |
+| `board` | default | optional, omitted when empty | array of `{item, source, route, owner, next_action, evidence_age}` |
+| `decisions` | default, topic | optional, omitted when empty | object: `open`, `decided`, `register` |
+| `readiness` | default, topic | optional, omitted when empty | object: `lanes`, `blockers`, `fallback_pool` |
+| `lanes` | default | optional, omitted when empty | array of `{lane, host, state, item, updated, open_notes, note_ids}` |
+| `lane_plan` | topic | optional, omitted when empty | object: `mode`, `lanes`, `unplaced`, `shared_resources` |
+| `ideas` | default | optional, omitted when empty | array of `{idea, anchor, judged}` |
+
+Values of the optional keys:
+
+- **`board`:** one object per board row. `route` is one of `core-pipeline`, `bounded-goal`, `direct-task` or `human`, and `owner` is `agent` or `human`: a row whose prose Route and Owner are `you` carries `human` in both. The prose value stays `you`. `possible_next[].category` keeps its five values; route labels live only in `board`.
+- **`status`:** the three status lists, each an array of objects.
+- **`decisions`:** `open` and `decided` are arrays; `register` is the decision register's path, or `null` while no register is read (the prose line is then `no decision register; run /user-dr`). Printed by default mode and `--decide`.
+- **`readiness`:** `lanes` has one object per Overnight or Goal candidate, `{item, checkout, host, capacity, run}`, with each check `clear`, `unknown` or `conflict` and `run` the candidate's Run, `qualify first` or `conflict:` line; `blockers` lists each named conflict or unknown; `fallback_pool` maps `codex`, `claude`, `local_product_work` and `lightweight_preparation` to a board item or `none on the board`. Printed by default mode, `--overnight` and `--goal`.
+- **`lanes`:** one card summary per lane from "Lane cards and waiting notes": the card's headline and state fields, the open-note count and up to three note ids. No note subject or body, owned path, checkout or card body. Each default-mode **Lane check** line is one `notes` string starting `lane check:`.
+- **`lane_plan`:** printed by `--lanes`. `mode` is `proposed` or `reviewed`; `lanes` is an array of `{lane, purpose, owns, items, host, handoffs}`; `unplaced` lists the board items left to `main`; `shared_resources` lists the resources claimed through Heads Up.
+- **`ideas`:** one object per anchored idea from "Improvement shortlist", with `judged` always `false`.
