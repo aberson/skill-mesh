@@ -375,7 +375,7 @@ SUPPORT_ASSETS = {
         ("skills", "test_sample_config_loads.py"),
         ("skills", "test_taxonomy_osot.py"),
     ],
-    "user-afterparty": [],
+    "user-afterparty": [("skills", "scripts/")],
     "user-brainstorm": [("skills", "evals/")],
     "user-build-route": [],
     "user-debug": [("skills", "evals/")],

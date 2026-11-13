@@ -7,6 +7,7 @@ See [../core.md](../core.md) for the full specification.
 - Load the core in full before acting. Use structured tool/action calls for filesystem, shell, browser, GitHub, and named-skill operations.
 - Normalize GPT verbosity: do not reveal hidden chain-of-thought; return only required decisions, evidence, artifacts, commands, questions, and the core's closing report.
 - Resolve capability tiers with `config/model-tier-map.json`; explicit router overrides win.
+- Usage telemetry: run `scripts/scan_usage.py` and `scripts/aggregate.py` from this package with `python -I` through the host shell, every location an argument as the core gives it. Never point `--out-dir` inside the installed skill tree or the Skill Mesh checkout; the script refuses the latter.
 - Before dispatch, inspect the current GPT/Copilot host's actual discovery/actions and feed
   the core's early capability table. `context-slim` is provider-native Claude-only and is
   therefore `known unavailable` here unless an explicit supported adapter is actually present;

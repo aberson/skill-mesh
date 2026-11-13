@@ -936,7 +936,12 @@
         "legacy_claude_adapter": ".claude/skills/user-afterparty/SKILL-claude.md",
         "legacy_gpt": ".claude/skills-gpt/user-afterparty/SKILL-gpt.md"
       },
-      "support_assets": []
+      "support_assets": [
+        {
+          "source": ".claude/skills/user-afterparty/scripts/",
+          "dest": "skills/user-afterparty/scripts/"
+        }
+      ]
     },
     {
       "name": "user-brainstorm",

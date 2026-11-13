@@ -129,6 +129,7 @@ resource plan as a new grandfathering waiver:
 | `review-deep` | a `config/`, `evals/`, and `scripts/` support tree | Authored at commit `e36a03e`, landed on `main` with RD-lite (issue #177) via merge `8a1b501` — the merge section 1 records as a prerequisite |
 | `build-step` | `scripts/build_step_tree.py` and `scripts/capture_evidence.py` | The P1 mechanics helper, and an LF copy of the legacy top-level package's capture script; reviewed packaging exception, packet route P2 |
 | `skill-iterate` | six Python files under `scripts/` | Canonical copies of the established evaluation helpers; reviewed scoped packaging exception for all three generated profiles |
+| `user-afterparty` | `scripts/scan_usage.py`, `scripts/aggregate.py` and their repository-only test | The usage-telemetry scripts; reviewed packaging exception under the scoped v3 catalog exception (cleanup plan Step 18, issue #274) |
 | `user-wrap` | `evals/` | Scoped repository-only evaluation plan in `user-wrap-source-evals.md`; not emitted or installed |
 | `user-gateway` | `evals/` | Scoped repository-only evaluation plan in `user-gateway-source-evals.md`; not emitted or installed |
 | `review-uat` | `evals/` | Scoped repository-only evaluation plan in `uat-source-evals.md`; not emitted or installed |
@@ -179,6 +180,15 @@ authorize another package file. Unmarked legacy copies in a consumer home are re
 by operator action after an exact hash check. Unrelated foreign files, including fixtures,
 M2 launchers and tests, are preserved, and rollback restores legacy bytes from the
 take-ownership backup. No unscoped `-Force` is routine or authorized without that check.
+
+**Reviewed packaging exception: the `user-afterparty` telemetry scripts.** Exactly
+`scan_usage.py` and `aggregate.py` under the table row's `scripts/` directory entered through
+the scoped v3 catalog exception (cleanup plan Step 18, issue #274), whose request lists them
+with their test as `resource_paths`. The distribution builder emits those two files into every
+profile's `user-afterparty/scripts/` package with Python provenance inside each module
+docstring; a missing input fails generation. `test_usage_scripts.py` is a repository-only test
+and is not emitted. This does not generalize `support_assets` into an emission protocol,
+reopen the grandfathered set, or authorize another package file.
 
 **Ended: the motion-capture runtime package exception.** The closed Claude-only runtime
 package that the provider-native rebuild plan authorized ended at the v3 catalog cleanup

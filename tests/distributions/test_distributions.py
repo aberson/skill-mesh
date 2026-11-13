@@ -513,15 +513,16 @@ def test_build_file_counts_match_manifest(dist_root):
     # asserted at all. The shared term is a length, not a directory listing --
     # `test_shared_payload_matches_an_independent_closure_walk` is what proves the
     # SET, from a re-walk rather than from this literal.
-    # The trailing literals are the three reviewed package exceptions: + 4 review-deep
-    # resources (Phase CD), + 2 build-step scripts (packet route P2), and + 6
-    # skill-iterate helpers. (The portfolio validator's + 1 ended with its skill at
+    # The trailing literals are the four reviewed package exceptions: + 4 review-deep
+    # resources (Phase CD), + 2 build-step scripts (packet route P2), + 6
+    # skill-iterate helpers, and + 2 user-afterparty telemetry scripts (v3 catalog
+    # cleanup Step 18). (The portfolio validator's + 1 ended with its skill at
     # v3 catalog cleanup Step 4, and the Claude-only motion-capture package's + 11 at
     # Step 6.)
     # Their focused resource tests prove each exact SET.
     shared = len(EXPECTED_SHARED_PAYLOAD)
-    assert len(claude_files) == len(portable) * 2 + len(native) * 1 + 2 + shared + 4 + 2 + 6
-    assert len(gpt_files) == len(portable) * 2 + 2 + shared + 4 + 2 + 6
+    assert len(claude_files) == len(portable) * 2 + len(native) * 1 + 2 + shared + 4 + 2 + 6 + 2
+    assert len(gpt_files) == len(portable) * 2 + 2 + shared + 4 + 2 + 6 + 2
 
 
 # --------------------------------------------------------------------------- #

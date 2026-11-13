@@ -12,6 +12,7 @@ See [../core.md](../core.md) for the full specification.
 
 - Load the core in full before acting. Use Claude Code's Skill tool for named-skill calls and Agent/Workflow tools for isolated agents where the core requires those host abstractions.
 - Preserve the core's gates, retry limits, filesystem safety, and exact output contracts.
+- Usage telemetry: run `scripts/scan_usage.py` and `scripts/aggregate.py` from this package with `python -I` through the host shell, every location an argument as the core gives it. Never point `--out-dir` inside the installed skill tree or the Skill Mesh checkout; the script refuses the latter.
 - Before dispatch, inspect the current host's actual skill discovery/callable tools and feed
   the core's early capability table. A discovered child is `unprobed` until its own contract
   qualifies it; a missing child is `known unavailable`. Preserve child reason codes and keep

@@ -148,6 +148,9 @@ $BUILD_STEP_RESOURCES = @(
 )
 # skill-iterate's reviewed package exception: the exact runtime closure named by
 # its core and by the shared composite scorer. Fixed list; never harvest scripts/.
+# user-afterparty's usage-telemetry scripts (v3 catalog cleanup Step 18): the exact pair
+# its core runs. Fixed list; the test beside them is repository-only and never ships.
+$AFTERPARTY_RESOURCES = @('scripts/scan_usage.py', 'scripts/aggregate.py')
 $SKILL_ITERATE_RESOURCES = @(
     'scripts/adversarial_calibration.py', 'scripts/append_result.py',
     'scripts/differential_grader.py', 'scripts/morning_summary.py',
@@ -607,6 +610,18 @@ foreach ($profile in $profiles) {
                 $buildStepResources[$resource] = Read-SourceText $resourceAbs
             }
         }
+        $afterpartyResources = @{}
+        if ($name -eq 'user-afterparty') {
+            $packageRoot = Join-Path $SKILLS_ROOT 'user-afterparty'
+            foreach ($resource in $AFTERPARTY_RESOURCES) {
+                $resourceAbs = Resolve-SafePath -Path (Join-Path $packageRoot $resource) `
+                                               -AllowedRoots @($packageRoot)
+                if (-not (Test-Path -LiteralPath $resourceAbs -PathType Leaf)) {
+                    throw "build-distributions: user-afterparty resource source missing: $resource"
+                }
+                $afterpartyResources[$resource] = Read-SourceText $resourceAbs
+            }
+        }
         $skillIterateResources = @{}
         if ($name -eq 'skill-iterate') {
             $packageRoot = Join-Path $SKILLS_ROOT 'skill-iterate'
@@ -698,6 +713,14 @@ foreach ($profile in $profiles) {
             if ($name -ne 'build-step') { break }
             $resourceLabel = "skills/build-step/$resource"
             $resourceOut = Add-PythonProvenance $buildStepResources[$resource] $resourceLabel $profile
+            Write-GeneratedFile (Join-Path $skillOutDir $resource) $resourceOut $profileDirAbs
+            $fileCount++
+        }
+
+        foreach ($resource in $AFTERPARTY_RESOURCES) {
+            if ($name -ne 'user-afterparty') { break }
+            $resourceLabel = "skills/user-afterparty/$resource"
+            $resourceOut = Add-PythonProvenance $afterpartyResources[$resource] $resourceLabel $profile
             Write-GeneratedFile (Join-Path $skillOutDir $resource) $resourceOut $profileDirAbs
             $fileCount++
         }

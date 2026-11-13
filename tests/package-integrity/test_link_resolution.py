@@ -474,6 +474,12 @@ REVIEW_DEEP_SHIPPED_RESOURCES = {
 BUILD_STEP_SHIPPED_RESOURCES = {
     "scripts/build_step_tree.py", "scripts/capture_evidence.py",
 }
+# user-afterparty's reviewed exception (v3 catalog cleanup Step 18), the same shape:
+# its two usage-telemetry scripts, credited to user-afterparty only. The test beside
+# them is repository-only and never ships.
+AFTERPARTY_SHIPPED_RESOURCES = {
+    "scripts/scan_usage.py", "scripts/aggregate.py",
+}
 
 _LINK_RE = re.compile(r"\[[^\]]*\]\(([^)\s]+)")
 _BACKTICK_RE = re.compile(r"`([^`\n]+)`")
@@ -616,6 +622,8 @@ def ships_into_discovery_root(target):
     if parts[0] == "review-deep" and "/".join(parts[1:]) in REVIEW_DEEP_SHIPPED_RESOURCES:
         return True
     if parts[0] == "build-step" and "/".join(parts[1:]) in BUILD_STEP_SHIPPED_RESOURCES:
+        return True
+    if parts[0] == "user-afterparty" and "/".join(parts[1:]) in AFTERPARTY_SHIPPED_RESOURCES:
         return True
     return len(parts) == 2 and parts[1] in SHIPPED_LEAVES
 
@@ -2375,6 +2383,10 @@ def test_shipped_shape_predicate_is_pinned():
         assert not ships_into_discovery_root("build-phase/" + resource)
         assert not ships_into_discovery_root("review-deep/" + resource)
     assert not ships_into_discovery_root("build-step/scripts/other_helper.py")
+    for resource in AFTERPARTY_SHIPPED_RESOURCES:
+        assert ships_into_discovery_root("user-afterparty/" + resource)
+        assert not ships_into_discovery_root("user-wrap/" + resource)
+    assert not ships_into_discovery_root("user-afterparty/scripts/test_usage_scripts.py")
 
 
 def test_resolution_roots_are_pinned():
@@ -2586,6 +2598,9 @@ def test_shipped_leaves_matches_a_real_build(dist_root):
             if skill_dir.name == "skill-iterate":
                 assert skill_iterate_resources <= paths
                 paths -= skill_iterate_resources
+            if skill_dir.name == "user-afterparty":
+                assert AFTERPARTY_SHIPPED_RESOURCES <= paths
+                paths -= AFTERPARTY_SHIPPED_RESOURCES
             names = paths
             unlisted = sorted(names - set(SHIPPED_LEAVES))
             assert not unlisted, (
