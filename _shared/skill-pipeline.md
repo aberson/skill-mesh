@@ -130,9 +130,11 @@ for high-stakes steps; `/plan-review` §27 routes those steps at plan time.
   banner + loss report, acts per verdict.
 - `/task-handoff` — the checkpoint library orchestrators call (`--loop [--no-commit]`,
   `--next-task`, `--resume`; `--end` delegates to session-wrap).
-- `/user-orient` — **session axis** (this thread's state; `--quick` tier = lightweight
-  three-section summary) vs `/user-pm` — **project axis** (plan+git-derived shipped /
-  planned / next / cuttable).
+- `/user-pm` — the **status door** for one project: live verified and not-yet-verified
+  status, a board with one route per item, readiness, lanes, and the plan+git-derived
+  shipped / planned / next / cuttable snapshot. It absorbed the retired orientation
+  skill's view; that skill's thread-only `--quick` recap was dropped (pick up a saved task with
+  `/task-handoff --resume`).
 - `/user-debug` (formerly `/bug-fix`) and `/memory-distill` (formerly `/review-memories`) renamed this phase.
 
 ---

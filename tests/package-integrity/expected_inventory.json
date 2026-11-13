@@ -1,16 +1,16 @@
 {
   "note": "Authoritative expected inventory for package-integrity tests. Committed so the public package tests need no private/legacy source. Regenerate with tools/gen_manifest.py.",
   "counts": {
-    "total": 60,
-    "portable": 57,
+    "total": 59,
+    "portable": 56,
     "provider_native": 3,
-    "claude": 60,
-    "gpt": 57,
-    "codex": 57,
-    "local_capable": 21,
+    "claude": 59,
+    "gpt": 56,
+    "codex": 56,
+    "local_capable": 20,
     "sub_agent": 20,
     "vision": 2,
-    "filesystem": 60
+    "filesystem": 59
   },
   "portable": [
     "build-observer",
@@ -63,7 +63,6 @@
     "user-gateway",
     "user-lavishify",
     "user-learn",
-    "user-orient",
     "user-pm",
     "user-project",
     "user-shakedown",
@@ -127,7 +126,6 @@
     "user-gateway",
     "user-lavishify",
     "user-learn",
-    "user-orient",
     "user-pm",
     "user-project",
     "user-shakedown",
@@ -152,7 +150,6 @@
     "skill-eval-setup",
     "user-draft",
     "user-gateway",
-    "user-orient",
     "user-pm",
     "user-shakedown",
     "user-walkthrough",
@@ -1279,26 +1276,6 @@
         {
           "source": ".claude/skills/user-learn/evals/",
           "dest": "skills/user-learn/evals/"
-        }
-      ]
-    },
-    {
-      "name": "user-orient",
-      "status": "portable",
-      "local_capable": true,
-      "capabilities": [
-        "filesystem"
-      ],
-      "migration": {
-        "legacy_core": ".claude/skills-gpt/user-orient/SKILL-core.md",
-        "legacy_claude_launcher": ".claude/skills/user-orient/SKILL.md",
-        "legacy_claude_adapter": ".claude/skills/user-orient/SKILL-claude.md",
-        "legacy_gpt": ".claude/skills-gpt/user-orient/SKILL-gpt.md"
-      },
-      "support_assets": [
-        {
-          "source": ".claude/skills/user-orient/evals/",
-          "dest": "skills/user-orient/evals/"
         }
       ]
     },

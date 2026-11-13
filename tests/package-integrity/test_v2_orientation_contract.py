@@ -58,15 +58,14 @@ def test_user_project_placeholder_is_not_resume_authority():
     assert "operator-authorized plain action and the schema's resume backstop cannot execute it" in core
 
 
-def test_user_orient_full_mode_uses_read_only_local_evidence():
-    core = _read("skills/user-orient/core.md")
+def test_user_pm_carries_the_absorbed_orientation_rules():
+    """The orientation skill was retired into user-pm (v3 user-pm plan Steps 3 and 13); its rules live on here."""
+    core = _read("skills/user-pm/core.md")
 
-    assert "An explicit `/user-orient` runs the full orientation" in core
-    assert "`/user-orient --quick` runs quick mode" in core
-    assert "no `git fetch`, pull, or request to a remote host" in core
-    assert "When the thread edited files in more than one repository" in core
-    assert "Memory entries, handoff notes, task-state files, and earlier summaries are leads, not verification" in core
-    assert "Skip Step 1 entirely — fire no tool calls" in core
+    assert "no `git fetch`, pull, or other request to a remote host" in core
+    assert "Memory entries, handoff notes, task-state files and earlier summaries are leads, never verification" in core
+    assert "the observed state wins" in core
+    assert "Run git in the innermost repository that contains the project directory" in core
 
 
 def test_user_pm_preserves_newer_plan_precedence_and_read_only_boundary():
@@ -83,7 +82,7 @@ def test_user_pm_preserves_newer_plan_precedence_and_read_only_boundary():
 
 
 def test_native_codex_adapters_have_no_unbound_router_or_provider_retry():
-    for skill in ("user-project", "user-orient", "user-pm"):
+    for skill in ("user-project", "user-pm"):
         adapter = _read(f"skills/{skill}/providers/codex.md").lower()
         assert "router reason" not in adapter
         assert "cross-cloud retry" not in adapter
@@ -92,16 +91,15 @@ def test_native_codex_adapters_have_no_unbound_router_or_provider_retry():
         assert "do not switch providers" in adapter
 
 
-def test_user_orient_labels_default_branch_comparison_honestly():
-    core = _read("skills/user-orient/core.md")
+def test_user_pm_labels_default_branch_comparison_honestly():
+    core = _read("skills/user-pm/core.md")
 
-    assert "commits ahead of the locally known default-branch ref" in core
-    assert "does not say whether they were pushed to the current branch's upstream" in core
+    assert "both are as of the last fetch, and neither says whether commits reached the current branch's upstream" in core
     assert "(unpushed commits;" not in core
 
 
 def test_codex_lookup_failure_continues_each_core_degraded_report():
-    for skill in ("user-orient", "user-pm"):
+    for skill in ("user-pm",):
         adapter = _read(f"skills/{skill}/providers/codex.md")
         assert "stop only that failed lookup" in adapter
         assert "continue the core's degraded report from available inputs" in adapter

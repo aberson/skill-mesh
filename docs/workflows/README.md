@@ -3,12 +3,12 @@
 
 These diagrams summarize the **Skill Mesh v2.0.4** contracts. Use the
 [skill reference](../../documentation/skill-reference.md) for a compact table
-of all 60 skills, purposes, host coverage and direct diagram links.
+of all 59 skills, purposes, host coverage and direct diagram links.
 
 Each diagram declares its source and omitted detail. The linked source contract
 remains authoritative: a diagram does not authorize an action, bypass a hold,
-or establish live qualification. Claude has all 60 packages; Codex and Copilot
-have the 57 portable packages. Native capability gates still apply.
+or establish live qualification. Claude has all 59 packages; Codex and Copilot
+have the 56 portable packages. Native capability gates still apply.
 
 These diagrams use the same rounded cards, monospace labels, and blue connectors
 as the overview graphics. Blue-bordered **GATE** cards mark decisions; connector
@@ -96,7 +96,6 @@ produces the default Mermaid README rather than this SVG gallery.
 - [user-gateway](#user-gateway) - Convert an operator vent into one evidence-aware work ledger row and ready-to-paste seed per distinct fragment.
 - [user-lavishify](#user-lavishify) - Re-present a dense artifact in a loopback Lavish Editor, collect pinned feedback, and propagate operator decisions to canonical sources.
 - [user-learn](#user-learn) - After scope approval, build a grounded hands-on learning folder, re-run its artifacts, and report results without committing.
-- [user-orient](#user-orient) - Reconstruct a verified project snapshot, separate proven from unverified state, and recommend the most honest next move.
 - [user-pm](#user-pm) - Present shipped work, outstanding plan items, practical next moves, and credible candidates to cut through a product-management lens.
 - [user-project](#user-project) - Set, show, or clear the session-scoped active-project pin that pipeline skills use to resolve their target repository.
 - [user-shakedown](#user-shakedown) - Work through a just-built tool's open shakedown items one at a time, stopping for unknowns and executing approved closure duties.
@@ -1322,29 +1321,6 @@ Drawn from:
 </picture>
 
 [Open full size](cards/user-learn-dark.svg)
-
----
-
-## user-orient
-
-Reconstruct a verified project snapshot, separate proven from unverified state, and recommend the most honest next move.
-
-Source: [`user-orient.mmd`](user-orient.mmd)
-
-Drawn from:
-
-- [`skills/user-orient/core.md`](../../skills/user-orient/core.md)
-
-**Alt:** Fresh autonomous asides and repository evidence join into an orientation that separates working, unverified, manual, and next-step information.
-
-**Deliberately not shown:** aside prompt text, quick-mode field reductions, git command details, exact output headings, and project-specific manual checks
-
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="cards/user-orient-dark.svg">
-  <img alt="Fresh autonomous asides and repository evidence join into an orientation that separates working, unverified, manual, and next-step information." src="cards/user-orient-light.svg">
-</picture>
-
-[Open full size](cards/user-orient-dark.svg)
 
 ---
 

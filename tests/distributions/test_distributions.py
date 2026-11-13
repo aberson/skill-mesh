@@ -3241,8 +3241,9 @@ def test_provider_both_still_means_claude_and_gpt_only(tmp_path):
 # the ONE place that says which skills each cohort added has to be a written-down list,
 # or "dist/codex holds exactly the declared cohorts" degrades into "dist/codex holds
 # whatever the manifest happens to declare", which no longer grades a step's Done-when.
-PILOT_CODEX_SKILLS = ["lesson-harvest", "plan-review", "session-wrap", "task-handoff",
-                      "user-orient"]
+# The pilot had five; its fifth, the orientation skill, was retired into user-pm by the
+# v3 user-pm plan's Step 13 (#238), so the declared roster is now fifty-six.
+PILOT_CODEX_SKILLS = ["lesson-harvest", "plan-review", "session-wrap", "task-handoff"]
 # Cohort B, the pipeline family (Phase CP Step 6, issue #123).
 COHORT_B_CODEX_SKILLS = ["plan-expedite", "plan-feature", "plan-init", "plan-merge",
                          "plan-redline", "plan-trim", "plan-wrap", "repo-init",
@@ -3292,7 +3293,8 @@ def test_codex_profile_holds_exactly_the_declared_cohorts_for_the_committed_mani
     and Step 10's seven promotions carried catalog and roster together to fifty-four.
     The separately approved code-consigliere addition carries both to fifty-five, and
     the separately authorized user-dr addition to fifty-six, and the separately
-    authorized user-build-route addition to fifty-seven. It
+    authorized user-build-route addition to fifty-seven; retiring the orientation skill
+    into user-pm brought it to fifty-six. It
     grades the whole emission contract for the real cohorts at once,
     because the parts are only correct together: a launcher without its co-located
     core.md is a package Codex can list and cannot run, and an unstamped file is one
@@ -3301,7 +3303,7 @@ def test_codex_profile_holds_exactly_the_declared_cohorts_for_the_committed_mani
     out = tmp_path / "out"
     r = _build(out, provider="codex")
     assert r.returncode == 0, f"{r.stdout}\n{r.stderr}"
-    assert "(57 skills," in r.stdout, r.stdout
+    assert "(56 skills," in r.stdout, r.stdout
     # The manifest declares exactly the spelled cohorts...
     assert sorted(_codex_skills()) == DECLARED_CODEX_SKILLS, _codex_skills()
     # ...and the emitted tree IS that roster: no extra skill dir, none missing. The

@@ -41,7 +41,7 @@ parallelization; (c) every conditional escalation names its concrete trigger.
   N-judge voting carries quality.
 - **repo-init, repo-sync, repo-update** — templated docs/issues/git work; Opus is already
   above the difficulty ceiling.
-- **user-brainstorm, user-learn, user-draft, user-pm, user-orient, user-recap** — user-brainstorm
+- **user-brainstorm, user-learn, user-draft, user-pm, user-recap** — user-brainstorm
   and user-learn fan out *independent parallel writes* with no cross-synthesis ceiling (no
   single seed artifact); the rest are single-pass work Opus handles at ceiling.
 - **plan-review, plan-wrap, plan-trim, plan-expedite** — checklist single-pass reasoning; no

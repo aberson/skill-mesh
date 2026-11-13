@@ -32,7 +32,7 @@ non-gating advisory slice and are emitted `true`.
 
 plan-init, plan-feature, plan-merge, plan-trim, plan-review, plan-wrap, plan-expedite, build-phase,
 build-queue, goblin-do, repo-init, repo-update, skill-eval-setup, user-brainstorm, user-learn,
-user-draft, user-pm, user-orient, user-recap, session-wrap, review-proof, review-uat,
+user-draft, user-pm, user-recap, session-wrap, review-proof, review-uat,
 memory-distill, research-prospect, test-prune, user-debug.
 
 ## No LLM (scriptable / mechanical / doc — nothing to offload)

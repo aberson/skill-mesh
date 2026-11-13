@@ -1,7 +1,7 @@
 {
   "schema": "show-your-work.workflows.v1",
   "generator": "show-your-work 0.1.0",
-  "generated_at": "2026-11-12T18:58:42+00:00",
+  "generated_at": "2026-11-13T05:37:21+00:00",
   "source_dir": "docs/workflows",
   "items": [
     {
@@ -743,20 +743,6 @@
       ],
       "source_path": "docs/workflows/user-learn.mmd",
       "source_sha256": "4f122479bfe7169864d6aa699bfa978fa6f62641289e3c0baf601a419587f7b5",
-      "engine": "mermaid",
-      "rasters": null
-    },
-    {
-      "id": "user-orient",
-      "label": "user-orient",
-      "summary": "Reconstruct a verified project snapshot, separate proven from unverified state, and recommend the most honest next move.",
-      "alt": "Fresh autonomous asides and repository evidence join into an orientation that separates working, unverified, manual, and next-step information.",
-      "not_shown": "aside prompt text, quick-mode field reductions, git command details, exact output headings, and project-specific manual checks",
-      "sources": [
-        "skills/user-orient/core.md"
-      ],
-      "source_path": "docs/workflows/user-orient.mmd",
-      "source_sha256": "b7ebb5d4209655aa06308b4ce6f3ee6e528eeefab041f7b17d5407c9c92aad6f",
       "engine": "mermaid",
       "rasters": null
     },

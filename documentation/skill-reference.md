@@ -1,6 +1,6 @@
 # Skill reference
 
-The v2 catalog contains **60 Claude skills** and **57 portable skills** for Codex and GitHub Copilot. Host coverage means an adapter is packaged; required native capabilities and external utilities still apply.
+The v2 catalog contains **59 Claude skills** and **56 portable skills** for Codex and GitHub Copilot. Host coverage means an adapter is packaged; required native capabilities and external utilities still apply.
 
 Each workflow link opens its source-linked diagram. Read the contract for full gates, flags, and omissions. See [installation](../README.md#install-or-upgrade), [utility integrations](../README.md#how-utility-projects-are-used), and [release limitations](https://github.com/aberson/skill-mesh/releases/tag/v2.0.2).
 
@@ -59,7 +59,6 @@ Each workflow link opens its source-linked diagram. Read the contract for full g
 | [user-gateway](../skills/user-gateway/core.md) | Convert an operator vent into one evidence-aware work ledger row and ready-to-paste seed per distinct fragment. | Claude, Copilot, Codex | [Diagram](../docs/workflows/README.md#user-gateway) |
 | [user-lavishify](../skills/user-lavishify/core.md) | Re-present a dense artifact in a loopback Lavish Editor, collect pinned feedback, and propagate operator decisions to canonical sources. | Claude, Copilot, Codex | [Diagram](../docs/workflows/README.md#user-lavishify) |
 | [user-learn](../skills/user-learn/core.md) | After scope approval, build a grounded hands-on learning folder, re-run its artifacts, and report results without committing. | Claude, Copilot, Codex | [Diagram](../docs/workflows/README.md#user-learn) |
-| [user-orient](../skills/user-orient/core.md) | Reconstruct a verified project snapshot, separate proven from unverified state, and recommend the most honest next move. | Claude, Copilot, Codex | [Diagram](../docs/workflows/README.md#user-orient) |
 | [user-pm](../skills/user-pm/core.md) | Present shipped work, outstanding plan items, practical next moves, and credible candidates to cut through a product-management lens. | Claude, Copilot, Codex | [Diagram](../docs/workflows/README.md#user-pm) |
 | [user-project](../skills/user-project/core.md) | Set, show, or clear the session-scoped active-project pin that pipeline skills use to resolve their target repository. | Claude, Copilot, Codex | [Diagram](../docs/workflows/README.md#user-project) |
 | [user-shakedown](../skills/user-shakedown/core.md) | Work through a just-built tool's open shakedown items one at a time, stopping for unknowns and executing approved closure duties. | Claude, Copilot, Codex | [Diagram](../docs/workflows/README.md#user-shakedown) |

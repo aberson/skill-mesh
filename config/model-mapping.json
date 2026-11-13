@@ -407,13 +407,6 @@
       "local": false,
       "notes": "Ported - shared core + GPT/Claude wrappers"
     },
-    "user-orient": {
-      "default_model": "claude",
-      "claude": true,
-      "gpt": true,
-      "local": true,
-      "notes": "Ported - shared core + GPT/Claude wrappers"
-    },
     "user-pm": {
       "default_model": "claude",
       "claude": true,

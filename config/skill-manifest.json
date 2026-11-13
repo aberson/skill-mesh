@@ -67,16 +67,16 @@
     }
   },
   "counts": {
-    "total": 60,
-    "portable": 57,
+    "total": 59,
+    "portable": 56,
     "provider_native": 3,
-    "claude": 60,
-    "gpt": 57,
-    "codex": 57,
-    "local_capable": 21,
+    "claude": 59,
+    "gpt": 56,
+    "codex": 56,
+    "local_capable": 20,
     "sub_agent": 20,
     "vision": 2,
-    "filesystem": 60
+    "filesystem": 59
   },
   "global_support_assets": [
     {
@@ -1575,33 +1575,6 @@
         {
           "source": ".claude/skills/user-learn/evals/",
           "dest": "skills/user-learn/evals/"
-        }
-      ]
-    },
-    {
-      "name": "user-orient",
-      "status": "portable",
-      "description": "Re-orient on the session axis with a verified snapshot of the work and what is left.",
-      "core": "skills/user-orient/core.md",
-      "providers": {
-        "claude": "skills/user-orient/providers/claude.md",
-        "gpt": "skills/user-orient/providers/gpt.md",
-        "codex": "skills/user-orient/providers/codex.md"
-      },
-      "capabilities": [
-        "filesystem"
-      ],
-      "local_capable": true,
-      "migration": {
-        "legacy_core": ".claude/skills-gpt/user-orient/SKILL-core.md",
-        "legacy_claude_launcher": ".claude/skills/user-orient/SKILL.md",
-        "legacy_claude_adapter": ".claude/skills/user-orient/SKILL-claude.md",
-        "legacy_gpt": ".claude/skills-gpt/user-orient/SKILL-gpt.md"
-      },
-      "support_assets": [
-        {
-          "source": ".claude/skills/user-orient/evals/",
-          "dest": "skills/user-orient/evals/"
         }
       ]
     },
