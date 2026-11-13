@@ -677,7 +677,9 @@ LOCKED_CLAIMS = (
      "normalize request -> verify Git checkout and resolve base_ref -> "
      "inspect impact and enumerate references -> enforce prerequisite / "
      "source / native / resource / collision stops -> edit canonical "
-     "authoring surfaces -> regenerate the derived in-repo artifacts -> "
+     "authoring surfaces -> regenerate the derived in-repo artifacts whose "
+     "inputs changed (`tools/gen_manifest.py` only when its constants "
+     "change) -> "
      "operation-specific verification -> build every required provider "
      "profile -> focused tests -> caller-owned commit"),
     # ----------------------------------------------------------------- #
