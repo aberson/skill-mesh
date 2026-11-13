@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "description": "Per-skill model capability mapping for the provider-neutral skill-mesh router. Transformed faithfully from the legacy .claude/references/model-mapping.md table (Step 34). Consumed by runtime/skill-router.ps1 to decide claude/gpt/local capability. Note text was ASCII-normalized (em-dash -> hyphen); the boolean capability data is preserved exactly, one row per legacy row. Phase CP Step 10 added seven rows that have no legacy row: the promoted workspace-custom skills (the four citation-* skills, goblin-sweep, repo-wrap, and a portfolio-block proposer whose row left with it when the v3 catalog cleanup moved it to dev-observatory). Their claude/gpt booleans state the adapters this package actually ships for them; local=false records 'not yet assessed' rather than a measured no, matching their deliberate absence from the manifest's LOCAL_CAPABLE set. Without a row here the router warns and falls back to Claude-only for a skill the manifest declares portable.",
+  "description": "Per-skill model capability mapping for the provider-neutral skill-mesh router. Transformed faithfully from the legacy .claude/references/model-mapping.md table (Step 34). Consumed by runtime/skill-router.ps1 to decide claude/gpt/local capability. Note text was ASCII-normalized (em-dash -> hyphen); the boolean capability data is preserved exactly, one row per legacy row. Phase CP Step 10 added seven rows that have no legacy row: the promoted workspace-custom skills (the four citation-* skills, repo-wrap, and two whose rows have since left: a portfolio-block proposer the v3 catalog cleanup moved to dev-observatory, and a goblin sweep wrapper it retired). Their claude/gpt booleans state the adapters this package actually ships for them; local=false records 'not yet assessed' rather than a measured no, matching their deliberate absence from the manifest's LOCAL_CAPABLE set. Without a row here the router warns and falls back to Claude-only for a skill the manifest declares portable.",
   "default_provider": "auto",
   "providers": {
     "claude": {
@@ -105,27 +105,6 @@
       "gpt": false,
       "local": false,
       "notes": "Claude-native - excluded from GPT porting"
-    },
-    "goblin-do": {
-      "default_model": "claude",
-      "claude": true,
-      "gpt": true,
-      "local": false,
-      "notes": "Ported - GPT actions adapter; orchestration remains parent-owned"
-    },
-    "goblin-suggest": {
-      "default_model": "claude",
-      "claude": true,
-      "gpt": true,
-      "local": false,
-      "notes": "Ported - GPT actions adapter; evidence-backed judge normalization"
-    },
-    "goblin-sweep": {
-      "default_model": "claude",
-      "claude": true,
-      "gpt": true,
-      "local": false,
-      "notes": "Promoted at Phase CP Step 10 - thin fail-loud wrapper over the goblin sweep CLI."
     },
     "judge-ui": {
       "default_model": "claude",

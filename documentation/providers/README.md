@@ -28,17 +28,17 @@ identical; only host-specific exceptions differ.
 
 Counts derived from `config/skill-manifest.json`; the per-host runtime behavior
 in the Codex cells below from the `skills/<name>/providers/codex.md` adapters and
-[`../parity-deltas.md`](../parity-deltas.md). 52 skills are portable and carry all
+[`../parity-deltas.md`](../parity-deltas.md). 49 skills are portable and carry all
 three adapters — Claude, GPT, and Codex (`counts.gpt` and `counts.codex` are both
-52); 2 are Claude-native exclusions with a `claude` adapter only. Codex coverage is
+49); 2 are Claude-native exclusions with a `claude` adapter only. Codex coverage is
 additive on a portable record, not a third status: the manifest's only `status`
 values are `portable` and `provider-native`.
 
 | Capability class | Claude | GPT/Copilot | Codex | Local (`code-30b`) |
 |---|---|---|---|---|
-| Portable skills (52) | yes | yes | an adapter for all 52; agent-dependent behavior is capability-conditioned. `build-step` and `user-debug` support a proven fresh-context host, while an ordinary CLI host halts `required_tool_missing` — see [codex.md](codex.md) § Known limitations | 17 of 52 (`local_capable`) |
+| Portable skills (49) | yes | yes | an adapter for all 49; agent-dependent behavior is capability-conditioned. `build-step` and `user-debug` support a proven fresh-context host, while an ordinary CLI host halts `required_tool_missing` — see [codex.md](codex.md) § Known limitations | 17 of 49 (`local_capable`) |
 | Vision skill (1: judge-ui) | yes | yes | judge-ui adapter only; its independent vision-judge dispatch is capability-conditioned on BOTH the agent-isolation contract and a proven image-capable child, and halts with `required_tool_missing` on a host that fails either | no |
-| `sub-agent` skills (19) | yes | yes, parent-owned actions (18 GPT-portable; context-slim is a native exclusion). `lesson-harvest` is packaged here, but its current GPT preview halts where D-GPT leaves fresh-context proof unavailable | the same 18 adapters: `citation-review` and `citation-sweep` keep preparation, exact run identity and commits in the parent and dispatch only fresh depth-1 classification judges; sweep opens every selected run before any commit. `lesson-harvest` produces only a bounded, audited local preview on a host that proves fresh siblings; automatic publication is unavailable in v2. `build-step` uses proven fresh-context dispatch plus separate opaque parent state and parent-only verdict service when phase-run; `user-debug` separately requires proven fresh siblings for Step 2 and Option 4; the remaining agent-dependent adapters retain their documented capability gates, and unsupported hosts halt `required_tool_missing`. `skill-evolve` and `skill-iterate` still require their Workflow primitive; `goblin-suggest` maps no Codex Workflow route; `user-uat` retains its independent assessor and strong-final gates. `goblin-do` remains outside this capability set | no |
+| `sub-agent` skills (18) | yes | yes, parent-owned actions (17 GPT-portable; context-slim is a native exclusion). `lesson-harvest` is packaged here, but its current GPT preview halts where D-GPT leaves fresh-context proof unavailable | the same 18 adapters: `citation-review` and `citation-sweep` keep preparation, exact run identity and commits in the parent and dispatch only fresh depth-1 classification judges; sweep opens every selected run before any commit. `lesson-harvest` produces only a bounded, audited local preview on a host that proves fresh siblings; automatic publication is unavailable in v2. `build-step` uses proven fresh-context dispatch plus separate opaque parent state and parent-only verdict service when phase-run; `user-debug` separately requires proven fresh siblings for Step 2 and Option 4; the remaining agent-dependent adapters retain their documented capability gates, and unsupported hosts halt `required_tool_missing`. `skill-evolve` and `skill-iterate` still require their Workflow primitive; `user-uat` retains its independent assessor and strong-final gates. | no |
 | Claude-native exclusions (2) | yes | **no adapter** | **no adapter** | no |
 
 ### Claude-native exclusions

@@ -270,7 +270,7 @@ check against it.
 |----|----------|-------|--------|-------------|
 | F1 | export button 500s on an empty set | bug | routed | seed: `/user-debug --symptom 'export 500 on empty set'`; repro check `pytest -k export | tail -1` |
 | F2 | ship v2 as opt-in or default? | decide | parked | operator-only: opt-in vs default rollout — question surfaced, awaiting operator |
-| F3 | rename the stale config key | do | done | closed via /goblin-do; scoped commit landed |
+| F3 | rename the stale config key | do | done | closed via a /user-pm direct task; scoped commit landed |
 ```
 
 Fixture A carries both regression guards. `F1`'s disposition deliberately contains a pipe
@@ -301,7 +301,7 @@ vocabulary):
 |----|----------|-------|--------|-------------|
 | F1 | export button 500s on an empty set | bug | routed | seed: `/user-debug --symptom 'export 500 on empty set'`; repro check `pytest -k export | tail -1` |
 | F2 | ship v2 as opt-in or default? | decide | parked | operator-only: opt-in vs default rollout — question surfaced, awaiting operator |
-| F3 | rename the stale config key | do | done | closed via /goblin-do; scoped commit landed |
+| F3 | rename the stale config key | do | done | closed via a /user-pm direct task; scoped commit landed |
 | X9 | id cell corrupted by a bad write | bug | routed | id no longer matches F<n> — must still count |
 | F4 | stray thought about caching | do | in-progress | hand-edited status word not in the vocabulary |
 ```

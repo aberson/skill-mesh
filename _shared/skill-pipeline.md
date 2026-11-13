@@ -29,7 +29,7 @@ Entry condition = what the operator's fragment sounds like.
 | Rail | Sounds like | Chain |
 |---|---|---|
 | **bug** | "X is broken / erroring / behaving wrong" — a symptom in hand | `/user-debug --symptom '...'` |
-| **do** | "just do X" — a resolved atom / small concrete task | `/goblin-do` (atoms come from `/goblin-suggest`) |
+| **do** | "just do X" — a small concrete task | `/user-pm` (its board routes the task by `user-build-route`'s rules) |
 | **plan** | "add / build capability X" — multi-step work needing steps + review | `/plan-feature` (or `/plan-init` for a brand-new project) → `/plan-expedite` → `/build-phase` → `/repo-update` (the build rail — detail below) |
 | **investigate** | "what's true about X? why does X happen?" — a question, not yet work | `/deep-research` via `Workflow({name: "deep-research-pinned"})` (never the built-in name — CLAUDE.md's dispatch rule) for external/multi-source; an Explore-agent sweep for codebase-local questions |
 | **verify** | "does X actually work? / I don't trust X" — distrust without a reproducible symptom | `/review-uat` (refine a fuzzy block) / `/user-uat` (mechanical tier) / `/user-walkthrough --shakedown` (autonomous closure) / `/user-walkthrough` (attended) — four-mode detail below |
@@ -73,10 +73,8 @@ When a rail skill discovers mid-run that the work is on the wrong rail, it:
    `routed`, with a disposition note recording the re-route.
 4. **STOPS** instead of grinding through on the wrong rail.
 
-`/goblin-do`'s non-goal seed handoff is the codified template for this contract: an atom
-with `goal_able: true` and a non-empty goal condition gets a copy-pasteable `/goal` block;
-every other atom gets the seed for its kind, including a `/plan-feature` seed for a
-suggestion. The skill stops after rendering and executes no work.
+A seed handed off this way is paste-ready text for the window that will run it; the skill
+that emits it stops after rendering and executes no work.
 
 ---
 
@@ -150,7 +148,7 @@ Visual tier: `/user-uat --ui` delegates single-frame screen states to `/judge-ui
 ## Supporting skills
 
 `/review-proof`, `/test-prune`, `/skill-eval-setup`, `/skill-iterate`,
-`/goblin-suggest` (produces the atoms `/goblin-do` consumes), `/memory-distill`,
+`/memory-distill`,
 `/user-brainstorm`, `/user-learn`, `/context-slim`, `/lesson-harvest`.
 
 `/repo-wrap [<path-or-slug>] [--dry-run]` — the repo close-out router for targets `/repo-update`

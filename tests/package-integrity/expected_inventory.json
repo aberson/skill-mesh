@@ -1,16 +1,16 @@
 {
   "note": "Authoritative expected inventory for package-integrity tests. Committed so the public package tests need no private/legacy source. Regenerate with tools/gen_manifest.py.",
   "counts": {
-    "total": 54,
-    "portable": 52,
+    "total": 51,
+    "portable": 49,
     "provider_native": 2,
-    "claude": 54,
-    "gpt": 52,
-    "codex": 52,
+    "claude": 51,
+    "gpt": 49,
+    "codex": 49,
     "local_capable": 17,
-    "sub_agent": 19,
+    "sub_agent": 18,
     "vision": 1,
-    "filesystem": 54
+    "filesystem": 51
   },
   "portable": [
     "build-phase",
@@ -21,9 +21,6 @@
     "citation-sweep",
     "citation-triage",
     "code-consigliere",
-    "goblin-do",
-    "goblin-suggest",
-    "goblin-sweep",
     "judge-ui",
     "lesson-harvest",
     "memory-distill",
@@ -79,9 +76,6 @@
     "citation-sweep",
     "citation-triage",
     "code-consigliere",
-    "goblin-do",
-    "goblin-suggest",
-    "goblin-sweep",
     "judge-ui",
     "lesson-harvest",
     "memory-distill",
@@ -148,7 +142,6 @@
     "citation-review",
     "citation-sweep",
     "context-slim",
-    "goblin-suggest",
     "judge-ui",
     "lesson-harvest",
     "research-prospect",
@@ -348,75 +341,6 @@
         {
           "source": ".claude/skills/context-slim/evals/",
           "dest": "skills/context-slim/evals/"
-        }
-      ]
-    },
-    {
-      "name": "goblin-do",
-      "status": "portable",
-      "local_capable": false,
-      "capabilities": [
-        "filesystem"
-      ],
-      "migration": {
-        "legacy_core": ".claude/skills-gpt/goblin-do/SKILL-core.md",
-        "legacy_claude_launcher": ".claude/skills/goblin-do/SKILL.md",
-        "legacy_claude_adapter": ".claude/skills/goblin-do/SKILL-claude.md",
-        "legacy_gpt": ".claude/skills-gpt/goblin-do/SKILL-gpt.md"
-      },
-      "support_assets": [
-        {
-          "source": ".claude/skills/goblin-do/evals/",
-          "dest": "skills/goblin-do/evals/"
-        },
-        {
-          "source": ".claude/skills/goblin-do/goblin_do.workflow.js",
-          "dest": "skills/goblin-do/goblin_do.workflow.js"
-        }
-      ]
-    },
-    {
-      "name": "goblin-suggest",
-      "status": "portable",
-      "local_capable": false,
-      "capabilities": [
-        "filesystem",
-        "sub-agent"
-      ],
-      "migration": {
-        "legacy_core": ".claude/skills-gpt/goblin-suggest/SKILL-core.md",
-        "legacy_claude_launcher": ".claude/skills/goblin-suggest/SKILL.md",
-        "legacy_claude_adapter": ".claude/skills/goblin-suggest/SKILL-claude.md",
-        "legacy_gpt": ".claude/skills-gpt/goblin-suggest/SKILL-gpt.md"
-      },
-      "support_assets": [
-        {
-          "source": ".claude/skills/goblin-suggest/evals/",
-          "dest": "skills/goblin-suggest/evals/"
-        },
-        {
-          "source": ".claude/skills/goblin-suggest/goblin_suggest.workflow.js",
-          "dest": "skills/goblin-suggest/goblin_suggest.workflow.js"
-        }
-      ]
-    },
-    {
-      "name": "goblin-sweep",
-      "status": "portable",
-      "local_capable": false,
-      "capabilities": [
-        "filesystem"
-      ],
-      "migration": {
-        "legacy_core": ".claude/skills-gpt/goblin-sweep/SKILL-core.md",
-        "legacy_claude_launcher": ".claude/skills/goblin-sweep/SKILL.md",
-        "legacy_claude_adapter": ".claude/skills/goblin-sweep/SKILL-claude.md",
-        "legacy_gpt": ".claude/skills-gpt/goblin-sweep/SKILL-gpt.md"
-      },
-      "support_assets": [
-        {
-          "source": ".claude/skills/goblin-sweep/evals/",
-          "dest": "skills/goblin-sweep/evals/"
         }
       ]
     },

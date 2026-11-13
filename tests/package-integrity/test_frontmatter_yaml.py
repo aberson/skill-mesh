@@ -51,7 +51,8 @@ SKILLS_ROOT = REPO_ROOT / "skills"
 # itself is 56 there, so the old floor would red on a correct tree. Lowered
 # 56 -> 55 the same way at Step 12 (#268), when the catalog became 55.
 # Lowered 55 -> 54 the same way at Step 13 (#269).
-MIN_CLAUDE_ADAPTERS = 54
+# Lowered 54 -> 51 the same way at Step 14 (#270), when three skills retired.
+MIN_CLAUDE_ADAPTERS = 51
 
 # The one skill whose adapter deliberately declares itself NOT user-invocable. It is
 # a reference document, not a command. Pinned by name so a regression that flips the

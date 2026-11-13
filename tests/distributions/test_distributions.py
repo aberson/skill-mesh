@@ -3271,9 +3271,10 @@ COHORT_B_CODEX_SKILLS = ["plan-expedite", "plan-feature", "plan-init", "plan-mer
                          "plan-redline", "plan-wrap", "repo-init",
                          "repo-sync", "repo-update", "user-project", "user-wrap"]
 # Cohort C, the build/review/skill/tier families (Phase CP Step 7, issue #124) -- the
-# heaviest host-abstraction consumers.
-COHORT_C_CODEX_SKILLS = ["build-phase", "build-queue", "build-step", "goblin-do",
-                         "goblin-suggest", "judge-ui", "review-deep",
+# heaviest host-abstraction consumers. The v3 catalog cleanup retired its two Goblin
+# skills (plan Step 14, #270).
+COHORT_C_CODEX_SKILLS = ["build-phase", "build-queue", "build-step",
+                         "judge-ui", "review-deep",
                          "review-gauntlet", "review-proof", "review-uat",
                          "skill-eval-setup", "skill-evolve", "skill-iterate",
                          "test-prune", "tier-escalate", "tier-offload"]
@@ -3292,9 +3293,10 @@ COHORT_D_CODEX_SKILLS = ["memory-distill", "research-prospect",
 # adapters in one commit, so they enter the portable roster and the codex roster
 # together and the two reached 54.
 # The v3 catalog cleanup moved the seventh, a portfolio-block proposer, to
-# dev-observatory (plan Step 4, #260), so six remain.
+# dev-observatory (plan Step 4, #260) and retired the goblin sweep wrapper (plan
+# Step 14, #270), so five remain.
 STEP10_PROMOTED_SKILLS = ["citation-distill", "citation-review",
-                          "citation-sweep", "citation-triage", "goblin-sweep",
+                          "citation-sweep", "citation-triage",
                           "repo-wrap"]
 # The separately approved code-consigliere addition extends both explicit rosters to 55.
 CODE_CONSIGLIERE_ADDITION = ["code-consigliere"]
@@ -3328,7 +3330,8 @@ def test_codex_profile_holds_exactly_the_declared_cohorts_for_the_committed_mani
     to fifty-five, moving the portfolio-block proposer out to fifty-four, creating
     user-fermize back to fifty-five, moving the Dev Observatory doctor out to
     fifty-four, folding the autonomous shakedown skill into user-walkthrough to
-    fifty-three, and folding the plan-cutting skill into plan-merge to fifty-two. It
+    fifty-three, folding the plan-cutting skill into plan-merge to fifty-two, and
+    retiring the three Goblin skills to forty-nine. It
     grades the whole emission contract for the real cohorts at once,
     because the parts are only correct together: a launcher without its co-located
     core.md is a package Codex can list and cannot run, and an unstamped file is one
@@ -3337,7 +3340,7 @@ def test_codex_profile_holds_exactly_the_declared_cohorts_for_the_committed_mani
     out = tmp_path / "out"
     r = _build(out, provider="codex")
     assert r.returncode == 0, f"{r.stdout}\n{r.stderr}"
-    assert "(52 skills," in r.stdout, r.stdout
+    assert "(49 skills," in r.stdout, r.stdout
     # The manifest declares exactly the spelled cohorts...
     assert sorted(_codex_skills()) == DECLARED_CODEX_SKILLS, _codex_skills()
     # ...and the emitted tree IS that roster: no extra skill dir, none missing. The
@@ -3368,7 +3371,7 @@ def test_codex_profile_rerun_over_the_committed_manifest_is_byte_identical(tmp_p
     """Determinism on the REAL cohort, not only on the fixture skill.
 
     The fixture-repo determinism test upstream drives one synthetic skill; this one
-    drives every committed codex adapter (fifty-two at v3 cleanup Step 13) plus the
+    drives every committed codex adapter (forty-nine at v3 cleanup Step 14) plus the
     shared payload their cores
     pull in, which is the tree an operator actually installs at the M-steps.
     """

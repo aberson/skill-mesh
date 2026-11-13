@@ -223,14 +223,17 @@ NEIGHBOUR_GATE = Path(__file__).with_name("test_codex_agent_isolation_contract.p
 # reviewable. The floor below is the separate guard against a mis-rooted glob
 # making every assertion in this module vacuous; both are asserted because they
 # fail for different reasons.
-EXPECTED_ADAPTERS = 52
-MIN_ADAPTERS = 50
+EXPECTED_ADAPTERS = 49
+# Lowered 50 -> 45 at v3 catalog cleanup Step 14 (#270), when deliberate retirements
+# took the roster to 49: the floor stays below the pinned roster so it catches only a
+# mis-rooted glob, which is its whole job; EXPECTED_ADAPTERS still pins the exact size.
+MIN_ADAPTERS = 45
 
 # One owner per threshold. Each of these was an inline literal duplicated across
 # two tests before Step 119 iteration 3; two hand-maintained copies of one
 # threshold drift the first time someone moves one (CLAUDE.md, "One source of
 # truth for data-shape constants").
-MIN_SUB_AGENT = 12          # manifest `sub-agent` codex skills (live: 16)
+MIN_SUB_AGENT = 12          # manifest `sub-agent` codex skills (live: 17)
 MIN_CONDITIONED = 8         # capability-conditioned adapters (live: 10)
 MIN_FALLBACK_SENTENCES = 10  # adapters naming a single-context fallback (live: 13)
 
@@ -1699,9 +1702,7 @@ def test_no_sub_agent_adapter_invents_a_documented_single_context_fallback():
     documents a single-context fallback. An adapter that says "use the
     single-context fallback the core documents" has granted itself the substitute
     the hard constraint forbids, and has done it in a sentence that reads like a
-    citation. (`goblin-do`/`goblin-suggest` are unaffected: their cores document
-    an out-of-process `claude -p` CLI rail, which is not a single-context one,
-    and they name no single-context fallback at all.)
+    citation.
 
     The subject-set floor lives in `_manifest_sub_agent_codex_names`; the floor
     here is on the SENTENCES, because a gate over an empty sentence set is the

@@ -3,12 +3,12 @@
 
 These diagrams summarize the **Skill Mesh v2.0.4** contracts. Use the
 [skill reference](../../documentation/skill-reference.md) for a compact table
-of all 54 skills, purposes, host coverage and direct diagram links.
+of all 51 skills, purposes, host coverage and direct diagram links.
 
 Each diagram declares its source and omitted detail. The linked source contract
 remains authoritative: a diagram does not authorize an action, bypass a hold,
-or establish live qualification. Claude has all 54 packages; Codex and Copilot
-have the 52 portable packages. Native capability gates still apply.
+or establish live qualification. Claude has all 51 packages; Codex and Copilot
+have the 49 portable packages. Native capability gates still apply.
 
 These diagrams use the same rounded cards, monospace labels, and blue connectors
 as the overview graphics. Blue-bordered **GATE** cards mark decisions; connector
@@ -53,9 +53,6 @@ produces the default Mermaid README rather than this SVG gallery.
 - [claude-oauth-auth](#claude-oauth-auth) - Authenticate the Claude CLI with a subscription token while keeping the credential out of logs and direct API calls.
 - [code-consigliere](#code-consigliere) - Resolve a target project, preserve private evidence, investigate together, hand off an agreed seed, and verify the returned build.
 - [context-slim](#context-slim) - Measure automatically loaded context, classify safe reductions, and apply only high-confidence changes when explicitly requested.
-- [goblin-do](#goblin-do) - Resolve one persisted atom, recheck its anchor, and print a goal block or planning seed without executing the work.
-- [goblin-suggest](#goblin-suggest) - Validate the invocation, enforce the current safety holds for every mode, and stop before reading project content or launching the workflow.
-- [goblin-sweep](#goblin-sweep) - Invoke the deterministic goblin sweep, parse its obligation records, and present every returned atom with a goblin-do handoff.
 - [judge-ui](#judge-ui) - Drive a declared UI flow through mechanical and read-back gates, calibrate one independent vision dispatch, and reduce to PASS, FAIL, or ESCALATE.
 - [lesson-harvest](#lesson-harvest) - Record one private observation or produce a privacy-reviewed zero-write lesson preview; automatic publication is unavailable in v2.
 - [memory-distill](#memory-distill) - Review selected feedback memories one at a time, surface broader principles, and apply changes only after explicit approval.
@@ -327,75 +324,6 @@ Drawn from:
 </picture>
 
 [Open full size](cards/context-slim-dark.svg)
-
----
-
-## goblin-do
-
-Resolve one persisted atom, recheck its anchor, and print a goal block or planning seed without executing the work.
-
-Source: [`goblin-do.mmd`](goblin-do.mmd)
-
-Drawn from:
-
-- [`skills/goblin-do/core.md`](../../skills/goblin-do/core.md)
-
-**Alt:** A read-only renderer resolves one atom and its project, refuses stale or unverifiable anchors, then prints either a goal block or the atom kind's seed.
-
-**Deliberately not shown:** CLI argument details, atom schemas, fuzzy-match ranking, reachability note fields, intake-ledger reroute write-back, and rendered block formats
-
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="cards/goblin-do-dark.svg">
-  <img alt="A read-only renderer resolves one atom and its project, refuses stale or unverifiable anchors, then prints either a goal block or the atom kind&#x27;s seed." src="cards/goblin-do-light.svg">
-</picture>
-
-[Open full size](cards/goblin-do-dark.svg)
-
----
-
-## goblin-suggest
-
-Validate the invocation, enforce the current safety holds for every mode, and stop before reading project content or launching the workflow.
-
-Source: [`goblin-suggest.mmd`](goblin-suggest.mmd)
-
-Drawn from:
-
-- [`skills/goblin-suggest/core.md`](../../skills/goblin-suggest/core.md)
-
-**Alt:** A suggestion request passes usage and capability checks, then every supported mode ends in a named hold with no project read, workflow launch, or write.
-
-**Deliberately not shown:** the disabled future generation pipeline, repair conditions for lifting the hold, known workflow deviations, scoring, and persistence formats
-
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="cards/goblin-suggest-dark.svg">
-  <img alt="A suggestion request passes usage and capability checks, then every supported mode ends in a named hold with no project read, workflow launch, or write." src="cards/goblin-suggest-light.svg">
-</picture>
-
-[Open full size](cards/goblin-suggest-dark.svg)
-
----
-
-## goblin-sweep
-
-Invoke the deterministic goblin sweep, parse its obligation records, and present every returned atom with a goblin-do handoff.
-
-Source: [`goblin-sweep.mmd`](goblin-sweep.mmd)
-
-Drawn from:
-
-- [`skills/goblin-sweep/core.md`](../../skills/goblin-sweep/core.md)
-
-**Alt:** A fail-loud wrapper checks three prerequisites, runs the deterministic engine, refuses malformed output, and lists each obligation with its read-only handoff.
-
-**Deliberately not shown:** pinned command text, seven report fields, persistence merge rules, completeness caveats, warning formatting, and engine discovery internals
-
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="cards/goblin-sweep-dark.svg">
-  <img alt="A fail-loud wrapper checks three prerequisites, runs the deterministic engine, refuses malformed output, and lists each obligation with its read-only handoff." src="cards/goblin-sweep-light.svg">
-</picture>
-
-[Open full size](cards/goblin-sweep-dark.svg)
 
 ---
 

@@ -833,7 +833,9 @@ def test_the_cited_agent_isolation_contract_reaches_the_emitted_codex_tree(codex
     profile = Path(codex_dist) / PROVIDER
     emitted = {p.parent.name: p.read_text(encoding="utf-8")
                for p in sorted(profile.rglob("SKILL.md"))}
-    assert len(emitted) >= 50, (
+    # Vacuity floor, not a roster pin: lowered 50 -> 45 at v3 catalog cleanup Step 14
+    # (#270), when deliberate retirements took the codex profile to 49 skills.
+    assert len(emitted) >= 45, (
         f"only {len(emitted)} emitted codex skills found under {profile} -- this "
         "assertion would be near-vacuous")
 

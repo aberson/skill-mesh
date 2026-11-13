@@ -996,7 +996,8 @@ def test_handoff_retires_on_a_managed_allowlist_and_preserves_consumer_only():
     """The handoff must name a concrete preserved entry, and that name must still be
     consumer-only.
 
-    DERIVED, not hand-listed. This gate used to spell `goblin-sweep`, which held until
+    DERIVED, not hand-listed. This gate used to spell a then-consumer-only goblin sweep
+    wrapper, which held until
     Phase CP Step 10 promoted that skill into the catalog -- at which point the handoff's
     own stated rule ("no name in the preserved line appears in
     config/skill-manifest.json") was false of the very example illustrating it, and a

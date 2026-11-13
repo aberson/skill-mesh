@@ -75,7 +75,10 @@ POINTER_BLOCK_RE = re.compile(r"```[a-zA-Z]*\n@AGENTS\.md\n```")
 # A floor, not a list. Hand-listing the citer paths is the failure mode this
 # repository has already shipped once, so the citers are discovered by sweep and
 # only their COUNT is pinned -- which is what makes a deleted citation visible.
-CITER_FLOOR = 4
+# Lowered 4 -> 3 at v3 catalog cleanup Step 14 (#270), with this reason: one of the
+# four citers was a retired Goblin skill's core, deleted with its whole package, not
+# a citation reworded or dropped from a surviving surface.
+CITER_FLOOR = 3
 
 _FENCE = re.compile(r"^\s{0,3}(`{3,}|~{3,})")
 

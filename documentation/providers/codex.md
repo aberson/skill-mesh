@@ -25,7 +25,7 @@ and byte-identical ledger, refusal, containment, and uninstall semantics to the 
 two profiles, because all three derive from the discovery subdirectory rather than
 spelling a root per provider.
 
-Only the 52 portable skills have a Codex adapter. The 2 Claude-native exclusions —
+Only the 49 portable skills have a Codex adapter. The 2 Claude-native exclusions —
 `claude-oauth-auth` and `context-slim` — carry `core: null` in
 `config/skill-manifest.json` and are absent from a Codex profile entirely; no
 misleading stub is emitted for a provider that cannot support them.
@@ -287,13 +287,6 @@ its own reported result, never a silently degraded one.
   the tier-drift pair halt on a host that does not pass their own capability contract.
   Each lands in the one report as its reason code rather than being reimplemented
   inline.
-- **The two Goblin skills take different Codex paths.** `goblin-do` runs the
-  read-only deterministic renderer through `uv`; it needs no Workflow, sub-agent,
-  `claude` CLI, or OAuth. If `uv`, the prepared environment, its frozen lock, or the
-  `goblin` console script is unavailable, it halts `required_tool_missing` rather
-  than installing or hand-rendering an artifact. `goblin-suggest` maps no Workflow
-  primitive on Codex and halts `required_tool_missing` before any Goblin command;
-  it never substitutes `claude -p` or generates and judges in one session.
 - **Citation review and sweep use parent-owned depth-1 judges.** Review's parent owns
   OPEN, PREPARE and COMMIT and dispatches one fresh sibling per classification vote.
   Sweep retains those same phases in one parent, opens every selected run before any

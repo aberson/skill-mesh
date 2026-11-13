@@ -67,16 +67,16 @@
     }
   },
   "counts": {
-    "total": 54,
-    "portable": 52,
+    "total": 51,
+    "portable": 49,
     "provider_native": 2,
-    "claude": 54,
-    "gpt": 52,
-    "codex": 52,
+    "claude": 51,
+    "gpt": 49,
+    "codex": 49,
     "local_capable": 17,
-    "sub_agent": 19,
+    "sub_agent": 18,
     "vision": 1,
-    "filesystem": 54
+    "filesystem": 51
   },
   "global_support_assets": [
     {
@@ -362,96 +362,6 @@
         {
           "source": ".claude/skills/context-slim/evals/",
           "dest": "skills/context-slim/evals/"
-        }
-      ]
-    },
-    {
-      "name": "goblin-do",
-      "status": "portable",
-      "description": "Render the next step for one persisted Goblin atom after a read-only liveness check.",
-      "core": "skills/goblin-do/core.md",
-      "providers": {
-        "claude": "skills/goblin-do/providers/claude.md",
-        "gpt": "skills/goblin-do/providers/gpt.md",
-        "codex": "skills/goblin-do/providers/codex.md"
-      },
-      "capabilities": [
-        "filesystem"
-      ],
-      "local_capable": false,
-      "migration": {
-        "legacy_core": ".claude/skills-gpt/goblin-do/SKILL-core.md",
-        "legacy_claude_launcher": ".claude/skills/goblin-do/SKILL.md",
-        "legacy_claude_adapter": ".claude/skills/goblin-do/SKILL-claude.md",
-        "legacy_gpt": ".claude/skills-gpt/goblin-do/SKILL-gpt.md"
-      },
-      "support_assets": [
-        {
-          "source": ".claude/skills/goblin-do/evals/",
-          "dest": "skills/goblin-do/evals/"
-        },
-        {
-          "source": ".claude/skills/goblin-do/goblin_do.workflow.js",
-          "dest": "skills/goblin-do/goblin_do.workflow.js"
-        }
-      ]
-    },
-    {
-      "name": "goblin-suggest",
-      "status": "portable",
-      "description": "Produce a grounded, ranked improvement shortlist for a project as goblin atoms.",
-      "core": "skills/goblin-suggest/core.md",
-      "providers": {
-        "claude": "skills/goblin-suggest/providers/claude.md",
-        "gpt": "skills/goblin-suggest/providers/gpt.md",
-        "codex": "skills/goblin-suggest/providers/codex.md"
-      },
-      "capabilities": [
-        "filesystem",
-        "sub-agent"
-      ],
-      "local_capable": false,
-      "migration": {
-        "legacy_core": ".claude/skills-gpt/goblin-suggest/SKILL-core.md",
-        "legacy_claude_launcher": ".claude/skills/goblin-suggest/SKILL.md",
-        "legacy_claude_adapter": ".claude/skills/goblin-suggest/SKILL-claude.md",
-        "legacy_gpt": ".claude/skills-gpt/goblin-suggest/SKILL-gpt.md"
-      },
-      "support_assets": [
-        {
-          "source": ".claude/skills/goblin-suggest/evals/",
-          "dest": "skills/goblin-suggest/evals/"
-        },
-        {
-          "source": ".claude/skills/goblin-suggest/goblin_suggest.workflow.js",
-          "dest": "skills/goblin-suggest/goblin_suggest.workflow.js"
-        }
-      ]
-    },
-    {
-      "name": "goblin-sweep",
-      "status": "portable",
-      "description": "List a project's obligation atoms from the goblin engine and route them to goblin-do.",
-      "core": "skills/goblin-sweep/core.md",
-      "providers": {
-        "claude": "skills/goblin-sweep/providers/claude.md",
-        "gpt": "skills/goblin-sweep/providers/gpt.md",
-        "codex": "skills/goblin-sweep/providers/codex.md"
-      },
-      "capabilities": [
-        "filesystem"
-      ],
-      "local_capable": false,
-      "migration": {
-        "legacy_core": ".claude/skills-gpt/goblin-sweep/SKILL-core.md",
-        "legacy_claude_launcher": ".claude/skills/goblin-sweep/SKILL.md",
-        "legacy_claude_adapter": ".claude/skills/goblin-sweep/SKILL-claude.md",
-        "legacy_gpt": ".claude/skills-gpt/goblin-sweep/SKILL-gpt.md"
-      },
-      "support_assets": [
-        {
-          "source": ".claude/skills/goblin-sweep/evals/",
-          "dest": "skills/goblin-sweep/evals/"
         }
       ]
     },

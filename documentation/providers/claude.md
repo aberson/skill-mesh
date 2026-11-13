@@ -49,7 +49,7 @@ is only the optional direct-API transport, independent of provider selection.
 ## Capabilities
 
 Claude adapters support the full capability vocabulary: `filesystem`, `sub-agent`,
-and `vision`. All 52 portable skills and both Claude-native exclusions have a
+and `vision`. All 49 portable skills and both Claude-native exclusions have a
 Claude adapter.
 
 The Claude host's Artifact tool is never used for operator-facing documents: since

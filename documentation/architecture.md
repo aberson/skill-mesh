@@ -21,7 +21,7 @@ Codex hosts receive *generated* compatibility layouts built from this source.
 | **shim** | Thin backward-compatible launcher that delegates to a canonical file. |
 | **transport** | Authenticated API or host-native channel used to execute a provider model. |
 | **calibration** | Existing deterministic/rubric comparison that checks adapter parity. |
-| **portable skill** | Skill with a neutral core plus Claude and GPT adapters, all 52 of which additionally carry a Codex adapter — codex capability is ADDITIVE on a portable record, never a third status. 52 total. |
+| **portable skill** | Skill with a neutral core plus Claude and GPT adapters, all 49 of which additionally carry a Codex adapter — codex capability is ADDITIVE on a portable record, never a third status. 49 total. |
 | **provider-native skill** | Skill supported on exactly one host; no neutral core. 3 total. |
 
 `<name>` and `<skill>` in every path template mean the same stable kebab-case
@@ -40,7 +40,7 @@ deprecation window (see `migration.md`), not canonical sources.
 | Skill core (portable) | `skills/<name>/core.md` | One per portable skill; `null` in the manifest for provider-native skills. |
 | Claude adapter | `skills/<name>/providers/claude.md` | Thin host adapter. Self-contained for provider-native skills. |
 | GPT adapter | `skills/<name>/providers/gpt.md` | Thin host adapter; absent for provider-native skills. |
-| Codex adapter | `skills/<name>/providers/codex.md` | Thin host adapter; absent for provider-native skills. One per portable skill (52). |
+| Codex adapter | `skills/<name>/providers/codex.md` | Thin host adapter; absent for provider-native skills. One per portable skill (49). |
 | Shared prose assets | `_shared/` (repo root) | Cross-skill cores/prose referenced by multiple skills. The manifest declares `skills/_shared/` as the eventual canonical home; that directory does not exist yet, so today's references resolve to the repo-root tree. The divergence is deliberate and locked by `tests/package-integrity/test_skill_tree.py::test_shared_dest_divergence_is_intentional`. |
 | Skill manifest | `config/skill-manifest.json` | Single source for distribution, install, integrity, and README counts. |
 | Skill inventory | `skills/inventory.json` | Machine-readable per-skill inventory. Committed, generated hermetically by `tools/gen_manifest.py` through the established `build_inventory()` projection, and graded by `tests/package-integrity/test_skill_tree.py`. |
@@ -184,8 +184,8 @@ each skill's legacy contract, not inferred from a single shared wrapper line.
 
 | Capability | Count | Skills |
 |---|---|---|
-| `filesystem` | 54 | all skills |
-| `sub-agent` | 19 | build-step, citation-review, citation-sweep, context-slim, goblin-suggest, judge-ui, lesson-harvest, research-prospect, review-deep, review-gauntlet, skill-evolve, skill-iterate, test-prune, tier-escalate, tier-offload, user-brainstorm, user-debug, user-learn, user-uat |
+| `filesystem` | 51 | all skills |
+| `sub-agent` | 18 | build-step, citation-review, citation-sweep, context-slim, judge-ui, lesson-harvest, research-prospect, review-deep, review-gauntlet, skill-evolve, skill-iterate, test-prune, tier-escalate, tier-offload, user-brainstorm, user-debug, user-learn, user-uat |
 | `vision` | 1 | judge-ui |
 
 The `sub-agent` set is derived by auditing every skill's contract for explicit
@@ -194,8 +194,7 @@ since -- citation-review and citation-sweep now require parent-dispatched fresh
 depth-1 classification judges, with sweep retaining every artifact phase in its
 parent, joined the audited set). Representative evidence (legacy `SKILL-core.md` /
 `SKILL.md`): build-step "Spawn a sub-agent" + "Step 6 — Spawn reviewer agents";
-context-slim "Spawn three parallel subagents using the Agent tool"; goblin-suggest "fan out `--n-judges`
-judge agent calls IN PARALLEL";
+context-slim "Spawn three parallel subagents using the Agent tool";
 judge-ui "dispatches an independent vision-judge sub-agent"; research-prospect
 "Fan out parallel Explore agents"; review-deep "spawns six fresh-context
 sub-agents, one per lens"; review-gauntlet "one fresh-context reviewer invocation
@@ -301,8 +300,8 @@ those steps must satisfy.
 
 Every skill has a machine-readable migration entry in `config/skill-manifest.json`
 (the `migration` + `support_assets` blocks per skill, plus top-level
-`global_support_assets`), covering **all 52 portable skills plus the 2
-Claude-native exclusions (54 total)**.
+`global_support_assets`), covering **all 49 portable skills plus the 2
+Claude-native exclusions (51 total)**.
 
 **Migration root.** All `source` / `legacy_*` paths are relative to **coding-root**
 (`aberson/coding-root` — the operator's `dev` checkout), READ-ONLY during Steps
@@ -349,7 +348,6 @@ Canonical ownership: a skill-local asset at `.claude/skills/<name>/<rel>` (or
 |---|---|---|
 | `.claude/skills/<name>/evals/` | `skills/<name>/evals/` | per-skill eval suite (most skills) |
 | `.claude/skills/build-step/scripts/` | `skills/build-step/scripts/` | build-step |
-| `.claude/skills/goblin-do/goblin_do.workflow.js` | `skills/goblin-do/goblin_do.workflow.js` | goblin-do |
 | `.claude/skills/plan-expedite/test-fixtures/` | `skills/plan-expedite/test-fixtures/` | plan-expedite |
 | `.claude/skills/plan-redline/reference-proposal.html` | `skills/plan-redline/reference-proposal.html` | plan-redline |
 | `.claude/skills/tier-offload/{sample-*,test_*.py}` | `skills/tier-offload/...` | tier-offload |
@@ -549,7 +547,7 @@ seam (defaults to this repository) that must be a git working tree.
 
 `tests/package-integrity/test_manifest_contract.py` fails on any of:
 
-- Skill count != 54, portable != 52, provider-native != 2, sub-agent != 19,
+- Skill count != 51, portable != 49, provider-native != 2, sub-agent != 18,
   vision != 1 (each set checked exactly against the committed
   `tests/package-integrity/expected_inventory.json` fixture — the package tests
   need no private source).

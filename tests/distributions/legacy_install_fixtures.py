@@ -452,7 +452,7 @@ MIGRATION_NATIVE = "context-slim"
 # These names must be skills the CONSUMER authored that the catalog does not claim --
 # that is the whole property the positive fixture proves, and
 # test_migration_fixture_names_match_the_manifest asserts it on every run. They read
-# two consumer skill names (a portfolio-block proposer and "goblin-sweep") until
+# two consumer skill names (a portfolio-block proposer and a goblin sweep wrapper) until
 # Phase CP Step 10 promoted both into the
 # manifest, which flipped this fixture from a positive case into a silent negative
 # one; that gate caught it and named it, which is what it is for. `meeting-sheet` is

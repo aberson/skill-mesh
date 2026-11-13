@@ -616,8 +616,8 @@ Not a session summary. Three bounded passes:
      `/plan-redline`, `/plan-wrap`, `/repo-sync`), with its path;
    - a plan synced this session whose steps are not DONE and that no window is building
      (per this session's knowledge) -> its `/build-phase --plan <path>`;
-   - an issue filed this session that no plan step carries -> the `/goblin-do` or plan
-     that should own it;
+   - an issue filed this session that no plan step carries -> `/user-pm` (to place it on
+     the board) or the plan that should own it;
    - a seed document written this session -> the `/plan-feature` or lifecycle request it
      seeds;
    - a `Follow-ups:` line a `/repo-update` run printed this session, and every item still

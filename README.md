@@ -5,7 +5,7 @@ workflow for Claude Code, GitHub Copilot, and OpenAI Codex.**
 
 - **A connected pipeline.** Turn an idea into a plan, a bounded build, an independently reviewed change, and a release.
 - **Explicit quality gates.** Automated checks and fresh-context reviewers inform the result; missing required capabilities stop the workflow.
-- **One contract, three hosts.** 54 Claude skills; 52 also packaged for Copilot and Codex through host adapters.
+- **One contract, three hosts.** 51 Claude skills; 49 also packaged for Copilot and Codex through host adapters.
 
 **[v2.0.4 is released](https://github.com/aberson/skill-mesh/releases/tag/v2.0.4)** ·
 [Try it](#install-or-upgrade) · [Browse the skills](documentation/skill-reference.md) ·
@@ -51,7 +51,7 @@ host's capabilities; installation puts the generated skills where the host finds
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="_shared/host-profiles-dark.svg">
-  <img alt="Shared Skill Mesh contracts generate three host profiles: 54 Claude skills and 52 portable skills each for GitHub Copilot and OpenAI Codex." src="_shared/host-profiles-light.svg">
+  <img alt="Shared Skill Mesh contracts generate three host profiles: 51 Claude skills and 49 portable skills each for GitHub Copilot and OpenAI Codex." src="_shared/host-profiles-light.svg">
 </picture>
 
 ### The routing web
@@ -67,8 +67,8 @@ and routes each to a useful next step.
   <img alt="An operator's notes enter user-gateway and split across eight routes, from debugging and planning to verification and drafting." src="_shared/routing-web-light.svg">
 </picture>
 
-The `goblin-do` route renders a next-action seed for an existing atom; it does not
-execute the work. Host commands such as `/goal` and `/deep-research` are separate
+The `do` route hands a small task to `user-pm`, whose board picks its build route; the
+gateway executes no work. Host commands such as `/goal` and `/deep-research` are separate
 from this skill catalog. [Routing contract](_shared/skill-pipeline.md).
 
 </details>
@@ -84,7 +84,7 @@ from this skill catalog. [Routing contract](_shared/skill-pipeline.md).
 | Evidence & improvement | `citation-review`, `lesson-harvest`, `skill-evolve`, `tier-offload` |
 
 <details>
-<summary><strong>Explore all 54 skills and available workflow documentation</strong></summary>
+<summary><strong>Explore all 51 skills and available workflow documentation</strong></summary>
 
 The [complete reference table](documentation/skill-reference.md) lists each skill's
 purpose, host coverage, source contract, and individual workflow. The
@@ -149,7 +149,7 @@ utility or start background services.
 | [Find Again](https://github.com/aberson/find-again) | Optional prior-work retrieval in `plan-feature`; current source stays authoritative. |
 | [dev-observatory](https://github.com/aberson/coding-root/tree/master/dev-observatory) | Its static doctor and the portfolio-block proposer are dev-observatory project-local skills, not Skill Mesh skills. |
 | [Citation Needed](https://github.com/aberson/citation-needed) | Evidence storage and scoring for the citation skills; review and sweep dispatch independent judges. v2 requires the [overview-filters branch](https://github.com/aberson/citation-needed/tree/skill-mesh-v2/overview-filters). |
-| Goblin | External CLI/private atom store. `goblin-do` prints a next-action seed; `goblin-suggest` generation remains held in v2. |
+| Goblin | External CLI/private atom store. No catalog skill drives it in v3: the Goblin skills were retired, and `user-pm` lists improvement ideas. |
 | Switchboard | `tier-offload` produces advisory, inactive routing candidates. |
 | [Show Your Work](https://github.com/aberson/show-your-work) | Checks diagram sources and generates the detailed workflow index; not a skill runtime dependency. |
 
@@ -169,7 +169,7 @@ verify its checksum, and choose one host profile.
 <details>
 <summary><strong>Installation, upgrades, and restoration</strong></summary>
 
-Of the portable catalog, 52/52 skills are GPT-capable; Claude provides all 54 skills.
+Of the portable catalog, 49/49 skills are GPT-capable; Claude provides all 51 skills.
 
 | Provider | Discovery root under the chosen home |
 |---|---|

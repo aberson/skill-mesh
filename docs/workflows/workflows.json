@@ -1,7 +1,7 @@
 {
   "schema": "show-your-work.workflows.v1",
   "generator": "show-your-work 0.1.0",
-  "generated_at": "2026-11-13T17:56:09+00:00",
+  "generated_at": "2026-11-13T18:02:34+00:00",
   "source_dir": "docs/workflows",
   "items": [
     {
@@ -141,48 +141,6 @@
       ],
       "source_path": "docs/workflows/context-slim.mmd",
       "source_sha256": "d41ec4d89ef053d9e505c66967926b5f8d7772359316e013f51dd6ddd2c77c67",
-      "engine": "mermaid",
-      "rasters": null
-    },
-    {
-      "id": "goblin-do",
-      "label": "goblin-do",
-      "summary": "Resolve one persisted atom, recheck its anchor, and print a goal block or planning seed without executing the work.",
-      "alt": "A read-only renderer resolves one atom and its project, refuses stale or unverifiable anchors, then prints either a goal block or the atom kind's seed.",
-      "not_shown": "CLI argument details, atom schemas, fuzzy-match ranking, reachability note fields, intake-ledger reroute write-back, and rendered block formats",
-      "sources": [
-        "skills/goblin-do/core.md"
-      ],
-      "source_path": "docs/workflows/goblin-do.mmd",
-      "source_sha256": "317a5e46fb74685283bbda08900fdcceb1787eccb1407c4fbffa48257a48fccd",
-      "engine": "mermaid",
-      "rasters": null
-    },
-    {
-      "id": "goblin-suggest",
-      "label": "goblin-suggest",
-      "summary": "Validate the invocation, enforce the current safety holds for every mode, and stop before reading project content or launching the workflow.",
-      "alt": "A suggestion request passes usage and capability checks, then every supported mode ends in a named hold with no project read, workflow launch, or write.",
-      "not_shown": "the disabled future generation pipeline, repair conditions for lifting the hold, known workflow deviations, scoring, and persistence formats",
-      "sources": [
-        "skills/goblin-suggest/core.md"
-      ],
-      "source_path": "docs/workflows/goblin-suggest.mmd",
-      "source_sha256": "8e3e9a383b61d6f6b9ea46cdeb72a168487122471558e6ccbd01118e9bf0b6b0",
-      "engine": "mermaid",
-      "rasters": null
-    },
-    {
-      "id": "goblin-sweep",
-      "label": "goblin-sweep",
-      "summary": "Invoke the deterministic goblin sweep, parse its obligation records, and present every returned atom with a goblin-do handoff.",
-      "alt": "A fail-loud wrapper checks three prerequisites, runs the deterministic engine, refuses malformed output, and lists each obligation with its read-only handoff.",
-      "not_shown": "pinned command text, seven report fields, persistence merge rules, completeness caveats, warning formatting, and engine discovery internals",
-      "sources": [
-        "skills/goblin-sweep/core.md"
-      ],
-      "source_path": "docs/workflows/goblin-sweep.mmd",
-      "source_sha256": "921af36ee2dc3da42a543494552eab156d9ebe15283ff27634e288d0a6f335ec",
       "engine": "mermaid",
       "rasters": null
     },

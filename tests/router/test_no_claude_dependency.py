@@ -114,7 +114,7 @@ def test_pattern_still_catches_legacy_source_roots():
 
     must_pass = [
         f"{dot}/skills/build-phase/SKILL.md",
-        f"{dot}/skills-gpt/goblin-sweep/SKILL.md",
+        f"{dot}/skills-gpt/review-uat/SKILL.md",
         f"{dot}\\skills\\build-phase",
         f'"discovery_subdir": "{dot}/skills"',
     ]
