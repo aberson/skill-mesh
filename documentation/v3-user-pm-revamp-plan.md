@@ -152,6 +152,8 @@ checkout has `git status --porcelain` empty at the start of each build step; and
 
 ### Step 3: Core rewrite A, status view, board and routes (UPDATE)
 
+**Status:** DONE 2026-11-12. Steps 3 to 5: commits 2a3e9a2, 2e502b2, 553a865, correction d05f8ed; reviewed APPROVE (`<coding-root>/docs/skill-mesh-3-review/builds/user-pm-core-review.md`). Focused tests plus the quick repo-wide checks under the adopted testing rule; no full suite.
+
 **Problem:** The current core reads one plan plus `git log`, with no live-status view, no route labels and no
 issue/PR reading.
 **Type:** code
@@ -182,6 +184,8 @@ no named-skill call, and the fetched-text-is-data rule.
 
 ### Step 4: Core rewrite B, autonomous readiness checklist (UPDATE)
 
+**Status:** DONE 2026-11-12. commit 2e502b2; review as Step 3.
+
 **Problem:** The Overnight rubric misses a dirty no-commit checkout, host capability and agent capacity, the
 exact incident behind `user-build-route` (brief section 0). This is the must-fix.
 **Type:** code
@@ -200,6 +204,8 @@ route-compat section.
 
 ### Step 5: Core rewrite C, improvement shortlist (UPDATE)
 
+**Status:** DONE 2026-11-12. commit 553a865, correction d05f8ed; review as Step 3.
+
 **Problem:** There is no idea shortlist (F5), and the old rule "do not invent moves not derivable from plan +
 git log + archive markers" blocks it.
 **Type:** code
@@ -214,6 +220,8 @@ Codex window" and a test asserts the label appears. No new flags are added.
 anchor rule and the Codex-window label in the core.
 
 ### Step 6: Readiness-citation test (round trip)
+
+**Status:** DONE 2026-11-12. commit a2632a8 (also aligns the known-conflict check with user-build-route's short-lived-conflict rule); Steps 6 to 10 reviewed APPROVE, nits only (`<coding-root>/docs/skill-mesh-3-review/builds/user-pm-core-2-review.md`).
 
 **Problem:** A mocked prose test cannot see drift between the rubric and `user-build-route`; a test must fail
 when the rubric stops citing the route-compat section or the section is renamed.
@@ -255,6 +263,8 @@ before Step 8. Step 10 (its `lanes` key and test) and Step 11(c) (it names Passi
 
 <!-- autofix-applied: 2026-11-12 -->
 ### Step 8: Lanes section: lane cards and waiting notes, plus lane planning
+
+**Status:** DONE 2026-11-12. commit 8d1838c; review as Step 6.
 
 **Problem:** Item 61 requires `user-pm`'s status to show each lane's card and waiting notes (part A). On
 2026-11-12 the operator also asked that `user-pm`, as the project's front door, help break the project into
@@ -334,6 +344,8 @@ may be built and reviewed alone, and Part A follows when Step 7 completes.
 
 ### Step 9: Provider adapters and description headroom
 
+**Status:** DONE 2026-11-12. commit f68f46e; review as Step 6.
+
 **Problem:** A portable skill needs `providers/claude.md`, `codex.md` and `gpt.md`. The Codex adapter treats
 overnight qualification as "recommendation text, never auto-dispatched work", and the Codex description budget
 has 577 characters of headroom after `user-dr` (brief section 1.6). Host differences exist for `gh` access,
@@ -348,6 +360,8 @@ is unchanged: it lists no flags, so the `--lanes` mode does not touch it.
 diff review shows no adapter text restating a core gate.
 
 ### Step 10: `--json` additive output and a superset test
+
+**Status:** DONE 2026-11-12. commit 9ab43fb; review as Step 6. The dev-observatory issue is filed in the coding-root tracker as #596.
 
 **Problem:** Keys must be added, never changed. Baseline (from Step 1): default mode has `project`,
 `what_it_is`, `history`, `outstanding`, `possible_next` (each item with `category`), `cut_candidates`,
