@@ -205,6 +205,7 @@ def _identity_violations(script: Path, tmp_path: Path) -> list:
             ("CLEAR without an id", ["clear"], [IDENTITY_LINE]),
             ("SET with a path-shaped id", ["alpha", "-SessionId", "..\\other-window"], [IDENTITY_LINE]),
             ("SET with a slash id", ["alpha", "-SessionId", "a/b"], [IDENTITY_LINE]),
+            ("SET with a stream-colon id", ["alpha", "-SessionId", "other-window:x"], [IDENTITY_LINE]),
             ("SHOW without an id", [], [SHOW_NO_ID, "cwd repo: (not a git repository)"])):
         before = _state(root)
         proc = _run(script, root, *args)

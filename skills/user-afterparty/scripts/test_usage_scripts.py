@@ -177,9 +177,12 @@ def test_a_second_snapshot_reports_what_changed_and_the_cadence_nudge(tmp_path):
     snaps = str(tmp_path / "snapshots")
     fresh = _run(AGG, "--check-cadence", "--out-dir", snaps, "--as-of", "2026-11-20T00:00:00Z")
     assert fresh.returncode == 0 and fresh.stdout == ""
-    stale = _run(AGG, "--check-cadence", "--out-dir", snaps, "--as-of", "2026-12-20T00:00:00Z")
-    assert stale.stdout.strip() == ("usage telemetry: last snapshot 2026-11-13 is 37 days old "
-                                    "(cadence 31 days); run /user-afterparty.")
+    # The default is the operator's recorded 35 days: exactly 35 days old is quiet, 36 nudges.
+    edge = _run(AGG, "--check-cadence", "--out-dir", snaps, "--as-of", "2026-12-18T00:00:00Z")
+    assert edge.returncode == 0 and edge.stdout == ""
+    stale = _run(AGG, "--check-cadence", "--out-dir", snaps, "--as-of", "2026-12-19T00:00:00Z")
+    assert stale.stdout.strip() == ("usage telemetry: last snapshot 2026-11-13 is 36 days old "
+                                    "(cadence 35 days); run /user-afterparty.")
     none = _run(AGG, "--check-cadence", "--out-dir", str(tmp_path / "empty"), "--as-of", AS_OF)
     assert none.stdout.startswith("usage telemetry: no snapshot yet in ")
 

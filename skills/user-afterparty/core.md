@@ -71,7 +71,7 @@ there is nothing to confirm.
 hygiene", "workspace cleanup", "afterparty", "sprint wrap", "tidy up the workspace". Also
 the target of the monthly `dev-sprint-wrap-monthly` scheduled task.
 
-**Cadence: monthly.** Run it at least every 31 days even without a milestone. Claude keeps
+**Cadence: monthly.** Run it at least every 35 days even without a milestone. Claude keeps
 only about six weeks of transcripts, so the monthly usage snapshot is the only lasting
 record of which skills are used; a missed month is lost data. Scheduling the run is the
 operator's; afterparty only nudges (Step 0).
@@ -209,7 +209,7 @@ When `<workspace>` is resolved, run the telemetry cadence check (read-only, ever
 
     python -I <skill-dir>/scripts/aggregate.py --check-cadence --out-dir "<workspace>/docs/user-afterparty"
 
-It prints one nudge line when the newest snapshot is older than 31 days or none exists,
+It prints one nudge line when the newest snapshot is older than 35 days or none exists,
 and nothing otherwise; print that line, if any, above the plan line.
 
 Announce ONE plan line before acting, so a wrong scope is visible immediately:

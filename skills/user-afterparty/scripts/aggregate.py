@@ -3,8 +3,8 @@
 Usage:
   python -I aggregate.py --manifest <skill-manifest.json> --events <events.jsonl>
                          --out-dir <snapshot folder> [--repo <skill-mesh checkout>]
-                         [--as-of <ISO-8601 time>] [--cadence-days 31]
-  python -I aggregate.py --check-cadence --out-dir <snapshot folder> [--cadence-days 31]
+                         [--as-of <ISO-8601 time>] [--cadence-days 35]
+  python -I aggregate.py --check-cadence --out-dir <snapshot folder> [--cadence-days 35]
 
 Every location is an explicit argument; nothing is derived from this file's own folder,
 so the installed copy never writes into the installed tree. The snapshot is
@@ -33,6 +33,9 @@ import re
 import subprocess
 import sys
 
+# The operator's recorded default (v3 cleanup decision item 8): nudge when the newest
+# snapshot is over 35 days old.
+CADENCE_DAYS = 35
 SNAPSHOT_RE = re.compile(r"^usage-(\d{4}-\d{2}-\d{2})\.json$")
 BUILTIN = {"clear", "model", "goal", "compact", "resume", "config", "init", "help", "context",
            "cost", "exit", "login", "status"}
@@ -241,7 +244,7 @@ def main(argv=None):
     ap.add_argument("--out-dir", required=True)
     ap.add_argument("--repo")
     ap.add_argument("--as-of")
-    ap.add_argument("--cadence-days", type=int, default=31)
+    ap.add_argument("--cadence-days", type=int, default=CADENCE_DAYS)
     ap.add_argument("--check-cadence", action="store_true")
     a = ap.parse_args(argv)
     now = parse_ts(a.as_of) if a.as_of else dt.datetime.now(dt.timezone.utc)

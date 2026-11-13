@@ -31,8 +31,9 @@ SESSION IDENTITY (write authority)
     -SessionId is the caller's own stable session id, bound by the caller's host wrapper:
     on Claude, the parent-directory name of the session's scratchpad path (it equals the
     hook session_id and the transcript basename); on Codex and GPT, only an id that the
-    running host's wrapper explicitly binds. It is accepted only as one path segment (no
-    backslash, slash or `..`).
+    running host's wrapper explicitly binds. It is accepted only as one plain path segment:
+    letters, digits, dot, underscore and hyphen, with no `..` (so no separator, no drive or
+    alternate-data-stream colon, no surrounding space).
     Never take the freshest sessions/*.md or the current.md rollup as this session's file,
     and never fabricate, guess or borrow an id: not another host's session variable (for
     example COPILOT_AGENT_SESSION_ID), not an environment variable the running host's
@@ -96,7 +97,7 @@ $registry = Join-Path $root '.claude\observatory\registry.toml'
 
 # -- Session identity: the caller-bound id, one path segment, or unavailable --
 $sid = $SessionId
-if ($sid -and ($sid.Contains('\') -or $sid.Contains('/') -or $sid.Contains('..') -or $sid.Trim() -ne $sid)) {
+if ($sid -and (($sid -cnotmatch '^[A-Za-z0-9._-]+\z') -or $sid.Contains('..'))) {
     $sid = ''
 }
 $sessionFile = $null
