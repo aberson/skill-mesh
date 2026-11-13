@@ -243,7 +243,7 @@ DESCRIPTIONS = {
     "plan-expedite": "Chain plan-review, plan-wrap, repo-sync, and task-handoff into one prep step before build.",
     "plan-feature": "Plan a new feature or phase for an existing project by reading its code and docs.",
     "plan-init": "Guide creation of a new project plan through a structured conversation about stack and tooling.",
-    "plan-merge": "Merge two overlapping plans into one, resolving sequencing and deleting subsumed phases.",
+    "plan-merge": "Merge overlapping plans into one; --trim proposes cuts to one plan, applies agreed ones.",
     "plan-redline": "Render a plan as an operator proposal, marking each choice operator- or agent-picked.",
     "plan-review": "Review a plan for gaps, open decisions and risks, checking claims against the code.",
     "plan-trim": "Investigate a project and propose plan items to cut or fold, then execute the trim.",

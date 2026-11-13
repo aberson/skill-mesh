@@ -551,7 +551,7 @@ Drawn from:
 
 **Alt:** Two plans are read and compared, contradictions and a merged spine are proposed, hard questions gate writing, and accepted originals are archived.
 
-**Deliberately not shown:** overlap table fields, question catalog, merged-plan template, archive naming rules, and external-reference command details
+**Deliberately not shown:** overlap table fields, question catalog, merged-plan template, archive naming rules, external-reference command details, and the separate --trim mode
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="cards/plan-merge-dark.svg">

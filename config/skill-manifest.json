@@ -631,7 +631,7 @@
     {
       "name": "plan-merge",
       "status": "portable",
-      "description": "Merge two overlapping plans into one, resolving sequencing and deleting subsumed phases.",
+      "description": "Merge overlapping plans into one; --trim proposes cuts to one plan, applies agreed ones.",
       "core": "skills/plan-merge/core.md",
       "providers": {
         "claude": "skills/plan-merge/providers/claude.md",

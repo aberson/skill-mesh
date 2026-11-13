@@ -1,7 +1,7 @@
 {
   "schema": "show-your-work.workflows.v1",
   "generator": "show-your-work 0.1.0",
-  "generated_at": "2026-11-13T10:14:50+00:00",
+  "generated_at": "2026-11-13T10:22:03+00:00",
   "source_dir": "docs/workflows",
   "items": [
     {
@@ -275,12 +275,12 @@
       "label": "plan-merge",
       "summary": "Compare two overlapping plans, resolve contradictions and sequencing, then write one approved spine and archive the originals.",
       "alt": "Two plans are read and compared, contradictions and a merged spine are proposed, hard questions gate writing, and accepted originals are archived.",
-      "not_shown": "overlap table fields, question catalog, merged-plan template, archive naming rules, and external-reference command details",
+      "not_shown": "overlap table fields, question catalog, merged-plan template, archive naming rules, external-reference command details, and the separate --trim mode",
       "sources": [
         "skills/plan-merge/core.md"
       ],
       "source_path": "docs/workflows/plan-merge.mmd",
-      "source_sha256": "4572fa896f3885eb35f7701e119182dbae8d92bf27097bb1a9e2776f607f1e05",
+      "source_sha256": "bde2bfa0cc86a22dfff51300e9beacd9f22f9c424051888c1879b1e0a801f7bc",
       "engine": "mermaid",
       "rasters": null
     },
