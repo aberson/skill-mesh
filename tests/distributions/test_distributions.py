@@ -2440,35 +2440,46 @@ def test_recreated_operator_file_at_owned_path_not_clobbered(one_skill_dist, tmp
 def test_partial_copy_recovery_ledger_lists_only_existing_files(one_skill_dist, tmp_path):
     """After a mid-copy failure (simulated via an exclusive file lock), the persisted
     (recovery) owned set must list ONLY files that exist on disk -- no ghost entries
-    that a later plain reinstall could clobber."""
-    try:
-        import msvcrt
-    except ImportError:  # pragma: no cover - non-Windows
-        pytest.skip("msvcrt (file locking) unavailable")
+    that a later plain reinstall could clobber.
 
+    The interruption must land in the COPY phase, or the recovery ledger is never
+    written and this test is vacuous. An identical reinstall under a byte-range lock
+    failed earlier, while validation hashed the locked file (v3 guard review, should-fix
+    2: an installer that persisted a ghost row stayed green). So the second install is
+    an UPGRADE (the source core.md changed), and the installed core.md is held open
+    read-shared: validation can still hash it, and the replace of it fails mid-copy."""
     home = tmp_path / "home"
     r = _install(home, "claude", dist_dir=one_skill_dist)
     assert r.returncode == 0, r.stderr
+    rel = _disco_rel("claude", "build-phase", "core.md")
     lockpath = home / DISCOVERY_SUBDIR["claude"] / "build-phase" / "core.md"
+    installed_bytes = lockpath.read_bytes()
+    installed_hash = _ledger(home)["installs"]["claude"]["owned_file_hashes"][rel]
 
-    f = open(lockpath, "r+b")
+    upgraded = tmp_path / "upgraded-dist"
+    shutil.copytree(one_skill_dist, upgraded)
+    source = upgraded / "claude" / "build-phase" / "core.md"
+    source.write_bytes(source.read_bytes() + b"\nchanged for the partial-copy upgrade\n")
+
+    closer = _open_deny_delete(lockpath)
+    if closer is None:
+        pytest.skip("cannot open a write-denying handle in this environment")
     try:
-        msvcrt.locking(f.fileno(), msvcrt.LK_NBLCK, 1)
-        r2 = _install(home, "claude", dist_dir=one_skill_dist)
+        r2 = _install(home, "claude", dist_dir=upgraded)
     finally:
-        try:
-            msvcrt.locking(f.fileno(), msvcrt.LK_UNLCK, 1)
-        except OSError:
-            pass
-        f.close()
+        closer()
 
     if r2.returncode == 0:
-        pytest.skip("file lock did not interrupt the copy on this host")
+        pytest.skip("the held handle did not interrupt the copy on this host")
     led = json.loads((home / ".skill-mesh-install.json").read_text(encoding="utf-8"))
-    owned = led["installs"]["claude"]["owned_files"]
+    entry = led["installs"]["claude"]
+    owned = entry["owned_files"]
     ghosts = [o for o in owned
               if not (home / Path(o.replace("/", "\\"))).exists()]
     assert not ghosts, f"recovery ledger lists non-existent (ghost) files: {ghosts}"
+    # The file the copy could not replace keeps its old bytes and its OLD authority.
+    assert lockpath.read_bytes() == installed_bytes
+    assert rel in owned and entry["owned_file_hashes"][rel] == installed_hash
 
 
 def test_final_ledger_failure_keeps_write_ahead_authority_and_plain_retry_converges(tmp_path):
