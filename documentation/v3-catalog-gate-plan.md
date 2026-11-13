@@ -15,6 +15,12 @@ This is the execution copy for build-phase, copied 2026-11-12 from the operator'
 > rule. Where a step below still names a full suite as its gate, read it this way. The step text is
 > not rewritten.
 
+> **Amended 2026-11-13, operator decision ("Step 8 now, rest to v3.1"):** Step 8 (item 51, option
+> "remove") was done standalone on 2026-11-13, ahead of the rest of this plan, in commit `dd01309`.
+> Steps 1 to 7 and 9 to 11 move to v3.1; they are deferred, not cancelled. Step 8's evidence (the
+> measured headroom, the decision note and the differential run on a scratch copy) is in
+> `<coding-root>/docs/skill-mesh-3-review/builds/catalog-gate/step8/`.
+
 > **Final review (2026-11-12 10:55):** `plan-review` found one blocker, Condition paths that did not
 > resolve from the build-phase project root; fixed in the roots paragraph and Steps 6 and 8 to 11. Record:
 > `catalog-gate-plan-2026-11-12-final-review.md`.
@@ -368,6 +374,8 @@ diverge). If Step 10 skips, Step 11 skips with it and the branch stays unmerged 
 Step 10 and then Step 11.
 
 ### Step 8: Implement the operator-chosen item 51 option
+
+**Status:** DONE 2026-11-13. Commit `dd01309`, standalone by operator decision (see the 2026-11-13 amendment at the top); review pending. Option "remove": the `headroom < 900` upper bound is gone, the `headroom > 400` lower bound is unchanged, and `CATALOG_FLOOR == 8_000` is pinned as the single constant the gate's predicate uses.
 
 - **Problem:** The guard edit must follow the operator's choice and must be its own commit, never part of the
   Phase 1 branch.
