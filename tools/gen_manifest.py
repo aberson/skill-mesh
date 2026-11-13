@@ -57,7 +57,7 @@ PORTABLE = [
     "citation-distill", "citation-review", "citation-sweep", "citation-triage",
     "code-consigliere",
     "goblin-do", "goblin-suggest", "goblin-sweep", "judge-ui",
-    "lesson-harvest", "memory-distill", "observatory-doctor", "plan-expedite",
+    "lesson-harvest", "memory-distill", "plan-expedite",
     "plan-feature", "plan-init", "plan-merge", "plan-redline", "plan-review",
     "plan-trim", "plan-wrap", "repo-init", "repo-sync", "repo-update",
     "repo-wrap", "research-prospect", "review-deep", "review-gauntlet",
@@ -79,7 +79,7 @@ NATIVE = ["claude-oauth-auth", "context-slim"]
 # what `status`, `counts["portable"]`, `counts["provider_native"]` and the README's
 # GPT-capable line all mean. A codex adapter is ADDITIVE on top of a record that is
 # already portable-or-native: it never moves a skill between those two buckets, so
-# EXPECTED_TOTAL / EXPECTED_PORTABLE / EXPECTED_NATIVE are 57/55/2 and every existing
+# EXPECTED_TOTAL / EXPECTED_PORTABLE / EXPECTED_NATIVE are 56/54/2 and every existing
 # count keeps its exact meaning. Modelling codex as a third status instead would
 # redefine `portable` for all catalog records and invalidate every committed tally.
 #
@@ -90,7 +90,8 @@ NATIVE = ["claude-oauth-auth", "context-slim"]
 # SURFACE with this list empty; Step 4 authored the pilot five, Step 6's Cohort B
 # (issue #123, the pipeline family) and Step 7's Cohort C (issue #124, the
 # build/review/skill/tier families) grew it to 33, and Step 8's Cohort D
-# (issue #125, the remaining 14: memory-distill, observatory-doctor,
+# (issue #125, the remaining 14: memory-distill, a Dev Observatory doctor (moved to
+# dev-observatory by the v3 catalog cleanup, Step 7),
 # research-prospect, and the user-* conversational family) closed the gap: every
 # portable skill now carries a codex adapter, so this list EQUALS PORTABLE by
 # value. Phase CP Step 10 (issue #127) promoted seven workspace-custom skills --
@@ -110,7 +111,7 @@ CODEX = [
     "citation-distill", "citation-review", "citation-sweep", "citation-triage",
     "code-consigliere",
     "goblin-do", "goblin-suggest", "goblin-sweep", "judge-ui",
-    "lesson-harvest", "memory-distill", "observatory-doctor", "plan-expedite",
+    "lesson-harvest", "memory-distill", "plan-expedite",
     "plan-feature", "plan-init", "plan-merge", "plan-redline", "plan-review",
     "plan-trim", "plan-wrap", "repo-init", "repo-sync", "repo-update",
     "repo-wrap", "research-prospect", "review-deep", "review-gauntlet",
@@ -144,7 +145,7 @@ CODEX = [
 # (citation-sweep is additionally excluded by construction: it is in SUB_AGENT below,
 # and sub-agent implies local_capable=false.)
 LOCAL_CAPABLE = {
-    "memory-distill", "observatory-doctor", "plan-feature",
+    "memory-distill", "plan-feature",
     "plan-init", "plan-merge", "plan-review", "plan-trim", "plan-wrap",
     "repo-init", "repo-sync", "repo-update", "review-proof", "review-uat",
     "skill-eval-setup", "user-draft", "user-gateway",
@@ -239,7 +240,6 @@ DESCRIPTIONS = {
     "judge-ui": "Drive a web UI through a flow, screenshot it, and have a vision judge give a verdict.",
     "lesson-harvest": "Find un-codified regressions in git history and notes; output an independently reviewed preview.",
     "memory-distill": "Review recent feedback memories one at a time and surface the principles they point at.",
-    "observatory-doctor": "Health-check every dev-observatory launcher button and report which project verbs work.",
     "plan-expedite": "Chain plan-review, plan-wrap, repo-sync, and task-handoff into one prep step before build.",
     "plan-feature": "Plan a new feature or phase for an existing project by reading its code and docs.",
     "plan-init": "Guide creation of a new project plan through a structured conversation about stack and tooling.",
@@ -341,7 +341,6 @@ SUPPORT_ASSETS = {
     ],
     "lesson-harvest": [("skills", "evals/")],
     "memory-distill": [("skills", "evals/")],
-    "observatory-doctor": [],
     "plan-expedite": [
         ("skills", "evals/"),
         ("skills", "test-fixtures/"),
@@ -410,7 +409,7 @@ SUPPORT_ASSETS = {
 # Spelled-out expectations for the tree enumeration below. The same three numbers are
 # asserted independently by tests/package-integrity/test_manifest_contract.py.
 # 59/56/3 since the v3 user-pm plan's Step 13 (#238) retired the orientation skill into user-pm.
-EXPECTED_TOTAL, EXPECTED_PORTABLE, EXPECTED_NATIVE = 57, 55, 2
+EXPECTED_TOTAL, EXPECTED_PORTABLE, EXPECTED_NATIVE = 56, 54, 2
 
 
 def skill_support_assets(name: str):

@@ -1,7 +1,7 @@
 {
   "schema": "show-your-work.workflows.v1",
   "generator": "show-your-work 0.1.0",
-  "generated_at": "2026-11-13T09:08:13+00:00",
+  "generated_at": "2026-11-13T10:14:50+00:00",
   "source_dir": "docs/workflows",
   "items": [
     {
@@ -225,20 +225,6 @@
       ],
       "source_path": "docs/workflows/memory-distill.mmd",
       "source_sha256": "1099ae2117cd53488efe08fbc724f34d28855d229afc240161f677a8ac616049",
-      "engine": "mermaid",
-      "rasters": null
-    },
-    {
-      "id": "observatory-doctor",
-      "label": "observatory-doctor",
-      "summary": "Run the prepared Dev Observatory static doctor once and relay measured launcher-row health without probing or repairing projects.",
-      "alt": "Root and runtime validation lead to one static doctor run without live probes, whose valid report branches to measured nothing, pass, warning, or broken rows.",
-      "not_shown": "PowerShell argument construction, JSON field schema, individual static checks, diagnostic text, and live-probe utility behavior",
-      "sources": [
-        "skills/observatory-doctor/core.md"
-      ],
-      "source_path": "docs/workflows/observatory-doctor.mmd",
-      "source_sha256": "4828e476ed16ebd819355191ec082edeb3406548d6b7b4f3fda5a5f44e2068c8",
       "engine": "mermaid",
       "rasters": null
     },

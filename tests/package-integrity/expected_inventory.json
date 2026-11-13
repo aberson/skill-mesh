@@ -1,16 +1,16 @@
 {
   "note": "Authoritative expected inventory for package-integrity tests. Committed so the public package tests need no private/legacy source. Regenerate with tools/gen_manifest.py.",
   "counts": {
-    "total": 57,
-    "portable": 55,
+    "total": 56,
+    "portable": 54,
     "provider_native": 2,
-    "claude": 57,
-    "gpt": 55,
-    "codex": 55,
-    "local_capable": 20,
+    "claude": 56,
+    "gpt": 54,
+    "codex": 54,
+    "local_capable": 19,
     "sub_agent": 19,
     "vision": 1,
-    "filesystem": 57
+    "filesystem": 56
   },
   "portable": [
     "build-phase",
@@ -27,7 +27,6 @@
     "judge-ui",
     "lesson-harvest",
     "memory-distill",
-    "observatory-doctor",
     "plan-expedite",
     "plan-feature",
     "plan-init",
@@ -88,7 +87,6 @@
     "judge-ui",
     "lesson-harvest",
     "memory-distill",
-    "observatory-doctor",
     "plan-expedite",
     "plan-feature",
     "plan-init",
@@ -132,7 +130,6 @@
   ],
   "local_capable": [
     "memory-distill",
-    "observatory-doctor",
     "plan-feature",
     "plan-init",
     "plan-merge",
@@ -495,21 +492,6 @@
           "dest": "skills/memory-distill/evals/"
         }
       ]
-    },
-    {
-      "name": "observatory-doctor",
-      "status": "portable",
-      "local_capable": true,
-      "capabilities": [
-        "filesystem"
-      ],
-      "migration": {
-        "legacy_core": ".claude/skills-gpt/observatory-doctor/SKILL-core.md",
-        "legacy_claude_launcher": ".claude/skills/observatory-doctor/SKILL.md",
-        "legacy_claude_adapter": ".claude/skills/observatory-doctor/SKILL-claude.md",
-        "legacy_gpt": ".claude/skills-gpt/observatory-doctor/SKILL-gpt.md"
-      },
-      "support_assets": []
     },
     {
       "name": "plan-expedite",

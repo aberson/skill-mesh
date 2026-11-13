@@ -46,8 +46,10 @@ SKILLS_ROOT = REPO_ROOT / "skills"
 # Floor, not an equality: skills are added, never quietly removed. Below it, every
 # per-file loop in this module would be vacuous. Raised 50 -> 57 at Phase CP
 # Step 10 (issue #127); a floor left behind the catalog stops noticing a
-# whole promotion's worth of adapters going missing.
-MIN_CLAUDE_ADAPTERS = 57
+# whole promotion's worth of adapters going missing. Lowered 57 -> 56 by a
+# deliberate, reviewed removal (v3 catalog cleanup Step 7, #263): the catalog
+# itself is 56 there, so the old floor would red on a correct tree.
+MIN_CLAUDE_ADAPTERS = 56
 
 # The one skill whose adapter deliberately declares itself NOT user-invocable. It is
 # a reference document, not a command. Pinned by name so a regression that flips the

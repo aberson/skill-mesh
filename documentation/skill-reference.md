@@ -1,6 +1,6 @@
 # Skill reference
 
-The v2 catalog contains **57 Claude skills** and **55 portable skills** for Codex and GitHub Copilot. Host coverage means an adapter is packaged; required native capabilities and external utilities still apply.
+The v2 catalog contains **56 Claude skills** and **54 portable skills** for Codex and GitHub Copilot. Host coverage means an adapter is packaged; required native capabilities and external utilities still apply.
 
 Each workflow link opens its source-linked diagram. Read the contract for full gates, flags, and omissions. See [installation](../README.md#install-or-upgrade), [utility integrations](../README.md#how-utility-projects-are-used), and [release limitations](https://github.com/aberson/skill-mesh/releases/tag/v2.0.2).
 
@@ -22,7 +22,6 @@ Each workflow link opens its source-linked diagram. Read the contract for full g
 | [judge-ui](../skills/judge-ui/core.md) | Drive a declared UI flow through mechanical and read-back gates, calibrate one independent vision dispatch, and reduce to PASS, FAIL, or ESCALATE. | Claude, Copilot, Codex | [Diagram](../docs/workflows/README.md#judge-ui) |
 | [lesson-harvest](../skills/lesson-harvest/core.md) | Record one private observation or produce a privacy-reviewed zero-write lesson preview; automatic publication is unavailable in v2. | Claude, Copilot, Codex | [Diagram](../docs/workflows/README.md#lesson-harvest) |
 | [memory-distill](../skills/memory-distill/core.md) | Review selected feedback memories one at a time, surface broader principles, and apply changes only after explicit approval. | Claude, Copilot, Codex | [Diagram](../docs/workflows/README.md#memory-distill) |
-| [observatory-doctor](../skills/observatory-doctor/core.md) | Run the prepared Dev Observatory static doctor once and relay measured launcher-row health without probing or repairing projects. | Claude, Copilot, Codex | [Diagram](../docs/workflows/README.md#observatory-doctor) |
 | [plan-expedite](../skills/plan-expedite/core.md) | Warn but continue on stale plans, resume only a valid stage prefix, then run the ordered review-to-build handoff chain. | Claude, Copilot, Codex | [Diagram](../docs/workflows/README.md#plan-expedite) |
 | [plan-feature](../skills/plan-feature/core.md) | Ground a feature plan in the existing codebase, resolve consequential choices, encode triggered obligations, and hand it to review. | Claude, Copilot, Codex | [Diagram](../docs/workflows/README.md#plan-feature) |
 | [plan-init](../skills/plan-init/core.md) | Guide a greenfield planning conversation, resolve architecture and process choices, then save a complete plan and project instructions. | Claude, Copilot, Codex | [Diagram](../docs/workflows/README.md#plan-init) |

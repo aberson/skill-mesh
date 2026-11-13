@@ -3,12 +3,12 @@
 
 These diagrams summarize the **Skill Mesh v2.0.4** contracts. Use the
 [skill reference](../../documentation/skill-reference.md) for a compact table
-of all 57 skills, purposes, host coverage and direct diagram links.
+of all 56 skills, purposes, host coverage and direct diagram links.
 
 Each diagram declares its source and omitted detail. The linked source contract
 remains authoritative: a diagram does not authorize an action, bypass a hold,
-or establish live qualification. Claude has all 57 packages; Codex and Copilot
-have the 55 portable packages. Native capability gates still apply.
+or establish live qualification. Claude has all 56 packages; Codex and Copilot
+have the 54 portable packages. Native capability gates still apply.
 
 These diagrams use the same rounded cards, monospace labels, and blue connectors
 as the overview graphics. Blue-bordered **GATE** cards mark decisions; connector
@@ -59,7 +59,6 @@ produces the default Mermaid README rather than this SVG gallery.
 - [judge-ui](#judge-ui) - Drive a declared UI flow through mechanical and read-back gates, calibrate one independent vision dispatch, and reduce to PASS, FAIL, or ESCALATE.
 - [lesson-harvest](#lesson-harvest) - Record one private observation or produce a privacy-reviewed zero-write lesson preview; automatic publication is unavailable in v2.
 - [memory-distill](#memory-distill) - Review selected feedback memories one at a time, surface broader principles, and apply changes only after explicit approval.
-- [observatory-doctor](#observatory-doctor) - Run the prepared Dev Observatory static doctor once and relay measured launcher-row health without probing or repairing projects.
 - [plan-expedite](#plan-expedite) - Warn but continue on stale plans, resume only a valid stage prefix, then run the ordered review-to-build handoff chain.
 - [plan-feature](#plan-feature) - Ground a feature plan in the existing codebase, resolve consequential choices, encode triggered obligations, and hand it to review.
 - [plan-init](#plan-init) - Guide a greenfield planning conversation, resolve architecture and process choices, then save a complete plan and project instructions.
@@ -468,29 +467,6 @@ Drawn from:
 </picture>
 
 [Open full size](cards/memory-distill-dark.svg)
-
----
-
-## observatory-doctor
-
-Run the prepared Dev Observatory static doctor once and relay measured launcher-row health without probing or repairing projects.
-
-Source: [`observatory-doctor.mmd`](observatory-doctor.mmd)
-
-Drawn from:
-
-- [`skills/observatory-doctor/core.md`](../../skills/observatory-doctor/core.md)
-
-**Alt:** Root and runtime validation lead to one static doctor run without live probes, whose valid report branches to measured nothing, pass, warning, or broken rows.
-
-**Deliberately not shown:** PowerShell argument construction, JSON field schema, individual static checks, diagnostic text, and live-probe utility behavior
-
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="cards/observatory-doctor-dark.svg">
-  <img alt="Root and runtime validation lead to one static doctor run without live probes, whose valid report branches to measured nothing, pass, warning, or broken rows." src="cards/observatory-doctor-light.svg">
-</picture>
-
-[Open full size](cards/observatory-doctor-dark.svg)
 
 ---
 
