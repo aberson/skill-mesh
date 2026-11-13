@@ -227,6 +227,15 @@ FILE_EXEMPT = {
     "runtime/telemetry/telemetry-writer.ps1":
         "Appends to the telemetry log path, validated by Resolve-SafePath. Not a "
         "consumer-home installer.",
+    "_shared/user-project.ps1":
+        "The session pin script (v3 catalog cleanup Step 15). Like the router above it "
+        "writes only its own session-state file, <coding-root>/.claude/task-state/"
+        "sessions/<id>.md, and creates that folder; it takes no -Home and never touches "
+        "an installed skill tree. The id is restricted to one path segment, and "
+        "Assert-SessionTarget refuses a junction or symlink anywhere between the coding "
+        "root and the file before any write (proven by _shared/test_user_project.py). "
+        "It ships inside the profiles, where runtime/path-guard.ps1 does not, so it "
+        "cannot call Resolve-SafePath.",
 }
 
 # Individual sites inside the consumer-home tools. Keyed by (file, exact stripped

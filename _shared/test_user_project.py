@@ -171,6 +171,23 @@ def test_no_coding_root_fails_and_writes_nothing(tmp_path):
     assert not (lone / ".claude").exists()
 
 
+def test_a_link_on_the_way_to_the_session_file_is_refused_and_nothing_is_written(tmp_path):
+    root = _root(tmp_path)
+    elsewhere = tmp_path / "elsewhere"
+    elsewhere.mkdir()
+    (root / ".claude" / "task-state").mkdir()
+    link = root / ".claude" / "task-state" / "sessions"
+    made = subprocess.run(["cmd", "/c", "mklink", "/J", str(link), str(elsewhere)],
+                          capture_output=True, check=False)
+    assert made.returncode == 0, made.stderr
+    for args in (["alpha", "-SessionId", "s9"], ["clear", "-SessionId", "s9"]):
+        proc = _run(SCRIPT, root, *args)
+        assert proc.returncode == 1, (args, proc.stdout, proc.stderr)
+        assert proc.stderr.strip().startswith(
+            "user-project.ps1: refusing to write through a link under the coding root (")
+    assert list(elsewhere.iterdir()) == [], "the write must not land through the junction"
+
+
 def _identity_violations(script: Path, tmp_path: Path) -> list:
     """Every way `script` breaks the identity rule; [] means it holds.
 

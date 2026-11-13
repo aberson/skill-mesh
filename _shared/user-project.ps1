@@ -54,7 +54,8 @@ WRITES
     the next task-handoff checkpoint replaces it and preserves the pin. Never current.md,
     another session's file, the registry, or the git index (no git add, no commit).
     Failures write nothing: no coding-root marker (exit 1), unknown name (exit 1, lists
-    the known slugs), identity unavailable (exit 0, the advisory line).
+    the known slugs), identity unavailable (exit 0, the advisory line), and a link
+    (junction or symlink) between the coding root and the session file (exit 1).
     Idempotent: re-running SET with the same name rewrites the same line; a second CLEAR
     prints `Active project already unset.`
 
@@ -141,6 +142,24 @@ function Show-CwdRepo {
     Write-Line "cwd repo: $top"
 }
 
+function Assert-SessionTarget {
+    # Containment before any write: the session file and every existing folder between it
+    # and the coding root must be real entries, not links (junctions, symlinks) that could
+    # carry the write somewhere else. The id is already one path segment. Refuse, write
+    # nothing, exit 1.
+    $p = $sessionFile
+    while ($p -and $p.Length -gt $root.Length) {
+        if (Test-Path -LiteralPath $p) {
+            $item = Get-Item -LiteralPath $p -Force
+            if ($item.Attributes -band [System.IO.FileAttributes]::ReparsePoint) {
+                Write-Fail "user-project.ps1: refusing to write through a link under the coding root ($p)."
+                exit 1
+            }
+        }
+        $p = Split-Path $p -Parent
+    }
+}
+
 # -- SHOW --
 if ($Project -eq '') {
     if (-not $sid) {
@@ -166,6 +185,7 @@ if ($Project -eq '') {
 # -- CLEAR --
 if ($Project -eq 'clear') {
     if (-not $sid) { Write-Line $IdentityUnavailableLine; exit 0 }
+    Assert-SessionTarget
     if (-not (Test-Path -LiteralPath $sessionFile -PathType Leaf)) { Write-Line 'Active project already unset.'; exit 0 }
     $s = Read-SessionLines $sessionFile
     $idx = -1
@@ -208,6 +228,7 @@ if ($match.owned -eq 'false') { $suffix = ' [third-party]' }
 
 # -- SET: 3. identity --
 if (-not $sid) { Write-Line $IdentityUnavailableLine; exit 0 }
+Assert-SessionTarget
 
 # -- SET: 4. write the pin (read-merge-write) --
 $pinValue = "$($match.slug) ($abs)"
