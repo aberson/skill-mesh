@@ -128,6 +128,8 @@ Red-on-garbage (Steps 6 to 12): wherever a test is moved, merged, folded, delete
 
 ### Step 4: Carry the rule into the gate-bearing cores, and sweep for every remaining copy
 
+**Status:** DONE 2026-11-13 (operator approved 2026-11-13). Commit 99bf538; coding root f21bbb49 (local). Reviewed APPROVE (`<coding-root>/docs/skill-mesh-3-review/builds/guard-step4-review.md`). Amendment from the review: the sweep must also run on text with line breaks joined (the line-based grep missed a sentence wrapped across two lines; the builder's joined sweep is the reference, in `<coding-root>/docs/skill-mesh-3-review/builds/guard-step4/`). Follow-up, not in this step: scope the "test suite where applicable" wording in the review-deep and review-gauntlet cores (review tooling, not a reviewer re-running a builder's suite; no contradiction, a clarity UPDATE).
+
 - **Problem:** The workspace gate-scope rule says its wording is carried identically by the `CLAUDE.md` Testing bullet and the build-step and build-phase gate prose. Left alone, the cores keep telling the build orchestrator that the step gate runs the FULL suite, which contradicts Step 1. The first list of copies was incomplete: a fresh grep also finds the build-step DONE gate step itself (not only its "too slow" clause), `user-debug`, the `build-queue` success clause, `user-walkthrough`, and `test-prune` (table rows 5 to 10).
 - **Type:** code
 - **Issue:** #

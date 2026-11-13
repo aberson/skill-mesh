@@ -190,8 +190,9 @@ red. Then **offer** — do not execute — three closers:
    rules**, using scoped `git add <paths>` only after its checks (never `git add -A`). The offer lists eligible files —
    the edited path(s) this walkthrough's row evidence records (**Re-runs**), never a file a row
    only cites — with their `git diff --stat` and passing applicable tests. It separately lists
-   and excludes any mixed-change, retained, red/erroring, or missing-test file. It offers the project's declared full suite first;
-   narrowest tests alone are not full-suite gate evidence. When selected: apply the
+   and excludes any mixed-change, retained, red/erroring, or missing-test file. It offers the project's declared per-change gate
+   first (the focused tests for the eligible files plus the quick repo-wide checks its testing
+   rule names); a subset that omits the named pack is not gate evidence. When selected: apply the
    local wrong-directory guard and before-staging boundary; never stage the ledger or an
    ineligible file; never include unrelated pre-existing staged work in the ordinary commit;
    never bypass hooks. On a hold or failure, report it verbatim and preserve the worktree and

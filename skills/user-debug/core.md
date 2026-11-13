@@ -377,8 +377,14 @@ Continue if verify passed (or was skipped):
 1. Confirm changes are in the project tree (the delegated build skill
    already landed its reviewed payload; standalone build-step leaves it
    uncommitted).
-2. Run every gate the project declares in the main project, including the FULL
-   test suite (every declared test root). Detect typecheck and lint from project
+2. Run every gate the project declares in the main project. Tests follow the
+   project's testing rule (workspace owner `dev/.claude/rules/code-quality.md`
+   § "Gate scope"), whose first sentence is:
+   Per change, run the focused tests for what the change touches plus the quick repo-wide checks, and save the command, the files it selected and its summary line to a file.
+   Run the focused tests for the fix plus the quick repo-wide checks the
+   project's rule names (its per-change pack; a project that names none runs its
+   declared test suites); the per-release sweep is not started here. Detect
+   typecheck and lint from project
    configuration: an absent gate is `not configured`, never `OK`. A configured
    gate that is unavailable or not run blocks completion; a deliberately absent
    typecheck/lint does not. Name the suites that ran; an unnamed subset count is
