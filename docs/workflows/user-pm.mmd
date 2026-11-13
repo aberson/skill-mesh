@@ -1,22 +1,23 @@
 %% user-pm
 %% Summary: Present shipped work, outstanding plan items, practical next moves, and credible candidates to cut through a product-management lens.
 %% Sources: skills/user-pm/core.md
-%% Not shown: topic-specific templates, overnight qualification rubric details, Observatory hook fields, tone rules, and plan-discovery commands
-%% Alt: Verified project history and plan state feed a concise overview whose next moves are categorized and checked for scope that should be cut.
+%% Not shown: call ceilings, gh and Passing Notes command lines, route criteria read from user-build-route, topic-specific templates, lane planning rules, JSON keys, and tone rules
+%% Alt: Plan, git, live state, open issues and lane notes feed a read-only status view and a routed board, which lead to readiness checks, anchored ideas, cuts, and one next move.
 
 flowchart TD
-    A[Resolve the project and current plan]
-    A --> B[Verify shipped history]
-    A --> C[Collect outstanding planned work]
-    B --> D[Explain current project state]
-    C --> D
-    D --> E[Generate concrete next moves]
-    E --> F{Move category}
-    F -->|Test| G[Name an operator check]
-    F -->|Build| H[Name a build action]
-    F -->|Decide| I[Surface required user input]
-    F -->|Overnight or other| J[Apply qualification rules]
-    G --> K[Identify candidates to cut]
-    H --> K
+    A[Resolve the project, its repository and plan]
+    A --> B[Read git history and live state]
+    A --> C[Read open issues and pull requests]
+    A --> D[Read lane cards and waiting notes]
+    B --> E[Split verified from not yet verified]
+    C --> E
+    D --> E
+    E --> F[Board items with one route and owner each]
+    F --> G{Route can run?}
+    G -->|Ready| H[Paste line for the route]
+    G -->|Unknown| I[Not ready or qualify first]
+    G -->|Operator item| J[Owner you, no agent route]
+    H --> K[Anchored unjudged ideas and cuts]
     I --> K
     J --> K
+    K --> L[One next move]

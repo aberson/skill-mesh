@@ -1,7 +1,7 @@
 {
   "schema": "show-your-work.workflows.v1",
   "generator": "show-your-work 0.1.0",
-  "generated_at": "2026-11-13T05:37:21+00:00",
+  "generated_at": "2026-11-13T05:50:07+00:00",
   "source_dir": "docs/workflows",
   "items": [
     {
@@ -750,13 +750,13 @@
       "id": "user-pm",
       "label": "user-pm",
       "summary": "Present shipped work, outstanding plan items, practical next moves, and credible candidates to cut through a product-management lens.",
-      "alt": "Verified project history and plan state feed a concise overview whose next moves are categorized and checked for scope that should be cut.",
-      "not_shown": "topic-specific templates, overnight qualification rubric details, Observatory hook fields, tone rules, and plan-discovery commands",
+      "alt": "Plan, git, live state, open issues and lane notes feed a read-only status view and a routed board, which lead to readiness checks, anchored ideas, cuts, and one next move.",
+      "not_shown": "call ceilings, gh and Passing Notes command lines, route criteria read from user-build-route, topic-specific templates, lane planning rules, JSON keys, and tone rules",
       "sources": [
         "skills/user-pm/core.md"
       ],
       "source_path": "docs/workflows/user-pm.mmd",
-      "source_sha256": "0203fce52a629b87986578530ee3cbe042a5d9e7ffa14bed2ca30df06a5d68cb",
+      "source_sha256": "471c68bd1bbf6910dbd44b5cf40e863f5b7b881125263ce784eee7d470a8a17b",
       "engine": "mermaid",
       "rasters": null
     },

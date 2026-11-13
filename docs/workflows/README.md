@@ -1334,13 +1334,13 @@ Drawn from:
 
 - [`skills/user-pm/core.md`](../../skills/user-pm/core.md)
 
-**Alt:** Verified project history and plan state feed a concise overview whose next moves are categorized and checked for scope that should be cut.
+**Alt:** Plan, git, live state, open issues and lane notes feed a read-only status view and a routed board, which lead to readiness checks, anchored ideas, cuts, and one next move.
 
-**Deliberately not shown:** topic-specific templates, overnight qualification rubric details, Observatory hook fields, tone rules, and plan-discovery commands
+**Deliberately not shown:** call ceilings, gh and Passing Notes command lines, route criteria read from user-build-route, topic-specific templates, lane planning rules, JSON keys, and tone rules
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="cards/user-pm-dark.svg">
-  <img alt="Verified project history and plan state feed a concise overview whose next moves are categorized and checked for scope that should be cut." src="cards/user-pm-light.svg">
+  <img alt="Plan, git, live state, open issues and lane notes feed a read-only status view and a routed board, which lead to readiness checks, anchored ideas, cuts, and one next move." src="cards/user-pm-light.svg">
 </picture>
 
 [Open full size](cards/user-pm-dark.svg)
