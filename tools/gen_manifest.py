@@ -59,7 +59,7 @@ PORTABLE = [
     "goblin-do", "goblin-suggest", "goblin-sweep", "judge-ui",
     "lesson-harvest", "memory-distill", "plan-expedite",
     "plan-feature", "plan-init", "plan-merge", "plan-redline", "plan-review",
-    "plan-trim", "plan-wrap", "repo-init", "repo-sync", "repo-update",
+    "plan-wrap", "repo-init", "repo-sync", "repo-update",
     "repo-wrap", "research-prospect", "review-deep", "review-gauntlet",
     "review-proof", "review-uat", "session-wrap", "skill-eval-setup",
     "skill-evolve", "skill-iterate", "task-handoff", "test-prune",
@@ -79,7 +79,7 @@ NATIVE = ["claude-oauth-auth", "context-slim"]
 # what `status`, `counts["portable"]`, `counts["provider_native"]` and the README's
 # GPT-capable line all mean. A codex adapter is ADDITIVE on top of a record that is
 # already portable-or-native: it never moves a skill between those two buckets, so
-# EXPECTED_TOTAL / EXPECTED_PORTABLE / EXPECTED_NATIVE are 55/53/2 and every existing
+# EXPECTED_TOTAL / EXPECTED_PORTABLE / EXPECTED_NATIVE are 54/52/2 and every existing
 # count keeps its exact meaning. Modelling codex as a third status instead would
 # redefine `portable` for all catalog records and invalidate every committed tally.
 #
@@ -113,7 +113,7 @@ CODEX = [
     "goblin-do", "goblin-suggest", "goblin-sweep", "judge-ui",
     "lesson-harvest", "memory-distill", "plan-expedite",
     "plan-feature", "plan-init", "plan-merge", "plan-redline", "plan-review",
-    "plan-trim", "plan-wrap", "repo-init", "repo-sync", "repo-update",
+    "plan-wrap", "repo-init", "repo-sync", "repo-update",
     "repo-wrap", "research-prospect", "review-deep", "review-gauntlet",
     "review-proof", "review-uat", "session-wrap", "skill-eval-setup",
     "skill-evolve", "skill-iterate", "task-handoff", "test-prune",
@@ -146,7 +146,7 @@ CODEX = [
 # and sub-agent implies local_capable=false.)
 LOCAL_CAPABLE = {
     "memory-distill", "plan-feature",
-    "plan-init", "plan-merge", "plan-review", "plan-trim", "plan-wrap",
+    "plan-init", "plan-merge", "plan-review", "plan-wrap",
     "repo-init", "repo-sync", "repo-update", "review-proof", "review-uat",
     "skill-eval-setup", "user-draft", "user-gateway",
     "user-pm", "user-walkthrough",
@@ -246,7 +246,6 @@ DESCRIPTIONS = {
     "plan-merge": "Merge plans into one resolving overlap and sequencing; --trim proposes and applies cuts.",
     "plan-redline": "Render a plan as an operator proposal, marking each choice operator- or agent-picked.",
     "plan-review": "Review a plan for gaps, open decisions and risks, checking claims against the code.",
-    "plan-trim": "Investigate a project and propose plan items to cut or fold, then execute the trim.",
     "plan-wrap": "Check whether a plan is self-contained for a fresh model with no conversation history.",
     "repo-init": "Publish a local project to GitHub: git init, create remote, README, issues.",
     "repo-sync": "Sync GitHub issues to match a plan's structure with rich, fresh-context bodies.",
@@ -352,7 +351,6 @@ SUPPORT_ASSETS = {
         ("skills", "reference-proposal.html"),
     ],
     "plan-review": [("skills", "evals/")],
-    "plan-trim": [("skills", "evals/")],
     "plan-wrap": [("skills", "evals/")],
     "repo-init": [("skills", "evals/")],
     "repo-sync": [("skills", "evals/")],
@@ -407,7 +405,7 @@ SUPPORT_ASSETS = {
 # Spelled-out expectations for the tree enumeration below. The same three numbers are
 # asserted independently by tests/package-integrity/test_manifest_contract.py.
 # 59/56/3 since the v3 user-pm plan's Step 13 (#238) retired the orientation skill into user-pm.
-EXPECTED_TOTAL, EXPECTED_PORTABLE, EXPECTED_NATIVE = 55, 53, 2
+EXPECTED_TOTAL, EXPECTED_PORTABLE, EXPECTED_NATIVE = 54, 52, 2
 
 
 def skill_support_assets(name: str):

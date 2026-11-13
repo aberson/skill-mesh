@@ -8,7 +8,7 @@ Two independent layers:
   at that step, the pilot five at Step 4, the whole portable roster since Step 8);
   every provider-native dir has ONLY providers/claude.md (no core.md, no gpt.md,
   no codex.md -- provider-native means Claude-only); the counts match the manifest
-  (53 portable, 2 native, 55 total, 53 codex); skills/inventory.json
+  (52 portable, 2 native, 54 total, 52 codex); skills/inventory.json
   agrees with the manifest and the committed expected_inventory.json fixture; and
   no operator-private absolute path leaked into the migrated tree.
 
@@ -90,13 +90,13 @@ def test_inventory_counts():
         "codex": sum(1 for s in skills if s["providers"]["codex"]),
     }
     assert inv["counts"] == derived, (inv["counts"], derived)
-    assert derived["total"] == 55
-    assert derived["portable"] == 53
+    assert derived["total"] == 54
+    assert derived["portable"] == 52
     assert derived["provider_native"] == 2
     # 54 since Phase CP Step 10 (issue #127) promoted the seven workspace-custom
     # skills on top of the Step 8 catalog of 47. Every portable skill carries a
     # providers/codex.md, and each promotion landed portable and codex together.
-    assert derived["codex"] == 53
+    assert derived["codex"] == 52
 
 
 def test_inventory_matches_manifest():
@@ -186,14 +186,14 @@ def test_file_counts_across_tree():
     claude = list(SKILLS_DIR.glob("*/providers/claude.md"))
     gpt = list(SKILLS_DIR.glob("*/providers/gpt.md"))
     codex = list(SKILLS_DIR.glob("*/providers/codex.md"))
-    assert len(cores) == 53, len(cores)
-    assert len(claude) == 55, len(claude)   # 53 portable + 2 native
-    assert len(gpt) == 53, len(gpt)
+    assert len(cores) == 52, len(cores)
+    assert len(claude) == 54, len(claude)   # 52 portable + 2 native
+    assert len(gpt) == 52, len(gpt)
     # 54 since Phase CP Step 10 (issue #127) promoted seven workspace-custom skills
     # on top of the Step 8 catalog of 47. This is a SPELLED count on purpose, exactly
     # like its three siblings: any step that authors more adapters must come here and
     # state the new number, so the catalog size is never silently redefined by a glob.
-    assert len(codex) == 53, len(codex)
+    assert len(codex) == 52, len(codex)
 
 
 def test_no_private_absolute_paths_in_migrated_tree():

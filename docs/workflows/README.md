@@ -3,12 +3,12 @@
 
 These diagrams summarize the **Skill Mesh v2.0.4** contracts. Use the
 [skill reference](../../documentation/skill-reference.md) for a compact table
-of all 55 skills, purposes, host coverage and direct diagram links.
+of all 54 skills, purposes, host coverage and direct diagram links.
 
 Each diagram declares its source and omitted detail. The linked source contract
 remains authoritative: a diagram does not authorize an action, bypass a hold,
-or establish live qualification. Claude has all 55 packages; Codex and Copilot
-have the 53 portable packages. Native capability gates still apply.
+or establish live qualification. Claude has all 54 packages; Codex and Copilot
+have the 52 portable packages. Native capability gates still apply.
 
 These diagrams use the same rounded cards, monospace labels, and blue connectors
 as the overview graphics. Blue-bordered **GATE** cards mark decisions; connector
@@ -65,7 +65,6 @@ produces the default Mermaid README rather than this SVG gallery.
 - [plan-merge](#plan-merge) - Compare two overlapping plans, resolve contradictions and sequencing, then write one approved spine and archive the originals.
 - [plan-redline](#plan-redline) - Turn a plan into a stable proposal, distinguish operator choices from defaults, and fold terse ID-based feedback back into the plan.
 - [plan-review](#plan-review) - Check a plan against source and execution contracts, auto-fix safe gaps, and return a severity-ranked verdict for another review pass.
-- [plan-trim](#plan-trim) - Investigate stale plan work, propose evidence-backed cuts, wait for the operator's explicit choice, and apply only the agreed set.
 - [plan-wrap](#plan-wrap) - Choose a full forward check or reduced completed-plan audit, auto-fix safe full-pass gaps, and return READY, READY WITH GAPS, or NEEDS WORK.
 - [repo-init](#repo-init) - Check identity and plan before writes, create and push the repository, add README in a second commit, then create issues and backfill plan IDs.
 - [repo-sync](#repo-sync) - Verify review prerequisites and repository identity, compare plan steps with issues, preview the diff, and apply it automatically unless dry-run.
@@ -604,29 +603,6 @@ Drawn from:
 </picture>
 
 [Open full size](cards/plan-review-dark.svg)
-
----
-
-## plan-trim
-
-Investigate stale plan work, propose evidence-backed cuts, wait for the operator's explicit choice, and apply only the agreed set.
-
-Source: [`plan-trim.mmd`](plan-trim.mmd)
-
-Drawn from:
-
-- [`skills/plan-trim/core.md`](../../skills/plan-trim/core.md)
-
-**Alt:** A trim pass investigates primary sources, proposes specific cuts, waits without writing, then safely applies approved cuts or ends with the proposal.
-
-**Deliberately not shown:** candidate categories, exact retirement prose, cross-reference commands, commit exceptions, issue-sync wording, and report template
-
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="cards/plan-trim-dark.svg">
-  <img alt="A trim pass investigates primary sources, proposes specific cuts, waits without writing, then safely applies approved cuts or ends with the proposal." src="cards/plan-trim-light.svg">
-</picture>
-
-[Open full size](cards/plan-trim-dark.svg)
 
 ---
 

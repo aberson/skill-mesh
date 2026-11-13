@@ -17,7 +17,7 @@ launch, or claim that an independent review passed.
 Invocation: `/plan-feature [feature name or one-line outcome]`. Use supplied facts immediately;
 do not ask the operator to repeat them. Greenfield work belongs to `plan-init`. If discovery shows
 the request is one small action or only trims an existing plan, return a concrete `goblin-do` or
-`plan-trim` seed instead of padding it into a feature plan.
+`plan-merge --trim` seed instead of padding it into a feature plan.
 
 ## 1. Establish the planning boundary
 

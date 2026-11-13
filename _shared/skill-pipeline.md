@@ -33,7 +33,7 @@ Entry condition = what the operator's fragment sounds like.
 | **plan** | "add / build capability X" — multi-step work needing steps + review | `/plan-feature` (or `/plan-init` for a brand-new project) → `/plan-expedite` → `/build-phase` → `/repo-update` (the build rail — detail below) |
 | **investigate** | "what's true about X? why does X happen?" — a question, not yet work | `/deep-research` via `Workflow({name: "deep-research-pinned"})` (never the built-in name — CLAUDE.md's dispatch rule) for external/multi-source; an Explore-agent sweep for codebase-local questions |
 | **verify** | "does X actually work? / I don't trust X" — distrust without a reproducible symptom | `/review-uat` (refine a fuzzy block) / `/user-uat` (mechanical tier) / `/user-walkthrough --shakedown` (autonomous closure) / `/user-walkthrough` (attended) — four-mode detail below |
-| **trim** | "the plan feels bloated / what can we cut" — plan-borne cruft-smell | `/plan-trim` (plan documents only; non-plan cruft-smell routes **investigate** first — assess, then `investigate→plan` or `investigate→do`) |
+| **trim** | "the plan feels bloated / what can we cut" — plan-borne cruft-smell | `/plan-merge --trim` (plan documents only; non-plan cruft-smell routes **investigate** first — assess, then `investigate→plan` or `investigate→do`) |
 | **decide** | "should we do A or B?" — an operator-only choice | surfaced-only: parked with the open question stated; never ground through autonomously |
 | **draft** | "here are rough thoughts" — wants a usable prompt or goal, not work done | `/user-draft` → `/goal` |
 
@@ -164,7 +164,7 @@ covers them) is tracked as a coding-root issue sequenced with utility-hookup's s
 `/user-afterparty` — the milestone workspace-hygiene front door (also fired by the workspace's monthly hygiene cron). Report-first orchestrator that SEQUENCES the hygiene skills, owning
 none of their logic: it runs the autonomous set into one report (`/lesson-harvest --dry-run`,
 `/context-slim`, a tier-drift check, meta-tool-prune), then walks `/memory-distill` → `/test-prune` →
-`/plan-trim` one at a time (yielding at each gate), and owns two orphans with no other home —
+`/plan-merge --trim` one at a time (yielding at each gate), and owns two orphans with no other home —
 orphan-`worktree_*` cleanup and the derived-`current.md` rollup commit/archive seam. Flags:
 `--only` / `--skip` / `--dry-run` / `--all-projects`.
 

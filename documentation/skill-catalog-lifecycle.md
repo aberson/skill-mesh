@@ -337,7 +337,7 @@ review, and qualification gates in that plan are authorized, eligibility remains
 Claude-only, and every later native mutation still takes
 `PROVIDER_NATIVE_REVIEW_REQUIRED`.
 
-The catalog at the time of writing is 55 skills: 53 portable and 2 provider-native.
+The catalog at the time of writing is 54 skills: 52 portable and 2 provider-native.
 
 ## 5. The five operations
 

@@ -1,6 +1,6 @@
 # Skill reference
 
-The v2 catalog contains **55 Claude skills** and **53 portable skills** for Codex and GitHub Copilot. Host coverage means an adapter is packaged; required native capabilities and external utilities still apply.
+The v2 catalog contains **54 Claude skills** and **52 portable skills** for Codex and GitHub Copilot. Host coverage means an adapter is packaged; required native capabilities and external utilities still apply.
 
 Each workflow link opens its source-linked diagram. Read the contract for full gates, flags, and omissions. See [installation](../README.md#install-or-upgrade), [utility integrations](../README.md#how-utility-projects-are-used), and [release limitations](https://github.com/aberson/skill-mesh/releases/tag/v2.0.2).
 
@@ -28,7 +28,6 @@ Each workflow link opens its source-linked diagram. Read the contract for full g
 | [plan-merge](../skills/plan-merge/core.md) | Compare two overlapping plans, resolve contradictions and sequencing, then write one approved spine and archive the originals. | Claude, Copilot, Codex | [Diagram](../docs/workflows/README.md#plan-merge) |
 | [plan-redline](../skills/plan-redline/core.md) | Turn a plan into a stable proposal, distinguish operator choices from defaults, and fold terse ID-based feedback back into the plan. | Claude, Copilot, Codex | [Diagram](../docs/workflows/README.md#plan-redline) |
 | [plan-review](../skills/plan-review/core.md) | Check a plan against source and execution contracts, auto-fix safe gaps, and return a severity-ranked verdict for another review pass. | Claude, Copilot, Codex | [Diagram](../docs/workflows/README.md#plan-review) |
-| [plan-trim](../skills/plan-trim/core.md) | Investigate stale plan work, propose evidence-backed cuts, wait for the operator's explicit choice, and apply only the agreed set. | Claude, Copilot, Codex | [Diagram](../docs/workflows/README.md#plan-trim) |
 | [plan-wrap](../skills/plan-wrap/core.md) | Choose a full forward check or reduced completed-plan audit, auto-fix safe full-pass gaps, and return READY, READY WITH GAPS, or NEEDS WORK. | Claude, Copilot, Codex | [Diagram](../docs/workflows/README.md#plan-wrap) |
 | [repo-init](../skills/repo-init/core.md) | Check identity and plan before writes, create and push the repository, add README in a second commit, then create issues and backfill plan IDs. | Claude, Copilot, Codex | [Diagram](../docs/workflows/README.md#repo-init) |
 | [repo-sync](../skills/repo-sync/core.md) | Verify review prerequisites and repository identity, compare plan steps with issues, preview the diff, and apply it automatically unless dry-run. | Claude, Copilot, Codex | [Diagram](../docs/workflows/README.md#repo-sync) |

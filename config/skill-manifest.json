@@ -67,16 +67,16 @@
     }
   },
   "counts": {
-    "total": 55,
-    "portable": 53,
+    "total": 54,
+    "portable": 52,
     "provider_native": 2,
-    "claude": 55,
-    "gpt": 53,
-    "codex": 53,
-    "local_capable": 18,
+    "claude": 54,
+    "gpt": 52,
+    "codex": 52,
+    "local_capable": 17,
     "sub_agent": 19,
     "vision": 1,
-    "filesystem": 55
+    "filesystem": 54
   },
   "global_support_assets": [
     {
@@ -710,33 +710,6 @@
         {
           "source": ".claude/skills/plan-review/evals/",
           "dest": "skills/plan-review/evals/"
-        }
-      ]
-    },
-    {
-      "name": "plan-trim",
-      "status": "portable",
-      "description": "Investigate a project and propose plan items to cut or fold, then execute the trim.",
-      "core": "skills/plan-trim/core.md",
-      "providers": {
-        "claude": "skills/plan-trim/providers/claude.md",
-        "gpt": "skills/plan-trim/providers/gpt.md",
-        "codex": "skills/plan-trim/providers/codex.md"
-      },
-      "capabilities": [
-        "filesystem"
-      ],
-      "local_capable": true,
-      "migration": {
-        "legacy_core": ".claude/skills-gpt/plan-trim/SKILL-core.md",
-        "legacy_claude_launcher": ".claude/skills/plan-trim/SKILL.md",
-        "legacy_claude_adapter": ".claude/skills/plan-trim/SKILL-claude.md",
-        "legacy_gpt": ".claude/skills-gpt/plan-trim/SKILL-gpt.md"
-      },
-      "support_assets": [
-        {
-          "source": ".claude/skills/plan-trim/evals/",
-          "dest": "skills/plan-trim/evals/"
         }
       ]
     },

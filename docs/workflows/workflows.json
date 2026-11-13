@@ -1,7 +1,7 @@
 {
   "schema": "show-your-work.workflows.v1",
   "generator": "show-your-work 0.1.0",
-  "generated_at": "2026-11-13T17:47:47+00:00",
+  "generated_at": "2026-11-13T17:56:09+00:00",
   "source_dir": "docs/workflows",
   "items": [
     {
@@ -309,20 +309,6 @@
       ],
       "source_path": "docs/workflows/plan-review.mmd",
       "source_sha256": "4bad5420e55e226cf7b191c6cec9837f629c946ad040abd2bdaa870008152c98",
-      "engine": "mermaid",
-      "rasters": null
-    },
-    {
-      "id": "plan-trim",
-      "label": "plan-trim",
-      "summary": "Investigate stale plan work, propose evidence-backed cuts, wait for the operator's explicit choice, and apply only the agreed set.",
-      "alt": "A trim pass investigates primary sources, proposes specific cuts, waits without writing, then safely applies approved cuts or ends with the proposal.",
-      "not_shown": "candidate categories, exact retirement prose, cross-reference commands, commit exceptions, issue-sync wording, and report template",
-      "sources": [
-        "skills/plan-trim/core.md"
-      ],
-      "source_path": "docs/workflows/plan-trim.mmd",
-      "source_sha256": "ea5bfcce861f53410cfedc45bf0519cd5b6cd49a7893b642ee5bc7794be58c7a",
       "engine": "mermaid",
       "rasters": null
     },

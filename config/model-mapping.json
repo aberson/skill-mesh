@@ -190,13 +190,6 @@
       "local": true,
       "notes": "Ported - shared core + GPT/Claude wrappers"
     },
-    "plan-trim": {
-      "default_model": "claude",
-      "claude": true,
-      "gpt": true,
-      "local": true,
-      "notes": "Ported - shared core + GPT/Claude wrappers"
-    },
     "plan-wrap": {
       "default_model": "claude",
       "claude": true,

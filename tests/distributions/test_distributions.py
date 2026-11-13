@@ -3265,9 +3265,10 @@ def test_provider_both_still_means_claude_and_gpt_only(tmp_path):
 # The pilot had five; its fifth, the orientation skill, was retired into user-pm by the
 # v3 user-pm plan's Step 13 (#238), so the declared roster is now fifty-six.
 PILOT_CODEX_SKILLS = ["lesson-harvest", "plan-review", "session-wrap", "task-handoff"]
-# Cohort B, the pipeline family (Phase CP Step 6, issue #123).
+# Cohort B, the pipeline family (Phase CP Step 6, issue #123). The v3 catalog cleanup
+# folded its plan-cutting skill into plan-merge --trim (plan Step 13, #269).
 COHORT_B_CODEX_SKILLS = ["plan-expedite", "plan-feature", "plan-init", "plan-merge",
-                         "plan-redline", "plan-trim", "plan-wrap", "repo-init",
+                         "plan-redline", "plan-wrap", "repo-init",
                          "repo-sync", "repo-update", "user-project", "user-wrap"]
 # Cohort C, the build/review/skill/tier families (Phase CP Step 7, issue #124) -- the
 # heaviest host-abstraction consumers.
@@ -3326,8 +3327,8 @@ def test_codex_profile_holds_exactly_the_declared_cohorts_for_the_committed_mani
     into user-pm brought it to fifty-six, retiring the Lavish Editor presentation skill
     to fifty-five, moving the portfolio-block proposer out to fifty-four, creating
     user-fermize back to fifty-five, moving the Dev Observatory doctor out to
-    fifty-four, and folding the autonomous shakedown skill into user-walkthrough to
-    fifty-three. It
+    fifty-four, folding the autonomous shakedown skill into user-walkthrough to
+    fifty-three, and folding the plan-cutting skill into plan-merge to fifty-two. It
     grades the whole emission contract for the real cohorts at once,
     because the parts are only correct together: a launcher without its co-located
     core.md is a package Codex can list and cannot run, and an unstamped file is one
@@ -3336,7 +3337,7 @@ def test_codex_profile_holds_exactly_the_declared_cohorts_for_the_committed_mani
     out = tmp_path / "out"
     r = _build(out, provider="codex")
     assert r.returncode == 0, f"{r.stdout}\n{r.stderr}"
-    assert "(53 skills," in r.stdout, r.stdout
+    assert "(52 skills," in r.stdout, r.stdout
     # The manifest declares exactly the spelled cohorts...
     assert sorted(_codex_skills()) == DECLARED_CODEX_SKILLS, _codex_skills()
     # ...and the emitted tree IS that roster: no extra skill dir, none missing. The
@@ -3367,7 +3368,7 @@ def test_codex_profile_rerun_over_the_committed_manifest_is_byte_identical(tmp_p
     """Determinism on the REAL cohort, not only on the fixture skill.
 
     The fixture-repo determinism test upstream drives one synthetic skill; this one
-    drives every committed codex adapter (fifty-three at v3 cleanup Step 12) plus the
+    drives every committed codex adapter (fifty-two at v3 cleanup Step 13) plus the
     shared payload their cores
     pull in, which is the tree an operator actually installs at the M-steps.
     """

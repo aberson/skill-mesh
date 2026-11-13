@@ -39,7 +39,7 @@ never restates or reimplements it:
   - [`/memory-distill`](../memory-distill/core.md) — post-mortem of recent feedback
     memories (**formerly `/review-memories`** — the swept set uses the new name).
   - [`/test-prune`](../test-prune/core.md) — redundant/mock-theater test triage.
-  - [`/plan-trim`](../plan-trim/core.md) — cut/fold plan cruft.
+  - [`/plan-merge --trim`](../plan-merge/core.md) — cut/fold plan cruft (plan-merge's trim mode).
 
 It additionally owns two orphans with no other home — **orphan-owner duties** (workspace
 stray / orphan-worktree cleanup) and the **current.md rollup commit/archive seam** — each
@@ -91,7 +91,7 @@ afterparty's read of that contract, not a second copy of it.
 | `context-slim` | `/context-slim [--project <p>] [--apply]` | **REPORT** only | **autonomous** | per-project | stdout report; `--apply` edits-in-tree |
 | `memory-distill` | `/memory-distill` | mutate-on-approval, per round | **conversational** | per-project memory | edits `feedback_*.md` + `MEMORY.md` |
 | `test-prune` | `/test-prune` | REPORT until confirm | **conversational** | per-project | triage table → edits-in-tree on confirm |
-| `plan-trim` | `/plan-trim` | investigate → confirm → mutate | **conversational** | per-project | plan-doc edits + commit |
+| `plan-merge` | `/plan-merge --trim` | investigate → confirm → mutate | **conversational** | per-project | plan-doc edits + commit |
 
 The two non-skill workspace items — `tier-drift` (runs `/tier-escalate` + `/tier-offload`,
 both discovery-only) and `meta-tool-prune` (a list-what's-due pass) — are report-only and
@@ -106,7 +106,7 @@ carry no gate.
 - **Workspace-wide items — ALWAYS run, once:** `tier-drift`, `lesson-harvest`,
   `meta-tool-prune`, `orphan-cleanup` (Step 3), `rollup-commit` (Step 4).
 - **Per-project items — the CURRENT project only:** `context-slim`, `memory-distill`,
-  `test-prune`, `plan-trim`. **"Current project" = the nearest ancestor directory of cwd
+  `test-prune`, `plan-merge`. **"Current project" = the nearest ancestor directory of cwd
   that contains a CLAUDE.md** — the same resolution `context-slim` itself already uses —
   NOT the cwd's git root. Monorepo sub-projects with no nested `.git` (`switchboard`,
   `dev-observatory`, `songs`) would resolve to the whole `dev/` workspace under a
@@ -133,7 +133,7 @@ carry no gate.
 - **`--only <csv>`** — run only the named swept items (e.g. `--only lesson-harvest,context-slim`).
 - **`--skip <csv>`** — run everything EXCEPT the named items (e.g. `--skip test-prune`).
   Item names are the swept-set identifiers: `tier-drift`, `lesson-harvest`, `context-slim`,
-  `meta-tool-prune`, `memory-distill`, `test-prune`, `plan-trim`, `orphan-cleanup`,
+  `meta-tool-prune`, `memory-distill`, `test-prune`, `plan-merge` (run as `/plan-merge --trim`), `orphan-cleanup`,
   `rollup-commit`. `--only` and `--skip` are mutually exclusive; if both are given, `--only`
   wins and a one-line note says so.
 - **`--dry-run`** — applies NOTHING anywhere. Forward `--dry-run` to both tier skills and
@@ -146,7 +146,7 @@ carry no gate.
   Every selected autonomous result is printed in the preview, including truthful unavailable
   or failed outcomes; no durable report or child output is claimed.
 - **`--all-projects`** — fans the per-project items (`context-slim`, `memory-distill`,
-  `test-prune`, `plan-trim`) across the MEMORY.md active-project list instead of the
+  `test-prune`, `plan-merge`) across the MEMORY.md active-project list instead of the
   current project only. Workspace-wide items still run once. Each item's targeting
   mechanism (there is no shared switch — use each skill's own contract; invocation detail
   lives in Step 1 / Step 2):
@@ -154,7 +154,7 @@ carry no gate.
     --project <p>` once per active project. NEVER bare in this loop: a bare call always
     re-audits the ambient cwd project regardless of loop position, so N bare calls
     silently produce N duplicate reports for the same project instead of N distinct ones.
-  - `memory-distill` / `test-prune` / `plan-trim` own NO project flag (verified against
+  - `memory-distill` / `test-prune` / `plan-merge --trim` own NO project flag (verified against
     each skill's canonical core) — they are cwd-scoped only. Target them by setting cwd to
     each project's root (the nearest ancestor with a CLAUDE.md, per the "current project"
     definition above) before invoking each via the Skill tool, once per active project.
@@ -252,7 +252,7 @@ not inline the full dumps.
 ### Step 2 — conversational walk (one skill at a time)
 
 Walk the selected conversational items in order (`memory-distill` → `test-prune` →
-`plan-trim`), ONE AT A TIME:
+`plan-merge --trim`), ONE AT A TIME:
 
 1. Invoke the skill via the Skill tool.
 2. YIELD to the operator at that skill's own confirmation gate. Do NOT answer for them, do
@@ -667,7 +667,7 @@ Present the consolidated report as the centerpiece of the output:
     Conversational (walked):
     - memory-distill:  <what the operator confirmed / deferred>
     - test-prune:      <same>
-    - plan-trim:       <same>
+    - plan-merge --trim: <same>
 
     Orphan cleanup:    <one-line outcome (Step 3)>
     Rollup commit:     <one-line outcome (Step 4)>

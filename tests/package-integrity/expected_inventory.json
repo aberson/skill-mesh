@@ -1,16 +1,16 @@
 {
   "note": "Authoritative expected inventory for package-integrity tests. Committed so the public package tests need no private/legacy source. Regenerate with tools/gen_manifest.py.",
   "counts": {
-    "total": 55,
-    "portable": 53,
+    "total": 54,
+    "portable": 52,
     "provider_native": 2,
-    "claude": 55,
-    "gpt": 53,
-    "codex": 53,
-    "local_capable": 18,
+    "claude": 54,
+    "gpt": 52,
+    "codex": 52,
+    "local_capable": 17,
     "sub_agent": 19,
     "vision": 1,
-    "filesystem": 55
+    "filesystem": 54
   },
   "portable": [
     "build-phase",
@@ -33,7 +33,6 @@
     "plan-merge",
     "plan-redline",
     "plan-review",
-    "plan-trim",
     "plan-wrap",
     "repo-init",
     "repo-sync",
@@ -92,7 +91,6 @@
     "plan-merge",
     "plan-redline",
     "plan-review",
-    "plan-trim",
     "plan-wrap",
     "repo-init",
     "repo-sync",
@@ -132,7 +130,6 @@
     "plan-init",
     "plan-merge",
     "plan-review",
-    "plan-trim",
     "plan-wrap",
     "repo-init",
     "repo-sync",
@@ -615,26 +612,6 @@
         {
           "source": ".claude/skills/plan-review/evals/",
           "dest": "skills/plan-review/evals/"
-        }
-      ]
-    },
-    {
-      "name": "plan-trim",
-      "status": "portable",
-      "local_capable": true,
-      "capabilities": [
-        "filesystem"
-      ],
-      "migration": {
-        "legacy_core": ".claude/skills-gpt/plan-trim/SKILL-core.md",
-        "legacy_claude_launcher": ".claude/skills/plan-trim/SKILL.md",
-        "legacy_claude_adapter": ".claude/skills/plan-trim/SKILL-claude.md",
-        "legacy_gpt": ".claude/skills-gpt/plan-trim/SKILL-gpt.md"
-      },
-      "support_assets": [
-        {
-          "source": ".claude/skills/plan-trim/evals/",
-          "dest": "skills/plan-trim/evals/"
         }
       ]
     },
