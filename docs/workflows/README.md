@@ -3,12 +3,12 @@
 
 These diagrams summarize the **Skill Mesh v2.0.4** contracts. Use the
 [skill reference](../../documentation/skill-reference.md) for a compact table
-of all 59 skills, purposes, host coverage and direct diagram links.
+of all 58 skills, purposes, host coverage and direct diagram links.
 
 Each diagram declares its source and omitted detail. The linked source contract
 remains authoritative: a diagram does not authorize an action, bypass a hold,
-or establish live qualification. Claude has all 59 packages; Codex and Copilot
-have the 56 portable packages. Native capability gates still apply.
+or establish live qualification. Claude has all 58 packages; Codex and Copilot
+have the 55 portable packages. Native capability gates still apply.
 
 These diagrams use the same rounded cards, monospace labels, and blue connectors
 as the overview graphics. Blue-bordered **GATE** cards mark decisions; connector
@@ -94,7 +94,6 @@ produces the default Mermaid README rather than this SVG gallery.
 - [user-dr](#user-dr) - Find a project's decision sources, collect open and decided items, check implied live state, group by theme, then ask theme-first and record each answer.
 - [user-draft](#user-draft) - Refine rough thoughts into either a ready-to-paste prompt or a measurable goal condition, checkpointing only when useful.
 - [user-gateway](#user-gateway) - Convert an operator vent into one evidence-aware work ledger row and ready-to-paste seed per distinct fragment.
-- [user-lavishify](#user-lavishify) - Re-present a dense artifact in a loopback Lavish Editor, collect pinned feedback, and propagate operator decisions to canonical sources.
 - [user-learn](#user-learn) - After scope approval, build a grounded hands-on learning folder, re-run its artifacts, and report results without committing.
 - [user-pm](#user-pm) - Present shipped work, outstanding plan items, practical next moves, and credible candidates to cut through a product-management lens.
 - [user-project](#user-project) - Set, show, or clear the session-scoped active-project pin that pipeline skills use to resolve their target repository.
@@ -1275,29 +1274,6 @@ Drawn from:
 </picture>
 
 [Open full size](cards/user-gateway-dark.svg)
-
----
-
-## user-lavishify
-
-Re-present a dense artifact in a loopback Lavish Editor, collect pinned feedback, and propagate operator decisions to canonical sources.
-
-Source: [`user-lavishify.mmd`](user-lavishify.mmd)
-
-Drawn from:
-
-- [`skills/user-lavishify/core.md`](../../skills/user-lavishify/core.md)
-
-**Alt:** Dense content passes Node and browser checks, becomes scratchpad HTML, loops through pinned browser feedback, then propagates approved decisions.
-
-**Deliberately not shown:** telemetry prefixes, playbook IDs, layout-warning handling, resume commands, issue-ownership proof, and destination-specific edits
-
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="cards/user-lavishify-dark.svg">
-  <img alt="Dense content passes Node and browser checks, becomes scratchpad HTML, loops through pinned browser feedback, then propagates approved decisions." src="cards/user-lavishify-light.svg">
-</picture>
-
-[Open full size](cards/user-lavishify-dark.svg)
 
 ---
 

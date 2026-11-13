@@ -1,7 +1,7 @@
 {
   "schema": "show-your-work.workflows.v1",
   "generator": "show-your-work 0.1.0",
-  "generated_at": "2026-11-13T05:50:07+00:00",
+  "generated_at": "2026-11-13T07:55:10+00:00",
   "source_dir": "docs/workflows",
   "items": [
     {
@@ -715,20 +715,6 @@
       ],
       "source_path": "docs/workflows/user-gateway.mmd",
       "source_sha256": "c21869fc56f29e4bf6e6c98755469c5a0d43a302389da3eb09d08305029d7ff4",
-      "engine": "mermaid",
-      "rasters": null
-    },
-    {
-      "id": "user-lavishify",
-      "label": "user-lavishify",
-      "summary": "Re-present a dense artifact in a loopback Lavish Editor, collect pinned feedback, and propagate operator decisions to canonical sources.",
-      "alt": "Dense content passes Node and browser checks, becomes scratchpad HTML, loops through pinned browser feedback, then propagates approved decisions.",
-      "not_shown": "telemetry prefixes, playbook IDs, layout-warning handling, resume commands, issue-ownership proof, and destination-specific edits",
-      "sources": [
-        "skills/user-lavishify/core.md"
-      ],
-      "source_path": "docs/workflows/user-lavishify.mmd",
-      "source_sha256": "34586e5809ceb3bddf60f9e10a793b54899786a2e8b522450a320b3b2f291eca",
       "engine": "mermaid",
       "rasters": null
     },

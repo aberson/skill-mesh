@@ -16,7 +16,7 @@ Each installed skill resolves `skills/<name>/providers/gpt.md`, which references
 shared `skills/<name>/core.md`. Discovery loads the GPT adapter directly, so a GPT
 session cannot accidentally discover the Claude compatibility launcher first.
 
-Only the 54 portable skills have a GPT adapter. The 3 Claude-native exclusions are
+Only the 55 portable skills have a GPT adapter. The 3 Claude-native exclusions are
 not installed into a GPT profile.
 
 ### Native discovery root and SKILL.md format
@@ -40,7 +40,7 @@ this package installed for a different provider:
 - `.agents/skills/` is the **codex install target** — not merely a root Copilot
   happens to scan. `tools/skill-mesh-discovery.ps1` maps the `codex` provider to
   that exact literal path, and `tools/install-skill-mesh.ps1` run with
-  `-Provider codex` writes a codex package for each of the 54 portable skills
+  `-Provider codex` writes a codex package for each of the 55 portable skills
   there, so a consumer who installed the codex profile **will** see those
   packages enumerated by Copilot whenever the codex home is also the directory
   Copilot treats as its project — `.agents/skills/` is one of Copilot's

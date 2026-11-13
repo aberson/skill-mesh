@@ -393,13 +393,6 @@
       "local": true,
       "notes": "Ported - shared core + GPT/Claude wrappers"
     },
-    "user-lavishify": {
-      "default_model": "claude",
-      "claude": true,
-      "gpt": true,
-      "local": false,
-      "notes": "Ported - shared core + GPT/Claude wrappers"
-    },
     "user-learn": {
       "default_model": "claude",
       "claude": true,

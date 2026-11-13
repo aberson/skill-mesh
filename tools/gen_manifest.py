@@ -65,7 +65,7 @@ PORTABLE = [
     "skill-evolve", "skill-iterate", "task-handoff", "test-prune",
     "tier-escalate", "tier-offload", "user-afterparty", "user-brainstorm",
     "user-build-route", "user-debug", "user-dr", "user-draft", "user-gateway",
-    "user-lavishify", "user-learn",
+    "user-learn",
     "user-pm", "user-project", "user-shakedown", "user-uat",
     "user-walkthrough", "user-wrap",
 ]
@@ -79,7 +79,7 @@ NATIVE = ["claude-oauth-auth", "context-slim", "judge-motion"]
 # what `status`, `counts["portable"]`, `counts["provider_native"]` and the README's
 # GPT-capable line all mean. A codex adapter is ADDITIVE on top of a record that is
 # already portable-or-native: it never moves a skill between those two buckets, so
-# EXPECTED_TOTAL / EXPECTED_PORTABLE / EXPECTED_NATIVE are 59/56/3 and every existing
+# EXPECTED_TOTAL / EXPECTED_PORTABLE / EXPECTED_NATIVE are 58/55/3 and every existing
 # count keeps its exact meaning. Modelling codex as a third status instead would
 # redefine `portable` for all catalog records and invalidate every committed tally.
 #
@@ -117,7 +117,7 @@ CODEX = [
     "skill-evolve", "skill-iterate", "task-handoff", "test-prune",
     "tier-escalate", "tier-offload", "user-afterparty", "user-brainstorm",
     "user-build-route", "user-debug", "user-dr", "user-draft", "user-gateway",
-    "user-lavishify", "user-learn",
+    "user-learn",
     "user-pm", "user-project", "user-shakedown", "user-uat",
     "user-walkthrough", "user-wrap",
 ]
@@ -274,7 +274,6 @@ DESCRIPTIONS = {
     "user-dr": "Theme-grouped decision register across plans and seeds; checks conflicts and records answers.",
     "user-draft": "Refine rough thoughts into a polished prompt or a ready-to-paste goal condition.",
     "user-gateway": "Turn an operator vent into routed, ledger-backed work with a seed per row.",
-    "user-lavishify": "Escalate the last output into a richer deliverable without changing the default style.",
     "user-learn": "Scaffold a learning ramp: knowledge base, notebooks, exercises, progress tracker.",
     "user-pm": "PM-lens project overview: what shipped, what is planned, what is next, what could be cut.",
     "user-project": "Pin the session's active project so pipeline skills target the right repo.",
@@ -410,7 +409,6 @@ SUPPORT_ASSETS = {
     "user-dr": [],
     "user-draft": [("skills", "evals.seed/")],
     "user-gateway": [("skills", "evals/")],
-    "user-lavishify": [],
     "user-learn": [("skills", "evals/")],
     "user-pm": [("skills", "evals/")],
     "user-project": [],
@@ -423,7 +421,7 @@ SUPPORT_ASSETS = {
 # Spelled-out expectations for the tree enumeration below. The same three numbers are
 # asserted independently by tests/package-integrity/test_manifest_contract.py.
 # 59/56/3 since the v3 user-pm plan's Step 13 (#238) retired the orientation skill into user-pm.
-EXPECTED_TOTAL, EXPECTED_PORTABLE, EXPECTED_NATIVE = 59, 56, 3
+EXPECTED_TOTAL, EXPECTED_PORTABLE, EXPECTED_NATIVE = 58, 55, 3
 
 
 def skill_support_assets(name: str):

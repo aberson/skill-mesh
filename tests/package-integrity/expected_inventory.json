@@ -1,16 +1,16 @@
 {
   "note": "Authoritative expected inventory for package-integrity tests. Committed so the public package tests need no private/legacy source. Regenerate with tools/gen_manifest.py.",
   "counts": {
-    "total": 59,
-    "portable": 56,
+    "total": 58,
+    "portable": 55,
     "provider_native": 3,
-    "claude": 59,
-    "gpt": 56,
-    "codex": 56,
+    "claude": 58,
+    "gpt": 55,
+    "codex": 55,
     "local_capable": 20,
     "sub_agent": 20,
     "vision": 2,
-    "filesystem": 59
+    "filesystem": 58
   },
   "portable": [
     "build-observer",
@@ -61,7 +61,6 @@
     "user-dr",
     "user-draft",
     "user-gateway",
-    "user-lavishify",
     "user-learn",
     "user-pm",
     "user-project",
@@ -124,7 +123,6 @@
     "user-dr",
     "user-draft",
     "user-gateway",
-    "user-lavishify",
     "user-learn",
     "user-pm",
     "user-project",
@@ -1242,21 +1240,6 @@
           "dest": "skills/user-gateway/evals/"
         }
       ]
-    },
-    {
-      "name": "user-lavishify",
-      "status": "portable",
-      "local_capable": false,
-      "capabilities": [
-        "filesystem"
-      ],
-      "migration": {
-        "legacy_core": ".claude/skills-gpt/user-lavishify/SKILL-core.md",
-        "legacy_claude_launcher": ".claude/skills/user-lavishify/SKILL.md",
-        "legacy_claude_adapter": ".claude/skills/user-lavishify/SKILL-claude.md",
-        "legacy_gpt": ".claude/skills-gpt/user-lavishify/SKILL-gpt.md"
-      },
-      "support_assets": []
     },
     {
       "name": "user-learn",

@@ -3256,10 +3256,11 @@ COHORT_C_CODEX_SKILLS = ["build-phase", "build-queue", "build-step", "goblin-do"
                          "skill-eval-setup", "skill-evolve", "skill-iterate",
                          "test-prune", "tier-escalate", "tier-offload"]
 # Cohort D, the remainder of the then-portable catalog (Phase CP Step 8, issue #125)
-# -- with it the declared roster became the portable roster, all 47.
+# -- with it the declared roster became the portable roster, all 47. The v3 catalog
+# cleanup retired its Lavish Editor presentation skill (plan Step 2, #258).
 COHORT_D_CODEX_SKILLS = ["memory-distill", "observatory-doctor", "research-prospect",
                          "user-afterparty", "user-brainstorm", "user-debug",
-                         "user-draft", "user-gateway", "user-lavishify",
+                         "user-draft", "user-gateway",
                          "user-learn", "user-pm", "user-shakedown", "user-uat",
                          "user-walkthrough"]
 # The seven workspace-custom skills promoted at Phase CP Step 10 (issue #127). Not a
@@ -3294,7 +3295,7 @@ def test_codex_profile_holds_exactly_the_declared_cohorts_for_the_committed_mani
     The separately approved code-consigliere addition carries both to fifty-five, and
     the separately authorized user-dr addition to fifty-six, and the separately
     authorized user-build-route addition to fifty-seven; retiring the orientation skill
-    into user-pm brought it to fifty-six. It
+    into user-pm brought it to fifty-six, and retiring the Lavish Editor presentation skill to fifty-five. It
     grades the whole emission contract for the real cohorts at once,
     because the parts are only correct together: a launcher without its co-located
     core.md is a package Codex can list and cannot run, and an unstamped file is one
@@ -3303,7 +3304,7 @@ def test_codex_profile_holds_exactly_the_declared_cohorts_for_the_committed_mani
     out = tmp_path / "out"
     r = _build(out, provider="codex")
     assert r.returncode == 0, f"{r.stdout}\n{r.stderr}"
-    assert "(56 skills," in r.stdout, r.stdout
+    assert "(55 skills," in r.stdout, r.stdout
     # The manifest declares exactly the spelled cohorts...
     assert sorted(_codex_skills()) == DECLARED_CODEX_SKILLS, _codex_skills()
     # ...and the emitted tree IS that roster: no extra skill dir, none missing. The
