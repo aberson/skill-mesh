@@ -420,6 +420,36 @@ def dist_root(tmp_path_factory):
     return out
 
 
+@pytest.fixture(scope="module")
+def one_skill_dist(tmp_path_factory):
+    """One real skill (build-phase) in both profiles, built once by the real builder.
+
+    v3 guard Step 8: the installer lifecycle tests used to install the full catalog
+    (about 160 files, 51 to 230 s per test). The properties they guard belong to the
+    installer, not to the catalog's size, so they install this distribution instead:
+    build-phase's launcher and core plus its `_shared/` closure (13 generated files per
+    profile, `.md` as well as `.py` and `.js`, each carrying the provenance marker),
+    including `_shared/judge-core.md`, the payload file the -ForceShared tests collide
+    with. Three full-catalog acceptance
+    installs stay on `dist_root`: test_install_places_profile_and_resolves_adapter[claude],
+    test_reinstall_is_idempotent and test_install_on_the_fly_build_without_distdir.
+    """
+    root = tmp_path_factory.mktemp("one-skill-dist")
+    manifest = _write_manifest(root / "build-phase.json", [_real_skill_entry("build-phase")])
+    dist = _build_from_manifest(root / "dist", manifest, provider="both")
+    for provider in ("claude", "gpt"):
+        package = dist / provider
+        assert (package / "build-phase" / "SKILL.md").is_file(), provider
+        assert (package / "build-phase" / "core.md").is_file(), provider
+        # The -ForceShared tests need the payload file to ship and the bystander not to.
+        assert (package / "_shared" / _PRESEEDED_PAYLOAD).is_file(), provider
+        assert not (package / "_shared" / _PRESEEDED_BYSTANDER).exists(), provider
+        skills = sorted(d.name for d in package.iterdir()
+                        if d.is_dir() and d.name != "_shared")
+        assert skills == ["build-phase"], (provider, skills)
+    return dist
+
+
 # --------------------------------------------------------------------------- #
 # Tooling presence
 # --------------------------------------------------------------------------- #
@@ -1576,10 +1606,16 @@ def _ledger(home):
     return json.loads(p.read_text(encoding="utf-8"))
 
 
-@pytest.mark.parametrize("provider", ["claude", "gpt"])
-def test_install_places_profile_and_resolves_adapter(dist_root, tmp_path, provider):
+# The claude case is a kept full-catalog acceptance install; the gpt case installs
+# the one-skill distribution (v3 guard Step 8; see one_skill_dist).
+@pytest.mark.parametrize("provider,dist_fixture",
+                         [("claude", "dist_root"), ("gpt", "one_skill_dist")],
+                         ids=["claude", "gpt"])
+def test_install_places_profile_and_resolves_adapter(request, tmp_path, provider,
+                                                     dist_fixture):
+    dist = request.getfixturevalue(dist_fixture)
     home = tmp_path / "home"
-    r = _install(home, provider, dist_dir=dist_root)
+    r = _install(home, provider, dist_dir=dist)
     assert r.returncode == 0, f"install failed:\n{r.stdout}\n{r.stderr}"
 
     root = _installed_root(home, provider)
@@ -1600,12 +1636,12 @@ def test_install_places_profile_and_resolves_adapter(dist_root, tmp_path, provid
                for h in entry["owned_file_hashes"].values())
 
 
-def test_gpt_install_target_is_github_skills_not_copilot(dist_root, tmp_path):
+def test_gpt_install_target_is_github_skills_not_copilot(one_skill_dist, tmp_path):
     """Step 44 retarget: a GPT install writes to <home>/.github/skills/<skill>/ and
     NEVER to the retired project-relative <home>/.copilot/skills. Two-sided so it
     fails both if the target regresses AND if nothing is written."""
     home = tmp_path / "home"
-    r = _install(home, "gpt", dist_dir=dist_root)
+    r = _install(home, "gpt", dist_dir=one_skill_dist)
     assert r.returncode == 0, f"gpt install failed:\n{r.stdout}\n{r.stderr}"
     github_target = home / DISCOVERY_SUBDIR["gpt"] / "build-phase" / "SKILL.md"
     assert github_target.is_file(), \
@@ -1638,7 +1674,7 @@ def test_reinstall_is_idempotent(dist_root, tmp_path):
     assert led1 == led2, "reinstall changed the ownership ledger (byte-identical expected)"
 
 
-def test_uninstall_removes_only_owned_files(dist_root, tmp_path):
+def test_uninstall_removes_only_owned_files(one_skill_dist, tmp_path):
     home = tmp_path / "home"
     # Pre-seed unrelated content: a sentinel INSIDE the discovery dir + one at root.
     disco = _installed_root(home, "claude")
@@ -1648,7 +1684,7 @@ def test_uninstall_removes_only_owned_files(dist_root, tmp_path):
     root_sentinel = home / "unrelated.txt"
     root_sentinel.write_text("also unrelated", encoding="utf-8")
 
-    r = _install(home, "claude", dist_dir=dist_root)
+    r = _install(home, "claude", dist_dir=one_skill_dist)
     assert r.returncode == 0, r.stderr
     led = _ledger(home)
     owned = [Path(home) / rel for rel in led["installs"]["claude"]["owned_files"]]
@@ -1741,7 +1777,7 @@ def test_build_refuses_traversal_source_path(tmp_path):
 
 
 @pytest.mark.parametrize("forge_hash", [False, True], ids=["unhashed", "hash-forged"])
-def test_uninstall_refuses_escaping_ledger_entry(dist_root, tmp_path, forge_hash):
+def test_uninstall_refuses_escaping_ledger_entry(one_skill_dist, tmp_path, forge_hash):
     """BLOCK 3: the ledger is untrusted at uninstall time. An owned_files entry that
     resolves OUTSIDE the install home grants NO removal authority at all: uninstall
     fails closed, the refusal NAMES the escaping row, and nothing is touched anywhere
@@ -1772,7 +1808,7 @@ def test_uninstall_refuses_escaping_ledger_entry(dist_root, tmp_path, forge_hash
     canary = sibling / "canary.txt"
     canary.write_text("CANARY", encoding="utf-8")
 
-    r = _install(home, "claude", dist_dir=dist_root)
+    r = _install(home, "claude", dist_dir=one_skill_dist)
     assert r.returncode == 0, r.stderr
 
     disco = home / DISCOVERY_SUBDIR["claude"]
@@ -1824,7 +1860,7 @@ def test_install_refuses_to_clobber_pre_existing_real_skill_file(dist_root, tmp_
     assert target.read_text(encoding="utf-8") == "CUSTOM-USER-CONTENT"
 
 
-def test_force_overwrites_and_owns_colliding_file(dist_root, tmp_path):
+def test_force_overwrites_and_owns_colliding_file(one_skill_dist, tmp_path):
     """BLOCK 4 (opt-in): -Force is the explicit override -- it overwrites the colliding
     path AND takes ownership, so uninstall then removes it."""
     home = tmp_path / "home"
@@ -1834,7 +1870,7 @@ def test_force_overwrites_and_owns_colliding_file(dist_root, tmp_path):
 
     backup = tmp_path / "backup"
     before = target.read_bytes()
-    r = _install(home, "claude", dist_dir=dist_root, force=True, backup_dir=backup)
+    r = _install(home, "claude", dist_dir=one_skill_dist, force=True, backup_dir=backup)
     assert r.returncode == 0, f"forced install failed:\n{r.stderr}"
     assert target.read_text(encoding="utf-8") != "CUSTOM-USER-CONTENT"
     run_dir, manifest = _backup_runs(backup)[0]
@@ -1898,7 +1934,7 @@ def _preseed_shared(home, provider="claude"):
     return payload, bystander
 
 
-def test_force_shared_backs_up_takes_ownership_and_spares_bystanders(dist_root, tmp_path):
+def test_force_shared_backs_up_takes_ownership_and_spares_bystanders(one_skill_dist, tmp_path):
     home = tmp_path / "home"
     backup = tmp_path / "backup"
     payload, bystander = _preseed_shared(home)
@@ -1906,7 +1942,7 @@ def test_force_shared_backs_up_takes_ownership_and_spares_bystanders(dist_root, 
     before_bystander = bystander.read_bytes()
 
     # GUARDRAIL 1 + 2: authorized because the collision is inside the payload.
-    r = _install(home, "claude", dist_dir=dist_root, force_shared=True, backup_dir=backup)
+    r = _install(home, "claude", dist_dir=one_skill_dist, force_shared=True, backup_dir=backup)
     assert r.returncode == 0, f"scoped take-ownership failed:\n{r.stdout}\n{r.stderr}"
 
     # GUARDRAIL 1: the pre-overwrite bytes, hash and size are recorded and restorable.
@@ -2000,7 +2036,7 @@ def test_force_shared_scope_is_decided_on_the_resolved_target_not_the_source_pat
             f"paths in the operator's own namespace were adopted into owned_files: {owned}"
 
 
-def test_two_profiles_into_one_backup_dir_keep_both_restore_records(dist_root, tmp_path):
+def test_two_profiles_into_one_backup_dir_keep_both_restore_records(one_skill_dist, tmp_path):
     """Both providers' restore records survive one shared `-BackupDir`.
 
     A fixed `<BackupDir>/take-ownership-backup.json` is overwritten by the second run:
@@ -2021,7 +2057,7 @@ def test_two_profiles_into_one_backup_dir_keep_both_restore_records(dist_root, t
     }
 
     for provider in ("claude", "gpt"):
-        r = _install(home, provider, dist_dir=dist_root, force_shared=True,
+        r = _install(home, provider, dist_dir=one_skill_dist, force_shared=True,
                      backup_dir=backup)
         assert r.returncode == 0, f"{provider}:\n{r.stdout}\n{r.stderr}"
 
@@ -2066,7 +2102,7 @@ def test_backup_dir_reaching_into_the_home_through_a_junction_is_refused(
     assert not _backup_runs(inside), "a backup landed inside the home it protects"
 
 
-def test_unscoped_force_also_backs_up_when_given_a_backup_dir(dist_root, tmp_path):
+def test_unscoped_force_also_backs_up_when_given_a_backup_dir(one_skill_dist, tmp_path):
     """`-BackupDir` is not a `-ForceShared`-only affordance.
 
     Documented in the installer's help, so it needs a test: the unscoped `-Force`
@@ -2081,7 +2117,7 @@ def test_unscoped_force_also_backs_up_when_given_a_backup_dir(dist_root, tmp_pat
     target.write_text("CUSTOM-USER-CONTENT", encoding="utf-8")
     before = target.read_bytes()
 
-    r = _install(home, "claude", dist_dir=dist_root, force=True, backup_dir=backup)
+    r = _install(home, "claude", dist_dir=one_skill_dist, force=True, backup_dir=backup)
     assert r.returncode == 0, f"{r.stdout}\n{r.stderr}"
     runs = _backup_runs(backup)
     assert len(runs) == 1, [str(d) for d, _ in runs]
@@ -2176,31 +2212,31 @@ def test_refused_reinstall_is_true_noop(tmp_path):
     assert foreign.read_text(encoding="utf-8") == "FOREIGN-BUILD-STEP"
 
 
-def test_reinstall_over_own_files_is_allowed_without_force(dist_root, tmp_path):
+def test_reinstall_over_own_files_is_allowed_without_force(one_skill_dist, tmp_path):
     """NEW-BLOCK B: skill-mesh's OWN previously-written files must never be treated as
     foreign collisions -- a re-run over them succeeds without -Force (the ledger
     records the owned set, so a resumed/repeated install recognizes them)."""
     home = tmp_path / "home"
-    r1 = _install(home, "claude", dist_dir=dist_root)
+    r1 = _install(home, "claude", dist_dir=one_skill_dist)
     assert r1.returncode == 0, r1.stderr
     bp = home / DISCOVERY_SUBDIR["claude"] / "build-phase" / "SKILL.md"
     assert bp.is_file()
     # Re-run WITHOUT -Force over skill-mesh's own files: must succeed, not refuse.
-    r2 = _install(home, "claude", dist_dir=dist_root)
+    r2 = _install(home, "claude", dist_dir=one_skill_dist)
     assert r2.returncode == 0, f"re-run over own files was refused:\n{r2.stdout}\n{r2.stderr}"
     assert "REFUS" not in (r2.stdout + r2.stderr)
     assert bp.is_file()
 
 
-def test_marker_retaining_customization_refuses_reinstall_as_true_noop(dist_root, tmp_path):
+def test_marker_retaining_customization_refuses_reinstall_as_true_noop(one_skill_dist, tmp_path):
     home = tmp_path / "home"
-    assert _install(home, "claude", dist_dir=dist_root).returncode == 0
+    assert _install(home, "claude", dist_dir=one_skill_dist).returncode == 0
     target = home / DISCOVERY_SUBDIR["claude"] / "build-phase" / "SKILL.md"
     target.write_bytes(target.read_bytes() + b"\nCONSUMER CUSTOMIZATION\n")
     ledger_path = home / ".skill-mesh-install.json"
     before_target, before_ledger = target.read_bytes(), ledger_path.read_bytes()
 
-    r = _install(home, "claude", dist_dir=dist_root)
+    r = _install(home, "claude", dist_dir=one_skill_dist)
     assert r.returncode != 0 and "REFUS" in (r.stdout + r.stderr)
     assert target.read_bytes() == before_target
     assert ledger_path.read_bytes() == before_ledger
@@ -2240,18 +2276,18 @@ def test_plain_force_mismatch_requires_external_backup(dist_root, tmp_path):
     assert not (home / ".skill-mesh-install.json").exists()
 
 
-def test_competing_home_operation_refuses_and_sequential_retry_succeeds(dist_root, tmp_path):
+def test_competing_home_operation_refuses_and_sequential_retry_succeeds(one_skill_dist, tmp_path):
     home = (tmp_path / "home").resolve()
     env = os.environ.copy()
     env["SKILL_MESH_INSTALL_TEST_HOLD_LOCK_MS"] = "10000"
     holder = subprocess.Popen(
         [PWSH, "-NoProfile", "-NonInteractive", "-File", str(INSTALL_SCRIPT),
-         "-Home", str(home), "-Provider", "claude", "-DistDir", str(dist_root)],
+         "-Home", str(home), "-Provider", "claude", "-DistDir", str(one_skill_dist)],
         stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, env=env,
     )
     try:
         time.sleep(2)
-        blocked = _install(home, "claude", dist_dir=dist_root)
+        blocked = _install(home, "claude", dist_dir=one_skill_dist)
         assert blocked.returncode != 0 and "concurrent operation" in (
             blocked.stdout + blocked.stderr)
         assert not home.exists()
@@ -2264,7 +2300,7 @@ def test_competing_home_operation_refuses_and_sequential_retry_succeeds(dist_roo
         out, err = holder.communicate(timeout=600)
         assert holder.returncode == 0, f"{out}\n{err}"
 
-    retry = _install(home, "claude", dist_dir=dist_root)
+    retry = _install(home, "claude", dist_dir=one_skill_dist)
     assert retry.returncode == 0, retry.stderr
     assert "claude" in _ledger(home)["installs"]
 
@@ -2292,9 +2328,9 @@ def test_customized_stale_file_refuses_reinstall_as_true_noop(tmp_path):
     assert ledger_path.read_bytes() == before_ledger
 
 
-def test_customized_owned_file_refuses_uninstall_as_true_noop(dist_root, tmp_path):
+def test_customized_owned_file_refuses_uninstall_as_true_noop(one_skill_dist, tmp_path):
     home = tmp_path / "home"
-    assert _install(home, "claude", dist_dir=dist_root).returncode == 0
+    assert _install(home, "claude", dist_dir=one_skill_dist).returncode == 0
     target = home / DISCOVERY_SUBDIR["claude"] / "build-phase" / "SKILL.md"
     target.write_bytes(target.read_bytes() + b"\nCUSTOM BEFORE UNINSTALL\n")
     ledger_path = home / ".skill-mesh-install.json"
@@ -2306,7 +2342,7 @@ def test_customized_owned_file_refuses_uninstall_as_true_noop(dist_root, tmp_pat
     assert ledger_path.read_bytes() == before_ledger
 
 
-def test_preexisting_empty_dirs_survive_full_uninstall(dist_root, tmp_path):
+def test_preexisting_empty_dirs_survive_full_uninstall(one_skill_dist, tmp_path):
     """NEW-BLOCK D: a pre-existing EMPTY home (and an empty intermediate dir the
     operator created) must survive a full uninstall -- skill-mesh only removes dirs it
     actually created."""
@@ -2315,7 +2351,7 @@ def test_preexisting_empty_dirs_survive_full_uninstall(dist_root, tmp_path):
     other_empty = home / DISCOVERY_SUBDIR["claude"] / "other-empty-tool"
     other_empty.mkdir(parents=True)  # unrelated empty intermediate/leaf dir
 
-    r = _install(home, "claude", dist_dir=dist_root)
+    r = _install(home, "claude", dist_dir=one_skill_dist)
     assert r.returncode == 0, r.stderr
     ru = _install(home, "claude", uninstall=True)
     assert ru.returncode == 0, ru.stderr
@@ -2326,9 +2362,9 @@ def test_preexisting_empty_dirs_survive_full_uninstall(dist_root, tmp_path):
     assert (home / DISCOVERY_SUBDIR["claude"] / "build-phase").is_dir()
 
 
-def test_uninstall_never_deletes_even_ledger_created_directories(dist_root, tmp_path):
+def test_uninstall_never_deletes_even_ledger_created_directories(one_skill_dist, tmp_path):
     home = tmp_path / "new-home"
-    assert _install(home, "claude", dist_dir=dist_root).returncode == 0
+    assert _install(home, "claude", dist_dir=one_skill_dist).returncode == 0
     created = [home / Path(r) for r in _ledger(home)["installs"]["claude"]["created_dirs"]]
     assert created
     assert _install(home, "claude", uninstall=True).returncode == 0
@@ -2403,23 +2439,23 @@ def test_poisoned_ledger_cannot_clobber_or_delete_foreign_file(dist_root, tmp_pa
     assert (home / ".skill-mesh-install.json").read_bytes() == ledger_before
 
 
-def test_recreated_operator_file_at_owned_path_not_clobbered(dist_root, tmp_path):
+def test_recreated_operator_file_at_owned_path_not_clobbered(one_skill_dist, tmp_path):
     """Ghost/recovered-operator-file: after skill-mesh owned a path, if an operator
     file (no marker) later occupies it, a plain reinstall must NOT clobber it."""
     home = tmp_path / "home"
-    r = _install(home, "claude", dist_dir=dist_root)
+    r = _install(home, "claude", dist_dir=one_skill_dist)
     assert r.returncode == 0, r.stderr
     owned = home / DISCOVERY_SUBDIR["claude"] / "build-phase" / "SKILL.md"
     assert owned.is_file()
     # Operator replaces skill-mesh's file with their own content (marker now gone).
     operator_bytes = b"MY-OWN-EDIT"
     owned.write_bytes(operator_bytes)
-    r2 = _install(home, "claude", dist_dir=dist_root)
+    r2 = _install(home, "claude", dist_dir=one_skill_dist)
     assert r2.returncode != 0 and "REFUS" in (r2.stdout + r2.stderr)
     assert owned.read_bytes() == operator_bytes, "operator file was clobbered"
 
 
-def test_partial_copy_recovery_ledger_lists_only_existing_files(dist_root, tmp_path):
+def test_partial_copy_recovery_ledger_lists_only_existing_files(one_skill_dist, tmp_path):
     """After a mid-copy failure (simulated via an exclusive file lock), the persisted
     (recovery) owned set must list ONLY files that exist on disk -- no ghost entries
     that a later plain reinstall could clobber."""
@@ -2429,14 +2465,14 @@ def test_partial_copy_recovery_ledger_lists_only_existing_files(dist_root, tmp_p
         pytest.skip("msvcrt (file locking) unavailable")
 
     home = tmp_path / "home"
-    r = _install(home, "claude", dist_dir=dist_root)
+    r = _install(home, "claude", dist_dir=one_skill_dist)
     assert r.returncode == 0, r.stderr
     lockpath = home / DISCOVERY_SUBDIR["claude"] / "build-phase" / "core.md"
 
     f = open(lockpath, "r+b")
     try:
         msvcrt.locking(f.fileno(), msvcrt.LK_NBLCK, 1)
-        r2 = _install(home, "claude", dist_dir=dist_root)
+        r2 = _install(home, "claude", dist_dir=one_skill_dist)
     finally:
         try:
             msvcrt.locking(f.fileno(), msvcrt.LK_UNLCK, 1)
@@ -2545,14 +2581,14 @@ def test_write_ahead_recovery_does_not_baseline_an_unreplaced_force_preimage(tmp
 CORRUPT_LEDGER = '{"note":"old-shape-ledger"}'
 
 
-def test_corrupt_ledger_install_self_heals_with_warning(dist_root, tmp_path):
+def test_corrupt_ledger_install_self_heals_with_warning(one_skill_dist, tmp_path):
     """A corrupt/old-shape ledger must NOT crash (PropertyNotFoundException lockout);
     install self-heals, warns LOUDLY (distinguishing corrupt from never-installed),
     and writes a fresh valid ledger."""
     home = tmp_path / "home"
     home.mkdir()
     (home / ".skill-mesh-install.json").write_text(CORRUPT_LEDGER, encoding="utf-8")
-    r = _install(home, "claude", dist_dir=dist_root)
+    r = _install(home, "claude", dist_dir=one_skill_dist)
     assert r.returncode == 0, f"install crashed on corrupt ledger:\n{r.stdout}\n{r.stderr}"
     assert "CORRUPT" in (r.stdout + r.stderr), "no loud corrupt-ledger diagnostic"
     assert (home / DISCOVERY_SUBDIR["claude"] / "build-phase" / "SKILL.md").is_file()
@@ -2560,11 +2596,11 @@ def test_corrupt_ledger_install_self_heals_with_warning(dist_root, tmp_path):
     assert "claude" in led["installs"], "install did not write a fresh valid ledger"
 
 
-def test_corrupt_ledger_uninstall_fails_closed_and_preserves_files(dist_root, tmp_path):
+def test_corrupt_ledger_uninstall_fails_closed_and_preserves_files(one_skill_dist, tmp_path):
     """A corrupt ledger has no current-byte identity authority; marker-only deletion
     is forbidden, so uninstall fails loudly and preserves every file."""
     home = tmp_path / "home"
-    r = _install(home, "claude", dist_dir=dist_root)
+    r = _install(home, "claude", dist_dir=one_skill_dist)
     assert r.returncode == 0, r.stderr
     disco = home / DISCOVERY_SUBDIR["claude"]
     assert len(list(disco.rglob("*.md"))) > 0
@@ -2583,9 +2619,9 @@ def test_corrupt_ledger_uninstall_fails_closed_and_preserves_files(dist_root, tm
 
 
 @pytest.mark.parametrize("mutation", ["missing", "malformed", "extra"])
-def test_invalid_owned_hash_maps_never_authorize_uninstall(dist_root, tmp_path, mutation):
+def test_invalid_owned_hash_maps_never_authorize_uninstall(one_skill_dist, tmp_path, mutation):
     home = tmp_path / "home"
-    assert _install(home, "claude", dist_dir=dist_root).returncode == 0
+    assert _install(home, "claude", dist_dir=one_skill_dist).returncode == 0
     ledger_path = home / ".skill-mesh-install.json"
     led = json.loads(ledger_path.read_text(encoding="utf-8"))
     entry = led["installs"]["claude"]
@@ -2606,9 +2642,9 @@ def test_invalid_owned_hash_maps_never_authorize_uninstall(dist_root, tmp_path, 
     assert _tree_snapshot(home / DISCOVERY_SUBDIR["claude"]) == before_tree
 
 
-def test_hashless_legacy_uninstall_requires_and_honors_backed_force(dist_root, tmp_path):
+def test_hashless_legacy_uninstall_requires_and_honors_backed_force(one_skill_dist, tmp_path):
     home = tmp_path / "home"
-    assert _install(home, "claude", dist_dir=dist_root).returncode == 0
+    assert _install(home, "claude", dist_dir=one_skill_dist).returncode == 0
     ledger_path = home / ".skill-mesh-install.json"
     led = json.loads(ledger_path.read_text(encoding="utf-8"))
     del led["installs"]["claude"]["owned_file_hashes"]
@@ -2629,10 +2665,10 @@ def test_hashless_legacy_uninstall_requires_and_honors_backed_force(dist_root, t
     assert not list((home / DISCOVERY_SUBDIR["claude"]).rglob("*.*"))
 
 
-def test_cross_provider_poison_cannot_authorize_uninstall(dist_root, tmp_path):
+def test_cross_provider_poison_cannot_authorize_uninstall(one_skill_dist, tmp_path):
     home = tmp_path / "home"
-    assert _install(home, "claude", dist_dir=dist_root).returncode == 0
-    assert _install(home, "gpt", dist_dir=dist_root).returncode == 0
+    assert _install(home, "claude", dist_dir=one_skill_dist).returncode == 0
+    assert _install(home, "gpt", dist_dir=one_skill_dist).returncode == 0
     victim = home / DISCOVERY_SUBDIR["gpt"] / "build-phase" / "SKILL.md"
     victim_rel = victim.relative_to(home).as_posix()
     ledger_path = home / ".skill-mesh-install.json"
@@ -2820,12 +2856,12 @@ def _open_deny_delete(path):
     return lambda: ctypes.windll.kernel32.CloseHandle(h)
 
 
-def test_uninstall_partial_removal_reconciles_ledger(dist_root, tmp_path):
+def test_uninstall_partial_removal_reconciles_ledger(one_skill_dist, tmp_path):
     """Uninstall interrupted partway (an owned file held with a delete-denying handle)
     must reconcile the ledger to list ONLY the owned files still present, so a retry
     resumes cleanly."""
     home = tmp_path / "home"
-    r = _install(home, "claude", dist_dir=dist_root)
+    r = _install(home, "claude", dist_dir=one_skill_dist)
     assert r.returncode == 0, r.stderr
     lockpath = home / DISCOVERY_SUBDIR["claude"] / "build-phase" / "core.md"
 
@@ -2961,10 +2997,10 @@ def test_tampered_dotlike_created_dir_entry_never_deletes_home(tmp_path):
         )
 
 
-def test_corrupt_ledger_fallback_preserves_everything(dist_root, tmp_path):
+def test_corrupt_ledger_fallback_preserves_everything(one_skill_dist, tmp_path):
     """Without current-byte hashes a corrupt-ledger uninstall deletes nothing."""
     home = tmp_path / "home"
-    r = _install(home, "claude", dist_dir=dist_root)
+    r = _install(home, "claude", dist_dir=one_skill_dist)
     assert r.returncode == 0, r.stderr
     disco = home / DISCOVERY_SUBDIR["claude"]
     op_dir = disco / "operator-tool"
@@ -2985,11 +3021,11 @@ def test_corrupt_ledger_fallback_preserves_everything(dist_root, tmp_path):
     assert generated.read_bytes() == generated_before
 
 
-def test_persisted_ledger_never_has_null_or_empty_entries(dist_root, tmp_path):
+def test_persisted_ledger_never_has_null_or_empty_entries(one_skill_dist, tmp_path):
     """Schema guard: a persisted ledger must never contain a null/empty owned_files or
     created_dirs entry (normal install, reinstall, and a zero-file install)."""
     home = tmp_path / "home"
-    r = _install(home, "claude", dist_dir=dist_root)
+    r = _install(home, "claude", dist_dir=one_skill_dist)
     assert r.returncode == 0, r.stderr
     _assert_no_empty_ledger_entries(
         json.loads((home / ".skill-mesh-install.json").read_text(encoding="utf-8")))
