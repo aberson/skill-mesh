@@ -13,7 +13,7 @@ Listening pass (user-draft's discipline — split, gaps, one round):
 
 Questions: none — the vent is already clear (one round max; zero used).
 
-Routes chosen by consulting the routing web (skill-pipeline.md § "The 8 rails" — cited, not restated): (a) is cruft-smell about the repo, not a plan document — the web's trim note routes it investigate first (assess, then the investigate->plan or investigate->do edge applies); the question is codebase-local, so an Explore sweep rather than a deep-research charter. (b) is a small concrete voiced task -> do. (c) wants a usable goal, not work done -> draft.
+Routes chosen by consulting the routing web (skill-pipeline.md § "The rails" — cited, not restated): (a) is cruft-smell about the repo, not a plan document — the web's trim note routes it investigate first (assess, then the investigate->plan or investigate->do edge applies); the question is codebase-local, so an Explore sweep rather than a deep-research charter. (b) is a small concrete voiced task -> do. (c) wants a usable goal, not work done -> draft.
 
 ===== written file: .claude/task-state/intake-toybox-cleanup.md =====
 # Intake ledger — toybox-cleanup

@@ -45,7 +45,7 @@ a DEFECT, not a bonus.
   ask when no vent was given, the echoed fragment split with Step 2's resume echoes
   (`already F<n>`, `F<n> parked → done`, `F<n> parked → routed`), at most one question
   round, the routing-web citation, the ledger table as written, each row's seed or parked
-  question, and the Step 4 closing block.
+  question (a decide row's with its register line), and the Step 4 closing block.
 - **Writes:** exactly one file, the intake ledger at the intake-engine §1 path — seeded only
   when absent, otherwise loaded and appended or updated per §4 and Step 2 (one writing
   session at a time). No other file, no seed files, no staging, no commit, no push.
@@ -154,6 +154,8 @@ fragment belongs on stays the web's call):
 - **plan** → the FULL `/plan-feature` seed paragraph in the gateway output (problem +
   voiced constraints, scope strictly as voiced); the ledger disposition keeps only the
   one-line form (intake-engine §2 owns that rule — the ledger never holds paragraphs).
+  When the web's plan rail names `/code-consigliere` for the fragment, the seed is one
+  `/code-consigliere <target>` line instead.
 - **investigate** → external/multi-source: a deep-research charter for the receiving
   window to dispatch via `Workflow({name: "deep-research-pinned"})` — never the built-in
   name (CLAUDE.md's dispatch rule, echoed by the web); codebase-local: a scoped
@@ -169,10 +171,30 @@ fragment belongs on stays the web's call):
   picks a build route or writes a build prompt itself — a seed that skips `/user-pm`
   (a bare build command on a freshly-voiced task) is wrong.
 - **draft** → a `/user-draft <the operator's rough thoughts>` line.
-- **decide** → NOT a seed: the row parks with the open question stated verbatim in its
-  disposition. Never answer it, never pick a side, never convert it into work — parked
-  rows wait for the operator (intake-engine §2/§3 own parked semantics; deciding is the
-  one thing the gateway must never do for them).
+- **review** → one line for the review skill the web's review rail names for the fragment,
+  carrying the change as voiced, in that skill's shape:
+  `/review-gauntlet '<intent as voiced>' <PR #N or diff>`,
+  `/review-deep --prompt '<intent as voiced>' --diff <PR #N or diff>`, or `/review-proof`
+  with the answer whose claims need sources.
+- **research** → `/research-prospect --projects <project>`, or the first link of the
+  citation chain the web names: `/citation-review <workspace-relative path>` (one
+  artifact) or `/citation-sweep <project-slug>` (project-wide).
+- **tend** → one line for the skill the web's tend rail names for the voiced complaint,
+  with its target when one was voiced (e.g. `/test-prune <suite path>`,
+  `/repo-wrap <path-or-slug>`, `/context-slim`).
+- **session** → `/user-wrap`, `/task-handoff --resume`, or `/user-pm`, as the web's
+  session rail names for the fragment.
+- **learn** → `/user-learn <topic as voiced>` or `/user-brainstorm <topic as voiced>`.
+- **decide** → NOT a work seed: the row parks with the open question stated verbatim in
+  its disposition, which also carries one register line so the question lands in the
+  decision register — `/user-dr open only <project root>; sources: <ledger path>` (user-dr's
+  scope and project path, plus the ledger as a named source: the parked row there carries
+  the question), or, when the web's decide rail names `/user-fermize` for the fragment,
+  `/user-fermize <plan path, or the voiced fragment as the excerpt>; decision: '<the
+  question as voiced>'; intended outcome: '<the outcome as voiced>'`. The line records or
+  frames the question; it decides nothing. Never answer it, never pick a side, never
+  convert it into work — parked rows wait for the operator (intake-engine §2/§3 own
+  parked semantics; deciding is the one thing the gateway must never do for them).
 
 ### Step 4 — closing block
 
@@ -186,7 +208,8 @@ Three elements, always:
 3. **QUICK COPY** — every routed row's seed, one paste-able line each (the plan rail's
    line invokes `/plan-feature` with a compact form, the full paragraph staying above).
    Parked rows are questions,
-   not seeds — they appear above with their open question, never in QUICK COPY. On a
+   not seeds — they appear above with their open question (and a decide row's register
+   line), never in QUICK COPY. On a
    loaded ledger, QUICK COPY holds only rows routed in this pass (a parked row this pass
    routed included); earlier `routed` rows and `already F<n>` echoes keep their seed
    pointer in the ledger and are not re-emitted.
