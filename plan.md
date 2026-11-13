@@ -1,5 +1,40 @@
 # Skill Mesh plan
 
+## v4 program - started 2026-11-13
+
+**Status: STARTED as a planning record. Nothing is built, and no v4 step can be dispatched until its
+workstream has its own reviewed plan.** On 2026-11-13 the operator directed that the v3 follow-ups start
+v4 work rather than form a v3.1 queue (relayed by the coding-root rollout window). This section owns v4
+execution status, as the v3 program section below does for v3.
+
+**Direction.** Approved work is queued and runs without the operator starting each stage. Route advice
+and plan approval work today. An outcome queue and an isolated builder VM are being built now; the VM is
+the current focus. A scheduler, a question-routing coordinator, automatic reporting and live dashboards
+are planned. This is the public statement on github.com/aberson, "Where it's heading".
+
+**Scope source:** `<coding-root>/docs/skill-mesh-3-review/v3-v4-split-proposal-2026-11-12.md`, section
+"What moves to v4". The cross-project contracts are in `<coding-root>/documentation/system-workflow-plan.md`
+(R21 to R25).
+
+| ID | Workstream | Contract owner | Where it stands |
+|---|---|---|---|
+| V4-1 | The driver, which runs skill changes in rounds, and its pilot | skill-mesh | Plan drafted and reviewed: `<coding-root>/docs/skill-mesh-3-review/driver-plan-2026-11-12.md` (17 steps). The pilot must be picked again, because v3 did the user-fermize promotion and the shakedown fold by hand. The operator's answers to BQ3 (items 10 to 12) apply. |
+| V4-2 | The optimization loop, measured model pins, and the tier skills folded into the pin path | switchboard and measure-twice; skill-mesh reads the pins | No plan yet. memory-distill stays the optimization pilot. |
+| V4-3 | Forge's queue and admission (R21 to R24): the execution queue formalized from you-asked-for-it's queue skills, and user-pm handing work to Forge | Forge master (R23); Skill Mesh master for route policy (R21) | No plan yet. Proposed substrate, awaiting the operator: swarm-forge's Forge kernel (`forge_kernel` / `forge_orch`, branch `forge-api-staging` at `25176495`). swarm-forge's stale deferred queue would be archived. |
+| V4-4 | Firstmate-style central and per-project coordinators | workflow plan (a candidate, not adopted) | No plan yet. |
+| V4-5 | Observatory's lane board (R25) and derived views, including dev-observatory reading user-pm `--json` | Observatory and Toolkit, outside skill-mesh | skill-mesh's part is to keep user-pm `--json` additive. |
+| V4-6 | The catalog create-and-delete rail (`/skill-crud`) | skill-mesh Phase CL ([master plan](docs/plans/master_plan.md), "Catalog lifecycle (CL)") | Step 110 is DONE at `c350102`. Steps 111 to 117 (#169 to #175) and the attended Step 118 (#176) are open. |
+| V4-7 | Remove the GPT adapters | skill-mesh | Due one release after v3.0.0, which carried the deprecation note (D5). |
+| V4-8 | v3 follow-ups folded into v4 | skill-mesh | Catalog gate Steps 1 to 7 and 9 to 11 (#245 to #255). user-pm Steps 17 and 18 (#242, #243): Step 17's second condition is met (user-fermize has a Claude adapter, `8b9b239`, and is installed); a real `user-dr` register is still missing. Phase WF (#196 to #204). |
+
+**Done in this change:** the stale v2 and Copilot wording in `documentation/skill-reference.md` and
+`documentation/v2-installation.md`, and `/user-dr` in the routing diagram's decide box.
+
+**Open for the operator:**
+- Relabel #245 to #255 from `deferred: v3.1` to `deferred: v4`. This is a tracker write, so it is not done here.
+- Decide the swarm-forge disposition for V4-3.
+- Choose the first v4 workstream to plan.
+
 ## Release v3.0.0 - catalog cleanup, user-pm revamp, tests sized to the change (2026-11-13)
 
 Released from `b67ee86`: tag `v3.0.0`, with `origin/main` fast-forwarded from `1fecb8c`. The archive
@@ -1371,7 +1406,7 @@ their respective release payloads. Restart host sessions after upgrading.
 - v3 building started 2026-11-12. Each v3 plan records its own step status on its
   `**Status:**` lines; read those, not this section:
   `documentation/v3-user-pm-revamp-plan.md`, `documentation/v3-guard-plan.md`,
-  `documentation/v3-catalog-gate-plan.md` (Step 8 only for v3; the rest deferred to v3.1),
+  `documentation/v3-catalog-gate-plan.md` (Step 8 only for v3; the rest moved to v4 on 2026-11-13, see the v4 program section, V4-8),
   `documentation/v3-catalog-cleanup-plan.md`, `documentation/v3-inbox-hooks-plan.md` and
   `documentation/v3-release-plan.md`.
 - Issue hygiene 2026-11-13: step issues closed where the plan records DONE or MET; the

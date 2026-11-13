@@ -1,7 +1,7 @@
-# Install or upgrade Skill Mesh v2
+# Install or upgrade Skill Mesh v3
 
-**v1 is deprecated and must not be reactivated.** Use only v2 distributions for
-active installations. Historical restoration evidence below describes qualification,
+**v1 is deprecated and must not be reactivated.** Use only v2 or later distributions
+for active installations. Historical restoration evidence below describes qualification,
 not permission to restore retired v1 skills. Restart host sessions after upgrading.
 
 

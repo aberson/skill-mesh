@@ -54,7 +54,7 @@
     <g class="rail"><rect x="470" y="228" width="330" height="52" rx="11"/><text class="rail-name" x="488" y="250">investigate</text><text class="rail-dest" x="488" y="268">/deep-research  ·  Explore</text></g>
     <g class="rail"><rect x="470" y="292" width="330" height="52" rx="11"/><text class="rail-name" x="488" y="314">verify</text><text class="rail-dest" x="488" y="332">/user-uat  ·  /user-walkthrough --shakedown</text></g>
     <g class="rail"><rect x="470" y="356" width="330" height="52" rx="11"/><text class="rail-name" x="488" y="378">trim</text><text class="rail-dest" x="488" y="396">/plan-merge --trim</text></g>
-    <g class="rail"><rect x="470" y="420" width="330" height="52" rx="11"/><text class="rail-name" x="488" y="442">decide</text><text class="rail-dest" x="488" y="460">surfaced  ·  parked for you</text></g>
+    <g class="rail"><rect x="470" y="420" width="330" height="52" rx="11"/><text class="rail-name" x="488" y="442">decide</text><text class="rail-dest" x="488" y="460">/user-dr  ·  parked for you</text></g>
     <g class="rail"><rect x="470" y="484" width="330" height="52" rx="11"/><text class="rail-name" x="488" y="506">draft</text><text class="rail-dest" x="488" y="524">/user-draft  →  /goal</text></g>
   </g>
   <g class="chip"><rect x="808" y="158" width="140" height="34" rx="8"/><text class="chip-cmd" x="820" y="173">/plan-feature</text><text class="chip-lbl" x="820" y="185">existing project</text></g><g class="chip"><rect x="808" y="196" width="140" height="34" rx="8"/><text class="chip-cmd" x="820" y="211">/plan-init</text><text class="chip-lbl" x="820" y="223">brand-new project</text></g>

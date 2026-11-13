@@ -21,6 +21,9 @@ This is the execution copy for build-phase, copied 2026-11-12 from the operator'
 > measured headroom, the decision note and the differential run on a scratch copy) is in
 > `<coding-root>/docs/skill-mesh-3-review/builds/catalog-gate/step8/`.
 
+> **Amended 2026-11-13, operator direction:** there is no v3.1 queue. Steps 1 to 7 and 9 to 11 are
+> v4 work, workstream V4-8 in `plan.md`, "v4 program".
+
 > **Final review (2026-11-12 10:55):** `plan-review` found one blocker, Condition paths that did not
 > resolve from the build-phase project root; fixed in the roots paragraph and Steps 6 and 8 to 11. Record:
 > `catalog-gate-plan-2026-11-12-final-review.md`.
