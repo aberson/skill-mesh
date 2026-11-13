@@ -21,6 +21,11 @@ python -m pytest
 Collection reaches the eight suites under `tests/` **and** three test roots that a
 `tests/`-scoped run never touches:
 
+> **Note (2026-11-13, v3 guard Step 6).** `tests/` now holds **ten** suites:
+> `tests/behavioural` was added, and `tests/production-toolchain` was already a suite
+> this document missed. The eight-suite wording and the counts in this file are the
+> 2026-08 measurement and are left as recorded.
+
 | Root-only test root | What it covers |
 |---|---|
 | `_shared/` | the shared build-step verdict engine and its graders |
@@ -139,7 +144,8 @@ Both pass-3 gates are the literal DONE-gate command: one uninterrupted repo-root
 `python -m pytest` with no path argument, each run detached with an exit-code sentinel
 because the ~2h wall clock exceeds the orchestrator's per-call tool timeout.
 
-**Collection reaches eight suites, not seven.** Verified against the Step 9 gate log:
+**Collection reaches eight suites, not seven** (2026-08; ten as of 2026-11-13, see the note
+above). Verified against the Step 9 gate log:
 `tests/` holds `calibration`, `distributions`, `experiments`, `package-integrity`,
 `release`, `router`, `smoke` and `telemetry` — `experiments` (78 tests) was omitted from
 this document and from `CLAUDE.md` until 2026-08-20. The three root-only roots (`_shared/`,
