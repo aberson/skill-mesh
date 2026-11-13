@@ -412,6 +412,8 @@ file only; the others are Step 12's); the profiles build; headroom unchanged; ga
 
 ### Step 10: Wait for the two outside prerequisites
 
+**Status:** DONE 2026-11-13. no commit (wait step; checkpoint in the evidence folder; base b1d9832) Steps 10 to 14 reviewed APPROVE (`<coding-root>/docs/skill-mesh-3-review/builds/cleanup-3-review.md`).
+
 **Status:** 2026-11-13: predicate (b) is now met by commit `dd01309` (catalog gate plan Step 8, option "remove": `tests/package-integrity/test_codex_budgets.py` has no `assert headroom <` line). Predicate (a) was already met by user-pm Step 5. Both prerequisites hold once that commit is on `v3/main`, so Step 10 can run.
 
 **Problem:** Two things outside this plan must be true before the remaining steps. (a) The user-pm revamp plan's
@@ -434,6 +436,8 @@ before the rebase (Steps 5 and 15) has a class entry and every one it removed (S
 class-map test passes; the same duty applies to the test files Steps 15 and 18 add after it.
 
 ### Step 11: UPDATE `user-gateway` (repoint its routes)
+
+**Status:** DONE 2026-11-13. commit ccb0895. Steps 10 to 14 reviewed APPROVE (`<coding-root>/docs/skill-mesh-3-review/builds/cleanup-3-review.md`).
 
 **Problem:** Decision item 14: keep `user-gateway` for people who do not know skill names, and repoint it. Its
 "ideas" route points at `/goblin-suggest`; its "do it" route and the "voice a task, then run it" lines point at
@@ -459,6 +463,8 @@ and new route tables side by side); the profiles build; headroom unchanged; gate
 
 ### Step 12: DELETE `user-shakedown`
 
+**Status:** DONE 2026-11-13. commit 207f2c4. Steps 10 to 14 reviewed APPROVE (`<coding-root>/docs/skill-mesh-3-review/builds/cleanup-3-review.md`).
+
 **Problem:** Folded in Step 9, repointed in Step 11. Remaining callers: `skills/review-uat/core.md`,
 `skills/user-uat/core.md`, `skills/user-walkthrough/` (core and Codex adapter prose), `_shared/skill-pipeline.md`,
 `_shared/intake-engine.md` (no change expected), docs, tests and the calibration port list.
@@ -475,6 +481,8 @@ here (Step 16).
 limit; ~962 from the build base, over it, which Step 10 verified is gone); gate named and green.
 
 ### Step 13: DELETE `plan-trim` (and update `user-afterparty`'s chain)
+
+**Status:** DONE 2026-11-13. commit 26fed33. Steps 10 to 14 reviewed APPROVE (`<coding-root>/docs/skill-mesh-3-review/builds/cleanup-3-review.md`).
 
 **Problem:** Folded in Step 8; the gateway repoint is done (Step 11). `user-afterparty` chains `plan-trim`
 (its hygiene list), and `plan-feature` and `_shared/skill-pipeline.md` name it. This is the first predicted
@@ -494,6 +502,8 @@ base) and above 400; if above 900 the guard must already be
 the one the catalog gate plan left, which Step 10 verified; gate named and green.
 
 ### Step 14: DELETE `goblin-suggest`, `goblin-sweep`, `goblin-do`
+
+**Status:** DONE 2026-11-13. commit a4035d6 (pin 306 to 258; CITER_FLOOR 4 to 3, MIN_ADAPTERS and the codex install vacuity floor 50 to 45, to be derived from the manifest in the next batch). Steps 10 to 14 reviewed APPROVE (`<coding-root>/docs/skill-mesh-3-review/builds/cleanup-3-review.md`).
 
 **Problem:** Retired (maintenance R1). Their cores describe a removed execute path; "what should I improve?" moved
 to `user-pm` (Step 5 of that plan, checked in Step 10), and the gateway was repointed in Step 11. This is one
