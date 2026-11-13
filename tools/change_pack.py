@@ -50,16 +50,12 @@ QUICK_CHECKS = (
     "tests/package-integrity",
 )
 
-# The five behavioural files in tests/package-integrity that are not quick
-# checks. They are left out of the pack by this explicit ignore list and run
-# per change only when their own script changes (see FOCUSED below).
-PACKAGE_INTEGRITY_IGNORES = (
-    "tests/package-integrity/test_lesson_observations.py",
-    "tests/package-integrity/test_review_deep_fail_closed.py",
-    "tests/package-integrity/test_review_deep_lint_prepass_adapter.py",
-    "tests/package-integrity/test_build_phase_landed_paths_roundtrip.py",
-    "tests/package-integrity/test_shared_ledger_checks.py",
-)
+# The five behavioural files that used to sit in tests/package-integrity now live
+# in tests/behavioural (v3 guard Step 6), so the pack takes the whole
+# package-integrity folder and ignores nothing. They run per change only when
+# their own script changes (see FOCUSED below). Kept as a list so a future
+# exclusion is one line and still checked for existence.
+PACKAGE_INTEGRITY_IGNORES = ()
 
 # Optional checks, added by option.
 ROSTER_CHECK = (
@@ -88,7 +84,7 @@ FOCUSED = (
     ("tools/release.ps1, tools/build-distributions.ps1", "tests/release"),
     ("a skill script with its own behavioural file (lesson observations, "
      "review-deep, build-phase landed paths, shared ledger)",
-     "that file (one of the five ignored above)"),
+     "that file in tests/behavioural"),
     ("experiments/", "tests/experiments"),
     ("a catalog CREATE or DELETE", "add --roster"),
     ("a representative skill's core.md", "add --rc-report"),

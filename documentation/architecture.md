@@ -430,7 +430,7 @@ a private absolute path).
 testing rule in the root `CLAUDE.md` (focused tests for what the change touches plus
 the quick repo-wide checks, with saved evidence); the repo-root run is the one full
 sweep per release, in the background, not a per-step or merge gate. Run it from the
-repository root with no path argument, so collection reaches the eight suites under
+repository root with no path argument, so collection reaches the ten suites under
 `tests` *and* the three test roots a `tests`-scoped run never touches — `_shared`,
 `skill-iterate/scripts`, and `skill-eval-setup/scripts`, all of which hold production
 modules this project edits:
@@ -468,9 +468,10 @@ python -m pytest tests\calibration
 ### 8.4 Lint / typecheck
 
 **Not configured.** The repository has no lint command and no typecheck command.
-Do not invent one. pytest is the only automated gate: the eight suites under `tests`
-(`tests/router`, `tests/calibration`, `tests/package-integrity`, `tests/distributions`,
-`tests/release`, `tests/telemetry`, `tests/smoke`, `tests/experiments`) plus the three
+Do not invent one. pytest is the only automated gate: the ten suites under `tests`
+(`tests/router`, `tests/calibration`, `tests/package-integrity`, `tests/behavioural`,
+`tests/distributions`, `tests/release`, `tests/telemetry`, `tests/smoke`,
+`tests/experiments`, `tests/production-toolchain`) plus the three
 root-only test roots described in section 8.3, all collected by the repo-root
 `python -m pytest`. Per-suite and total counts are NOT restated here -- they live in
 [`phase-75-baseline.md`](phase-75-baseline.md), which is the one owner of the measured

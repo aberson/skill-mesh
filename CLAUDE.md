@@ -18,7 +18,7 @@ installed skill tree. Installing produces a host-native discovery tree in a cons
 | Manifest / config | JSON — `config/skill-manifest.json` (authoritative skill inventory) |
 | Build / install / release tooling | Windows PowerShell 5.1 floor (`powershell`) — `tools/*.ps1` |
 | Manifest + release checks | Python 3 — `tools/gen_manifest.py`, `tools/release_checks.py` |
-| Tests | pytest — 8 suites under `tests/` plus 3 root-only test roots; per change, focused tests plus the quick repo-wide checks; the repo-root `python -m pytest` is the once-per-release sweep (see Key commands) |
+| Tests | pytest — 10 suites under `tests/` plus 3 root-only test roots; per change, focused tests plus the quick repo-wide checks; the repo-root `python -m pytest` is the once-per-release sweep (see Key commands) |
 | Lint / typecheck | **Not configured** (deliberate — see Key commands) |
 
 ## Key commands
@@ -68,7 +68,7 @@ Before starting it, run `python tools/gate_preflight.py` and put its measured li
 record: it refuses (exit 3) when available memory is under 2048 MB or another pytest process is
 running, because either makes a red full sweep untrustworthy.
 
-A path argument narrows collection. `python -m pytest tests/` reaches only the eight suites
+A path argument narrows collection. `python -m pytest tests/` reaches only the ten suites
 under `tests/`; it never collects the three root-only test roots — `_shared/`,
 `skill-iterate/scripts/`, and `skill-eval-setup/scripts/` — so it cannot see a regression
 there. Those roots are real production code (the shared verdict engine and the two
