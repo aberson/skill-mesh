@@ -1,7 +1,7 @@
 {
   "schema": "show-your-work.workflows.v1",
   "generator": "show-your-work 0.1.0",
-  "generated_at": "2026-11-13T08:08:16+00:00",
+  "generated_at": "2026-11-13T08:24:06+00:00",
   "source_dir": "docs/workflows",
   "items": [
     {
@@ -687,6 +687,20 @@
       ],
       "source_path": "docs/workflows/user-draft.mmd",
       "source_sha256": "4e16f1d2c703337c513499ef7466b07858ab1673ec719cd55d2c1fb1a3f4ba52",
+      "engine": "mermaid",
+      "rasters": null
+    },
+    {
+      "id": "user-fermize",
+      "label": "user-fermize",
+      "summary": "Read one complex build decision read-only, tie the release promise to its checks and gaps, and advise on a smaller useful milestone when one is supported.",
+      "alt": "A plan and one decision are read read-only in about ten minutes; each promise is tied to its condition, check and gap; a smaller milestone is shown only when supported; the result is short advice.",
+      "not_shown": "the Relevance, Evidence and Control lenses in detail, costly-check rerun rules, failed-gate readings, and the report's wording rules",
+      "sources": [
+        "skills/user-fermize/core.md"
+      ],
+      "source_path": "docs/workflows/user-fermize.mmd",
+      "source_sha256": "a4f1fb2ca20c189c512460b6cb189ccfdbabc89a3ef392850df6ff261556a698",
       "engine": "mermaid",
       "rasters": null
     },

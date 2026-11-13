@@ -25,7 +25,7 @@ and byte-identical ledger, refusal, containment, and uninstall semantics to the 
 two profiles, because all three derive from the discovery subdirectory rather than
 spelling a root per provider.
 
-Only the 54 portable skills have a Codex adapter. The 3 Claude-native exclusions —
+Only the 55 portable skills have a Codex adapter. The 3 Claude-native exclusions —
 `claude-oauth-auth`, `context-slim`, and `judge-motion` — carry `core: null` in
 `config/skill-manifest.json` and are absent from a Codex profile entirely; no
 misleading stub is emitted for a provider that cannot support them.

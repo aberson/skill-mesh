@@ -67,16 +67,16 @@
     }
   },
   "counts": {
-    "total": 57,
-    "portable": 54,
+    "total": 58,
+    "portable": 55,
     "provider_native": 3,
-    "claude": 57,
-    "gpt": 54,
-    "codex": 54,
+    "claude": 58,
+    "gpt": 55,
+    "codex": 55,
     "local_capable": 20,
     "sub_agent": 20,
     "vision": 2,
-    "filesystem": 57
+    "filesystem": 58
   },
   "global_support_assets": [
     {
@@ -1465,6 +1465,28 @@
           "dest": "skills/user-draft/evals.seed/"
         }
       ]
+    },
+    {
+      "name": "user-fermize",
+      "status": "portable",
+      "description": "Weigh one complex build decision: a smaller useful milestone, what can wait, what to prove.",
+      "core": "skills/user-fermize/core.md",
+      "providers": {
+        "claude": "skills/user-fermize/providers/claude.md",
+        "gpt": "skills/user-fermize/providers/gpt.md",
+        "codex": "skills/user-fermize/providers/codex.md"
+      },
+      "capabilities": [
+        "filesystem"
+      ],
+      "local_capable": false,
+      "migration": {
+        "legacy_core": ".claude/skills-gpt/user-fermize/SKILL-core.md",
+        "legacy_claude_launcher": ".claude/skills/user-fermize/SKILL.md",
+        "legacy_claude_adapter": ".claude/skills/user-fermize/SKILL-claude.md",
+        "legacy_gpt": ".claude/skills-gpt/user-fermize/SKILL-gpt.md"
+      },
+      "support_assets": []
     },
     {
       "name": "user-gateway",

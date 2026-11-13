@@ -1,0 +1,16 @@
+%% user-fermize
+%% Summary: Read one complex build decision read-only, tie the release promise to its checks and gaps, and advise on a smaller useful milestone when one is supported.
+%% Sources: skills/user-fermize/core.md
+%% Not shown: the Relevance, Evidence and Control lenses in detail, costly-check rerun rules, failed-gate readings, and the report's wording rules
+%% Alt: A plan and one decision are read read-only in about ten minutes; each promise is tied to its condition, check and gap; a smaller milestone is shown only when supported; the result is short advice.
+
+flowchart TD
+    A[Take the plan, the decision and the intended outcome] --> B{Target and outcome clear?}
+    B -- No, ask one question --> A
+    B -- Yes --> C[Read instructions, plan and deciding evidence, read-only]
+    C --> D[Tie each promise to its condition, check and gap]
+    D --> E{Smaller useful milestone supported?}
+    E -- Yes --> F[Show what it delivers, what waits, what stays unproven]
+    E -- No --> G[Keep the current scope and name the gaps]
+    F --> H[Return short advice-only view and the next decision]
+    G --> H

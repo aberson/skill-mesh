@@ -379,6 +379,13 @@
       "local": true,
       "notes": "Ported - shared core + GPT/Claude wrappers"
     },
+    "user-fermize": {
+      "default_model": "claude",
+      "claude": true,
+      "gpt": true,
+      "local": false,
+      "notes": "Created in the v3 catalog cleanup (Step 5) from the personal Codex skill: neutral core plus Claude, Copilot and Codex adapters; local capability not assessed."
+    },
     "user-gateway": {
       "default_model": "claude",
       "claude": true,

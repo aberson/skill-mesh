@@ -1,16 +1,16 @@
 {
   "note": "Authoritative expected inventory for package-integrity tests. Committed so the public package tests need no private/legacy source. Regenerate with tools/gen_manifest.py.",
   "counts": {
-    "total": 57,
-    "portable": 54,
+    "total": 58,
+    "portable": 55,
     "provider_native": 3,
-    "claude": 57,
-    "gpt": 54,
-    "codex": 54,
+    "claude": 58,
+    "gpt": 55,
+    "codex": 55,
     "local_capable": 20,
     "sub_agent": 20,
     "vision": 2,
-    "filesystem": 57
+    "filesystem": 58
   },
   "portable": [
     "build-phase",
@@ -59,6 +59,7 @@
     "user-debug",
     "user-dr",
     "user-draft",
+    "user-fermize",
     "user-gateway",
     "user-learn",
     "user-pm",
@@ -120,6 +121,7 @@
     "user-debug",
     "user-dr",
     "user-draft",
+    "user-fermize",
     "user-gateway",
     "user-learn",
     "user-pm",
@@ -1190,6 +1192,21 @@
           "dest": "skills/user-draft/evals.seed/"
         }
       ]
+    },
+    {
+      "name": "user-fermize",
+      "status": "portable",
+      "local_capable": false,
+      "capabilities": [
+        "filesystem"
+      ],
+      "migration": {
+        "legacy_core": ".claude/skills-gpt/user-fermize/SKILL-core.md",
+        "legacy_claude_launcher": ".claude/skills/user-fermize/SKILL.md",
+        "legacy_claude_adapter": ".claude/skills/user-fermize/SKILL-claude.md",
+        "legacy_gpt": ".claude/skills-gpt/user-fermize/SKILL-gpt.md"
+      },
+      "support_assets": []
     },
     {
       "name": "user-gateway",
