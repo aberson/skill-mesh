@@ -70,7 +70,7 @@ PORTABLE = [
     "user-walkthrough", "user-wrap",
 ]
 
-NATIVE = ["claude-oauth-auth", "context-slim", "judge-motion"]
+NATIVE = ["claude-oauth-auth", "context-slim"]
 
 # Skills carrying a Codex provider adapter (skills/<name>/providers/codex.md).
 #
@@ -79,7 +79,7 @@ NATIVE = ["claude-oauth-auth", "context-slim", "judge-motion"]
 # what `status`, `counts["portable"]`, `counts["provider_native"]` and the README's
 # GPT-capable line all mean. A codex adapter is ADDITIVE on top of a record that is
 # already portable-or-native: it never moves a skill between those two buckets, so
-# EXPECTED_TOTAL / EXPECTED_PORTABLE / EXPECTED_NATIVE are 58/55/3 and every existing
+# EXPECTED_TOTAL / EXPECTED_PORTABLE / EXPECTED_NATIVE are 57/55/2 and every existing
 # count keeps its exact meaning. Modelling codex as a third status instead would
 # redefine `portable` for all catalog records and invalidate every committed tally.
 #
@@ -170,7 +170,6 @@ SUB_AGENT = {
                          # depth-1 classification judges after the OPEN ALL barrier
     "context-slim",      # "Spawn three parallel subagents using the Agent tool"
     "goblin-suggest",    # "fan out --n-judges judge agent calls IN PARALLEL"
-    "judge-motion",      # "separate sub-agent per transition" via Agent tool
     "judge-ui",          # "dispatches an independent vision-judge sub-agent"
     "lesson-harvest",    # fresh strong reviewer gates public surfaces/dispositions
     "research-prospect", # "Fan out parallel Explore agents"
@@ -191,13 +190,13 @@ SUB_AGENT = {
 #
 # NON-DERIVABLE BY DESIGN. "Requires a native image/vision capability" is a claim
 # about the HOST capability a skill needs, not about any artifact in skills/<name>/.
-# Several skills mention screenshots without needing to SEE one; these two cannot
+# Several skills mention screenshots without needing to SEE one; judge-ui cannot
 # render a verdict without it. Nothing on disk marks that difference.
 #
 # Unchanged by Phase CP Step 10: none of the seven promoted skills reads an image.
 # The portfolio-block proposer rendered TOML from text sources, the citation-* family grades prose,
 # goblin-sweep parses JSON, and repo-wrap runs git -- all text-only end to end.
-VISION = {"judge-ui", "judge-motion"}
+VISION = {"judge-ui"}
 
 # Per-skill one-line `description`, the SINGLE source of truth for the SKILL.md
 # frontmatter description the builder emits (GitHub Copilot CLI requires every
@@ -237,7 +236,6 @@ DESCRIPTIONS = {
     "goblin-do": "Render the next step for one persisted Goblin atom after a read-only liveness check.",
     "goblin-suggest": "Produce a grounded, ranked improvement shortlist for a project as goblin atoms.",
     "goblin-sweep": "List a project's obligation atoms from the goblin engine and route them to goblin-do.",
-    "judge-motion": "Capture a UI transition as a slow-motion filmstrip and have a vision-judge render a PASS/FAIL/ESCALATE verdict on motion defects.",
     "judge-ui": "Drive a web UI through a flow, screenshot it, and have a vision judge give a verdict.",
     "lesson-harvest": "Find un-codified regressions in git history and notes; output an independently reviewed preview.",
     "memory-distill": "Review recent feedback memories one at a time and surface the principles they point at.",
@@ -337,13 +335,6 @@ SUPPORT_ASSETS = {
         ("skills", "goblin_suggest.workflow.js"),
     ],
     "goblin-sweep": [("skills", "evals/")],
-    "judge-motion": [
-        ("skills", "fixtures/"),
-        ("skills", "package-lock.json"),
-        ("skills", "package.json"),
-        ("skills", "scripts/"),
-        ("skills", "tests/"),
-    ],
     "judge-ui": [
         ("skills", "evals/"),
         ("skills-gpt", "calibration-notes.md"),
@@ -419,7 +410,7 @@ SUPPORT_ASSETS = {
 # Spelled-out expectations for the tree enumeration below. The same three numbers are
 # asserted independently by tests/package-integrity/test_manifest_contract.py.
 # 59/56/3 since the v3 user-pm plan's Step 13 (#238) retired the orientation skill into user-pm.
-EXPECTED_TOTAL, EXPECTED_PORTABLE, EXPECTED_NATIVE = 58, 55, 3
+EXPECTED_TOTAL, EXPECTED_PORTABLE, EXPECTED_NATIVE = 57, 55, 2
 
 
 def skill_support_assets(name: str):

@@ -23,7 +23,7 @@ Every artifact class has exactly one canonical home, enumerated in
 [`architecture.md`](architecture.md) §2 and §7. In short:
 
 - **Skill behavior**: `skills/<name>/core.md` (portable) or `skills/<name>/providers/claude.md`
-  (the 3 Claude-native exclusions — `claude-oauth-auth`, `context-slim`, `judge-motion`).
+  (the 2 Claude-native exclusions — `claude-oauth-auth`, `context-slim`).
 - **Provider adapters**: `skills/<name>/providers/claude.md`, `skills/<name>/providers/gpt.md`.
 - **Router and provider-detection**: `runtime/skill-router.ps1`, `runtime/providers/`.
 - **Manifest** (single source of truth for counts, adapters, exclusions): `config/skill-manifest.json`.
@@ -44,8 +44,8 @@ Those 46 directories are **still present on disk** and still resolve for anyone 
 link, clone, or `mklink /J` junction pointed at them.
 
 They are **not** the canonical source: they were not touched by Steps 33-38, they do not carry
-GPT adapters, and the 4 skills added since this migration started
-(`judge-motion`, `observatory-doctor`, `plan-redline`, `user-project`) exist **only** in the new
+GPT adapters, and the skills added since this migration started that are still in the catalog
+(`observatory-doctor`, `plan-redline`, `user-project`) exist **only** in the new
 `skills/<name>/` tree — they have no top-level counterpart. Treat any content difference between
 a top-level `<skill>/SKILL.md` and `skills/<skill>/core.md` (or `providers/claude.md`) as the new
 canonical tree being authoritative.

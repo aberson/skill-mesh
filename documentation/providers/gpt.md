@@ -16,7 +16,7 @@ Each installed skill resolves `skills/<name>/providers/gpt.md`, which references
 shared `skills/<name>/core.md`. Discovery loads the GPT adapter directly, so a GPT
 session cannot accidentally discover the Claude compatibility launcher first.
 
-Only the 55 portable skills have a GPT adapter. The 3 Claude-native exclusions are
+Only the 55 portable skills have a GPT adapter. The 2 Claude-native exclusions are
 not installed into a GPT profile.
 
 ### Native discovery root and SKILL.md format
@@ -116,8 +116,8 @@ GPT adapters support `filesystem`, `sub-agent`, and `vision`:
   review-gauntlet, skill-evolve, skill-iterate, test-prune, tier-escalate,
   tier-offload, user-brainstorm, user-debug, user-learn, user-uat) map fresh
   isolated arms onto the provider's
-  action/task API; orchestration remains parent-owned. (context-slim and judge-motion are also
-  `sub-agent` but are Claude-native exclusions with no GPT adapter.) The current
+  action/task API; orchestration remains parent-owned. (context-slim is also
+  `sub-agent` but is a Claude-native exclusion with no GPT adapter.) The current
   `lesson-harvest` adapter is packaged but its local preview halts
   `required_tool_missing` because D-GPT provides no qualifying fresh-context proof;
   automatic publication is unavailable in v2 on every provider.

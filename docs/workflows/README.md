@@ -3,11 +3,11 @@
 
 These diagrams summarize the **Skill Mesh v2.0.4** contracts. Use the
 [skill reference](../../documentation/skill-reference.md) for a compact table
-of all 58 skills, purposes, host coverage and direct diagram links.
+of all 57 skills, purposes, host coverage and direct diagram links.
 
 Each diagram declares its source and omitted detail. The linked source contract
 remains authoritative: a diagram does not authorize an action, bypass a hold,
-or establish live qualification. Claude has all 58 packages; Codex and Copilot
+or establish live qualification. Claude has all 57 packages; Codex and Copilot
 have the 55 portable packages. Native capability gates still apply.
 
 These diagrams use the same rounded cards, monospace labels, and blue connectors
@@ -56,7 +56,6 @@ produces the default Mermaid README rather than this SVG gallery.
 - [goblin-do](#goblin-do) - Resolve one persisted atom, recheck its anchor, and print a goal block or planning seed without executing the work.
 - [goblin-suggest](#goblin-suggest) - Validate the invocation, enforce the current safety holds for every mode, and stop before reading project content or launching the workflow.
 - [goblin-sweep](#goblin-sweep) - Invoke the deterministic goblin sweep, parse its obligation records, and present every returned atom with a goblin-do handoff.
-- [judge-motion](#judge-motion) - Gate a motion run on session calibration, capture paint-driven evidence, short-circuit mechanical failures, and reduce per-transition verdicts.
 - [judge-ui](#judge-ui) - Drive a declared UI flow through mechanical and read-back gates, calibrate one independent vision dispatch, and reduce to PASS, FAIL, or ESCALATE.
 - [lesson-harvest](#lesson-harvest) - Record one private observation or produce a privacy-reviewed zero-write lesson preview; automatic publication is unavailable in v2.
 - [memory-distill](#memory-distill) - Review selected feedback memories one at a time, surface broader principles, and apply changes only after explicit approval.
@@ -400,29 +399,6 @@ Drawn from:
 </picture>
 
 [Open full size](cards/goblin-sweep-dark.svg)
-
----
-
-## judge-motion
-
-Gate a motion run on session calibration, capture paint-driven evidence, short-circuit mechanical failures, and reduce per-transition verdicts.
-
-Source: [`judge-motion.mmd`](judge-motion.mmd)
-
-Drawn from:
-
-- [`skills/judge-motion/providers/claude.md`](../../skills/judge-motion/providers/claude.md)
-
-**Alt:** A motion run checks calibration before bring-up, captures transitions, fails hard mechanical defects without vision, judges residual motion, and reduces the worst result.
-
-**Deliberately not shown:** flow-spec fields, capture and frame scripts, binary question battery, auth details, calibration procedure, reduced-motion mode, and artifact schema
-
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="cards/judge-motion-dark.svg">
-  <img alt="A motion run checks calibration before bring-up, captures transitions, fails hard mechanical defects without vision, judges residual motion, and reduces the worst result." src="cards/judge-motion-light.svg">
-</picture>
-
-[Open full size](cards/judge-motion-dark.svg)
 
 ---
 

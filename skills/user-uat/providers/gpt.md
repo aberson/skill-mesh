@@ -16,7 +16,7 @@ See [../core.md](../core.md) for the full specification.
   invent a verdict for an unexecuted step. Under `--dry-run`, return exactly the core's step-2
   listing. Add no other result headings (no separate `Done` section), no speculative advice,
   and no verbose internal deliberation; stop after the operator ask.
-- `--ui` delegates through named-skill dispatch to `/judge-ui` / `/judge-motion`. `judge-motion` is Claude-native and absent from the GPT profile; if a needed judge is unavailable or fails its own capability contract on this host, report the step `ESCALATED` with `required_tool_missing: <judge>` and list it in `Needs you` - never view the screen and render a visual verdict yourself.
+- `--ui` delegates through named-skill dispatch to `/judge-ui`; transition-shaped steps stay manual checks on every host. If a needed judge is unavailable or fails its own capability contract on this host, report the step `ESCALATED` with `required_tool_missing: <judge>` and list it in `Needs you` - never view the screen and render a visual verdict yourself.
 
 ## Known GPT limitations
 

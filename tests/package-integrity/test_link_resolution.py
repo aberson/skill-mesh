@@ -681,8 +681,9 @@ def classify_reference(core):
         return "home_anchored"
     # SIXTH class, added to the plan's five by measurement, and the residual bucket:
     # a relative reference to a SIBLING path that exists in this repository's layout
-    # but not in a shipped one. Six entries / seven occurrences today -- five
-    # profile-side (three judge-motion/SKILL.md depth-3 sibling links plus the two
+    # but not in a shipped one. Three entries today (six at Step 63; the retired
+    # provider-native adapter's three depth-3 sibling links left with it at v3
+    # catalog cleanup Step 6) -- two profile-side (the two
     # `../context-slim/providers/claude.md` links, which break because a profile
     # flattens providers/ into SKILL.md and has nothing above its root) and one
     # canonical (`_shared/score-skill.md` citing `../<skill>/scripts/...`, a repo-only
@@ -1345,10 +1346,6 @@ def evaluate_gate(detected, known, frozen):
 KNOWN_DANGLING = (
     ('_shared/judge-core.md', '_shared/calibrate_judge.py', 'backtick'),
     ('_shared/judge-core.md', '_shared/grader_prompt.py', 'backtick'),
-    ('dist/claude/judge-motion/SKILL.md', '../../build-step/core.md', 'link'),
-    ('dist/claude/judge-motion/SKILL.md', '../../judge-ui/core.md', 'link'),
-    ('dist/claude/judge-motion/SKILL.md', '../../user-uat/core.md', 'link'),
-    ('dist/claude/judge-motion/SKILL.md', '_shared/judge-core.md', 'backtick'),
     ('dist/claude/judge-ui/core.md', '_shared/judge-core.md', 'backtick'),
     ('dist/claude/review-deep/core.md', '_shared/calibrate_judge.py', 'bare'),
     ('dist/claude/review-deep/core.md', '_shared/judge-core.md', 'backtick'),
@@ -1385,8 +1382,6 @@ KNOWN_DANGLING = (
     ('skills/build-phase/core.md', '../../_shared/judge-core.md', 'link'),
     ('skills/build-step/core.md', '../../_shared/build_step_verdict.py', 'backtick'),
     ('skills/build-step/core.md', '../../_shared/judge-core.md', 'link'),
-    ('skills/judge-motion/providers/claude.md', '../../../_shared/judge-core.md', 'link'),
-    ('skills/judge-motion/providers/claude.md', '_shared/judge-core.md', 'backtick'),
     ('skills/judge-ui/calibration-notes.md', '../../_shared/judge-core.md', 'link'),
     ('skills/judge-ui/core.md', '../../_shared/judge-core.md', 'link'),
     ('skills/judge-ui/core.md', '_shared/judge-core.md', 'backtick'),
@@ -2571,19 +2566,6 @@ def test_shipped_leaves_matches_a_real_build(dist_root):
         "scripts/resolve_queue.py",
         "scripts/structural_metrics.py",
     }
-    judge_motion_resources = {
-        "package.json",
-        "package-lock.json",
-        "fixtures/fixtures-flow.json",
-        "fixtures/janky.html",
-        "fixtures/smooth.html",
-        "fixtures/README.md",
-        "scripts/calibrate.py",
-        "scripts/capture_motion.mjs",
-        "scripts/gate_signals.py",
-        "scripts/reduced_motion_audit.py",
-        "scripts/select_frames.py",
-    }
     shared_seen = {}
     seen = set()
     for provider in PROFILES:
@@ -2604,10 +2586,6 @@ def test_shipped_leaves_matches_a_real_build(dist_root):
             if skill_dir.name == "skill-iterate":
                 assert skill_iterate_resources <= paths
                 paths -= skill_iterate_resources
-            if skill_dir.name == "judge-motion":
-                assert provider == "claude"
-                assert judge_motion_resources <= paths
-                paths -= judge_motion_resources
             names = paths
             unlisted = sorted(names - set(SHIPPED_LEAVES))
             assert not unlisted, (

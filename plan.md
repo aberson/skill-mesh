@@ -1310,7 +1310,7 @@ installs were cut over from the checksum-verified bundle; restart host sessions 
 | Issue | Detail |
 |---|---|
 | Adapters may cite `<repo>/_shared/<leaf>` | The link gate accepts only that spelling from `skills/*/providers/*.md`; `../../../_shared/<leaf>` escapes the discovery root. `test_vendored_reference_citations_reach_the_payload` grades adapter citations against `dist/<profile>/<skill>/SKILL.md`. |
-| Not converted | `judge-ui`, `judge-motion`, `tier-escalate`, `tier-offload`, `skill-iterate`, `skill-evolve`, `user-brainstorm` still write documents ad hoc; converting them means adding a row to `_shared/document-output.md` and citing it. |
+| Not converted | `judge-ui`, `tier-escalate`, `tier-offload`, `skill-iterate`, `skill-evolve`, `user-brainstorm` still write documents ad hoc; converting them means adding a row to `_shared/document-output.md` and citing it. |
 | Pre-edit baselines of the slow suites are waste | The two heavy suites take ~3.5–4.5 h; for a doc-format patch run the post-change gate once. |
 
 ## Release v2.0.2 — wrap clarity and safe build-worktree cleanup (2026-10-29)

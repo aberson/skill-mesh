@@ -62,26 +62,23 @@ DISCOVERY_SUBDIR = {
 # The retired project-relative GPT target: a GPT install must NEVER write here.
 RETIRED_GPT_SUBDIR = Path(".copilot") / "skills"
 
-# judge-motion's reviewed Claude-only package exception. This independent literal
-# catches drift in the builder's PowerShell allowlist.
-JUDGE_MOTION_RESOURCES = (
-    "package.json",
-    "package-lock.json",
-    "fixtures/fixtures-flow.json",
-    "fixtures/janky.html",
-    "fixtures/smooth.html",
-    "fixtures/README.md",
-    "scripts/calibrate.py",
-    "scripts/capture_motion.mjs",
-    "scripts/gate_signals.py",
-    "scripts/reduced_motion_audit.py",
-    "scripts/select_frames.py",
-)
-JUDGE_MOTION_JSON_PACKAGE_RESOURCES = frozenset({
+# The retired provider-native motion-capture package (v3 catalog cleanup Step 6,
+# issue #262). The builder no longer emits it, but tools/install-skill-mesh.ps1 keeps
+# its three exact JSON paths (MARKERLESS_JSON_OWNED_RELS) so the ownership ledger can
+# remove copies installed before the retirement. This independent literal catches
+# drift in that list; the one-skill installer tests below rebuild the installed shape.
+RETIRED_JSON_PACKAGE = "judge-motion"
+RETIRED_JSON_PACKAGE_JSON = (
     "package.json", "package-lock.json", "fixtures/fixtures-flow.json",
-})
-JUDGE_MOTION_JSON_RESOURCES = frozenset(
-    f"judge-motion/{rel}" for rel in JUDGE_MOTION_JSON_PACKAGE_RESOURCES)
+)
+RETIRED_JSON_PACKAGE_RESOURCES = RETIRED_JSON_PACKAGE_JSON + ("fixtures/README.md",)
+RETIRED_JSON_OBJECTS = {
+    "package.json": {"name": RETIRED_JSON_PACKAGE, "private": True,
+                     "version": "0.0.0"},
+    "package-lock.json": {"name": RETIRED_JSON_PACKAGE, "lockfileVersion": 3,
+                          "requires": True, "packages": {}},
+    "fixtures/fixtures-flow.json": {"flow": "fixture", "transitions": []},
+}
 
 
 def _load_strict_json_object(path):
@@ -471,13 +468,14 @@ def test_build_file_counts_match_manifest(dist_root):
     # asserted at all. The shared term is a length, not a directory listing --
     # `test_shared_payload_matches_an_independent_closure_walk` is what proves the
     # SET, from a re-walk rather than from this literal.
-    # The trailing literals are the four reviewed package exceptions: + 4 review-deep
-    # resources (Phase CD), + 2 build-step scripts (packet route P2), + 6
-    # skill-iterate helpers, and + 11 Claude-only judge-motion resources. (The
-    # portfolio validator's + 1 ended with its skill, v3 catalog cleanup Step 4.)
+    # The trailing literals are the three reviewed package exceptions: + 4 review-deep
+    # resources (Phase CD), + 2 build-step scripts (packet route P2), and + 6
+    # skill-iterate helpers. (The portfolio validator's + 1 ended with its skill at
+    # v3 catalog cleanup Step 4, and the Claude-only motion-capture package's + 11 at
+    # Step 6.)
     # Their focused resource tests prove each exact SET.
     shared = len(EXPECTED_SHARED_PAYLOAD)
-    assert len(claude_files) == len(portable) * 2 + len(native) * 1 + 2 + shared + 4 + 2 + 6 + 11
+    assert len(claude_files) == len(portable) * 2 + len(native) * 1 + 2 + shared + 4 + 2 + 6
     assert len(gpt_files) == len(portable) * 2 + 2 + shared + 4 + 2 + 6
 
 
@@ -585,28 +583,20 @@ def test_shared_payload_carries_valid_provenance_for_every_extension(dist_root, 
 
 
 def test_every_generated_file_reads_owned_through_the_anchored_parser(dist_root, tmp_path):
-    """Every output is marker-owned except the exact three Claude package JSON paths.
+    """Every emitted file in both profiles is marker-owned; none is markerless.
 
-    The anti-stranding control for the header parser's anchors. The three markerless
-    files use the installer's separate path/ledger/current-hash identity; every other
-    emitted file must still satisfy the shared parser. Whole corpus, both profiles,
-    every extension -- not a sample -- with a stamped sibling as the negative anchor
-    against accidentally widening the JSON exception."""
+    The anti-stranding control for the header parser's anchors. Until v3 catalog cleanup
+    Step 6 three Claude package JSON paths were the one markerless exception; that
+    package was retired, and the installer keeps those paths only to remove copies
+    installed before then (see test_installer_markerless_json_allowlist_is_exactly_
+    the_retired_package). Whole corpus, both profiles, every extension -- not a sample."""
     for profile in ("claude", "gpt"):
         root = dist_root / profile
         verdicts = _provenance_verdicts(root, tmp_path / profile)
         expected = {p.relative_to(root).as_posix() for p in root.rglob("*") if p.is_file()}
         assert set(verdicts) == expected, "the probe did not visit every emitted file"
         unowned = sorted(rel for rel, ok in verdicts.items() if not ok)
-        expected_unowned = sorted(JUDGE_MOTION_JSON_RESOURCES) if profile == "claude" else []
-        assert unowned == expected_unowned, (
-            f"{profile}: markerless output differed from the exact judge-motion JSON "
-            f"exception: expected {expected_unowned}, got {unowned}")
-        if profile == "claude":
-            for rel in expected_unowned:
-                assert _load_strict_json_object(root / rel)
-            negative = "judge-motion/fixtures/janky.html"
-            assert verdicts[negative], "the carve-out expanded beyond the three JSON paths"
+        assert unowned == [], f"{profile}: markerless generated output: {unowned}"
 
 
 def test_the_anchored_parser_rejects_a_document_that_quotes_the_header(dist_root, tmp_path):
@@ -1067,11 +1057,10 @@ def test_mistyped_repo_rooted_shared_citation_throws_the_build(tmp_path):
 def test_shared_closure_seeds_from_the_adapter_as_well_as_the_core(tmp_path):
     """WALK EDGE: the seed harvest reads the ADAPTER body, not only the core body.
 
-    judge-motion is `core: null` and cites the payload from its adapter alone, so an
+    A `core: null` skill can cite the payload from its adapter alone, so an
     implementation that harvested seeds from cores only would drop that skill's payload.
-    On the live tree the loss is invisible -- every asset judge-motion cites is also
-    cited by some skill that HAS a core -- so the edge needs a fixture where the adapter
-    is the only citer.
+    On the live tree the loss is invisible -- no live adapter is the only citer of an
+    asset -- so the edge needs a fixture where the adapter is the only citer.
     """
     repo = _synthetic_build_repo(
         tmp_path,
@@ -1149,29 +1138,36 @@ def test_builder_refuses_to_ship_a_pytest_module(tmp_path):
     assert "pytest module" in (r.stdout + r.stderr)
 
 
-def test_core_null_adapter_is_repointed_at_depth_three(dist_root):
-    """judge-motion is `core: null`, and its ADAPTER carries depth-3 `_shared` refs.
+def test_core_null_adapter_is_repointed_at_depth_three(tmp_path):
+    """A `core: null` skill's ADAPTER can carry depth-3 `_shared` refs.
 
     The rewrite must not be gated on the skill having a core, and it must be
     longest-token-first: `../../../_shared/` literally contains `../../_shared/`, so a
     two-dot-first replace leaves `../_shared/` prefixed by a stray `../` -- still
-    broken, and nothing else in this file would notice.
+    broken, and nothing else in this file would notice. Synthetic since v3 catalog
+    cleanup Step 6: the retired provider-native adapter was the only canonical source
+    that carried the form, so a planted source is now the only way to reach it.
     """
-    _, native = _skill_partition()
-    assert "judge-motion" in native, "judge-motion is no longer provider-native"
-    source = (SKILLS_ROOT / "judge-motion" / "providers" / "claude.md").read_text(
-        encoding="utf-8")
-    assert "../../../_shared/" in source, \
-        "the depth-3 fixture this test relies on is gone from the canonical adapter"
-
-    launcher = dist_root / "claude" / "judge-motion" / "SKILL.md"
+    repo = _synthetic_build_repo(tmp_path, {"doc.md": "# doc\n\nDoctrine.\n"},
+                                 "# demo core\n")
+    adapter = repo / "skills" / "native-demo" / "providers" / "claude.md"
+    adapter.parent.mkdir(parents=True)
+    adapter.write_text("# native demo\n\nSee [the doc](../../../_shared/doc.md).\n",
+                       encoding="utf-8")
+    _write_manifest(repo / "config" / "skill-manifest.json", [{
+        "name": "native-demo", "status": "provider-native", "core": None,
+        "providers": {"claude": "skills/native-demo/providers/claude.md"},
+    }])
+    out = tmp_path / "out"
+    r = _synthetic_build(repo, out)
+    assert r.returncode == 0, f"{r.stdout}\n{r.stderr}"
+    launcher = out / "claude" / "native-demo" / "SKILL.md"
     text = launcher.read_text(encoding="utf-8")
-    assert not (launcher.parent / "core.md").exists(), "judge-motion gained a core.md"
+    assert not (launcher.parent / "core.md").exists(), "a core: null skill gained a core.md"
     assert "../../../_shared/" not in text and "../../_shared/" not in text
     leaves = set(re.findall(r"\.\./_shared/([A-Za-z0-9][A-Za-z0-9._-]*)", text))
-    assert leaves, "judge-motion's depth-3 references vanished instead of being repointed"
-    for leaf in sorted(leaves):
-        assert (dist_root / "claude" / SHARED_DEST / leaf).is_file(), leaf
+    assert leaves == {"doc.md"}, "the depth-3 reference vanished instead of being repointed"
+    assert (out / "claude" / SHARED_DEST / "doc.md").is_file()
 
 
 # --------------------------------------------------------------------------- #
@@ -3733,28 +3729,46 @@ def test_skill_iterate_canonical_helpers_drift_only_at_review_status():
             canonical = canonical.replace(', "review-required"', "")
         assert canonical == legacy, leaf
 
-# judge-motion's Claude-only package is a closed runtime set. The legacy package's
-# tests, dependency directories, caches, and run artifacts are deliberately excluded.
+# The retired motion-capture package's installed shape (see RETIRED_JSON_PACKAGE). A
+# synthetic one-skill distribution: the generated launcher, one marker-owned fixture
+# README, and the three JSON objects at their allowlisted paths. The tests below keep
+# the installer's markerless-JSON identity contract under test for as long as the
+# installer carries those paths.
 @pytest.fixture(scope="module")
-def judge_motion_distribution(tmp_path_factory):
-    root = tmp_path_factory.mktemp("judge-motion-distribution")
-    manifest = root / "manifest.json"
-    entry = next(row for row in _load_manifest()["skills"]
-                 if row["name"] == "judge-motion")
-    _write_manifest(manifest, [entry])
-    _build_from_manifest(root / "dist", manifest, provider="claude")
-    return root / "dist"
+def retired_package_distribution(tmp_path_factory):
+    root = tmp_path_factory.mktemp("retired-json-package")
+    repo = _synthetic_build_repo(root, {}, "# demo core\n")
+    adapter = repo / "skills" / RETIRED_JSON_PACKAGE / "providers" / "claude.md"
+    adapter.parent.mkdir(parents=True)
+    adapter.write_text(
+        f"---\nname: {RETIRED_JSON_PACKAGE}\ndescription: Retired package fixture.\n---\n\n"
+        "# Retired provider-native package (test fixture)\n", encoding="utf-8")
+    _write_manifest(repo / "config" / "skill-manifest.json", [{
+        "name": RETIRED_JSON_PACKAGE, "status": "provider-native", "core": None,
+        "providers": {"claude": f"skills/{RETIRED_JSON_PACKAGE}/providers/claude.md"},
+    }])
+    dist = root / "dist"
+    built = _synthetic_build(repo, dist, "claude")
+    assert built.returncode == 0, f"{built.stdout}\n{built.stderr}"
+    package = _retired_package(dist)
+    readme = package / "fixtures" / "README.md"
+    readme.parent.mkdir()
+    # Marker-owned: the generated launcher's own bytes carry the provenance header.
+    readme.write_bytes((package / "SKILL.md").read_bytes())
+    for rel, value in RETIRED_JSON_OBJECTS.items():
+        (package / rel).write_text(json.dumps(value, indent=2) + "\n", encoding="utf-8")
+    return dist
 
 
-def _judge_package(dist):
-    return Path(dist) / "claude" / "judge-motion"
+def _retired_package(dist):
+    return Path(dist) / "claude" / RETIRED_JSON_PACKAGE
 
 
-def _judge_target(home, resource="package.json"):
-    return Path(home) / DISCOVERY_SUBDIR["claude"] / "judge-motion" / resource
+def _retired_target(home, resource="package.json"):
+    return Path(home) / DISCOVERY_SUBDIR["claude"] / RETIRED_JSON_PACKAGE / resource
 
 
-def _copy_judge_dist(dist, destination):
+def _copy_retired_dist(dist, destination):
     shutil.copytree(dist, destination)
     return destination
 
@@ -3765,137 +3779,113 @@ def _rewrite_json_object(path, **updates):
     Path(path).write_text(json.dumps(value, indent=2) + "\n", encoding="utf-8")
 
 
-def test_judge_motion_resource_closure_and_fidelity(judge_motion_distribution, tmp_path):
-    package = _judge_package(judge_motion_distribution)
-    files = {p.relative_to(package).as_posix() for p in package.rglob("*") if p.is_file()}
-    assert files == {"SKILL.md", *JUDGE_MOTION_RESOURCES}
+def test_installer_markerless_json_allowlist_is_exactly_the_retired_package():
+    """The installer's markerless JSON paths are the retired package's three, and no more.
 
-    verdicts = _provenance_verdicts(package, tmp_path / "provenance")
-    assert set(verdicts) == files
-    for resource in JUDGE_MOTION_RESOURCES:
-        canonical = (SKILLS_ROOT / "judge-motion" / resource).read_text(
-            encoding="utf-8-sig").replace("\r\n", "\n").replace("\r", "\n")
-        emitted_path = package / resource
-        emitted = emitted_path.read_text(encoding="utf-8")
-        if resource in JUDGE_MOTION_JSON_PACKAGE_RESOURCES:
-            assert not verdicts[resource], resource
-            canonical_bytes = canonical.encode("utf-8")
-            emitted_bytes = emitted_path.read_bytes()
-            assert emitted_bytes == canonical_bytes, resource
-            assert b"\r" not in emitted_bytes, resource
-            assert not emitted_bytes.startswith(b"\xef\xbb\xbf"), resource
-        else:
-            assert verdicts[resource], resource
-            assert _strip_provenance_header(emitted, resource) == canonical, resource
-    assert verdicts["SKILL.md"]
+    A path added here would let a ledger row own a markerless file the builder never
+    produces; a path dropped would make a normal install over a home installed before the
+    retirement refuse the whole run instead of removing its stale copy."""
+    text = INSTALL_SCRIPT.read_text(encoding="utf-8")
+    block = re.search(r"\$MARKERLESS_JSON_OWNED_RELS = @\((.*?)\n\)", text, re.S)
+    assert block, "MARKERLESS_JSON_OWNED_RELS not found in the installer"
+    rels = re.findall(r"\(\$CLAUDE_DISCOVERY_REL \+ '([^']+)'\)", block.group(1))
+    assert rels == [f"/{RETIRED_JSON_PACKAGE}/{rel}" for rel in RETIRED_JSON_PACKAGE_JSON]
 
 
-def test_judge_motion_reduced_motion_python_shape(judge_motion_distribution, tmp_path):
-    canonical_path = SKILLS_ROOT / "judge-motion/scripts/reduced_motion_audit.py"
-    emitted_path = _judge_package(judge_motion_distribution) / \
-        "scripts/reduced_motion_audit.py"
-    for path in (canonical_path, emitted_path):
-        text = path.read_text(encoding="utf-8")
-        tree = ast.parse(text, filename=str(path))
-        assert isinstance(tree.body[0], ast.Expr)
-        assert isinstance(tree.body[0].value, ast.Constant)
-        assert isinstance(tree.body[0].value.value, str), f"{path}: node zero is not docstring"
-        assert isinstance(tree.body[1], ast.ImportFrom)
-        assert tree.body[1].module == "__future__"
-        compile(text, str(path), "exec")
-        blocks = re.findall(r"(?ms)^# /// script\n.*?^# ///$", text)
-        assert len(blocks) == 1 and "Pillow" in blocks[0], path
-    py_compile.compile(str(emitted_path), cfile=str(tmp_path / "reduced_motion_audit.pyc"),
-                       doraise=True)
+def test_retired_json_package_is_removed_by_a_normal_install_without_it(
+        retired_package_distribution, tmp_path):
+    """The retirement's installed-ledger effect (lifecycle guide section 5, DELETE).
 
-
-def test_judge_motion_capture_script_parses(judge_motion_distribution):
-    if NODE is None:
-        pytest.skip("node is not available for the emitted .mjs syntax check")
-    script = _judge_package(judge_motion_distribution) / "scripts/capture_motion.mjs"
-    result = subprocess.run([NODE, "--check", str(script)], capture_output=True, text=True)
-    assert result.returncode == 0, f"{result.stdout}\n{result.stderr}"
-
-
-def test_judge_motion_canonical_json_is_strict_object_without_duplicate_keys():
-    for resource in sorted(JUDGE_MOTION_JSON_PACKAGE_RESOURCES):
-        assert _load_strict_json_object(SKILLS_ROOT / "judge-motion" / resource)
-
-
-@pytest.mark.parametrize("missing", JUDGE_MOTION_RESOURCES)
-def test_judge_motion_builder_refuses_each_missing_resource(tmp_path, missing):
-    repo = _synthetic_build_repo(tmp_path, {}, "fixture")
-    package = repo / "skills/judge-motion"
-    shutil.copytree(SKILLS_ROOT / "judge-motion", package,
-                    ignore=shutil.ignore_patterns("__pycache__"))
-    (package / missing).unlink()
-    entry = next(row for row in _load_manifest()["skills"]
-                 if row["name"] == "judge-motion")
-    _write_manifest(repo / "config/skill-manifest.json", [entry])
-    result = _synthetic_build(repo, tmp_path / "dist", "claude")
-    assert result.returncode != 0
-    assert "judge-motion resource source missing" in result.stderr
-    assert not (tmp_path / "dist/claude/judge-motion/SKILL.md").exists()
-
-
-def test_judge_motion_install_fresh_idempotent_and_json_upgrade(
-        judge_motion_distribution, tmp_path):
+    A home installed before the retirement is cleaned by an ordinary install of a profile
+    that no longer carries the package: no -Force, nothing hand-deleted, the ledger rows
+    gone, and unowned dependency and run directories beside it left alone."""
     home = tmp_path / "home"
-    first = _install(home, "claude", dist_dir=judge_motion_distribution)
+    first = _install(home, "claude", dist_dir=retired_package_distribution)
     assert first.returncode == 0, f"{first.stdout}\n{first.stderr}"
-    package = _judge_package(judge_motion_distribution)
-    target = _judge_target(home)
+    root = _retired_target(home).parent
+    neighbors = {
+        root / "node_modules/operator.txt": b"node neighbor",
+        root / f".{RETIRED_JSON_PACKAGE}/operator.txt": b"run neighbor",
+    }
+    for path, body in neighbors.items():
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(body)
+
+    repo = _synthetic_build_repo(tmp_path / "current", {}, "# demo core\n")
+    current = tmp_path / "current-dist"
+    built = _synthetic_build(repo, current, "claude")
+    assert built.returncode == 0, f"{built.stdout}\n{built.stderr}"
+    upgraded = _install(home, "claude", dist_dir=current)
+    assert upgraded.returncode == 0, f"{upgraded.stdout}\n{upgraded.stderr}"
+
+    for rel in ("SKILL.md", *RETIRED_JSON_PACKAGE_RESOURCES):
+        assert not (root / rel).exists(), rel
+    entry = _ledger(home)["installs"]["claude"]
+    prefix = _disco_rel("claude", RETIRED_JSON_PACKAGE) + "/"
+    assert not [rel for rel in entry["owned_files"] if rel.startswith(prefix)]
+    assert not [rel for rel in entry["owned_file_hashes"] if rel.startswith(prefix)]
+    assert (home / DISCOVERY_SUBDIR["claude"] / "demo" / "SKILL.md").is_file()
+    assert all(path.read_bytes() == body for path, body in neighbors.items())
+
+
+def test_retired_json_package_install_fresh_idempotent_and_json_upgrade(
+        retired_package_distribution, tmp_path):
+    home = tmp_path / "home"
+    first = _install(home, "claude", dist_dir=retired_package_distribution)
+    assert first.returncode == 0, f"{first.stdout}\n{first.stderr}"
+    package = _retired_package(retired_package_distribution)
+    target = _retired_target(home)
     assert target.read_bytes() == (package / "package.json").read_bytes()
     entry = _ledger(home)["installs"]["claude"]
-    expected = {_disco_rel("claude", "judge-motion", "SKILL.md"), *(
-        _disco_rel("claude", "judge-motion", *Path(r).parts)
-        for r in JUDGE_MOTION_RESOURCES)}
+    expected = {_disco_rel("claude", RETIRED_JSON_PACKAGE, "SKILL.md"), *(
+        _disco_rel("claude", RETIRED_JSON_PACKAGE, *Path(r).parts)
+        for r in RETIRED_JSON_PACKAGE_RESOURCES)}
     owned = set(entry["owned_files"])
     assert expected <= owned
-    judge_prefix = _disco_rel("claude", "judge-motion") + "/"
+    judge_prefix = _disco_rel("claude", RETIRED_JSON_PACKAGE) + "/"
     assert {rel for rel in owned if rel.startswith(judge_prefix)} == expected
     ledger_path = home / ".skill-mesh-install.json"
     before = ledger_path.read_bytes()
 
-    again = _install(home, "claude", dist_dir=judge_motion_distribution)
+    again = _install(home, "claude", dist_dir=retired_package_distribution)
     assert again.returncode == 0, f"{again.stdout}\n{again.stderr}"
     assert ledger_path.read_bytes() == before
 
-    changed = _copy_judge_dist(judge_motion_distribution, tmp_path / "changed")
-    changed_json = _judge_package(changed) / "package.json"
+    changed = _copy_retired_dist(retired_package_distribution, tmp_path / "changed")
+    changed_json = _retired_package(changed) / "package.json"
     _rewrite_json_object(changed_json, description="ordinary markerless JSON upgrade")
     upgraded = _install(home, "claude", dist_dir=changed)
     assert upgraded.returncode == 0, f"{upgraded.stdout}\n{upgraded.stderr}"
     assert target.read_bytes() == changed_json.read_bytes()
     upgraded_entry = _ledger(home)["installs"]["claude"]
-    rel = _disco_rel("claude", "judge-motion", "package.json")
+    rel = _disco_rel("claude", RETIRED_JSON_PACKAGE, "package.json")
     assert upgraded_entry["owned_file_hashes"][rel] == hashlib.sha256(
         target.read_bytes()).hexdigest()
 
 
-def test_judge_motion_modified_owned_json_refuses_reinstall_as_noop(
-        judge_motion_distribution, tmp_path):
+def test_retired_json_package_modified_owned_json_refuses_reinstall_as_noop(
+        retired_package_distribution, tmp_path):
     home = tmp_path / "home"
-    assert _install(home, "claude", dist_dir=judge_motion_distribution).returncode == 0
-    target = _judge_target(home)
+    assert _install(home, "claude", dist_dir=retired_package_distribution).returncode == 0
+    target = _retired_target(home)
     _rewrite_json_object(target, local_change=True)
     ledger_path = home / ".skill-mesh-install.json"
     before_target = target.read_bytes()
     before_ledger = ledger_path.read_bytes()
-    refused = _install(home, "claude", dist_dir=judge_motion_distribution)
+    refused = _install(home, "claude", dist_dir=retired_package_distribution)
     assert refused.returncode != 0 and "REFUS" in (refused.stdout + refused.stderr)
     assert target.read_bytes() == before_target
     assert ledger_path.read_bytes() == before_ledger
 
 
-def test_judge_motion_modified_stale_json_refuses_reinstall_as_noop(
-        judge_motion_distribution, tmp_path):
+def test_retired_json_package_modified_stale_json_refuses_reinstall_as_noop(
+        retired_package_distribution, tmp_path):
     home = tmp_path / "home"
-    assert _install(home, "claude", dist_dir=judge_motion_distribution).returncode == 0
-    target = _judge_target(home)
+    assert _install(home, "claude", dist_dir=retired_package_distribution).returncode == 0
+    target = _retired_target(home)
     _rewrite_json_object(target, local_change=True)
-    dropped = _copy_judge_dist(judge_motion_distribution, tmp_path / "dropped")
-    (_judge_package(dropped) / "package.json").unlink()
+    dropped = _copy_retired_dist(retired_package_distribution, tmp_path / "dropped")
+    (_retired_package(dropped) / "package.json").unlink()
     ledger_path = home / ".skill-mesh-install.json"
     before_target = target.read_bytes()
     before_ledger = ledger_path.read_bytes()
@@ -3905,15 +3895,15 @@ def test_judge_motion_modified_stale_json_refuses_reinstall_as_noop(
     assert ledger_path.read_bytes() == before_ledger
 
 
-def test_judge_motion_unmodified_stale_json_is_removed_from_disk_and_ledger(
-        judge_motion_distribution, tmp_path):
+def test_retired_json_package_unmodified_stale_json_is_removed_from_disk_and_ledger(
+        retired_package_distribution, tmp_path):
     home = tmp_path / "home"
-    assert _install(home, "claude", dist_dir=judge_motion_distribution).returncode == 0
-    target = _judge_target(home, "package-lock.json")
-    rel = _disco_rel("claude", "judge-motion", "package-lock.json")
+    assert _install(home, "claude", dist_dir=retired_package_distribution).returncode == 0
+    target = _retired_target(home, "package-lock.json")
+    rel = _disco_rel("claude", RETIRED_JSON_PACKAGE, "package-lock.json")
     assert target.exists() and rel in _ledger(home)["installs"]["claude"]["owned_file_hashes"]
-    dropped = _copy_judge_dist(judge_motion_distribution, tmp_path / "drop-lockfile")
-    (_judge_package(dropped) / "package-lock.json").unlink()
+    dropped = _copy_retired_dist(retired_package_distribution, tmp_path / "drop-lockfile")
+    (_retired_package(dropped) / "package-lock.json").unlink()
 
     reinstalled = _install(home, "claude", dist_dir=dropped)
     assert reinstalled.returncode == 0, f"{reinstalled.stdout}\n{reinstalled.stderr}"
@@ -3923,11 +3913,11 @@ def test_judge_motion_unmodified_stale_json_is_removed_from_disk_and_ledger(
     assert rel not in entry["owned_file_hashes"]
 
 
-def test_judge_motion_modified_json_refuses_uninstall(
-        judge_motion_distribution, tmp_path):
+def test_retired_json_package_modified_json_refuses_uninstall(
+        retired_package_distribution, tmp_path):
     home = tmp_path / "home"
-    assert _install(home, "claude", dist_dir=judge_motion_distribution).returncode == 0
-    target = _judge_target(home)
+    assert _install(home, "claude", dist_dir=retired_package_distribution).returncode == 0
+    target = _retired_target(home)
     _rewrite_json_object(target, local_change=True)
     ledger_path = home / ".skill-mesh-install.json"
     before_target = target.read_bytes()
@@ -3939,14 +3929,14 @@ def test_judge_motion_modified_json_refuses_uninstall(
     assert ledger_path.read_bytes() == before_ledger
 
 
-def test_judge_motion_clean_uninstall_preserves_unowned_neighbors(
-        judge_motion_distribution, tmp_path):
+def test_retired_json_package_clean_uninstall_preserves_unowned_neighbors(
+        retired_package_distribution, tmp_path):
     home = tmp_path / "home"
-    assert _install(home, "claude", dist_dir=judge_motion_distribution).returncode == 0
-    root = _judge_target(home).parent
+    assert _install(home, "claude", dist_dir=retired_package_distribution).returncode == 0
+    root = _retired_target(home).parent
     neighbors = {
         root / "node_modules/operator.txt": b"node neighbor",
-        root / ".judge-motion/operator.txt": b"run neighbor",
+        root / f".{RETIRED_JSON_PACKAGE}/operator.txt": b"run neighbor",
         root / "scripts/__pycache__/operator.pyc": b"cache neighbor",
         root / "tests/operator.txt": b"legacy test neighbor",
     }
@@ -3955,30 +3945,30 @@ def test_judge_motion_clean_uninstall_preserves_unowned_neighbors(
         path.write_bytes(body)
     removed = _install(home, "claude", uninstall=True)
     assert removed.returncode == 0, f"{removed.stdout}\n{removed.stderr}"
-    assert not _judge_target(home).exists()
+    assert not _retired_target(home).exists()
     assert all(path.read_bytes() == body for path, body in neighbors.items())
     assert not (home / ".skill-mesh-install.json").exists()
 
 
-def test_judge_motion_corrupt_hash_ledger_refuses_uninstall(
-        judge_motion_distribution, tmp_path):
+def test_retired_json_package_corrupt_hash_ledger_refuses_uninstall(
+        retired_package_distribution, tmp_path):
     home = tmp_path / "home"
-    assert _install(home, "claude", dist_dir=judge_motion_distribution).returncode == 0
+    assert _install(home, "claude", dist_dir=retired_package_distribution).returncode == 0
     ledger_path = home / ".skill-mesh-install.json"
     ledger = json.loads(ledger_path.read_text(encoding="utf-8"))
     del ledger["installs"]["claude"]["owned_file_hashes"]
     ledger_path.write_text(json.dumps(ledger), encoding="utf-8")
-    target = _judge_target(home)
+    target = _retired_target(home)
     before = target.read_bytes()
     refused = _install(home, "claude", uninstall=True)
     assert refused.returncode != 0 and "REFUS" in (refused.stdout + refused.stderr)
     assert target.read_bytes() == before
 
 
-def test_judge_motion_nonallowlisted_markerless_json_source_refuses_before_home_mutation(
-        judge_motion_distribution, tmp_path):
-    dist = _copy_judge_dist(judge_motion_distribution, tmp_path / "extra-json")
-    (_judge_package(dist) / "extra.json").write_text('{"valid": true}\n', encoding="utf-8")
+def test_retired_json_package_nonallowlisted_markerless_json_source_refuses_before_home_mutation(
+        retired_package_distribution, tmp_path):
+    dist = _copy_retired_dist(retired_package_distribution, tmp_path / "extra-json")
+    (_retired_package(dist) / "extra.json").write_text('{"valid": true}\n', encoding="utf-8")
     home = tmp_path / "home"
     refused = _install(home, "claude", dist_dir=dist)
     output = refused.stdout + refused.stderr
@@ -3990,10 +3980,10 @@ def test_judge_motion_nonallowlisted_markerless_json_source_refuses_before_home_
 @pytest.mark.parametrize("invalid", [
     b"not json", b"[]", b"[{}]", b"\xef\xbb\xbf{\"ok\": true}",
 ])
-def test_judge_motion_invalid_allowlisted_json_source_refuses_before_home_mutation(
-        judge_motion_distribution, tmp_path, invalid):
-    dist = _copy_judge_dist(judge_motion_distribution, tmp_path / "invalid-json")
-    (_judge_package(dist) / "package.json").write_bytes(invalid)
+def test_retired_json_package_invalid_allowlisted_json_source_refuses_before_home_mutation(
+        retired_package_distribution, tmp_path, invalid):
+    dist = _copy_retired_dist(retired_package_distribution, tmp_path / "invalid-json")
+    (_retired_package(dist) / "package.json").write_bytes(invalid)
     home = tmp_path / "home"
     refused = _install(home, "claude", dist_dir=dist)
     output = refused.stdout + refused.stderr
@@ -4002,10 +3992,10 @@ def test_judge_motion_invalid_allowlisted_json_source_refuses_before_home_mutati
     assert not home.exists()
 
 
-def test_judge_motion_case_variant_json_path_is_not_allowlisted(
-        judge_motion_distribution, tmp_path):
-    dist = _copy_judge_dist(judge_motion_distribution, tmp_path / "case-variant")
-    package = _judge_package(dist)
+def test_retired_json_package_case_variant_json_path_is_not_allowlisted(
+        retired_package_distribution, tmp_path):
+    dist = _copy_retired_dist(retired_package_distribution, tmp_path / "case-variant")
+    package = _retired_package(dist)
     source = package / "package.json"
     intermediate = package / "package.rename-tmp"
     variant = package / "Package.json"
@@ -4019,11 +4009,11 @@ def test_judge_motion_case_variant_json_path_is_not_allowlisted(
     assert not home.exists()
 
 
-def test_judge_motion_hashless_ledger_grants_no_exact_incoming_authority(
-        judge_motion_distribution, tmp_path):
+def test_retired_json_package_hashless_ledger_grants_no_exact_incoming_authority(
+        retired_package_distribution, tmp_path):
     home = tmp_path / "home"
-    assert _install(home, "claude", dist_dir=judge_motion_distribution).returncode == 0
-    target = _judge_target(home)
+    assert _install(home, "claude", dist_dir=retired_package_distribution).returncode == 0
+    target = _retired_target(home)
     ledger_path = home / ".skill-mesh-install.json"
     ledger = json.loads(ledger_path.read_text(encoding="utf-8"))
     del ledger["installs"]["claude"]["owned_file_hashes"]
@@ -4031,32 +4021,32 @@ def test_judge_motion_hashless_ledger_grants_no_exact_incoming_authority(
     before_target = target.read_bytes()
     before_mtime = target.stat().st_mtime_ns
     before_ledger = ledger_path.read_bytes()
-    refused = _install(home, "claude", dist_dir=judge_motion_distribution)
+    refused = _install(home, "claude", dist_dir=retired_package_distribution)
     assert refused.returncode != 0 and "REFUS" in (refused.stdout + refused.stderr)
     assert target.read_bytes() == before_target
     assert target.stat().st_mtime_ns == before_mtime
     assert ledger_path.read_bytes() == before_ledger
 
 
-def test_judge_motion_identical_foreign_json_requires_backed_force_and_can_restore(
-        judge_motion_distribution, tmp_path):
+def test_retired_json_package_identical_foreign_json_requires_backed_force_and_can_restore(
+        retired_package_distribution, tmp_path):
     home = tmp_path / "home"
-    source = _judge_package(judge_motion_distribution) / "package.json"
-    target = _judge_target(home)
+    source = _retired_package(retired_package_distribution) / "package.json"
+    target = _retired_target(home)
     target.parent.mkdir(parents=True)
     target.write_bytes(source.read_bytes())
     before = target.read_bytes()
-    plain = _install(home, "claude", dist_dir=judge_motion_distribution)
+    plain = _install(home, "claude", dist_dir=retired_package_distribution)
     assert plain.returncode != 0 and "REFUS" in (plain.stdout + plain.stderr)
     assert target.read_bytes() == before
     assert not (home / ".skill-mesh-install.json").exists()
 
     backup = tmp_path / "backup"
-    forced = _install(home, "claude", dist_dir=judge_motion_distribution,
+    forced = _install(home, "claude", dist_dir=retired_package_distribution,
                       force=True, backup_dir=backup)
     assert forced.returncode == 0, f"{forced.stdout}\n{forced.stderr}"
     run_dir, certificate = _backup_runs(backup)[0]
-    rel = _disco_rel("claude", "judge-motion", "package.json")
+    rel = _disco_rel("claude", RETIRED_JSON_PACKAGE, "package.json")
     row = next(item for item in certificate["files"] if item["rel_path"] == rel)
     backed = run_dir / row["backup_rel"]
     assert backed.read_bytes() == before
@@ -4071,17 +4061,17 @@ def test_judge_motion_identical_foreign_json_requires_backed_force_and_can_resto
     assert hashlib.sha256(target.read_bytes()).hexdigest() == row["sha256"]
 
 
-def test_judge_motion_write_ahead_recovery_handles_changed_json_and_dropped_file(
-        judge_motion_distribution, tmp_path):
+def test_retired_json_package_write_ahead_recovery_handles_changed_json_and_dropped_file(
+        retired_package_distribution, tmp_path):
     home = tmp_path / "home"
-    assert _install(home, "claude", dist_dir=judge_motion_distribution).returncode == 0
-    changed = _copy_judge_dist(judge_motion_distribution, tmp_path / "changed")
-    source_json = _judge_package(changed) / "package.json"
+    assert _install(home, "claude", dist_dir=retired_package_distribution).returncode == 0
+    changed = _copy_retired_dist(retired_package_distribution, tmp_path / "changed")
+    source_json = _retired_package(changed) / "package.json"
     _rewrite_json_object(source_json, description="write-ahead recovery payload")
     dropped_rel = "fixtures/README.md"
-    (_judge_package(changed) / dropped_rel).unlink()
-    target = _judge_target(home)
-    stale = _judge_target(home, dropped_rel)
+    (_retired_package(changed) / dropped_rel).unlink()
+    target = _retired_target(home)
+    stale = _retired_target(home, dropped_rel)
     assert stale.exists()
 
     env = os.environ.copy()
@@ -4098,27 +4088,27 @@ def test_judge_motion_write_ahead_recovery_handles_changed_json_and_dropped_file
     assert not write_ahead.exists()
     assert target.read_bytes() == source_json.read_bytes()
     entry = _ledger(home)["installs"]["claude"]
-    assert _disco_rel("claude", "judge-motion", *Path(dropped_rel).parts) not in \
+    assert _disco_rel("claude", RETIRED_JSON_PACKAGE, *Path(dropped_rel).parts) not in \
         entry["owned_file_hashes"]
 
 
-def test_judge_motion_partial_copy_recovery_keeps_prior_json_authority(
-        judge_motion_distribution, tmp_path):
+def test_retired_json_package_partial_copy_recovery_keeps_prior_json_authority(
+        retired_package_distribution, tmp_path):
     home = tmp_path / "home"
-    assert _install(home, "claude", dist_dir=judge_motion_distribution).returncode == 0
-    changed = _copy_judge_dist(judge_motion_distribution, tmp_path / "changed")
-    package = _judge_package(changed)
+    assert _install(home, "claude", dist_dir=retired_package_distribution).returncode == 0
+    changed = _copy_retired_dist(retired_package_distribution, tmp_path / "changed")
+    package = _retired_package(changed)
     source_readme = package / "fixtures/README.md"
     source_readme.write_bytes(source_readme.read_bytes() + b"\nRECOVERY-ORDER-PROBE\n")
     source_json = package / "package.json"
     _rewrite_json_object(source_json, description="partial-copy recovery payload")
 
-    target_readme = _judge_target(home, "fixtures/README.md")
-    target_json = _judge_target(home)
+    target_readme = _retired_target(home, "fixtures/README.md")
+    target_json = _retired_target(home)
     json_old_hash = hashlib.sha256(target_json.read_bytes()).hexdigest()
     readme_new_hash = hashlib.sha256(source_readme.read_bytes()).hexdigest()
-    json_rel = _disco_rel("claude", "judge-motion", "package.json")
-    readme_rel = _disco_rel("claude", "judge-motion", "fixtures", "README.md")
+    json_rel = _disco_rel("claude", RETIRED_JSON_PACKAGE, "package.json")
+    readme_rel = _disco_rel("claude", RETIRED_JSON_PACKAGE, "fixtures", "README.md")
 
     closer = _open_deny_delete(target_json)
     if closer is None:

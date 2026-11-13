@@ -121,14 +121,13 @@ installer ownership and current-byte checks apply. Runtime/calibration resources
 the standalone router's root JSON are unchanged. The source mapping remains unqualified
 until the Phase CD Step 156 installed-host proof and profile refresh.
 
-The existing Claude-only `judge-motion` identity has one separately reviewed package
-exception under the provider-native rebuild plan. Its fixed runtime resources are emitted
-only by the explicit builder allowlist, and exactly three JSON paths require a ledger hash
-that matches their current bytes because JSON cannot carry the shared provenance header.
-Their BOM-free bytes pass a throwing UTF-8 decoder and the built-in Windows JSON serializer
-must return an object; this describes shape and does not claim strict JSON parsing. This does
-not turn manifest `support_assets` into a general emitter or authorize another native
-mutation.
+The provider-native rebuild plan's Claude-only runtime package exception ended at the v3
+catalog cleanup (plan Step 6, issue #262), when its skill was retired: the builder emits no
+resource beside a provider-native adapter. The installer keeps that package's three exact
+JSON paths only so its ownership ledger can remove copies installed before the retirement;
+each still requires a ledger hash that matches its current bytes because JSON cannot carry
+the shared provenance header. This does not turn manifest `support_assets` into a general
+emitter or authorize another native mutation.
 
 ## 3. Skill package shape
 
@@ -151,9 +150,7 @@ skills/<name>/
 ```
 
 A reviewed package exception may add resource files beside a provider-native adapter
-without creating a neutral core. For `judge-motion`, the canonical package contains package
-metadata, fixtures, their README, and runtime scripts; generated Claude output preserves
-those relative paths while legacy tests and dependency or run directories remain excluded.
+without creating a neutral core; no provider-native skill carries one today.
 
 `core` is `null` in the manifest **only** for provider-native skills. Host-facing
 filenames (`SKILL.md`, `SKILL-claude.md`, `SKILL-gpt.md`) are generated discovery
@@ -187,9 +184,9 @@ each skill's legacy contract, not inferred from a single shared wrapper line.
 
 | Capability | Count | Skills |
 |---|---|---|
-| `filesystem` | 58 | all skills |
-| `sub-agent` | 20 | build-step, citation-review, citation-sweep, context-slim, goblin-suggest, judge-motion, judge-ui, lesson-harvest, research-prospect, review-deep, review-gauntlet, skill-evolve, skill-iterate, test-prune, tier-escalate, tier-offload, user-brainstorm, user-debug, user-learn, user-uat |
-| `vision` | 2 | judge-ui, judge-motion |
+| `filesystem` | 57 | all skills |
+| `sub-agent` | 19 | build-step, citation-review, citation-sweep, context-slim, goblin-suggest, judge-ui, lesson-harvest, research-prospect, review-deep, review-gauntlet, skill-evolve, skill-iterate, test-prune, tier-escalate, tier-offload, user-brainstorm, user-debug, user-learn, user-uat |
+| `vision` | 1 | judge-ui |
 
 The `sub-agent` set is derived by auditing every skill's contract for explicit
 isolated-agent dispatch (all 50 legacy contracts at Step 33, plus each skill promoted
@@ -198,7 +195,7 @@ depth-1 classification judges, with sweep retaining every artifact phase in its
 parent, joined the audited set). Representative evidence (legacy `SKILL-core.md` /
 `SKILL.md`): build-step "Spawn a sub-agent" + "Step 6 — Spawn reviewer agents";
 context-slim "Spawn three parallel subagents using the Agent tool"; goblin-suggest "fan out `--n-judges`
-judge agent calls IN PARALLEL"; judge-motion "separate sub-agent per transition";
+judge agent calls IN PARALLEL";
 judge-ui "dispatches an independent vision-judge sub-agent"; research-prospect
 "Fan out parallel Explore agents"; review-deep "spawns six fresh-context
 sub-agents, one per lens"; review-gauntlet "one fresh-context reviewer invocation
@@ -304,8 +301,8 @@ those steps must satisfy.
 
 Every skill has a machine-readable migration entry in `config/skill-manifest.json`
 (the `migration` + `support_assets` blocks per skill, plus top-level
-`global_support_assets`), covering **all 55 portable skills plus the 3
-Claude-native exclusions (58 total)**.
+`global_support_assets`), covering **all 55 portable skills plus the 2
+Claude-native exclusions (57 total)**.
 
 **Migration root.** All `source` / `legacy_*` paths are relative to **coding-root**
 (`aberson/coding-root` — the operator's `dev` checkout), READ-ONLY during Steps
@@ -333,7 +330,7 @@ Portable skill `<name>` (`migration` block):
 | `legacy_claude_launcher` | `.claude/skills/<name>/SKILL.md` (compat launcher) | regenerated as a `dist/` shim; **not** a canonical source |
 | `legacy_gpt` | `.claude/skills-gpt/<name>/SKILL-gpt.md` | `skills/<name>/providers/gpt.md` |
 
-Provider-native skill `<name>` (claude-oauth-auth, context-slim, judge-motion):
+Provider-native skill `<name>` (claude-oauth-auth, context-slim):
 
 | Manifest field | Legacy source (read-only) | Canonical target |
 |---|---|---|
@@ -353,19 +350,13 @@ Canonical ownership: a skill-local asset at `.claude/skills/<name>/<rel>` (or
 | `.claude/skills/<name>/evals/` | `skills/<name>/evals/` | per-skill eval suite (most skills) |
 | `.claude/skills/build-step/scripts/` | `skills/build-step/scripts/` | build-step |
 | `.claude/skills/goblin-do/goblin_do.workflow.js` | `skills/goblin-do/goblin_do.workflow.js` | goblin-do |
-| `.claude/skills/judge-motion/{package.json,package-lock.json,scripts/,fixtures/,tests/}` | `skills/judge-motion/...` | judge-motion |
 | `.claude/skills/plan-expedite/test-fixtures/` | `skills/plan-expedite/test-fixtures/` | plan-expedite |
 | `.claude/skills/plan-redline/reference-proposal.html` | `skills/plan-redline/reference-proposal.html` | plan-redline |
 | `.claude/skills/tier-offload/{sample-*,test_*.py}` | `skills/tier-offload/...` | tier-offload |
 | `.claude/skills-gpt/judge-ui/calibration-notes.md` | `skills/judge-ui/calibration-notes.md` | judge-ui (from the GPT tree) |
 
 Build-output and cache directories are **never** migrated: `node_modules/`,
-`.pytest_cache/`, `__pycache__/`, `tmp/`, and `.judge-motion/` are excluded.
-
-The `judge-motion` support-assets row records legacy migration ownership; it is not an
-emission rule. The current Claude package ships the reviewed package metadata, fixture
-README, HTML and JSON fixtures, and runtime scripts. Legacy `tests/` remains excluded from
-build and install output, as do the dependency, cache, and run directories named above.
+`.pytest_cache/`, `__pycache__/`, and `tmp/` are excluded.
 
 Global (cross-skill) assets are recorded in top-level `global_support_assets`:
 
@@ -389,9 +380,8 @@ single `skills/_shared` location.
 |---|---|
 | `claude-oauth-auth` | Claude-native — Claude OAuth flow; excluded from GPT porting. |
 | `context-slim` | Claude-native — Claude Code context management; excluded from GPT porting. |
-| `judge-motion` | Claude-native — depends on Claude-native motion/vision capture; excluded from GPT porting. |
 
-These three receive no misleading GPT stubs. The manifest records `core: null`
+These two receive no misleading GPT stubs. The manifest records `core: null`
 and a single truthful `claude` adapter.
 
 ## 8. Build, install, and test commands
@@ -558,11 +548,11 @@ seam (defaults to this repository) that must be a git working tree.
 
 `tests/package-integrity/test_manifest_contract.py` fails on any of:
 
-- Skill count != 58, portable != 55, provider-native != 3, sub-agent != 20,
-  vision != 2 (each set checked exactly against the committed
+- Skill count != 57, portable != 55, provider-native != 2, sub-agent != 19,
+  vision != 1 (each set checked exactly against the committed
   `tests/package-integrity/expected_inventory.json` fixture — the package tests
   need no private source).
-- The provider-native set != {claude-oauth-auth, context-slim, judge-motion}, or
+- The provider-native set != {claude-oauth-auth, context-slim}, or
   the exact local-capable / sub-agent / vision name sets not matching the fixture.
 - A portable skill missing a `core`, a `claude` adapter, or a `gpt` adapter.
 - A provider-native skill with a non-null `core` or a `gpt` adapter.

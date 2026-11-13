@@ -49,7 +49,7 @@ is only the optional direct-API transport, independent of provider selection.
 ## Capabilities
 
 Claude adapters support the full capability vocabulary: `filesystem`, `sub-agent`,
-and `vision`. All 55 portable skills and all 3 Claude-native exclusions have a
+and `vision`. All 55 portable skills and both Claude-native exclusions have a
 Claude adapter.
 
 The Claude host's Artifact tool is never used for operator-facing documents: since
@@ -59,7 +59,7 @@ v2.0.1 the plan-redline proposal and the repo-update tour are files under
 
 ### Claude-native skills
 
-`claude-oauth-auth`, `context-slim`, and `judge-motion` are Claude-only. They have
+`claude-oauth-auth` and `context-slim` are Claude-only. They have
 no neutral core and no GPT or Codex adapter; their `claude` adapter is self-contained.
 
 ## Host-metadata detection

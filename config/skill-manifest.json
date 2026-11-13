@@ -67,16 +67,16 @@
     }
   },
   "counts": {
-    "total": 58,
+    "total": 57,
     "portable": 55,
-    "provider_native": 3,
-    "claude": 58,
+    "provider_native": 2,
+    "claude": 57,
     "gpt": 55,
     "codex": 55,
     "local_capable": 20,
-    "sub_agent": 20,
-    "vision": 2,
-    "filesystem": 58
+    "sub_agent": 19,
+    "vision": 1,
+    "filesystem": 57
   },
   "global_support_assets": [
     {
@@ -452,49 +452,6 @@
         {
           "source": ".claude/skills/goblin-sweep/evals/",
           "dest": "skills/goblin-sweep/evals/"
-        }
-      ]
-    },
-    {
-      "name": "judge-motion",
-      "status": "provider-native",
-      "description": "Capture a UI transition as a slow-motion filmstrip and have a vision-judge render a PASS/FAIL/ESCALATE verdict on motion defects.",
-      "core": null,
-      "providers": {
-        "claude": "skills/judge-motion/providers/claude.md"
-      },
-      "capabilities": [
-        "filesystem",
-        "sub-agent",
-        "vision"
-      ],
-      "local_capable": false,
-      "migration": {
-        "legacy_core": null,
-        "legacy_claude_launcher": null,
-        "legacy_claude_adapter": ".claude/skills/judge-motion/SKILL.md",
-        "legacy_gpt": null
-      },
-      "support_assets": [
-        {
-          "source": ".claude/skills/judge-motion/fixtures/",
-          "dest": "skills/judge-motion/fixtures/"
-        },
-        {
-          "source": ".claude/skills/judge-motion/package-lock.json",
-          "dest": "skills/judge-motion/package-lock.json"
-        },
-        {
-          "source": ".claude/skills/judge-motion/package.json",
-          "dest": "skills/judge-motion/package.json"
-        },
-        {
-          "source": ".claude/skills/judge-motion/scripts/",
-          "dest": "skills/judge-motion/scripts/"
-        },
-        {
-          "source": ".claude/skills/judge-motion/tests/",
-          "dest": "skills/judge-motion/tests/"
         }
       ]
     },

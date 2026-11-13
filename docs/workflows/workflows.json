@@ -1,7 +1,7 @@
 {
   "schema": "show-your-work.workflows.v1",
   "generator": "show-your-work 0.1.0",
-  "generated_at": "2026-11-13T08:24:06+00:00",
+  "generated_at": "2026-11-13T09:08:13+00:00",
   "source_dir": "docs/workflows",
   "items": [
     {
@@ -183,20 +183,6 @@
       ],
       "source_path": "docs/workflows/goblin-sweep.mmd",
       "source_sha256": "921af36ee2dc3da42a543494552eab156d9ebe15283ff27634e288d0a6f335ec",
-      "engine": "mermaid",
-      "rasters": null
-    },
-    {
-      "id": "judge-motion",
-      "label": "judge-motion",
-      "summary": "Gate a motion run on session calibration, capture paint-driven evidence, short-circuit mechanical failures, and reduce per-transition verdicts.",
-      "alt": "A motion run checks calibration before bring-up, captures transitions, fails hard mechanical defects without vision, judges residual motion, and reduces the worst result.",
-      "not_shown": "flow-spec fields, capture and frame scripts, binary question battery, auth details, calibration procedure, reduced-motion mode, and artifact schema",
-      "sources": [
-        "skills/judge-motion/providers/claude.md"
-      ],
-      "source_path": "docs/workflows/judge-motion.mmd",
-      "source_sha256": "7745d9c62800e5fdaa5d123e69a3657ed0b9e5167bd1273af1d863b677545ed3",
       "engine": "mermaid",
       "rasters": null
     },

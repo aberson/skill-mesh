@@ -108,10 +108,10 @@ def test_counts_match_fixture_and_array():
     assert m["counts"] == derived, (m["counts"], derived)
     assert fx["counts"] == derived, (fx["counts"], derived)
     # spelled-out expectations
-    assert derived["total"] == 58
+    assert derived["total"] == 57
     assert derived["portable"] == 55
-    assert derived["provider_native"] == 3
-    assert derived["claude"] == 58, "every skill carries a Claude adapter"
+    assert derived["provider_native"] == 2
+    assert derived["claude"] == 57, "every skill carries a Claude adapter"
     assert derived["gpt"] == 55, "the gpt adapter set IS the portable set"
     # 54 at Phase CP Step 10. It was 0 at Step 3 (the generation rails ship before
     # any codex adapter is authored), 5 at Step 4, 17 at Step 6, 33 at Step 7, and
@@ -126,9 +126,9 @@ def test_counts_match_fixture_and_array():
     # user-uat requires isolated deep assessment and strong final visual review;
     # lesson-harvest requires a fresh strong privacy/disposition reviewer.
     assert derived["local_capable"] == 20
-    assert derived["sub_agent"] == 20
-    assert derived["vision"] == 2
-    assert derived["filesystem"] == 58
+    assert derived["sub_agent"] == 19
+    assert derived["vision"] == 1
+    assert derived["filesystem"] == 57
 
 
 def test_exact_skill_names_and_statuses():
@@ -327,8 +327,6 @@ def test_known_skill_local_assets_present():
              for n, s in by_name.items()}
     # a few evidence-anchored assets that must be captured
     assert "skills/goblin-do/goblin_do.workflow.js" in dests["goblin-do"]
-    assert "skills/judge-motion/package.json" in dests["judge-motion"]
-    assert "skills/judge-motion/scripts/" in dests["judge-motion"]
     assert "skills/build-step/scripts/" in dests["build-step"]
     assert "skills/tier-offload/sample-offload-config.json" in dests["tier-offload"]
     assert "skills/judge-ui/calibration-notes.md" in dests["judge-ui"]  # from skills-gpt tree
@@ -719,7 +717,7 @@ def test_derived_skill_sets_match_the_spelled_out_rosters():
     assert portable == sorted(gm.PORTABLE)
     assert native == sorted(gm.NATIVE)
     assert codex == sorted(gm.CODEX)
-    assert (len(portable), len(native)) == (55, 3)
+    assert (len(portable), len(native)) == (55, 2)
     # 54 at Phase CP Step 10: the Step 8 catalog of 47 plus the seven promoted
     # workspace-custom skills (issue #127), each landing portable and codex in the
     # same commit. Spelled, like its siblings above, so any step that grows the
@@ -734,7 +732,7 @@ def test_derived_skill_sets_match_the_spelled_out_rosters():
     assert not set(codex) & set(native)
 
 
-def _plant_skill_tree(root, portable=55, native=3, extras=(), codex=0,
+def _plant_skill_tree(root, portable=55, native=2, extras=(), codex=0,
                       codex_on_native=0):
     """A synthetic skills/ tree: `portable` dirs with providers/gpt.md, `native`
     without, plus whatever non-skill entries the caller wants to prove are skipped.
@@ -778,7 +776,7 @@ def test_enumeration_skips_inventory_json_and_the_shared_namespace(tmp_path):
     _plant_skill_tree(root, extras=("inventory.json", "_shared/"))
     (root / "_shared" / "judge-core.md").write_text("x", encoding="utf-8")
     portable, native, codex = gm.derived_skill_sets(root)
-    assert (len(portable), len(native)) == (55, 3)
+    assert (len(portable), len(native)) == (55, 2)
     assert codex == []
     assert "inventory.json" not in portable + native
     assert "_shared" not in portable + native
@@ -797,7 +795,7 @@ def test_codex_enumeration_is_orthogonal_to_the_portable_native_partition(tmp_pa
     root = tmp_path / "skills"
     _plant_skill_tree(root, codex=5)
     portable, native, codex = gm.derived_skill_sets(root)
-    assert (len(portable), len(native)) == (55, 3)
+    assert (len(portable), len(native)) == (55, 2)
     assert len(codex) == 5
     assert set(codex) <= set(portable)
 
@@ -823,12 +821,12 @@ def test_enumeration_reds_when_the_tree_disagrees_with_the_counts(tmp_path):
 
     Every planted tree here must be REJECTED, so deleting the whole guard block reds
     this test. Beyond that, no ONE guard can carry the block alone -- for each single
-    guard, at least one planted case slips past it: keep only the total guard and 55/2
-    slips (it sums to 57); keep only the portable guard and 54/4 slips; keep only the
-    native guard and BOTH 55/3 and 53/3 slip. Before the 55/2 case existed the other
+    guard, at least one planted case slips past it: keep only the total guard and 56/1
+    slips (it sums to 57); keep only the portable guard and 55/3 slips; keep only the
+    native guard and BOTH 56/2 and 54/2 slip. Before the 56/1 case existed the other
     three all broke the total too (58/58/56), so a total-only block passed this
-    anchor -- that is the hole 55/2 closes. The four cases do NOT each have a distinct
-    catching subset, and this docstring does not claim they do: 55/3 and 53/3 are both
+    anchor -- that is the hole 56/1 closes. The four cases do NOT each have a distinct
+    catching subset, and this docstring does not claim they do: 56/2 and 54/2 are both
     caught by exactly {total, portable}.
 
     What it CANNOT decide, and does not claim: deleting exactly one guard is invisible
@@ -840,8 +838,8 @@ def test_enumeration_reds_when_the_tree_disagrees_with_the_counts(tmp_path):
     strip them; catching ValueError here keeps that property under test.
     """
     gm = _load_gen_manifest()
-    for kwargs in ({"portable": 56}, {"native": 4}, {"portable": 54},
-                   {"portable": 56, "native": 2}):
+    for kwargs in ({"portable": 56}, {"native": 3}, {"portable": 54},
+                   {"portable": 56, "native": 1}):
         root = tmp_path / ("skills-" + "-".join(f"{k}{v}" for k, v in sorted(kwargs.items())))
         _plant_skill_tree(root, **kwargs)
         try:

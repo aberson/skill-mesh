@@ -29,9 +29,9 @@ adapter** (e.g. toybox's `/uat-ui`). Without an adapter it runs an inline flow s
   visual-tier step here. Or a project adapter calls you with a named flow.
 - **Don't use** for things a still frame can't judge: **animation/motion, audio/sfx, real-device
   input, or subjective "does it feel right"** (a screenshot is one frame; it cannot see a
-  countdown tick or hear a sound). Motion/transition review (route change, modal open/close, … —
-  full list: `/judge-motion`'s When-to-use) routes to `/judge-motion`; audio,
-  real-device input, and feel stay human. Don't use it to *refine* a fuzzy UAT (that is
+  countdown tick or hear a sound). Motion/transition review (route change, modal open/close,
+  loading-to-content swap, hover/focus animation) is a manual check: motion checks live in
+  each project's own skills. Audio, real-device input, and feel stay human. Don't use it to *refine* a fuzzy UAT (that is
   `/review-uat`) or to run shell-only checks (that is `/user-uat`'s mechanical tier).
 
 ## Invocation
@@ -210,8 +210,6 @@ Capture there; judge here.
 - **`/user-uat`** — its **Visual tier** (`--ui`) delegates single-frame states here. `user-uat`
   owns the partition, separate strong-final gate and terse report; `judge-ui` owns the drive and
   visual verdict. ESCALATE feeds its `Needs you` section.
-- **`/judge-motion`** — the motion/transition sibling: it owns the temporal residual this
-  skill's "Don't use" clause disclaims; single-frame static states stay here.
 - **`/review-uat`** — emits the `Verify (visual — vision-judge)` blocks this skill consumes;
   its rubric *is* the per-stage pass criteria. Refine → judge.
 - **`/build-step --ui`** — the capture/lifecycle primitives to reuse (above).

@@ -1,16 +1,16 @@
 {
   "note": "Authoritative expected inventory for package-integrity tests. Committed so the public package tests need no private/legacy source. Regenerate with tools/gen_manifest.py.",
   "counts": {
-    "total": 58,
+    "total": 57,
     "portable": 55,
-    "provider_native": 3,
-    "claude": 58,
+    "provider_native": 2,
+    "claude": 57,
     "gpt": 55,
     "codex": 55,
     "local_capable": 20,
-    "sub_agent": 20,
-    "vision": 2,
-    "filesystem": 58
+    "sub_agent": 19,
+    "vision": 1,
+    "filesystem": 57
   },
   "portable": [
     "build-phase",
@@ -71,8 +71,7 @@
   ],
   "provider_native": [
     "claude-oauth-auth",
-    "context-slim",
-    "judge-motion"
+    "context-slim"
   ],
   "codex": [
     "build-phase",
@@ -159,7 +158,6 @@
     "citation-sweep",
     "context-slim",
     "goblin-suggest",
-    "judge-motion",
     "judge-ui",
     "lesson-harvest",
     "research-prospect",
@@ -176,7 +174,6 @@
     "user-uat"
   ],
   "vision": [
-    "judge-motion",
     "judge-ui"
   ],
   "skills": [
@@ -429,44 +426,6 @@
         {
           "source": ".claude/skills/goblin-sweep/evals/",
           "dest": "skills/goblin-sweep/evals/"
-        }
-      ]
-    },
-    {
-      "name": "judge-motion",
-      "status": "provider-native",
-      "local_capable": false,
-      "capabilities": [
-        "filesystem",
-        "sub-agent",
-        "vision"
-      ],
-      "migration": {
-        "legacy_core": null,
-        "legacy_claude_launcher": null,
-        "legacy_claude_adapter": ".claude/skills/judge-motion/SKILL.md",
-        "legacy_gpt": null
-      },
-      "support_assets": [
-        {
-          "source": ".claude/skills/judge-motion/fixtures/",
-          "dest": "skills/judge-motion/fixtures/"
-        },
-        {
-          "source": ".claude/skills/judge-motion/package-lock.json",
-          "dest": "skills/judge-motion/package-lock.json"
-        },
-        {
-          "source": ".claude/skills/judge-motion/package.json",
-          "dest": "skills/judge-motion/package.json"
-        },
-        {
-          "source": ".claude/skills/judge-motion/scripts/",
-          "dest": "skills/judge-motion/scripts/"
-        },
-        {
-          "source": ".claude/skills/judge-motion/tests/",
-          "dest": "skills/judge-motion/tests/"
         }
       ]
     },

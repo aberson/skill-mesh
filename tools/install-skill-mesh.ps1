@@ -193,6 +193,13 @@ $UTF8_NO_BOM = New-Object System.Text.UTF8Encoding($false)
 # inspector and the migrator) -- see that file for why it is not spelled here.
 $DISCOVERY_SUBDIR = Get-SkillMeshDiscoveryRoots
 $CLAUDE_DISCOVERY_REL = ([string]$DISCOVERY_SUBDIR['claude'] -replace '\\', '/').TrimEnd('/')
+# The retired provider-native motion-capture package's three JSON files (v3 catalog
+# cleanup Step 6, issue #262). Nothing the builder produces lands at these paths any
+# more. They stay here ONLY so the ownership ledger keeps its default authority to
+# remove copies installed before the retirement (stale removal and uninstall): JSON
+# cannot carry the provenance marker, so without the exact path a normal install
+# over such a home would refuse the whole run. Removing these rows is a separate
+# decision, once no consumer home still records them.
 $MARKERLESS_JSON_OWNED_RELS = @(
     ($CLAUDE_DISCOVERY_REL + '/judge-motion/package.json'),
     ($CLAUDE_DISCOVERY_REL + '/judge-motion/package-lock.json'),
@@ -306,8 +313,9 @@ function Test-MarkerlessJsonOwnedRel([string]$rel) {
 }
 
 function Test-OwnedIdentity([string]$absPath, [string]$intendedRel, [string]$expectedHash) {
-    # Generated files keep their existing provenance path. Exactly three JSON files
-    # cannot carry that marker, so they use a path-scoped, byte-bound identity instead.
+    # Generated files keep their existing provenance path. Exactly three JSON paths
+    # (a retired package's; see MARKERLESS_JSON_OWNED_RELS) cannot carry that marker,
+    # so they use a path-scoped, byte-bound identity instead.
     if (Test-FileHasMarker $absPath) { return $true }
     if (-not (Test-MarkerlessJsonOwnedRel $intendedRel) -or
         $expectedHash -cnotmatch '^[0-9a-f]{64}$' -or

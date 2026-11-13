@@ -653,25 +653,23 @@ LOCKED_CLAIMS = (
      "that plan are authorized, eligibility remains Claude-only, and every "
      "later native mutation still takes "
      "`PROVIDER_NATIVE_REVIEW_REQUIRED`."),
-    ('fact 3 - judge-motion package exception is closed', GUIDE_REL,
+    # Rewritten at v3 catalog cleanup Step 6 (#262), when the package's skill was
+    # retired. Still pinned: the installer's three markerless JSON paths survive
+    # only as stale-removal authority, and this is the sentence that says so.
+    ('fact 3 - the motion-capture package exception ended', GUIDE_REL,
      "What this guide governs", 'paragraph',
-     "**Reviewed packaging exception: the `judge-motion` runtime resources.** "
-     "The table row's `package.json`, `package-lock.json`, `fixtures/`, and "
-     "`scripts/` entries are the closed runtime package authorized by the "
-     "provider-native rebuild plan. The distribution builder emits exactly "
-     "the approved eleven files only in the Claude profile and fails before "
-     "writing the launcher when an input is missing; legacy tests, dependency "
-     "directories, caches, and run output are excluded. The three JSON objects "
-     "at `package.json`, `package-lock.json`, and "
-     "`fixtures/fixtures-flow.json` remain markerless and are owned only when "
-     "their exact allowlisted home-relative path, a valid ledger hash, and "
-     "current bytes agree. Their BOM-free bytes use a throwing UTF-8 decoder "
-     "and the built-in Windows JSON serializer must return an object; this is "
-     "a shape check, not a claim of strict JSON parsing. Foreign files and "
-     "unowned neighbors remain untouched. This exception does not generalize "
-     "`support_assets` into an "
-     "emission protocol, reopen the grandfathered set, or authorize another "
-     "package file."),
+     "**Ended: the motion-capture runtime package exception.** The closed "
+     "Claude-only runtime package that the provider-native rebuild plan "
+     "authorized ended at the v3 catalog cleanup (plan Step 6, issue #262), "
+     "when its skill was retired: the distribution builder emits no resource "
+     "beside a provider-native adapter. The installer keeps that package's "
+     "three exact allowlisted JSON paths for one purpose only, so its "
+     "ownership ledger can remove copies installed before the retirement. "
+     "Such a copy is owned only when its exact home-relative path, a valid "
+     "ledger hash, and current bytes agree; nothing the builder produces lands "
+     "there. Foreign files and unowned neighbors remain untouched. This does "
+     "not generalize `support_assets` into an emission protocol, reopen the "
+     "grandfathered set, or authorize another package file."),
     ('fact 4 - the gate order', GUIDE_REL,
      "recovery rule", 'fence',
      "normalize request -> verify Git checkout and resolve base_ref -> "

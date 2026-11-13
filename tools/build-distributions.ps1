@@ -35,8 +35,8 @@
     file -- skill dirs and the payload alike -- sits exactly ONE level below it and
     every such reference is repointed to ../_shared/x. The rewrite is
     longest-token-first because '../../../_shared/' contains '../../_shared/', and it
-    is NOT conditional on the skill having a core (judge-motion is core: null and
-    still cites the payload). A THIRD spelling, '<repo>/_shared/x', is repointed the
+    is NOT conditional on the skill having a core (a core: null skill's adapter may
+    still cite the payload). A THIRD spelling, '<repo>/_shared/x', is repointed the
     same way: it is how the ten cores cite the seven vendored workspace references
     (Step 66), because a relative spelling of those citations would be a NEW dangling
     reference in the shrink-only link-gate allowlist. See Repoint-SharedReference.
@@ -152,16 +152,6 @@ $SKILL_ITERATE_RESOURCES = @(
     'scripts/adversarial_calibration.py', 'scripts/append_result.py',
     'scripts/differential_grader.py', 'scripts/morning_summary.py',
     'scripts/resolve_queue.py', 'scripts/structural_metrics.py'
-)
-# judge-motion's reviewed Claude-only runtime closure. Fixed list; never harvest
-# the legacy tests, dependency directories, caches, or run output.
-$JUDGE_MOTION_RESOURCES = @(
-    'package.json', 'package-lock.json',
-    'fixtures/fixtures-flow.json', 'fixtures/janky.html',
-    'fixtures/smooth.html', 'fixtures/README.md',
-    'scripts/calibrate.py', 'scripts/capture_motion.mjs',
-    'scripts/gate_signals.py', 'scripts/reduced_motion_audit.py',
-    'scripts/select_frames.py'
 )
 
 if ([string]::IsNullOrWhiteSpace($ManifestPath)) {
@@ -337,10 +327,10 @@ function Repoint-SharedReference([string]$body) {
     #
     # LONGEST TOKEN FIRST is load-bearing (design decision D2): '../../../_shared/'
     # literally CONTAINS '../../_shared/', so replacing the two-dot form first
-    # rewrites judge-motion's depth-3 references into still-broken depth-2
-    # references, silently, with nothing objecting. There ARE live depth-3
-    # references (skills/judge-motion/providers/claude.md), and judge-motion is a
-    # core: null skill -- so callers must NOT gate this on a core being present.
+    # rewrites depth-3 references into still-broken depth-2 references, silently,
+    # with nothing objecting. A depth-3 reference can sit in a core: null skill's
+    # adapter (skills/<name>/providers/claude.md, with no core beside it) -- so
+    # callers must NOT gate this on a core being present.
     $out = $body.Replace('../../../_shared/', '../_shared/')
     $out = $out.Replace('../../_shared/', '../_shared/')
     # THIRD spelling, added in Step 66: '<repo>/_shared/<leaf>'.
@@ -563,7 +553,7 @@ foreach ($profile in $profiles) {
         # Spelled as 'not claude' rather than 'is gpt' so a provider added later is
         # excluded by DEFAULT: the safe direction for this test is to omit a skill from
         # a new profile, never to ship a Claude-only skill into one. Codex inherits the
-        # rule for free, which is what makes dist/codex free of the 3 native skills.
+        # rule for free, which is what makes dist/codex free of the native skills.
         if ($profile -ne 'claude' -and $isNative) { continue }
 
         $providersObj = Get-Prop $skill 'providers'
@@ -629,18 +619,6 @@ foreach ($profile in $profiles) {
                 $skillIterateResources[$resource] = Read-SourceText $resourceAbs
             }
         }
-        $judgeMotionResources = @{}
-        if ($name -eq 'judge-motion') {
-            $packageRoot = Join-Path $SKILLS_ROOT 'judge-motion'
-            foreach ($resource in $JUDGE_MOTION_RESOURCES) {
-                $resourceAbs = Resolve-SafePath -Path (Join-Path $packageRoot $resource) `
-                                               -AllowedRoots @($packageRoot)
-                if (-not (Test-Path -LiteralPath $resourceAbs -PathType Leaf)) {
-                    throw "build-distributions: judge-motion resource source missing: $resource"
-                }
-                $judgeMotionResources[$resource] = Read-SourceText $resourceAbs
-            }
-        }
 
         # -- Launcher (SKILL.md) -- (all sources validated above)
         $adapterBody = Read-SourceText $adapterAbs
@@ -649,8 +627,8 @@ foreach ($profile in $profiles) {
         if ($hasCore) {
             $adapterBody = Repoint-CoreReference $adapterBody
         }
-        # NOT gated on $hasCore: judge-motion is core: null in the manifest and its
-        # adapter still carries depth-3 '../../../_shared/' references (D2).
+        # NOT gated on $hasCore: a core: null skill's adapter can carry depth-3
+        # '../../../_shared/' references (D2).
         $adapterBody = Repoint-SharedReference $adapterBody
         # GPT/Copilot AND Codex native discovery both require the SKILL.md to LEAD with
         # a YAML frontmatter block (name + description). Neither the canonical gpt.md
@@ -728,25 +706,6 @@ foreach ($profile in $profiles) {
             if ($name -ne 'skill-iterate') { break }
             $resourceLabel = "skills/skill-iterate/$resource"
             $resourceOut = Add-PythonProvenance $skillIterateResources[$resource] $resourceLabel $profile
-            Write-GeneratedFile (Join-Path $skillOutDir $resource) $resourceOut $profileDirAbs
-            $fileCount++
-        }
-
-        foreach ($resource in $JUDGE_MOTION_RESOURCES) {
-            if ($name -ne 'judge-motion') { break }
-            $resourceLabel = "skills/judge-motion/$resource"
-            $resourceBody = $judgeMotionResources[$resource]
-            switch ([System.IO.Path]::GetExtension($resource)) {
-                '.md' { $resourceOut = Add-Provenance $resourceBody $resourceLabel $profile }
-                '.html' { $resourceOut = Add-Provenance $resourceBody $resourceLabel $profile }
-                '.py' { $resourceOut = Add-PythonProvenance $resourceBody $resourceLabel $profile }
-                '.mjs' {
-                    $resourceOut = Add-JsProvenance $resourceBody `
-                        (New-ProvenanceHeader $resourceLabel $profile)
-                }
-                '.json' { $resourceOut = $resourceBody }
-                default { throw "build-distributions: no judge-motion resource emitter for '$resource'." }
-            }
             Write-GeneratedFile (Join-Path $skillOutDir $resource) $resourceOut $profileDirAbs
             $fileCount++
         }

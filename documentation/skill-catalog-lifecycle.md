@@ -129,7 +129,6 @@ resource plan as a new grandfathering waiver:
 | `review-deep` | a `config/`, `evals/`, and `scripts/` support tree | Authored at commit `e36a03e`, landed on `main` with RD-lite (issue #177) via merge `8a1b501` — the merge section 1 records as a prerequisite |
 | `build-step` | `scripts/build_step_tree.py` and `scripts/capture_evidence.py` | The P1 mechanics helper, and an LF copy of the legacy top-level package's capture script; reviewed packaging exception, packet route P2 |
 | `skill-iterate` | six Python files under `scripts/` | Canonical copies of the established evaluation helpers; reviewed scoped packaging exception for all three generated profiles |
-| `judge-motion` | `package.json`, `package-lock.json`, `fixtures/`, `scripts/` | Reviewed Claude-only runtime package authorized by the provider-native rebuild plan |
 | `user-wrap` | `evals/` | Scoped repository-only evaluation plan in `user-wrap-source-evals.md`; not emitted or installed |
 | `user-gateway` | `evals/` | Scoped repository-only evaluation plan in `user-gateway-source-evals.md`; not emitted or installed |
 | `review-uat` | `evals/` | Scoped repository-only evaluation plan in `uat-source-evals.md`; not emitted or installed |
@@ -181,18 +180,16 @@ by operator action after an exact hash check. Unrelated foreign files, including
 M2 launchers and tests, are preserved, and rollback restores legacy bytes from the
 take-ownership backup. No unscoped `-Force` is routine or authorized without that check.
 
-**Reviewed packaging exception: the `judge-motion` runtime resources.** The table row's
-`package.json`, `package-lock.json`, `fixtures/`, and `scripts/` entries are the closed
-runtime package authorized by the provider-native rebuild plan. The distribution builder
-emits exactly the approved eleven files only in the Claude profile and fails before writing
-the launcher when an input is missing; legacy tests, dependency directories, caches, and
-run output are excluded. The three JSON objects at `package.json`, `package-lock.json`, and
-`fixtures/fixtures-flow.json` remain markerless and are owned only when their exact
-allowlisted home-relative path, a valid ledger hash, and current bytes agree. Their BOM-free
-bytes use a throwing UTF-8 decoder and the built-in Windows JSON serializer must return an
-object; this is a shape check, not a claim of strict JSON parsing. Foreign files and unowned
-neighbors remain untouched. This exception does not generalize `support_assets`
-into an emission protocol, reopen the grandfathered set, or authorize another package file.
+**Ended: the motion-capture runtime package exception.** The closed Claude-only runtime
+package that the provider-native rebuild plan authorized ended at the v3 catalog cleanup
+(plan Step 6, issue #262), when its skill was retired: the distribution builder emits no
+resource beside a provider-native adapter. The installer keeps that package's three exact
+allowlisted JSON paths for one purpose only, so its ownership ledger can remove copies
+installed before the retirement. Such a copy is owned only when its exact home-relative
+path, a valid ledger hash, and current bytes agree; nothing the builder produces lands
+there. Foreign files and unowned neighbors remain untouched. This does not generalize
+`support_assets` into an emission protocol, reopen the grandfathered set, or authorize
+another package file.
 
 **Scoped source-only resource plan: user-wrap evaluation assets.** The v2
 [user-wrap maintenance plan](user-wrap-source-evals.md) admits
@@ -322,9 +319,9 @@ emits and verifies its GPT profile. What DS-D7(c) removed is the requirement for
 Adding a provider to the general provider vocabulary does not widen this set. Widening it is
 an explicit provider-rollout decision with its own review.
 
-**Provider-native skills are the closed exception.** Three skills are supported on exactly
+**Provider-native skills are the closed exception.** Two skills are supported on exactly
 one host and carry no neutral core (`core: null` in the manifest):
-`claude-oauth-auth`, `context-slim`, and `judge-motion`.
+`claude-oauth-auth` and `context-slim`.
 
 They are grandfathered and are not converted by this phase. `READ` may inspect them.
 `CREATE`, `UPDATE`, `DELETE`, and `RENAME` against a provider-native identity stop **before
@@ -340,7 +337,7 @@ review, and qualification gates in that plan are authorized, eligibility remains
 Claude-only, and every later native mutation still takes
 `PROVIDER_NATIVE_REVIEW_REQUIRED`.
 
-The catalog at the time of writing is 58 skills: 55 portable and 3 provider-native.
+The catalog at the time of writing is 57 skills: 55 portable and 2 provider-native.
 
 ## 5. The five operations
 

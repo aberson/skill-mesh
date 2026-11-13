@@ -1,7 +1,7 @@
 # Provider-native rebuild plan for the existing Claude-only skills
 
 Status: operator-approved architecture decision. Implementation and qualification remain
-gated by the stage boundaries below.
+gated by the stage boundaries below. 2026-11-13: one of the three identities and its Stage B package were retired in the v3 catalog cleanup (plan Step 6, issue #262); this plan stays the authority record for the other two.
 
 ## Scope and authority
 

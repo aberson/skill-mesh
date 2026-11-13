@@ -5,7 +5,7 @@ workflow for Claude Code, GitHub Copilot, and OpenAI Codex.**
 
 - **A connected pipeline.** Turn an idea into a plan, a bounded build, an independently reviewed change, and a release.
 - **Explicit quality gates.** Automated checks and fresh-context reviewers inform the result; missing required capabilities stop the workflow.
-- **One contract, three hosts.** 58 Claude skills; 55 also packaged for Copilot and Codex through host adapters.
+- **One contract, three hosts.** 57 Claude skills; 55 also packaged for Copilot and Codex through host adapters.
 
 **[v2.0.4 is released](https://github.com/aberson/skill-mesh/releases/tag/v2.0.4)** ·
 [Try it](#install-or-upgrade) · [Browse the skills](documentation/skill-reference.md) ·
@@ -51,7 +51,7 @@ host's capabilities; installation puts the generated skills where the host finds
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="_shared/host-profiles-dark.svg">
-  <img alt="Shared Skill Mesh contracts generate three host profiles: 58 Claude skills and 55 portable skills each for GitHub Copilot and OpenAI Codex." src="_shared/host-profiles-light.svg">
+  <img alt="Shared Skill Mesh contracts generate three host profiles: 57 Claude skills and 55 portable skills each for GitHub Copilot and OpenAI Codex." src="_shared/host-profiles-light.svg">
 </picture>
 
 ### The routing web
@@ -84,14 +84,14 @@ from this skill catalog. [Routing contract](_shared/skill-pipeline.md).
 | Evidence & improvement | `citation-review`, `lesson-harvest`, `skill-evolve`, `tier-offload` |
 
 <details>
-<summary><strong>Explore all 58 skills and available workflow documentation</strong></summary>
+<summary><strong>Explore all 57 skills and available workflow documentation</strong></summary>
 
 The [complete reference table](documentation/skill-reference.md) lists each skill's
 purpose, host coverage, source contract, and individual workflow. The
 [source-linked workflow catalog](docs/workflows/README.md) records the details and
 omissions behind each flow, checked with [Show Your Work](https://github.com/aberson/show-your-work).
 
-`claude-oauth-auth`, `context-slim`, and `judge-motion` are Claude-only.
+`claude-oauth-auth` and `context-slim` are Claude-only.
 An adapter's presence does not guarantee every required native capability is
 available in your session.
 
@@ -169,7 +169,7 @@ verify its checksum, and choose one host profile.
 <details>
 <summary><strong>Installation, upgrades, and restoration</strong></summary>
 
-Of the portable catalog, 55/55 skills are GPT-capable; Claude provides all 58 skills.
+Of the portable catalog, 55/55 skills are GPT-capable; Claude provides all 57 skills.
 
 | Provider | Discovery root under the chosen home |
 |---|---|

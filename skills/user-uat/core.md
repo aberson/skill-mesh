@@ -37,7 +37,7 @@ human. The win is the mechanical tier — which is most of the volume.
 /user-uat path/to/plan.md#M4    # run the M-step at this anchor
 /user-uat --dry-run             # classify + print what WOULD run (mechanical / side-effectful / escalated); run nothing
 /user-uat --deep                # also ask an independent fresh-context assessor; each result stays ESCALATED pending operator confirmation
-/user-uat --ui                  # drive + vision-JUDGE the visual-tier steps (static → /judge-ui, transitions → /judge-motion) instead of escalating them to you
+/user-uat --ui                  # drive + vision-JUDGE the single-frame visual-tier steps via /judge-ui instead of escalating them to you; transitions stay manual checks
 /user-uat --yes-side-effects    # pre-authorize reversible local fixture mutations; never waives destructive or outbound confirmation
 ```
 
@@ -78,14 +78,14 @@ isn't deterministic.** Classify every step's *action* and *verify* (separately) 
 |---|---|---|
 | **Mechanical** | exit code, "stdout contains X", "refuses with Y", a DB row / count, HTTP status, file on disk, a log line | **Auto-judge** PASS/FAIL — show the observed value as evidence |
 | **Agent-judgeable** | "output looks grounded", "the ship-vs-park call was right", a diff reads sensibly | **Escalate** with evidence (default). With `--deep`: a fresh-context assessor evaluates the evidence, labeled `independent-assessor: <verdict> — confirm?`; the result remains escalated |
-| **Visual** *(needs `--ui`)* | a **rendered screen state** visible in one browser frame — layout, a component, copy, a list/table, "the right screen showed" — or a **UI transition** between such states | **Without `--ui`: escalate (Human).** With `--ui`: drive + vision-judge via `/judge-ui`, cross-check the read-back, then apply Step 4's separate strong-final gate; `UNCERTAIN → escalate`, and the visual judge alone never yields AUTO-PASS. **Transition-shaped steps** (route change, modal open/close, … — full list: `/judge-motion`'s When-to-use) delegate to `/judge-motion` instead; single-frame static states stay with `/judge-ui` |
-| **Human** | audio / sfx, real-device input, kid-facing feel, anything credentialed or physical the agent can't drive (transition-shaped motion → the Visual qualifier) | **Always escalate** — a crisp one-line ask, never a verdict |
+| **Visual** *(needs `--ui`)* | a **rendered screen state** visible in one browser frame — layout, a component, copy, a list/table, "the right screen showed" — never a transition between such states | **Without `--ui`: escalate (Human).** With `--ui`: drive + vision-judge via `/judge-ui`, cross-check the read-back, then apply Step 4's separate strong-final gate; `UNCERTAIN → escalate`, and the visual judge alone never yields AUTO-PASS. **Transition-shaped steps** (route change, modal open/close, loading-to-content swap, hover/focus animation) are not judged: each is reported in `Needs you` as a manual-check step, never silently dropped (motion checks live in each project's own skills). Only single-frame static states go to `/judge-ui` |
+| **Human** | audio / sfx, real-device input, kid-facing feel, anything credentialed or physical the agent can't drive (transition-shaped motion is a manual check per the Visual qualifier) | **Always escalate** — a crisp one-line ask, never a verdict |
 
 **When classification is ambiguous, treat the verify as human and escalate.** A
 mechanical-judgement applied to a judgment-class check is exactly how the blind spot leaks
 back in. **Even with `--ui`, audio / feel stay Human** — the agent can't hear a sound or judge
-kid-facing feel; transition-shaped motion routes to `/judge-motion` per the Visual qualifier,
-not to a still-frame judge.
+kid-facing feel; transition-shaped motion is a manual check per the Visual qualifier, never
+a still-frame judge's verdict.
 
 ## Flow
 
@@ -93,8 +93,8 @@ not to a still-frame judge.
    `Step N (source: file:line / M-anchor) — action: <command>; verify: <expectation>; Tier: Mechanical / Agent-judgeable / Human`
    The source citation must appear on the per-step classification line, not just in a header.
    Valid tiers are **Mechanical**, **Agent-judgeable**, **Human** — plus, only when `--ui` is
-   passed, **Visual** (a vision-judgeable subset carved out of Human: a rendered screen state or a
-   UI transition — transition-shaped steps carry the tier table's `/judge-motion` qualifier;
+   passed, **Visual** (a vision-judgeable subset carved out of Human: a rendered screen state;
+   transition-shaped steps stay manual checks per the tier table's qualifier, and
    audio/feel stay Human). There is no "Ungroundable" category. If a step can't be grounded or is
    ambiguous → stop, report it, and point at `/review-uat`.
 2. **Safety gate.** Tag each command read-only/preview, **reversible local mutation**, or
@@ -144,18 +144,17 @@ not to a still-frame judge.
    regardless of `--deep`.
    **Visual-tier steps:** without `--ui`, escalate like Human. With `--ui`, delegate single-frame
    states to `/judge-ui` — it drives the screen, captures stage screenshots, and renders a vision
-   verdict **cross-checked against an API/DB read-back** — and transition-shaped steps to
-   `/judge-motion` (screencast + filmstrip vision verdict; mechanics live in its SKILL.md). Either
-   judge's corroborated PASS becomes a candidate for the independent strong-final gate described
-   below; it does not yet land as `AUTO-PASS`. Preserve its evidence (screenshot/filmstrip +
-   read-back value, or `/judge-motion`'s mechanical gate evidence where it has no read-back), and
+   verdict **cross-checked against an API/DB read-back**. Transition-shaped steps are not judged:
+   each lands in `Needs you` as a manual-check step. The judge's corroborated PASS becomes a
+   candidate for the independent strong-final gate described below; it does not yet land as
+   `AUTO-PASS`. Preserve its evidence (screenshot + read-back value), and
    an `UNCERTAIN`/`ESCALATE`/low-confidence/pixels-vs-read-back-disagree result falls back to the
    **`Needs you`** section. Use the project adapter for
    bring-up + auth (e.g. toybox `/uat-ui`); never drive an app instance you don't own.
    **Independent strong-final gate for Visual PASS.** After a visual judge returns a
    corroborated PASS, dispatch a different fresh-context strong-final judge using the existing
    workspace strong-final policy. Give it the original visual rubric, source citation,
-   mechanical gates, screenshot/filmstrip paths, structured read-back, visual-judge verdict and
+   mechanical gates, screenshot paths, structured read-back, visual-judge verdict and
    evidence, plus the identity of the driving and producing sessions when known. It may not
    waive a failed mechanical gate, a failed visual finding, absent evidence, or uncertainty.
    Only its evidence-backed `PASS` converts the step to `AUTO-PASS`. `FAIL` or `NEEDS-WORK`
@@ -166,9 +165,8 @@ not to a still-frame judge.
    **Report mapping (the verdict enum stays three-valued):** a `--deep` assessment is reported
    `ESCALATED` with its `independent-assessor: <verdict> — confirm?` label and listed in
    `Needs you` — never `AUTO-PASS`. A Visual step is `AUTO-PASS` only after both the corroborated
-   visual PASS and the strong-final PASS, citing both judges, the screenshot/filmstrip path and
-   the read-back value (or, for `/judge-motion`, whose read-back handle is optional, its
-   mechanical gate evidence). A visual judge's corroborated FAIL or the strong-final gate's
+   visual PASS and the strong-final PASS, citing both judges, the screenshot path and the
+   read-back value. A visual judge's corroborated FAIL or the strong-final gate's
    `FAIL`/`NEEDS-WORK` is `AUTO-FAIL`; it stops the run like a mechanical FAIL. Missing judges,
    malformed returns and uncertainty are `ESCALATED` and listed in `Needs you` — never view the
    screen and render a visual verdict yourself.
@@ -198,8 +196,8 @@ not to a still-frame judge.
   write-back.
 - **Writes:** none of its own. The only state changes are those of UAT actions (including a
   Visual step's driven interaction) that passed the step-2 gate, plus delegated judge lifecycle,
-  isolated fixture/store, capture and evidence writes under `/judge-ui` / `/judge-motion`'s own
-  contracts and the same side-effect gate. Never edit the source block, a
+  isolated fixture/store, capture and evidence writes under `/judge-ui`'s own
+  contract and the same side-effect gate. Never edit the source block, a
   plan's `## Manual UAT` section (append-only, owned by `/build-phase`), issues, or the
   `/user-walkthrough` / `/user-shakedown` ledger.
 - **Verdict ownership:** an `ESCALATED` item stays open until the operator answers it. Never
@@ -244,9 +242,6 @@ not to a still-frame judge.
   browser flow, captures stage screenshots, and renders a vision verdict cross-checked against a
   read-back (`UNCERTAIN → Human` fallback). Project adapters (e.g. toybox `/uat-ui`) supply its
   bring-up + auth. Pairs with `--deep` the way `judge-ui` pairs with this skill's Human-fallback.
-- **`/judge-motion`** — the motion/transition sibling `--ui` delegates transition-shaped Visual
-  steps to (full list: its When-to-use); its `ESCALATE` feeds the `Needs you` section the same
-  way. Single-frame static states stay with `/judge-ui`.
 - **An ad-hoc app run** (a host built-in, not a Skill Mesh skill) confirms a code change works;
   `user-uat` runs a *defined UAT script*, partitioning auto-vs-human across its steps.
 - **`/build-phase`, `/build-step`** — their `Type: operator` / "Manual UAT" outputs are exactly

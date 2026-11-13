@@ -53,7 +53,7 @@ manifest for TODAY's resolvability:
     appears in a migrated ref.
   - The per-skill support-asset fallback is CONSERVATIVE: it only rewrites a tail
     that lands under a DECLARED `support_asset` dest, so an illustrative or gitignored
-    runtime tail (e.g. `.judge-motion/<run-id>`) is never fabricated into a bogus
+    runtime tail (e.g. a gitignored `.<skill>/<run-id>` run directory) is never fabricated into a bogus
     `skills/...` path.
 
 Usage:
@@ -80,12 +80,11 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 MANIFEST_PATH = REPO_ROOT / "config" / "skill-manifest.json"
 INVENTORY_PATH = REPO_ROOT / "skills" / "inventory.json"
 
-# Explicit, truthful reasons the 3 provider-native skills receive no neutral core
+# Explicit, truthful reasons the 2 provider-native skills receive no neutral core
 # and no GPT adapter (documentation/architecture.md sec 7.3). ASCII only.
 EXCLUSION_REASONS = {
     "claude-oauth-auth": "Claude-native - Claude OAuth flow; excluded from GPT porting.",
     "context-slim": "Claude-native - Claude Code context management; excluded from GPT porting.",
-    "judge-motion": "Claude-native - depends on Claude-native motion/vision capture; excluded from GPT porting.",
 }
 
 # Step 66 vendored seven workspace reference documents into the repo-root `_shared/`
@@ -231,7 +230,7 @@ def _map_neutral(parts, portable, native, support):
     a per-skill support asset DECLARED in the manifest (`support` = the set of declared
     support_asset dests), and the hardcoded global-asset equivalents below
     (references/model-* -> config/, lib/* -> runtime//tests/). The per-skill fallback is
-    CONSERVATIVE: an unrecognized/illustrative tail (e.g. a gitignored `.judge-motion/
+    CONSERVATIVE: an unrecognized/illustrative tail (e.g. a gitignored `.<skill>/
     <run-id>` runtime path) is NOT rewritten into a fabricated `skills/...` path -> None.
     """
     if not parts:

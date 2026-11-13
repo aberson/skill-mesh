@@ -8,7 +8,7 @@ Two independent layers:
   at that step, the pilot five at Step 4, the whole portable roster since Step 8);
   every provider-native dir has ONLY providers/claude.md (no core.md, no gpt.md,
   no codex.md -- provider-native means Claude-only); the counts match the manifest
-  (55 portable, 3 native, 58 total, 55 codex); skills/inventory.json
+  (55 portable, 2 native, 57 total, 55 codex); skills/inventory.json
   agrees with the manifest and the committed expected_inventory.json fixture; and
   no operator-private absolute path leaked into the migrated tree.
 
@@ -90,9 +90,9 @@ def test_inventory_counts():
         "codex": sum(1 for s in skills if s["providers"]["codex"]),
     }
     assert inv["counts"] == derived, (inv["counts"], derived)
-    assert derived["total"] == 58
+    assert derived["total"] == 57
     assert derived["portable"] == 55
-    assert derived["provider_native"] == 3
+    assert derived["provider_native"] == 2
     # 54 since Phase CP Step 10 (issue #127) promoted the seven workspace-custom
     # skills on top of the Step 8 catalog of 47. Every portable skill carries a
     # providers/codex.md, and each promotion landed portable and codex together.
@@ -187,7 +187,7 @@ def test_file_counts_across_tree():
     gpt = list(SKILLS_DIR.glob("*/providers/gpt.md"))
     codex = list(SKILLS_DIR.glob("*/providers/codex.md"))
     assert len(cores) == 55, len(cores)
-    assert len(claude) == 58, len(claude)   # 55 portable + 3 native
+    assert len(claude) == 57, len(claude)   # 55 portable + 2 native
     assert len(gpt) == 55, len(gpt)
     # 54 since Phase CP Step 10 (issue #127) promoted seven workspace-custom skills
     # on top of the Step 8 catalog of 47. This is a SPELLED count on purpose, exactly

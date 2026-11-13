@@ -127,13 +127,6 @@
       "local": false,
       "notes": "Promoted at Phase CP Step 10 - thin fail-loud wrapper over the goblin sweep CLI."
     },
-    "judge-motion": {
-      "default_model": "claude",
-      "claude": true,
-      "gpt": false,
-      "local": false,
-      "notes": "Claude-native - excluded from GPT porting"
-    },
     "judge-ui": {
       "default_model": "claude",
       "claude": true,

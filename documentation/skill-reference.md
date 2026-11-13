@@ -1,6 +1,6 @@
 # Skill reference
 
-The v2 catalog contains **58 Claude skills** and **55 portable skills** for Codex and GitHub Copilot. Host coverage means an adapter is packaged; required native capabilities and external utilities still apply.
+The v2 catalog contains **57 Claude skills** and **55 portable skills** for Codex and GitHub Copilot. Host coverage means an adapter is packaged; required native capabilities and external utilities still apply.
 
 Each workflow link opens its source-linked diagram. Read the contract for full gates, flags, and omissions. See [installation](../README.md#install-or-upgrade), [utility integrations](../README.md#how-utility-projects-are-used), and [release limitations](https://github.com/aberson/skill-mesh/releases/tag/v2.0.2).
 
@@ -19,7 +19,6 @@ Each workflow link opens its source-linked diagram. Read the contract for full g
 | [goblin-do](../skills/goblin-do/core.md) | Resolve one persisted atom, recheck its anchor, and print a goal block or planning seed without executing the work. | Claude, Copilot, Codex | [Diagram](../docs/workflows/README.md#goblin-do) |
 | [goblin-suggest](../skills/goblin-suggest/core.md) | Validate the invocation, enforce the current safety holds for every mode, and stop before reading project content or launching the workflow. | Claude, Copilot, Codex | [Diagram](../docs/workflows/README.md#goblin-suggest) |
 | [goblin-sweep](../skills/goblin-sweep/core.md) | Invoke the deterministic goblin sweep, parse its obligation records, and present every returned atom with a goblin-do handoff. | Claude, Copilot, Codex | [Diagram](../docs/workflows/README.md#goblin-sweep) |
-| [judge-motion](../skills/judge-motion/providers/claude.md) | Gate a motion run on session calibration, capture paint-driven evidence, short-circuit mechanical failures, and reduce per-transition verdicts. | Claude only | [Diagram](../docs/workflows/README.md#judge-motion) |
 | [judge-ui](../skills/judge-ui/core.md) | Drive a declared UI flow through mechanical and read-back gates, calibrate one independent vision dispatch, and reduce to PASS, FAIL, or ESCALATE. | Claude, Copilot, Codex | [Diagram](../docs/workflows/README.md#judge-ui) |
 | [lesson-harvest](../skills/lesson-harvest/core.md) | Record one private observation or produce a privacy-reviewed zero-write lesson preview; automatic publication is unavailable in v2. | Claude, Copilot, Codex | [Diagram](../docs/workflows/README.md#lesson-harvest) |
 | [memory-distill](../skills/memory-distill/core.md) | Review selected feedback memories one at a time, surface broader principles, and apply changes only after explicit approval. | Claude, Copilot, Codex | [Diagram](../docs/workflows/README.md#memory-distill) |
@@ -65,4 +64,4 @@ Each workflow link opens its source-linked diagram. Read the contract for full g
 | [user-walkthrough](../skills/user-walkthrough/core.md) | Guide attended acceptance of a just-built tool, answer from primary evidence, and fix small in-scope issues during the walkthrough. | Claude, Copilot, Codex | [Diagram](../docs/workflows/README.md#user-walkthrough) |
 | [user-wrap](../skills/user-wrap/core.md) | Reorient a returning operator, delegate the verdict to session-wrap, and execute exactly the action owned by that verdict. | Claude, Copilot, Codex | [Diagram](../docs/workflows/README.md#user-wrap) |
 
-Inventory source: [skill-manifest.json](../config/skill-manifest.json). The three Claude-only entries are claude-oauth-auth, context-slim and judge-motion. Diagram sources and omissions are recorded beside every rendered flow.
+Inventory source: [skill-manifest.json](../config/skill-manifest.json). The two Claude-only entries are claude-oauth-auth and context-slim. Diagram sources and omissions are recorded beside every rendered flow.

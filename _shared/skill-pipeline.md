@@ -143,7 +143,7 @@ for high-stakes steps; `/plan-review` §27 routes those steps at plan time.
 
 Four modes: `/user-uat` EXECUTES an already-clear UAT block; `/review-uat` REFINES a fuzzy one; `/user-walkthrough` lets the operator DRIVE exploration of a just-built feature (agent answers from source, fixes small, logs big, marks coverage); `/user-shakedown` AUTONOMOUSLY CLOSES the shared UAT ledger to zero open items (designed to run armed under `/goal`). The walkthrough/shakedown pair share one ledger contract: `shakedown-engine.md`.
 
-Visual tier: `/user-uat --ui` delegates single-frame screen states to `/judge-ui` and transition-shaped steps (route change, modal open/close, … — full list: `/judge-motion`'s When-to-use) to `/judge-motion` — the static/motion vision-judge sibling pair.
+Visual tier: `/user-uat --ui` delegates single-frame screen states to `/judge-ui`. Transition-shaped steps (route change, modal open/close, loading-to-content swap, hover/focus animation) stay manual-check steps in `Needs you`; motion checks live in each project's own skills.
 
 ---
 
