@@ -94,7 +94,11 @@ Group each move under one of the five category headers below. Order moves by ove
 - **<Move>** — <why this is autonomous-safe in one line>
   - Plan: [`<path>`](<path>) § <section>
   - Prereqs: <e.g., `/plan-review` pending; `/repo-sync` to fill blank `**Issue:** #` lines; frontend touches need `--ui`>
-  - Run: `/build-phase --plan <path> [--phase N] [--steps a,b,c]`
+  - Readiness: checkout <clear, or the conflict>; host <clear, unknown, or the conflict>; capacity <clear or unknown>
+  - Run: `/build-phase --plan <path> [--phase N] [--steps a,b,c]` (all clear), or `qualify first:` <the qualify-first prompt> (any unknown), or `conflict:` <the conflict and the smaller route or constraint change> (known conflict)
+- **Goal:** <the `--goal` paste line for one goal-ready board item>
+- **Queue:** `/queue-prep` <only where the project declares an execution queue>
+- **Fallback pool:** Codex — <board item or none on the board>; Claude — <...>; local product work — <...>; lightweight preparation — <...>
 
 ### Other (no code, no command — board hygiene, real-use, deferred decisions)
 - **<Move>** — <one-line rationale>
@@ -152,9 +156,27 @@ Check the Overnight rubric: a move qualifies only if `/build-phase` could run it
 - **Worktree-safe.** Multiple steps editing the same shared file (routes module, central config) overwrite each other on merge. If two candidate steps both rewrite the same file end-to-end, surface ONE per night, not both in parallel.
 - **No external dependencies a human has to set up overnight** (game client, paid API quota refresh, hardware reboot).
 
+The checks above miss three gaps that can stop an unattended run. Check each by applying `skills/user-build-route/core.md`, section "Check the route can run", to the intended route on the intended host (the host the plan or project instructions name for the run, else the current one). Read that section and inspect only: never probe, spend capacity or dispatch an agent to answer it.
+
+- **Checkout and commit rule.** Dirty paths or stashes this run observed that must not be committed, or a stated no-commit rule (project instructions, the plan, a handoff), against the commits, pushes and stash or worktree handling the route performs.
+- **Host capability.** The route's entry skill on the intended host, the independent reviewers the step flags require being available there, and the project's test and validation time against the run's budget (or the window, when no budget is stated).
+- **Agent capacity.** Capacity for the run's agent dispatch. Capacity is not proven by consuming it: never spawn an agent to find out. Capacity that cannot be observed without a probe is unknown.
+
+Each candidate's result on those three decides its run line:
+
+- **All clear:** the normal Run line.
+- **Unknown** on any of the three: a `qualify first` line, never a go. It is the qualify-first prompt that section describes, through the entry skill's own gate.
+- **Known conflict** (for example build-phase checkpoint commits against a dirty checkout that must not be committed): no unconditional route. A `conflict:` line names the conflict and the smallest supported route that keeps the constraint, or the constraint change the operator must authorize.
+
+Close the Overnight block with these lines, each only when it has content:
+
+- **Goal:** the `--goal` mode paste line for one goal-ready board item, with the same three checks applied.
+- **Queue:** `/queue-prep`, only where the project instructions declare an execution queue. This skill never writes queue activations.
+- **Fallback pool:** for each of the four lanes of the workspace's unattended-window closeout gate (`docs/templates/progress-standard.md`, "Unattended window closeout gate"), namely Codex, Claude, local product work and lightweight preparation, the next useful board item or `none on the board`, so a window whose chosen run holds can reselect instead of stopping.
+
 Prefer substrate moves (foundational layer, not a single capability) over capability moves at equal effort — substrate compounds across future work.
 
-Skip the Overnight header entirely if nothing in the plan currently meets the bar. Do not say "Nothing autonomous-ready" as a placeholder — just skip the section.
+Skip the Overnight header entirely if no candidate passes the first list of checks (plan format through external dependencies); a candidate that passes it shows its Run, `qualify first` or `conflict:` line. Do not say "Nothing autonomous-ready" as a placeholder — just skip the section.
 
 ## The "Candidates to cut" section is the point
 
@@ -210,7 +232,9 @@ Be honest in **What this unblocks**. If completing this topic doesn't unblock an
 - **`--overnight`** — moves that pass the Overnight qualification rubric (see earlier section). Per move:
   - **Plan:** `[path](path)` § section.
   - **Prereqs:** explicit list — `/plan-review` pending, `/repo-sync` to fill blank `**Issue:** #`, `--ui` flag needs adding, etc.
-  - **Run:** `/build-phase --plan <path> [--phase N] [--steps a,b,c]`.
+  - **Readiness:** the rubric's checkout, host capability and agent capacity checks, each with its result and evidence.
+  - **Run:** `/build-phase --plan <path> [--phase N] [--steps a,b,c]` only when all three are clear; otherwise the `qualify first` or `conflict:` line the rubric prescribes.
+  - Close **The work** with the rubric's Goal, Queue and Fallback pool lines, each only when it has content.
   - If nothing currently qualifies, say so in one line and point to the closest-to-ready candidate plus what it'd take to qualify (usually `/plan-review` + `/repo-sync`). Don't pad with capability moves dressed up as Overnight.
 
 - **`--goal`** — work items a fresh window can drive to a **binary, checkable stop condition** under `/goal`, each rendered as a single ready-to-paste line. Distinct from `--overnight`: `--goal` needs no plan format, no synced issues, no `/build-phase` rail — just a condition a fast model can verify each turn. The harness's `/goal` Stop hook keeps the session grinding across turns and auto-compactions until the condition resolves. Reach for it when "done" is nameable but a full build-phase plan is overkill: get a suite green, close issue #N, lift an eval score past a threshold, finish a bounded bug fix. For this mode, **Context** = the shipped substrate that makes these goals runnable now; **What this unblocks** = what each met goal clears downstream. Per candidate under **The work**:
@@ -218,6 +242,7 @@ Be honest in **What this unblocks**. If completing this topic doesn't unblock an
   - **Open:** if one point of the condition can't be pinned down in a single pass (which suite counts as "green", what threshold, which of two files), name it declaratively in one line — no question mark, no waiting. Omit this sub-bullet entirely when the condition is unambiguous. user-pm surfaces the gap as data, the way `### Decide` does, and never blocks on it; resolving it is the one job handed to `/user-draft`.
   - **Ready to paste:** exactly one line per candidate. With **no Open point**, emit the fresh-window pair in a fenced block — `/task-handoff --resume` then `/goal "<condition>"` (the resume line self-orients the new window; droppable for same-window use). With an **Open point**, emit instead `/user-draft <seed>`, where the seed carries the candidate + draft condition + the open point — so the new window starts by clarifying and user-draft's GOAL branch ends by emitting the finished `/goal` line. This is why user-pm inlines user-draft's standard rather than invoking it per candidate: it stays one-pass, and the interactive clarify happens in the window the user chooses to open.
   - **Skip** any item blocked on operator action, hardware, or an external dependency a fresh window can't satisfy — those aren't goal-drivable; route them to `--test` or `--decide` instead.
+  - **Readiness:** the Overnight rubric's checkout, host capability and agent capacity checks apply to each candidate too. A known conflict replaces its paste line with the `conflict:` line; an unknown result marks the line `qualify first`.
   - Close **The work** with a mandatory `QUICK COPY (one per window)` block — the single paste-line for each candidate (`/goal "<condition>"` for ready ones, `/user-draft <seed>` for ones with an Open point), one per line — so each new window either starts the goal or starts the clarify-then-goal pass.
   - If nothing currently has a checkable stop condition, say so in one line and name the closest candidate plus the criterion it'd need. Don't dress a fuzzy task up as a goal.
   - `/goal` and its Stop hook exist only on hosts that provide them (build-phase applies the same capability guard). If the invoking host has no `/goal`, still emit every candidate and paste line, and add to the notes line under the title that the lines need a `/goal`-capable window.
@@ -267,7 +292,7 @@ Be honest in **What this unblocks**. If completing this topic doesn't unblock an
 - If no plan file is found at the Step 1 locations, the snapshot is sparse (`README.md` and git only).
 - In a project folder inside a parent repository (no nested `.git`), git reads are limited to the project path, but `git stash list` and `git worktree list` still report the whole parent repository, and the `gh` reads are skipped.
 - Plan status is not re-derived from git; only the conflicts this run happens to observe are flagged.
-- Overnight qualification is a heuristic, not a guarantee — the rubric catches common misroutes but cannot detect every silent precondition.
+- Overnight qualification is a heuristic, not a guarantee — the rubric catches common misroutes but cannot detect every silent precondition. Its readiness checks inspect without probing, so they certify nothing; the entry skill's own gates revalidate at dispatch.
 - There is no recap of the current thread without lookups: to pick up a saved task use `task-handoff --resume`; to decide whether to keep a window going use `user-wrap`.
 
 
