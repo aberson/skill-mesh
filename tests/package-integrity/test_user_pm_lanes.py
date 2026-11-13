@@ -51,6 +51,15 @@ PART_B = "### Lane planning"
 FALLBACK_FILE = f"%LOCALAPPDATA%\\lane-notes\\{PROJECT}.txt"
 BOM = b"\xef\xbb\xbf"
 UTC = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$")
+# The Passing Notes protocol's lane id grammar and card states (passing-notes/docs/protocol.md,
+# "Identifiers" and "Lane cards"). The core cites the grammar; this test models it.
+LANE_ID = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")
+ID_FLOOR = re.compile(r"^[a-z0-9-]+$")
+RESERVED_IDS = {"all", "operator", "con", "prn", "aux", "nul",
+                *(f"com{i}" for i in range(10)), *(f"lpt{i}" for i in range(10))}
+CARD_STATES = {"active", "waiting", "blocked", "idle", "done"}
+PASTE_START = "New-Item"
+ITEM_PLACEHOLDER = "<what this lane is doing now>"
 
 # The core sentence (fragment) that prescribes each branch of the model.
 RULES = {
@@ -88,8 +97,18 @@ RULES = {
     "fb_cap": "for at most 20 lanes; lanes past the twentieth are not shown",
     "fb_waiting": "A note is waiting for a lane when it is addressed to that lane or to `all`, is not from that lane, and is newer than that lane's latest card line.",
     "fb_render": "with host `unknown`, the card's time as its updated time, each waiting note shown as its UTC time in place of a note id",
+    "fb_ids": "`<lane>` and `<from>` are lane ids under the protocol's id grammar",
+    "fb_to": "`<to>` is a lane id, `all` or `operator`",
+    "fb_states": "`<state>` is one of the protocol's card states: `active`, `waiting`, `blocked`, `idle` or `done`.",
+    "fb_ids_floor": "an id holding any character other than a lowercase letter, a digit or a hyphen breaks the line, and the note says the ids were checked without the protocol",
     "fb_ack": "a paste line for the lane's own window that appends a newer card line",
-    "fb_quote": "Card text goes inside the single quotes with any single quote doubled",
+    "fb_no_file_text": "No text from the file goes into a paste line except a validated lane id and card state.",
+    "fb_item_placeholder": "'Z | card | <lane> | <state> | <what this lane is doing now>')`",
+    "fb_clears": "appending a card acknowledges every note waiting for that lane, not only the first",
+    "fb_post": "Then one **Post a note** line, the same command ending `'Z | note | <from> -> <to> | <subject>')`, every field left for the operator to fill in.",
+    "fb_typed_quote": "A single quote typed into a field, straight or curly, is doubled.",
+    "fb_folder": "Each paste line creates the folder when it is missing and starts its entry with a line break",
+    "fb_bootstrap": "shows only the **Acknowledge** line with every field left as a placeholder",
     "fb_no_write": "user-pm never writes the file.",
     "fb_note_used": "Passing Notes is unavailable (not on PATH, or store absent) and the lanes came from the fallback file",
     "fb_note_absent": "when the file is absent, Passing Notes is unavailable and no fallback file was found at",
@@ -148,7 +167,16 @@ def _lines(part_a: str, call: Call, what: str, problems: list[str]) -> list[str]
     return [line for line in lines if not line.startswith((DIAGNOSTIC_PREFIX, COUNT_PREFIX))]
 
 
-def _parse_fallback_line(part_a: str, line: str) -> tuple[str, ...] | None:
+def _valid_id(part_a: str, value: str, protocol: bool) -> bool:
+    """A lane id under the protocol's grammar, or under the core's floor when the protocol is unreadable."""
+    if not protocol:
+        _rule(part_a, "fb_ids_floor")
+        return bool(ID_FLOOR.match(value))
+    return (bool(LANE_ID.match(value)) and len(value) <= 32
+            and "to" not in value.split("-") and value not in RESERVED_IDS)
+
+
+def _parse_fallback_line(part_a: str, line: str, protocol: bool) -> tuple[str, ...] | None:
     """One fallback line as ("card", utc, lane, state, item) or ("note", utc, from, to, subject)."""
     head = line.split(" | ", 2)
     if len(head) < 3 or not UTC.match(head[0]):
@@ -157,23 +185,34 @@ def _parse_fallback_line(part_a: str, line: str) -> tuple[str, ...] | None:
     if head[1] == "card":
         _rule(part_a, "fb_card")
         fields = line.split(" | ", 4)
-        if len(fields) == 5 and all(f.strip() for f in fields[2:]):
+        if len(fields) != 5 or not fields[4].strip():
+            return None
+        _rule(part_a, "fb_ids")
+        _rule(part_a, "fb_states")
+        if _valid_id(part_a, fields[2], protocol) and fields[3] in CARD_STATES:
             return ("card", fields[0], fields[2], fields[3], fields[4])
     elif head[1] == "note":
         _rule(part_a, "fb_note")
         fields = line.split(" | ", 3)
         ends = fields[2].split(" -> ") if len(fields) == 4 else []
-        if len(ends) == 2 and all(e.strip() for e in ends) and fields[3].strip():
-            return ("note", fields[0], ends[0], ends[1], fields[3])
+        if len(ends) != 2 or not fields[3].strip():
+            return None
+        _rule(part_a, "fb_ids")
+        _rule(part_a, "fb_to")
+        frm, to = ends
+        if _valid_id(part_a, frm, protocol) and (to in ("all", "operator") or _valid_id(part_a, to, protocol)):
+            return ("note", fields[0], frm, to, fields[3])
     return None
 
 
-def fallback_read(part_a: str, data: bytes | None, reason: str) -> tuple[list[str], list[str]]:
-    """The Lanes lines and the one notes entry the core prescribes from the fallback file."""
-    _rule(part_a, "fb_path")
-    if data is None:
-        _rule(part_a, "fb_note_absent")
-        return [], [f"lanes: Passing Notes unavailable ({reason}); no fallback file at {FALLBACK_FILE}"]
+@dataclass
+class FallbackFile:
+    cards: dict[str, tuple[str, str, str]]  # lane -> latest (utc, state, item), first-seen order
+    notes: list[tuple[str, ...]]            # (utc, from, to, subject), file order
+    unparsed: int
+
+
+def _fallback_parse(part_a: str, data: bytes, protocol: bool) -> FallbackFile:
     for key in ("fb_only_unavailable", "fb_read", "fb_no_write"):
         _rule(part_a, key)
     if len(data) > CAP:
@@ -185,27 +224,39 @@ def fallback_read(part_a: str, data: bytes | None, reason: str) -> tuple[list[st
     elif data.startswith(BOM):
         _rule(part_a, "fb_bom")
         data = data[len(BOM):]
-    cards: dict[str, tuple[str, str, str]] = {}  # lane -> latest (utc, state, item), first-seen order
-    notes: list[tuple[str, ...]] = []
-    unparsed = 0
+    parsed = FallbackFile({}, [], 0)
     for line in data.decode("utf-8", "replace").splitlines():
         if not line.strip():
             continue
-        entry = _parse_fallback_line(part_a, line)
+        entry = _parse_fallback_line(part_a, line, protocol)
         if entry is None:
             _rule(part_a, "fb_malformed")
-            unparsed += 1
+            parsed.unparsed += 1
         elif entry[0] == "card":
             _rule(part_a, "fb_latest")
             _, utc, lane, state, item = entry
-            if lane not in cards or utc >= cards[lane][0]:
-                cards[lane] = (utc, state, item)
+            if lane not in parsed.cards or utc >= parsed.cards[lane][0]:
+                parsed.cards[lane] = (utc, state, item)
         else:
-            notes.append(entry[1:])
+            parsed.notes.append(entry[1:])
+    return parsed
+
+
+def fallback_read(part_a: str, data: bytes | None, reason: str,
+                  protocol: bool = True) -> tuple[list[str], list[str]]:
+    """The Lanes lines and the one notes entry the core prescribes from the fallback file."""
+    _rule(part_a, "fb_path")
+    if data is None:
+        _rule(part_a, "fb_note_absent")
+        _rule(part_a, "fb_bootstrap")
+        return [], [f"lanes: Passing Notes unavailable ({reason}); no fallback file at {FALLBACK_FILE}"]
+    parsed = _fallback_parse(part_a, data, protocol)
     problems = [f"Passing Notes unavailable ({reason}); lanes from the fallback file"]
-    if unparsed:
-        problems.append(f"{unparsed} lines unparsed")
-    lanes = list(cards.items())
+    if not protocol:
+        problems.append("ids checked without the protocol")
+    if parsed.unparsed:
+        problems.append(f"{parsed.unparsed} lines unparsed")
+    lanes = list(parsed.cards.items())
     if len(lanes) > LANE_CAP:
         _rule(part_a, "fb_cap")
         problems.append(f"{len(lanes) - LANE_CAP} lanes unread")
@@ -214,7 +265,7 @@ def fallback_read(part_a: str, data: bytes | None, reason: str) -> tuple[list[st
     for lane, (card_utc, state, item) in lanes:
         _rule(part_a, "fb_waiting")
         _rule(part_a, "fb_render")
-        waiting = [(utc, frm, subject) for utc, frm, to, subject in notes
+        waiting = [(utc, frm, subject) for utc, frm, to, subject in parsed.notes
                    if to in (lane, "all") and frm != lane and utc > card_utc]
         shown = "; ".join(f"`{utc}` from {frm}: {subject}" for utc, frm, subject in waiting[:3])
         more = f"; +{len(waiting) - 3} more" if len(waiting) > 3 else ""
@@ -224,14 +275,31 @@ def fallback_read(part_a: str, data: bytes | None, reason: str) -> tuple[list[st
     return rendered, ["lanes: " + "; ".join(problems)]
 
 
-def fallback_ack(core: str, lane: str, item: str) -> str:
-    """The Acknowledge paste line: appends a newer card line, card text single-quoted."""
+def _paste_template(part_a: str) -> str:
+    """The core's own Acknowledge command, the one code span that starts with New-Item."""
+    spans = [s for s in re.findall(r"`([^`\n]+)`", part_a) if s.startswith(PASTE_START)]
+    if len(spans) != 1:
+        raise ContractGap(f"core states {len(spans)} {PASTE_START} paste commands, expected one")
+    return spans[0]
+
+
+def fallback_ack(core: str, data: bytes, lane: str) -> str:
+    """The Acknowledge paste line for one lane: only its validated id and state come from the file."""
     part_a = _part_a(core)
-    for key in ("fb_ack", "fb_quote", "fb_card"):
+    for key in ("fb_ack", "fb_no_file_text", "fb_item_placeholder", "fb_clears", "fb_folder", "fb_typed_quote"):
         _rule(part_a, key)
-    text = f"Z | card | {lane} | active | {item}".replace("'", "''")
-    return (f'Add-Content -Encoding utf8 "$env:LOCALAPPDATA\\lane-notes\\{PROJECT}.txt" '
-            f"((Get-Date).ToUniversalTime().ToString('s') + '{text}')")
+    _, state, _item = _fallback_parse(part_a, data, True).cards[lane]
+    return (_paste_template(part_a).replace("<project>", PROJECT)
+            .replace("<lane>", lane).replace("<state>", state))
+
+
+def fallback_post(core: str) -> str:
+    """The Post a note paste line: the same command, every note field a placeholder."""
+    part_a = _part_a(core)
+    for key in ("fb_post", "fb_item_placeholder", "fb_folder", "fb_typed_quote"):
+        _rule(part_a, key)
+    template = _paste_template(part_a).replace("<project>", PROJECT)
+    return template[: template.index("'Z | card")] + "'Z | note | <from> -> <to> | <subject>')"
 
 
 def lanes_read(
@@ -242,15 +310,17 @@ def lanes_read(
     store_exists: bool = True,
     cards_folder_exists: bool = True,
     fallback: bytes | None = None,
+    protocol: bool = True,
 ) -> tuple[list[str], list[str]]:
     """The Lanes lines and the notes entries (zero or one) the core prescribes.
 
-    `fallback` is the lane fallback file's bytes, or None when that file is absent.
+    `fallback` is the lane fallback file's bytes, or None when that file is absent; `protocol`
+    is False when the Passing Notes protocol cannot be read.
     """
     part_a = _part_a(core)
     _rule(part_a, "gate")
     if not (on_path and store_exists):
-        return fallback_read(part_a, fallback, "not on PATH" if not on_path else "store absent")
+        return fallback_read(part_a, fallback, "not on PATH" if not on_path else "store absent", protocol)
     if not cards_folder_exists:
         _rule(part_a, "gate_silent")
         return [], []
@@ -674,25 +744,106 @@ def test_fallback_is_not_used_when_passing_notes_is_present() -> None:
     assert "fallback" not in notes[0]
 
 
-def test_fallback_acknowledge_line_quotes_card_text() -> None:
+CURLY = "’"
+HOSTILE = _fb(
+    f"2030-01-01T10:00:00Z | card | lane-a | idle | Fix the user{CURLY}s bug{CURLY}; Remove-Item x",
+    f"2030-01-01T10:00:00Z | card | lane{CURLY}b | idle | Curly lane id",
+    f"2030-01-01T10:01:00Z | note | lane-c -> lane{CURLY}d | Curly recipient",
+    "2030-01-01T10:02:00Z | card | lane-e | busy | Not a card state",
+    "2030-01-01T10:03:00Z | card | operator | active | Reserved id",
+    "2030-01-01T10:04:00Z | card | go-to-x | active | A to segment",
+    "2030-01-01T10:05:00Z | card | Lane-F | active | Upper case",
+    "2030-01-01T10:06:00Z | note | lane-c -> operator | For the operator",
+)
+
+
+def test_fallback_ids_and_states_follow_the_protocol() -> None:
     # Act
-    line = fallback_ack(_core(), "lane-a", "Fix the user's $(Get-Process) bug")
+    lines, notes = _fallback(HOSTILE)
 
-    # Assert: card text sits in single quotes with the quote doubled, so nothing expands.
-    assert line.startswith('Add-Content -Encoding utf8 "$env:LOCALAPPDATA\\lane-notes\\demo.txt" ')
-    assert line.endswith("+ 'Z | card | lane-a | active | Fix the user''s $(Get-Process) bug')")
+    # Assert: a curly quote in an id, an unknown state, a reserved id, a `to` segment and
+    # upper case all break their line; a note to `operator` parses but is never listed.
+    assert _lane_ids(lines) == ["lane-a"]
+    assert "6 lines unparsed" in notes[0]
+    assert "For the operator" not in lines[0]
 
 
-def test_core_fallback_paste_lines_only_append() -> None:
+def test_fallback_paste_lines_never_echo_file_text() -> None:
+    # Act
+    ack = fallback_ack(_core(), HOSTILE, "lane-a")
+    post = fallback_post(_core())
+
+    # Assert: only the validated lane id and state come from the file; the item is a placeholder.
+    for line in (ack, post):
+        assert CURLY not in line and "Fix the user" not in line and "Remove-Item" not in line
+        assert line.startswith('New-Item -ItemType Directory -Force "$env:LOCALAPPDATA\\lane-notes" | Out-Null; ')
+        assert "(Join-Path \"$env:LOCALAPPDATA\\lane-notes\" 'demo.txt')" in line
+        assert "[Environment]::NewLine + (Get-Date).ToUniversalTime().ToString('s')" in line
+    assert ack.endswith(f"'Z | card | lane-a | idle | {ITEM_PLACEHOLDER}')")
+    assert post.endswith("'Z | note | <from> -> <to> | <subject>')")
+
+
+def test_fallback_without_the_protocol_checks_ids_against_the_floor() -> None:
+    # Act
+    lines, notes = lanes_read(_core(), _scripted({})[0], on_path=False, fallback=HOSTILE, protocol=False)
+
+    # Assert: the floor admits `go-to-x` and `operator` as ids but still rejects a curly quote.
+    assert _lane_ids(lines) == ["lane-a", "operator", "go-to-x"]
+    assert "ids checked without the protocol" in notes[0] and "4 lines unparsed" in notes[0]
+
+
+def test_core_fallback_paste_command_only_creates_the_folder_and_appends() -> None:
     # Arrange
     part_a = _part_a(_core())
 
     # Act
-    spans = [s for s in re.findall(r"`([^`\n]+)`", part_a) if s.startswith("Add-Content")]
+    spans = [s for s in re.findall(r"`([^`\n]+)`", part_a) if s.startswith(PASTE_START)]
 
-    # Assert: the only file command the fallback names is an append to the lane file.
-    assert spans and all("lane-notes" in s for s in spans)
+    # Assert: one command, which makes the folder and appends to the lane file, nothing else.
+    assert len(spans) == 1
+    verbs = set(re.findall(r"\b[A-Z][a-z]+-[A-Z][A-Za-z]+\b", spans[0]))
+    assert verbs == {"New-Item", "Out-Null", "Add-Content", "Join-Path", "Get-Date"}, verbs
+    assert "'<project>.txt'" in spans[0]
     assert RULES["fb_no_write"] in part_a and RULES["fb_read"] in part_a
+
+
+# Fallback sentences outside the Lanes procedure: the output shape, the notes, --json and Limitations.
+FALLBACK_PINS = {
+    "post_a_note_shape": "- **Post a note:** <fallback file only: the paste line that appends a note line>",
+    "fetched_text": "Passing Notes card fields and note subjects, the lines of the lane fallback file, and any",
+    "limitations": ("- The lane fallback file is a by-hand convention, read by user-pm alone. The other skills' "
+                    "Passing Notes inbox hooks (task-handoff, session-wrap, build-step, repo-update) still skip "
+                    "when Passing Notes is absent, and none of them writes the file."),
+    "lanes_source_row": "| `lanes_source` | default | optional, present only with `lanes` | `passing-notes` or `fallback-file` |",
+    "json_host_unknown": "From the fallback file, `host` is `unknown` and `note_ids` holds up to three waiting notes' UTC times.",
+    "read_only_constraint": "The lane fallback file is only read, through the host's own file tool.",
+}
+
+
+def fallback_pin_defects(core: str) -> list[str]:
+    return [f"{key}: missing {pin!r}" for key, pin in FALLBACK_PINS.items() if pin not in core]
+
+
+def test_core_states_the_fallback_outside_the_lanes_procedure() -> None:
+    # Act
+    defects = fallback_pin_defects(_core())
+
+    # Assert
+    assert defects == [], "\n".join(defects)
+
+
+@pytest.mark.parametrize("key", sorted(FALLBACK_PINS))
+def test_garbage_anchor_each_fallback_pin_fails_when_removed(key: str) -> None:
+    # Arrange
+    core = _core()
+    garbage = core.replace(FALLBACK_PINS[key], "")
+
+    # Act
+    defects = fallback_pin_defects(garbage)
+
+    # Assert
+    assert garbage != core
+    assert any(d.startswith(f"{key}:") for d in defects), defects
 
 
 @pytest.mark.parametrize("key", sorted(RULES))
@@ -708,7 +859,9 @@ def test_garbage_anchor_part_a_scenarios_fail_on_a_core_without_the_rule(key: st
         "fb_full": lambda c: lanes_read(c, _scripted({})[0], on_path=False, fallback=FB_FULL),
         "fb_big": lambda c: lanes_read(c, _scripted({})[0], on_path=False, fallback=_fb(*(
             f"2030-01-01T10:00:00Z | card | lane-{i:03d} | idle | {'x' * 60}" for i in range(150)))),
-        "fb_ack": lambda c: fallback_ack(c, "lane-a", "Work"),
+        "fb_floor": lambda c: lanes_read(c, _scripted({})[0], on_path=False, fallback=HOSTILE, protocol=False),
+        "fb_ack": lambda c: fallback_ack(c, FB_FULL, "lane-a"),
+        "fb_post": lambda c: fallback_post(c),
         "empty": lambda c: lanes_read(c, _scripted({"list": _ok(RECORDED["empty"])})[0]),
         "malformed": lambda c: lanes_read(c, _scripted({"list": _ok(RECORDED["malformed_list"])})[0]),
         "refused": lambda c: lanes_read(c, _scripted({"list": Call(exit_code=4)})[0]),
