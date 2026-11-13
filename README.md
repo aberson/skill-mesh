@@ -1,11 +1,11 @@
 # skill-mesh
 
 **Agent skills for planning, building, reviewing, and shipping software — a shared
-workflow for Claude Code, GitHub Copilot, and OpenAI Codex.**
+workflow for Claude Code and OpenAI Codex.**
 
 - **A connected pipeline.** Turn an idea into a plan, a bounded build, an independently reviewed change, and a release.
 - **Explicit quality gates.** Automated checks and fresh-context reviewers inform the result; missing required capabilities stop the workflow.
-- **One contract, three hosts.** 50 Claude skills; 48 also packaged for Copilot and Codex through host adapters.
+- **One contract, several hosts.** 50 Claude skills; 48 also packaged for Codex through host adapters, and for GitHub Copilot one last time in v3.0.0.
 
 **[v3.0.0 is released](https://github.com/aberson/skill-mesh/releases/tag/v3.0.0)** ·
 [Try it](#install-or-upgrade) · [Browse the skills](documentation/skill-reference.md) ·
@@ -44,14 +44,15 @@ other review paths. Landing is uncommitted; final PASS follows verification,
 restoration, and cleanup. The [build-step contract](skills/build-step/core.md) defines the full gates,
 iteration limits, and recovery behavior.
 
-### One workflow, three hosts
+### One workflow, several hosts
 
 Portable behavior lives in shared contracts. Adapters map that behavior to each
 host's capabilities; installation puts the generated skills where the host finds them.
+The GitHub Copilot profile is deprecated and ships for the last time in v3.0.0.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="_shared/host-profiles-dark.svg">
-  <img alt="Shared Skill Mesh contracts generate three host profiles: 50 Claude skills and 48 portable skills each for GitHub Copilot and OpenAI Codex." src="_shared/host-profiles-light.svg">
+  <img alt="Shared Skill Mesh contracts generate three host profiles: 50 Claude skills and 48 portable skills each for GitHub Copilot (deprecated) and OpenAI Codex." src="_shared/host-profiles-light.svg">
 </picture>
 
 ### The routing web
@@ -68,9 +69,12 @@ and routes each to a useful next step.
 </picture>
 
 The `do` route hands a small task to `user-pm`, whose board picks its build route; the
-gateway executes no work. Host commands such as `/goal` and `/deep-research` are separate
-from this skill catalog. The routing contract adds five more routes (review, research,
-tend, session, learn) so a vent can reach every vent-worthy skill:
+gateway executes no work. `user-pm` is also the status door ("where does this project
+stand?"). The `decide` route records the open question with `user-dr` (a complex scope
+choice goes to `user-fermize`), and `plan` can start with `code-consigliere` when you want
+to understand a project before agreeing a change. Host commands such as `/goal` and
+`/deep-research` are separate from this skill catalog. The routing contract adds five more
+routes (review, research, tend, session, learn) so a vent can reach every vent-worthy skill:
 [Routing contract](_shared/skill-pipeline.md).
 
 </details>
@@ -79,10 +83,11 @@ tend, session, learn) so a vent can reach every vent-worthy skill:
 
 | Family | Examples |
 |---|---|
-| Plan | `plan-init`, `plan-feature`, `plan-review`, `plan-redline` |
+| Route & decide | `user-gateway`, `user-build-route`, `user-dr`, `user-fermize` |
+| Plan | `plan-init`, `plan-feature`, `code-consigliere`, `plan-review`, `plan-redline` |
 | Build & ship | `build-step`, `build-phase`, `build-queue`, `repo-update` |
 | Review & acceptance | `review-deep`, `review-gauntlet`, `user-uat`, `judge-ui` |
-| Sessions & orientation | `session-wrap`, `task-handoff`, `user-wrap`, `user-pm` |
+| Sessions & status | `session-wrap`, `task-handoff`, `user-wrap`, `user-pm` |
 | Evidence & improvement | `citation-review`, `lesson-harvest`, `skill-evolve`, `tier-offload` |
 
 <details>
@@ -103,8 +108,12 @@ available in your session.
 
 | You want to… | Start with |
 |---|---|
+| Sort several half-formed ideas into next steps | `user-gateway` |
+| See where a project stands and what to do next | `user-pm` |
 | Choose between planning/build, a bounded goal, or a direct task | `user-build-route` |
 | Plan a new project or extend an existing one | `plan-init` / `plan-feature` |
+| Understand a project before agreeing a change | `code-consigliere` |
+| Record a decision or find a simpler first milestone | `user-dr` / `user-fermize` |
 | Deliver one well-scoped change | `build-step` |
 | Work through an entire phase | `build-phase` |
 | Investigate a stubborn bug | `user-debug` |
@@ -143,14 +152,14 @@ These projects remain separate. Installing Skill Mesh does not install every
 utility or start background services.
 
 <details>
-<summary><strong>Which integrations are in v2?</strong></summary>
+<summary><strong>Which integrations are in v3?</strong></summary>
 
 | Utility | How it is used |
 |---|---|
 | [Drift Ranger](https://github.com/aberson/drift-ranger) | Private outcome records and capability checkpoints; existing session state is the fallback. |
 | [Find Again](https://github.com/aberson/find-again) | Optional prior-work retrieval in `plan-feature`; current source stays authoritative. |
-| [dev-observatory](https://github.com/aberson/coding-root/tree/master/dev-observatory) | Its static doctor and the portfolio-block proposer are dev-observatory project-local skills, not Skill Mesh skills. |
-| [Citation Needed](https://github.com/aberson/citation-needed) | Evidence storage and scoring for the citation skills; review and sweep dispatch independent judges. v2 requires the [overview-filters branch](https://github.com/aberson/citation-needed/tree/skill-mesh-v2/overview-filters). |
+| dev-observatory | Its static doctor and the portfolio-block proposer are dev-observatory project-local skills, not Skill Mesh skills. |
+| [Citation Needed](https://github.com/aberson/citation-needed) | Evidence storage and scoring for the citation skills; review and sweep dispatch independent judges. Requires the [overview-filters branch](https://github.com/aberson/citation-needed/tree/skill-mesh-v2/overview-filters). |
 | Goblin | External CLI/private atom store. No catalog skill drives it in v3: the Goblin skills were retired, and `user-pm` lists improvement ideas. |
 | Switchboard | `tier-offload` produces advisory, inactive routing candidates. |
 | [Show Your Work](https://github.com/aberson/show-your-work) | Checks diagram sources and generates the detailed workflow index; not a skill runtime dependency. |
@@ -187,7 +196,7 @@ Use Windows PowerShell 5.1. From the extracted bundle, replacing the example hom
 powershell -NoProfile -File tools/install-skill-mesh.ps1 -Provider claude -Home C:\path\to\consumer-home -DistDir .\dist
 ```
 
-Use `-Provider codex` for Codex or `-Provider gpt` for GitHub Copilot.
+Use `-Provider codex` for Codex or `-Provider gpt` for GitHub Copilot (deprecated).
 Preserve the previous distribution and installation ledger before upgrading.
 See the [installation and restoration guide](documentation/v2-installation.md)
 for home resolution, collision handling, and legacy migration.
@@ -223,7 +232,7 @@ a release. Adapt workspace conventions and external utility dependencies to your
 Phase 7 complete: issues #62 and #63 closed; Step 48 is DONE.
 The [historical cutover handoff](documentation/coding-root-cutover-handoff.md)
 preserves that acceptance record. It does not authorize reactivating v1;
-use the current v2 installation guide for active consumers.
+use the current installation guide for active consumers.
 
 </details>
 
