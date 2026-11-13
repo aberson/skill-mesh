@@ -1803,18 +1803,6 @@ def test_journal_records_begin_and_commit_around_every_mutation(mini_dist, tmp_p
         assert first_begin < first_commit, f"seq {seq}: commit was flushed before begin"
 
 
-def test_status_advances_only_through_legal_states(mini_dist, tmp_path):
-    home = fx.migration_home(tmp_path / "h")
-    backup = tmp_path / "b"
-    assert _apply(home, backup, mini_dist).returncode == 0
-    tx = _only_tx(backup)
-    assert _manifest_of(tx)["status"] == "applied"
-    # prepared -> applying -> applied is the only route to `applied`, and each hop
-    # is in the declared map.
-    for hop in (("prepared", "applying"), ("applying", "applied")):
-        assert hop in LEGAL_TRANSITIONS
-
-
 def test_applied_commit_only_history_is_observational_during_rollback(
         mini_dist, tmp_path):
     """A legacy commit can report post-state without granting delete authority.
@@ -4380,18 +4368,10 @@ def test_rollback_refuses_to_clobber_a_post_migration_edit(mini_dist, tmp_path):
     assert _manifest_of(tx)["status"] == "failed_incomplete"
     assert _sha256(Path(home) / edited_rel) == after_edit, \
         "the operator's edit was destroyed by rollback"
-
-
-def test_rollback_still_restores_when_nothing_was_edited(mini_dist, tmp_path):
-    """Red-on-garbage pair: the identity check must not make every rollback refuse."""
-    home = fx.migration_home(tmp_path / "h")
-    backup = tmp_path / "b"
-    before = _tree_digest(home)
-    assert _apply(home, backup, mini_dist).returncode == 0
-    tx = _only_tx(backup)
-    r = _migrate(home, backup, mode="-Rollback", migration_id=tx.name)
-    assert r.returncode == 0, f"{r.stdout}\n{r.stderr}"
-    assert _tree_digest(home) == before
+    # Red-on-garbage pair (the identity check must not make every rollback refuse):
+    # test_rollback_restores_original_hashes_and_removes_only_migration_files makes the
+    # same apply, an unedited rollback and the digest-equality check (v3 guard Step 9
+    # removed the duplicate that sat here).
 
 
 # --------------------------------------------------------------------------- #

@@ -1631,31 +1631,24 @@ def test_install_places_profile_and_resolves_adapter(request, tmp_path, provider
     assert led is not None and provider in led["installs"]
     entry = led["installs"][provider]
     assert len(entry["owned_files"]) > 0
+    # Folded from test_gpt_install_target_is_github_skills_not_copilot (v3 guard
+    # Step 9; Step 44 retarget): the ledger records the discovery root the files went
+    # to, and a GPT install never writes the retired project-relative Copilot tree.
+    assert entry["discovery_subdir"] == DISCOVERY_SUBDIR[provider].as_posix()
+    if provider == "gpt":
+        assert not (home / RETIRED_GPT_SUBDIR).exists(), \
+            f"GPT install wrote to the retired target {RETIRED_GPT_SUBDIR}"
     assert set(entry["owned_file_hashes"]) == set(entry["owned_files"])
     assert all(re.fullmatch(r"[0-9a-f]{64}", h)
                for h in entry["owned_file_hashes"].values())
 
 
-def test_gpt_install_target_is_github_skills_not_copilot(one_skill_dist, tmp_path):
-    """Step 44 retarget: a GPT install writes to <home>/.github/skills/<skill>/ and
-    NEVER to the retired project-relative <home>/.copilot/skills. Two-sided so it
-    fails both if the target regresses AND if nothing is written."""
-    home = tmp_path / "home"
-    r = _install(home, "gpt", dist_dir=one_skill_dist)
-    assert r.returncode == 0, f"gpt install failed:\n{r.stdout}\n{r.stderr}"
-    github_target = home / DISCOVERY_SUBDIR["gpt"] / "build-phase" / "SKILL.md"
-    assert github_target.is_file(), \
-        f"GPT install did not write to {DISCOVERY_SUBDIR['gpt']} (got no SKILL.md at {github_target})"
-    retired = home / RETIRED_GPT_SUBDIR
-    assert not retired.exists(), \
-        f"GPT install wrote to the retired target {RETIRED_GPT_SUBDIR}"
-    # the installer's own ledger records the retargeted subdir
-    led = _ledger(home)
-    assert led is not None and "gpt" in led["installs"]
-    assert led["installs"]["gpt"]["discovery_subdir"] == DISCOVERY_SUBDIR["gpt"].as_posix()
-
-
 def test_reinstall_is_idempotent(dist_root, tmp_path):
+    """A second install over the first converges: same files, same bytes, same ledger.
+
+    Also NEW-BLOCK B (folded from test_reinstall_over_own_files_is_allowed_without_force,
+    v3 guard Step 9): skill-mesh's OWN previously-written files are never treated as
+    foreign collisions, so the re-run succeeds without -Force and refuses nothing."""
     home = tmp_path / "home"
     ledger_path = home / ".skill-mesh-install.json"
     r1 = _install(home, "claude", dist_dir=dist_root)
@@ -1666,6 +1659,7 @@ def test_reinstall_is_idempotent(dist_root, tmp_path):
 
     r2 = _install(home, "claude", dist_dir=dist_root)
     assert r2.returncode == 0, r2.stderr
+    assert "REFUS" not in (r2.stdout + r2.stderr)
     snap2 = _tree_snapshot(root)
     led2 = ledger_path.read_bytes()
 
@@ -1848,10 +1842,14 @@ def test_install_refuses_to_clobber_pre_existing_real_skill_file(dist_root, tmp_
     target.write_text("CUSTOM-USER-CONTENT", encoding="utf-8")
 
     # Default (no -Force): refuse, write nothing, own nothing.
+    before = _tree_snapshot(home)
     r = _install(home, "claude", dist_dir=dist_root)
     assert r.returncode != 0, "install silently clobbered a pre-existing real-skill file"
     assert "REFUS" in (r.stdout + r.stderr)
     assert target.read_text(encoding="utf-8") == "CUSTOM-USER-CONTENT"
+    # A true no-op (validate-before-mutate), as the codex lane's foreign-collision test
+    # asserted before v3 guard Step 9 folded it here.
+    assert _tree_snapshot(home) == before, "a refused install mutated the home"
     assert not (home / ".skill-mesh-install.json").exists(), "foreign file was owned"
 
     # A no-op uninstall must not touch it either.
@@ -2210,22 +2208,6 @@ def test_refused_reinstall_is_true_noop(tmp_path):
     assert bp.read_bytes() == bp_before, "prior owned file was mutated by a refused reinstall"
     assert ledger_path.read_bytes() == ledger_before, "ledger changed on a refused reinstall"
     assert foreign.read_text(encoding="utf-8") == "FOREIGN-BUILD-STEP"
-
-
-def test_reinstall_over_own_files_is_allowed_without_force(one_skill_dist, tmp_path):
-    """NEW-BLOCK B: skill-mesh's OWN previously-written files must never be treated as
-    foreign collisions -- a re-run over them succeeds without -Force (the ledger
-    records the owned set, so a resumed/repeated install recognizes them)."""
-    home = tmp_path / "home"
-    r1 = _install(home, "claude", dist_dir=one_skill_dist)
-    assert r1.returncode == 0, r1.stderr
-    bp = home / DISCOVERY_SUBDIR["claude"] / "build-phase" / "SKILL.md"
-    assert bp.is_file()
-    # Re-run WITHOUT -Force over skill-mesh's own files: must succeed, not refuse.
-    r2 = _install(home, "claude", dist_dir=one_skill_dist)
-    assert r2.returncode == 0, f"re-run over own files was refused:\n{r2.stdout}\n{r2.stderr}"
-    assert "REFUS" not in (r2.stdout + r2.stderr)
-    assert bp.is_file()
 
 
 def test_marker_retaining_customization_refuses_reinstall_as_true_noop(one_skill_dist, tmp_path):
@@ -2604,6 +2586,12 @@ def test_corrupt_ledger_uninstall_fails_closed_and_preserves_files(one_skill_dis
     assert r.returncode == 0, r.stderr
     disco = home / DISCOVERY_SUBDIR["claude"]
     assert len(list(disco.rglob("*.md"))) > 0
+    # Folded from test_corrupt_ledger_fallback_preserves_everything (v3 guard Step 9):
+    # the operator's own empty directory and unmarked notes file beside the install.
+    op_dir = disco / "operator-tool"
+    op_dir.mkdir()
+    unrelated = disco / "operator-notes.txt"
+    unrelated.write_text("my notes, no marker", encoding="utf-8")
     # Corrupt the ledger AFTER install (simulates truncation/tamper).
     (home / ".skill-mesh-install.json").write_text(CORRUPT_LEDGER, encoding="utf-8")
 
@@ -2612,13 +2600,18 @@ def test_corrupt_ledger_uninstall_fails_closed_and_preserves_files(one_skill_dis
     ru = _install(home, "claude", uninstall=True)
     assert ru.returncode != 0
     diag = ru.stdout + ru.stderr
+    assert "REFUS" in diag
     assert ("lost track" in diag) or ("fallback" in diag) or ("CORRUPT" in diag), \
         "no loud lost-tracking diagnostic on corrupt-ledger uninstall"
     assert _tree_snapshot(disco) == before
     assert (home / ".skill-mesh-install.json").read_bytes() == ledger_before
+    # Directories (incl. the shared discovery root) + the unrelated file survive.
+    assert disco.is_dir(), "shared discovery root was deleted by the fallback"
+    assert op_dir.is_dir(), "operator dir was deleted by the fallback"
+    assert unrelated.read_text(encoding="utf-8") == "my notes, no marker"
 
 
-@pytest.mark.parametrize("mutation", ["missing", "malformed", "extra"])
+@pytest.mark.parametrize("mutation", ["missing", "malformed", "inconsistent", "extra"])
 def test_invalid_owned_hash_maps_never_authorize_uninstall(one_skill_dist, tmp_path, mutation):
     home = tmp_path / "home"
     assert _install(home, "claude", dist_dir=one_skill_dist).returncode == 0
@@ -2630,6 +2623,10 @@ def test_invalid_owned_hash_maps_never_authorize_uninstall(one_skill_dist, tmp_p
     elif mutation == "malformed":
         first = entry["owned_files"][0]
         entry["owned_file_hashes"][first] = "not-a-sha256"
+    elif mutation == "inconsistent":
+        # Moved from the codex lane (v3 guard Step 9): one owned file loses its hash,
+        # so owned_files and owned_file_hashes are no longer a bijection.
+        entry["owned_file_hashes"].pop(sorted(entry["owned_file_hashes"])[0])
     else:
         entry["owned_file_hashes"]["unexpected/extra"] = "0" * 64
     ledger_path.write_text(json.dumps(led, sort_keys=True), encoding="utf-8")
@@ -2995,30 +2992,6 @@ def test_tampered_dotlike_created_dir_entry_never_deletes_home(tmp_path):
         assert home.is_dir(), (
             f"tampered created_dirs entry {poison!r} deleted the operator's pre-existing home"
         )
-
-
-def test_corrupt_ledger_fallback_preserves_everything(one_skill_dist, tmp_path):
-    """Without current-byte hashes a corrupt-ledger uninstall deletes nothing."""
-    home = tmp_path / "home"
-    r = _install(home, "claude", dist_dir=one_skill_dist)
-    assert r.returncode == 0, r.stderr
-    disco = home / DISCOVERY_SUBDIR["claude"]
-    op_dir = disco / "operator-tool"
-    op_dir.mkdir()                                  # operator's own (empty) dir
-    unrelated = disco / "operator-notes.txt"
-    unrelated.write_text("my notes, no marker", encoding="utf-8")  # non-marker file
-
-    (home / ".skill-mesh-install.json").write_text(CORRUPT_LEDGER, encoding="utf-8")
-    generated = disco / "build-phase" / "SKILL.md"
-    generated_before = generated.read_bytes()
-    ru = _install(home, "claude", uninstall=True)
-    assert ru.returncode != 0 and "REFUS" in (ru.stdout + ru.stderr)
-
-    # Directories (incl. shared discovery root) + the unrelated file survive.
-    assert disco.is_dir(), "shared discovery root was deleted by the fallback"
-    assert op_dir.is_dir(), "operator dir was deleted by the fallback"
-    assert unrelated.read_text(encoding="utf-8") == "my notes, no marker"
-    assert generated.read_bytes() == generated_before
 
 
 def test_persisted_ledger_never_has_null_or_empty_entries(one_skill_dist, tmp_path):

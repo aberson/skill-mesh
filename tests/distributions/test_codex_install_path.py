@@ -15,8 +15,9 @@ them is a separate failure this module pins:
 
 2. **Refusal parity.** The write-ahead-hardened installer refuses to delete on a
    missing / malformed / inconsistent `owned_file_hashes`. Adding a provider must not
-   create a lane where that refusal is weaker, so the codex lane is held to the same
-   refusals its claude/gpt siblings are.
+   create a lane where that refusal is weaker. The refusal code is provider-neutral, so
+   the refusals themselves are graded once in test_distributions.py (see the
+   "Refusal parity" note below for the test that holds each one).
 
 3. **The sequencing guard.** The manifest's top-level `providers.codex` vocabulary key
    and codex's entry in `tools/skill-mesh-discovery.ps1` MUST land together: the
@@ -395,91 +396,23 @@ def test_codex_temp_home_round_trip_writes_only_inside_the_temp_home(codex_dist,
         "the round trip created or removed a skill-mesh path in the REAL user home"
 
 
-def test_codex_reinstall_over_itself_is_idempotent(codex_dist, tmp_path):
-    """A rerun must converge without -Force: the installed bytes are already ours and
-    already recorded, so the second run is a no-op on both the tree and the ledger."""
-    home = tmp_path / "home"
-    home.mkdir()
-    assert _install(home, codex_dist).returncode == 0
-    root = home / Path(*CODEX_ROOT.split("/"))
-    tree_after_first = _tree_snapshot(root)
-    ledger_after_first = _ledger(home)
-    r = _install(home, codex_dist)
-    assert r.returncode == 0, f"reinstall failed:\n{r.stdout}\n{r.stderr}"
-    assert _tree_snapshot(root) == tree_after_first
-    assert _ledger(home) == ledger_after_first
-
-
 # --------------------------------------------------------------------------- #
-# Refusal parity: codex must not be a weaker lane than claude/gpt
+# Refusal parity: where it is graded
+#
+# The installer's refusal and ledger paths are provider-neutral: the same functions
+# (Get-ValidOwnedHashMap, the uninstall identity preflight, the install collision
+# check) run for every provider, keyed only by the provider's discovery root. So the
+# refusals are graded once, on the claude lane in test_distributions.py, and the
+# codex lane is graded end to end by the round trip above. v3 guard Step 9 removed
+# the codex re-proofs; each property's surviving test:
+#
+#   reinstall over itself is idempotent    -> test_reinstall_is_idempotent
+#   non-authoritative hash map (missing, malformed, inconsistent, extra key)
+#                                          -> test_invalid_owned_hash_maps_never_authorize_uninstall
+#                                             (the `inconsistent` case moved there)
+#   uninstall refuses changed bytes        -> test_customized_owned_file_refuses_uninstall_as_true_noop
+#   install refuses a foreign collision    -> test_install_refuses_to_clobber_pre_existing_real_skill_file
 # --------------------------------------------------------------------------- #
-
-def _tamper_ledger(home, mutate):
-    led = _ledger(home)
-    mutate(led["installs"][PROVIDER])
-    (Path(home) / LEDGER_NAME).write_text(json.dumps(led), encoding="utf-8")
-
-
-@pytest.mark.parametrize("label,mutate", [
-    ("missing", lambda e: e.pop("owned_file_hashes")),
-    ("malformed", lambda e: e["owned_file_hashes"].update(
-        {k: "not-a-sha256" for k in list(e["owned_file_hashes"])[:1]})),
-    ("inconsistent", lambda e: e["owned_file_hashes"].pop(
-        sorted(e["owned_file_hashes"])[0])),
-    ("extra_key", lambda e: e["owned_file_hashes"].update(
-        {CODEX_ROOT + "/ghost.md": "0" * 64})),
-])
-def test_codex_uninstall_refuses_a_non_authoritative_hash_map(codex_dist, tmp_path,
-                                                              label, mutate):
-    """`Get-ValidOwnedHashMap` is all-or-nothing: `owned_files` and
-    `owned_file_hashes` must be an exact bijection of 64-hex digests, or the entry
-    grants NO destructive authority. Adding a provider must not open a lane where that
-    is softer, so each of the four ways the map stops being authority is exercised on
-    the codex entry and must leave every installed file on disk."""
-    home = tmp_path / "home"
-    home.mkdir()
-    assert _install(home, codex_dist).returncode == 0
-    root = home / Path(*CODEX_ROOT.split("/"))
-    before = _tree_snapshot(root)
-    assert before, "nothing installed -- the refusal would be vacuous"
-
-    _tamper_ledger(home, mutate)
-    r = _install(home, codex_dist, uninstall=True)
-    assert r.returncode != 0, f"[{label}] uninstall did NOT refuse:\n{r.stdout}"
-    assert "REFUSING uninstall" in (r.stdout + r.stderr), f"[{label}] {r.stdout}\n{r.stderr}"
-    assert _tree_snapshot(root) == before, f"[{label}] a refused uninstall deleted files"
-
-
-def test_codex_uninstall_refuses_when_installed_bytes_changed(codex_dist, tmp_path):
-    """Destructive authority is the RECORDED CURRENT-BYTE hash, not the marker and not
-    the path. An operator edit to an installed file must survive an uninstall."""
-    home = tmp_path / "home"
-    home.mkdir()
-    assert _install(home, codex_dist).returncode == 0
-    root = home / Path(*CODEX_ROOT.split("/"))
-    victim = sorted(p for p in root.rglob("SKILL.md"))[0]
-    edited = victim.read_text(encoding="utf-8") + "\noperator addition\n"
-    victim.write_text(edited, encoding="utf-8")
-
-    r = _install(home, codex_dist, uninstall=True)
-    assert r.returncode != 0, f"uninstall did NOT refuse:\n{r.stdout}"
-    assert victim.read_text(encoding="utf-8") == edited, "the edited file was deleted"
-
-
-def test_codex_install_refuses_a_foreign_collision(codex_dist, tmp_path):
-    """A pre-existing non-marker file at a codex target refuses the WHOLE install, and
-    the refusal is a true no-op (validate-before-mutate)."""
-    home = tmp_path / "home"
-    root = home / Path(*CODEX_ROOT.split("/")) / "plan-review"
-    root.mkdir(parents=True)
-    foreign = root / "SKILL.md"
-    foreign.write_text("# hand-authored by the operator\n", encoding="utf-8")
-    before = _tree_snapshot(home)
-
-    r = _install(home, codex_dist)
-    assert r.returncode != 0, f"install did NOT refuse a foreign collision:\n{r.stdout}"
-    assert _tree_snapshot(home) == before, "a refused install mutated the home"
-    assert _ledger(home) is None
 
 
 # --------------------------------------------------------------------------- #
