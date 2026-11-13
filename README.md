@@ -168,6 +168,8 @@ is historical planning, not proof that every proposed caller is wired.
 Download the [v2.0.4 release](https://github.com/aberson/skill-mesh/releases/tag/v2.0.4),
 verify its checksum, and choose one host profile.
 
+**GitHub Copilot (GPT) support is deprecated.** v3.0.0 is the last release that ships the GPT profile. It is included unchanged, so nothing breaks today, but the GPT adapters, the `.github/skills` install target and the GPT build will be removed in the next release. Skill Mesh will then support Claude Code and the OpenAI Codex CLI. If you use the GPT profile, plan to move to one of those.
+
 <details>
 <summary><strong>Installation, upgrades, and restoration</strong></summary>
 

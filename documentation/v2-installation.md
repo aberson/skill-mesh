@@ -12,7 +12,7 @@ The bundle includes generated distributions; installation needs no source build.
 From the directory holding the downloaded archive:
 
 ```powershell
-Get-FileHash .\skill-mesh-v2.0.4.zip -Algorithm SHA256
+Get-FileHash .\skill-mesh-v3.0.0.zip -Algorithm SHA256
 ```
 
 Choose one host profile and an explicit consumer home:
@@ -32,6 +32,9 @@ powershell -NoProfile -File tools/install-skill-mesh.ps1 -Provider claude -Home 
 For Codex use `-Provider codex`; first resolve its effective home with the
 read-only [probe](../tools/probe-codex-skills.ps1) and
 [Codex guide](providers/codex.md). For Copilot use `-Provider gpt`.
+
+**GitHub Copilot (GPT) support is deprecated.** v3.0.0 is the last release that ships the GPT profile. It is included unchanged, so nothing breaks today, but the GPT adapters, the `.github/skills` install target and the GPT build will be removed in the next release. Skill Mesh will then support Claude Code and the OpenAI Codex CLI. If you use the GPT profile, plan to move to one of those.
+
 Start a fresh host session after installation. Installing does not authenticate
 the host or supply missing native capabilities. Codex uses its own adapter and
 authenticated host, not the GPT/Copilot transport.
