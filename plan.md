@@ -35,18 +35,43 @@ are planned. This is the public statement on github.com/aberson, "Where it's hea
 - Relabel #245 to #255 from `deferred: v3.1` to `deferred: v4`. This is a tracker write, so it is not done here.
 - Choose the first v4 workstream to plan.
 
-## v3.0.1 fix list - opened 2026-11-13
+## Patch fix list - opened 2026-11-13
 
-Fixes small or urgent enough for a patch release. Findings F2, F4, F5 and F6 came from the coding-root
+Fixes small or urgent enough for a patch release. v3.0.1 shipped P1 only; the rest are queued for v3.0.2. Findings F2, F4, F5 and F6 came from the coding-root
 hook-enforcement and system-revamp windows. F1 and F3 are v4 work (V4-9).
 
 | ID | Fix | Where | Why now |
 |---|---|---|---|
-| P1 | Install the merged `user-pm --lanes` change (`43869be`). The installed cores still print starter lines rather than the `/lane-open` block | release and install, Claude and Codex profiles | Merged and pushed but not installed. Release and install wait on the operator's word |
+| P1 | **DONE in v3.0.1.** Install the merged `user-pm --lanes` change (`43869be`) | release and install, Claude and Codex profiles | Shipped and installed 2026-11-13 |
 | F6 | Add a SAFETY block to the build-step and review-deep agent prompts, including review-deep lenses that "may run experiments": no `-Credential`, `Read-Host` or other prompt sources; every configured path under Temp; nothing at a drive root | `skills/build-step/core.md`, `skills/review-deep/core.md` and its lens prompts | Seen live: a developer ran `Remove-Item -Credential`, which opened a desktop credential prompt, and a reviewer created a folder at a drive root |
 | F4 | The build-step and build-phase Codex adapters cite `config/model-tier-map.json`, which the installed Codex profile does not ship. Checked 2026-11-13: no such file under the installed Codex skills | `skills/build-step/providers/codex.md:10`, `skills/build-phase/providers/codex.md:8` | A Codex session is told to resolve tiers from a file it cannot read. Related: #182 |
 | F2 | Carry the earlier Windows finding into the Codex provider adapter: an `exec_command` service without a tty prints its ready line and then exits (codex-deep-review-bounded-resumption, 2026-09-23) | the Codex provider docs or adapter | A known failure mode is missing from the adapter that needs it |
 | F5 | Decide a Nit policy for the build-step deep lane. "One Nit on any lens = BLOCKED" did not converge in 10 rounds (hook-enforcement Phase HE Step 2 is BLOCKED), and a style finding oscillated. Candidates: a Nit tolerance, or no new Nits from fresh lenses on unchanged code | operator decision first, then a `skills/build-step/core.md` UPDATE | It blocks a live build. Oscillation means an undecided policy, so write the decision before patching |
+
+## Release v3.0.1 - user-pm opens lanes (2026-11-13)
+
+Released from `3b74b0a`: tag `v3.0.1`, with `origin/main` fast-forwarded from `5a6b088`. The archive
+`skill-mesh-v3.0.1.zip` holds 1,254 files and has SHA-256
+`8edf024cfa386805ea2d008ecb70e0fedf61e8a63628fa3b392ead41b26315a0`; a re-download from the GitHub release
+matched it. Its `CHECKSUMS.txt` covers 407 `dist/` files (Claude 137, Codex 135, GPT 135). The catalog is
+unchanged from v3.0.0.
+
+v3.0.1 carries the `user-pm --lanes` close (`43869be`) and documentation. By operator decision
+(2026-11-13), the GPT profile ships unchanged one more time, and its deprecation notice now says it is
+removed in v4 (V4-7).
+
+Gate, under the adopted testing rule, on `3b74b0a`:
+
+- `python tools/change_pack.py --rc-report`: 677 passed. `tests/router`: 66 passed, 1 skipped.
+- The staged package-integrity run inside `release.ps1 -Provider all`: 654 passed, 3 skipped.
+- The full repository-root sweep runs in the background after install, in `skill-mesh-wt/sweep-v3.0.1`. Its
+  result is recorded when it ends.
+
+Installed from the downloaded zip, without `-Force`: Claude into the coding root (137 files) and Codex into
+the user home (135 files). The installed-equals-released check passed: Claude 137 of 137 and Codex 135 of
+135 files are identical to the released `dist/`, with 0 differing, 0 missing, and each ledger owning exactly
+the released set. Its planted-defect check went red as expected first. Evidence:
+`<coding-root>/docs/skill-mesh-3-review/builds/release-v3.0.1/`.
 
 ## Release v3.0.0 - catalog cleanup, user-pm revamp, tests sized to the change (2026-11-13)
 
