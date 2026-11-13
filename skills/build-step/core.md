@@ -595,6 +595,24 @@ verdict. The one report-derived input a parent uses is the `landed-paths.json` f
    commits and overlapping paths and end the run. No developer round can fix an upstream race. Only
    `unavailable` here (no remote or default branch resolves) is reported as `shipgate=not-checked` with
    the reason and does not stop the run.
+
+**Lane inbox (lane windows only), between items 1 and 2.** Only a session whose operator declared a
+lane for its window runs the block below, once, before the payload is written to the operator
+tree: another lane may have announced a reservation or change of a payload path. A `build-step`
+dispatched by `/build-phase` has no declaration and skips it. The lane and project rules, gates,
+calls, limits and the line are owned by `<repo>/_shared/lane-inbox-hooks.md`; the placeholders
+are defined there (section 11), and `<host>` comes from the provider wrapper.
+
+```text
+lane-inbox-call: build-step-land
+python -B <skill-dir>/../_shared/lane_inbox.py inbox --point build-step-land --root <project-dir> --host <host> --lane <lane>
+```
+
+Its output (`Lane inbox: <n> unread`, `Lane inbox: none`, or nothing on a tool failure) is kept for
+the report's own `Lane inbox:` line (Step 10). It is a heads-up, never a gate: it is not part of
+the verdict `summary`, adds no `halt` value, outcome or terminal-table row, adds no prompt, and the
+run proceeds to item 2 whatever it prints.
+
 2. **Stash overlap.** If the run stashed operator changes and any stashed path is in the payload, end
    the run as a merge conflict before writing anything.
 3. **Land.** Run `land` (T8). Before taking any lock it recomputes the payload hash from the worktree (a
@@ -767,6 +785,7 @@ build-step complete                                  | build-step BLOCKED after 
   Worktree: <removed | kept at path>
   Branch: <name>
   Run state: <removed | kept at path>   Diagnosis: <path, if the arm ran>
+  Lane inbox: <n> unread | none   (only when the Step 8 lane inbox block printed a line)
 ```
 
 A BLOCKED report then prints `Remaining findings:` with the per-reviewer summary from

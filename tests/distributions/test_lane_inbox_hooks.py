@@ -35,11 +35,12 @@ PROJECT = "demo-proj"
 LANE = "art-lane"
 SHARED_ASSETS = ("lane-inbox-hooks.md", "lane_inbox.py")
 
-# Skill -> its insertion points. Grows with each plan step; build-step waits on Step 5.
+# Skill -> its insertion points (plan Steps 3 to 6).
 HOOKED = {
     "task-handoff": ("task-handoff-resume",),
     "session-wrap": ("session-wrap-wrap",),
     "repo-update": ("repo-update-commit",),
+    "build-step": ("build-step-land",),
 }
 PRIMARY = ("task-handoff-resume", "session-wrap-wrap")
 
@@ -473,3 +474,46 @@ def test_wrap_delegating_to_repo_update_prints_one_inbox_line(dist, lane, profil
     out = run_block(wrap, lane.env) + run_block(nested, lane.env)
     assert out.count("[lane-inbox]") == 1 and out.count("\n") == 1
     assert lane.verbs() == ["inbox"]
+
+
+# --------------------------------------------------------------------------- #
+# build-step (inbox hooks Step 5)
+# --------------------------------------------------------------------------- #
+
+@pytest.mark.parametrize("profile", PROFILES)
+def test_build_step_block_sits_between_ship_gate_and_landing(dist, profile):
+    core = _core(dist, profile, "build-step").replace("\r\n", "\n")
+    land = _section(core, "### Step 8 -- Land", "### Step 9")
+    ship_gate = land.index("1. **Ship gate.**")
+    block = land.index("lane-inbox-call: build-step-land")
+    stash = land.index("2. **Stash overlap.**")
+    landing = land.index("3. **Land.**")
+    assert ship_gate < block < stash < landing
+    flat = " ".join(land.split())
+    assert "A `build-step` dispatched by `/build-phase` has no declaration and skips it." in flat
+    for section in ("### Step 0", "### Step 2", "### Step 7", "### Step 9"):
+        start = core.index(section)
+        nxt = core.index("\n### ", start + 4)
+        assert "lane-inbox" not in core[start:nxt], section
+
+
+@pytest.mark.parametrize("profile", PROFILES)
+def test_build_step_verdict_summary_carries_no_lane_text(dist, profile):
+    core = _core(dist, profile, "build-step").replace("\r\n", "\n")
+    machine = _section(core, "#### Machine verdict", "### Step 8")
+    assert "lane" not in machine.lower()
+    example = next(l for l in machine.splitlines() if l.startswith('{"schema_version":2'))
+    record = json.loads(example)
+    assert len(record["summary"]) <= 512
+    assert record["summary"].startswith("PASS: ") and "; tree=" in record["summary"]
+    report = _section(core, "### Step 10", None)
+    assert "  Lane inbox: <n> unread | none" in report
+    assert core.count("(y/n)") == (REPO_ROOT / "skills" / "build-step" / "core.md").read_text(
+        encoding="utf-8").count("(y/n)")
+
+
+def test_build_step_verdict_helper_is_not_touched_by_the_hook():
+    helper = (REPO_ROOT / "_shared" / "build_step_verdict.py").read_text(encoding="utf-8")
+    # build-step's own review "lanes" are unrelated; the hook's names must not appear.
+    for needle in ("lane_inbox", "lane-inbox", "Lane inbox", "passing-notes"):
+        assert needle not in helper
