@@ -224,10 +224,17 @@ NEIGHBOUR_GATE = Path(__file__).with_name("test_codex_agent_isolation_contract.p
 # making every assertion in this module vacuous; both are asserted because they
 # fail for different reasons.
 EXPECTED_ADAPTERS = 49
-# Lowered 50 -> 45 at v3 catalog cleanup Step 14 (#270), when deliberate retirements
-# took the roster to 49: the floor stays below the pinned roster so it catches only a
-# mis-rooted glob, which is its whole job; EXPECTED_ADAPTERS still pins the exact size.
-MIN_ADAPTERS = 45
+# The vacuity floor is DERIVED from the manifest, never hand-set: it is the manifest's
+# codex roster size minus this margin (see `_min_adapters`). It was a literal (50, then
+# 45 at v3 catalog cleanup Step 14) and had to be lowered by hand at every retirement.
+# The margin keeps the floor's job separate from the exact pin above: the floor reds
+# on a mis-rooted glob that finds nothing or next to nothing, while one missing adapter
+# is the roster test's failure, reported once rather than by every consumer here.
+ADAPTER_VACUITY_MARGIN = 4
+# Guards the derivation itself: a manifest read that yields (almost) no codex records
+# would derive a floor of zero and let every gate here pass over nothing. Far below
+# any real catalog, so a retirement never reaches it.
+MIN_MANIFEST_CODEX = 10
 
 # One owner per threshold. Each of these was an inline literal duplicated across
 # two tests before Step 119 iteration 3; two hand-maintained copies of one
@@ -585,11 +592,28 @@ def _adapter_texts():
     """
     texts = {name: _normalized(path.read_bytes())
              for name, path in _adapter_paths().items()}
-    assert len(texts) >= MIN_ADAPTERS, (
-        f"only {len(texts)} codex adapters found under skills/*/providers/ -- "
-        "every assertion in this module would be near-vacuous. Check the glob "
-        "root before relaxing this floor.")
+    floor = _min_adapters()
+    assert len(texts) >= floor, (
+        f"only {len(texts)} codex adapters found under skills/*/providers/, under "
+        f"the derived floor of {floor} (manifest codex roster minus "
+        f"{ADAPTER_VACUITY_MARGIN}) -- every assertion in this module would be "
+        "near-vacuous. Check the glob root before relaxing this floor.")
     return texts
+
+
+def _min_adapters():
+    """The adapter vacuity floor: the manifest's codex roster minus a stated margin.
+
+    Derived so a deliberate retirement moves it with the manifest, in the same
+    commit, with no hand edit. The manifest read is floored first, so an empty or
+    mis-read manifest cannot derive a floor of zero.
+    """
+    declared = len(_manifest_codex_names())
+    assert declared >= MIN_MANIFEST_CODEX, (
+        f"the manifest declares only {declared} codex skills, under "
+        f"{MIN_MANIFEST_CODEX}; the derived adapter floor would be vacuous. "
+        "Check MANIFEST_PATH and the manifest's `providers` fields.")
+    return declared - ADAPTER_VACUITY_MARGIN
 
 
 def test_adapter_roster_is_enumerated_and_agrees_with_the_manifest():
@@ -703,7 +727,7 @@ def _corpus():
     """(planted claims, conditional openers), with the vacuity floor applied.
 
     The floor lives HERE so every consumer inherits it, the same placement as
-    `MIN_ADAPTERS` inside `_adapter_texts` and `MIN_SUB_AGENT` inside
+    `_min_adapters()` inside `_adapter_texts` and `MIN_SUB_AGENT` inside
     `_manifest_sub_agent_codex_names`. These two tuples ARE the calibration
     corpus and every generated axis is their cross product, so an empty seed
     multiplies to an empty axis that reports a comfortable PASS: measured,

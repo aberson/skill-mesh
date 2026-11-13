@@ -833,11 +833,22 @@ def test_the_cited_agent_isolation_contract_reaches_the_emitted_codex_tree(codex
     profile = Path(codex_dist) / PROVIDER
     emitted = {p.parent.name: p.read_text(encoding="utf-8")
                for p in sorted(profile.rglob("SKILL.md"))}
-    # Vacuity floor, not a roster pin: lowered 50 -> 45 at v3 catalog cleanup Step 14
-    # (#270), when deliberate retirements took the codex profile to 49 skills.
-    assert len(emitted) >= 45, (
-        f"only {len(emitted)} emitted codex skills found under {profile} -- this "
-        "assertion would be near-vacuous")
+    # The emitted roster must equal the manifest's codex roster. Derived, never
+    # hand-set: this was a literal vacuity floor (50, then 45 at v3 catalog cleanup
+    # Step 14) that had to be lowered by hand at every retirement and tolerated four
+    # skills going missing from the emit. An empty or near-empty emission fails the
+    # equality; the manifest read is floored first so it cannot derive an empty roster.
+    manifest = json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))
+    declared = sorted(s["name"] for s in manifest["skills"]
+                      if PROVIDER in s["providers"])
+    assert len(declared) >= 10, (
+        f"the manifest declares only {len(declared)} codex skills; the derived "
+        "roster would make this assertion near-vacuous")
+    assert sorted(emitted) == declared, (
+        f"{len(emitted)} emitted codex skills under {profile} do not match the "
+        f"manifest's {len(declared)}:\n"
+        f"  emitted only: {sorted(set(emitted) - set(declared))}\n"
+        f"  declared only: {sorted(set(declared) - set(emitted))}")
 
     owner = emitted.get("build-step", "")
     assert "## Agent-isolation capability contract" in owner, (
