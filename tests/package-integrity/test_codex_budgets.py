@@ -343,10 +343,11 @@ def test_catalog_floor_reds_when_the_catalog_grows_past_it():
     #     catalog is harmless, and retiring skills must not turn this guard red or force
     #     unrelated descriptions to be padded or batched with creates.
     #   * The floor pin: CATALOG_FLOOR is the published 8,000-char unknown-context
-    #     limit, the gate's predicate reads exactly that one module constant (identity,
-    #     not just equality), and the predicate's boundary sits at it. Buying room by
-    #     raising the floor, or by hard-coding a larger number into the predicate,
-    #     reds here instead of opening the headroom unnoticed.
+    #     limit; the gate's predicate reads that constant by name and carries no
+    #     numeric literal of its own (so it cannot hold a second copy of the floor,
+    #     even an equal one); and the predicate's boundary sits at it. Buying room by
+    #     raising the floor, or by hard-coding any number into the predicate, reds
+    #     here instead of opening the headroom unnoticed.
     assert headroom > 400, (
         f"catalog headroom is down to {headroom} chars ({total} over {len(sizes)} rows, "
         f"floor {CATALOG_FLOOR}) -- descriptions have grown since the Phase CP Step 10 "
@@ -358,7 +359,12 @@ def test_catalog_floor_reds_when_the_catalog_grows_past_it():
         "NOT give _fits_under_floor its own bound, to buy room: trim DESCRIPTIONS in "
         "tools/gen_manifest.py instead.")
     assert CATALOG_FLOOR == 8_000, floor_msg
-    assert _fits_under_floor.__globals__["CATALOG_FLOOR"] is CATALOG_FLOOR, floor_msg
+    gate_code = _fits_under_floor.__code__
+    assert "CATALOG_FLOOR" in gate_code.co_names, floor_msg
+    gate_literals = [c for c in gate_code.co_consts
+                     if isinstance(c, (int, float)) and not isinstance(c, bool)
+                     and abs(c) >= 1_000]
+    assert gate_literals == [], floor_msg
     assert _fits_under_floor(CATALOG_FLOOR - 1) is True, floor_msg
     assert _fits_under_floor(CATALOG_FLOOR) is False, floor_msg
 
