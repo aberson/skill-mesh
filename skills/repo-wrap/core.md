@@ -123,7 +123,7 @@ committed, and its contents are never read or printed.**
 
 ## Step 0 — resolve the target (exactly ONE repo per invocation)
 
-Resolve `<workspace-root>` first, the way `/user-project` does: walk up to the first directory
+Resolve `<workspace-root>` first, the way the project pin script (`<repo>/_shared/user-project.ps1`) does: walk up to the first directory
 holding `.claude/observatory/registry.toml`, starting from the path being resolved — a path-form
 argument, else the pin's path when the pin applies, else cwd; a slug argument walks from cwd. If
 none is found there is no registry: slugs cannot resolve, and Step 1 classifies by its cases 1
@@ -132,11 +132,11 @@ and 3 only.
 Precedence:
 
 1. **Explicit positional arg** — tried first as a literal path (relative to cwd, then absolute); if
-   no such path exists, as a registry slug (resolved the way [`/user-project`](../user-project/core.md)'s
-   SET step resolves a name: match `slug` or `path` in `registry.toml`'s `[[project]]` blocks, then
+   no such path exists, as a registry slug (resolved the way the pin script
+   `<repo>/_shared/user-project.ps1` resolves a SET name: match `slug` or `path` in `registry.toml`'s `[[project]]` blocks, then
    `<workspace-root>/<path>`). An argument that is neither stops the run with zero mutations and
    one line: `repo-wrap: cannot resolve <arg> (no such path or registry slug)`.
-2. **The `/user-project` pin**, if set.
+2. **The project pin** (`<repo>/_shared/user-project.ps1`), if set.
 3. **The cwd repo** (`git rev-parse --show-toplevel`); if cwd is not inside a git repo, the cwd
    directory itself.
 
@@ -195,9 +195,10 @@ ceremony here.
 advisory (execution-context line naming the target directory), invoke nothing, and stop:
 
 - `--dry-run` → print `/repo-update`. It has no dry-run mode, so invoking it would mutate.
-- A `/user-project` pin is set and resolves to a different repo than the effective target → print
-  `/user-project <slug>` (or `/user-project clear`), then `/repo-update`. repo-update honors the pin
-  ([`/user-project`](../user-project/core.md) § Relationship to other skills;
+- A project pin is set and resolves to a different repo than the effective target → print
+  `user-project.ps1 <slug> -SessionId <this session's id>` (or `user-project.ps1 clear -SessionId <this session's id>`),
+  then `/repo-update`. repo-update honors the pin
+  (`<repo>/_shared/user-project.ps1`, its header's description;
   `transition-directory-contract.md` § resolved target), so delegating would run its commit, push
   and posterity issue against the pinned repo.
 - The operator named a subdirectory (Step 1 widening) → print `/repo-update`. Its ceremony is

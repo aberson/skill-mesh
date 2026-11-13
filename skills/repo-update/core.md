@@ -72,7 +72,7 @@ none resolves, withhold Steps 9–11 as `Result: PARTIAL (withheld: default bran
   skill's failure; the `Result:` line below is the line callers can read. No caller parses it yet,
   so a deliberate withhold is only fully honored on the session-wrap route once that caller
   distinguishes `PARTIAL (withheld: …)` from a failure.
-- **Target.** `$PROJECT_ROOT` resolves in the precedence `/user-project` pin → the invocation's
+- **Target.** `$PROJECT_ROOT` resolves in the precedence project pin (`<repo>/_shared/user-project.ps1`) → the invocation's
   path, slug or plan (or a delegating caller's target) → the cwd repo (per
   transition-directory-contract.md). When a pin is set and an explicit or delegated target names a
   different repo, stop before any write with
@@ -716,7 +716,7 @@ paths, and it still neither blocks nor halts.
 
 > Next-step commands name their target directory, and the proactive project-switch message fires on a cwd≠project mismatch with no pin, per transition-directory-contract.md.
 
-All git/gh operations here run in `$PROJECT_ROOT` (Step 1 `cd $PROJECT_ROOT`) — that is the named target dir; when the wrap targets a project repo while cwd is coding-root with no `/user-project` pin, emit the one-line project-switch advisory before the Step 9 git verbs.
+All git/gh operations here run in `$PROJECT_ROOT` (Step 1 `cd $PROJECT_ROOT`) — that is the named target dir; when the wrap targets a project repo while cwd is coding-root with no project pin, emit the one-line project-switch advisory before the Step 9 git verbs.
 
 ---
 

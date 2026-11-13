@@ -3,12 +3,12 @@
 
 These diagrams summarize the **Skill Mesh v2.0.4** contracts. Use the
 [skill reference](../../documentation/skill-reference.md) for a compact table
-of all 51 skills, purposes, host coverage and direct diagram links.
+of all 50 skills, purposes, host coverage and direct diagram links.
 
 Each diagram declares its source and omitted detail. The linked source contract
 remains authoritative: a diagram does not authorize an action, bypass a hold,
-or establish live qualification. Claude has all 51 packages; Codex and Copilot
-have the 49 portable packages. Native capability gates still apply.
+or establish live qualification. Claude has all 50 packages; Codex and Copilot
+have the 48 portable packages. Native capability gates still apply.
 
 These diagrams use the same rounded cards, monospace labels, and blue connectors
 as the overview graphics. Blue-bordered **GATE** cards mark decisions; connector
@@ -90,7 +90,6 @@ produces the default Mermaid README rather than this SVG gallery.
 - [user-gateway](#user-gateway) - Convert an operator vent into one evidence-aware work ledger row and ready-to-paste seed per distinct fragment.
 - [user-learn](#user-learn) - After scope approval, build a grounded hands-on learning folder, re-run its artifacts, and report results without committing.
 - [user-pm](#user-pm) - Present shipped work, outstanding plan items, practical next moves, and credible candidates to cut through a product-management lens.
-- [user-project](#user-project) - Set, show, or clear the session-scoped active-project pin that pipeline skills use to resolve their target repository.
 - [user-uat](#user-uat) - Classify a clear UAT script, gate side effects, auto-judge supported checks, and escalate irreducible human experience checks.
 - [user-walkthrough](#user-walkthrough) - Guide attended acceptance of a just-built tool, answer from primary evidence, and fix small in-scope issues during the walkthrough.
 - [user-wrap](#user-wrap) - Reorient a returning operator, delegate the verdict to session-wrap, and execute exactly the action owned by that verdict.
@@ -1175,29 +1174,6 @@ Drawn from:
 </picture>
 
 [Open full size](cards/user-pm-dark.svg)
-
----
-
-## user-project
-
-Set, show, or clear the session-scoped active-project pin that pipeline skills use to resolve their target repository.
-
-Source: [`user-project.mmd`](user-project.mmd)
-
-Drawn from:
-
-- [`skills/user-project/core.md`](../../skills/user-project/core.md)
-
-**Alt:** Shared root and session resolution lead to set, show, or clear branches, with every unresolved identity or project failure writing nothing.
-
-**Deliberately not shown:** registry parsing, session-ID resolution, exact task-state merge rules, statusline integration, path normalization, and consumer precedence exceptions
-
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="cards/user-project-dark.svg">
-  <img alt="Shared root and session resolution lead to set, show, or clear branches, with every unresolved identity or project failure writing nothing." src="cards/user-project-light.svg">
-</picture>
-
-[Open full size](cards/user-project-dark.svg)
 
 ---
 

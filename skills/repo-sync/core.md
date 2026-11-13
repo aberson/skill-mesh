@@ -18,7 +18,7 @@ in the issue body to start work.
 
 - **Position:** plan pipeline stage 5 of 7 — after `/plan-review` → `/plan-redline` → `/plan-wrap`, before `/build-phase`; `/repo-init` is the first-time alternative at the same stage (see Prerequisites).
 - **Input:** `--plan` is required. A bare invocation, or a `--plan` path that is missing or unreadable, ends `Result: NOT RUN (<reason>)` before any `gh` call. Never guess a plan: a guessed plan would flow into issue mutation.
-- **Target repo:** resolved once in Step 0, in the precedence of `.claude/references/transition-directory-contract.md` § The resolved target repo (`/user-project` pin → the plan's project → cwd repo). Every `gh` call after Step 0's resolution passes `-R <owner>/<repo>` for that one repo.
+- **Target repo:** resolved once in Step 0, in the precedence of `.claude/references/transition-directory-contract.md` § The resolved target repo (project pin → the plan's project → cwd repo). Every `gh` call after Step 0's resolution passes `-R <owner>/<repo>` for that one repo.
 - **Allowed writes:** in the target repo only — `gh issue create`, `gh issue edit` (title and body), and `gh issue close` with its comment; temp body files under the Windows-safe temp directory, deleted after use; and blank `**Issue:**` values in the plan (Step 7b). Nothing else: no reopen, delete, label, milestone or other comment, no other repository, and no git write command (add, commit, push, stash, checkout, reset); read-only `git rev-parse` is allowed for target resolution, the wrong-directory guard and the footer `<git-short-sha>`. `--dry-run` writes nothing.
 - **Result:** every run, including a stop, ends with one `Result:` line followed by the `Next:` line (Step 8). Callers should read the `Result:` line (plan-expedite adoption: X3), not the last line, which is `Next:`; success is never inferred from prose.
 - **Re-run:** matching is by title prefix and footer, so a re-run after a partial failure or a plan edit converges — existing issues become ENRICH, UPDATE or NO-OP rather than duplicates, and Step 7b never overwrites an existing issue number.
@@ -179,7 +179,7 @@ Before proceeding to issue mutation, verify plan-review and plan-wrap have each 
 remote (`aberson/coding-root`), so running `gh` from `dev/` silently
 lands on `aberson/coding-root` instead of the intended project
 subdirectory. `<absolute-project-dir>` below is the resolved target
-(Operating contract). When a set `/user-project` pin names a different
+(Operating contract). When a set project pin (`<repo>/_shared/user-project.ps1`) names a different
 repo than the one containing `--plan`, print one
 `WARNING target repo '<pin-repo>' != plan repo '<plan-repo>'` line
 naming both, then continue with the resolved target (advisory, like the

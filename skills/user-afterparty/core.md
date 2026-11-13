@@ -29,7 +29,7 @@ never restates or reimplements it:
     never edit a skill), then diff the maps against live pins and report the deltas.
   - [`/lesson-harvest --dry-run --repo <workspace>`](../lesson-harvest/core.md) —
     zero-write preview of un-codified regressions from recent history. The explicit
-    target is load-bearing: a conflicting `/user-project` pin makes lesson-harvest
+    target is load-bearing: a conflicting project pin makes lesson-harvest
     stop `target_conflict` rather than silently scan another repository.
   - [`/context-slim`](../context-slim/providers/claude.md) — auto-loaded-context audit, bare
     (report-only by default).

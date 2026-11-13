@@ -8,7 +8,7 @@ Two independent layers:
   at that step, the pilot five at Step 4, the whole portable roster since Step 8);
   every provider-native dir has ONLY providers/claude.md (no core.md, no gpt.md,
   no codex.md -- provider-native means Claude-only); the counts match the manifest
-  (49 portable, 2 native, 51 total, 49 codex); skills/inventory.json
+  (48 portable, 2 native, 50 total, 48 codex); skills/inventory.json
   agrees with the manifest and the committed expected_inventory.json fixture; and
   no operator-private absolute path leaked into the migrated tree.
 
@@ -90,13 +90,13 @@ def test_inventory_counts():
         "codex": sum(1 for s in skills if s["providers"]["codex"]),
     }
     assert inv["counts"] == derived, (inv["counts"], derived)
-    assert derived["total"] == 51
-    assert derived["portable"] == 49
+    assert derived["total"] == 50
+    assert derived["portable"] == 48
     assert derived["provider_native"] == 2
     # 54 since Phase CP Step 10 (issue #127) promoted the seven workspace-custom
     # skills on top of the Step 8 catalog of 47. Every portable skill carries a
     # providers/codex.md, and each promotion landed portable and codex together.
-    assert derived["codex"] == 49
+    assert derived["codex"] == 48
 
 
 def test_inventory_matches_manifest():
@@ -186,14 +186,14 @@ def test_file_counts_across_tree():
     claude = list(SKILLS_DIR.glob("*/providers/claude.md"))
     gpt = list(SKILLS_DIR.glob("*/providers/gpt.md"))
     codex = list(SKILLS_DIR.glob("*/providers/codex.md"))
-    assert len(cores) == 49, len(cores)
-    assert len(claude) == 51, len(claude)   # 49 portable + 2 native
-    assert len(gpt) == 49, len(gpt)
+    assert len(cores) == 48, len(cores)
+    assert len(claude) == 50, len(claude)   # 48 portable + 2 native
+    assert len(gpt) == 48, len(gpt)
     # 54 since Phase CP Step 10 (issue #127) promoted seven workspace-custom skills
     # on top of the Step 8 catalog of 47. This is a SPELLED count on purpose, exactly
     # like its three siblings: any step that authors more adapters must come here and
     # state the new number, so the catalog size is never silently redefined by a glob.
-    assert len(codex) == 49, len(codex)
+    assert len(codex) == 48, len(codex)
 
 
 def test_no_private_absolute_paths_in_migrated_tree():
@@ -1048,7 +1048,7 @@ def _support_dests():
 _REAL_DIRS = ("skills", "_shared", "config", "runtime", "tests", "documentation", "tools")
 # The repo's OWN generated-artifact namespaces: an absolute backtick/bare ref here
 # that does not resolve is a genuine defect (fabricated/dangling), never an
-# illustrative user-project example (which live under documentation/ and tests/).
+# illustrative example from a user's project (which live under documentation/ and tests/).
 _ARTIFACT_DIRS = ("skills/", "_shared/")
 
 
@@ -1066,7 +1066,7 @@ def _ref_defect(core, fdir, support, is_link):
     internal (they render as clickable repo links). Backtick/bare TOKENS are
     citations, so only a stranded home/drive prefix or an unresolved ref in the
     repo's own artifact namespaces (skills/, _shared/, or an extension-bearing
-    config//runtime//tests/calibration/) counts -- illustrative user-project example
+    config//runtime//tests/calibration/) counts -- illustrative examples from a user's project
     paths (documentation/*, tests/test_*, prose runtime/full) are not repo refs."""
     if not core or any(c in core for c in "<>*"):
         return None  # template / glob placeholder
@@ -1105,7 +1105,7 @@ def _ref_defect(core, fdir, support, is_link):
         return "nonexistent repo path"
     if rel.startswith("tests/calibration/"):
         return "nonexistent repo path"
-    return None  # illustrative user-project example path (documentation/, tests/, prose)
+    return None  # illustrative user's-project example path (documentation/, tests/, prose)
 
 
 def _reference_offenders(md_path, text, support):

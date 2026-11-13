@@ -178,8 +178,9 @@ Check for `.plan-expedite-state` JSON file in the project root (sibling to plan.
 run start; used by resume logic to invoke the correct final sub-skill(s) on re-entry.
 
 The **stage list** for a mode is, in order: `plan-review`, `plan-redline`, `plan-wrap`,
-`repo-sync`, `task-handoff`, with `session-wrap` appended for `new-window`. (`user-project` is an
-advisory pin inside the plan→repo boundary, not a stage, and is never recorded.)
+`repo-sync`, `task-handoff`, with `session-wrap` appended for `new-window`. (The project pin script,
+`<repo>/_shared/user-project.ps1`, is an advisory pin inside the plan→repo boundary, not a stage, and is never
+recorded.)
 
 `plan_mtime` is a numeric float — seconds since the Unix epoch, as returned by `os.path.getmtime(plan_path)` or `stat -c %Y`. No timezone, no string parsing. Comparison uses a 1-second tolerance: `abs(current_mtime - state_mtime) <= 1.0`. The tolerance accommodates filesystems with different mtime precision (NTFS records to 100ns, FAT32 rounds to 2s) and avoids spurious "plan changed" detections from format-only round-trips.
 
@@ -230,8 +231,10 @@ Call each sub-skill below through the host's skill-invocation adapter, in order.
    - Compute `$planRepo` = walk up from the plan file's directory to the nearest `.git`; and
      `$codingRoot` = walk up for `.claude/observatory/registry.toml`.
    - **Nested project repo registered in the observatory registry** (`$planRepo` ≠ `$codingRoot`
-     and its `slug`/`path` matches a registry entry): **auto-pin it** — invoke `/user-project` via
-     the host skill-invocation adapter with `args: "<slug>"`. Emit
+     and its `slug`/`path` matches a registry entry): **auto-pin it** — run `<repo>/_shared/user-project.ps1`
+     with the arguments `<slug> -SessionId <id>` through the host shell, where `<id>` is the session
+     id this host's wrapper binds (task-state schema § Session identity; with no bound id, pass none
+     and the script prints its identity-unavailable line). Emit
      `-> repo phase for <slug> (<abs-repo>) - context pinned (repo-sync + downstream honor it regardless of cwd)`
      only when the result confirms `Pinned active project:` for that requested project.
      If identity is unavailable, the write failed, or confirmation is absent/mismatched,
@@ -242,7 +245,7 @@ Call each sub-skill below through the host's skill-invocation adapter, in order.
      `-> repo phase - coding-root work (<coding-root>); target verified`.
    - **Unresolvable** (a nested repo whose basename is not a registry `slug`/`path`): do NOT guess
      or pin — emit the proactive switch-message, then apply the target check below:
-     `this is <repo-basename> work; a switch might help (open its window, or register it + /user-project <name>)`.
+     `this is <repo-basename> work; a switch might help (open its window, or register it + pin it with user-project.ps1 <name>)`.
 
    **Verify the effective downstream target before any repo operation.** After the optional
    pin attempt, resolve the target using the honoring consumer's precedence: this session's
@@ -445,7 +448,7 @@ Use the same five-line template regardless of which sub-skill fails (plan-review
 | `/plan-review`, `/plan-wrap` | Autofix sub-skills (Steps 7-8 of BPA plan) |
 | `/plan-redline` | Redline checkpoint between plan-review and plan-wrap: publishes the P/D proposal; the chain does not wait for feedback (the operator folds later via `/plan-redline`; before the build starts, then re-runs `/plan-expedite`; after it starts, runs `/plan-review` + `/plan-wrap`, then `/repo-sync`) |
 | `/repo-sync` | Issue-sync sub-skill (Step 6) |
-| `/user-project` | Advisory project pin at the plan→repo boundary (never a stage) |
+| `<repo>/_shared/user-project.ps1` | Advisory project pin script at the plan→repo boundary (never a stage) |
 | `/task-handoff` | Durable boundary write (`--next-task build-phase`) in both modes |
 | `/session-wrap` | End-window handoff sub-skill (`--new-window` only, invoked `--end` AFTER the durable `task-handoff --next-task` write; renders `handoff-prompt.md` + prints the Pick-up-here block) |
 | `/build-phase` | Runs from the continuation /plan-expedite emits: on a verified Claude destination with a qualified route, the operator-typed `/goal` + `/build-phase` pair; elsewhere the host's verified invocation or a plain-language prompt; when unqualified, an attended qualification-first run with no goal (with `--new-window`, the fresh window opens from the rendered handoff carrying it). Its native gates revalidate at dispatch |

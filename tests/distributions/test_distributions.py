@@ -3276,10 +3276,11 @@ def test_provider_both_still_means_claude_and_gpt_only(tmp_path):
 # v3 user-pm plan's Step 13 (#238), so the declared roster is now fifty-six.
 PILOT_CODEX_SKILLS = ["lesson-harvest", "plan-review", "session-wrap", "task-handoff"]
 # Cohort B, the pipeline family (Phase CP Step 6, issue #123). The v3 catalog cleanup
-# folded its plan-cutting skill into plan-merge --trim (plan Step 13, #269).
+# folded its plan-cutting skill into plan-merge --trim (plan Step 13, #269) and made
+# its project-pin skill a shared script (plan Steps 15 and 16, #271 and #272).
 COHORT_B_CODEX_SKILLS = ["plan-expedite", "plan-feature", "plan-init", "plan-merge",
                          "plan-redline", "plan-wrap", "repo-init",
-                         "repo-sync", "repo-update", "user-project", "user-wrap"]
+                         "repo-sync", "repo-update", "user-wrap"]
 # Cohort C, the build/review/skill/tier families (Phase CP Step 7, issue #124) -- the
 # heaviest host-abstraction consumers. The v3 catalog cleanup retired its two Goblin
 # skills (plan Step 14, #270).
@@ -3350,7 +3351,7 @@ def test_codex_profile_holds_exactly_the_declared_cohorts_for_the_committed_mani
     out = tmp_path / "out"
     r = _build(out, provider="codex")
     assert r.returncode == 0, f"{r.stdout}\n{r.stderr}"
-    assert "(49 skills," in r.stdout, r.stdout
+    assert "(48 skills," in r.stdout, r.stdout
     # The manifest declares exactly the spelled cohorts...
     assert sorted(_codex_skills()) == DECLARED_CODEX_SKILLS, _codex_skills()
     # ...and the emitted tree IS that roster: no extra skill dir, none missing. The

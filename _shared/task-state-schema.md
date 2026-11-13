@@ -98,7 +98,7 @@ of a single state file; they apply verbatim to each `sessions/<id>.md`.
 **Status:** IN_PROGRESS | BLOCKED | COMPLETE
 **Session SHA:** <git short SHA at last write>
 **Last written:** <ISO 8601 UTC timestamp — e.g. 2026-06-15T14:30:00Z>
-**Active project:** <slug> (<abs-repo-path>)   <!-- optional; present only when /user-project has pinned. Preserve verbatim across every write. -->
+**Active project:** <slug> (<abs-repo-path>)   <!-- optional; present only when user-project.ps1 has pinned. Preserve verbatim across every write. -->
 
 ## Completed
 - [<sha>] <step or action>: <one-line result, test count if known>
@@ -141,7 +141,7 @@ of a single state file; they apply verbatim to each `sessions/<id>.md`.
 | **Key Files** | When file read reveals relevant structure | Append only |
 | **Parked** | When a salvage item is parked rather than written (session-wrap decisions/salvage sweep) | Append on park; remove an entry only when it has been filed or written |
 | **Next Action** | On every write | Overwrite |
-| **Active project** | On `/user-project` pin (optional header field) | Overwrite on re-pin; **preserve verbatim across every other write** (this is why `/user-project`'s pin survives a `task-handoff --loop` checkpoint); remove only on `/user-project clear` |
+| **Active project** | On a `user-project.ps1` pin (optional header field) | Overwrite on re-pin; **preserve verbatim across every other write** (this is why the pin survives a `task-handoff --loop` checkpoint); remove only on `user-project.ps1 clear` |
 
 ---
 

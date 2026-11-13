@@ -10,52 +10,74 @@ def _read(relative):
     return (ROOT / relative).read_text(encoding="utf-8")
 
 
+PIN_SCRIPT = "_shared/user-project.ps1"
+
+
 def test_user_project_registry_parser_ignores_nested_path_keys(tmp_path):
-    core = _read("skills/user-project/core.md")
-    blocks = re.findall(r"```powershell\n(.*?)```", core, flags=re.DOTALL)
-    parser = next(block for block in blocks if "$entries = foreach" in block)
-    registry = tmp_path / "registry.toml"
-    registry.write_text(
+    """The pin script (v3 catalog cleanup Step 16 replaced the skill core with it) reads
+    only each entry's own keys: a sub-table's `path` is not the entry's path."""
+    root = tmp_path / "root"
+    (root / ".claude" / "observatory").mkdir(parents=True)
+    (root / ".claude" / "observatory" / "registry.toml").write_text(
         '[[project]]\nslug = "gamma"\nowned = true\n'
         '  [project.launch.dev]\n  path = "nested-trap"\n',
         encoding="utf-8",
     )
-    script = (
-        f"$registry = '{str(registry).replace(chr(39), chr(39) * 2)}'\n"
-        "$name = 'gamma'\n"
-        + parser
-        + '\nWrite-Output "$($match.slug)|$($match.path)"\n'
-    )
     result = subprocess.run(
-        ["powershell", "-NoProfile", "-NonInteractive", "-Command", "-"],
-        input=script,
-        text=True,
-        capture_output=True,
-        check=False,
+        ["powershell", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass",
+         "-File", str(ROOT / PIN_SCRIPT), "gamma", "-SessionId", "orientation"],
+        cwd=str(root), capture_output=True, check=False,
     )
     assert result.returncode == 0, result.stderr
-    assert result.stdout.strip() == "gamma|gamma"
+    pin = (root / ".claude" / "task-state" / "sessions" / "orientation.md").read_text(encoding="utf-8")
+    assert f"**Active project:** gamma ({root / 'gamma'})" in pin.splitlines()
+
+
+def _identity_contract_problems(script):
+    """Every way the pin script's text breaks the own-session-identity rule; [] holds."""
+    problems = []
+    for phrase in (
+            "Never take the freshest sessions/*.md or the current.md rollup as this session's file",
+            "SET (after name validation) and CLEAR write nothing",
+            "SHOW prints its identity-unavailable line",
+            "This\n    script reads no environment variable for identity."):
+        if phrase not in script:
+            problems.append(f"missing: {phrase!r}")
+    if "fallback to the freshest" in script:
+        problems.append("names a fallback to the freshest session file")
+    # Behaviour, not prose: identity comes only from -SessionId, never the environment.
+    if re.search(r"\$env:", script, flags=re.IGNORECASE):
+        problems.append("reads an environment variable")
+    return problems
 
 
 def test_user_project_requires_own_session_identity_for_every_write():
-    core = _read("skills/user-project/core.md")
-    codex = _read("skills/user-project/providers/codex.md")
+    script = _read(PIN_SCRIPT)
+    codex = _read("skills/plan-expedite/providers/codex.md")
+    assert _identity_contract_problems(script) == []
+    assert "This wrapper binds no Codex session id today, so pass no `-SessionId`" in codex
+    assert "Never pass another host's session variable or a guessed id" in codex
 
-    assert "**Never** take the freshest `sessions/*.md` or the `current.md` rollup as this session's file" in core
-    assert "SET (after name validation) and CLEAR write nothing" in core
-    assert "SHOW prints its identity-unavailable line" in core
-    assert "Never use the freshest `sessions/*.md` or the `current.md` rollup" in codex
-    assert "write nothing, and stop" in codex
-    assert "fallback to the freshest" not in core
-    assert "fallback to the freshest" not in codex
+
+def test_identity_contract_check_reds_on_a_borrowing_script():
+    """Garbage anchor: the check above must red on a script that borrows an id."""
+    script = _read(PIN_SCRIPT)
+    garbage = script.replace(
+        "Never take the freshest sessions/*.md or the current.md rollup as this session's file",
+        "Use the freshest sessions/*.md when no id is given",
+    ).replace("$sid = $SessionId\n", "$sid = $SessionId\nif (-not $sid) { $sid = $env:CODEX_THREAD_ID }\n")
+    assert garbage != script
+    problems = _identity_contract_problems(garbage)
+    assert any("missing" in p for p in problems)
+    assert "reads an environment variable" in problems
 
 
 def test_user_project_placeholder_is_not_resume_authority():
-    core = _read("skills/user-project/core.md")
-    assert "whose body is `(none recorded)`" in core
-    assert "never a runnable command" in core
-    assert "it is not a fresh," in core
-    assert "operator-authorized plain action and the schema's resume backstop cannot execute it" in core
+    script = _read(PIN_SCRIPT)
+    assert "`## Next Action` body is `(none recorded)`" in script
+    assert "never a runnable command" in script
+    assert "is not a fresh," in script
+    assert "operator-authorized plain action and the schema's resume backstop cannot execute it" in script
 
 
 def test_user_pm_carries_the_absorbed_orientation_rules():
@@ -82,7 +104,7 @@ def test_user_pm_preserves_newer_plan_precedence_and_read_only_boundary():
 
 
 def test_native_codex_adapters_have_no_unbound_router_or_provider_retry():
-    for skill in ("user-project", "user-pm"):
+    for skill in ("user-pm",):
         adapter = _read(f"skills/{skill}/providers/codex.md").lower()
         assert "router reason" not in adapter
         assert "cross-cloud retry" not in adapter

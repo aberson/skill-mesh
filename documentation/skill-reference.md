@@ -1,6 +1,6 @@
 # Skill reference
 
-The v2 catalog contains **51 Claude skills** and **49 portable skills** for Codex and GitHub Copilot. Host coverage means an adapter is packaged; required native capabilities and external utilities still apply.
+The v2 catalog contains **50 Claude skills** and **48 portable skills** for Codex and GitHub Copilot. Host coverage means an adapter is packaged; required native capabilities and external utilities still apply.
 
 Each workflow link opens its source-linked diagram. Read the contract for full gates, flags, and omissions. See [installation](../README.md#install-or-upgrade), [utility integrations](../README.md#how-utility-projects-are-used), and [release limitations](https://github.com/aberson/skill-mesh/releases/tag/v2.0.2).
 
@@ -53,7 +53,6 @@ Each workflow link opens its source-linked diagram. Read the contract for full g
 | [user-gateway](../skills/user-gateway/core.md) | Convert an operator vent into one evidence-aware work ledger row and ready-to-paste seed per distinct fragment. | Claude, Copilot, Codex | [Diagram](../docs/workflows/README.md#user-gateway) |
 | [user-learn](../skills/user-learn/core.md) | After scope approval, build a grounded hands-on learning folder, re-run its artifacts, and report results without committing. | Claude, Copilot, Codex | [Diagram](../docs/workflows/README.md#user-learn) |
 | [user-pm](../skills/user-pm/core.md) | Present shipped work, outstanding plan items, practical next moves, and credible candidates to cut through a product-management lens. | Claude, Copilot, Codex | [Diagram](../docs/workflows/README.md#user-pm) |
-| [user-project](../skills/user-project/core.md) | Set, show, or clear the session-scoped active-project pin that pipeline skills use to resolve their target repository. | Claude, Copilot, Codex | [Diagram](../docs/workflows/README.md#user-project) |
 | [user-uat](../skills/user-uat/core.md) | Classify a clear UAT script, gate side effects, auto-judge supported checks, and escalate irreducible human experience checks. | Claude, Copilot, Codex | [Diagram](../docs/workflows/README.md#user-uat) |
 | [user-walkthrough](../skills/user-walkthrough/core.md) | Guide attended acceptance of a just-built tool, answer from primary evidence, and fix small in-scope issues during the walkthrough. | Claude, Copilot, Codex | [Diagram](../docs/workflows/README.md#user-walkthrough) |
 | [user-wrap](../skills/user-wrap/core.md) | Reorient a returning operator, delegate the verdict to session-wrap, and execute exactly the action owned by that verdict. | Claude, Copilot, Codex | [Diagram](../docs/workflows/README.md#user-wrap) |

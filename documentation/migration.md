@@ -45,7 +45,7 @@ link, clone, or `mklink /J` junction pointed at them.
 
 They are **not** the canonical source: they were not touched by Steps 33-38, they do not carry
 GPT adapters, and the skills added since this migration started that are still in the catalog
-(`plan-redline`, `user-project`) exist **only** in the new
+(`plan-redline`) exist **only** in the new
 `skills/<name>/` tree — they have no top-level counterpart. Treat any content difference between
 a top-level `<skill>/SKILL.md` and `skills/<skill>/core.md` (or `providers/claude.md`) as the new
 canonical tree being authoritative.

@@ -85,7 +85,7 @@ identity proof); otherwise ask once which feature to walk through, and yield.
 
 These rules are complete even when the optional workspace policy documents are unavailable.
 Before any `git add`, commit, or push, resolve the intended target repository in this order: a
-verified `/user-project` pin; the repository identified by the explicit invocation argument or
+verified project pin (`<repo>/_shared/user-project.ps1`); the repository identified by the explicit invocation argument or
 the feature's plan; otherwise the current directory's git root. An unreadable or merely announced
 pin is not verified: do not invent its path; report that it was not used and continue down the
 precedence list. Resolve the actual commit repository with `git rev-parse --show-toplevel` from

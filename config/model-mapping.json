@@ -365,13 +365,6 @@
       "local": true,
       "notes": "Ported - shared core + GPT/Claude wrappers"
     },
-    "user-project": {
-      "default_model": "claude",
-      "claude": true,
-      "gpt": true,
-      "local": false,
-      "notes": "Ported - shared core + GPT/Claude wrappers"
-    },
     "user-uat": {
       "default_model": "claude",
       "claude": true,

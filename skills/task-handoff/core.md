@@ -13,8 +13,8 @@ Checkpoint library for task-state writes and reads. Its callers are orchestratin
 need a durable checkpoint or an in-window resume: `build-phase` and `build-step`
 (`--loop [--no-commit]`), `plan-expedite` (`--next-task`), `session-wrap` (`--loop [--no-commit]`;
 it is also the target of `--end`) and `user-draft` (`--loop`; it emits `--resume`). `user-pm`
-emits `--resume`, `user-wrap` mirrors its orientation shape, and `user-project`'s pin must survive
-every write. Operators wanting a session transition should use `/session-wrap`.
+emits `--resume`, `user-wrap` mirrors its orientation shape, and the project pin (`<repo>/_shared/user-project.ps1`)
+must survive every write. Operators wanting a session transition should use `/session-wrap`.
 
 **Accepted invocations (closed list):** bare `/task-handoff` (= `--resume`), `--loop`,
 `--loop --no-commit`, `--next-task [label]`, `--resume`, `--end`. Any other flag or combination
@@ -150,7 +150,7 @@ After the preflight, write **this session's own file** — `sessions/<session-id
 `<session-id>` is the ID resolved under § Session identity. Read-merge-write *that* file (not
 the shared `current.md`), applying the schema doc's per-field append-vs-overwrite rules (it owns
 that split). In particular, if the file carries an `**Active project:**` header field (set by
-`/user-project`), carry it over **verbatim** — it is a preserve-across-every-write field per the
+`<repo>/_shared/user-project.ps1`), carry it over **verbatim** — it is a preserve-across-every-write field per the
 schema doc; silently dropping it un-pins the session. When the caller keeps the existing Next
 Action, carry it over byte-for-byte, including a multiline body. Because the session owns its
 file exclusively under a correctly resolved ID, the write never contends with another window.

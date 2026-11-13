@@ -5,7 +5,7 @@ workflow for Claude Code, GitHub Copilot, and OpenAI Codex.**
 
 - **A connected pipeline.** Turn an idea into a plan, a bounded build, an independently reviewed change, and a release.
 - **Explicit quality gates.** Automated checks and fresh-context reviewers inform the result; missing required capabilities stop the workflow.
-- **One contract, three hosts.** 51 Claude skills; 49 also packaged for Copilot and Codex through host adapters.
+- **One contract, three hosts.** 50 Claude skills; 48 also packaged for Copilot and Codex through host adapters.
 
 **[v2.0.4 is released](https://github.com/aberson/skill-mesh/releases/tag/v2.0.4)** ·
 [Try it](#install-or-upgrade) · [Browse the skills](documentation/skill-reference.md) ·
@@ -51,7 +51,7 @@ host's capabilities; installation puts the generated skills where the host finds
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="_shared/host-profiles-dark.svg">
-  <img alt="Shared Skill Mesh contracts generate three host profiles: 51 Claude skills and 49 portable skills each for GitHub Copilot and OpenAI Codex." src="_shared/host-profiles-light.svg">
+  <img alt="Shared Skill Mesh contracts generate three host profiles: 50 Claude skills and 48 portable skills each for GitHub Copilot and OpenAI Codex." src="_shared/host-profiles-light.svg">
 </picture>
 
 ### The routing web
@@ -84,7 +84,7 @@ from this skill catalog. [Routing contract](_shared/skill-pipeline.md).
 | Evidence & improvement | `citation-review`, `lesson-harvest`, `skill-evolve`, `tier-offload` |
 
 <details>
-<summary><strong>Explore all 51 skills and available workflow documentation</strong></summary>
+<summary><strong>Explore all 50 skills and available workflow documentation</strong></summary>
 
 The [complete reference table](documentation/skill-reference.md) lists each skill's
 purpose, host coverage, source contract, and individual workflow. The
@@ -169,7 +169,7 @@ verify its checksum, and choose one host profile.
 <details>
 <summary><strong>Installation, upgrades, and restoration</strong></summary>
 
-Of the portable catalog, 49/49 skills are GPT-capable; Claude provides all 51 skills.
+Of the portable catalog, 48/48 skills are GPT-capable; Claude provides all 50 skills.
 
 | Provider | Discovery root under the chosen home |
 |---|---|

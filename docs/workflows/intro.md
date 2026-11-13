@@ -1,11 +1,11 @@
 These diagrams summarize the **Skill Mesh v2.0.4** contracts. Use the
 [skill reference](../../documentation/skill-reference.md) for a compact table
-of all 51 skills, purposes, host coverage and direct diagram links.
+of all 50 skills, purposes, host coverage and direct diagram links.
 
 Each diagram declares its source and omitted detail. The linked source contract
 remains authoritative: a diagram does not authorize an action, bypass a hold,
-or establish live qualification. Claude has all 51 packages; Codex and Copilot
-have the 49 portable packages. Native capability gates still apply.
+or establish live qualification. Claude has all 50 packages; Codex and Copilot
+have the 48 portable packages. Native capability gates still apply.
 
 These diagrams use the same rounded cards, monospace labels, and blue connectors
 as the overview graphics. Blue-bordered **GATE** cards mark decisions; connector

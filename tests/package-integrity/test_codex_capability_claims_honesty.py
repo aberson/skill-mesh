@@ -223,7 +223,7 @@ NEIGHBOUR_GATE = Path(__file__).with_name("test_codex_agent_isolation_contract.p
 # reviewable. The floor below is the separate guard against a mis-rooted glob
 # making every assertion in this module vacuous; both are asserted because they
 # fail for different reasons.
-EXPECTED_ADAPTERS = 49
+EXPECTED_ADAPTERS = 48
 # The vacuity floor is DERIVED from the manifest, never hand-set: it is the manifest's
 # codex roster size minus this margin (see `_min_adapters`). It was a literal (50, then
 # 45 at v3 catalog cleanup Step 14) and had to be lowered by hand at every retirement.

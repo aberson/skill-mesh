@@ -1,7 +1,7 @@
 {
   "schema": "show-your-work.workflows.v1",
   "generator": "show-your-work 0.1.0",
-  "generated_at": "2026-11-13T18:02:34+00:00",
+  "generated_at": "2026-11-13T19:14:31+00:00",
   "source_dir": "docs/workflows",
   "items": [
     {
@@ -659,20 +659,6 @@
       ],
       "source_path": "docs/workflows/user-pm.mmd",
       "source_sha256": "471c68bd1bbf6910dbd44b5cf40e863f5b7b881125263ce784eee7d470a8a17b",
-      "engine": "mermaid",
-      "rasters": null
-    },
-    {
-      "id": "user-project",
-      "label": "user-project",
-      "summary": "Set, show, or clear the session-scoped active-project pin that pipeline skills use to resolve their target repository.",
-      "alt": "Shared root and session resolution lead to set, show, or clear branches, with every unresolved identity or project failure writing nothing.",
-      "not_shown": "registry parsing, session-ID resolution, exact task-state merge rules, statusline integration, path normalization, and consumer precedence exceptions",
-      "sources": [
-        "skills/user-project/core.md"
-      ],
-      "source_path": "docs/workflows/user-project.mmd",
-      "source_sha256": "1c8165f125badc8b810b1306f4ae7763b03544d92d694d003788fd11a6289b60",
       "engine": "mermaid",
       "rasters": null
     },
