@@ -127,16 +127,20 @@ def test_explicit_local_user_debug_halts_before_local_request():
 
 
 @pytest.mark.skipif(PWSH is None, reason="powershell is not available on PATH")
-def test_codex_distribution_emits_the_capability_conditioned_user_debug_adapter():
+def test_codex_distribution_emits_the_capability_conditioned_user_debug_adapter(tmp_path):
+    # Built into a temporary -OutputDir, never the checkout's own dist/: inside
+    # tools/release.ps1's staged check a default-path build would rewrite the stage's
+    # dist/codex just before its checksums are taken (v3 guard Step 12).
+    out_dir = tmp_path / "dist"
     build = subprocess.run(
         [PWSH, "-NonInteractive", "-File", str(REPO_ROOT / "tools" / "build-distributions.ps1"),
-         "-Provider", "codex"],
+         "-Provider", "codex", "-OutputDir", str(out_dir)],
         cwd=REPO_ROOT,
         capture_output=True,
         text=True,
     )
     assert build.returncode == 0, (build.stdout, build.stderr)
-    emitted = REPO_ROOT / "dist" / "codex" / "user-debug" / "SKILL.md"
+    emitted = out_dir / "codex" / "user-debug" / "SKILL.md"
     assert emitted.is_file()
     assert "## Independent-diagnosis capability contract" in emitted.read_text(encoding="utf-8")
     assert "Codex has no isolated fresh-context agent primitive" not in emitted.read_text(encoding="utf-8")
