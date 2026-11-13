@@ -114,7 +114,7 @@ Group each move under one of the five category headers below. Order moves by ove
 - **Deep dive:** <one plain-language `user-fermize` prompt, labelled `Run in: a Codex window`>
 
 ## Next move
-<one paragraph: what to do right now, why this over the alternatives, the tradeoff when two paths are close, and a rough effort>
+- **Do this now:** <the one move and a rough effort> — <why it beats the alternatives; when two paths are close, the tradeoff in one clause>
 ```
 
 ## Status view
@@ -171,7 +171,7 @@ Each candidate's result on those three decides its run line:
 
 - **All clear:** the normal Run line.
 - **Unknown** on any of the three: a `qualify first` line, never a go. It is the qualify-first prompt that section describes, through the entry skill's own gate.
-- **Known conflict** (for example build-phase checkpoint commits against a dirty checkout that must not be committed): no unconditional route. A `conflict:` line names the conflict and the smallest supported route that keeps the constraint, or the constraint change the operator must authorize.
+- **Known conflict** (for example build-phase checkpoint commits against a dirty checkout that must not be committed): no unconditional route. A `conflict:` line names the conflict and the smallest supported route that keeps the constraint (labelled conditional where its capability is unverified), or the constraint change the operator must authorize.
 
 Close the Overnight block with these lines, each only when it has content:
 
