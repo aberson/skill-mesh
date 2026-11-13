@@ -4,6 +4,8 @@ This is the execution copy for build-phase, copied 2026-11-12 from the operator'
 
 Status: reviewed 2026-11-12 (plan-review and plan-wrap applied; findings in
 `catalog-cleanup-plan-2026-11-12-review.md`). Planning only; nothing in the catalog has been changed.
+Decided 2026-11-12 22:29: the operator's "BQ2 yes" takes the default of every item in "Open for redline" that was
+still open (afternoon sheet items 6 to 11 and 34). Build base re-recorded at `4040eed` (see Base).
 
 Path convention: skill-mesh paths are repo-relative. `<coding-root>` is the workspace folder that holds the
 skill-mesh checkout and the other projects.
@@ -34,15 +36,20 @@ user-dr safeguards: a recorded base ref, the target paths, pre-write hashes and 
 | `user-afterparty` runs monthly and owns usage telemetry | UPDATE | 18 |
 
 Not in this batch: the tier skills (v4, model-pin path), the execution queue (v4, Forge), GPT adapter removal
-(after v3 ships), and the `user-orient` DELETE (see Ordering dependencies).
+(after v3 ships), and the `user-orient` DELETE (see Ordering dependencies; it landed on `v3/main` at `f369f97`,
+before this build started).
 
 ## Base
 
 - Integration checkout: branch `v3/main`, commit `1ee18b3a4b435e505eafca9e84247170bcda3e1f` at planning time.
   Step 1 re-records the full 40-hex base; every later step records its own base (the worktree head when the step
   starts) in its lifecycle request.
-- Catalog at planning time: 60 skills (57 portable, 3 provider-native). After this batch: 51 (49 portable,
-  2 provider-native). After the user-pm plan's `user-orient` DELETE: 50 (48 portable).
+- **Build base (2026-11-12): `v3/main` at `4040eed`**, which equals `origin/main` and already carries the user-pm
+  revamp (its Step 5 included) and the `user-orient` DELETE (`f369f97`). The catalog there is 59 skills
+  (56 portable, 3 provider-native) and Codex headroom is 551 (re-measured; see Headroom). Every count below that
+  says "from the build base" is stated from this commit.
+- Catalog at planning time: 60 skills (57 portable, 3 provider-native). At the build base: 59 (56 portable,
+  3 provider-native). After this batch: 50 (48 portable, 2 provider-native).
 - Worktree: one isolated sibling worktree of the integration checkout on a new branch, created in Step 1 from the
   recorded base. The integration checkout stays read-only for this plan. Fresh worktrees do not inherit
   `node_modules` or a virtualenv: install what the gate needs before the first gate.
@@ -52,15 +59,17 @@ Not in this batch: the tier skills (v4, model-pin path), the execution queue (v4
 | This plan's step | Waits on | Why |
 |---|---|---|
 | 11 (user-gateway), 14 (goblin) | user-pm revamp plan Step 5 (improvement shortlist) landed on `v3/main` | goblin's "what should I improve?" job moves to `user-pm`; that step also uses the goblin-suggest core's anchor contract as a model, so the goblin core must still exist until Step 5 lands. Step 10 checks it. |
-| 13 (plan-trim DELETE) and later | catalog gate plan Step 8 (the Codex headroom upper limit removed) | see Headroom. Step 10 checks it. |
+| 13 (plan-trim DELETE) and later; 12 and later from the build base | catalog gate plan Step 8 (the Codex headroom upper limit removed) | see Headroom. Step 10 checks it. |
 | 5 (user-fermize) | nothing | It must land before user-pm Steps 17 and 18, which need the Claude adapter. |
-| user-pm Step 13 (`user-orient` DELETE) | this plan's Step 11 | Step 11 repoints every `user-orient` mention in user-gateway (decision item 14 owns that file), so Step 13 of the user-pm plan finds none there. The DELETE itself stays in the user-pm plan, after its core rewrite. |
+| user-pm Step 13 (`user-orient` DELETE) | this plan's Step 11 | Step 11 repoints every `user-orient` mention in user-gateway (decision item 14 owns that file), so Step 13 of the user-pm plan finds none there. The DELETE itself stays in the user-pm plan, after its core rewrite. It landed first, at `f369f97`; user-gateway carried no `user-orient` mention at that base, so Step 11 finds none to repoint. |
 | Both plans | each other, on generated files | Both regenerate `config/skill-manifest.json`, `skills/inventory.json`, `tests/package-integrity/expected_inventory.json` and count pins. Never run in one worktree at once. Whichever lands second rebases and regenerates with `python tools/gen_manifest.py`, never hand-merges. |
 
 ## Headroom: the Codex catalog budget
 
 `tests/package-integrity/test_codex_budgets.py` today requires `400 < headroom < 900` over the 57 codex-eligible
-records. Measured on the base, headroom is **421** (total 7,579 against the 8,000 floor). Measured per-skill sizes
+records. Measured on the base, headroom is **421** (total 7,579 against the 8,000 floor). Re-measured on the build
+base `4040eed` (56 records, `user-orient` gone): total 7,449, headroom **551**; the per-skill sizes below are
+unchanged there. Measured per-skill sizes
 (name, description and path, as the test serializes them):
 
 | Skill | Chars | Effect |
@@ -80,16 +89,21 @@ description serializes to 308, so the manifest description must be a short one-l
 item 3).
 
 Floor (`headroom > 400`): the only step that lowers headroom is the create. Step 5 runs after two retirements,
-so headroom is about 694 before it and about 554 after, well clear of 400. The floor never fails.
+so headroom is about 694 before it and about 554 after, well clear of 400. The floor never fails. (From the build
+base: 824 before it and about 686 after.)
 
 Predicted headroom after each step (re-measured and recorded in every step's Done-when; these are estimates):
 
 | After step | 1 | 2 | 4 | 5 | 6 | 7 | 8-11 | 12 | 13 | 14 | 16 | 18-19 |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | Headroom | 421 | ~559 | ~694 | ~554 | ~554 | ~701 | ~701 | ~830 | ~955 | ~1345 | ~1467 | ~1467 |
+| From the build base `4040eed` | 551 | ~689 | ~824 | ~686 | ~686 | ~833 | ~833 | ~962 | ~1087 | ~1477 | ~1599 | ~1599 |
+
+From the build base the first predicted breach of `headroom < 900` moves from Step 13 to Step 12. Step 10 still
+comes before it, so the ordering below is unchanged; only the step named as the first breach changes.
 
 Upper limit (`headroom < 900`): this batch frees about 1,046 net, so it cannot stay inside the band; no create is
-left to offset it. The first predicted breach is Step 13. Catalog gate plan Step 8 (morning item 17) removes the
+left to offset it. The first predicted breach is Step 13 (Step 12 from the build base). Catalog gate plan Step 8 (morning item 17) removes the
 upper limit. This plan does **not** edit the guard; that plan owns it (one owner). Step 10 is a wait step placed
 before the first breach: it passes when the upper limit is gone. If this plan runs before that plan lands, steps
 1 to 9 stay inside the band and the build halts at Step 10 until it does (open item 4). Step 1 records whether the
@@ -105,7 +119,7 @@ limit is already gone; if so, Step 10 passes at once on resume.
   even after it lands; the selector, not this plan, decides, and a `full` answer is never waived.
 - **Else the full repo-root `python -m pytest`** is the done gate. It takes hours. Per decision item 50 the agent
   asks the operator before starting it and never waives it itself. To keep the build unattended, the default is the
-  operator's recorded pre-approval, confirmed at redline (open item 1): each step is gated by the item 50 scoped
+  operator's recorded pre-approval, confirmed at redline (open item 1, decided 2026-11-12 by "BQ2 yes"): each step is gated by the item 50 scoped
   set (`tests/package-integrity`, `tests/distributions/test_distributions.py`, `tests/smoke`, `tests/release`,
   `tests/router`, `tests/telemetry`, the three root-only roots `_shared/`, `skill-iterate/scripts/` and
   `skill-eval-setup/scripts/`, and `tools/release.ps1`'s staged package checks), the step is recorded with the
@@ -215,8 +229,8 @@ plans and closure records (`documentation/parity-deltas.md`, `documentation/v2-p
 `archive/v1/*` are historical-preserve by explicit listing.
 **Done when:** pre- and post-DELETE reports are recorded; the post report over tracked and untracked-not-ignored
 text files, excluding the explicitly preserved occurrences (whose hashes are unchanged), finds zero
-`user-lavishify`; manifest counts read 59 total, 56 portable; all three profiles build; headroom is recorded and
-is above 400 (predicted ~559); the step's gate (see Gates) is green and named. The installed ledger effect (stale
+`user-lavishify`; manifest counts read 59 total, 56 portable (58 and 55 from the build base); all three profiles build; headroom is recorded and
+is above 400 (predicted ~559; ~689 from the build base); the step's gate (see Gates) is green and named. The installed ledger effect (stale
 cleanup removing the host profile) is left to Step 20.
 
 ### Step 3: Copy `build-observer` and `observatory-doctor` into dev-observatory (other repository)
@@ -258,7 +272,8 @@ count prose regenerated and re-pinned. The guide edit removes a statement about 
 weakens no gate; the reviewer is told to check exactly that.
 **Done when:** pre- and post-DELETE reports recorded; zero `build-observer` in the post report outside listed
 historical-preserve occurrences; the three profiles build without the build-observer resource step; counts read
-58 total, 55 portable; headroom recorded (predicted ~694) and above 400; gate named and green.
+58 total, 55 portable (57 and 54 from the build base); headroom recorded (predicted ~694; ~824 from the build
+base) and above 400; gate named and green.
 
 ### Step 5: CREATE `user-fermize`
 
@@ -282,7 +297,8 @@ proves the Claude and Codex profiles load the core and carry the read-only, advi
 production caller yet (user-pm Steps 17 and 18 add it), so no caller test applies and the reviewer is told so.
 **Done when:** the post-create existence check passes (present in the worktree, absent at the base); the three
 profiles build; the manifest description's serialized size and the new headroom are recorded and headroom is
-above 400 (predicted ~554, a drop of about 140); the existing personal install file is untouched (the installer's
+above 400 (predicted ~554, a drop of about 140; ~686 from the build base); counts read 58 total, 55 portable
+from the build base; the existing personal install file is untouched (the installer's
 foreign-file handling is Step 20's job); the step's gate is green and named.
 
 ### Step 6: DELETE `judge-motion` (provider-native)
@@ -312,7 +328,7 @@ plan is historical-preserve where it records past authorization). Callers repoin
 steps are reported as manual-check steps, not silently dropped (open item 10).
 **Done when:** pre- and post-DELETE reports recorded; zero `judge-motion` outside listed historical-preserve
 occurrences; the build and install tooling carry no judge-motion special case; counts read 58 total, 56 portable,
-2 native; headroom unchanged at about 554 (not codex-eligible); the three profiles build; gate named and green.
+2 native (57, 55 and 2 from the build base); headroom unchanged at about 554 (~686 from the build base) (not codex-eligible); the three profiles build; gate named and green.
 
 ### Step 7: DELETE `observatory-doctor` from the mesh
 
@@ -325,7 +341,8 @@ workflow card and count pins updated as in Step 2; current documentation (`READM
 `documentation/skill-reference.md`, `documentation/migration.md`, providers pages) updated; the old plans and
 records historical-preserve by listing.
 **Done when:** pre- and post-reports recorded; zero `observatory-doctor` outside the preserved list; counts read
-57 total, 55 portable; headroom recorded (predicted ~701); gate named and green.
+57 total, 55 portable (56 and 54 from the build base); headroom recorded (predicted ~701; ~833 from the build
+base); gate named and green.
 
 ### Step 8: UPDATE `plan-merge` (add `--trim`)
 
@@ -377,7 +394,7 @@ the `headroom < 900` upper limit, because Step 13 is the first predicted breach.
 predicates, both read from `v3/main`: (a) `grep -c "single pass, unjudged" skills/user-pm/core.md` reports at
 least 1 (the label user-pm Step 5's Done-when requires); (b) the upper limit is gone: `grep -nE "assert headroom <"
 tests/package-integrity/test_codex_budgets.py` finds no line, or finds one whose bound exceeds this plan's
-predicted peak headroom of 1,467 (a "raise" outcome of catalog gate Step 8). A mention of the old bound in a comment
+predicted peak headroom of 1,467 (1,599 from the build base `4040eed`; a "raise" outcome of catalog gate Step 8). A mention of the old bound in a comment
 does not count. Resume with `--resume 11` after rebasing the isolated worktree onto `v3/main` and re-measuring
 headroom.
 **Done when:** both predicates hold; the worktree is rebased and regenerated (`python tools/gen_manifest.py`
@@ -424,13 +441,14 @@ is updated; `tests/calibration/phase-3-4-ports.json`, `tests/package-integrity/t
 `tools/gen_skill_tree.py` references dispositioned; user-project-pin reader text in other cores is not touched
 here (Step 16).
 **Done when:** pre- and post-reports recorded; zero `user-shakedown` outside the preserved list; counts read
-56 total, 54 portable; headroom recorded (predicted ~830, still under the old 900 limit); gate named and green.
+56 total, 54 portable (55 and 53 from the build base); headroom recorded (predicted ~830, still under the old 900
+limit; ~962 from the build base, over it, which Step 10 verified is gone); gate named and green.
 
 ### Step 13: DELETE `plan-trim` (and update `user-afterparty`'s chain)
 
 **Problem:** Folded in Step 8; the gateway repoint is done (Step 11). `user-afterparty` chains `plan-trim`
 (its hygiene list), and `plan-feature` and `_shared/skill-pipeline.md` name it. This is the first predicted
-headroom-over-900 step, which is why Step 10 waits.
+headroom-over-900 step (from the build base it is the second; Step 12 is the first), which is why Step 10 waits.
 **Type:** code
 **Issue:** #269
 **Flags:** `--reviewers` default
@@ -441,7 +459,8 @@ constants, mapping row, generated files, workflow card, count pins; `skills/user
 cadence and telemetry are Step 18); `tier-escalate/` and `tier-offload/` legacy sample files that name it are
 historical-preserve by listing.
 **Done when:** pre- and post-reports recorded; zero `plan-trim` outside the preserved list; counts read
-55 total, 53 portable; headroom recorded (predicted ~955) and above 400; if above 900 the guard must already be
+55 total, 53 portable (54 and 52 from the build base); headroom recorded (predicted ~955; ~1087 from the build
+base) and above 400; if above 900 the guard must already be
 the one the catalog gate plan left, which Step 10 verified; gate named and green.
 
 ### Step 14: DELETE `goblin-suggest`, `goblin-sweep`, `goblin-do`
@@ -471,7 +490,7 @@ goblin skills re-pinned. **Session-wrap is a representative skill**, so
 **Done when:** pre- and post-reports recorded for all four names (three skills and the shared file); zero
 occurrences outside the preserved list; the release-candidate report test is green (it sits in the smoke suite
 and is not collected by a package-integrity-only run, so run it explicitly); counts read 52 total, 50 portable
-(plus 2 native); headroom recorded (predicted ~1345); gate named and green.
+(plus 2 native; 51 and 49 from the build base); headroom recorded (predicted ~1345; ~1477 from the build base); gate named and green.
 
 ### Step 15: Create the `user-project` script (runtime, with its own test)
 
@@ -528,8 +547,8 @@ mechanical edit per file, listed in one table in the checkpoint); no caller's ga
 advisory-and-fail-open behavior on an unset or unavailable pin is untouched).
 **Done when:** pre- and post-reports recorded; zero `user-project` as a slash name in skill bytes outside the
 preserved list (the pin's own field name `Active project` is not the old name and is expected to remain); the
-rewritten orientation test is green and red-on-garbage; counts read 51 total, 49 portable, 2 native; headroom
-recorded (predicted ~1467); gate named and green.
+rewritten orientation test is green and red-on-garbage; counts read 51 total, 49 portable, 2 native (50, 48 and 2 from the build base);
+headroom recorded (predicted ~1467; ~1599 from the build base); gate named and green.
 
 ### Step 17: Point coding-root references at the script (other repository)
 
@@ -587,7 +606,8 @@ and the full gate has run once.
 **Flags:** `--reviewers` default
 **Produces:** a final `python tools/gen_manifest.py` (no diff expected; any diff is a defect in an earlier step);
 `python tests/smoke/gen_release_candidate_report.py` (no diff expected after Step 14); a build of all three profiles;
-the count check (51 total, 49 portable, 2 native, or 50 and 48 if the user-pm plan has landed Step 13 first);
+the count check (51 total, 49 portable, 2 native, or 50 and 48 if the user-pm plan has landed Step 13 first; it
+has, so from the build base the check is 50, 48 and 2);
 a final repo-wide absence report for all retired names (the ten skills, the goblin shared file) with only the
 listed historical-preserve occurrences remaining, whose hashes are re-verified unchanged; the final headroom
 recorded; the done gate. At this step: **the catalog gate if it has landed, run in addition to the full gate if it
@@ -609,15 +629,18 @@ collide with the generated one.
 **Issue:** #276
 **Flags:** none (operator step; produces no code)
 **Produces:** the operator installs the Claude and Codex profiles from the merged result, in this order and with the
-exact commands below, run separately and in the operator's window, with the dry run first:
+exact commands below, run separately and in the operator's window. The installer has no `-WhatIf` option
+(afternoon sheet item 34, decided 2026-11-12 by "BQ2 yes"), so the first run of each profile is a normal install
+without `-Force`: it refuses every foreign-file collision, lists each one, and changes nothing while any remains.
 
 ```
-powershell -File tools/install-skill-mesh.ps1 -Provider claude -Home <install-home> -WhatIf
+powershell -File tools/install-skill-mesh.ps1 -Provider claude -Home <install-home>
 ```
 
-then the same without `-WhatIf`, then `-Provider codex`. Foreign-file collisions are inspected one by one; the
-personal `user-fermize` file is preserved and adopted through the installer's backup procedure (never `-Force`
-across unrelated collisions, never a hand-edited ledger). The operator then runs `tools/inspect-host-install.ps1`
+Read its collision list. Then the same command for `-Provider codex` with that profile's home. Foreign-file
+collisions are inspected one by one; the personal `user-fermize` file is preserved and adopted through the
+installer's backup procedure (never `-Force` across unrelated collisions, never a hand-edited ledger), and the
+install is re-run without `-Force` once the list is empty. The operator then runs `tools/inspect-host-install.ps1`
 for both profiles.
 **Done when:** the inspection reports the installed catalog equals the released one; none of the ten retired
 names, nor `user-orient` if its plan has landed, is discoverable in either host root; `user-fermize` loads from the
@@ -630,10 +653,11 @@ session both start without a skill-list truncation warning; the operator records
 ## Open for redline
 
 Each item has a default the plan follows if you do not decide. Review 2026-11-12 triaged the list: items marked
-"Decided 2026-11-12" are settled by an existing operator answer or rule and are kept only as a record; items 1, 3,
-9, 12 and 13 are still open for the operator, each with its default.
+"Decided 2026-11-12" are settled by an existing operator answer or rule and are kept only as a record. Items 1, 3,
+9, 12 and 13, the last ones open, were decided at their defaults by the operator's "BQ2 yes" (2026-11-12 22:29,
+afternoon sheet items 6 to 10); nothing in this list is open.
 
-1. **Per-step gate.** The full repo-root suite takes hours and item 50 says the agent asks first. Default: you
+1. **Decided 2026-11-12 (BQ2 yes, default).** **Per-step gate.** The full repo-root suite takes hours and item 50 says the agent asks first. Default: you
    pre-approve the item 50 scoped set for Steps 2 to 18 (suites named in each checkpoint, full gate INCOMPLETE until
    Step 19), and the full suite runs once at Step 19. Changes if: you want the full suite at every step (about
    a dozen runs), or the catalog gate has landed and its selector chooses.
@@ -641,7 +665,7 @@ Each item has a default the plan follows if you do not decide. Review 2026-11-12
    mandatory for a portable create, v3 still ships the GPT profile under its deprecation note, and the prepared
    packet carries one. Default: include a thin `providers/gpt.md`, removed with the GPT removal pass after v3.
    Changes if: you want the guide's rule amended first, which is a plan change.
-3. **`user-fermize` manifest description.** The packet's request description serializes to 308 characters
+3. **Decided 2026-11-12 (BQ2 yes, default).** **`user-fermize` manifest description.** The packet's request description serializes to 308 characters
    against a catalog mean of 133. Default: a one-line manifest description of about 90 characters (name 12 plus
    path 36 plus 90 gives the 140 this plan's headroom table assumes; at 110 characters the cost is about 158 and
    every later headroom figure drops by about 18, still above 400). The long text stays in the core. Changes if: you want the longer text and a trim elsewhere.
@@ -659,7 +683,7 @@ Each item has a default the plan follows if you do not decide. Review 2026-11-12
    mesh core and Claude adapter, with the validator script and its test; Codex parity is left to
    dev-observatory's owner.
 8. **Decided 2026-11-12 (by decision item 15, approved 11/11: a script the same callers run, wired in, listed and tested; the location follows from the review's measurement that `runtime/` is not emitted but `_shared/` is).** **Where callers find the `user-project` script once installed.** Default: `_shared/user-project.ps1`, cited by callers as `../_shared/user-project.ps1`.
-9. **Telemetry snapshots and the monthly trigger.** Default: dated snapshots in a gitignored `docs/user-afterparty/`
+9. **Decided 2026-11-12 (BQ2 yes, default).** **Telemetry snapshots and the monthly trigger.** Default: dated snapshots in a gitignored `docs/user-afterparty/`
    folder in the coding-root repository; a nudge in afterparty's report when the last snapshot is over 35
    days old; scheduling the run is yours. Changes if: you want a scheduled routine built (a separate plan).
 10. **Decided 2026-11-12 (by maintenance R2: the operator chose deprecation over a `judge-ui --motion` mode; README Operator answers keep `judge-ui` as is).** **Motion transitions after `judge-motion` goes.** Default: `user-uat` and `judge-ui` report transition-shaped
@@ -668,10 +692,10 @@ Each item has a default the plan follows if you do not decide. Review 2026-11-12
 11. **Decided 2026-11-12 (by lifecycle guide section 8, which owns `historical-preserve`, and Q1's safeguards).** **Old plans and the v1 archive.** Default: every occurrence in completed plans, parity and closure records,
     review evidence and `archive/v1/` is `historical-preserve`, listed by path, line, column and hash; none is
     edited.
-12. **Ordering of the two plans' shared generated files.** Default: this plan and the user-pm plan never share a
+12. **Decided 2026-11-12 (BQ2 yes, default).** **Ordering of the two plans' shared generated files.** Default: this plan and the user-pm plan never share a
     worktree; whichever finishes second rebases and regenerates. Changes if: you would rather one plan be
     gated to start only after the other lands.
-13. **Legacy evals for the folded and retired skills.** The manifest names `evals/` folders for `plan-trim`,
+13. **Decided 2026-11-12 (BQ2 yes, default).** **Legacy evals for the folded and retired skills.** The manifest names `evals/` folders for `plan-trim`,
     `plan-merge`, `user-shakedown` and `user-walkthrough`, but none is tracked in the mesh (they exist only under
     the coding-root's legacy `.claude/skills/`). Default: carry none; Steps 8 and 9 rely on the clause-by-clause
     contract maps instead. Changes if: you want those eval cases added as new tracked resources to `plan-merge` and
