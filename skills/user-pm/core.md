@@ -202,7 +202,7 @@ An area is a group of board items that share a path or wait on one another. Two 
 
 **Splitting rules** (applied by `--lanes`):
 
-- Every split has a `main` lane, the lane the operator coordinates through. It takes the board items that are unplaced or could belong to more than one lane, owns the shared files (the plan, manifests, lockfiles, generated output) and does the merges. A lane that cannot tell where a note or item belongs sends it to `main`.
+- Every split has a `main` lane, the lane the operator coordinates through. It is the coordinator, shipper and operator relay unless the table names others: the operator gives every lane's decisions and requests in `main`, which relays them as `operator-said:` notes (lane rules, section 4). It takes the board items that are unplaced or could belong to more than one lane, owns the shared files (the plan, manifests, lockfiles, generated output) and does the merges. A lane that cannot tell where a note or item belongs sends it to `main`.
 - Split on file ownership first: no path is owned by two lanes.
 - A resource that cannot be split (an engine, a play checkout, credits, machine memory) is listed as shared and claimed through Heads Up, never assigned to two lanes.
 - Each lane can park without stalling the others; a lane that cannot is merged into the lane it waits on. An area with fewer than two board items folds into a neighbour.
@@ -366,13 +366,17 @@ Be honest in **What this unblocks**. If completing this topic doesn't unblock an
   - **Host:** Claude, Codex or either; `qualify first` when the host's capability for the lane's work is unknown (the Overnight rubric's host capability check).
   - **Hands off / needs:** what it hands to or needs from other lanes.
   - After the lanes, list the board items left unplaced (they go to `main`) and the shared resources.
-  - Close **The work** with paste-ready draft text: a draft `docs/lanes/README.md` table (lane, purpose, owns, host, hands off or needs) and one starter line per lane for opening its window. user-pm writes neither: creating the table and the cards is the operator's act, or a lane window's.
+  - Close **The work** with one paste-ready block for the `main` lane's window. user-pm writes and runs none of it:
+    1. when that window has no `main` card, `passing-notes card set --project <project> --lane main --host <host> --item "coordinate lanes" --state active`;
+    2. the draft `docs/lanes/README.md` table (lane, purpose, owns, host, hands off or needs), then `Coordinator`, `Shipper` and `Operator relay` lines (each `main` unless the split gives a reason) and a link to the shared lane rules, `passing-notes/docs/lane-rules.md`;
+    3. one `/lane-open <lane> --project <project> --host <claude|codex> --from main -- <brief>` line per work lane; the brief names the lane's purpose, owned paths and first board items.
+  - After the operator approves the table in `main`, `main` commits it path-scoped and runs the `/lane-open` lines: the operator never opens lane windows or pastes starter lines by hand. When this host has no installed `lane-open` skill, say so on the notes line and give one starter line per lane instead.
 
 ## Tone
 
 - No emojis unless the plan uses them. ✅ for shipped status is fine since most plans use it.
 - File/line references use `[path](path)` markdown links.
-- Don't recommend skill invocations gratuitously. **Exceptions:** the `Build` and `Overnight` sub-categories under "Possible next moves" explicitly propose slash commands or `/build-phase` invocations — that's their whole job; `--goal` mode emits `/goal`, `/task-handoff --resume`, and `/user-draft` lines as its deliverable; the board's Next action cells, the `no decision register; run /user-dr` line, the `user-fermize` deep-dive line, the Lanes **Acknowledge** and **Post a note** lines and the `--lanes` draft table and starter lines are deliverables too. `Test` and `Other` use shell commands when commands apply.
+- Don't recommend skill invocations gratuitously. **Exceptions:** the `Build` and `Overnight` sub-categories under "Possible next moves" explicitly propose slash commands or `/build-phase` invocations — that's their whole job; `--goal` mode emits `/goal`, `/task-handoff --resume`, and `/user-draft` lines as its deliverable; the board's Next action cells, the `no decision register; run /user-dr` line, the `user-fermize` deep-dive line, the Lanes **Acknowledge** and **Post a note** lines and the `--lanes` block (card line, draft table and `/lane-open` lines) are deliverables too. `Test` and `Other` use shell commands when commands apply.
 - Don't ask clarifying questions. If the plan is missing or ambiguous, say so in one line and proceed with what you have.
 
 ## Constraints

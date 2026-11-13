@@ -983,8 +983,10 @@ PLANNING_RULES = {
         "- **`--lanes`** — the project's split into lanes",
     ],
     "draft_text_no_write": [
-        "Close **The work** with paste-ready draft text: a draft `docs/lanes/README.md` table",
-        "user-pm writes neither: creating the table and the cards is the operator's act, or a lane window's.",
+        "Close **The work** with one paste-ready block for the `main` lane's window. user-pm writes and runs none of it:",
+        "the draft `docs/lanes/README.md` table",
+        "one `/lane-open <lane> --project <project> --host <claude|codex> --from main -- <brief>` line per work lane",
+        "`main` commits it path-scoped and runs the `/lane-open` lines: the operator never opens lane windows or pastes starter lines by hand.",
         "Lane planning proposes draft text only: it never writes a lanes table, a card, a note or an acknowledgement.",
     ],
     "main_lane": [
