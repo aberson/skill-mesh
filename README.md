@@ -7,7 +7,7 @@ workflow for Claude Code, GitHub Copilot, and OpenAI Codex.**
 - **Explicit quality gates.** Automated checks and fresh-context reviewers inform the result; missing required capabilities stop the workflow.
 - **One contract, three hosts.** 50 Claude skills; 48 also packaged for Copilot and Codex through host adapters.
 
-**[v2.0.4 is released](https://github.com/aberson/skill-mesh/releases/tag/v2.0.4)** ·
+**[v3.0.0 is released](https://github.com/aberson/skill-mesh/releases/tag/v3.0.0)** ·
 [Try it](#install-or-upgrade) · [Browse the skills](documentation/skill-reference.md) ·
 [Detailed workflows](docs/workflows/README.md)
 
@@ -165,7 +165,7 @@ is historical planning, not proof that every proposed caller is wired.
 
 ## Install or upgrade
 
-Download the [v2.0.4 release](https://github.com/aberson/skill-mesh/releases/tag/v2.0.4),
+Download the [v3.0.0 release](https://github.com/aberson/skill-mesh/releases/tag/v3.0.0),
 verify its checksum, and choose one host profile.
 
 **GitHub Copilot (GPT) support is deprecated.** v3.0.0 is the last release that ships the GPT profile. It is included unchanged, so nothing breaks today, but the GPT adapters, the `.github/skills` install target and the GPT build will be removed in the next release. Skill Mesh will then support Claude Code and the OpenAI Codex CLI. If you use the GPT profile, plan to move to one of those.
@@ -196,12 +196,12 @@ for home resolution, collision handling, and legacy migration.
 
 ## Status & adapting
 
-**v2.0.4 adds /user-dr:** build a plain-language decision register for any project.
-It collects open and decided items from plans, seeds and decision records, groups them by
-theme, shows what a theme-level answer would change and which earlier answers it goes
-against, then asks theme-first and records your words. v2.0.3 added /code-consigliere.
-The [release notes](https://github.com/aberson/skill-mesh/releases/tag/v2.0.4)
-record qualification and installation limits.
+**v3.0.0 tidies the catalog and rebuilds /user-pm:** `/user-pm` is the status door for a
+project (verified status, a routed board, lanes); `/user-gateway` routes a vent to every
+skill; build and wrap skills size tests to the change; eleven skills were retired, folded,
+moved or replaced by a script, and `/user-fermize` joined. GitHub Copilot (GPT) support is deprecated and leaves in
+the next release. The [release notes](https://github.com/aberson/skill-mesh/releases/tag/v3.0.0)
+record what changed, the checks that ran and installation limits.
 
 <details>
 <summary><strong>Scope, dependencies, and known limitations</strong></summary>

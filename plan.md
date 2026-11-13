@@ -1,5 +1,30 @@
 # Skill Mesh plan
 
+## Release v3.0.0 - catalog cleanup, user-pm revamp, tests sized to the change (2026-11-13)
+
+Released from `b67ee86`: tag `v3.0.0`, with `origin/main` fast-forwarded from `1fecb8c`. The archive
+`skill-mesh-v3.0.0.zip` holds 1,254 files and has SHA-256
+`4ad16672dca9235bbcc140b952774fbc263c86426908a5c4869760434fa74a64`. Its `CHECKSUMS.txt` covers 407 `dist/` files
+(Claude 137, Codex 135, GPT 135). Catalog: 50 skills, 48 portable and 2 Claude-only. GitHub Copilot (GPT) is
+deprecated; this is the last release that ships the GPT profile.
+
+Gate evidence, an operator-approved named set for this release (release plan Open item 1), on `b67ee86`:
+
+- `python tools/change_pack.py --roster --rc-report`: 678 passed.
+- `tests/package-integrity`: 657 passed. `tests/router`: 66 passed, 1 skipped.
+- The staged package-integrity run inside `release.ps1 -Provider all`: 654 passed, 3 skipped.
+- The full repository-root `python -m pytest` did not run before publication; it is INCOMPLETE. Catalog cleanup
+  Step 19's full run was stopped by operator decision. Under the adopted testing rule the one full sweep runs on
+  the release tree after install, in the background (guard plan Step 14).
+- Independent reviews: the package (release Step 8) PASS, 0 blocking; every v3 row's review is listed in the
+  release entry check.
+
+Installed from the staged `dist/` into the coding root's Claude profile (137 files) and the user home's Codex
+profile (135 files), without `-Force`. The GPT profile was not reinstalled. Installed-equals-released (release
+Step 11): after the known-garbage anchors went red as expected, Claude 137 of 137 and Codex 135 of 135 files are
+identical to an independent rebuild at the tag; 0 differ, 0 missing, 0 real extras, 0 retired-skill leftovers;
+each ledger owns exactly the released set. Evidence: `<coding-root>/docs/skill-mesh-3-review/builds/release-v3.0.0/`.
+
 ## Maintenance - user-build-route rebased onto v2.0.4 (2026-11-12)
 
 The `user-build-route` CREATE and `plan-expedite` UPDATE recorded below (2026-10-31

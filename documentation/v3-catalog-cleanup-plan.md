@@ -675,6 +675,8 @@ the recovery rule applies.
 
 ### Step 20: Install and verify the refreshed profiles
 
+**Status:** DONE 2026-11-13 through release v3.0.0 Step 10 (Claude 137 and Codex 135 files installed without `-Force`) and Step 11 (installed equals released, PASS).
+
 **Problem:** Installed must equal released for the changes to exist for the operator. This needs install authority
 (a real consumer home), which a build step does not have. The installer removes retired skills by its ownership
 ledger; nothing is hand-deleted. `user-fermize` already exists as a personal, unledgered Codex skill and will

@@ -1,5 +1,7 @@
 # Release v3.0.0 (plan)
 
+**Status: RELEASED 2026-11-13.** Tag `v3.0.0` = `b67ee86`; Steps 1-11 done (package review PASS, installed-equals-released PASS); Step 12 close-out in the following docs commit. Gate: the operator-approved named set (Open item 1). Evidence: `<coding-root>/docs/skill-mesh-3-review/builds/release-v3.0.0/`.
+
 > **Amended 2026-11-13, operator decisions:** (1) Row 3 (the catalog gate) counts as done for this release with
 > catalog gate plan Step 8 alone (`dd01309`); its Steps 1 to 7 and 9 to 11 are v3.1 work. In the operator's words:
 > "step 8 should be enough. A catalog gate as the very last step sounds reasonable." Step 1's entry check reads row 3
