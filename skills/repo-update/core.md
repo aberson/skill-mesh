@@ -482,6 +482,22 @@ withholds, it is the only reason reported, even if the branch or default branch 
   `Result: PARTIAL (withheld: on <branch>, expected $DEFAULT_BRANCH)` (for a detached HEAD,
   `on detached HEAD, expected $DEFAULT_BRANCH`) and print the commands for the operator to run.
 
+**Lane inbox (lane windows only).** When neither check withheld Step 9 and the operator declared a
+lane for this window, run the block below once, before anything is staged. The lane and project
+rules, gates, calls, limits and the line are owned by `<repo>/_shared/lane-inbox-hooks.md`; with
+no declared lane, or when Step 9 is withheld, there is no call. Add `--nested` when a delegating
+skill (a `/session-wrap` route) said it already ran its lane inbox check. The placeholders are
+defined in the reference (section 11); `<host>` comes from the provider wrapper.
+
+```text
+lane-inbox-call: repo-update-commit
+python -B <skill-dir>/../_shared/lane_inbox.py inbox --point repo-update-commit --root <project-dir> --host <host> --lane <lane> [--nested]
+```
+
+Print its output (zero or one line, nothing on a tool failure) in the Step 9 narration. It is a
+heads-up for the lane and the operator, not a gate: staging, the commit, Step 10 and Step 11 run
+exactly as below whatever it prints, and it adds no prompt and no `Result:` value.
+
 Add files matching `$STAGE_INCLUDE`. Do NOT stage anything matching `$STAGE_EXCLUDE`.
 
 If nothing is staged, make no commit and continue to Step 10, which still pushes unpushed commits

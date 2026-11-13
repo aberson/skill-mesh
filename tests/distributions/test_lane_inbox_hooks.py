@@ -39,6 +39,7 @@ SHARED_ASSETS = ("lane-inbox-hooks.md", "lane_inbox.py")
 HOOKED = {
     "task-handoff": ("task-handoff-resume",),
     "session-wrap": ("session-wrap-wrap",),
+    "repo-update": ("repo-update-commit",),
 }
 PRIMARY = ("task-handoff-resume", "session-wrap-wrap")
 
@@ -440,3 +441,35 @@ def test_session_wrap_tells_a_delegated_repo_update_it_is_nested(dist, profile):
     core = _core(dist, profile, "session-wrap")
     router = _section(core, "## Git-verb router", "## Rendering contract")
     assert "adds\n  `--nested` and prints nothing" in router.replace("\r\n", "\n")
+
+
+# --------------------------------------------------------------------------- #
+# repo-update (inbox hooks Step 6)
+# --------------------------------------------------------------------------- #
+
+@pytest.mark.parametrize("profile", PROFILES)
+def test_repo_update_call_sits_after_the_withhold_checks_and_before_staging(dist, profile):
+    core = _core(dist, profile, "repo-update").replace("\r\n", "\n")
+    step9 = _section(core, "## Step 9", "## Step 10")
+    ownership = step9.index("- **Ownership.**")
+    branch = step9.index("- **Branch.**")
+    block = step9.index("lane-inbox-call: repo-update-commit")
+    staging = step9.index("Add files matching `$STAGE_INCLUDE`")
+    assert ownership < branch < block < staging
+    flat = " ".join(step9.split())
+    assert "When neither check withheld Step 9" in flat
+    assert "no declared lane, or when Step 9 is withheld, there is no call" in flat
+    assert "lane-inbox" not in _section(core, "## Step 10", None)
+
+
+@pytest.mark.parametrize("profile", PROFILES)
+def test_wrap_delegating_to_repo_update_prints_one_inbox_line(dist, lane, profile):
+    lane.scenario_set({"inbox": {"stdout_file": "inbox-two.txt"}})
+    wrap = fill(block_for(_core(dist, profile, "session-wrap"), "session-wrap-wrap"),
+                dist / profile / "session-wrap", lane.project, profile, state="waiting")
+    nested = fill(block_for(_core(dist, profile, "repo-update"), "repo-update-commit"),
+                  dist / profile / "repo-update", lane.project, profile, nested=True)
+    assert nested[-1] == "--nested"
+    out = run_block(wrap, lane.env) + run_block(nested, lane.env)
+    assert out.count("[lane-inbox]") == 1 and out.count("\n") == 1
+    assert lane.verbs() == ["inbox"]
