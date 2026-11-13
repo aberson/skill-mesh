@@ -199,7 +199,7 @@ a still-frame judge's verdict.
   isolated fixture/store, capture and evidence writes under `/judge-ui`'s own
   contract and the same side-effect gate. Never edit the source block, a
   plan's `## Manual UAT` section (append-only, owned by `/build-phase`), issues, or the
-  `/user-walkthrough` / `/user-shakedown` ledger.
+  `/user-walkthrough` shakedown ledger (either mode).
 - **Verdict ownership:** an `ESCALATED` item stays open until the operator answers it. Never
   record, imply or relay a PASS on the operator's behalf; when the operator answers, apply the
   state-mismatch push-back below. Marking a step or issue complete is the operator's (or a later
@@ -247,11 +247,12 @@ a still-frame judge's verdict.
 - **`/build-phase`, `/build-step`** — their `Type: operator` / "Manual UAT" outputs are exactly
   the blocks `user-uat` is built to execute; `/build-phase`'s final-report cue
   `Please run M<N> next.` runs as `/user-uat <plan>#M<N>`.
-- **`/user-walkthrough`, `/user-shakedown`** — the two operator-acceptance siblings for a
+- **`/user-walkthrough`, `/user-walkthrough --shakedown`** — the two operator-acceptance modes for a
   just-built feature with no clear script yet. `/user-uat` EXECUTES an already-clear script;
   `/user-walkthrough` is operator-DRIVEN exploration (you drive, the agent answers from source /
-  fixes small / logs big); `/user-shakedown` AUTONOMOUSLY CLOSES the resulting UAT ledger to zero
-  open items. Poke a fresh build with a walkthrough/shakedown; run a defined block with user-uat.
+  fixes small / logs big); `/user-walkthrough --shakedown` AUTONOMOUSLY CLOSES the resulting UAT ledger
+  to zero open items. Poke a fresh build with a walkthrough or its shakedown mode; run a defined
+  block with user-uat.
 
 ## Maintenance
 

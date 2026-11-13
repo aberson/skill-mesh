@@ -48,8 +48,9 @@ SKILLS_ROOT = REPO_ROOT / "skills"
 # Step 10 (issue #127); a floor left behind the catalog stops noticing a
 # whole promotion's worth of adapters going missing. Lowered 57 -> 56 by a
 # deliberate, reviewed removal (v3 catalog cleanup Step 7, #263): the catalog
-# itself is 56 there, so the old floor would red on a correct tree.
-MIN_CLAUDE_ADAPTERS = 56
+# itself is 56 there, so the old floor would red on a correct tree. Lowered
+# 56 -> 55 the same way at Step 12 (#268), when the catalog became 55.
+MIN_CLAUDE_ADAPTERS = 55
 
 # The one skill whose adapter deliberately declares itself NOT user-invocable. It is
 # a reference document, not a command. Pinned by name so a regression that flips the

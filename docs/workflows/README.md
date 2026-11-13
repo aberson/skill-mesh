@@ -3,12 +3,12 @@
 
 These diagrams summarize the **Skill Mesh v2.0.4** contracts. Use the
 [skill reference](../../documentation/skill-reference.md) for a compact table
-of all 56 skills, purposes, host coverage and direct diagram links.
+of all 55 skills, purposes, host coverage and direct diagram links.
 
 Each diagram declares its source and omitted detail. The linked source contract
 remains authoritative: a diagram does not authorize an action, bypass a hold,
-or establish live qualification. Claude has all 56 packages; Codex and Copilot
-have the 54 portable packages. Native capability gates still apply.
+or establish live qualification. Claude has all 55 packages; Codex and Copilot
+have the 53 portable packages. Native capability gates still apply.
 
 These diagrams use the same rounded cards, monospace labels, and blue connectors
 as the overview graphics. Blue-bordered **GATE** cards mark decisions; connector
@@ -95,7 +95,6 @@ produces the default Mermaid README rather than this SVG gallery.
 - [user-learn](#user-learn) - After scope approval, build a grounded hands-on learning folder, re-run its artifacts, and report results without committing.
 - [user-pm](#user-pm) - Present shipped work, outstanding plan items, practical next moves, and credible candidates to cut through a product-management lens.
 - [user-project](#user-project) - Set, show, or clear the session-scoped active-project pin that pipeline skills use to resolve their target repository.
-- [user-shakedown](#user-shakedown) - Work through a just-built tool's open shakedown items one at a time, stopping for unknowns and executing approved closure duties.
 - [user-uat](#user-uat) - Classify a clear UAT script, gate side effects, auto-judge supported checks, and escalate irreducible human experience checks.
 - [user-walkthrough](#user-walkthrough) - Guide attended acceptance of a just-built tool, answer from primary evidence, and fix small in-scope issues during the walkthrough.
 - [user-wrap](#user-wrap) - Reorient a returning operator, delegate the verdict to session-wrap, and execute exactly the action owned by that verdict.
@@ -1295,29 +1294,6 @@ Drawn from:
 </picture>
 
 [Open full size](cards/user-project-dark.svg)
-
----
-
-## user-shakedown
-
-Work through a just-built tool's open shakedown items one at a time, stopping for unknowns and executing approved closure duties.
-
-Source: [`user-shakedown.mmd`](user-shakedown.mmd)
-
-Drawn from:
-
-- [`skills/user-shakedown/core.md`](../../skills/user-shakedown/core.md)
-
-**Alt:** A resolved shakedown ledger enters a one-item closure loop, where evidence supports a fix or an explicit stop before autonomous closers run.
-
-**Deliberately not shown:** ledger derivation format, prerequisite list, git safety commands, item-state schema, closer command details, and goal-mode integration
-
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="cards/user-shakedown-dark.svg">
-  <img alt="A resolved shakedown ledger enters a one-item closure loop, where evidence supports a fix or an explicit stop before autonomous closers run." src="cards/user-shakedown-light.svg">
-</picture>
-
-[Open full size](cards/user-shakedown-dark.svg)
 
 ---
 

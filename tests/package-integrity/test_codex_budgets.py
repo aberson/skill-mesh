@@ -231,7 +231,7 @@ def test_whole_catalog_initial_list_estimate_is_under_the_unknown_context_floor(
     # out of the estimate can never make the floor easier to fit.
     portable_names = {s["name"] for s in _load_manifest()["skills"]
                       if s["status"] == "portable"}
-    assert len(sizes) == 54
+    assert len(sizes) == 53
     assert set(sizes) == portable_names
     assert _fits_under_floor(total), (
         f"Codex initial-list estimate {total} chars over {len(sizes)} skills exceeds "
@@ -267,12 +267,12 @@ def test_catalog_estimate_basis_is_eligibility_not_the_authored_roster():
     eligible = {s["name"] for s in _codex_eligible_records()}
     portable = {s["name"] for s in manifest["skills"] if s["status"] == "portable"}
     assert eligible == portable
-    assert len(eligible) == manifest["counts"]["portable"] == 54
+    assert len(eligible) == manifest["counts"]["portable"] == 53
     # Since Step 8 every eligible record is also authored -- the pass-2 exit fact --
     # and the coincidence is asserted so a dropped adapter cannot hide behind it.
     authored = {s["name"] for s in manifest["skills"] if "codex" in s["providers"]}
     assert authored == eligible
-    assert len(authored) == manifest["counts"]["codex"] == 54
+    assert len(authored) == manifest["counts"]["codex"] == 53
     # The synthetic-manifest pin: predicates disagree, eligibility must win.
     synthetic = {"skills": [
         {"name": "future-portable", "status": "portable", "description": "d",
@@ -285,7 +285,7 @@ def test_catalog_estimate_basis_is_eligibility_not_the_authored_roster():
         "the estimate's membership predicate drifted off eligibility "
         f"(status == portable): got {sorted(basis)}")
     total, sizes = _catalog_estimate()
-    assert len(sizes) == 54
+    assert len(sizes) == 53
     assert total > 0
 
 
@@ -399,7 +399,7 @@ def test_step6_cohort_is_authored_and_every_authored_record_fits_the_per_skill_c
     # issue #124) + Cohort D's fourteen (Step 8, issue #125) + Step 10's seven
     # promotions (issue #127) -- the full portable catalog. Spelled, so any step that
     # grows the roster must come here and state its new number.
-    assert len(authored) == manifest["counts"]["codex"] == 54
+    assert len(authored) == manifest["counts"]["codex"] == 53
     offenders = []
     for name, rec in authored.items():
         size = _utf8_len(_skill_metadata_serialization(name, rec["description"]))
@@ -453,13 +453,15 @@ def test_step7_cohort_is_authored_and_every_authored_record_fits_the_per_skill_c
 # memory-distill, a Dev Observatory doctor, research-prospect, and the user-* conversational
 # family. SPELLED for the same reason as the two cohorts above: the sweep must grade
 # the step's actual roster, not whatever the manifest happens to declare. The v3
-# catalog cleanup retired the Lavish Editor presentation skill (plan Step 2, #258) and
-# moved the doctor to dev-observatory (plan Step 7, #263), so both leave the list.
+# catalog cleanup retired the Lavish Editor presentation skill (plan Step 2, #258),
+# moved the doctor to dev-observatory (plan Step 7, #263) and folded the autonomous
+# shakedown skill into user-walkthrough --shakedown (plan Step 12, #268), so all three
+# leave the list.
 STEP8_COHORT_D = [
     "memory-distill", "research-prospect",
     "user-afterparty", "user-brainstorm", "user-debug", "user-draft",
     "user-gateway", "user-learn", "user-pm",
-    "user-shakedown", "user-uat", "user-walkthrough",
+    "user-uat", "user-walkthrough",
 ]
 
 # The seven workspace-custom skills promoted into the canonical catalog at Phase CP

@@ -6,15 +6,15 @@
 > Fixture results below are historical until explicitly rerun for the candidate.
 
 Single source of truth for the **shakedown ledger**: the append-only status table that
-`/user-walkthrough` (attended, operator-driven) and `/user-shakedown` (autonomous closure)
-both read and write, and that a `/goal` condition mechanically checks each turn. Both skills
-**cite this file**; neither redefines the grammar below. Three consumers must agree on the
-ledger â€” two skills plus the `/goal` zero-open check â€” so the grammar, slug rule, and check
+`/user-walkthrough`'s two modes, attended (operator-driven) and `--shakedown` (autonomous
+closure), both read and write, and that a `/goal` condition mechanically checks each turn. Both
+modes **cite this file**; neither redefines the grammar below. Three consumers must agree on the
+ledger â€” two modes plus the `/goal` zero-open check â€” so the grammar, slug rule, and check
 command live here **once** (per `code-quality.md Â§ "One source of truth for data-shape
-constants"`). When any grammar below changes, grep both skills +
+constants"`). When any grammar below changes, grep the skill (both modes) +
 this file before landing.
 
-Cited by: `.claude/skills/user-walkthrough/SKILL.md`, `.claude/skills/user-shakedown/SKILL.md`.
+Cited by: `.claude/skills/user-walkthrough/SKILL.md` (both modes).
 
 ---
 
@@ -47,12 +47,12 @@ ledger to compensate. Apply the same validation to a replacement argument. Examp
 | `Export Button` | `export-button` | `shakedown-export-button.md` |
 | `pta_finance M1` | `pta-finance-m1` | `shakedown-pta-finance-m1.md` |
 
-This rule is **stated once here** so BOTH skills resolve the **same** file for the same
-feature â€” that file identity is exactly what lets a `/user-walkthrough` hand a half-filled
-ledger to `/user-shakedown` mid-stream. If the two skills computed different slugs, the handoff
+This rule is **stated once here** so BOTH modes resolve the **same** file for the same
+feature â€” that file identity is exactly what lets an attended `/user-walkthrough` hand a half-filled
+ledger to `/user-walkthrough --shakedown` mid-stream. If the two modes computed different slugs, the handoff
 would silently start a fresh ledger.
 
-**Invoke both skills with the same argument.** The slug keys off the raw argument, so a near-miss
+**Invoke both modes with the same argument.** The slug keys off the raw argument, so a near-miss
 (`"Export Button"` vs `"the export button"` â†’ `export-button` vs `the-export-button`) would
 silently start a second ledger. Safety net for the derive path: before deriving a fresh
 ledger, glob `<git-root>/.claude/task-state/shakedown-*.md`. Load an exact slug match first.
@@ -161,7 +161,8 @@ keeps the result non-zero; headings and ordinary context remain outside the boun
 
 ### Canonical /goal string
 
-Defined here once; `/user-walkthrough` emits it at wrap, `/user-shakedown` terminates on it:
+Defined here once; the attended `/user-walkthrough` emits it at wrap, `/user-walkthrough --shakedown`
+terminates on it:
 
 ```
 /goal "shakedown ledger for <feature-slug> has zero open items"
@@ -173,8 +174,8 @@ The condition is checkable every turn by running the block above and asserting `
 
 ## 4. Checklist derivation (idempotent â€” load before derive)
 
-**If the ledger file already exists, LOAD it as-is. Never re-seed.** A `/user-shakedown` must be
-able to pick up a `/user-walkthrough`'s ledger, and re-derivation would duplicate rows. Derive
+**If the ledger file already exists, LOAD it as-is. Never re-seed.** A `/user-walkthrough --shakedown` run must be
+able to pick up an attended walkthrough's ledger, and re-derivation would duplicate rows. Derive
 **only when the file is absent**:
 
 1. **Locate the feature's canonical entry plan:** prefer `docs/plans/master_plan.md`.

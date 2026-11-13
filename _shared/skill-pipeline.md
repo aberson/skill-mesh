@@ -32,7 +32,7 @@ Entry condition = what the operator's fragment sounds like.
 | **do** | "just do X" — a resolved atom / small concrete task | `/goblin-do` (atoms come from `/goblin-suggest`) |
 | **plan** | "add / build capability X" — multi-step work needing steps + review | `/plan-feature` (or `/plan-init` for a brand-new project) → `/plan-expedite` → `/build-phase` → `/repo-update` (the build rail — detail below) |
 | **investigate** | "what's true about X? why does X happen?" — a question, not yet work | `/deep-research` via `Workflow({name: "deep-research-pinned"})` (never the built-in name — CLAUDE.md's dispatch rule) for external/multi-source; an Explore-agent sweep for codebase-local questions |
-| **verify** | "does X actually work? / I don't trust X" — distrust without a reproducible symptom | `/review-uat` (refine a fuzzy block) / `/user-uat` (mechanical tier) / `/user-shakedown` (autonomous closure) / `/user-walkthrough` (attended) — four-mode detail below |
+| **verify** | "does X actually work? / I don't trust X" — distrust without a reproducible symptom | `/review-uat` (refine a fuzzy block) / `/user-uat` (mechanical tier) / `/user-walkthrough --shakedown` (autonomous closure) / `/user-walkthrough` (attended) — four-mode detail below |
 | **trim** | "the plan feels bloated / what can we cut" — plan-borne cruft-smell | `/plan-trim` (plan documents only; non-plan cruft-smell routes **investigate** first — assess, then `investigate→plan` or `investigate→do`) |
 | **decide** | "should we do A or B?" — an operator-only choice | surfaced-only: parked with the open question stated; never ground through autonomously |
 | **draft** | "here are rough thoughts" — wants a usable prompt or goal, not work done | `/user-draft` → `/goal` |
@@ -141,7 +141,7 @@ for high-stakes steps; `/plan-review` §27 routes those steps at plan time.
 
 ## Post-build operator acceptance (verify rail detail)
 
-Four modes: `/user-uat` EXECUTES an already-clear UAT block; `/review-uat` REFINES a fuzzy one; `/user-walkthrough` lets the operator DRIVE exploration of a just-built feature (agent answers from source, fixes small, logs big, marks coverage); `/user-shakedown` AUTONOMOUSLY CLOSES the shared UAT ledger to zero open items (designed to run armed under `/goal`). The walkthrough/shakedown pair share one ledger contract: `shakedown-engine.md`.
+Four modes: `/user-uat` EXECUTES an already-clear UAT block; `/review-uat` REFINES a fuzzy one; `/user-walkthrough` lets the operator DRIVE exploration of a just-built feature (agent answers from source, fixes small, logs big, marks coverage); `/user-walkthrough --shakedown` AUTONOMOUSLY CLOSES the shared UAT ledger to zero open items (designed to run armed under `/goal`). The walkthrough's two modes share one ledger contract: `shakedown-engine.md`.
 
 Visual tier: `/user-uat --ui` delegates single-frame screen states to `/judge-ui`. Transition-shaped steps (route change, modal open/close, loading-to-content swap, hover/focus animation) stay manual-check steps in `Needs you`; motion checks live in each project's own skills.
 

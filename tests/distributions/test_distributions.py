@@ -3278,12 +3278,13 @@ COHORT_C_CODEX_SKILLS = ["build-phase", "build-queue", "build-step", "goblin-do"
                          "test-prune", "tier-escalate", "tier-offload"]
 # Cohort D, the remainder of the then-portable catalog (Phase CP Step 8, issue #125)
 # -- with it the declared roster became the portable roster, all 47. The v3 catalog
-# cleanup retired its Lavish Editor presentation skill (plan Step 2, #258) and moved
-# its Dev Observatory doctor to dev-observatory (plan Step 7, #263).
+# cleanup retired its Lavish Editor presentation skill (plan Step 2, #258), moved
+# its Dev Observatory doctor to dev-observatory (plan Step 7, #263) and folded its
+# autonomous shakedown skill into user-walkthrough --shakedown (plan Step 12, #268).
 COHORT_D_CODEX_SKILLS = ["memory-distill", "research-prospect",
                          "user-afterparty", "user-brainstorm", "user-debug",
                          "user-draft", "user-gateway",
-                         "user-learn", "user-pm", "user-shakedown", "user-uat",
+                         "user-learn", "user-pm", "user-uat",
                          "user-walkthrough"]
 # The seven workspace-custom skills promoted at Phase CP Step 10 (issue #127). Not a
 # cohort in the earlier sense: these are NEW catalog members authored core-plus-three-
@@ -3324,8 +3325,9 @@ def test_codex_profile_holds_exactly_the_declared_cohorts_for_the_committed_mani
     authorized user-build-route addition to fifty-seven; retiring the orientation skill
     into user-pm brought it to fifty-six, retiring the Lavish Editor presentation skill
     to fifty-five, moving the portfolio-block proposer out to fifty-four, creating
-    user-fermize back to fifty-five, and moving the Dev Observatory doctor out to
-    fifty-four. It
+    user-fermize back to fifty-five, moving the Dev Observatory doctor out to
+    fifty-four, and folding the autonomous shakedown skill into user-walkthrough to
+    fifty-three. It
     grades the whole emission contract for the real cohorts at once,
     because the parts are only correct together: a launcher without its co-located
     core.md is a package Codex can list and cannot run, and an unstamped file is one
@@ -3334,7 +3336,7 @@ def test_codex_profile_holds_exactly_the_declared_cohorts_for_the_committed_mani
     out = tmp_path / "out"
     r = _build(out, provider="codex")
     assert r.returncode == 0, f"{r.stdout}\n{r.stderr}"
-    assert "(54 skills," in r.stdout, r.stdout
+    assert "(53 skills," in r.stdout, r.stdout
     # The manifest declares exactly the spelled cohorts...
     assert sorted(_codex_skills()) == DECLARED_CODEX_SKILLS, _codex_skills()
     # ...and the emitted tree IS that roster: no extra skill dir, none missing. The
@@ -3365,7 +3367,8 @@ def test_codex_profile_rerun_over_the_committed_manifest_is_byte_identical(tmp_p
     """Determinism on the REAL cohort, not only on the fixture skill.
 
     The fixture-repo determinism test upstream drives one synthetic skill; this one
-    drives the fifty-four committed adapters plus the shared payload their cores
+    drives every committed codex adapter (fifty-three at v3 cleanup Step 12) plus the
+    shared payload their cores
     pull in, which is the tree an operator actually installs at the M-steps.
     """
     first, second = tmp_path / "a", tmp_path / "b"

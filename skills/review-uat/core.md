@@ -280,7 +280,7 @@ These are the patterns that recur. Treat them as a checklist when scanning a dra
 - **`/user-draft`** — overlapping ambiguity-hunting discipline; the heuristics table here borrows from user-draft's "weak verbs" finding.
 - **`/plan-review`** — the build-step counterpart. plan-review covers what gets built; review-uat covers what humans verify after build.
 - **`/repo-update`** — if the refined UAT gets applied (`--apply`), repo-update is the natural follow-up to commit + push the doc change; this skill never commits.
-- **`/user-walkthrough`, `/user-shakedown`** — the sibling operator-acceptance modes. `/review-uat` REFINES a fuzzy script; `/user-walkthrough` lets the operator DRIVE exploration of a fresh build (agent answers from source, fixes small, logs big); `/user-shakedown` AUTONOMOUSLY CLOSES the resulting ledger to zero open items. Refine a script with review-uat; poke a build with the walkthrough/shakedown pair.
+- **`/user-walkthrough`, `/user-walkthrough --shakedown`** — the sibling operator-acceptance modes. `/review-uat` REFINES a fuzzy script; `/user-walkthrough` lets the operator DRIVE exploration of a fresh build (agent answers from source, fixes small, logs big); `/user-walkthrough --shakedown` AUTONOMOUSLY CLOSES the resulting ledger to zero open items. Refine a script with review-uat; poke a build with the walkthrough or its shakedown mode.
 
 ## Maintenance
 

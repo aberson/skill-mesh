@@ -1,7 +1,7 @@
 {
   "schema": "show-your-work.workflows.v1",
   "generator": "show-your-work 0.1.0",
-  "generated_at": "2026-11-13T10:26:47+00:00",
+  "generated_at": "2026-11-13T17:47:47+00:00",
   "source_dir": "docs/workflows",
   "items": [
     {
@@ -729,20 +729,6 @@
       ],
       "source_path": "docs/workflows/user-project.mmd",
       "source_sha256": "1c8165f125badc8b810b1306f4ae7763b03544d92d694d003788fd11a6289b60",
-      "engine": "mermaid",
-      "rasters": null
-    },
-    {
-      "id": "user-shakedown",
-      "label": "user-shakedown",
-      "summary": "Work through a just-built tool's open shakedown items one at a time, stopping for unknowns and executing approved closure duties.",
-      "alt": "A resolved shakedown ledger enters a one-item closure loop, where evidence supports a fix or an explicit stop before autonomous closers run.",
-      "not_shown": "ledger derivation format, prerequisite list, git safety commands, item-state schema, closer command details, and goal-mode integration",
-      "sources": [
-        "skills/user-shakedown/core.md"
-      ],
-      "source_path": "docs/workflows/user-shakedown.mmd",
-      "source_sha256": "d6c909f852bb809f4c53c55f9d9a12da270b1c48854fb5b1b15ee2c97c445598",
       "engine": "mermaid",
       "rasters": null
     },

@@ -1,16 +1,16 @@
 {
   "note": "Authoritative expected inventory for package-integrity tests. Committed so the public package tests need no private/legacy source. Regenerate with tools/gen_manifest.py.",
   "counts": {
-    "total": 56,
-    "portable": 54,
+    "total": 55,
+    "portable": 53,
     "provider_native": 2,
-    "claude": 56,
-    "gpt": 54,
-    "codex": 54,
-    "local_capable": 19,
+    "claude": 55,
+    "gpt": 53,
+    "codex": 53,
+    "local_capable": 18,
     "sub_agent": 19,
     "vision": 1,
-    "filesystem": 56
+    "filesystem": 55
   },
   "portable": [
     "build-phase",
@@ -63,7 +63,6 @@
     "user-learn",
     "user-pm",
     "user-project",
-    "user-shakedown",
     "user-uat",
     "user-walkthrough",
     "user-wrap"
@@ -123,7 +122,6 @@
     "user-learn",
     "user-pm",
     "user-project",
-    "user-shakedown",
     "user-uat",
     "user-walkthrough",
     "user-wrap"
@@ -145,7 +143,6 @@
     "user-draft",
     "user-gateway",
     "user-pm",
-    "user-shakedown",
     "user-walkthrough",
     "user-wrap"
   ],
@@ -1224,26 +1221,6 @@
         "legacy_gpt": ".claude/skills-gpt/user-project/SKILL-gpt.md"
       },
       "support_assets": []
-    },
-    {
-      "name": "user-shakedown",
-      "status": "portable",
-      "local_capable": true,
-      "capabilities": [
-        "filesystem"
-      ],
-      "migration": {
-        "legacy_core": ".claude/skills-gpt/user-shakedown/SKILL-core.md",
-        "legacy_claude_launcher": ".claude/skills/user-shakedown/SKILL.md",
-        "legacy_claude_adapter": ".claude/skills/user-shakedown/SKILL-claude.md",
-        "legacy_gpt": ".claude/skills-gpt/user-shakedown/SKILL-gpt.md"
-      },
-      "support_assets": [
-        {
-          "source": ".claude/skills/user-shakedown/evals/",
-          "dest": "skills/user-shakedown/evals/"
-        }
-      ]
     },
     {
       "name": "user-uat",
