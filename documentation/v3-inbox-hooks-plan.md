@@ -198,6 +198,8 @@ Afternoon sheet answers (operator, 2026-11-12 22:29 clock, "BQ1 yes", defaults):
 ## Steps
 
 ### Step 1: Shared hook contract reference
+
+**Status:** DONE 2026-11-13. Commit b6d879b; correction e8aaffa (card-refresh escape guard and UTF-8 tool output). Reviewed APPROVE after one correction round (`<coding-root>/docs/skill-mesh-3-review/builds/inbox-hooks-review.md`); focused tests plus the per-change pack under the adopted testing rule.
 - **Problem:** Four skills need the same lane and inbox behavior on two hosts. If each core restates it, the copies drift, which the workspace's one-owner rule forbids. The lane, gating and failure semantics also need one reviewed home before any core cites them.
 - **Type:** code
 - **Issue:**
@@ -213,6 +215,8 @@ Afternoon sheet answers (operator, 2026-11-12 22:29 clock, "BQ1 yes", defaults):
 - **Depends on:** none (written from the documented contract; D2 refines it)
 
 ### Step 2: Lane inbox helper, unit tests and payload wiring
+
+**Status:** DONE 2026-11-13. Commit cf222dd; correction e8aaffa (card-refresh escape guard and UTF-8 tool output). Reviewed APPROVE after one correction round (`<coding-root>/docs/skill-mesh-3-review/builds/inbox-hooks-review.md`); focused tests plus the per-change pack under the adopted testing rule.
 - **Problem:** A hook described only in Markdown is run differently by each model and host and cannot be unit-tested. The parsing, sanitizing, gating and card read-merge-write must behave identically on Claude and Codex, and the failure text of another program must not reach the operator.
 - **Type:** code
 - **Issue:**
@@ -228,6 +232,8 @@ Afternoon sheet answers (operator, 2026-11-12 22:29 clock, "BQ1 yes", defaults):
 - **Depends on:** 1, D4
 
 ### Step 3: `task-handoff` UPDATE (resume and start)
+
+**Status:** DONE 2026-11-13. Commit b8aba5c; correction e8aaffa (card-refresh escape guard and UTF-8 tool output). Reviewed APPROVE after one correction round (`<coding-root>/docs/skill-mesh-3-review/builds/inbox-hooks-review.md`); focused tests plus the per-change pack under the adopted testing rule.
 - **Problem:** A lane window that starts or resumes does not look at its inbox or publish its card, so the operator relays "a note is waiting" by hand.
 - **Type:** code
 - **Issue:**
@@ -243,6 +249,8 @@ Afternoon sheet answers (operator, 2026-11-12 22:29 clock, "BQ1 yes", defaults):
 - **Depends on:** 2, D4
 
 ### Step 4: `session-wrap` UPDATE (wrap, card update) and representative report
+
+**Status:** DONE 2026-11-13. Commit d455eb3; correction e8aaffa (card-refresh escape guard and UTF-8 tool output). Reviewed APPROVE after one correction round (`<coding-root>/docs/skill-mesh-3-review/builds/inbox-hooks-review.md`); focused tests plus the per-change pack under the adopted testing rule.
 - **Problem:** At a wrap, a waiting note should surface in the digest and the lane's card should say where the lane stands, or the next window and the operator learn it by asking.
 - **Type:** code
 - **Issue:**
@@ -259,6 +267,8 @@ Afternoon sheet answers (operator, 2026-11-12 22:29 clock, "BQ1 yes", defaults):
 - **Depends on:** 2, 3, D4
 
 ### Step 5: `build-step` UPDATE (before landing)
+
+**Status:** DONE 2026-11-13. Commit 238c207; correction e8aaffa (card-refresh escape guard and UTF-8 tool output). Reviewed APPROVE after one correction round (`<coding-root>/docs/skill-mesh-3-review/builds/inbox-hooks-review.md`); focused tests plus the per-change pack under the adopted testing rule.
 - **Problem:** `build-step` lands a payload into the operator tree. Another lane may own a path in it, and a note announcing a reservation or change would be missed while the run is long. The line cannot stop the landing, so its value is a heads-up, and the signed verdict summary that `build-phase` reads must not change.
 - **Type:** code
 - **Issue:**
@@ -274,6 +284,8 @@ Afternoon sheet answers (operator, 2026-11-12 22:29 clock, "BQ1 yes", defaults):
 - **Depends on:** 2, D4 (independent of Steps 3 and 4 except for the shared helper). Kept separate from Step 6 because this step carries the verdict-grammar risk
 
 ### Step 6: `repo-update` UPDATE (before the commit)
+
+**Status:** DONE 2026-11-13. Commit f66410b; correction e8aaffa (card-refresh escape guard and UTF-8 tool output). Reviewed APPROVE after one correction round (`<coding-root>/docs/skill-mesh-3-review/builds/inbox-hooks-review.md`); focused tests plus the per-change pack under the adopted testing rule.
 - **Problem:** `repo-update` commits and pushes docs and may touch paths another lane owns, with no look at the board. The line cannot stop the commit; it is a heads-up.
 - **Type:** code
 - **Issue:**
@@ -287,6 +299,8 @@ Afternoon sheet answers (operator, 2026-11-12 22:29 clock, "BQ1 yes", defaults):
 - **Depends on:** 2, D4
 
 ### Step 8: Workspace convention amendment (private workspace repository; outside the build sequence)
+
+**Status:** OPEN (operator). Operator step in the private workspace; not done by the build.
 - **Problem:** The advisory-call convention is the one owner of hookup shape. These hooks are a new advisory tool (`passing-notes`) with one documented deviation, and a second description of that deviation would break the one-owner rule. Both files live in the operator's private workspace repository, not in this one, so a skill-mesh build step cannot land them (a payload outside the plan's own repository is a scope escape, and `repo-sync` would open a public issue for private work).
 - **Type:** operator (run in the workspace repository by its own flow; the produced files are Markdown, not code; **not part of the skill-mesh build-phase sequence and not part of the phase-end Manual UAT bundle (it is work, not observation)**, and no other step depends on it)
 - **Issue:** none (no skill-mesh issue is created for it)
@@ -300,6 +314,8 @@ Afternoon sheet answers (operator, 2026-11-12 22:29 clock, "BQ1 yes", defaults):
 - **Depends on:** 1 (a timing note only; it gates no build step)
 
 ### Step 9: Real-tool conformance capture and fixture swap
+
+**Status:** DONE 2026-11-13. Commit 2cafc71; correction e8aaffa (card-refresh escape guard and UTF-8 tool output). Reviewed APPROVE after one correction round (`<coding-root>/docs/skill-mesh-3-review/builds/inbox-hooks-review.md`); focused tests plus the per-change pack under the adopted testing rule.
 - **Problem:** Step 2 closes on stubs written from the documented contract. A mocked tool can disagree with the real one while every test stays green, and some outputs (inbox lines, `card show`, the missing-card result) are documented only in the tool's source. Operator steps may not produce committed code artifacts, so this step is code; the live cross-host observation stays the operator's Step 10 (Decided item 48).
 - **Type:** code
 - **Issue:**
@@ -314,6 +330,8 @@ Afternoon sheet answers (operator, 2026-11-12 22:29 clock, "BQ1 yes", defaults):
 - **Depends on:** 2 (D1 is met; this step can run as soon as Step 2 lands)
 
 ### Step 10: Cross-host acceptance handoff
+
+**Status:** OPEN (operator). Needs the operator and live hosts; not done by the build.
 - **Problem:** The hooks are only proven when a real Claude lane and a real Codex lane exchange notes through them. That is Passing Notes' Step 4 (issue #2, Manual UAT M1; its Step 3 headless smoke already passed), and the Codex window-token self-proof has never run inside a live Codex thread.
 - **Type:** operator
 - **Issue:**
