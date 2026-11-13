@@ -3482,7 +3482,7 @@ def test_cd_installed_helpers_execute_outside_source(cd_installed, tmp_path, mon
     assert audit["aggregated_verdict"]["result"] == "PASS"
 
 
-@pytest.mark.parametrize("mutation", ["missing", "duplicate", "extra", "malformed", "skipped", "duplicate-key", "pass-with-nit"])
+@pytest.mark.parametrize("mutation", ["missing", "duplicate", "extra", "malformed", "skipped", "duplicate-key", "pass-with-block"])
 def test_cd_installed_recipe_rejects_raw_invalid_sets(cd_installed, tmp_path, mutation):
     lenses = _cd_lenses()
     if mutation == "missing":
@@ -3495,8 +3495,8 @@ def test_cd_installed_recipe_rejects_raw_invalid_sets(cd_installed, tmp_path, mu
         lenses[0]["findings"] = None
     elif mutation == "skipped":
         lenses[-1]["overall_verdict"] = "SKIPPED"
-    elif mutation == "pass-with-nit":
-        lenses[1]["findings"] = [{"severity": "Nit", "file_line": "sum.py:1",
+    elif mutation == "pass-with-block":
+        lenses[1]["findings"] = [{"severity": "Block", "file_line": "sum.py:1",
                                   "excerpt": "a + b", "rationale": "retained mismatch"}]
     reports = [json.dumps(v) for v in lenses]
     if mutation == "duplicate-key":
@@ -3505,6 +3505,18 @@ def test_cd_installed_recipe_rejects_raw_invalid_sets(cd_installed, tmp_path, mu
         _cd_recipe(cd_installed)(cd_installed, reports, plan_step="proof-plan.md:1", invocation=_cd_invocation(),
                                 timestamp="2026-09-23T10-00-00", output_dir=tmp_path / "audit")
     assert not (tmp_path / "audit").exists()
+
+
+def test_cd_installed_recipe_passes_a_pass_lens_with_an_advisory_nit(cd_installed, tmp_path):
+    """Nit is advisory: a PASS lens may carry one, the run still PASSes, and
+    the Nit stays in the sidecar and the rendered report."""
+    lenses = _cd_lenses()
+    lenses[4]["findings"] = [{"severity": "Nit", "file_line": "sum.py:1",
+                              "excerpt": "a + b", "rationale": "naming deviates from neighbours"}]
+    _, audit, rendered = _cd_aggregate(cd_installed, lenses, tmp_path / "audit")
+    assert audit["aggregated_verdict"]["result"] == "PASS"
+    assert [f["severity"] for f in audit["lens_verdicts"][4]["findings"]] == ["Nit"]
+    assert "### Nit" in rendered
 
 
 @pytest.mark.parametrize("verdict", ["NEEDS-WORK", "NO-EVIDENCE", "FAILED", "UNCERTAIN", "NEEDS-CLARIFICATION"])

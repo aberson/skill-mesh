@@ -31,6 +31,15 @@ first (a recorded mechanical `fail`, the current lens dir, or the stricter
 lane was dropped and the run gave PASS). Every single-value option given
 twice -- in the `--opt value` or the `--opt=value` form -- must exit 2 with no
 sidecar, while the same option given once still parses.
+
+Nit policy (operator decision 2026-11-13): only a Block fails a round. A
+medium-severity bug is a Block; the remaining Nits are advisory -- reported,
+never blocking, at any count (no Nit tolerance). A PASS lens may therefore
+carry Nit findings, the run still PASSes and the Nits stay in the sidecar and
+the report, while a PASS lens holding a Block stays NEEDS-WORK. The core's
+rubric row, its six per-lens threshold paragraphs, its ladder and
+build-step's deep-lane sentence are pinned below so a later edit cannot
+silently bring the old "any Nit fails the lens" rule back.
 """
 
 import importlib.util
@@ -268,7 +277,122 @@ def test_pass_lens_with_block_cannot_be_laundered_by_lint_dedup(tmp_path):
                               "rationale": "reset sets the wrong value"}]
     lint = [{"tool": "ruff", "rule": "F841", "file_line": "counter.py:3", "message": "stale"}]
     sidecar, stdout = _run(tmp_path, lenses, lint=lint)
-    _assert_needs_work(sidecar, stdout, "PASS lens carries Block/Nit findings: bugs")
+    _assert_needs_work(sidecar, stdout, "PASS lens carries Block findings: bugs")
+
+
+# ---------------------------------------------------------------- Nit is advisory (2026-11-13)
+
+_STYLE_NIT = {"severity": "Nit", "file_line": "counter.py:5", "excerpt": "resetCount = 0",
+              "rationale": "camelCase where the neighbours use snake_case"}
+
+
+def test_nit_only_pass_lens_passes_and_the_nit_is_still_reported(tmp_path):
+    """Was: a PASS lens carrying a Nit was a lens-set problem (NEEDS-WORK).
+    Now the Nit is advisory: the run PASSes and the Nit is listed."""
+    lenses = _six()
+    lenses[4]["findings"] = [dict(_STYLE_NIT)]
+    sidecar, stdout = _run(tmp_path, lenses)
+    result = sidecar["aggregated_verdict"]
+    assert result["result"] == "PASS", result
+    assert "1 Nit finding (advisory)" in result["rationale"], result["rationale"]
+    style = next(v for v in sidecar["lens_verdicts"] if v["lens_id"] == "style")
+    assert [f["severity"] for f in style["findings"]] == ["Nit"]
+    assert stdout.startswith("# review-deep: PASS\n"), stdout[:200]
+    assert "### Nit" in stdout and "resetCount = 0" in stdout, stdout
+
+
+def test_nits_across_lenses_never_reach_a_tolerance(tmp_path):
+    """Was: an aggregated Nit count of 3 or more was NEEDS-WORK. There is no
+    Nit tolerance now: five Nits on five PASS lenses still PASS."""
+    lenses = _six()
+    for index in range(5):
+        lenses[index]["findings"] = [dict(_STYLE_NIT, file_line=f"counter.py:{index + 1}")]
+    sidecar, stdout = _run(tmp_path, lenses)
+    result = sidecar["aggregated_verdict"]
+    assert result["result"] == "PASS", result
+    assert "5 Nit findings (advisory)" in result["rationale"], result["rationale"]
+    assert stdout.startswith("# review-deep: PASS\n"), stdout[:200]
+    assert "### Nit" in stdout and stdout.count("resetCount = 0") == 5, stdout
+
+
+def test_pass_lens_with_a_block_and_a_nit_is_needs_work(tmp_path):
+    lenses = _six()
+    lenses[1]["findings"] = [dict(_STYLE_NIT), {"severity": "Block", "file_line": "counter.py:3",
+                                                "excerpt": "count = 1", "rationale": "reset sets the wrong value"}]
+    sidecar, stdout = _run(tmp_path, lenses)
+    _assert_needs_work(sidecar, stdout, "PASS lens carries Block findings: bugs")
+
+
+CORE = REPO_ROOT / "skills" / "review-deep" / "core.md"
+BUILD_STEP_CORE = REPO_ROOT / "skills" / "build-step" / "core.md"
+
+
+def _rubric_row(text, severity):
+    rows = [line for line in text.splitlines() if line.startswith(f"| `{severity}` |")]
+    assert len(rows) == 1, (severity, rows)
+    return rows[0]
+
+
+def test_core_rubric_makes_a_medium_severity_bug_a_block_and_nit_advisory():
+    text = CORE.read_text(encoding="utf-8")
+    block, nit = _rubric_row(text, "Block"), _rubric_row(text, "Nit")
+    assert "Bug with high or medium severity" in block, block
+    assert "medium" not in nit.lower(), nit
+    assert "bug" not in nit.lower(), nit
+    assert "Advisory" in nit and "never blocks" in nit, nit
+    for kept in ("Convention deviation", "test redundancy", "suboptimal but functional code"):
+        assert kept in nit, (kept, nit)
+    # The Bugs lens rubric puts the medium blast radius under Block too.
+    bugs = text.split("### Bugs lens", 1)[1].split("### Security lens", 1)[0]
+    rubric = " ".join(bugs.split("**Severity rubric:**", 1)[1].split("**Output format:**", 1)[0].split())
+    assert rubric.startswith("`Block` if the bug has high blast radius"), rubric
+    assert "or medium blast radius (degraded UX, error in rare path)" in rubric.split("`Nit`", 1)[0], rubric
+
+
+def test_core_correctness_lens_makes_a_missed_implied_edge_case_a_block():
+    """Operator decision 2026-11-13: a diff that does what is asked but misses
+    an edge case the prompt implies is a Block, not an advisory Nit."""
+    text = CORE.read_text(encoding="utf-8")
+    lens = text.split("### Correctness lens", 1)[1].split("### Bugs lens", 1)[0]
+    rubric = " ".join(lens.split("**Severity rubric:**", 1)[1].split("**Output format:**", 1)[0].split())
+    block, _, nit = rubric.partition("`Nit`")
+    assert block.startswith("`Block` if the diff fails to do what its prompt claims"), rubric
+    assert "misses an edge case the prompt implies" in block, rubric
+    assert "misses an edge case" not in nit, rubric
+    assert "(advisory)" in nit, rubric
+
+
+def test_core_verdict_threshold_is_block_only_and_uniform_across_six_lenses():
+    text = CORE.read_text(encoding="utf-8")
+    marker = "**Verdict threshold (uniform across all six lenses).**"
+    paragraphs = [line for line in text.splitlines() if line.startswith(marker)]
+    assert len(paragraphs) == 6, len(paragraphs)
+    base = paragraphs[0]
+    for paragraph in paragraphs[1:]:
+        assert paragraph.startswith(base), paragraph  # Plan-conformance only appends
+    assert "zero `Block` entries (`Nit` and `FYI` are advisory" in base, base
+    assert "Emit `NEEDS-WORK` if findings contains any `Block`." in base, base
+    assert "zero `Nit`" not in base and "any `Nit`" not in base, base
+    assert "**`Nit` and `FYI` findings DO NOT trigger NEEDS-WORK.**" in text
+    ladder = [line for line in text.splitlines() if line.startswith("| `PASS` | Every required lens")]
+    assert len(ladder) == 1 and "advisory at any count" in ladder[0], ladder
+    assert "Nit` count" not in text, "the aggregated Nit-count threshold must stay retired"
+
+
+def test_build_step_deep_lane_states_the_block_only_threshold():
+    text = " ".join(BUILD_STEP_CORE.read_text(encoding="utf-8").split())
+    assert "single Nit already makes a lens NEEDS-WORK" not in text
+    assert "under which only a Block makes a lens NEEDS-WORK" in text
+
+
+def test_review_gauntlet_normalizes_only_a_block_to_needs_work():
+    """review-gauntlet runs review-deep's severity rules unchanged, so its
+    verdict logic must not let a Nit fail a lens either."""
+    gauntlet = REPO_ROOT / "skills" / "review-gauntlet" / "core.md"
+    text = " ".join(gauntlet.read_text(encoding="utf-8").split())
+    assert "an evidence-backed `Block` normalizes to `NEEDS-WORK`." in text
+    assert "or `Nit` normalizes to `NEEDS-WORK`" not in text
+    assert "`Nit` and `FYI` findings are advisory, as in review-deep" in text
 
 
 def test_malformed_lens_record_writes_no_verdict(tmp_path):

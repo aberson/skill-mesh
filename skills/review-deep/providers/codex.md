@@ -91,8 +91,8 @@ def aggregate_code_review(package, reports, *, plan_step, invocation, timestamp,
             if (not isinstance(finding, dict) or finding.get("severity") not in {"Block", "Nit", "FYI"}
                     or any(not isinstance(finding.get(k), str) for k in ("file_line", "excerpt", "rationale"))):
                 raise ValueError("NEEDS-WORK: malformed finding")
-        if verdict == "PASS" and any(finding["severity"] in {"Block", "Nit"} for finding in lens["findings"]):
-            raise ValueError("NEEDS-WORK: PASS lens has retained Block or Nit findings")
+        if verdict == "PASS" and any(finding["severity"] == "Block" for finding in lens["findings"]):
+            raise ValueError("NEEDS-WORK: PASS lens has a retained Block finding")
         if verdict == "SKIPPED" and lens["findings"]:
             raise ValueError("NEEDS-WORK: skipped lens has findings")
     if not re.fullmatch(r"\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}", timestamp):
