@@ -164,7 +164,10 @@ def _stage_record(stage, result):
 
 @pytest.fixture(scope="module")
 def shared_release(source_repo, tmp_path_factory):
-    """Two release runs into one stage, from a planted clone of source_repo."""
+    """Two release runs into one stage, from a planted clone of source_repo.
+
+    Selecting any one of the five tests that read it (for example with -k) still pays
+    for both runs: the fixture makes them together."""
     work = tmp_path_factory.mktemp("shared-release")
     planted = _clone_repo(source_repo, work / "planted")
     (planted / _UNTRACKED_NAME).write_text("do not ship me", encoding="utf-8")
@@ -299,7 +302,11 @@ def test_release_check_catches_a_tracked_dist_file(source_repo, tmp_path):
     r = _run(["-SourceRoot", str(mutated), "-StageDir", str(stage)])
     assert r.returncode != 0, "release.ps1 did not fail on a git-add -f'd dist/ file"
     combined = (r.stdout + r.stderr).lower()
-    assert "tracked" in combined or "package-integrity" in combined
+    # The release must fail BECAUSE the nested no-tracked-dist check ran against the
+    # SOURCE repo's index and found the file -- not for some other staged-tree defect.
+    # A looser "tracked or package-integrity" substring passed even when the check was
+    # pointed at the git-less stage and skipped (v3 guard review, should-fix 1).
+    assert "test_no_tracked_dist_on_real_repo" in combined, combined[-4000:]
     assert not (stage / "CHECKSUMS.txt").exists(), \
         "checksums were written despite a tracked generated-distribution path"
 
