@@ -387,6 +387,8 @@ for that repository's owner, proposing that its review page read `--json` (opera
 
 ### Step 11: Integration test through the production caller (prose and timeout contract)
 
+**Status:** BUILT 2026-11-12, awaiting the coordinator's wrap to mark it done. skill-mesh commit 203a301 (parts b and c, plus the core's Call budget paragraph); coding-root commits aa07bd71 and 34f0918a, the second adding in-file helper anchors after review (part a, `dev-observatory/tests/test_review_user_pm_contract.py`). Part (a) reads the installed coding-root core and checks only text that both the pre-revamp and the revamped core carry; it also passes against the revamped core in a scratch tree. Re-run it against the installed copy after the Step 16 install. Focused tests plus the quick repo-wide checks under the adopted testing rule; no full suite. dev-observatory's own suite has 6 failures in other files that fail the same way without this test.
+
 **Problem:** `code-quality.md` requires an integration test through the production entry point. The real
 caller is dev-observatory's review path, which sends `/user-pm` or `/user-pm --goal|--outstanding|--cut`,
 stores the prose reply and allows 300 seconds (see "Consumer facts"). A JSON fixture or a live `claude -p`
@@ -436,6 +438,8 @@ pauses here, Steps 14 and 15 still run without Step 13, Step 16's "`user-orient`
 <!-- autofix-applied: 2026-11-12 -->
 ### Step 13: DELETE `user-orient` and repoint references
 
+**Status:** BUILT 2026-11-12, awaiting the coordinator's wrap to mark it done. Commit f369f97. Catalog 59 skills (56 portable, 3 provider-native). The request, the pre- and post-greps and one disposition per occurrence are kept outside the repository with the build record. Focused tests: tests/package-integrity and the tests/distributions roster and count selection; no full suite.
+
 **Problem:** `user-orient` retires (F6) after its view is absorbed (Step 3). A catalog DELETE needs every
 caller, link, fixture, mapping and ledger effect dispositioned. User-gateway's routes and goblin retirement
 belong to decision items 14 and R1 (other lanes) and are not done here, but the user-orient-related repoints
@@ -465,6 +469,8 @@ on it. Historical records under `.build-step/` are evidence and are not edited. 
 applies (stop, revert the whole mutation) and a checkpoint is recorded after the regenerate.
 
 ### Step 14: Regenerate and run the full gate
+
+**Status:** BUILT 2026-11-12, awaiting the coordinator's wrap to mark it done. Commit 59ea74d. The gate is substituted under the operator's adopted testing rule (2026-11-12): tests/package-integrity and tests/router ran green on the final head instead of the repo-root full suite. The repo-root `python -m pytest` clause below is therefore not met by design and moves to the one full sweep per release. `gen_release_candidate_report.py` changed only line endings, so there is no content diff.
 
 **Problem:** Generated surfaces (`dist/`, manifest, inventory, workflow card) must be regenerated, and the DONE
 gate is the full suite, not a subset (`code-quality.md` gate scope; `skill-mesh/CLAUDE.md`).

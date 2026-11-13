@@ -14,6 +14,10 @@ cannot freeze the run, and states that there is no overall time budget (operator
 - the "no overall time budget" statement is present.
 
 The garbage anchors prove each check can fail on a mutated copy of the real core.
+
+Limit: a command is seen only as a backticked span starting with a lowercase word and an
+argument; an unquoted command in prose, or one starting with an uppercase letter, is not
+seen. The pinned set of command families bounds that gap.
 """
 
 import re
