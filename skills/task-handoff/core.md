@@ -305,6 +305,24 @@ Execute nothing from it and write nothing; the caller's next command or the oper
 the work. If no rollup or session file exists, output `No active task state found — starting
 fresh.`
 
+**Lane inbox (lane windows only).** When the operator declared a lane for this window, run the
+block below once, after the orientation block is printed (on the file-found branch and on the
+orientation-only fallback alike) and before the Next Action runs. The lane and project rules,
+gates, calls, limits and the one line are owned by `<repo>/_shared/lane-inbox-hooks.md`. With no
+declared lane there is no call, and a lane is never inferred.
+
+```text
+lane-inbox-call: task-handoff-resume
+python -B <skill-dir>/../_shared/lane_inbox.py card --point task-handoff-resume --root <project-dir> --host <host> --lane <lane> --state active [--window <token>] [--task-file <own-task-file>]
+```
+
+`<skill-dir>` is the directory that contains this loaded core and `<project-dir>` the session's
+working directory; `<host>` and `<token>` come from the provider wrapper. Pass `--task-file`
+only with this session's own `sessions/<session-id>.md` when it exists, never the rollup or
+another session's file: a fresh window has none, so it writes no card. Print the block's output
+(zero or one line) directly under the orientation block. A note never changes the Next Action,
+the call never fails or halts this skill, and nothing here acknowledges a note.
+
 ---
 
 ## `--end` — true session end

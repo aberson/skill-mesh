@@ -1,0 +1,7 @@
+20261112T090000Z-central-to-art-lane-0a1b	question	reply	central	Which palette for the hub?
+20261112T100000Z-combat-design-to-art-lane-1c2d	blocker	operator-decision	combat-design	Need the operator on scope
+20261112T110000Z-central-to-all-2e3f	fyi	fyi	central	Main is green
+20261112T120000Z-central-to-art-lane-3a4b	handoff	ack	central	Hand-off of the icon set
+20261112T130000Z-central-to-art-lane-4c5d	change-notice	reply	central	Renamed the atlas folder
+diagnostic: messages/demo-proj/not-a-note.md: ignored: not named <note id>.md
+diagnostics: 1

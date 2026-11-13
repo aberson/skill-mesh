@@ -1,0 +1,24 @@
+{
+  "card-invalid": {
+    "error_code": "card-invalid",
+    "exit": 3,
+    "stdout_empty": true
+  },
+  "card-missing": {
+    "error_code": "not-found",
+    "exit": 3,
+    "stdout_empty": true
+  },
+  "card-show-lane-symbols.txt": {
+    "exit": 0
+  },
+  "card-show-lane.txt": {
+    "exit": 0
+  },
+  "card-show-project.txt": {
+    "exit": 0
+  },
+  "inbox.txt": {
+    "exit": 0
+  }
+}

@@ -152,6 +152,11 @@ EXPECTED_SHARED_PAYLOAD = frozenset({
     "subagent-economy.md",
     "task-state-schema.md",
     "worktree-hygiene.md",
+    # v3 inbox hooks (Steps 1 to 3): the lane inbox contract, cited by the hooked cores
+    # and adapters as `<repo>/_shared/lane-inbox-hooks.md`, and the helper it names bare.
+    # The independent closure walk below finds both without being told about them.
+    "lane-inbox-hooks.md",
+    "lane_inbox.py",
 })
 
 # A `_shared/<leaf>` asset reference in any spelling the canonical sources use: bare,

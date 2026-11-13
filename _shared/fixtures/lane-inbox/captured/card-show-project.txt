@@ -1,0 +1,4 @@
+art-lane	codex	active	icons pass 2	2026-11-12T20:00:00Z
+symbol-lane	claude	idle	symbols pass	2026-11-12T20:00:00Z
+diagnostic: cards/demo-proj/combat-design.md: invalid: state: 'sleeping' is not one of active, waiting, blocked, idle, done
+diagnostics: 1
