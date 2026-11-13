@@ -1,6 +1,6 @@
 # Skill reference
 
-The v3 catalog contains **50 Claude skills** and **48 portable skills** for Codex. GitHub Copilot (GPT) is deprecated: v3.0.0 is the last release that ships its profile. Host coverage means an adapter is packaged; required native capabilities and external utilities still apply.
+The v3 catalog contains **50 Claude skills** and **48 portable skills** for Codex. GitHub Copilot (GPT) is deprecated: the v3.0.x releases are the last to ship its profile. Host coverage means an adapter is packaged; required native capabilities and external utilities still apply.
 
 Each workflow link opens its source-linked diagram. Read the contract for full gates, flags, and omissions. See [installation](../README.md#install-or-upgrade), [utility integrations](../README.md#how-utility-projects-are-used), and [release limitations](https://github.com/aberson/skill-mesh/releases/tag/v2.0.2).
 

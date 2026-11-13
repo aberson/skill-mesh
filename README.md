@@ -5,9 +5,9 @@ workflow for Claude Code and OpenAI Codex.**
 
 - **A connected pipeline.** Turn an idea into a plan, a bounded build, an independently reviewed change, and a release.
 - **Explicit quality gates.** Automated checks and fresh-context reviewers inform the result; missing required capabilities stop the workflow.
-- **One contract, several hosts.** 50 Claude skills; 48 also packaged for Codex through host adapters, and for GitHub Copilot one last time in v3.0.0.
+- **One contract, several hosts.** 50 Claude skills; 48 also packaged for Codex through host adapters, and for GitHub Copilot one last time in v3.0.x.
 
-**[v3.0.0 is released](https://github.com/aberson/skill-mesh/releases/tag/v3.0.0)** ·
+**[v3.0.1 is released](https://github.com/aberson/skill-mesh/releases/tag/v3.0.1)** ·
 [Try it](#install-or-upgrade) · [Browse the skills](documentation/skill-reference.md) ·
 [Detailed workflows](docs/workflows/README.md)
 
@@ -48,7 +48,7 @@ iteration limits, and recovery behavior.
 
 Portable behavior lives in shared contracts. Adapters map that behavior to each
 host's capabilities; installation puts the generated skills where the host finds them.
-The GitHub Copilot profile is deprecated and ships for the last time in v3.0.0.
+The GitHub Copilot profile is deprecated and ships for the last time in v3.0.x.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="_shared/host-profiles-dark.svg">
@@ -174,10 +174,10 @@ is historical planning, not proof that every proposed caller is wired.
 
 ## Install or upgrade
 
-Download the [v3.0.0 release](https://github.com/aberson/skill-mesh/releases/tag/v3.0.0),
+Download the [v3.0.1 release](https://github.com/aberson/skill-mesh/releases/tag/v3.0.1),
 verify its checksum, and choose one host profile.
 
-**GitHub Copilot (GPT) support is deprecated.** v3.0.0 is the last release that ships the GPT profile. It is included unchanged, so nothing breaks today, but the GPT adapters, the `.github/skills` install target and the GPT build will be removed in the next release. Skill Mesh will then support Claude Code and the OpenAI Codex CLI. If you use the GPT profile, plan to move to one of those.
+**GitHub Copilot (GPT) support is deprecated.** The v3.0.x releases are the last to ship the GPT profile. It is included unchanged, so nothing breaks today, but the GPT adapters, the `.github/skills` install target and the GPT build will be removed in v4. Skill Mesh will then support Claude Code and the OpenAI Codex CLI. If you use the GPT profile, plan to move to one of those.
 
 <details>
 <summary><strong>Installation, upgrades, and restoration</strong></summary>
@@ -208,9 +208,11 @@ for home resolution, collision handling, and legacy migration.
 **v3.0.0 tidies the catalog and rebuilds /user-pm:** `/user-pm` is the status door for a
 project (verified status, a routed board, lanes); `/user-gateway` routes a vent to every
 skill; build and wrap skills size tests to the change; eleven skills were retired, folded,
-moved or replaced by a script, and `/user-fermize` joined. GitHub Copilot (GPT) support is deprecated and leaves in
-the next release. The [release notes](https://github.com/aberson/skill-mesh/releases/tag/v3.0.0)
-record what changed, the checks that ran and installation limits.
+moved or replaced by a script, and `/user-fermize` joined. **v3.0.1** makes `/user-pm --lanes` end
+with one block for the main lane's window that opens each lane with `/lane-open`. GitHub Copilot (GPT)
+support is deprecated and leaves in v4. The [v3.0.0](https://github.com/aberson/skill-mesh/releases/tag/v3.0.0)
+and [v3.0.1](https://github.com/aberson/skill-mesh/releases/tag/v3.0.1) release notes record what
+changed, the checks that ran and installation limits.
 
 <details>
 <summary><strong>Scope, dependencies, and known limitations</strong></summary>
