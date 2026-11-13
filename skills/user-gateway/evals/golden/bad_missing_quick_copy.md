@@ -24,7 +24,7 @@ Questions (ONE round, 4 targeted — answer what you can; I proceed either way):
 
 Q4 unanswered — proceeding; assumption marked in F3's seed: no pre-named cut list, the trim pass proposes.
 
-Routes chosen by consulting the routing web (skill-pipeline.md § "The 8 rails", tiebreak applied — cited, not restated): (b) lands verify, not bug — distrust with no failing check in hand; (c) is cruft in a plan document -> trim; (d) is an operator-only choice -> parked, never ground through.
+Routes chosen by consulting the routing web (skill-pipeline.md § "The rails", tiebreak applied — cited, not restated): (b) lands verify, not bug — distrust with no failing check in hand; (c) is cruft in a plan document -> trim; (d) is an operator-only choice -> parked, never ground through.
 
 ===== written file: .claude/task-state/intake-switchboard-leftovers.md =====
 # Intake ledger — switchboard-leftovers
@@ -36,7 +36,7 @@ Seeded by /user-gateway 2026-07-13. Grammar + statuses per <repo>/_shared/intake
 | F1 | endpoint launcher 500s when the model list comes back empty | bug | routed | seed: `/user-debug --symptom 'endpoint launcher 500 on empty model list'`; repro: stop ollama, hit /launch |
 | F2 | no evidence monitor auto-disable works since the Phase B merge | verify | routed | seed: `/user-walkthrough --shakedown 'switchboard monitor auto-disable'`; evidence check `curl -s 127.0.0.1:8080/status | jq .monitor` |
 | F3 | switchboard plan doc carries never-do Phase C items | trim | routed | seed: `/plan-merge --trim switchboard/plan.md`; assumption: no pre-named cut list (Q4 unanswered) — trim proposes |
-| F4 | tinstar viewer: stay bundled in switchboard or split into its own repo? | decide | parked | operator-only: bundle vs split — question surfaced, awaiting operator |
+| F4 | tinstar viewer: stay bundled in switchboard or split into its own repo? | decide | parked | operator-only: bundle vs split — question surfaced, awaiting operator; register: `/user-dr open only <git-root>; sources: <git-root>/.claude/task-state/intake-switchboard-leftovers.md` |
 | F5 | endpoint health dashboard (status, latency, per-model routing counts) | plan | routed | seed: /plan-feature 'switchboard endpoint health dashboard' — full seed paragraph in gateway output |
 ===== end written file =====
 
@@ -51,8 +51,9 @@ F2 — verify (mode per the web's verify-rail detail: no UAT block exists yet an
 F3 — trim (plan document: switchboard/plan.md; assumption from unanswered Q4: no pre-named cut list — /plan-merge --trim proposes the cut set):
 /plan-merge --trim switchboard/plan.md
 
-F4 — decide (PARKED — operator-only; no seed):
+F4 — decide (PARKED — operator-only; no work seed):
 Open question, stated and waiting: should the tinstar viewer stay bundled in switchboard, or split into its own repo? The ledger holds it as parked; nothing proceeds on it until you call it.
+Record it in the decision register: `/user-dr open only <git-root>; sources: <git-root>/.claude/task-state/intake-switchboard-leftovers.md`
 
 F5 — plan (paste as the /plan-feature argument):
 /plan-feature switchboard endpoint health dashboard — a read-only page in switchboard's own UI (your answer to Q3) showing per-endpoint status, rolling latency, and per-model routing counts. Scope strictly as voiced; anything beyond these three panels is /plan-feature's conversation to have.

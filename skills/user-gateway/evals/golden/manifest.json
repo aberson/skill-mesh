@@ -7,20 +7,20 @@
     {
       "file": "good_multirail_vent.md",
       "scenario": "scenario_multirail_vent",
-      "passes_all": true,
-      "note": "Embedded ledger executed against the intake-engine §3 check: scores 0 (4 routed + 1 parked; parked does not count as open)."
+      "passes_all": null,
+      "note": "Edited 2026-11-13 in commit 2f16c97 (routing-web heading rename; decide register line); not re-graded since. Embedded ledger re-executed against the intake-engine §3 check on 2026-11-13: still scores 0. Pre-edit: Embedded ledger executed against the intake-engine §3 check: scores 0 (4 routed + 1 parked; parked does not count as open)."
     },
     {
       "file": "good_cruft_investigate.md",
       "scenario": "scenario_nonplan_cruft",
-      "passes_all": true,
-      "note": "Embedded ledger executed against the intake-engine §3 check: scores 0 (3 routed)."
+      "passes_all": null,
+      "note": "Edited 2026-11-13 in commit 2f16c97 (routing-web heading rename; decide register line); not re-graded since. Embedded ledger re-executed against the intake-engine §3 check on 2026-11-13: still scores 0. Pre-edit: Embedded ledger executed against the intake-engine §3 check: scores 0 (3 routed)."
     },
     {
       "file": "good_loaded_resume.md",
       "scenario": "scenario_loaded_resume",
       "passes_all": null,
-      "note": "Source-only anchor added for the resumable-intake contract; no grader result claimed."
+      "note": "Edited 2026-11-13 in commit 2f16c97 (routing-web heading rename; decide register line); not re-graded since. Source-only anchor added for the resumable-intake contract; no grader result claimed."
     },
     {
       "file": "good_preflight_matrix.md",
@@ -30,10 +30,10 @@
     }
   ],
   "verification_summary": {
-    "verified_single_defect": 10,
-    "ungraded": 2,
+    "verified_single_defect": 1,
+    "ungraded": 11,
     "total_bads": 12,
-    "note": "Historical verification metadata is preserved for the original corpus. New r2 fixtures are source-only and carry no grader result."
+    "note": "Historical verification metadata is preserved for the original corpus. New r2 fixtures are source-only and carry no grader result. The 2026-11-13 edit (commit 2f16c97) touched 10 bads and 3 goods; their grader results were reset to null because no grader re-run followed, so only the untouched bad_inlined_routing_table keeps a verified result."
   },
   "bads": [
     {
@@ -41,72 +41,81 @@
       "defect_type": "listening - second question round, oversized round, or blocking",
       "assertion_id": 1,
       "scenario": "scenario_multirail_vent",
-      "verified_fails": true,
-      "regen_attempts": 1
+      "verified_fails": null,
+      "regen_attempts": 1,
+      "note": "Edited 2026-11-13 in commit 2f16c97 (routing-web heading rename; decide register line); not re-graded since."
     },
     {
       "file": "bad_unprompted_suggestion.md",
       "defect_type": "posture - unprompted suggestion (proposing, not converting)",
       "assertion_id": 2,
       "scenario": "scenario_multirail_vent",
-      "verified_fails": true,
-      "regen_attempts": 1
+      "verified_fails": null,
+      "regen_attempts": 1,
+      "note": "Edited 2026-11-13 in commit 2f16c97 (routing-web heading rename; decide register line); not re-graded since."
     },
     {
       "file": "bad_dropped_fragment.md",
       "defect_type": "coverage - voiced fragment dropped before the ledger",
       "assertion_id": 3,
       "scenario": "scenario_multirail_vent",
-      "verified_fails": true,
-      "regen_attempts": 1
+      "verified_fails": null,
+      "regen_attempts": 1,
+      "note": "Edited 2026-11-13 in commit 2f16c97 (routing-web heading rename; decide register line); not re-graded since."
     },
     {
       "file": "bad_corrupted_row_id.md",
       "defect_type": "ledger - malformed row or wrong path",
       "assertion_id": 4,
       "scenario": "scenario_multirail_vent",
-      "verified_fails": true,
-      "regen_attempts": 1
+      "verified_fails": null,
+      "regen_attempts": 1,
+      "note": "Edited 2026-11-13 in commit 2f16c97 (routing-web heading rename; decide register line); not re-graded since."
     },
     {
       "file": "bad_row_left_open.md",
       "defect_type": "ledger - row left open at gateway close",
       "assertion_id": 5,
       "scenario": "scenario_multirail_vent",
-      "verified_fails": true,
-      "regen_attempts": 1
+      "verified_fails": null,
+      "regen_attempts": 1,
+      "note": "Edited 2026-11-13 in commit 2f16c97 (routing-web heading rename; decide register line); not re-graded since."
     },
     {
       "file": "bad_distrust_routed_bug.md",
       "defect_type": "routing - route inconsistent with the web/tiebreak",
       "assertion_id": 6,
       "scenario": "scenario_multirail_vent",
-      "verified_fails": true,
-      "regen_attempts": 1
+      "verified_fails": null,
+      "regen_attempts": 1,
+      "note": "Edited 2026-11-13 in commit 2f16c97 (routing-web heading rename; decide register line); not re-graded since."
     },
     {
       "file": "bad_decide_ground_through.md",
       "defect_type": "routing - decide fragment ground through",
       "assertion_id": 7,
       "scenario": "scenario_multirail_vent",
-      "verified_fails": true,
-      "regen_attempts": 1
+      "verified_fails": null,
+      "regen_attempts": 1,
+      "note": "Edited 2026-11-13 in commit 2f16c97 (routing-web heading rename; decide register line); not re-graded since."
     },
     {
       "file": "bad_vague_seed.md",
       "defect_type": "seeds - not ready-to-paste for the row's rail",
       "assertion_id": 8,
       "scenario": "scenario_multirail_vent",
-      "verified_fails": true,
-      "regen_attempts": 1
+      "verified_fails": null,
+      "regen_attempts": 1,
+      "note": "Edited 2026-11-13 in commit 2f16c97 (routing-web heading rename; decide register line); not re-graded since."
     },
     {
       "file": "bad_missing_quick_copy.md",
       "defect_type": "closing - ledger path, /goal, or QUICK COPY missing",
       "assertion_id": 9,
       "scenario": "scenario_multirail_vent",
-      "verified_fails": true,
-      "regen_attempts": 1
+      "verified_fails": null,
+      "regen_attempts": 1,
+      "note": "Edited 2026-11-13 in commit 2f16c97 (routing-web heading rename; decide register line); not re-graded since."
     },
     {
       "file": "bad_inlined_routing_table.md",
@@ -122,7 +131,8 @@
       "assertion_id": 9,
       "scenario": "scenario_loaded_resume",
       "verified_fails": null,
-      "regen_attempts": 0
+      "regen_attempts": 0,
+      "note": "Edited 2026-11-13 in commit 2f16c97 (routing-web heading rename; decide register line); not re-graded since."
     },
     {
       "file": "bad_empty_slug_write.md",

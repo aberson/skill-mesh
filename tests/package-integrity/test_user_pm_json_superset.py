@@ -59,6 +59,7 @@ NEW_KEYS = {
     "readiness": ("lanes", "blockers", "fallback_pool"),
     "lanes": ("lane", "host", "state", "item", "updated"),
     "lane_plan": ("mode", "lanes", "unplaced", "shared_resources"),
+    "lanes_source": ("passing-notes", "fallback-file"),
     "ideas": ("idea", "anchor", "judged"),
 }
 ROUTE_ENUM = ("core-pipeline", "bounded-goal", "direct-task", "human")

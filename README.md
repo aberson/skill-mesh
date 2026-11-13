@@ -60,16 +60,18 @@ Have several half-formed ideas at once? `user-gateway` separates the fragments
 and routes each to a useful next step.
 
 <details>
-<summary><strong>See the eight routes: bug, do, plan, investigate, verify, trim, decide, draft</strong></summary>
+<summary><strong>See the core routes: bug, do, plan, investigate, verify, trim, decide, draft</strong></summary>
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="_shared/routing-web-dark.svg">
-  <img alt="An operator's notes enter user-gateway and split across eight routes, from debugging and planning to verification and drafting." src="_shared/routing-web-light.svg">
+  <img alt="An operator's notes enter user-gateway and split across the core routes, from debugging and planning to verification and drafting." src="_shared/routing-web-light.svg">
 </picture>
 
 The `do` route hands a small task to `user-pm`, whose board picks its build route; the
 gateway executes no work. Host commands such as `/goal` and `/deep-research` are separate
-from this skill catalog. [Routing contract](_shared/skill-pipeline.md).
+from this skill catalog. The routing contract adds five more routes (review, research,
+tend, session, learn) so a vent can reach every vent-worthy skill:
+[Routing contract](_shared/skill-pipeline.md).
 
 </details>
 

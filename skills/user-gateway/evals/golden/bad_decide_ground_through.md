@@ -26,7 +26,7 @@ Questions (ONE round, 4 targeted — answer what you can; I proceed either way):
 
 Q4 unanswered — proceeding; assumption marked in F3's seed: no pre-named cut list, the trim pass proposes.
 
-Routes chosen by consulting the routing web (skill-pipeline.md § "The 8 rails", tiebreak applied — cited, not restated): (b) lands verify, not bug — distrust with no failing check in hand; (c) is cruft in a plan document -> trim; (d) I went ahead and called it — split is cleaner, bundling has been friction all phase, so it routes plan.
+Routes chosen by consulting the routing web (skill-pipeline.md § "The rails", tiebreak applied — cited, not restated): (b) lands verify, not bug — distrust with no failing check in hand; (c) is cruft in a plan document -> trim; (d) I went ahead and called it — split is cleaner, bundling has been friction all phase, so it routes plan.
 
 ===== written file: .claude/task-state/intake-switchboard-leftovers.md =====
 # Intake ledger — switchboard-leftovers

@@ -83,7 +83,7 @@ The ledger body is a single markdown table. One data row per operator fragment:
   pipe-free (render any literal `|` as `/`; a pipe that slips through makes the row count as
   open — the fail-safe direction, §3).
 - **`route`** — the rail this fragment was routed onto, chosen from the routing web
-  ([`skill-pipeline.md § "The 8 rails"`](./skill-pipeline.md)); `-` until the row is routed.
+  ([`skill-pipeline.md § "The rails"`](./skill-pipeline.md)); `-` until the row is routed.
   Deliberately **not pinned** by the grammar below: the routing web is the one owner of the
   rail vocabulary, and pinning rail names here would create a second owner that drifts when a
   rail is added. The check never needs it — closure is a **status** question, not a route
@@ -95,7 +95,9 @@ The ledger body is a single markdown table. One data row per operator fragment:
     seeded work itself finishes is the receiving rail's business (its plan, issue, or
     shakedown ledger), not this ledger's.
   - `parked` — a decide-rail row: an operator-only choice, surfaced with the open question
-    stated, awaiting the operator — never ground through autonomously. An operator decision
+    stated, awaiting the operator — never ground through autonomously. Its disposition may
+    also carry the paste line that records the question in a decision register (`/user-dr`);
+    that line records, it decides nothing, so the row stays `parked`. An operator decision
     resolves a parked row to `routed` (disposition gains the seed) or `done` (disposition
     records the decision).
   - `done` — the underlying work was closed (by the operator or a skill); the disposition

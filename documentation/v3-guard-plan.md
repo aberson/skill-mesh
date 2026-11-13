@@ -267,6 +267,8 @@ Red-on-garbage (Steps 6 to 12): wherever a test is moved, merged, folded, delete
 
 ### Step 13: Operator replay with a fresh Codex session (operator step)
 
+**Dropped 2026-11-13 (operator: "cut step 13"). Not run.**
+
 - **Problem:** The change is to what Codex is told, so the only honest evidence is what a fresh Codex session does with it. This is observation, so it runs after the merge and produces no code.
 - **Type:** operator
 - **Issue:** #
