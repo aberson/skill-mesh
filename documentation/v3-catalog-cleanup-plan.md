@@ -299,7 +299,9 @@ production caller yet (user-pm Steps 17 and 18 add it), so no caller test applie
 profiles build; the manifest description's serialized size and the new headroom are recorded and headroom is
 above 400 (predicted ~554, a drop of about 140; ~686 from the build base); counts read 58 total, 55 portable
 from the build base; the existing personal install file is untouched (the installer's
-foreign-file handling is Step 20's job); the step's gate is green and named.
+foreign-file handling is Step 20's job); the step's gate is green and named. From this step until the user-pm plan's
+Step 18 (which drops the label), `skills/user-pm/core.md` still says user-fermize has no Claude adapter and labels its
+deep-dive line "Run in: a Codex window"; that file belongs to the user-pm plan and this step does not edit it.
 
 ### Step 6: DELETE `judge-motion` (provider-native)
 
@@ -484,12 +486,16 @@ reader (the same occurrence report covers it); the three folders, constants, map
 workflow cards and count pins; callers repointed: "do the next small thing" now says to hand the item to
 `user-pm` (and, in session-wrap, the plan or issue path it already names); `tests/package-integrity/
 test_codex_capability_claims_honesty.py`, `test_manifest_contract.py` and the distribution tests that name the
-goblin skills re-pinned. **Session-wrap is a representative skill**, so
+goblin skills re-pinned; in `tests/package-integrity/test_codex_budgets.py`, `goblin-sweep` leaves
+`STEP10_PROMOTIONS` and the fixed-cost pin (`assert fixed == 306`, set by Step 4 over the six promotions left then)
+is re-derived over the five that remain (`fixed == 258`), with the comment above it updated; the same name leaves
+`STEP10_PROMOTED_SKILLS` in `tests/distributions/test_distributions.py`. **Session-wrap is a representative skill**, so
 `python tests/smoke/gen_release_candidate_report.py` runs in this step, and the regenerated
 `documentation/release-candidate-report.md` is part of the change.
 **Done when:** pre- and post-reports recorded for all four names (three skills and the shared file); zero
 occurrences outside the preserved list; the release-candidate report test is green (it sits in the smoke suite
-and is not collected by a package-integrity-only run, so run it explicitly); counts read 52 total, 50 portable
+and is not collected by a package-integrity-only run, so run it explicitly); `goblin-sweep` is absent from both
+Step 10 promotion rosters and the fixed-cost pin equals the recomputed sum over the remaining names; counts read 52 total, 50 portable
 (plus 2 native; 51 and 49 from the build base); headroom recorded (predicted ~1345; ~1477 from the build base); gate named and green.
 
 ### Step 15: Create the `user-project` script (runtime, with its own test)
