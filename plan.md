@@ -1343,5 +1343,11 @@ their respective release payloads. Restart host sessions after upgrading.
 - The v3 program plan and its decisions live in the coding root's
   `docs/skill-mesh-3-review/` folder (decision sheet of 2026-11-11; the folder README is
   the decision notebook).
-- Nothing has been built for v3 yet. The 2026-11-12 docs housekeeping (decision items 1, 2,
-  3, 7, 8 and 28) records decisions only.
+- v3 building started 2026-11-12. Each v3 plan records its own step status on its
+  `**Status:**` lines; read those, not this section:
+  `documentation/v3-user-pm-revamp-plan.md`, `documentation/v3-guard-plan.md`,
+  `documentation/v3-catalog-gate-plan.md` (Step 8 only for v3; the rest deferred to v3.1),
+  `documentation/v3-catalog-cleanup-plan.md`, `documentation/v3-inbox-hooks-plan.md` and
+  `documentation/v3-release-plan.md`.
+- Issue hygiene 2026-11-13: step issues closed where the plan records DONE or MET; the
+  deferred catalog-gate step issues carry the `deferred: v3.1` label.
