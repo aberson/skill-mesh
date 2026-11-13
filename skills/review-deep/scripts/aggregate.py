@@ -15,8 +15,9 @@ dev/.claude/rules/code-quality.md).
 
 Aggregator rules implemented (each as apply_rule_N_<desc>):
 
-1. Severity dominance: Block outweighs any Nit count; the aggregated verdict
-   is driven by the highest-severity finding across lenses, not finding count.
+1. Severity dominance: Block outweighs any Nit count; only a Block finding
+   fails the aggregated verdict. Nit and FYI findings are advisory at any
+   count: they stay in the sidecar and the report and never gate.
 2. Lens owns its dimension: when two lenses disagree on the same file_line,
    the lens whose Scope covers that dimension wins; the other is demoted to
    FYI. Catalog Lens-routing fields drive primary/secondary selection.
@@ -33,7 +34,8 @@ Aggregator rules implemented (each as apply_rule_N_<desc>):
 6. Persistent disagreement: when --prior-sidecar is supplied AND the current
    run flags the same finding identity (file_line + anti_pattern + severity)
    that a prior run demoted under rule 2, escalate the severity by one tier
-   and annotate the rationale.
+   and annotate the rationale. An escalation to Nit stays advisory; only an
+   escalation to Block gates.
 7. Absence-of-thing dedup AND lint-finding dedup: two independent paths in
    the same rule. (a) Absence path: when multiple lenses surface findings
    about the same absence (no concrete file_line anchor in the diff), dedup
@@ -48,16 +50,17 @@ Aggregator rules implemented (each as apply_rule_N_<desc>):
 Default-deny PASS (P-RD-1 variant (a); the sidecar result enum stays
 PASS | NEEDS-WORK | DEFERRED-TO-UAT). The aggregated result is PASS only when
 every required lens is present exactly once with overall_verdict PASS (or an
-allowed SKIPPED, rule 3), zero Block, aggregated Nit < 3, no failed or invalid
-mechanical result and no deferral. Everything else is NEEDS-WORK with an
+allowed SKIPPED, rule 3), zero Block, no failed or invalid mechanical result
+and no deferral; Nit and FYI findings never change the result. Everything else is NEEDS-WORK with an
 explicit rationale, including: a lens UNCERTAIN (abstention -- escalate to the
 operator, never PASS), NEEDS-CLARIFICATION, an unknown or missing
 overall_verdict, a missing / duplicate / unexpected lens, a lens file whose
 name is not <lens_id>.json, a required lens SKIPPED, no runtime lens under
 --reviewers runtime (or full without a recorded downgrade), a recorded runtime
 downgrade under --reviewers runtime, a runtime lens record under a recorded
-downgrade, a SKIPPED lens carrying findings, a PASS lens carrying Block/Nit
-findings, an invalid finding severity, and a mechanical check whose status is
+downgrade, a SKIPPED lens carrying findings, a PASS lens carrying a Block
+finding (a PASS lens may carry advisory Nit and FYI findings), an invalid
+finding severity, and a mechanical check whose status is
 "fail" or a malformed mechanical record -- including a supplied record that is
 not a JSON object, such as null ("missing-tool" is listed in the rationale and
 does not block). A structurally malformed lens record (not an object, no string
@@ -578,6 +581,11 @@ def apply_rule_6_persistent_disagreement(
     (FYI -> Nit, Nit -> Block) and prefix its rationale with
     "Persistent disagreement: ".
 
+    Nit is advisory (build_aggregated_verdict never fails on a Nit), so an
+    escalation FYI -> Nit is reported but does not gate; only a Nit -> Block
+    escalation fails the round. While rule 2 keeps demoting the co-flagged
+    copy to FYI each run, the chain stops at Nit.
+
     When prior_sidecar is None, this rule is a no-op (first invocation).
     """
     if prior_sidecar is None:
@@ -935,8 +943,9 @@ def check_lens_set(
     - under a recorded downgrade (``invocation.runtime_downgraded is True``)
       runtime lenses are never spawned, so ANY runtime lens record is stale or
       fabricated and is a problem;
-    - a PASS lens carries no Block/Nit finding, and every finding severity is
-      Block, Nit or FYI.
+    - a PASS lens carries no Block finding (advisory Nit and FYI findings are
+      allowed on a PASS lens), and every finding severity is Block, Nit or
+      FYI.
 
     Unknown or missing overall_verdict values are handled by
     build_aggregated_verdict (default-deny), not here.
@@ -986,10 +995,8 @@ def check_lens_set(
                 f"invalid finding severity in {lens_id}: "
                 + ", ".join(repr(s) for s in bad)
             )
-        if verdict == "PASS" and any(
-            f.get("severity") in ("Block", "Nit") for f in findings
-        ):
-            problems.append(f"PASS lens carries Block/Nit findings: {lens_id}")
+        if verdict == "PASS" and any(f.get("severity") == "Block" for f in findings):
+            problems.append(f"PASS lens carries Block findings: {lens_id}")
 
     reason = (inv.get("runtime_downgrade_reason") or "reason not recorded") if downgraded else None
     if downgraded:
@@ -1115,19 +1122,20 @@ def build_aggregated_verdict(
     Default-deny rules from SKILL.md "Aggregated-verdict output ladder" (the
     result enum stays PASS | NEEDS-WORK | DEFERRED-TO-UAT):
       PASS              -- every lens verdict is PASS or an allowed SKIPPED;
-                           zero Block; Nit < 3; no lens-set problem
+                           zero Block; no lens-set problem
                            (check_lens_set); no failed or invalid mechanical
                            result; no deferral
       NEEDS-WORK        -- any Block; OR any lens verdict other than PASS /
                            SKIPPED (NEEDS-WORK, FAILED, NO-EVIDENCE, UNCERTAIN,
                            NEEDS-CLARIFICATION, or an unknown/missing value);
                            OR any lens-set problem; OR a mechanical check with
-                           status "fail" or a malformed mechanical result;
-                           OR aggregated Nit count >= 3
+                           status "fail" or a malformed mechanical result
       DEFERRED-TO-UAT   -- structurally un-evaluable parts (Step 7 trigger);
                            deferral over PASS but NOT over NEEDS-WORK
     UNCERTAIN and NEEDS-CLARIFICATION are abstentions: the rationale names the
     lens so the operator escalates; they never become PASS.
+    Nit and FYI findings are advisory at any count: the rationale counts Nits
+    as advisory and they never change the result (no Nit tolerance).
     """
     lens_set_problems = list(lens_set_problems or [])
     needs_work_lenses = [
@@ -1165,7 +1173,6 @@ def build_aggregated_verdict(
     # Hardest verdict wins for gating: NEEDS-WORK > DEFERRED > PASS.
     hard_needs_work = (
         block_count > 0
-        or nit_count >= 3
         or bool(needs_work_lenses)
         or bool(failed)
         or bool(no_evidence)
@@ -1188,7 +1195,9 @@ def build_aggregated_verdict(
     if block_count:
         parts.append(f"{block_count} Block finding{'s' if block_count != 1 else ''}")
     if nit_count:
-        parts.append(f"{nit_count} Nit finding{'s' if nit_count != 1 else ''}")
+        parts.append(
+            f"{nit_count} Nit finding{'s' if nit_count != 1 else ''} (advisory)"
+        )
     if needs_work_lenses:
         parts.append(f"lenses NEEDS-WORK: {', '.join(needs_work_lenses)}")
     if failed:
@@ -2393,6 +2402,66 @@ def run_unit_tests() -> int:
         missing_tool = {"checks": [{"check": "mypy", "status": "missing-tool"}]}
         assert _result(_six(), mechanical_results=missing_tool) == "PASS", (
             "(f') missing-tool is listed but non-blocking"
+        )
+
+        # Test 11: Nit is advisory. A PASS lens may carry Nit findings, any
+        # number of them across lenses still PASSes (no Nit tolerance), and
+        # the Nits stay in the sidecar, the rationale and the rendered report.
+        # A PASS lens carrying a Block is still a lens-set problem.
+        def _nit(n: int) -> dict:
+            return {
+                "severity": "Nit",
+                "file_line": f"src/style_{n}.py:{n}",
+                "excerpt": f"value_{n} = compute()",
+                "rationale": f"naming deviates from the neighbours ({n})",
+                "anti_pattern": None,
+            }
+
+        nit_only = _six()
+        nit_only[4]["findings"] = [_nit(1)]
+        out_nit = aggregate(
+            nit_only, timestamp="2026-01-01T00-00-00", skill_version="v3"
+        )
+        assert out_nit["aggregated_verdict"]["result"] == "PASS", (
+            "(h) a PASS lens with only a Nit must PASS, got "
+            f"{out_nit['aggregated_verdict']!r}"
+        )
+        assert "1 Nit finding (advisory)" in out_nit["aggregated_verdict"]["rationale"], (
+            "(h) the rationale must count the Nit as advisory, got "
+            f"{out_nit['aggregated_verdict']['rationale']!r}"
+        )
+        style_out = next(
+            lv for lv in out_nit["lens_verdicts"] if lv["lens_id"] == "style"
+        )
+        assert [f["severity"] for f in style_out["findings"]] == ["Nit"], (
+            "(h) the advisory Nit must stay in the sidecar"
+        )
+        rendered_nit = render_markdown(out_nit)
+        assert rendered_nit.startswith("# review-deep: PASS"), (
+            "(h) rendered header must read PASS"
+        )
+        assert "### Nit" in rendered_nit and "value_1 = compute()" in rendered_nit, (
+            "(h) the rendered report must still list the advisory Nit"
+        )
+        many_nits = _six()
+        for idx in range(5):
+            many_nits[idx]["findings"] = [_nit(10 + idx)]
+        assert _result(many_nits) == "PASS", (
+            "(i) five Nits across five PASS lenses must still PASS (no Nit tolerance)"
+        )
+        pass_with_block = _six()
+        pass_with_block[1]["findings"] = [dict(_nit(2), severity="Block")]
+        out_pwb = aggregate(
+            pass_with_block, timestamp="2026-01-01T00-00-00", skill_version="v3"
+        )
+        assert out_pwb["aggregated_verdict"]["result"] == "NEEDS-WORK", (
+            "(j) a PASS lens carrying a Block must not PASS"
+        )
+        assert "PASS lens carries Block findings: bugs" in (
+            out_pwb["aggregated_verdict"]["rationale"]
+        ), (
+            "(j) the rationale must name the PASS lens holding a Block, got "
+            f"{out_pwb['aggregated_verdict']['rationale']!r}"
         )
         dup_dir = Path(tempfile.mkdtemp(prefix="agg-test10-"))
         try:

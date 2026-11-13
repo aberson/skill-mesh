@@ -57,6 +57,18 @@ unrestricted catalog mutations. On 2026-11-12 the operator also authorized one U
 of `user-build-route` that fixes four defects a smoke test found after install, with
 the same safeguards. See [the validation record](user-build-route-validation.md).
 
+**Scoped operator exception (2026-11-13):** the operator authorized one UPDATE of
+`review-deep` and `build-step` that makes Nit findings advisory: only a Block finding fails a
+review round, a medium-severity bug moves from Nit to Block, and the remaining Nits are
+reported but never block, with no Nit-count tolerance. The UPDATE covers the review-deep core,
+its Codex adapter, its aggregator script and README (with the byte-identical legacy copy),
+its evaluation statements, the build-step core sentence that restated the old threshold, and
+the tests that pinned it. It runs in an isolated worktree from `origin/main` while the original
+checkout stays untouched, and the base ref, target paths and pre-write hashes were recorded
+outside the repository before any write. The golden calibration labels are not changed. The
+exception does not complete Step 111 or open unrestricted catalog mutations, and it does not
+authorize a push, install or release.
+
 ## 1. Prerequisite preflight — recorded evidence
 
 Phase CL execution is gated on four facts, all four checked and satisfied for Step 110. The

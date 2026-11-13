@@ -85,8 +85,9 @@ An item passes when at least one reviewer of the lane CONFIRMED it and none FAUL
 NOT OBSERVED. On `full`, any arm's CONFIRMED counts, matched by item number. An item that no reviewer
 could confirm (every arm `UNVERIFIABLE` or `NOT APPLICABLE`) becomes a deferred manual-UAT item
 `verify: <item>`, not a failure. On `deep`, items go to review-deep's prompt as criteria, and
-`--plan-step` adds its plan-conformance lens; review-deep's own threshold applies there, under which a
-single Nit already makes a lens NEEDS-WORK. On `auto`, no reviewer exists: the condition is reported
+`--plan-step` adds its plan-conformance lens; review-deep's own threshold applies there, under which only
+a Block makes a lens NEEDS-WORK; Nits are advisory and reach the developer as advisory findings
+(Step 9). On `auto`, no reviewer exists: the condition is reported
 `unchecked` and does not gate. A PASS on `auto` therefore leaves a declared `Done when` unverified, and
 the parent's checkpoint and issue comment do not show that; choose a reviewer lane when the condition
 matters.
