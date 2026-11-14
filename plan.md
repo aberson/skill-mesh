@@ -64,8 +64,8 @@ Gate on `0872fb8`:
 
 - `python tools/change_pack.py --rc-report`: 677 passed. `tests/router`: 66 passed, 1 skipped.
 - The staged package-integrity run inside `release.ps1 -Provider all`: 654 passed, 3 skipped.
-- The full repository-root sweep runs in the background after install, in `skill-mesh-wt/sweep-v3.0.2`. Its
-  result is recorded when it ends.
+- The full repository-root sweep, run in the background after install on `0872fb8`: **2526 passed, 2 skipped in
+  1 h 06 min 53 s, exit 0**. Its worktree was removed afterwards.
 
 Installed from the downloaded zip, without `-Force`: Claude (137 files) and Codex (135 files). The
 installed-equals-released check passed: 137 of 137 and 135 of 135 files are identical, with 0 missing, and
