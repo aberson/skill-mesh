@@ -29,4 +29,6 @@
   <g class="node"><rect x="24" y="164" width="200" height="48" rx="10"/><text class="pn" x="38" y="185">lesson-harvest</text><text class="ps" x="38" y="202">preview candidates</text></g>
   <path class="lnk" marker-end="url(#ar-dark)" d="M224,188 L262,188"/>
   <g class="node"><rect x="262" y="164" width="200" height="48" rx="10"/><text class="pn" x="276" y="185">memory-distill</text><text class="ps" x="276" y="202">human gate</text></g>
-  </svg>
+    <text class="cap" x="500" y="182">Improve track: a typical order, not a required chain.</text>
+  <text class="cap" x="500" y="200">A misbehaving skill usually starts at skill-iterate.</text>
+</svg>

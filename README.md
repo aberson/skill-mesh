@@ -41,12 +41,13 @@ Plan → sync → build → ship. Everything else supports this spine.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="_shared/core-pipeline-dark.svg">
-  <img alt="Plan, review, redline and wrap; sync issues and save a handoff; run checks, selected review and landing gates inside each build step; then acceptance and repository publishing." src="_shared/core-pipeline-light.svg">
+  <img alt="Plan, review, redline and wrap; sync issues and save a handoff; run checks, selected review and landing gates inside each build step; then ship with repo-update, with acceptance where the plan asks for it." src="_shared/core-pipeline-light.svg">
 </picture>
 
 `plan-expedite` collapses the middle (`plan-review → plan-redline → plan-wrap → repo-sync →
-task-handoff`) into one command, and ends by printing the `/goal` + `/build-phase` pair to
-paste next.
+task-handoff`) into one command, and ends by printing what to paste next: a `/clear`, then the
+`/goal` + `/build-phase` pair (or a Pick-up-here block with `--new-window`). `build-phase` ends by
+pointing at `/repo-update`; acceptance testing runs wherever the plan puts it.
 
 Order matters twice. **`plan-review` before `repo-sync`:** a gap caught after the issues
 exist means editing the plan plus every issue body. **`repo-sync` before `build-phase`:**
@@ -97,11 +98,13 @@ across them, one ledger row per fragment. The full table and the re-route edges 
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="_shared/routing-web-dark.svg">
-  <img alt="An operator's notes enter user-gateway and split across the core routes, from debugging and planning to verification and drafting." src="_shared/routing-web-light.svg">
+  <img alt="An operator vent goes through user-gateway to thirteen routes: bug, do, plan, investigate, verify, trim, decide, draft, review, research, tend, session and learn. The plan route forks to plan-feature, plan-init or code-consigliere. Routes are a starting guess with nine re-route edges." src="_shared/routing-web-light.svg">
 </picture>
 
-The graphic shows the eight core routes; v3 adds five more so a vent can reach every skill
-worth venting to. The table shows what a fragment *sounds like* to land on each:
+The graphic shows all thirteen routes (the routing contract calls them *rails*). A route is
+a starting guess: nine sanctioned re-route edges move work along when it turns out to be
+something else, such as a failed verification becoming a bug. The table shows what a fragment
+*sounds like* to land on each:
 
 | Route | Sounds like | Goes to |
 |---|---|---|
@@ -115,7 +118,7 @@ worth venting to. The table shows what a fragment *sounds like* to land on each:
 | **draft** | "here are rough thoughts" | `/user-draft` → `/goal` |
 | **review** | "look this over / is this change OK?" | `/review-gauntlet` · `/review-deep` (high stakes) · `/review-proof` |
 | **research** | "what should we research? / are this doc's claims backed?" | `/research-prospect` · the `citation-*` skills |
-| **tend** | "context feels bloated / tests are slow / we keep repeating mistakes" | `/context-slim` · `/test-prune` · `/lesson-harvest` · `/user-afterparty` |
+| **tend** | "context feels bloated / tests are slow / we keep repeating mistakes" | `/context-slim` · `/test-prune` · `/lesson-harvest` · `/memory-distill` · `/skill-iterate` · `/tier-offload` · `/repo-wrap` · `/user-afterparty` |
 | **session** | "I'm back / keep going or close? / where does this stand?" | `/user-wrap` · `/task-handoff --resume` · `/user-pm` |
 | **learn** | "teach me X / let's explore an idea" | `/user-learn` · `/user-brainstorm` |
 
@@ -174,7 +177,7 @@ session.
 |---|---|
 | [`/plan-init`](#entry-1) | A brand-new project. It stops on an existing codebase and points you to `plan-feature`. |
 | [`/plan-feature`](#entry-2) | Add a feature to existing code; `/code-consigliere` first if you want to understand the project. |
-| [`/build-step`](#entry-3) | One well-scoped change, no plan, with three independent knobs. |
+| [`/build-step`](#entry-3) | One well-scoped change, no plan, in an isolated worktree with the review lane you choose. |
 | [`/user-build-route`](#entry-3) | Not sure how big it is? Get a pipeline, bounded-goal or direct-task recommendation. |
 | [`/user-debug`](#entry-4) | Stuck circling a bug. It forces an independent reproduction before any code change. |
 | [`/review-gauntlet`](#entry-5) | Review a diff or PR with a terse verdict; `/review-deep` for high stakes. |
@@ -196,9 +199,11 @@ session.
 /plan-expedite --plan plan.md       # review → redline → wrap → issue sync → handoff
 ```
 
-`plan-expedite` finishes by printing a ready-to-paste pair: arm the goal, then build.
+`plan-expedite` finishes by printing what to paste next: clear the window, arm the goal, then
+build.
 
 ```
+/clear
 /goal "<completion condition it printed>"
 /build-phase --plan plan.md
 ```
@@ -255,13 +260,14 @@ Prefer the à-la-carte version when you want to inspect between stages:
 /build-step --problem "<what to build or fix>" [--issue N]
 ```
 
-One skill, three independent knobs:
+The developer always works in an isolated git worktree (`--isolation worktree`, the only
+supported value). The main choice is the review lane:
 
-- `--isolation worktree|docker`: where the developer agent works (worktree by default).
-- `--reviewers auto|code|deep|runtime|full`: `auto` = checks only; `code` = five reviewer
-  lenses; `deep` = one `review-deep` run; `runtime` = three evidence-based reviewers on a
-  running app; `full` = all eight.
-- `--ui --start-cmd "<cmd>" --url <url>`: Playwright evidence capture for frontend steps.
+- `--reviewers auto|code|deep|runtime|full`: `auto` = checks only (the default); `code` = five
+  reviewer lenses; `deep` = one `review-deep` run; `runtime` = three evidence-based reviewers
+  on a running app; `full` = all eight.
+- `runtime` and `full` also need `--start-cmd "<cmd>" --url <url>` and capture Playwright
+  evidence; `--ui` is implied there and ignored on the other lanes.
 
 Not sure whether it needs a plan at all? `/user-build-route <the work>` recommends the core
 pipeline, a bounded `/goal`, or a direct task, with its reasons and a prompt to paste. It
@@ -328,7 +334,7 @@ After a build, human-facing verification splits on whether a test script exists.
 
 ```
 /user-walkthrough <feature>               # attended: you drive, the agent answers from source and fixes small things live
-/user-walkthrough <feature> --shakedown   # on its own: closes every open ledger item (verify, quick fix, or log)
+/user-walkthrough --shakedown <feature>   # on its own: closes every open ledger item (verify, quick fix, or log)
 ```
 
 - Both modes share one ledger, so you can explore attended and hand the rest to
@@ -431,7 +437,7 @@ Two independent tracks work on the skills themselves and on the workspace's feed
 # improve a skill
 /user-brainstorm <skill or problem>              # candidate strategies to try
 /skill-eval-setup <skill>                        # bootstrap evals, scenarios and a gold corpus
-/skill-evolve --skill <name> --variants <file>   # A/B variants in parallel; prints the gh pr create command
+/skill-evolve --skill <name> [--variants <file>]   # A/B variants in parallel (brainstorms some if omitted); prints the gh pr create command
 /skill-iterate                                   # serial hill-climb, capped by wall clock or iterations
 
 # codify a lesson
@@ -470,11 +476,12 @@ pipeline.
 ## How utility projects are used
 
 Skills coordinate the work. Small utility projects provide specific operations: tracking the
-intended outcome, finding prior work, keeping evidence, and validating project information.
+intended outcome, finding prior work, keeping evidence, passing notes between lanes, and
+registering projects and their ports.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="_shared/utility-support-dark.svg">
-  <img alt="Skill workflows use Drift Ranger for intent, Find Again for retrieval, Citation Needed for evidence, and dev-observatory for portfolio validation and static diagnostics. Show Your Work documents the workflows." src="_shared/utility-support-light.svg">
+  <img alt="Skill workflows use Drift Ranger for intent, Find Again for retrieval, Citation Needed for evidence, Passing Notes for notes between lanes, and dev-observatory for registry and port hooks. Show Your Work documents the workflows." src="_shared/utility-support-light.svg">
 </picture>
 
 These projects remain separate. Installing Skill Mesh does not install every utility or start
@@ -488,7 +495,7 @@ background services.
 | [Drift Ranger](https://github.com/aberson/drift-ranger) | Private outcome records and capability checkpoints; existing session state is the fallback. |
 | [Find Again](https://github.com/aberson/find-again) | Optional prior-work retrieval in `plan-feature`; current source stays authoritative. |
 | [Passing Notes](https://github.com/aberson/passing-notes) | Lane cards and notes between windows; skills read a lane's waiting notes and never block on the tool. |
-| dev-observatory | Its static doctor and the portfolio-block proposer are dev-observatory project-local skills, not Skill Mesh skills. |
+| dev-observatory | Optional hooks: project registration (`plan-init`), verb and port sync (`repo-update`), a port pre-flight (`build-step --ui`), port and goal checks (`plan-review`, `plan-wrap`), and registry reads (`repo-wrap`, `user-afterparty`); `user-pm --json` feeds its views. Its static doctor and portfolio-block proposer are dev-observatory's own skills. |
 | [Citation Needed](https://github.com/aberson/citation-needed) | Evidence storage and scoring for the citation skills; review and sweep dispatch independent judges. Requires the [overview-filters branch](https://github.com/aberson/citation-needed/tree/skill-mesh-v2/overview-filters). |
 | Switchboard | `tier-offload` produces advisory, inactive routing candidates. |
 | [Show Your Work](https://github.com/aberson/show-your-work) | Checks diagram sources and generates the detailed workflow index; not a skill runtime dependency. |
@@ -595,9 +602,9 @@ are not upgraded by publishing a release.
   router and `tier-escalate` a model-tiering map; adapt them to your models, or skip them.
   `judge-ui` needs a per-project browser adapter (server start-up, auth, test IDs). The
   `citation-*` skills need the Citation Needed CLI, and the lane features need Passing Notes.
-- A few workspace reference files stay unpublished (`shakedown-engine.md`,
-  `task-state-schema.md`, the `docs/investigations/` corpus). Published skills may point at
-  them; treat those as adaptation points, not missing files.
+- A few workspace-only references stay unpublished (the `docs/investigations/` corpus, and
+  workspace rules a skill cites by name). Published skills may point at them; treat those as
+  adaptation points, not missing files.
 - No secrets or credentials are included.
 
 </details>
