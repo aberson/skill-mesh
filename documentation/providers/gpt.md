@@ -1,6 +1,6 @@
 # GPT / Copilot Provider Guide
 
-> **GitHub Copilot (GPT) support is deprecated.** The v3.0.x releases are the last to ship the GPT profile. It is included unchanged, so nothing breaks today, but the GPT adapters, the `.github/skills` install target and the GPT build will be removed in v4. Skill Mesh will then support Claude Code and the OpenAI Codex CLI. If you use the GPT profile, plan to move to one of those.
+> **GitHub Copilot (GPT) is no longer supported.** Skill Mesh supports Claude Code and the OpenAI Codex CLI. The v3.0.x release zips still carry the old GPT profile, unchanged and no longer maintained or qualified; the GPT adapters, the `.github/skills` install target and the GPT build are removed in v4. If you used the GPT profile, move to Claude Code or Codex.
 
 GPT/Copilot host binding, transport precedence, and capabilities for skill-mesh.
 See [`../architecture.md`](../architecture.md) for the full package contract.

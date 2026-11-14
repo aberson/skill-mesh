@@ -31,9 +31,9 @@ powershell -NoProfile -File tools/install-skill-mesh.ps1 -Provider claude -Home 
 
 For Codex use `-Provider codex`; first resolve its effective home with the
 read-only [probe](../tools/probe-codex-skills.ps1) and
-[Codex guide](providers/codex.md). For Copilot use `-Provider gpt`.
+[Codex guide](providers/codex.md). `-Provider gpt` installs the old Copilot profile, which is no longer supported.
 
-**GitHub Copilot (GPT) support is deprecated.** The v3.0.x releases are the last to ship the GPT profile. It is included unchanged, so nothing breaks today, but the GPT adapters, the `.github/skills` install target and the GPT build will be removed in v4. Skill Mesh will then support Claude Code and the OpenAI Codex CLI. If you use the GPT profile, plan to move to one of those.
+**GitHub Copilot (GPT) is no longer supported.** Skill Mesh supports Claude Code and the OpenAI Codex CLI. The v3.0.x release zips still carry the old GPT profile, unchanged and no longer maintained or qualified; the GPT adapters, the `.github/skills` install target and the GPT build are removed in v4. If you used the GPT profile, move to Claude Code or Codex.
 
 Start a fresh host session after installation. Installing does not authenticate
 the host or supply missing native capabilities. Codex uses its own adapter and

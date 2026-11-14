@@ -11,7 +11,7 @@ run on Claude Code and OpenAI Codex from one behavior contract.**
   Block fails a round. The review judges are themselves checked against gold examples.
 - **Real and portable.** 50 skills used day to day, extracted from a working personal
   workspace. One contract per skill drives Claude Code (all 50) and OpenAI Codex (48
-  portable). GitHub Copilot ships for the last time in v3.0.x.
+  portable). GitHub Copilot is no longer supported.
 
 **[v3.0.2 is released](https://github.com/aberson/skill-mesh/releases/tag/v3.0.2)** ·
 [Quick start](#quick-start) · [Browse the skills](documentation/skill-reference.md) ·
@@ -85,7 +85,7 @@ capabilities, and installation puts the generated skills where that host finds t
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="_shared/host-profiles-dark.svg">
-  <img alt="Shared Skill Mesh contracts generate three host profiles: 50 Claude skills and 48 portable skills each for GitHub Copilot (deprecated) and OpenAI Codex." src="_shared/host-profiles-light.svg">
+  <img alt="Shared Skill Mesh contracts generate host profiles for Claude Code (all 50 skills) and OpenAI Codex (48 portable skills). GitHub Copilot is no longer supported and is removed in v4." src="_shared/host-profiles-light.svg">
 </picture>
 
 ### The routing web
@@ -525,28 +525,28 @@ and `build-*` skills (they create repositories and post to issues), and Playwrig
 
 ## Providers & installation
 
-**GitHub Copilot (GPT) support is deprecated.** The v3.0.x releases are the last to ship the GPT profile. It is included unchanged, so nothing breaks today, but the GPT adapters, the `.github/skills` install target and the GPT build will be removed in v4. Skill Mesh will then support Claude Code and the OpenAI Codex CLI. If you use the GPT profile, plan to move to one of those.
+**GitHub Copilot (GPT) is no longer supported.** Skill Mesh supports Claude Code and the OpenAI Codex CLI. The v3.0.x release zips still carry the old GPT profile, unchanged and no longer maintained or qualified; the GPT adapters, the `.github/skills` install target and the GPT build are removed in v4. If you used the GPT profile, move to Claude Code or Codex.
 
 Each skill has one provider-neutral behavior contract (`skills/<name>/core.md`) plus a thin
-adapter per host; installing binds one adapter into that host's discovery layout. Of the
-portable catalog, 48/48 skills are GPT-capable; Claude provides all 50 skills, and two are
-Claude-only (`claude-oauth-auth`, `context-slim`).
+adapter per host; installing binds one adapter into that host's discovery layout. Claude
+provides all 50 skills, two of them Claude-only (`claude-oauth-auth`, `context-slim`), and Codex
+the 48 portable ones. Until v4 removes it, the unsupported GPT profile still builds: for the
+release checks, 48/48 skills are GPT-capable.
 
 | Provider | Host | Discovery root under the chosen home |
 |---|---|---|
 | claude | Claude Code | `.claude/skills/` |
 | codex | OpenAI Codex CLI | `.agents/skills/` |
-| gpt | GitHub Copilot CLI (deprecated) | `.github/skills/` |
+| gpt | GitHub Copilot CLI: no longer supported, removed in v4 | `.github/skills/` |
 
 <details>
 <summary><strong>Installation, upgrades, and restoration</strong></summary>
 
-- Use `-Provider gpt` for GitHub Copilot while it still ships.
+- `-Provider gpt` still installs the old, unsupported Copilot profile from a v3.0.x zip; it is removed in v4.
 - Preserve the previous distribution and installation ledger before upgrading. The installer
   removes a retired skill's files only if you have not edited them, and refuses to overwrite a
   file it does not own unless you tell it to (with a backup).
-- **Auth** is a separate question from install: Claude uses the host's own sign-in, and
-  Copilot uses `gh auth login`; no `OPENAI_API_KEY` is needed for either.
+- **Auth** is a separate question from install: each host uses its own sign-in.
 - See the [installation and restoration guide](documentation/v2-installation.md) for home
   resolution, collision handling, and legacy migration, and the
   [provider guides](documentation/providers/README.md) for capability and exclusion matrices.
