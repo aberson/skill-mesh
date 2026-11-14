@@ -7,7 +7,7 @@ workflow for Claude Code and OpenAI Codex.**
 - **Explicit quality gates.** Automated checks and fresh-context reviewers inform the result; missing required capabilities stop the workflow.
 - **One contract, several hosts.** 50 Claude skills; 48 also packaged for Codex through host adapters, and for GitHub Copilot one last time in v3.0.x.
 
-**[v3.0.1 is released](https://github.com/aberson/skill-mesh/releases/tag/v3.0.1)** ·
+**[v3.0.2 is released](https://github.com/aberson/skill-mesh/releases/tag/v3.0.2)** ·
 [Try it](#install-or-upgrade) · [Browse the skills](documentation/skill-reference.md) ·
 [Detailed workflows](docs/workflows/README.md)
 
@@ -174,7 +174,7 @@ is historical planning, not proof that every proposed caller is wired.
 
 ## Install or upgrade
 
-Download the [v3.0.1 release](https://github.com/aberson/skill-mesh/releases/tag/v3.0.1),
+Download the [v3.0.2 release](https://github.com/aberson/skill-mesh/releases/tag/v3.0.2),
 verify its checksum, and choose one host profile.
 
 **GitHub Copilot (GPT) support is deprecated.** The v3.0.x releases are the last to ship the GPT profile. It is included unchanged, so nothing breaks today, but the GPT adapters, the `.github/skills` install target and the GPT build will be removed in v4. Skill Mesh will then support Claude Code and the OpenAI Codex CLI. If you use the GPT profile, plan to move to one of those.
@@ -209,10 +209,13 @@ for home resolution, collision handling, and legacy migration.
 project (verified status, a routed board, lanes); `/user-gateway` routes a vent to every
 skill; build and wrap skills size tests to the change; eleven skills were retired, folded,
 moved or replaced by a script, and `/user-fermize` joined. **v3.0.1** makes `/user-pm --lanes` end
-with one block for the main lane's window that opens each lane with `/lane-open`. GitHub Copilot (GPT)
-support is deprecated and leaves in v4. The [v3.0.0](https://github.com/aberson/skill-mesh/releases/tag/v3.0.0)
-and [v3.0.1](https://github.com/aberson/skill-mesh/releases/tag/v3.0.1) release notes record what
-changed, the checks that ran and installation limits.
+with one block for the main lane's window that opens each lane with `/lane-open`. **v3.0.2** makes
+review rounds fail only on a Block: Nits are advisory, and medium-severity bugs and missed implied edge
+cases now count as Blocks. GitHub Copilot (GPT) support is deprecated and leaves in v4. The
+[v3.0.0](https://github.com/aberson/skill-mesh/releases/tag/v3.0.0),
+[v3.0.1](https://github.com/aberson/skill-mesh/releases/tag/v3.0.1) and
+[v3.0.2](https://github.com/aberson/skill-mesh/releases/tag/v3.0.2) release notes record what changed,
+the checks that ran and installation limits.
 
 <details>
 <summary><strong>Scope, dependencies, and known limitations</strong></summary>
