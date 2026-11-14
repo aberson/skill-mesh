@@ -37,7 +37,7 @@ are planned. This is the public statement on github.com/aberson, "Where it's hea
 
 ## Patch fix list - opened 2026-11-13
 
-Fixes small or urgent enough for a patch release. v3.0.1 shipped P1 only; the rest are queued for v3.0.2. Findings F2, F4, F5 and F6 came from the coding-root
+Fixes small or urgent enough for a patch release. v3.0.1 shipped P1 and v3.0.2 shipped F5. F2, F4 and F6 are still open. Findings F2, F4, F5 and F6 came from the coding-root
 hook-enforcement and system-revamp windows. F1 and F3 are v4 work (V4-9).
 
 | ID | Fix | Where | Why now |
@@ -46,7 +46,31 @@ hook-enforcement and system-revamp windows. F1 and F3 are v4 work (V4-9).
 | F6 | Add a SAFETY block to the build-step and review-deep agent prompts, including review-deep lenses that "may run experiments": no `-Credential`, `Read-Host` or other prompt sources; every configured path under Temp; nothing at a drive root | `skills/build-step/core.md`, `skills/review-deep/core.md` and its lens prompts | Seen live: a developer ran `Remove-Item -Credential`, which opened a desktop credential prompt, and a reviewer created a folder at a drive root |
 | F4 | The build-step and build-phase Codex adapters cite `config/model-tier-map.json`, which the installed Codex profile does not ship. Checked 2026-11-13: no such file under the installed Codex skills | `skills/build-step/providers/codex.md:10`, `skills/build-phase/providers/codex.md:8` | A Codex session is told to resolve tiers from a file it cannot read. Related: #182 |
 | F2 | Carry the earlier Windows finding into the Codex provider adapter: an `exec_command` service without a tty prints its ready line and then exits (codex-deep-review-bounded-resumption, 2026-09-23) | the Codex provider docs or adapter | A known failure mode is missing from the adapter that needs it |
-| F5 | **DONE on main 2026-11-13 (merge of `v3/nit-policy`), ships in v3.0.2.** Operator decision: only a Block fails a review round, and Nits are advisory. Medium-severity bugs and missed implied edge cases moved up to Block. Applied to review-deep (core, aggregator, Codex adapter, evals, gold sample), review-gauntlet and build-step. Independent reviews of `4cdffa3` and `c088f4a` both APPROVED. | `skills/review-deep/**`, `skills/review-gauntlet/core.md`, `skills/build-step/core.md` | Unblocks hook-enforcement Phase HE Step 2 once v3.0.2 is installed |
+| F5 | **DONE, shipped and installed in v3.0.2 (2026-11-13).** Operator decision: only a Block fails a review round, and Nits are advisory. Medium-severity bugs and missed implied edge cases moved up to Block. Applied to review-deep (core, aggregator, Codex adapter, evals, gold sample), review-gauntlet and build-step. Independent reviews of `4cdffa3` and `c088f4a` both APPROVED. | `skills/review-deep/**`, `skills/review-gauntlet/core.md`, `skills/build-step/core.md` | Unblocks hook-enforcement Phase HE Step 2 once v3.0.2 is installed |
+
+## Release v3.0.2 - reviews fail only on a Block (2026-11-13)
+
+Released from `0872fb8`: tag `v3.0.2`, with `origin/main` fast-forwarded from `4744319`. The archive
+`skill-mesh-v3.0.2.zip` holds 1,254 files and has SHA-256
+`760dc21b8a5866754cee5593c13de0b82aab1510693fa144b01fe71a1b42a735`; a re-download from the GitHub release
+matched it. Its `CHECKSUMS.txt` covers 407 `dist/` files (Claude 137, Codex 135, GPT 135). The catalog is
+unchanged.
+
+v3.0.2 carries the Nit policy (patch fix list F5, merge `2d334ae`). In review-deep, review-gauntlet and
+build-step, only a Block fails a review round, and Nits are advisory. Medium-severity bugs and missed
+implied edge cases are now Blocks.
+
+Gate on `0872fb8`:
+
+- `python tools/change_pack.py --rc-report`: 677 passed. `tests/router`: 66 passed, 1 skipped.
+- The staged package-integrity run inside `release.ps1 -Provider all`: 654 passed, 3 skipped.
+- The full repository-root sweep runs in the background after install, in `skill-mesh-wt/sweep-v3.0.2`. Its
+  result is recorded when it ends.
+
+Installed from the downloaded zip, without `-Force`: Claude (137 files) and Codex (135 files). The
+installed-equals-released check passed: 137 of 137 and 135 of 135 files are identical, with 0 missing, and
+each ledger owns exactly the released set. Its planted-defect check went red as expected first. Evidence:
+`<coding-root>/docs/skill-mesh-3-review/builds/release-v3.0.2/`.
 
 ## Release v3.0.1 - user-pm opens lanes (2026-11-13)
 
@@ -64,8 +88,8 @@ Gate, under the adopted testing rule, on `3b74b0a`:
 
 - `python tools/change_pack.py --rc-report`: 677 passed. `tests/router`: 66 passed, 1 skipped.
 - The staged package-integrity run inside `release.ps1 -Provider all`: 654 passed, 3 skipped.
-- The full repository-root sweep runs in the background after install, in `skill-mesh-wt/sweep-v3.0.1`. Its
-  result is recorded when it ends.
+- The full repository-root sweep, run in the background after install on `3b74b0a`: **2517 passed, 2 skipped in
+  1 h 10 min 34 s, exit 0**. Its worktree was removed afterwards.
 
 Installed from the downloaded zip, without `-Force`: Claude into the coding root (137 files) and Codex into
 the user home (135 files). The installed-equals-released check passed: Claude 137 of 137 and Codex 135 of
