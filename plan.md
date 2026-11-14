@@ -32,12 +32,11 @@ are planned. This is the public statement on github.com/aberson, "Where it's hea
 `documentation/v2-installation.md`, and `/user-dr` in the routing diagram's decide box.
 
 **Open for the operator:**
-- Relabel #245 to #255 from `deferred: v3.1` to `deferred: v4`. This is a tracker write, so it is not done here.
 - Choose the first v4 workstream to plan.
 
 ## Patch fix list - opened 2026-11-13
 
-Fixes small or urgent enough for a patch release. v3.0.1 shipped P1 and v3.0.2 shipped F5. F2, F4 and F6 are still open. Findings F2, F4, F5 and F6 came from the coding-root
+Fixes small or urgent enough for a patch release. v3.0.1 shipped P1 and v3.0.2 shipped F5. Open: F6 (safety, first), F4, F2, and the lane follow-ups P2 to P4 (added 2026-11-13 from Passing Notes requests). Findings F2, F4, F5 and F6 came from the coding-root
 hook-enforcement and system-revamp windows. F1 and F3 are v4 work (V4-9).
 
 | ID | Fix | Where | Why now |
@@ -47,6 +46,9 @@ hook-enforcement and system-revamp windows. F1 and F3 are v4 work (V4-9).
 | F4 | The build-step and build-phase Codex adapters cite `config/model-tier-map.json`, which the installed Codex profile does not ship. Checked 2026-11-13: no such file under the installed Codex skills | `skills/build-step/providers/codex.md:10`, `skills/build-phase/providers/codex.md:8` | A Codex session is told to resolve tiers from a file it cannot read. Related: #182 |
 | F2 | Carry the earlier Windows finding into the Codex provider adapter: an `exec_command` service without a tty prints its ready line and then exits (codex-deep-review-bounded-resumption, 2026-09-23) | the Codex provider docs or adapter | A known failure mode is missing from the adapter that needs it |
 | F5 | **DONE, shipped and installed in v3.0.2 (2026-11-13).** Operator decision: only a Block fails a review round, and Nits are advisory. Medium-severity bugs and missed implied edge cases moved up to Block. Applied to review-deep (core, aggregator, Codex adapter, evals, gold sample), review-gauntlet and build-step. Independent reviews of `4cdffa3` and `c088f4a` both APPROVED. | `skills/review-deep/**`, `skills/review-gauntlet/core.md`, `skills/build-step/core.md` | Unblocks hook-enforcement Phase HE Step 2 once v3.0.2 is installed |
+| P2 | When `/user-pm --lanes` runs in the main lane's own window, end with one line (approve, and say which lanes to open) instead of the paste block meant for another window. Found on the first real `--lanes` run, in the coding root | `skills/user-pm/core.md` (`--lanes` close) and its lanes test | The operator was confused about where to paste the block |
+| P3 | Register the three lane skills `lane-open`, `lane-close` and `lane-handoff`, whose canonical source is in the passing-notes repository: three catalog CREATEs, then rebuild and install for Claude and Codex | `config/skill-manifest.json`, `skills/lane-*/` | They run today from a direct install outside the catalog. Each CREATE needs the operator's scoped exception (lifecycle guide) |
+| P4 | In `session-wrap`, add a lane-scoped git step (clear-next and end-window) so other lanes' edits stop downgrading every close to ask-first. Add an advisory lane reminder in `session-wrap --end` and in `user-wrap`'s WRAP & CLOSE when the window has an active lane card. Design approved by the operator 2026-11-13, relayed by the passing-notes maintainer | `skills/session-wrap/core.md`, `skills/user-wrap/core.md` | `lane-close` calls `session-wrap --end`; in repositories with several active lanes, every close is downgraded today |
 
 ## Release v3.0.2 - reviews fail only on a Block (2026-11-13)
 
@@ -1472,4 +1474,4 @@ their respective release payloads. Restart host sessions after upgrading.
   `documentation/v3-catalog-cleanup-plan.md`, `documentation/v3-inbox-hooks-plan.md` and
   `documentation/v3-release-plan.md`.
 - Issue hygiene 2026-11-13: step issues closed where the plan records DONE or MET; the
-  deferred catalog-gate step issues carry the `deferred: v3.1` label.
+  deferred catalog-gate step issues carried the `deferred: v3.1` label; on 2026-11-13 they were relabelled `deferred: v4` (V4-8).
