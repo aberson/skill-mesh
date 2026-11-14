@@ -4,8 +4,9 @@
 
 skill-mesh is a provider-neutral collection of 50 agent skills for planning, building, reviewing,
 and shipping software. Each skill is authored once as a shared behavior contract (`core.md`) plus
-thin per-host adapters, so the same skill runs on Claude Code, GitHub Copilot CLI, and the OpenAI
-Codex CLI.
+thin per-host adapters, so the same skill runs on Claude Code and the OpenAI Codex CLI. GitHub
+Copilot (the GPT provider) is no longer supported: its adapters still build for the v3.0.x releases
+and are removed in v4.
 
 This repository is the **canonical source and the build/release toolchain** — it is not itself an
 installed skill tree. Installing produces a host-native discovery tree in a consumer home.
@@ -291,8 +292,8 @@ the Phase 7.5 status documents, and `documentation/step-4-checkpoint-2026-08-13.
   Its absence is a named call-time error and does not abort unrelated collection.
 - **git** — release staging is `git ls-files`-driven and fails outside a working tree.
 - **`gh` CLI** for issue/PR work.
-- **GitHub Copilot CLI, signed in via `gh auth login`**, for any GPT-side host acceptance.
-  Copilot subscription auth is the transport — **no `OPENAI_API_KEY` is used or needed**.
+- **GitHub Copilot CLI** is no longer a supported host. The GPT profile still builds and its
+  package checks still run until v4 removes it; no GPT-side host acceptance is done.
 - Writing this file: keep absolute user paths out of every committed file. This is a public
   repository and `tests/package-integrity/test_manifest_contract.py` gates it.
 

@@ -1,5 +1,7 @@
 # Troubleshooting
 
+> **GitHub Copilot (GPT) is no longer supported.** Skill Mesh supports Claude Code and the OpenAI Codex CLI. The GPT/Copilot material below describes the old profile, which still builds for the v3.0.x releases and is removed in v4.
+
 Provider selection and transport authentication are separate axes (see
 [`architecture.md`](architecture.md) section 5 and [`providers/`](providers/)).
 Most router problems fall into one of the two categories below; check which axis

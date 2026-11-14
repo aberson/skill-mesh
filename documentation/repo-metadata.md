@@ -8,6 +8,20 @@ Claude-only framing left over from before the provider-neutral migration (Steps 
 description,repositoryTopics`; re-apply with `gh repo edit aberson/skill-mesh --description "..."
 --add-topic ...` or the GitHub web UI.
 
+## Applied 2026-11-13 (current)
+
+GitHub Copilot is no longer supported (operator, 2026-11-13), and the catalog is 50 skills, 48 of them
+portable. This replaces the 2026-08 description below.
+
+- **Description:**
+  > Agent skills for a gated plan -> build -> review -> ship pipeline on Claude Code and OpenAI
+  > Codex: 50 skills (48 portable), independent evidence-citing reviewers, calibrated judges, and
+  > install/build/release tooling.
+- **Topics:** `agentic-workflows`, `ai-agents`, `claude`, `claude-code`, `developer-tools`, `llm`,
+  `openai-codex`, `provider-neutral`, `python`. `github-copilot` and `gpt` were removed.
+
+The sections below are the earlier records, kept as history.
+
 ## Previous (pre-migration, now replaced)
 
 - **Description:** "36 Claude Code skills for an autonomous plan -> build -> review -> ship

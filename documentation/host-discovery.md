@@ -1,5 +1,7 @@
 # Host-Loading Authority Map
 
+> **GitHub Copilot (GPT) is no longer supported.** Skill Mesh supports Claude Code and the OpenAI Codex CLI. The GPT/Copilot material below describes the old profile, which still builds for the v3.0.x releases and is removed in v4.
+
 How a host finds and runs a skill-mesh skill involves **three separate mechanisms**.
 They are **distinct and not interchangeable**: satisfying one does not satisfy
 another, and evidence of one is never evidence of another. Conflating them is the

@@ -1,16 +1,15 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 282" font-family="ui-monospace,'Cascadia Code','SF Mono',Consolas,monospace" role="img" aria-label="Shared contracts generate host-native profiles; required capabilities remain explicit">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 282" font-family="ui-monospace,'Cascadia Code','SF Mono',Consolas,monospace" role="img" aria-label="Shared contracts generate host-native profiles for Claude Code and OpenAI Codex; required capabilities remain explicit">
 <defs><marker id="arrow" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 Z" fill="#6E9BFF"/></marker><filter id="shadow" x="-20%" y="-45%" width="140%" height="190%"><feDropShadow dx="0" dy="2" stdDeviation="4" flood-opacity=".12"/></filter></defs>
-<style>.node rect{fill:#161C26;stroke:#384153;stroke-width:1.4;filter:url(#shadow)}.name{fill:#6E9BFF;font-size:14px;font-weight:600}.sub{fill:#9AA5B8;font-size:11px}.label{fill:#9AA5B8;font-size:11px;letter-spacing:.12em}.flow{fill:none;stroke:#6E9BFF;stroke-width:2;marker-end:url(#arrow)}</style>
+<style>.node rect{fill:#161C26;stroke:#384153;stroke-width:1.4;filter:url(#shadow)}.name{fill:#6E9BFF;font-size:14px;font-weight:600}.sub{fill:#9AA5B8;font-size:11px}.label{fill:#9AA5B8;font-size:11px;letter-spacing:.12em}.flow{fill:none;stroke:#6E9BFF;stroke-width:2;marker-end:url(#arrow)}.retired{fill:#9AA5B8;font-size:11px;opacity:.75}</style>
 <rect x="6" y="6" width="988" height="270" rx="16" fill="#161C26" stroke="#29313F" stroke-width="1.5"/>
 <text class="label" x="28" y="34">AUTHOR ONCE</text><text class="label" x="360" y="34">BUILD + INSTALL</text><text class="label" x="708" y="34">HOST-NATIVE DISCOVERY</text>
-<g class="node"><rect x="28" y="105" width="255" height="58" rx="10"/><text class="name" x="44" y="129">48 shared contracts</text><text class="sub" x="44" y="149">behavior + gates + host adapters</text></g>
+<g class="node"><rect x="28" y="105" width="255" height="58" rx="10"/><text class="name" x="44" y="129">50 skill contracts</text><text class="sub" x="44" y="149">48 portable + 2 Claude-only</text></g>
 <g class="node"><rect x="360" y="105" width="260" height="58" rx="10"/><text class="name" x="376" y="129">Generated profiles</text><text class="sub" x="376" y="149">manifest-driven, ownership-aware</text></g>
 <path class="flow" d="M283,134 H355"/>
-<path class="flow" d="M620,134 H660 V77 H703"/>
-<path class="flow" d="M620,134 H703"/>
-<path class="flow" d="M660,134 V215 H703"/>
-<g class="node"><rect x="708" y="48" width="264" height="58" rx="10"/><text class="name" x="724" y="72">Claude Code</text><text class="sub" x="724" y="92">50 skills / 2 Claude-only</text></g>
-<g class="node"><rect x="708" y="117" width="264" height="58" rx="10"/><text class="name" x="724" y="141">GitHub Copilot</text><text class="sub" x="724" y="161">48 portable, deprecated</text></g>
-<g class="node"><rect x="708" y="186" width="264" height="58" rx="10"/><text class="name" x="724" y="210">OpenAI Codex</text><text class="sub" x="724" y="230">48 portable skills</text></g>
+<path class="flow" d="M620,134 H660 V89 H703"/>
+<path class="flow" d="M660,134 V175 H703"/>
+<g class="node"><rect x="708" y="60" width="264" height="58" rx="10"/><text class="name" x="724" y="84">Claude Code</text><text class="sub" x="724" y="104">all 50 skills</text></g>
+<g class="node"><rect x="708" y="146" width="264" height="58" rx="10"/><text class="name" x="724" y="170">OpenAI Codex</text><text class="sub" x="724" y="190">48 portable skills</text></g>
+<text class="retired" x="708" y="236">GitHub Copilot: no longer supported,</text><text class="retired" x="708" y="252">removed in v4</text>
 <text class="sub" x="28" y="217">Required review and vision capabilities</text><text class="sub" x="28" y="236">are checked in the consuming host.</text>
 </svg>

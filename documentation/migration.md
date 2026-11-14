@@ -1,5 +1,7 @@
 # Migration Notes
 
+> **GitHub Copilot (GPT) is no longer supported.** Skill Mesh supports Claude Code and the OpenAI Codex CLI. The GPT/Copilot material below describes the old profile, which still builds for the v3.0.x releases and is removed in v4.
+
 Operator-facing narrative for the provider-neutral repackaging done in Steps 33-40 of
 [`provider-neutral-skill-mesh-plan.md`](provider-neutral-skill-mesh-plan.md). This document
 answers "what changed, what do I point at now, and what still needs a follow-up" for anyone
