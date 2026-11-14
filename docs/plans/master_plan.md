@@ -717,11 +717,27 @@ Use disposable project/worktree fixtures for safety and malformed-history cases.
 
 
 ## Catalog lifecycle (CL)
+
+#### v3 re-base (2026-11-14)
+
+This section was written in September 2026 against a 57-skill catalog. Lane `catalog-safety` re-checked it against `main` at `6803b5e` on 2026-11-14 (a plan-review plus a line-by-line check of its code citations). Where the points below disagree with older text in this section, they win. Steps 110 and 119 stay as accepted history.
+
+- **Catalog.** 50 skills: 48 portable and 2 provider-native, with 48 Codex and 48 GPT adapters. Adding `/skill-crud` makes it 51 / 49 / 2, with 49 adapters for each required provider.
+- **Required providers (operator decision, 2026-11-14).** `portable_provider_contract.required` is `['claude', 'codex']`. GitHub Copilot (GPT) is no longer supported, and V4-7 removes its adapters. Until then the existing `providers/gpt.md` files stay and the GPT profile still builds what is present. GPT is not required: `/skill-crud` ships no `gpt.md`, and a portable skill without one is not drift. This amends CL-D4 and section 4 of the lifecycle guide, whose Step 110 pins assert the three-provider set. Step 111 updates both.
+- **Generator.** The three-file producer already landed under the scoped code-consigliere exception (2026-11-02). `tools/gen_manifest.py` lists all three files in `ARTIFACTS`, and `write_artifacts()` writes them. Step 111 keeps only the work that remains.
+- **Existing guards.** `skills/skill-eval-setup/core.md` already stops a catalog-owned target with `PACKAGE_RESOURCE_PLAN_REQUIRED`. skill-evolve and skill-iterate already turn generated or installed targets into proposals. Step 114 is held for re-scoping; see that step.
+- **Testing.** The adopted testing rule (2026-11-12, `CLAUDE.md` Key commands) replaces the September gate cadence. Each step runs the focused tests for what it touches plus `python tools/change_pack.py`: add `--roster` for a catalog CREATE or DELETE, and `--rc-report` when a representative skill's core changes. The step saves the command, the selected files and the summary line as evidence. The one repository-root `python -m pytest` sweep runs in Step 117 as the release-candidate check, detached, after `python tools/gate_preflight.py`. This supersedes DS-D7(f)'s shared-gate batching.
+- **Paths and line numbers.** Porting this section into the master plan rewrote `documentation/` to `docs/`. The paths are corrected back. Line numbers cited in sections 2 and 4 are September values. Each step re-finds its call sites with `rg`, per section 4's closing rule.
+- **Raised, not resolved.** These overlaps need the operator or the owning lane:
+  - Step 114 overlaps the v4 optimization program (V4-2) and the switchboard model pins, which also reshape skill-evolve, skill-iterate and skill-eval-setup.
+  - Step 112 shares `tools/release_checks.py`, `tools/build-distributions.ps1`, `config/model-mapping.json` and the frontmatter gate with V4-7 (GPT removal).
+  - Step 9 of the catalog-gate plan (#253, V4-8) adds a section to `documentation/skill-catalog-lifecycle.md`, which Steps 111 and 113 also edit.
+
 #### Contract: 2. Existing Context
 
 ### Canonical and generated surfaces
 
-`docs/architecture.md` currently assigns one canonical home to each core, adapter,
+`documentation/architecture.md` currently assigns one canonical home to each core, adapter,
 manifest, mapping, builder, and test surface (section 2, lines 26–79). Portable packages live at
 `skills/<name>/core.md` plus provider adapters (section 3, lines 81–104). Generated host trees
 under `dist/` and consumer discovery roots are not authoring surfaces.
@@ -742,18 +758,19 @@ skills/<name>/{core.md,providers/*.md}
  tools/build-distributions.ps1 -Provider all
                          |
                          v
- disposable claude / gpt / codex profiles and installs
+ disposable claude / codex profiles and installs (gpt still builds while its adapters exist)
 ```
 
-Today `tools/gen_manifest.py` hermetically produces only the first two JSON artifacts in the
-middle row (`ARTIFACTS`, lines 728–729). `tools/gen_skill_tree.py` owns
-`skills/inventory.json`, but lines 37–43 explicitly say its legacy source was overwritten and it
-cannot safely regenerate the current canonical tree. Phase CL moves inventory emission to the
-hermetic producer and leaves the retired transform available only for its historical unit tests.
+Since the scoped code-consigliere exception (2026-11-02), `tools/gen_manifest.py` produces all
+three JSON artifacts in the middle row (`ARTIFACTS`), building `skills/inventory.json` through
+`gen_skill_tree.build_inventory()`. `tools/gen_skill_tree.py` lines 37–43 still say its legacy
+source was overwritten and it cannot safely regenerate the current canonical tree. Phase CL keeps
+that split. It adds validation of all three payloads before the first write, safe per-file
+replacement and a no-write `--check`.
 
 ### The current provider invariant is in the wrong owner
 
-- `docs/architecture.md` lines 38–45 describes a Codex adapter for every portable
+- `documentation/architecture.md` lines 38–45 describes a Codex adapter for every portable
   skill.
 - `tools/release_checks.py` lines 153–174 and
   `tests/package-integrity/test_manifest_contract.py` lines 207–225 still define only Claude and
@@ -764,7 +781,7 @@ hermetic producer and leaves the retired transform available only for its histor
   completeness.
 
 Phase CL introduces one manifest field, `portable_provider_contract.required`, whose ordered
-value is `['claude', 'gpt', 'codex']`. Release completeness, tree shape, generation, inventory,
+value is `['claude', 'codex']` (operator decision 2026-11-14; GPT is unsupported and V4-7 removes its adapters). Release completeness, tree shape, generation, inventory,
 and lifecycle validation all consume this field. Adding a provider to the general provider
 vocabulary does not silently widen portable CRUD; widening this required set is an explicit
 provider-rollout decision.
@@ -905,7 +922,7 @@ caller-owned disposable directory, is read once, and is never rewritten by the h
 ### In scope
 
 - One canonical lifecycle guide and pasteable request template.
-- A portable `/skill-crud` core plus Claude, GPT, and Codex adapters.
+- A portable `/skill-crud` core plus Claude and Codex adapters (the required set, re-based 2026-11-14).
 - Portable-by-default CREATE/READ/UPDATE/DELETE/RENAME behavior and exact stop conditions.
 - Truthful `origin`/`migration` provenance for packages authored after the legacy migration.
 - One explicit required-provider set for portable skills.
@@ -920,14 +937,14 @@ caller-owned disposable directory, is read once, and is never rewritten by the h
   descope DS-D7(d)).
 - The #165 codex adapter capability-claims honesty sweep (pre-rail Step 119 per DS-D7(e)).
 - Disposable all-provider build/install/rollback rehearsals and attended host acceptance
-  (Claude+Codex attended; gpt build-only per DS-D7(c)).
+  (Claude and Codex; GPT is not a required provider).
 
 ### Out of scope
 
 - Editing or replacing an OpenAI-, Claude-, or other host-provided `skill-creator`.
 - Direct edits to `.agents/skills`, `.claude/skills`, `.github/skills`, `dist/`,
   `release-stage/`, or the legacy top-level compatibility packages.
-- Converting the three existing provider-native exclusions.
+- Converting the two existing provider-native exclusions.
 - Adding a fourth provider or changing provider-expansion sequencing.
 - Retargeting the complete eval/evolve/iterate scoring engines to multi-file canonical packages;
   this phase adds the fail-closed guard only.
@@ -940,29 +957,29 @@ caller-owned disposable directory, is read once, and is never rewritten by the h
 
 | File or surface | Change type | Reason | Verified existing context |
 |---|---|---|---|
-| `docs/skill-catalog-lifecycle.md` | create | Canonical operator guide and reusable CRUD template | Absent at planning HEAD; no lifecycle authority exists. |
+| `documentation/skill-catalog-lifecycle.md` | modify | Canonical operator guide and reusable CRUD template | Created by Step 110. Step 111 re-bases section 4 to the Claude+Codex required set and the generator position; Step 113 switches the front door. |
 | `CLAUDE.md` | modify | Point catalog mutations to `/skill-crud` and ban generated/host-root edits | It is the shared project instruction source; `AGENTS.md` already delegates to it. |
-| `docs/architecture.md` | modify | Document authoring vs generated-canonical surfaces, required provider set, provenance, and inventory owner | Sections 2–3 and 7 currently describe the canonical package and migration-only provenance. |
-| `tools/gen_manifest.py` | modify | Generate/check three artifacts, encode origin and required providers, and dogfood the new catalog record | Lines 52–126 own rosters; 422 owns fixed counts; 488–556 constructs skill records; 728–729 names only two artifacts. |
+| `documentation/architecture.md` | modify | Document authoring vs generated-canonical surfaces, required provider set, provenance, and inventory owner | Sections 2–3 and 7 currently describe the canonical package and migration-only provenance. |
+| `tools/gen_manifest.py` | modify | Generate/check three artifacts, encode origin and required providers, and dogfood the new catalog record | Lines 52–126 own rosters; 422 owns fixed counts; 488–556 constructs skill records; `ARTIFACTS` already names all three files (scoped exception, 2026-11-02). |
 | `tools/gen_skill_tree.py` | modify | Retire it as the current inventory writer without deleting transform coverage | Lines 37–43 declare the live regeneration path non-reproducible; lines 565–645 build/write inventory. |
-| `config/skill-manifest.json`, `tests/package-integrity/expected_inventory.json`, `skills/inventory.json` | regenerate | Publish the new schema and later the new skill from one hermetic producer | Current counts are 57 total, 54 portable, 3 native, 54 Codex. |
+| `config/skill-manifest.json`, `tests/package-integrity/expected_inventory.json`, `skills/inventory.json` | regenerate | Publish the new schema and later the new skill from one hermetic producer | Counts on 2026-11-14: 50 total, 48 portable, 2 native, 48 Codex. |
 | `config/model-mapping.json` | modify | Add the new skill's routing row; preserve exact set equality | Router fallback for a missing row is Claude-only at `runtime/skill-router.ps1:521–550`. |
 | `tools/release_checks.py` | modify | Make every required portable adapter a release-completeness requirement | Lines 153–174 require Claude/GPT and call Codex optional. |
 | `tools/build-distributions.ps1` | modify | Reject an incomplete portable provider set before deleting or emitting any output | Lines 540–544 currently skip a missing adapter and still allow the builder to finish successfully. |
 | `tools/skill_catalog.py` | create | Read-only impact inventory and operation-specific conformance verdict | Absent at planning HEAD. |
-| `skills/skill-crud/core.md`, `skills/skill-crud/providers/{claude,gpt,codex}.md` | create | Provider-neutral lifecycle front door with three thin bindings | No `skill-crud` or canonical `skill-creator` appears in the 57-skill tree. |
-| `skills/skill-eval-setup/core.md` | modify | Refuse legacy single-file mutation for a catalog-owned target | Lines 20–24 resolve names to `.claude/skills/<name>/SKILL.md`; lines 324–329 commit that single file. |
+| `skills/skill-crud/core.md`, `skills/skill-crud/providers/{claude,codex}.md` | create | Provider-neutral lifecycle front door with two thin bindings | No `skill-crud` or canonical `skill-creator` appears in the 50-skill tree. |
+| `skills/skill-eval-setup/core.md` | modify | Refuse legacy single-file mutation for a catalog-owned target | Re-checked 2026-11-14: the core already stops a catalog-owned target with `PACKAGE_RESOURCE_PLAN_REQUIRED` (its "Catalog-owned targets use the catalog lifecycle" paragraph). Step 114 is held for re-scoping. |
 | `skills/skill-evolve/core.md` | modify | Route catalog-owned targets away from one-host winner materialization | Lines 53 and 146 resolve the legacy file; lines 246–257 commit it. |
 | `skills/skill-iterate/core.md` | modify | Stop catalog-owned hill-climbs before single-file edits | Lines 41–63 discover the legacy tree; lines 503–505 edit/commit one `SKILL.md`. |
 | `tests/package-integrity/test_manifest_contract.py`, `test_skill_tree.py`, `test_release_gates.py`, `test_codex_budgets.py`, `test_frontmatter_yaml.py` | modify | Move the adapter invariant to its correct owner; pin provenance, generation, counts, frontmatter, and negative cases | Each file currently owns part of those structural assertions. |
-| `tests/package-integrity/test_skill_catalog_lifecycle.py` | create | Unit and planted-negative coverage for inspect/verify and the three bypass guards | Absent at planning HEAD. |
+| `tests/package-integrity/test_skill_catalog_lifecycle.py` | modify | Unit and planted-negative coverage for inspect/verify and the bypass guards | Created by Step 110. Its pins were rebound for the 2026-11-02 exception, so later steps edit the live rebound pins. |
 | `tests/smoke/test_skill_crud_lifecycle.py` and fixtures | create | Disposable black-box CRUD sequence through build/install boundaries | Absent at planning HEAD. |
-| `tests/distributions/test_distributions.py`, `tests/release/test_release_script.py`, active count/budget fixtures | modify as discovered by the exact consumer grep | Reject builder-level missing adapters, re-pin 58/55 cardinalities, and prove all-provider install, stale cleanup, rollback, and release without rewriting historical cohort evidence | Step-10 commit `c4a850c` touched these same count and distribution consumers when seven skills were promoted. |
+| `tests/distributions/test_distributions.py`, `tests/release/test_release_script.py`, active count/budget fixtures | modify as discovered by the exact consumer grep | Reject builder-level missing adapters, re-pin 51/49 cardinalities, and prove all-provider install, stale cleanup, rollback, and release without rewriting historical cohort evidence | Step-10 commit `c4a850c` touched these same count and distribution consumers when seven skills were promoted. |
 | `tools/release.ps1` | modify | Update active catalog-count comments while retaining `-Provider all` as lifecycle certification | The script has current-count commentary and deliberately defaults to `both`, which omits Codex. |
 | `tools/install-skill-mesh.ps1` | modify (Step 116, #192 scope only) | Forced stale removal re-verifies literal final-path identity after reparse substitution | Folded in by descope DS-D7(d); Step 116 is the plan's one step exercising the forced deletion paths end-to-end. |
 | `skills/*/providers/codex.md` (audit surface, Step 119) | modify as found | Replace stale provider-wide host-capability claims with capability probes or honest named refusals | Absorbed #165 per DS-D7(e); review-deep's fail-closed halt is the DS-D3 known gap, not a defect. |
-| `README.md`, `docs/providers/**`, `docs/migration.md`, `docs/phase-75-baseline.md` | modify | Publish the supported entry point, 58/55 current counts, commands, and final measured test baseline | These are active operator/status surfaces; historical plans retain their original measurements. |
-| `docs/findings/skill-crud-uat.md` | create in Step 117, fill in Step 118 | Pre-authored disposable-host acceptance rows | Absent at planning HEAD. |
+| `README.md`, `documentation/providers/**`, `documentation/migration.md`, `documentation/phase-75-baseline.md` | modify | Publish the supported entry point, 51/49 current counts, commands, and final measured test baseline | These are active operator/status surfaces; historical plans retain their original measurements. |
+| `documentation/findings/skill-crud-uat.md` | create in Step 117, fill in Step 118 | Pre-authored disposable-host acceptance rows | Absent at planning HEAD. |
 
 The implementation begins each step with `rg` over the touched identifier/count and records every
 new consumer in that step's diff. The table is a verified floor, not permission to ignore a newly
@@ -1013,7 +1030,7 @@ The `skill-crud` catalog metadata is locked before its CREATE dogfood:
 | local-capable | `false` (unassessed; conservative) |
 | sub-agent / vision | neither set contains `skill-crud` |
 | support assets | `[]` |
-| model mapping | `{"default_model":"claude","claude":true,"gpt":true,"local":false,"notes":"Phase CL provider-neutral catalog CRUD; core plus Claude/GPT/Codex adapters."}` |
+| model mapping | `{"default_model":"claude","claude":true,"gpt":false,"local":false,"notes":"Phase CL provider-neutral catalog CRUD; core plus Claude/Codex adapters."}` |
 
 Codex eligibility is represented by the required adapter and provider profile, not a boolean in the
 current model-mapping schema.
@@ -1029,7 +1046,7 @@ and direct generated-only edit.
 
 ### Hermetic three-artifact generation
 
-`tools/gen_manifest.py` becomes the only current writer for:
+`tools/gen_manifest.py` has been the only current writer since the 2026-11-02 scoped exception for:
 
 1. `config/skill-manifest.json`
 2. `tests/package-integrity/expected_inventory.json`
@@ -1048,7 +1065,7 @@ reported as generated drift by `--check`. `--check` compares all three in memory
 | CL-D1 | Phase CL is a separate post-closeout feature, not a Phase IS amendment. | Phase IS C3 pins 57/54/54 catalog cardinalities and C2A requires the authoritative phase-plan blob to stay unchanged. |
 | CL-D2 | AMENDED 2026-09-06 (descope DS-D7(b)/DS-D4): execution waits only for the descope record on main, the deleted freeze, and RD-lite (#177) landed. The original Phase IS C5 / Phase CP M3 park is retired — the Phase IS tail is parked terminal-unless-recertified, and the operator accepted that the first catalog change makes the frozen IS candidate uncertifiable. | Originally: a new catalog member would change the candidate and parity baseline while each was still being certified. That certification program is now parked by operator decision. |
 | CL-D3 | The front door is named `skill-crud`, not `skill-creator`. | It avoids collision and false authority claims over host-provided creator skills. |
-| CL-D4 | Portable means every provider in `portable_provider_contract.required`; initially Claude, GPT, and Codex. | One host-only adapter must be structurally incapable of passing as a portable create. |
+| CL-D4 | Portable means every provider in `portable_provider_contract.required`: Claude and Codex (amended 2026-11-14 by operator decision; the September set was Claude, GPT and Codex). | One host-only adapter must be structurally incapable of passing as a portable create. |
 | CL-D5 | New provider-native mutation is blocked, not parameterized. | Native exceptions require operator architecture judgment and cannot be made safe by an unattended flag. |
 | CL-D6 | The helper inspects and verifies but never applies edits. | The model can make scoped semantic edits; a deterministic checker remains independent of the mutation mechanism. |
 | CL-D7 | `gen_manifest.py` owns all current inventory JSON; `gen_skill_tree.py` retains only historical transform behavior. | The former is hermetic and the latter cannot reproduce the overwritten legacy source. |
@@ -1069,7 +1086,7 @@ reported as generated drift by `--check`. `--check` compares all three in memory
 - **Problem:** After the `6d14626` repair fixed build-step/build-phase, other Codex adapters may still carry stale provider-wide host-capability claims (unconditional isolation or tool assertions) instead of capability probes or honest named refusals.
 - **Type:** code
 - **Issue:** #165
-- **Files:** `skills/*/providers/codex.md` (audit all 54), `docs/troubleshooting.md`, `tests/package-integrity/` (a planted-negative or contract test if one fits naturally)
+- **Files:** `skills/*/providers/codex.md` (audit all 54), `documentation/troubleshooting.md`, `tests/package-integrity/` (a planted-negative or contract test if one fits naturally)
 - **Existing context:** review-deep's codex adapter keeps its fail-closed `required_tool_missing` halt — that is the DS-D3 known gap, not a defect; reword only if its stated reason is inaccurate. Editing `review-gauntlet/providers/codex.md` (or any other representative skill's file) moves recorded hashes: regenerate the release-candidate report via `python tests/smoke/gen_release_candidate_report.py` IN THE SAME CHANGE (the guard lives in the smoke suite and otherwise reds hours later in the slow gate).
 - **Produces:** every codex adapter's host-capability language is either a runtime capability probe or an honest named refusal; #165 closes with a per-adapter disposition table.
 - **Done when:** the audit table (adapter → claim → disposition) is posted to #165; changed adapters carry no provider-wide claim; the release-candidate report is regenerated if any representative skill changed; focused package-integrity tests pass.
@@ -1082,8 +1099,8 @@ reported as generated drift by `--check`. `--check` compares all three in memory
 - **Problem:** Skill Mesh documents canonical package locations but has no supported CRUD contract or root instruction that prevents a host-only creator from being mistaken for a provider-neutral catalog operation.
 - **Type:** code
 - **Issue:** #168
-- **Files:** `docs/skill-catalog-lifecycle.md`, `docs/architecture.md`, `CLAUDE.md`, `tests/package-integrity/test_skill_catalog_lifecycle.py`
-- **Existing context:** before any repository write, verify from Git that `docs/descope-2026-09.md` is on `main`, the dev workspace freeze file is deleted (its DS-D2), RD-lite (#177) has landed, and `main` is clean and synchronized with `origin/main`. If any prerequisite is absent, stop with `PHASE_CL_PREREQUISITE_NOT_MET` (its meaning re-based by DS-D7(b) — the old Phase IS C5 / CP M3 park is retired). `AGENTS.md` is intentionally a thin pointer to `CLAUDE.md`; preserve that shape. Issue #165 is owned by Step 119, not this step.
+- **Files:** `documentation/skill-catalog-lifecycle.md`, `documentation/architecture.md`, `CLAUDE.md`, `tests/package-integrity/test_skill_catalog_lifecycle.py`
+- **Existing context:** before any repository write, verify from Git that `documentation/descope-2026-09.md` is on `main`, the dev workspace freeze file is deleted (its DS-D2), RD-lite (#177) has landed, and `main` is clean and synchronized with `origin/main`. If any prerequisite is absent, stop with `PHASE_CL_PREREQUISITE_NOT_MET` (its meaning re-based by DS-D7(b) — the old Phase IS C5 / CP M3 park is retired). `AGENTS.md` is intentionally a thin pointer to `CLAUDE.md`; preserve that shape. Issue #165 is owned by Step 119, not this step.
 - **Produces:** the canonical CREATE/READ/UPDATE/DELETE/RENAME guide, pasteable request template, locked prerequisite/native/resource/source/mutation stop codes, authoring/generated/consumer boundary, recovery contract, and a root pointer to that guide for catalog-owned mutations until the distributed front door exists.
 - **Done when:** the prerequisite preflight has passed and its evidence is recorded; the guide defines every operation and request field in sections 1–2 of this plan; portable is explicitly core plus Claude/GPT/Codex; native mutation returns `PROVIDER_NATIVE_REVIEW_REQUIRED` before writes; a support-resource topology change returns `PACKAGE_RESOURCE_PLAN_REQUIRED`; non-Skill-Mesh sources stop with `NOT_SKILL_MESH_SOURCE`; direct `dist/`, host-root, release-stage, and legacy-package edits are forbidden; mutation failure preserves unrelated work and returns `CATALOG_MUTATION_INCOMPLETE` without automatic cleanup; tests fail when the guide pointer, required-provider rule, stop codes, recovery rule, or canonical/generated boundary is removed. Step 110 does not claim `/skill-crud` is installed or invokable.
 - **Flags:** --reviewers code
@@ -1091,14 +1108,14 @@ reported as generated drift by `--check`. `--check` compares all three in memory
 
 ### Step 111: Make native-born inventory generation hermetic
 
-- **Status:** PENDING / BLOCKED ON 110
+- **Status:** PENDING (Step 110 DONE; re-based 2026-11-14)
 - **Problem:** The current generator cannot truthfully represent and reproduce a native-born canonical package.
 - **Type:** code
 - **Issue:** #169
-- **Files:** `tools/gen_manifest.py`, `tools/gen_skill_tree.py`, `config/skill-manifest.json`, `skills/inventory.json`, `tests/package-integrity/expected_inventory.json`, `tests/package-integrity/test_manifest_contract.py`, `tests/package-integrity/test_skill_tree.py`, `tests/package-integrity/test_codex_budgets.py`
-- **Existing context:** preserve the explicit roster and exact native set as anti-silent-addition guards. The committed catalog remains 57/54/3 throughout this infrastructure step; Step 113 performs the one-member growth. `gen_skill_tree.py` keeps historical transform coverage but ceases to be the live inventory writer.
-- **Produces:** truthful `origin`/nullable-`migration` records, `portable_provider_contract.required`, Codex membership derived from `PORTABLE` instead of a second `CODEX` roster, one hermetic three-artifact producer, safe per-file writes, and a no-write `--check` mode.
-- **Done when:** `python tools/gen_manifest.py --check` is byte-for-byte read-only and green; normal regeneration reproduces all three artifacts; all three payloads are computed and validated before the first replacement; an injected interruption cannot truncate an artifact and is surfaced as drift on the next check; existing records retain truthful legacy provenance; a canonical fixture carries `migration: null`; no independent `CODEX` membership authority remains; focused manifest/tree/budget tests pass without changing the 57/54/3 partition.
+- **Files:** `tools/gen_manifest.py`, `tools/gen_skill_tree.py`, `config/skill-manifest.json`, `skills/inventory.json`, `tests/package-integrity/expected_inventory.json`, `tests/package-integrity/test_manifest_contract.py`, `tests/package-integrity/test_skill_tree.py`, `tests/package-integrity/test_codex_budgets.py`, plus the three files of the #169 plan-Files correction that carry Step 110 pins this step makes false: `documentation/architecture.md`, `documentation/skill-catalog-lifecycle.md`, `tests/package-integrity/test_skill_catalog_lifecycle.py`
+- **Existing context:** preserve the explicit roster and exact native set as anti-silent-addition guards. The committed catalog stays at 50/48/2 throughout this infrastructure step; Step 113 adds the one new member. `gen_skill_tree.py` keeps historical transform coverage. Re-based 2026-11-14: the three-file producer already landed under the 2026-11-02 scoped code-consigliere exception (`ARTIFACTS` and `write_artifacts()` in `tools/gen_manifest.py`), but `write_artifacts()` still writes each file in a loop without validating all three first. The lifecycle test rebinds its two-file pins to three-file ones for that exception. Edit the live rebound pins, not the superseded originals, and remove the dangling comment that cites the no-longer-existing `test_guide_records_that_inventory_regeneration_has_no_current_producer`. The guide's section 4, its `REQUIRED_PROVIDERS` test constant and its "`gpt` is mandatory" pin assert the September three-provider set. Re-base them to Claude and Codex. Also correct `documentation/architecture.md`'s vocabulary rows: portable is no longer "Claude and GPT", and there are 2 provider-native skills, not 3.
+- **Produces:** truthful `origin`/nullable-`migration` records; `portable_provider_contract.required` = `['claude', 'codex']`; Codex membership derived from `PORTABLE` instead of a second `CODEX` roster; all three payloads computed and validated before the first replacement on the existing three-file producer; safe per-file writes; a no-write `--check` mode; the guide's section 4, the architecture vocabulary and their pins re-based to the Claude+Codex required set.
+- **Done when:** `python tools/gen_manifest.py --check` is byte-for-byte read-only and green; normal regeneration reproduces all three artifacts; all three payloads are computed and validated before the first replacement; an injected interruption cannot truncate an artifact and is surfaced as drift on the next check; existing records retain truthful legacy provenance; a canonical fixture carries `migration: null`; no independent `CODEX` membership authority remains; the manifest, guide section 4 and lifecycle pins agree on the ordered required set `['claude', 'codex']`; the focused manifest, tree, budget and lifecycle tests and `python tools/change_pack.py` pass, with that evidence saved, without changing the 50/48/2 partition.
 - **Flags:** --reviewers code
 - **Depends on:** 110
 
@@ -1108,10 +1125,10 @@ reported as generated drift by `--check`. `--check` compares all three in memory
 - **Problem:** No read-only gate checks operation semantics and exact agreement across every catalog representation.
 - **Type:** code
 - **Issue:** #170
-- **Files:** `tools/skill_catalog.py`, `tools/release_checks.py`, `tools/build-distributions.ps1`, `config/model-mapping.json`, `tests/package-integrity/test_skill_catalog_lifecycle.py`, `tests/package-integrity/test_release_gates.py`, `tests/package-integrity/test_codex_budgets.py`, `tests/distributions/test_distributions.py`
-- **Existing context:** use the required-provider field produced in Step 111. Preserve the router's fallback for unknown external skills, but do not let a missing model-map row pass for a shipped catalog member. The catalog remains 57/54/3 in this step.
+- **Files:** `tools/skill_catalog.py`, `tools/release_checks.py`, `tools/build-distributions.ps1`, `config/model-mapping.json`, `tests/package-integrity/test_skill_catalog_lifecycle.py`, `tests/package-integrity/test_manifest_contract.py`, `tests/package-integrity/test_release_gates.py`, `tests/package-integrity/test_codex_budgets.py`, `tests/distributions/test_distributions.py`
+- **Existing context:** use the required-provider field produced in Step 111. Preserve the router's fallback for unknown external skills, but do not let a missing model-map row pass for a shipped catalog member. The catalog stays at 50/48/2 in this step. Re-based 2026-11-14: release completeness consumes the Claude+Codex required set, so `tools/release_checks.py`'s current Claude+GPT mandate and the "Codex is optional" wording in `test_manifest_contract.py` go. This step shares files with V4-7 (GPT removal); see the section's re-base note.
 - **Produces:** deterministic read-only `inspect` and `verify` commands with the locked v1 JSON contract, operation-aware exit codes, exact-set agreement across canonical tree/manifest/inventory/expected inventory/model mapping, and required-adapter completeness owned by helper/release/builder gates rather than a metadata-budget side effect.
-- **Done when:** every valid operation returns sorted deterministic v1 JSON and exit 0; invalid/prohibited requests return 2; catalog drift returns 3; Git uses validated argument arrays without shell interpolation; planted missing-provider, missing-mapping, stale-inventory, orphan-directory, generated-only-edit, native-mutation, resource-topology, collision, unclassified historical reference, and stale-rename cases each reach the expected verdict; the verifier writes no byte; before removing or emitting any output, the production builder validates every required adapter for every portable skill; a builder-level missing-adapter fixture exits nonzero and leaves a preseeded output tree byte-identical; release, distribution, and focused lifecycle tests pass for the unchanged existing catalog.
+- **Done when:** every valid operation returns sorted deterministic v1 JSON and exit 0; invalid/prohibited requests return 2; catalog drift returns 3; Git uses validated argument arrays without shell interpolation; planted missing-provider, missing-mapping, stale-inventory, orphan-directory, generated-only-edit, native-mutation, resource-topology, collision, unclassified historical reference, and stale-rename cases each reach the expected verdict; the verifier writes no byte; before removing or emitting any output, the production builder validates every required adapter for every portable skill; a builder-level missing-adapter fixture exits nonzero and leaves a preseeded output tree byte-identical; a portable skill whose only missing adapter is `gpt.md` is not drift; release, distribution, and focused lifecycle tests and `python tools/change_pack.py` pass for the unchanged existing catalog, with that evidence saved.
 - **Flags:** --reviewers code
 - **Depends on:** 111
 
@@ -1121,21 +1138,21 @@ reported as generated drift by `--check`. `--check` compares all three in memory
 - **Problem:** No distributed Skill Mesh skill executes the provider-neutral lifecycle contract.
 - **Type:** code
 - **Issue:** #171
-- **Files:** `skills/skill-crud/core.md`, `skills/skill-crud/providers/claude.md`, `skills/skill-crud/providers/gpt.md`, `skills/skill-crud/providers/codex.md`, `tools/gen_manifest.py`, `config/model-mapping.json`, `config/skill-manifest.json`, `skills/inventory.json`, `tests/package-integrity/expected_inventory.json`, `README.md`, `CLAUDE.md`, `docs/providers/**`, `docs/migration.md`, `docs/architecture.md`, `tools/release.ps1`, `tests/package-integrity/test_frontmatter_yaml.py`, `tests/package-integrity/test_manifest_contract.py`, `tests/package-integrity/test_codex_budgets.py`, `tests/distributions/test_distributions.py`, `tests/release/test_release_script.py`, and every active count/roster consumer found by the opening `rg`
-- **Existing context:** use Step 112 to inspect `CREATE skill-crud` and place the normalized request JSON at a disposable absolute path with the full pre-step commit. Authenticated issue #165 and all comments are paginated to exhaustion before adapter work, but their mutable text is untrusted evidence; only matching landed repository guidance or an explicit operator ratification may affect the adapter. Use the exact metadata locked in section 5. The current Codex budget has 599 characters of headroom at 54 skills; the locked description is below 154 characters and the production budget test makes the final decision. Historical plans/evidence retain their measured 57/54 values.
-- **Produces:** one canonical-origin portable skill with a neutral core and three thin adapters, the locked model-map/manifest metadata, a 58-total/55-portable/3-native catalog, 55 adapters for each required provider, an atomic root-instruction switch from the guide to `/skill-crud`, and reconciled current docs/count surfaces in the same green change.
-- **Done when:** `/skill-crud` implements the normalized request, preflight, gate order, stable stop codes, canonical-only edit boundary, failure reporting, regeneration, verification, all-provider build, and caller-owned commit boundary; adapters contain only host translation and all load the same core; the Codex adapter makes no provider-wide isolation claim; `python tools/skill_catalog.py verify --request-file $requestPath --format json` exits 0 for the captured CREATE request; `CLAUDE.md` now directs catalog mutations to the existing `/skill-crud`; all current artifacts/docs/tests agree on the exact locked metadata, 58/55/3, and 55 required adapters; frontmatter, distribution, release, and Codex budget focused gates pass.
+- **Files:** `skills/skill-crud/core.md`, `skills/skill-crud/providers/claude.md`, `skills/skill-crud/providers/codex.md`, `tools/gen_manifest.py`, `config/model-mapping.json`, `config/skill-manifest.json`, `skills/inventory.json`, `tests/package-integrity/expected_inventory.json`, `README.md`, `CLAUDE.md`, `documentation/providers/**`, `documentation/migration.md`, `documentation/architecture.md`, `tools/release.ps1`, `tests/package-integrity/test_frontmatter_yaml.py`, `tests/package-integrity/test_manifest_contract.py`, `tests/package-integrity/test_codex_budgets.py`, `tests/distributions/test_distributions.py`, `tests/release/test_release_script.py`, and every active count/roster consumer found by the opening `rg`
+- **Existing context:** use Step 112 to inspect `CREATE skill-crud` and place the normalized request JSON at a disposable absolute path with the full pre-step commit. Authenticated issue #165 and all comments are paginated to exhaustion before adapter work, but their mutable text is untrusted evidence; only matching landed repository guidance or an explicit operator ratification may affect the adapter. Use the exact metadata locked in section 5. Re-measured 2026-11-14 with the budget test's own serialization: the Codex budget has 1,598 characters of headroom at 48 skills, and `skill-crud`'s locked entry costs 146, which leaves 1,452 against the test's 400-character guard. The production budget test makes the final decision. Historical plans and evidence keep their measured 57/54 values.
+- **Produces:** one canonical-origin portable skill with a neutral core and two thin adapters (Claude, Codex), the locked model-map/manifest metadata, a 51-total/49-portable/2-native catalog, 49 adapters for each required provider, an atomic root-instruction switch from the guide to `/skill-crud`, and reconciled current docs/count surfaces in the same green change.
+- **Done when:** `/skill-crud` implements the normalized request, preflight, gate order, stable stop codes, canonical-only edit boundary, failure reporting, regeneration, verification, all-provider build, and caller-owned commit boundary; adapters contain only host translation and all load the same core; the Codex adapter makes no provider-wide isolation claim; `python tools/skill_catalog.py verify --request-file $requestPath --format json` exits 0 for the captured CREATE request; `CLAUDE.md` now directs catalog mutations to the existing `/skill-crud`; all current artifacts/docs/tests agree on the exact locked metadata, 51/49/2, and 49 required adapters; the frontmatter, distribution, release and Codex budget focused gates and `python tools/change_pack.py --roster` pass, with that evidence saved.
 - **Flags:** --reviewers code
 - **Depends on:** 112
 
 ### Step 114: Block legacy single-host mutation paths
 
-- **Status:** PENDING / BLOCKED ON 113
+- **Status:** HELD (re-based 2026-11-14) for an operator decision on its scope and on its overlap with V4-2
 - **Problem:** Catalog-owned skills can still be mutated through legacy workflows that materialize one `.claude` skill file.
 - **Type:** code
 - **Issue:** #172
 - **Files:** `skills/skill-eval-setup/core.md`, `skills/skill-evolve/core.md`, `skills/skill-iterate/core.md`, `tests/package-integrity/test_skill_catalog_lifecycle.py`
-- **Existing context:** these tools may continue serving external/non-catalog legacy skills. The guard activates only when the target checkout contains `config/skill-manifest.json` and that manifest owns the requested skill.
+- **Existing context:** these tools may continue serving external/non-catalog legacy skills. The guard activates only when the target checkout contains `config/skill-manifest.json` and that manifest owns the requested skill. Re-checked 2026-11-14, and since changed: `skill-eval-setup` already has this guard, but it stops with `PACKAGE_RESOURCE_PLAN_REQUIRED` (eval files are a resource-topology change), not `CATALOG_SKILL_USE_SKILL_CRUD`. `skill-evolve` and `skill-iterate` already route a generated or installed target to a proposal rather than a commit. Two open questions for the operator: (1) is the remaining scope only to pin these existing guards with planted negatives, plus whatever canonical-source bypass is still open, and which stop code is shared; (2) the v4 optimization program (V4-2) and the switchboard model pins also reshape these three cores. This step does not resolve that overlap on its own.
 - **Produces:** one stable `CATALOG_SKILL_USE_SKILL_CRUD` stop/redirect contract shared by all three workflows.
 - **Done when:** each workflow still reaches its existing path for an external/non-catalog target, but a catalog-owned target stops with `CATALOG_SKILL_USE_SKILL_CRUD` and `/skill-crud UPDATE` guidance before worktree creation, edit, materialization, commit, or push; planted negatives fail if any of the three bypasses reopens.
 - **Flags:** --reviewers code
@@ -1150,7 +1167,7 @@ reported as generated drift by `--check`. `--check` compares all three in memory
 - **Files:** `tests/smoke/test_skill_crud_lifecycle.py`, nondestructive lifecycle fixtures under `tests/fixtures/`, `tests/distributions/test_distributions.py`
 - **Existing context:** use only synthetic Git repositories, disposable build roots, and disposable homes. The builder-level missing-adapter refusal is already owned by Step 112; exercise it here through the public lifecycle flow rather than duplicating its unit implementation.
 - **Produces:** black-box portable CREATE/READ/UPDATE coverage through the actual request, generator, verifier, builder, and installer boundaries.
-- **Done when:** CREATE produces one core, the exact three adapters, locked metadata, mapping, and three generated inventories; READ leaves the repository and all disposable-home hashes unchanged; UPDATE changes shared behavior in the core and propagates it into Claude/GPT/Codex builds and installs; repeated all-provider builds are byte-identical; missing required adapter and CREATE collision are true no-ops; focused smoke/distribution tests and `git diff --check` pass.
+- **Done when:** CREATE produces one core, the exact two required adapters (Claude, Codex), locked metadata, mapping, and three generated inventories; READ leaves the repository and all disposable-home hashes unchanged; UPDATE changes shared behavior in the core and propagates it into the Claude and Codex builds and installs (a GPT profile, while it exists, still builds cleanly); repeated all-provider builds are byte-identical; missing required adapter and CREATE collision are true no-ops; the focused smoke and distribution tests, `python tools/change_pack.py` and `git diff --check` pass, with that evidence saved.
 - **Flags:** --reviewers code
 - **Depends on:** 114
 
@@ -1163,7 +1180,7 @@ reported as generated drift by `--check`. `--check` compares all three in memory
 - **Files:** `tests/smoke/test_skill_crud_lifecycle.py`, destructive lifecycle fixtures under `tests/fixtures/`, `tests/distributions/test_distributions.py`, `tools/install-skill-mesh.ps1` (the #192 hardening only)
 - **Existing context:** installer tests already prove collision refusal, customized-stale refusal, ledger-owned stale cleanup, and interrupted-publication recovery. Extend those real primitives; do not implement a second deletion path. Historical references are preserved only through the explicit per-occurrence disposition contract in section 2. Scope addition recorded by descope DS-D7(d): this step also lands issue #192's hardening — forced (`-Force`/`-ForceShared`) stale removal must re-verify literal final-path identity after reparse-point substitution rather than waiving it — because this is the plan's one step that exercises those installer deletion paths end-to-end.
 - **Produces:** black-box DELETE/RENAME, exact-reference, stale-install, customized-refusal, interrupted-mutation, and rollback coverage in disposable repositories/homes; plus the #192 forced-stale-removal path-identity hardening with a planted reparse-substitution negative.
-- **Done when:** RENAME yields the exact new live set with every `must-update` old-name occurrence absent and every listed `historical-preserve` byte unchanged; DELETE removes only unchanged ledger-owned stale files and refuses customized ones; name collision and unclassified/stale dispositions are true no-ops; an injected post-write failure emits `CATALOG_MUTATION_INCOMPLETE`, lists changed paths, preserves unrelated dirty work, and is repairable from the left diff; reinstalling the prior all-provider artifact restores the prior disposable state; a planted reparse-substitution case proves forced stale removal refuses when literal final-path identity fails (#192); focused smoke/distribution tests and `git diff --check` pass.
+- **Done when:** RENAME yields the exact new live set with every `must-update` old-name occurrence absent and every listed `historical-preserve` byte unchanged; DELETE removes only unchanged ledger-owned stale files and refuses customized ones; name collision and unclassified/stale dispositions are true no-ops; an injected post-write failure emits `CATALOG_MUTATION_INCOMPLETE`, lists changed paths, preserves unrelated dirty work, and is repairable from the left diff; reinstalling the prior all-provider artifact restores the prior disposable state; a planted reparse-substitution case proves forced stale removal refuses when literal final-path identity fails (#192); the focused smoke and distribution tests, `python tools/change_pack.py --roster` and `git diff --check` pass, with that evidence saved.
 - **Flags:** --reviewers code
 - **Depends on:** 115
 
@@ -1173,10 +1190,10 @@ reported as generated drift by `--check`. `--check` compares all three in memory
 - **Problem:** The completed lifecycle needs one immutable all-provider certification packet before any model is asked to exercise it in a host.
 - **Type:** code
 - **Issue:** #175
-- **Files:** `docs/phase-75-baseline.md`, `docs/findings/skill-crud-uat.md`, and any additional live evidence-only baseline consumer identified by the opening exact-name/count grep
+- **Files:** `documentation/phase-75-baseline.md`, `documentation/findings/skill-crud-uat.md`, and any additional live evidence-only baseline consumer identified by the opening exact-name/count grep
 - **Existing context:** Step 113 owns active count/docs/release-test reconciliation; Steps 115–116 own behavioral smoke. Before any Step-117 write, capture the full merged Step-116 HEAD and tree as the immutable package candidate. Step 117 may change evidence documents only—no `skills/`, `tools/`, `runtime/`, `config/`, or test byte. A discovered defect stops and routes back to its owning code step. This step does not invoke a host or pre-fill a behavioral verdict.
-- **Produces:** an all-provider release result against the Step-116 package candidate, final measured test baseline, immutable pre-step commit/tree identifiers, and a pre-authored Claude+Codex attended UAT packet (per DS-D7(c); the gpt profile's checks in the packet are mechanical build/verify rows, not attended rows) with exact disposable commands and rollback fields.
-- **Done when:** the recorded pre-step commit/tree still resolves to the exact Step-116 merged candidate and the candidate package-input hashes match the current checkout; `powershell -NoProfile -File tools\release.ps1 -Provider all` succeeds in its script-owned stage; the release contains the exact 58/55/3 catalog and all required adapters; `git diff --check`, focused suites, `python -m pytest tests/`, and repository-root `python -m pytest` exit 0; the baseline records the measured results plus the pre-Step-117 candidate commit/tree without claiming the evidence commit is its own input; the UAT packet contains exact disposable source/build/home paths, commands, expected mechanical checks, rollback, unchanged-primary-profile checks, and blank observation/verdict fields.
+- **Produces:** an all-provider release result against the Step-116 package candidate, final measured test baseline, immutable pre-step commit/tree identifiers, and a pre-authored Claude+Codex attended UAT packet (GPT is not a required provider, so the packet has no GPT rows) with exact disposable commands and rollback fields.
+- **Done when:** the recorded pre-step commit/tree still resolves to the exact Step-116 merged candidate and the candidate package-input hashes match the current checkout; `powershell -NoProfile -File tools\release.ps1 -Provider all` succeeds in its script-owned stage; the release contains the exact 51/49/2 catalog and all required adapters; `git diff --check`, the focused suites and `python tools/change_pack.py --roster` exit 0; the phase's one repository-root `python -m pytest` sweep (the adopted rule's per-release check) runs detached after `python tools/gate_preflight.py` has recorded its measured line, and exits 0; the baseline records the measured results plus the pre-Step-117 candidate commit/tree without claiming the evidence commit is its own input; the UAT packet contains exact disposable source/build/home paths, commands, expected mechanical checks, rollback, unchanged-primary-profile checks, and blank observation/verdict fields.
 - **Flags:** --reviewers code
 - **Depends on:** 116
 
@@ -1186,10 +1203,10 @@ reported as generated drift by `--check`. `--check` compares all three in memory
 - **Problem:** The operator's original failure occurred in a real host interaction, so code and prompt-contract tests alone cannot prove that each installed adapter leads a fresh model through the complete portable create boundary.
 - **Type:** operator
 - **Issue:** #176
-- **Files:** `docs/findings/skill-crud-uat.md` (record observations only; no code or shipped configuration)
-- **Existing context:** use only the Step-117 certified packet, disposable source clones, and disposable host homes. Do not point any install or CRUD command at the operator's real home or this primary checkout. Narrowed by descope DS-D7(c): attended hosts are Claude and Codex only — gpt remains a mandatory BUILD-ONLY adapter (every build still emits and verifies `dist/gpt`; no attended GPT/Copilot session is required), per product-charter anti-goals 2 and 9.
+- **Files:** `documentation/findings/skill-crud-uat.md` (record observations only; no code or shipped configuration)
+- **Existing context:** use only the Step-117 certified packet, disposable source clones, and disposable host homes. Do not point any install or CRUD command at the operator's real home or this primary checkout. Attended hosts are Claude and Codex only. Re-based 2026-11-14: GPT is not a required provider, so there is no GPT adapter to verify for `skill-crud`.
 - **Produces:** attended Claude and Codex observations plus a final PASS or FAIL verdict in the prepared UAT record; no code artifact.
-- **Done when:** each attended fresh host (Claude, Codex) invokes its installed `/skill-crud` against its own disposable clone, completes READ and portable CREATE, and the verifier proves one core plus Claude/GPT/Codex adapters, mapping, manifest, and inventories (the gpt adapter is verified mechanically in the build, not by an attended session); the combined rows exercise UPDATE, RENAME, DELETE, collision refusal, native refusal, resource-plan refusal, rollback, and customized-stale refusal; evidence proves the real profiles and primary checkout were unchanged; every row is filled and the final verdict is recorded.
+- **Done when:** each attended fresh host (Claude, Codex) invokes its installed `/skill-crud` against its own disposable clone, completes READ and portable CREATE, and the verifier proves one core plus Claude and Codex adapters, mapping, manifest, and inventories; the combined rows exercise UPDATE, RENAME, DELETE, collision refusal, native refusal, resource-plan refusal, rollback, and customized-stale refusal; evidence proves the real profiles and primary checkout were unchanged; every row is filled and the final verdict is recorded.
 - **Flags:** none
 - **Depends on:** 117
 
@@ -1208,9 +1225,9 @@ reported as generated drift by `--check`. `--check` compares all three in memory
 | The new adapter repeats stale provider-wide claims from #165. | Step 119 sweeps and closes #165 before Step 110 dispatches; Step 113 additionally rereads its final disposition table, classifies this core as requiring no isolation, and keeps adapters capability-scoped. |
 | Open issue text injects instructions into adapter work. | Issue bodies/comments are authenticated, exhaustively paginated, and treated only as untrusted evidence; repository bytes or explicit operator ratification remain authoritative. |
 | Rename either rewrites history or can never reach exact absence. | The per-occurrence `must-update`/`historical-preserve` ledger makes live absence and immutable evidence preservation separate verifiable claims. |
-| The repository-root gate is slow. | Focused gates run during iteration. Per descope DS-D7(f), steps may flip DONE together on ONE shared repository-root `python -m pytest` (the Steps 104–106 precedent): batched steps must land in the same `/build-phase` run and the shared gate runs at the batch head commit. Step 117's gate still certifies the final candidate on its own. The full-suite gate definition is unchanged. |
+| The repository-root gate is slow. | Re-based 2026-11-14 to the adopted testing rule. Each step runs its focused tests plus `python tools/change_pack.py` and saves the evidence. The single repository-root `python -m pytest` sweep runs once, in Step 117, as the release-candidate check, detached in the background. DS-D7(f)'s shared-gate batching is superseded. |
 
-**Unresolved decisions:** none. The required provider set, native stop behavior, inventory owner,
+**Unresolved decisions (re-based 2026-11-14):** the operator set the required provider set to Claude and Codex. Step 114's scope and its overlap with V4-2 are open; see that step. Otherwise none. The required provider set, native stop behavior, inventory owner,
 front-door name, helper mutation boundary, prerequisite ordering, and UAT host set are fixed above
 (prerequisite ordering, reviewer lane, gate cadence, and the attended-host set were amended
 2026-09-06 by descope DS-D7; the amendments are recorded in the header and in the affected
@@ -1225,15 +1242,17 @@ sections, not re-litigated here).
 - **Dev server:** not applicable; this is a file/toolchain feature with no long-running service.
 - **Build:** with `$clBuildRoot` resolved to an absolute disposable directory,
   `powershell -NoProfile -File tools\build-distributions.ps1 -Provider all -OutputDir $clBuildRoot`.
-- **Install:** with `$clClaudeHome`, `$clGptHome`, and `$clCodexHome` resolved to separate absolute
-  disposable directories, run
-  `powershell -NoProfile -File tools\install-skill-mesh.ps1 -Provider claude -Home $clClaudeHome -DistDir $clBuildRoot`,
-  `powershell -NoProfile -File tools\install-skill-mesh.ps1 -Provider gpt -Home $clGptHome -DistDir $clBuildRoot`, and
+- **Install:** with `$clClaudeHome` and `$clCodexHome` resolved to separate absolute disposable
+  directories, run
+  `powershell -NoProfile -File tools\install-skill-mesh.ps1 -Provider claude -Home $clClaudeHome -DistDir $clBuildRoot` and
   `powershell -NoProfile -File tools\install-skill-mesh.ps1 -Provider codex -Home $clCodexHome -DistDir $clBuildRoot`.
-- **Test:** focused pytest while iterating, `python -m pytest tests/` as an intermediate suite,
-  and repository-root `python -m pytest` as the mandatory post-merge gate — run per step, or
-  once per DONE-batch under the DS-D7(f) shared-gate cadence (same `/build-phase` run, gate at
-  the batch head).
+  GPT is not a required provider and gets no disposable install (re-based 2026-11-14).
+- **Test (adopted testing rule, re-based 2026-11-14):** each step runs the focused tests for what
+  it touches plus `python tools/change_pack.py` (with `--roster` for a catalog CREATE or DELETE and
+  `--rc-report` when a representative skill's core changes). `python tools/change_pack.py --focused`
+  prints which focused tests a change needs. The command, the selected files and the summary line
+  are saved as evidence. The single repository-root `python -m pytest` sweep runs once, in Step 117,
+  as the release-candidate check, detached and after `python tools/gate_preflight.py`.
 - **Lint/typecheck:** not configured. Do not invent either command; use `git diff --check` for
   patch hygiene.
 - **Release:** `powershell -NoProfile -File tools\release.ps1 -Provider all` so Codex is included
@@ -1265,7 +1284,7 @@ smoke.
 ### Attended acceptance
 
 Step 118 is the live-substrate gate for the prompt-driven skill. It uses fresh Claude and
-Codex contexts (gpt is build-only per descope DS-D7(c)), but all repositories and homes are disposable. The operator judges
+Codex contexts (GPT is not a required provider), but all repositories and homes are disposable. The operator judges
 whether each host follows the same lifecycle decisions; the deterministic verifier judges the
 resulting bytes. Either kind of failure produces a FAIL row and blocks Phase CL closeout.
 
