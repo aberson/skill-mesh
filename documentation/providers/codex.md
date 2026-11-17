@@ -25,7 +25,7 @@ and byte-identical ledger, refusal, containment, and uninstall semantics to the 
 two profiles, because all three derive from the discovery subdirectory rather than
 spelling a root per provider.
 
-Only the 48 portable skills have a Codex adapter. The 2 Claude-native exclusions —
+Only the 44 portable skills have a Codex adapter. The 2 Claude-native exclusions —
 `claude-oauth-auth` and `context-slim` — carry `core: null` in
 `config/skill-manifest.json` and are absent from a Codex profile entirely; no
 misleading stub is emitted for a provider that cannot support them.
@@ -227,7 +227,8 @@ its own reported result, never a silently degraded one.
   after its explicit no-history probe passes; `build-phase` additionally requires a
   fresh per-step opaque parent HMAC state and a usable caller-scoped parent-only verdict
   service. Phase CL Step 119 (issue #165) swept all 54 adapters and closed the rest of
-  that historical set: `citation-sweep`, `judge-ui`, `research-prospect`,
+  that historical set (one member, a citation sweep skill, has since moved to the
+  Citation Needed repository): `judge-ui`, `research-prospect`,
   `review-gauntlet`, `test-prune`, `tier-escalate`, `tier-offload`,
   `user-brainstorm`, and `user-learn` are now capability-conditioned on the SAME
   contract build-step publishes -- a host that passes it may map their isolated arms
@@ -241,9 +242,6 @@ its own reported result, never a silently degraded one.
   whether that script can execute, so those two keep their own workflow-scoped halts.
   Every adapter still establishes the capability for itself, from the active callable
   schema plus a non-mutating probe.
-  `citation-review` now joins the capability-conditioned set because its parent
-  dispatches fresh classification judges; its sweep caller uses the same direct
-  depth-1 mapping after completing the OPEN ALL barrier.
   `user-debug` is capability-conditioned: its parent directly dispatches separately
   probed fresh siblings for Step 2 and Option 4, or visibly halts
   `required_tool_missing`; the child receives only symptom, repro, and bounded
@@ -287,17 +285,10 @@ its own reported result, never a silently degraded one.
   the tier-drift pair halt on a host that does not pass their own capability contract.
   Each lands in the one report as its reason code rather than being reimplemented
   inline.
-- **Citation review and sweep use parent-owned depth-1 judges.** Review's parent owns
-  OPEN, PREPARE and COMMIT and dispatches one fresh sibling per classification vote.
-  Sweep retains those same phases in one parent, opens every selected run before any
-  commit, and dispatches only the classification judges; it never creates nested
-  per-artifact workers. Both adapters are capability-conditioned on the build-step
-  agent-isolation contract and halt `required_tool_missing` before opening when the
-  host cannot prove fresh siblings. Neither core has an in-context voting fallback.
-  (The `sub-agent` capability set in `config/skill-manifest.json` has 20
-  members, 18 of them codex-eligible. The gate
+- The `sub-agent` capability set in `config/skill-manifest.json` has 16
+  members, 15 of them codex-eligible. The gate
   `tests/package-integrity/test_codex_capability_claims_honesty.py` derives its
-  halt-gate subject set from that field rather than from any count written here.)
+  halt-gate subject set from that field rather than from any count written here.
 - **Lesson harvest offers an audited local preview.** Its parent owns evidence reads,
   in-memory candidate drafting, and a bounded repository-state audit. One read-only
   strong reviewer gates the exact preview surfaces and final negative dispositions.

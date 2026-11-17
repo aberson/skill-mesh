@@ -67,16 +67,16 @@
     }
   },
   "counts": {
-    "total": 50,
-    "portable": 48,
+    "total": 46,
+    "portable": 44,
     "provider_native": 2,
-    "claude": 50,
-    "gpt": 48,
-    "codex": 48,
+    "claude": 46,
+    "gpt": 44,
+    "codex": 44,
     "local_capable": 17,
-    "sub_agent": 18,
+    "sub_agent": 16,
     "vision": 1,
-    "filesystem": 50
+    "filesystem": 46
   },
   "global_support_assets": [
     {
@@ -201,96 +201,6 @@
           "dest": "skills/build-step/scripts/"
         }
       ]
-    },
-    {
-      "name": "citation-distill",
-      "status": "portable",
-      "description": "Turn a committed Citation Needed review into evidence-backed trim or rewrite proposals.",
-      "core": "skills/citation-distill/core.md",
-      "providers": {
-        "claude": "skills/citation-distill/providers/claude.md",
-        "gpt": "skills/citation-distill/providers/gpt.md",
-        "codex": "skills/citation-distill/providers/codex.md"
-      },
-      "capabilities": [
-        "filesystem"
-      ],
-      "local_capable": false,
-      "migration": {
-        "legacy_core": ".claude/skills-gpt/citation-distill/SKILL-core.md",
-        "legacy_claude_launcher": ".claude/skills/citation-distill/SKILL.md",
-        "legacy_claude_adapter": ".claude/skills/citation-distill/SKILL-claude.md",
-        "legacy_gpt": ".claude/skills-gpt/citation-distill/SKILL-gpt.md"
-      },
-      "support_assets": []
-    },
-    {
-      "name": "citation-review",
-      "status": "portable",
-      "description": "Evidence-check one LLM-facing artifact through Citation Needed's calibrated review pipeline.",
-      "core": "skills/citation-review/core.md",
-      "providers": {
-        "claude": "skills/citation-review/providers/claude.md",
-        "gpt": "skills/citation-review/providers/gpt.md",
-        "codex": "skills/citation-review/providers/codex.md"
-      },
-      "capabilities": [
-        "filesystem",
-        "sub-agent"
-      ],
-      "local_capable": false,
-      "migration": {
-        "legacy_core": ".claude/skills-gpt/citation-review/SKILL-core.md",
-        "legacy_claude_launcher": ".claude/skills/citation-review/SKILL.md",
-        "legacy_claude_adapter": ".claude/skills/citation-review/SKILL-claude.md",
-        "legacy_gpt": ".claude/skills-gpt/citation-review/SKILL-gpt.md"
-      },
-      "support_assets": []
-    },
-    {
-      "name": "citation-sweep",
-      "status": "portable",
-      "description": "Project-wide Citation Needed rigor pass producing a citation-backed distill backlog.",
-      "core": "skills/citation-sweep/core.md",
-      "providers": {
-        "claude": "skills/citation-sweep/providers/claude.md",
-        "gpt": "skills/citation-sweep/providers/gpt.md",
-        "codex": "skills/citation-sweep/providers/codex.md"
-      },
-      "capabilities": [
-        "filesystem",
-        "sub-agent"
-      ],
-      "local_capable": false,
-      "migration": {
-        "legacy_core": ".claude/skills-gpt/citation-sweep/SKILL-core.md",
-        "legacy_claude_launcher": ".claude/skills/citation-sweep/SKILL.md",
-        "legacy_claude_adapter": ".claude/skills/citation-sweep/SKILL-claude.md",
-        "legacy_gpt": ".claude/skills-gpt/citation-sweep/SKILL-gpt.md"
-      },
-      "support_assets": []
-    },
-    {
-      "name": "citation-triage",
-      "status": "portable",
-      "description": "Walk Citation Needed's ranked distill queue and record keep, cut, or rewrite decisions.",
-      "core": "skills/citation-triage/core.md",
-      "providers": {
-        "claude": "skills/citation-triage/providers/claude.md",
-        "gpt": "skills/citation-triage/providers/gpt.md",
-        "codex": "skills/citation-triage/providers/codex.md"
-      },
-      "capabilities": [
-        "filesystem"
-      ],
-      "local_capable": false,
-      "migration": {
-        "legacy_core": ".claude/skills-gpt/citation-triage/SKILL-core.md",
-        "legacy_claude_launcher": ".claude/skills/citation-triage/SKILL.md",
-        "legacy_claude_adapter": ".claude/skills/citation-triage/SKILL-claude.md",
-        "legacy_gpt": ".claude/skills-gpt/citation-triage/SKILL-gpt.md"
-      },
-      "support_assets": []
     },
     {
       "name": "claude-oauth-auth",

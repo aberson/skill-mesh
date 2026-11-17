@@ -57,34 +57,6 @@
       "local": false,
       "notes": "Ported - shared core + GPT/Claude wrappers; identical halt contract"
     },
-    "citation-distill": {
-      "default_model": "claude",
-      "claude": true,
-      "gpt": true,
-      "local": false,
-      "notes": "Promoted at Phase CP Step 10 - proposal-only distill rail over the cite CLI."
-    },
-    "citation-review": {
-      "default_model": "claude",
-      "claude": true,
-      "gpt": true,
-      "local": false,
-      "notes": "Promoted at Phase CP Step 10 - calibrated single-artifact review over the cite CLI."
-    },
-    "citation-sweep": {
-      "default_model": "claude",
-      "claude": true,
-      "gpt": true,
-      "local": false,
-      "notes": "Promoted at Phase CP Step 10 - bounded project sweep; dispatches isolated per-artifact reviewers."
-    },
-    "citation-triage": {
-      "default_model": "claude",
-      "claude": true,
-      "gpt": true,
-      "local": false,
-      "notes": "Promoted at Phase CP Step 10 - operator-decision recorder over the distill queue."
-    },
     "code-consigliere": {
       "default_model": "claude",
       "claude": true,

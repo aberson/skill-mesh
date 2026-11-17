@@ -3,11 +3,11 @@
 
 These diagrams summarize the **Skill Mesh v3.0.2** contracts. Use the
 [skill reference](../../documentation/skill-reference.md) for a compact table
-of all 50 skills, purposes, host coverage and direct diagram links.
+of all 46 skills, purposes, host coverage and direct diagram links.
 
 Each diagram declares its source and omitted detail. The linked source contract
 remains authoritative: a diagram does not authorize an action, bypass a hold,
-or establish live qualification. Claude has all 50 packages; Codex has the 48
+or establish live qualification. Claude has all 46 packages; Codex has the 44
 portable packages. GitHub Copilot is no longer supported. Native capability gates still apply.
 
 These diagrams use the same rounded cards, monospace labels, and blue connectors
@@ -46,10 +46,6 @@ produces the default Mermaid README rather than this SVG gallery.
 - [build-phase](#build-phase) - Parse a plan, run each eligible step through build-step, checkpoint progress, and halt only on the phase contract's named conditions.
 - [build-queue](#build-queue) - Validate queue and resume authority, run plan-expedite then build-phase per item, park every halt, and continue to a morning summary.
 - [build-step](#build-step) - Isolate one plan step, iterate developer and independent review rounds, then land, verify, and finalize only an authenticated passing candidate.
-- [citation-distill](#citation-distill) - Prove one artifact's active completed review, generate mechanical queue defaults, and refine them only from matching same-run evidence.
-- [citation-review](#citation-review) - Bind an exact calibrated judge, open one review, prepare frozen evidence, resolve each choice by independent votes, and commit only untied complete results.
-- [citation-sweep](#citation-sweep) - Bind one calibrated judge, open every selected artifact before judging any, commit only complete runs, and generate backlog rows for clean commits.
-- [citation-triage](#citation-triage) - Present one ranked queue row at a time, bind an explicit operator choice to its frozen identity, and resolve an unchanged row exactly once.
 - [claude-oauth-auth](#claude-oauth-auth) - Authenticate the Claude CLI with a subscription token while keeping the credential out of logs and direct API calls.
 - [code-consigliere](#code-consigliere) - Resolve a target project, preserve private evidence, investigate together, hand off an agreed seed, and verify the returned build.
 - [context-slim](#context-slim) - Measure automatically loaded context, classify safe reductions, and apply only high-confidence changes when explicitly requested.
@@ -162,98 +158,6 @@ Drawn from:
 </picture>
 
 [Open full size](cards/build-step-dark.svg)
-
----
-
-## citation-distill
-
-Prove one artifact's active completed review, generate mechanical queue defaults, and refine them only from matching same-run evidence.
-
-Source: [`citation-distill.mmd`](citation-distill.mmd)
-
-Drawn from:
-
-- [`skills/citation-distill/core.md`](../../skills/citation-distill/core.md)
-
-**Alt:** A distillation flow freezes one completed review identity, writes default queue rows, uses matching evidence to refine eligible rows, and hands decisions to triage.
-
-**Deliberately not shown:** scan and readiness qualifiers, queue schemas, prompt and breakdown fields, ASCII JSON transport, exact receipts, and final evidence reporting
-
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="cards/citation-distill-dark.svg">
-  <img alt="A distillation flow freezes one completed review identity, writes default queue rows, uses matching evidence to refine eligible rows, and hands decisions to triage." src="cards/citation-distill-light.svg">
-</picture>
-
-[Open full size](cards/citation-distill-dark.svg)
-
----
-
-## citation-review
-
-Bind an exact calibrated judge, open one review, prepare frozen evidence, resolve each choice by independent votes, and commit only untied complete results.
-
-Source: [`citation-review.mmd`](citation-review.mmd)
-
-Drawn from:
-
-- [`skills/citation-review/core.md`](../../skills/citation-review/core.md)
-
-**Alt:** A model-bound review checks calibration and sibling dispatch, opens once, freezes evidence, expands tied votes from three to seven, and commits only a complete untied payload.
-
-**Deliberately not shown:** calibration anchor procedure, extraction and classification prompts, schemas, evidence searches, parse-failure conversion, and report fields
-
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="cards/citation-review-dark.svg">
-  <img alt="A model-bound review checks calibration and sibling dispatch, opens once, freezes evidence, expands tied votes from three to seven, and commits only a complete untied payload." src="cards/citation-review-light.svg">
-</picture>
-
-[Open full size](cards/citation-review-dark.svg)
-
----
-
-## citation-sweep
-
-Bind one calibrated judge, open every selected artifact before judging any, commit only complete runs, and generate backlog rows for clean commits.
-
-Source: [`citation-sweep.mmd`](citation-sweep.mmd)
-
-Drawn from:
-
-- [`skills/citation-sweep/core.md`](../../skills/citation-sweep/core.md)
-
-**Alt:** A bounded sweep checks calibration and dispatch, selects stale then unreviewed paths, opens all runs as a barrier, judges them, and commits only complete results.
-
-**Deliberately not shown:** scoped readiness list caps, omitted-count reporting, PREPARE details, k3/5/7 voting, commit payloads, and per-artifact report fields
-
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="cards/citation-sweep-dark.svg">
-  <img alt="A bounded sweep checks calibration and dispatch, selects stale then unreviewed paths, opens all runs as a barrier, judges them, and commits only complete results." src="cards/citation-sweep-light.svg">
-</picture>
-
-[Open full size](cards/citation-sweep-dark.svg)
-
----
-
-## citation-triage
-
-Present one ranked queue row at a time, bind an explicit operator choice to its frozen identity, and resolve an unchanged row exactly once.
-
-Source: [`citation-triage.mmd`](citation-triage.mmd)
-
-Drawn from:
-
-- [`skills/citation-triage/core.md`](../../skills/citation-triage/core.md)
-
-**Alt:** A triage walk freezes each row, shows bounded evidence, waits for a valid row-specific choice, defers changed rows, and records unchanged choices once.
-
-**Deliberately not shown:** queue record schema, decision-support field formatting, concurrency checks, persistence commands, and handoff text
-
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="cards/citation-triage-dark.svg">
-  <img alt="A triage walk freezes each row, shows bounded evidence, waits for a valid row-specific choice, defers changed rows, and records unchanged choices once." src="cards/citation-triage-light.svg">
-</picture>
-
-[Open full size](cards/citation-triage-dark.svg)
 
 ---
 

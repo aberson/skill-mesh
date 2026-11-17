@@ -53,7 +53,9 @@ SKILLS_ROOT = REPO_ROOT / "skills"
 # Lowered 55 -> 54 the same way at Step 13 (#269).
 # Lowered 54 -> 51 the same way at Step 14 (#270), when three skills retired.
 # Lowered 51 -> 50 the same way at Step 16 (#272), when the pin skill became a script.
-MIN_CLAUDE_ADAPTERS = 50
+# Lowered 50 -> 46 the same way in v4, when the four citation skills moved to the
+# Citation Needed repository.
+MIN_CLAUDE_ADAPTERS = 46
 
 # The one skill whose adapter deliberately declares itself NOT user-invocable. It is
 # a reference document, not a command. Pinned by name so a regression that flips the

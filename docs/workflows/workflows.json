@@ -1,7 +1,7 @@
 {
   "schema": "show-your-work.workflows.v1",
   "generator": "show-your-work 0.1.0",
-  "generated_at": "2026-11-13T19:14:31+00:00",
+  "generated_at": "2026-11-17T00:52:22+00:00",
   "source_dir": "docs/workflows",
   "items": [
     {
@@ -43,62 +43,6 @@
       ],
       "source_path": "docs/workflows/build-step.mmd",
       "source_sha256": "edac3c47e598bab71d5c1631ff73bedd0e3ecc03bc1e550424186d0073ee8536",
-      "engine": "mermaid",
-      "rasters": null
-    },
-    {
-      "id": "citation-distill",
-      "label": "citation-distill",
-      "summary": "Prove one artifact's active completed review, generate mechanical queue defaults, and refine them only from matching same-run evidence.",
-      "alt": "A distillation flow freezes one completed review identity, writes default queue rows, uses matching evidence to refine eligible rows, and hands decisions to triage.",
-      "not_shown": "scan and readiness qualifiers, queue schemas, prompt and breakdown fields, ASCII JSON transport, exact receipts, and final evidence reporting",
-      "sources": [
-        "skills/citation-distill/core.md"
-      ],
-      "source_path": "docs/workflows/citation-distill.mmd",
-      "source_sha256": "411e6e878168e3d0f0f0a7dde2178ed31caac55a0ca22e3be7c31e5c9cea4fb4",
-      "engine": "mermaid",
-      "rasters": null
-    },
-    {
-      "id": "citation-review",
-      "label": "citation-review",
-      "summary": "Bind an exact calibrated judge, open one review, prepare frozen evidence, resolve each choice by independent votes, and commit only untied complete results.",
-      "alt": "A model-bound review checks calibration and sibling dispatch, opens once, freezes evidence, expands tied votes from three to seven, and commits only a complete untied payload.",
-      "not_shown": "calibration anchor procedure, extraction and classification prompts, schemas, evidence searches, parse-failure conversion, and report fields",
-      "sources": [
-        "skills/citation-review/core.md"
-      ],
-      "source_path": "docs/workflows/citation-review.mmd",
-      "source_sha256": "b97d5179fb601a1d6a7f25d5f29e67149922bbf525bdc9539c4901d6ae1c4e2a",
-      "engine": "mermaid",
-      "rasters": null
-    },
-    {
-      "id": "citation-sweep",
-      "label": "citation-sweep",
-      "summary": "Bind one calibrated judge, open every selected artifact before judging any, commit only complete runs, and generate backlog rows for clean commits.",
-      "alt": "A bounded sweep checks calibration and dispatch, selects stale then unreviewed paths, opens all runs as a barrier, judges them, and commits only complete results.",
-      "not_shown": "scoped readiness list caps, omitted-count reporting, PREPARE details, k3/5/7 voting, commit payloads, and per-artifact report fields",
-      "sources": [
-        "skills/citation-sweep/core.md"
-      ],
-      "source_path": "docs/workflows/citation-sweep.mmd",
-      "source_sha256": "32cd44029b4fd9cfcd6a63f4e81695025fa6fcb8ac29aba46bd3755f3c44a808",
-      "engine": "mermaid",
-      "rasters": null
-    },
-    {
-      "id": "citation-triage",
-      "label": "citation-triage",
-      "summary": "Present one ranked queue row at a time, bind an explicit operator choice to its frozen identity, and resolve an unchanged row exactly once.",
-      "alt": "A triage walk freezes each row, shows bounded evidence, waits for a valid row-specific choice, defers changed rows, and records unchanged choices once.",
-      "not_shown": "queue record schema, decision-support field formatting, concurrency checks, persistence commands, and handoff text",
-      "sources": [
-        "skills/citation-triage/core.md"
-      ],
-      "source_path": "docs/workflows/citation-triage.mmd",
-      "source_sha256": "da0a05f5e50325d6cf4dc0f2be82f19acd190ec305695ff4e2c9338c1e30c5be",
       "engine": "mermaid",
       "rasters": null
     },

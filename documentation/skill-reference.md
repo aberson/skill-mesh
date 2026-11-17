@@ -1,6 +1,6 @@
 # Skill reference
 
-The v3 catalog contains **50 Claude skills** and **48 portable skills** for Codex. GitHub Copilot (GPT) is no longer supported and is removed in v4. Host coverage means an adapter is packaged; required native capabilities and external utilities still apply.
+The catalog contains **46 Claude skills** and **44 portable skills** for Codex. GitHub Copilot (GPT) is no longer supported and is removed in v4. Host coverage means an adapter is packaged; required native capabilities and external utilities still apply.
 
 Each workflow link opens its source-linked diagram. Read the contract for full gates, flags, and omissions. See [installation](../README.md#install-or-upgrade), [utility integrations](../README.md#how-utility-projects-are-used), and [release limitations](https://github.com/aberson/skill-mesh/releases/tag/v2.0.2).
 
@@ -9,10 +9,6 @@ Each workflow link opens its source-linked diagram. Read the contract for full g
 | [build-phase](../skills/build-phase/core.md) | Parse a plan, run each eligible step through build-step, checkpoint progress, and halt only on the phase contract's named conditions. | Claude, Codex | [Diagram](../docs/workflows/README.md#build-phase) |
 | [build-queue](../skills/build-queue/core.md) | Validate queue and resume authority, run plan-expedite then build-phase per item, park every halt, and continue to a morning summary. | Claude, Codex | [Diagram](../docs/workflows/README.md#build-queue) |
 | [build-step](../skills/build-step/core.md) | Isolate one plan step, iterate developer and independent review rounds, then land, verify, and finalize only an authenticated passing candidate. | Claude, Codex | [Diagram](../docs/workflows/README.md#build-step) |
-| [citation-distill](../skills/citation-distill/core.md) | Prove one artifact's active completed review, generate mechanical queue defaults, and refine them only from matching same-run evidence. | Claude, Codex | [Diagram](../docs/workflows/README.md#citation-distill) |
-| [citation-review](../skills/citation-review/core.md) | Bind an exact calibrated judge, open one review, prepare frozen evidence, resolve each choice by independent votes, and commit only untied complete results. | Claude, Codex | [Diagram](../docs/workflows/README.md#citation-review) |
-| [citation-sweep](../skills/citation-sweep/core.md) | Bind one calibrated judge, open every selected artifact before judging any, commit only complete runs, and generate backlog rows for clean commits. | Claude, Codex | [Diagram](../docs/workflows/README.md#citation-sweep) |
-| [citation-triage](../skills/citation-triage/core.md) | Present one ranked queue row at a time, bind an explicit operator choice to its frozen identity, and resolve an unchanged row exactly once. | Claude, Codex | [Diagram](../docs/workflows/README.md#citation-triage) |
 | [code-consigliere](../skills/code-consigliere/core.md) | Investigate a project workflow and its rationale, agree any change, hand off a safe build seed, and verify the returned build. | Claude, Codex | [Workflow](../docs/workflows/code-consigliere.mmd) |
 | [claude-oauth-auth](../skills/claude-oauth-auth/providers/claude.md) | Authenticate the Claude CLI with a subscription token while keeping the credential out of logs and direct API calls. | Claude only | [Diagram](../docs/workflows/README.md#claude-oauth-auth) |
 | [context-slim](../skills/context-slim/providers/claude.md) | Measure automatically loaded context, classify safe reductions, and apply only high-confidence changes when explicitly requested. | Claude only | [Diagram](../docs/workflows/README.md#context-slim) |
