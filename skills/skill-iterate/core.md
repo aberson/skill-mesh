@@ -33,7 +33,7 @@ Two measurement rules bind every score this skill acts on (the workspace measure
 - Skill is in the embedded skip-list below (output is side-effect-driven, not text-gradable).
 - Skill is at a hill-climb plateau and needs radical exploration — use `/skill-evolve` (parallel A/B with operator-curated variants) instead.
 - Single-skill interactive iteration where the operator wants to review each diff — use `/build-step` against a hand-edited SKILL.md instead.
-- Changing a Skill Mesh catalog skill in place. Install output is never merged: a generated host profile is edited only on a disposable `skill-iterate/*` branch and yields a reviewable proposal, and an unmarked file in a Skill Mesh install tree is skipped (§Target resolution). The change lands through the Skill Mesh catalog lifecycle.
+- Changing a Skill Mesh catalog skill in place. Install output is never merged: a generated host profile is edited only on a disposable `skill-iterate/*` branch and yields a reviewable proposal, and an unmarked file in a Skill Mesh install tree is skipped (§Target resolution). A skill whose project is a Skill Mesh source tree that owns it stops with `CATALOG_SKILL_USE_LIFECYCLE` before any worktree or branch: an explicit `--skill` or `--queue` name halts in pre-flight, and a discovered one is skipped. The change lands through the Skill Mesh catalog lifecycle.
 
 ---
 
@@ -108,6 +108,7 @@ Per the workspace plan-and-issue-flow rule § "Autonomous-by-default skills" and
 This skill MUST default to autonomous execution. No mid-run `(y/n)` prompts. The only legitimate halts are:
 
 1. **Pre-flight failure** — any of:
+   - an explicit `--skill <name>` or `--queue` name is a Skill Mesh catalog skill (`CATALOG_SKILL_USE_LIFECYCLE`; checked before the folder check)
    - skill folder missing for an explicit `--skill <name>`
    - `evals/evals.json` missing for a discovered or explicit skill
    - kill-switch file (`.skill-iterate-killswitch`) already present at workspace root at launch
@@ -220,6 +221,7 @@ The merged set is what auto-discovery filters against in Phase 1 and what `--ski
 
 When `--skill <name>` is passed:
 
+- **Catalog-owned name → halt with `CATALOG_SKILL_USE_LIFECYCLE`.** Checked first, before the folder check below; it needs no file to exist. If `git -C <project> rev-parse --show-toplevel` succeeds, that repository root holds `config/skill-manifest.json`, and the manifest's `skills` list has a record whose `name` equals `<name>`, halt before any worktree, branch, edit, materialization, commit or push, and print `CATALOG_SKILL_USE_LIFECYCLE: <name> is a Skill Mesh catalog skill; change it through the catalog lifecycle (documentation/skill-catalog-lifecycle.md in the Skill Mesh source tree), not through /skill-iterate.` Catalog names are lowercase kebab-case: fold `<name>` to lowercase, then compare it exactly with the manifest's spelling, so a case variant on a case-insensitive file system still matches. Because the check reads only the name and the manifest, it fires in a source tree's own `skills/<name>/` layout, which has no `.claude/skills/`, and it covers every tree that passes the source tree predicate in section 3 of the lifecycle guide (the guide owns that predicate). A project with no `config/skill-manifest.json`, or whose manifest does not own `<name>`, is not affected and keeps its existing path.
 - Verify `.claude/skills/<name>/` exists. If not, halt — pre-flight failure per §Autonomy contract clause 1.
 - Verify both `.claude/skills/<name>/evals/evals.json` AND `.claude/skills/<name>/evals/test_scenarios.json` exist. If either is missing, halt with the message `evals not bootstrapped for <name>; run /skill-eval-setup <name> first`.
 - If `<name>` appears in the merged skip-list and `--force-skip-collision` is absent, halt with `skip-list collision: <name> is excluded; pass --force-skip-collision to treat this as a warning and continue`. With `--force-skip-collision`, emit that warning and continue.
@@ -232,20 +234,21 @@ When `--queue <path>` is passed:
   - Lines starting with `#` (after leading-whitespace strip) are whole-line comments and ignored.
   - Inline comments are supported: a `#` anywhere on a non-comment line introduces a trailing comment — split on the FIRST `#` and take the left side, then re-strip trailing whitespace. Example: `session-wrap   # known winner overnight` parses as `session-wrap`.
   - Skill names containing `#` are not permitted (no skill name in `.claude/skills/*/` contains `#`, so this is a non-collision in practice).
-- For each parsed skill name, run the same three checks as `--skill` (folder + evals/evals.json + evals/test_scenarios.json + skip-list collision). Halt on the FIRST failure rather than silently skipping, except that `--force-skip-collision` converts only a skip-list collision to a warning and continues — `--queue` is an explicit operator-curated list, and silent skips would mask typos.
+- For each parsed skill name, run the same checks as `--skill` (the catalog-owned check first, which halts with `CATALOG_SKILL_USE_LIFECYCLE`, then folder + evals/evals.json + evals/test_scenarios.json + skip-list collision). Halt on the FIRST failure rather than silently skipping, except that `--force-skip-collision` converts only a skip-list collision to a warning and continues — `--queue` is an explicit operator-curated list, and silent skips would mask typos.
 
 #### Pre-flight failure modes
 
-Restated for the developer agent — these are the six conditions under which the run halts before any skill is processed (the five Phase 0 checks plus the Phase 1 launch gate). Calibration and garbage-anchor parks and target-resolution skips are per-skill, not whole-run, so they are not in this list:
+Restated for the developer agent — these are the seven conditions under which the run halts before any skill is processed (the six Phase 0 checks plus the Phase 1 launch gate). Calibration and garbage-anchor parks and target-resolution skips are per-skill, not whole-run, so they are not in this list:
 
-1. Skill folder missing (for an explicit `--skill <name>` or any name in `--queue <path>`).
-2. `evals/evals.json` or `evals/test_scenarios.json` missing for an explicit skill.
-3. Kill-switch file (`.skill-iterate-killswitch`) present at workspace root at launch.
-4. Skill in the merged skip-list when passed explicitly via `--skill <name>` or `--queue <path>`.
-5. Concurrent run detected (live lock file with a running PID).
-6. At the launch gate: a required helper or the host workflow primitive is unavailable (`required_tool_missing`), or `<project>` is not its own git top level (`project-not-toplevel`).
+1. An explicit `--skill <name>` or `--queue <path>` name is a Skill Mesh catalog skill (`CATALOG_SKILL_USE_LIFECYCLE`), checked before the folder check.
+2. Skill folder missing (for an explicit `--skill <name>` or any name in `--queue <path>`).
+3. `evals/evals.json` or `evals/test_scenarios.json` missing for an explicit skill.
+4. Kill-switch file (`.skill-iterate-killswitch`) present at workspace root at launch.
+5. Skill in the merged skip-list when passed explicitly via `--skill <name>` or `--queue <path>`.
+6. Concurrent run detected (live lock file with a running PID).
+7. At the launch gate: a required helper or the host workflow primitive is unavailable (`required_tool_missing`), or `<project>` is not its own git top level (`project-not-toplevel`).
 
-All six map to §Autonomy contract clause 1; none of them count toward the consecutive-crash defect-park counter.
+All seven map to §Autonomy contract clause 1; none of them count toward the consecutive-crash defect-park counter.
 
 ### Phase 1 — Discover queue
 
@@ -290,10 +293,12 @@ For each queued skill, resolve the file this run scores and edits — its **cont
 - **Contract file.** The complete recognized defer set is a `Core: core.md` line or a `See [core.md](core.md) …` link. Exactly one defer form must be present to select the sibling core. Neither form selects SKILL.md itself. Both forms together are ambiguous and are skipped below rather than scored as a launcher proxy. Render agents read only the file they are given, so scoring a deferring launcher measures a proxy, not the behavior the host loads (the workspace measurement-validity rule: score the production artifact). `<contract-path>` below is the contract file's path relative to `<project>`; every later step uses it where older prose says "SKILL.md".
 - **Generated.** The contract file is generated when it contains the marker `SKILL-MESH-GENERATED-FILE`. Its **canonical destination** is the `Canonical source:` path in that marker comment, inside the Skill Mesh source tree (a `core.md`, or `providers/<host>.md` for a provider-native skill).
 - **Install tree.** `<project>/.claude/skills/` is a **Skill Mesh install** when the `SKILL.md` or `core.md` of any skill folder in it carries the marker. An install tree is a consumer discovery root owned by the installer (`skill-catalog-lifecycle.md`, class table). An unmarked file there does not prove a hand-authored skill, so the resolver fails closed: only a project whose skill tree carries no marker at all has `merge` targets.
+- **Catalog-owned.** The skill is catalog-owned under the same test as Phase 0's catalog-owned check (§Explicit --skill / --queue handling): `<project>`'s repository root holds a `config/skill-manifest.json` that owns `<name>`. An explicit name already halted there, so this per-skill check covers discovered skills. This check runs first, before the mode is assigned: a catalog-owned skill gets no mode and is skipped with `CATALOG_SKILL_USE_LIFECYCLE` (below).
 - **Mode.** `merge` for an unmarked contract file in a tree that is not a Skill Mesh install. `proposal` for a generated one: the full loop still runs in the disposable per-skill worktree, but Phase 3 never merges it and routes any earned change to a proposal (`review-required`). Editing or merging install output is forbidden (`skill-mesh/docs/skill-catalog-lifecycle.md`, "Forbidden, without exception"; workspace rule: edit the canonical source and rebuild).
 
 Drop the skill from the queue and print `target skipped: <name> (<reason>)` when:
 
+- `CATALOG_SKILL_USE_LIFECYCLE` — the skill is catalog-owned (above). Checked before every other reason, so it applies to a marked or unmarked contract file alike, and no worktree, branch, edit, materialization, commit or push is made for it. After the skip line, print `CATALOG_SKILL_USE_LIFECYCLE: <name> is a Skill Mesh catalog skill; change it through the catalog lifecycle (documentation/skill-catalog-lifecycle.md in the Skill Mesh source tree), not through /skill-iterate.` A project with no `config/skill-manifest.json`, or whose manifest does not own `<name>`, is not affected and keeps its existing mode.
 - `mixed-install` — SKILL.md carries the marker but the core it defers to does not: no canonical destination can be named, and treating the core as non-generated would merge into install output.
 - `unrecognized-deferral` — SKILL.md carries the marker, has a sibling `core.md`, and contains neither recognized defer form: the production contract is ambiguous, so do not score the launcher proxy.
 - `ambiguous-deferral` — SKILL.md contains both recognized defer forms: two independent directives name the core, so fail closed instead of guessing which directive owns production behavior.

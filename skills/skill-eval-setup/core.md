@@ -69,12 +69,17 @@ the invoking window's repository or to a similarly named installed copy.
 
 **Catalog-owned targets use the catalog lifecycle.** Before Steps 1-5 or emitting the Part 3 loop,
 if `TARGET_REPO` contains `config/skill-manifest.json` and that manifest owns the selected skill,
-stop unconditionally with `PACKAGE_RESOURCE_PLAN_REQUIRED`, whether or not `evals/` already exists.
-Report that the requested package-local eval
-resources need the repository's supported catalog lifecycle and, because they change resource
-topology, a scoped packaging or source-only resource plan. Follow the current manual lifecycle
-contract or installed `/skill-crud UPDATE` when available. A host-provided skill creator and a
-single-host installed copy are not substitutes.
+stop unconditionally with `CATALOG_SKILL_USE_LIFECYCLE`, whether or not `evals/` already exists,
+before any edit, materialization, commit or push. Report that the requested package-local eval
+resources are a package-resource change to a catalog skill: they need the repository's catalog
+lifecycle (`documentation/skill-catalog-lifecycle.md` in the Skill Mesh source tree) and,
+because they change resource topology, a scoped packaging or source-only resource plan. A
+host-provided skill creator and a single-host installed copy are not substitutes. A target whose
+repository has no `config/skill-manifest.json`, or whose manifest does not own the skill, is not
+catalog-owned and keeps its existing path.
+Catalog names are lowercase kebab-case: fold the selected skill folder's name to lowercase, then
+compare it exactly with the manifest's spelling, so a case variant on a case-insensitive file
+system still matches.
 
 If the skill, its SKILL.md, or a `core.md` it defers to cannot be found, report the error and stop.
 
@@ -386,7 +391,9 @@ git from this window's working directory.
   git work tree; otherwise its output is REPO), or this fails because the file is untracked or
   ignored: `git -C REPO ls-files --error-unmatch -- <edit-file>`.
 - catalog-target: REPO has `config/skill-manifest.json` and that manifest owns this skill. Stop
-  with `PACKAGE_RESOURCE_PLAN_REQUIRED`; do not edit or commit the catalog source from this loop.
+  with `CATALOG_SKILL_USE_LIFECYCLE` and report that the skill changes only through the catalog
+  lifecycle (`documentation/skill-catalog-lifecycle.md` in the Skill Mesh source tree); do not
+  edit, commit or push the catalog source from this loop.
 - branch-changed: record the nonempty result of `git -C REPO branch --show-current` as BRANCH;
   detached HEAD is a stop. Re-run it before every edit and commit and stop if it differs.
 - dirty-target: `git -C REPO status --porcelain --untracked-files=all -- <edit-file>` prints
@@ -519,7 +526,7 @@ Check these before any Step 5 dispatch:
   write; never simulate an unavailable isolated grader in the current context.
 - `production-model-unknown`: the target skill's production model cannot be established. Do not
   substitute a cheaper, nearby, or default model for a producer.
-- `PACKAGE_RESOURCE_PLAN_REQUIRED`: the unconditional catalog-owned-target guard from Input
+- `CATALOG_SKILL_USE_LIFECYCLE`: the unconditional catalog-owned-target guard from Input
   applies even when `evals/` or a prior golden corpus already exists.
 - `calibrated-corpus`: `evals/golden/` holds `verdicts.jsonl` or `recorded_scores.json`. A
   recorded judge-calibration gate replays a score for every fixture there and fails closed on a

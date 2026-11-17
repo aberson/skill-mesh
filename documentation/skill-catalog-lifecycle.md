@@ -308,6 +308,20 @@ name with `NOT_SKILL_MESH_SOURCE` would tell an operator standing in a real Skil
 checkout that it is not one, and would attach the "no single-host fallback" advice to a
 request that never needed it.
 
+**The legacy optimization workflows stop at a catalog skill.** `skill-eval-setup`,
+`skill-evolve`, and `skill-iterate` edit the one file they are pointed at and carry none of
+this contract's gates, so they must not mutate a catalog skill. When the repository a run is
+aimed at holds a `config/skill-manifest.json` that owns the requested skill's name, each of
+the three stops with `CATALOG_SKILL_USE_LIFECYCLE` before any worktree, branch, edit,
+materialization, commit, or push, and its stop message names this guide. The check reads only
+the requested name and that manifest, not a `SKILL.md`, so it fires in this tree's own
+`skills/<name>/` layout; and because it keys on the manifest alone, it covers every tree that
+passes the predicate above. A generated copy inside such a repository, such as an untracked
+`dist/` build or a checkout used as an install home, stops too instead of becoming a
+proposal. An installed generated target in an ordinary consumer home, which holds no
+manifest, still becomes a proposal and never a commit in `skill-evolve` and `skill-iterate`,
+and a skill that no Skill Mesh manifest owns keeps each workflow's existing path.
+
 Regeneration is an explicit step of a mutation, not a side effect. After the canonical bytes
 change, `tools/gen_manifest.py` reproduces the three artifacts it owns, and the provider
 profiles are rebuilt with `tools/build-distributions.ps1`, before any verification verdict is
@@ -473,7 +487,7 @@ is an invalid request, not a warning.
 
 ## 9. Stop codes
 
-These five are **locked strings**. They are the vocabulary the rest of Phase CL, its tests,
+These six are **locked strings**. They are the vocabulary the rest of Phase CL, its tests,
 and its operator messages key on; a caller may rely on the exact spelling.
 
 | Stop code | Raised when | Raised before |
@@ -483,6 +497,7 @@ and its operator messages key on; a caller may rely on the exact spelling.
 | `PACKAGE_RESOURCE_PLAN_REQUIRED` | A request would add, remove, or relocate a package-local file, or change a declared support-asset entry. | any write |
 | `NOT_SKILL_MESH_SOURCE` | The target fails the section 3 source tree predicate — not a Git working tree, or no `config/skill-manifest.json` at that path. A name the manifest does not own is `SKILL_NOT_FOUND`, not this. | any write, and with no single-host fallback |
 | `CATALOG_MUTATION_INCOMPLETE` | A gate failed after the first write, leaving the change partial. | any cleanup — see section 10 |
+| `CATALOG_SKILL_USE_LIFECYCLE` | A legacy optimization workflow (`skill-eval-setup`, `skill-evolve`, or `skill-iterate`) targets a skill whose repository root holds a `config/skill-manifest.json` that owns the skill's name: every tree that passes the section 3 source tree predicate, and any copy inside one. | any worktree, branch, edit, materialization, commit, or push into that skill's canonical source |
 
 A stop is a refusal to proceed, not an error to be worked around. Widening any of these
 conditions is a plan change, not an implementation detail.

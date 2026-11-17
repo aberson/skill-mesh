@@ -9,13 +9,13 @@ WHAT THIS FILE DECIDES, stated exactly. Two mechanisms, and only two.
 
   (a) VERBATIM PINS. The enforcement text of five protected facts is pinned
       byte-for-byte in `LOCKED_CLAIMS`, exactly the treatment this module
-      already gives the five locked stop-code strings. A pinned claim reds when
+      already gives the six locked stop-code strings. A pinned claim reds when
       it is deleted, reworded, weakened, inverted, or -- for a `paragraph` pin
       -- extended by an appended sentence. The five facts:
 
         1. the `CLAUDE.md` pointer at the guide,
         2. the required-provider rule (a mutation carries claude, gpt, codex),
-        3. any of the five locked stop codes, or the trigger bound to it,
+        3. any of the six locked stop codes, or the trigger bound to it,
         4. the recovery rule (a failed mutation preserves unrelated work,
            reports `CATALOG_MUTATION_INCOMPLETE`, and never auto-cleans),
         5. the canonical-vs-generated boundary and its forbidden surfaces,
@@ -31,6 +31,14 @@ WHAT THIS FILE DECIDES, stated exactly. Two mechanisms, and only two.
       partition, and the grandfathered package-local owners, each read out of
       `config/skill-manifest.json` or out of `skills/` itself and compared
       against the guide, so the guide cannot drift away from the repository.
+
+  Phase CL Step 114 (issue #172) adds one consumer of the guide's vocabulary
+  outside these three documents: the legacy-path guards in the
+  `skill-eval-setup`, `skill-evolve` and `skill-iterate` cores, which all raise
+  the sixth locked string. Section 3b grades those guards with the same parser
+  -- what a reader sees -- and runs its checker on planted negatives so the
+  gate is shown failing, not only passing. The two mechanisms above still
+  govern the guide and the root pointer.
 
 ONE MODEL OF MARKDOWN, AND IT IS NOT THIS FILE'S. Every question about what a
 block IS -- prose or fence, heading or paragraph, table row or pipe characters,
@@ -165,9 +173,14 @@ ARCH_REL = "documentation/architecture.md"
 ROOT_INSTRUCTION_REL = "CLAUDE.md"
 MANIFEST_REL = "config/skill-manifest.json"
 
-# The five locked stop codes, each mapped to a token that must appear in ITS OWN
+# The one stop code the three legacy optimization workflows share (Phase CL
+# Step 114, decision CL-D15). Named once here; the guide row, the guard-site
+# table, and the planted negatives below all read this constant.
+CATALOG_GUARD_CODE = "CATALOG_SKILL_USE_LIFECYCLE"
+
+# The six locked stop codes, each mapped to a token that must appear in ITS OWN
 # trigger cell in the guide's stop-code table. The mapping is what binds a code
-# to its condition: without it the table can have all five rows with their
+# to its condition: without it the table can have all six rows with their
 # triggers swapped, and a presence check cannot tell.
 LOCKED_STOP_CODES = {
     "PHASE_CL_PREREQUISITE_NOT_MET": "prerequisite",
@@ -175,6 +188,7 @@ LOCKED_STOP_CODES = {
     "PACKAGE_RESOURCE_PLAN_REQUIRED": "package-local",
     "NOT_SKILL_MESH_SOURCE": "skill-manifest.json",
     "CATALOG_MUTATION_INCOMPLETE": "after the first write",
+    CATALOG_GUARD_CODE: "legacy optimization workflow",
 }
 
 OPERATIONS = ("CREATE", "READ", "UPDATE", "DELETE", "RENAME")
@@ -742,7 +756,7 @@ LOCKED_CLAIMS = (
      "side channel."),
     ('fact 3 - the stop codes are locked strings', GUIDE_REL,
      "Stop codes", 'paragraph',
-     "These five are **locked strings**. They are the vocabulary the rest "
+     "These six are **locked strings**. They are the vocabulary the rest "
      "of Phase CL, its tests, and its operator messages key on; a caller "
      "may rely on the exact spelling."),
     ('fact 4 - what a mutation does not do', GUIDE_REL,
@@ -802,6 +816,29 @@ LOCKED_CLAIMS = (
      "leave those files in place. `DELETE`, `RENAME`, or any change "
      "to their presence or location is a resource-topology change "
      "and takes the stop above."),
+    # Phase CL Step 114 (issue #172, CL-D10 / CL-D15): the shared stop of the
+    # three legacy optimization workflows, stated where the source-tree
+    # predicate it keys on is stated.
+    ('fact 3 - the legacy workflows stop at a catalog skill', GUIDE_REL,
+     'Canonical, generated, and consumer surfaces', 'paragraph',
+     "**The legacy optimization workflows stop at a catalog skill.** "
+     "`skill-eval-setup`, `skill-evolve`, and `skill-iterate` edit the one "
+     "file they are pointed at and carry none of this contract's gates, so "
+     "they must not mutate a catalog skill. When the repository a run is "
+     "aimed at holds a `config/skill-manifest.json` that owns the requested "
+     "skill's name, each of the three stops with "
+     "`CATALOG_SKILL_USE_LIFECYCLE` before any worktree, branch, edit, "
+     "materialization, commit, or push, and its stop message names this "
+     "guide. The check reads only the requested name and that manifest, not "
+     "a `SKILL.md`, so it fires in this tree's own `skills/<name>/` layout; "
+     "and because it keys on the manifest alone, it covers every tree that "
+     "passes the predicate above. A generated copy inside such a repository, "
+     "such as an untracked `dist/` build or a checkout used as an install "
+     "home, stops too instead of becoming a proposal. An installed generated "
+     "target in an ordinary consumer home, which holds no manifest, still "
+     "becomes a proposal and never a commit in `skill-evolve` and "
+     "`skill-iterate`, and a skill that no Skill Mesh manifest owns keeps "
+     "each workflow's existing path."),
 )
 
 LOCKED_TABLE_ROWS = (
@@ -1076,6 +1113,18 @@ LOCKED_TABLE_ROWS = (
         "A gate failed after the first write, leaving the change partial.",
        2:
         "any cleanup \u2014 see section 10",
+      },
+      # Phase CL Step 114 (issue #172): the sixth locked string.
+      "`CATALOG_SKILL_USE_LIFECYCLE`": {
+       1:
+        "A legacy optimization workflow (`skill-eval-setup`, "
+        "`skill-evolve`, or `skill-iterate`) targets a skill whose "
+        "repository root holds a `config/skill-manifest.json` that owns the "
+        "skill's name: every tree that passes the section 3 source tree "
+        "predicate, and any copy inside one.",
+       2:
+        "any worktree, branch, edit, materialization, commit, or push into "
+        "that skill's canonical source",
       },
      }),
     ("architecture's authoring-verdict table", ARCH_REL,
@@ -2746,7 +2795,7 @@ def test_every_locked_claim_is_present_verbatim():
           "two things. If the document was WEAKENED, restore the pinned text. "
           "If the sentence was deliberately improved, update its entry in "
           "LOCKED_CLAIMS in the SAME change -- the pin is contract text, and "
-          "it is held exactly the way the five locked stop-code strings are. "
+          "it is held exactly the way the six locked stop-code strings are. "
           "Do not relax the comparison; rounds 1-3 of issue #168 measured what "
           "a fuzzy version of this gate lets through.")
     assert not duplicated, (
@@ -3370,7 +3419,7 @@ def test_required_provider_set_is_core_plus_claude_gpt_codex_in_order():
 # --------------------------------------------------------------------------- #
 
 def test_every_locked_stop_code_has_a_row_in_the_guide():
-    """The five locked strings, present, spelled exactly, one row each.
+    """The six locked strings, present, spelled exactly, one row each.
 
     Which CONDITION each row states, and when the stop fires, are pinned
     verbatim by `LOCKED_TABLE_ROWS` -- the marker-and-length heuristic this
@@ -3407,7 +3456,7 @@ def test_every_locked_stop_code_has_a_row_in_the_guide():
     assert not unbound, (
         "stop code(s) no longer state their own condition:\n"
         + "\n".join(unbound)
-        + "\n\nA presence check cannot tell five rows apart when their "
+        + "\n\nA presence check cannot tell six rows apart when their "
           "triggers have been swapped; the mapping is what binds a code to "
           "the condition it names.")
 
@@ -3415,7 +3464,7 @@ def test_every_locked_stop_code_has_a_row_in_the_guide():
 def test_stop_codes_are_reachable_from_the_prose_that_raises_them():
     """A code defined only in the reference table is a code nobody reaches.
 
-    All five, not four: `CATALOG_MUTATION_INCOMPLETE` was reachable only from
+    All six, not four: `CATALOG_MUTATION_INCOMPLETE` was reachable only from
     the reference table and from a pinned paragraph, and a pin proves the text
     exists somewhere in its scope without proving the CODE is stated where the
     condition is described.
@@ -3427,6 +3476,7 @@ def test_stop_codes_are_reachable_from_the_prose_that_raises_them():
         ("NOT_SKILL_MESH_SOURCE", "Canonical, generated, and consumer surfaces"),
         ("PHASE_CL_PREREQUISITE_NOT_MET", "Prerequisite preflight"),
         ("CATALOG_MUTATION_INCOMPLETE", "recovery rule"),
+        (CATALOG_GUARD_CODE, "Canonical, generated, and consumer surfaces"),
     ):
         assert code in _section(guide, heading, GUIDE_REL), (
             f"`{code}` is no longer stated in the section that describes its "
@@ -3435,7 +3485,7 @@ def test_stop_codes_are_reachable_from_the_prose_that_raises_them():
     assert set(LOCKED_STOP_CODES) == {
         "PROVIDER_NATIVE_REVIEW_REQUIRED", "PACKAGE_RESOURCE_PLAN_REQUIRED",
         "NOT_SKILL_MESH_SOURCE", "PHASE_CL_PREREQUISITE_NOT_MET",
-        "CATALOG_MUTATION_INCOMPLETE"}, (
+        "CATALOG_MUTATION_INCOMPLETE", CATALOG_GUARD_CODE}, (
         "a stop code was added or removed without giving it a section that "
         "describes its condition. The list above is not a sample.")
 
@@ -3522,6 +3572,607 @@ def test_the_source_tree_predicate_states_exactly_two_conditions():
         "does not own from a tree that is not a Skill Mesh checkout. Without "
         "that sentence the two findings collapse, and the one that masks the "
         "other is the one that tells an operator to go somewhere else.")
+
+
+# --------------------------------------------------------------------------- #
+# 3b. The legacy-path guards (Phase CL Step 114, issue #172)
+#
+# `skill-eval-setup`, `skill-evolve` and `skill-iterate` edit the one file they
+# are pointed at. Decisions CL-D10 and CL-D15 make all three stop with ONE
+# shared locked code, `CATALOG_GUARD_CODE`, before any worktree, branch, edit,
+# materialization, commit or push into a catalog-owned skill's canonical
+# source, and keep each workflow's existing path for everything else: an
+# external, non-catalog target, and (for evolve and iterate) the generated
+# install target's proposal route.
+#
+# These cores are prose contracts, so the guard is graded the way this module
+# grades the guide: by what a READER sees. `_prose_units` reads every paragraph
+# the parser produces -- including the ones inside list items -- as visible
+# text, so a guard sentence parked in a fence, an indented code block, an HTML
+# block or an inline HTML comment is not in the haystack. The single exception
+# is the eval-setup loop PROMPT TEMPLATE, which is a fence by construction:
+# that fence is emitted verbatim as the loop's instructions, so its content is
+# the production artifact and is graded as such (`kind == "fence"`).
+#
+# `_legacy_guard_findings(workflow, text)` is the checker. It takes the core's
+# TEXT rather than reading the file, so the planted-negative tests below can run
+# it on mutated copies and watch it go red -- a gate that has never been seen
+# failing has not been shown to grade anything.
+# --------------------------------------------------------------------------- #
+
+LEGACY_WORKFLOW_CORES = {
+    "skill-eval-setup": "skills/skill-eval-setup/core.md",
+    "skill-evolve": "skills/skill-evolve/core.md",
+    "skill-iterate": "skills/skill-iterate/core.md",
+}
+
+# Each workflow's OWN way of stopping before Step 114, which is what a revert
+# would restore. eval-setup raised the guide's resource-plan code; evolve and
+# iterate had no code at all, so their revert is the per-workflow label the
+# guard would naturally have carried (eval-setup's loop row is spelled
+# `catalog-target`, iterate's skip reasons are kebab labels).
+LEGACY_OWN_CODES = {
+    "skill-eval-setup": "PACKAGE_RESOURCE_PLAN_REQUIRED",
+    "skill-evolve": "catalog-target",
+    "skill-iterate": "catalog-owned",
+}
+
+# (label, heading needle, kind, anchor, required phrases)
+#
+# `anchor` locates exactly one unit in the section; `required` are phrases the
+# unit must carry, compared case-insensitively on whitespace-collapsed VISIBLE
+# text (so backticks and emphasis do not matter, and a phrase hidden in markup
+# a reader cannot see does not count). Every guard unit must also carry the
+# shared code and, at a raising site, the guide path; the checker adds those,
+# they are not repeated per row.
+LEGACY_GUARD_SITES = {
+    "skill-eval-setup": (
+        ("input guard", "Input", "prose",
+         "Catalog-owned targets use the catalog lifecycle.",
+         ("before steps 1-5 or emitting the part 3 loop",
+          "config/skill-manifest.json",
+          "that manifest owns the selected skill",
+          "before any edit, materialization, commit or push",
+          "package-resource change",
+          "resource plan",
+          "is not catalog-owned and keeps its existing path",
+          "fold the selected skill folder's name to lowercase")),
+        ("loop preflight row", "Prompt template", "fence",
+         "- catalog-target:",
+         ("config/skill-manifest.json",
+          "do not edit, commit or push the catalog source")),
+        ("held-outcome entry", "Preconditions and HELD outcomes", "prose",
+         CATALOG_GUARD_CODE + ": the unconditional catalog-owned-target guard",
+         ()),
+    ),
+    "skill-evolve": (
+        ("execution-model rule 8", "Execution model", "prose",
+         "Generated surfaces are read-only.",
+         ("canonical source is never edited here either",
+          "halts in pre-flight",
+          "before brainstorm mode and before any missing-file halt")),
+        ("brainstorm step 1", "Variant sourcing", "prose",
+         "Resolve and verify target skill (same as Step 0 pre-flight #1).",
+         ("its catalog-owned check runs first",
+          "before any candidate is generated or any file is written")),
+        ("pre-flight guard", "Step 0: Pre-flight", "prose",
+         "Catalog-owned target → halt with " + CATALOG_GUARD_CODE + ".",
+         ("checked first: before every file check below, and before "
+          "brainstorm mode",
+          "it needs no file to exist",
+          "config/skill-manifest.json",
+          "before any worktree, branch, edit, materialization, commit or push",
+          "fold the requested name to lowercase",
+          "section 3 of the lifecycle guide",
+          "a generated copy inside such a repository stops too",
+          "keeps its proposal route",
+          "keeps its existing path")),
+        ("halt #1", "Halts", "prose",
+         "Pre-flight failure.",
+         ("a catalog-owned target in a skill mesh source tree",
+          "checked first in step 0 #1")),
+    ),
+    "skill-iterate": (
+        ("when-not-to-use bullet", "When NOT to use", "prose",
+         "Changing a Skill Mesh catalog skill in place.",
+         ("source tree that owns it",
+          "before any worktree or branch",
+          "halts in pre-flight",
+          "a discovered one is skipped")),
+        ("autonomy pre-flight bullet", "Autonomy contract", "prose",
+         "name is a Skill Mesh catalog skill (" + CATALOG_GUARD_CODE
+         + "; checked before the folder check)",
+         ()),
+        ("pre-flight guard", "Explicit --skill / --queue handling", "prose",
+         "Catalog-owned name → halt with " + CATALOG_GUARD_CODE + ".",
+         ("checked first, before the folder check below",
+          "it needs no file to exist",
+          "config/skill-manifest.json",
+          "before any worktree, branch, edit, materialization, commit or push",
+          "fold <name> to lowercase",
+          "section 3 of the lifecycle guide",
+          "keeps its existing path")),
+        ("queue reuse", "Explicit --skill / --queue handling", "prose",
+         "run the same checks as --skill",
+         ("the catalog-owned check first",)),
+        ("failure-modes entry", "Pre-flight failure modes", "prose",
+         "name is a Skill Mesh catalog skill (" + CATALOG_GUARD_CODE
+         + "), checked before the folder check.",
+         ()),
+        ("catalog-owned resolution", "Target resolution", "prose",
+         "Catalog-owned. The skill is catalog-owned under the same test as "
+         "Phase 0's catalog-owned check",
+         ("config/skill-manifest.json",
+          "covers discovered skills",
+          "this check runs first, before the mode is assigned")),
+        ("skip reason", "Target resolution", "prose",
+         CATALOG_GUARD_CODE + " — the skill is catalog-owned",
+         ("checked before every other reason",
+          "no worktree, branch, edit, materialization, commit or push",
+          "keeps its existing mode")),
+    ),
+}
+
+# Guard units that are NOT where the stop message is printed, so they need not
+# name the guide: each points at the unit that raises the stop (eval-setup's
+# HELD entry points at its Input guard; evolve's rule 8, brainstorm step and
+# halt #1 point at its Step 0 guard; iterate's When-NOT-to-use, autonomy,
+# queue, failure-mode and resolution units point at its Phase 0 guard or its
+# skip reason). Every other unit is a raising site and must name the guide.
+LEGACY_GUARD_SITES_WITHOUT_MESSAGE = {
+    ("skill-eval-setup", "held-outcome entry"),
+    ("skill-evolve", "execution-model rule 8"),
+    ("skill-evolve", "brainstorm step 1"),
+    ("skill-evolve", "halt #1"),
+    ("skill-iterate", "when-not-to-use bullet"),
+    ("skill-iterate", "autonomy pre-flight bullet"),
+    ("skill-iterate", "queue reuse"),
+    ("skill-iterate", "failure-modes entry"),
+    ("skill-iterate", "catalog-owned resolution"),
+}
+
+# The existing paths Step 114 must not move (completion conditions 1 and 2),
+# each a phrase a reader sees in the named section of the core.
+LEGACY_KEPT_PATHS = {
+    "skill-eval-setup": (
+        ("generated target stays read-only", "Input",
+         "Generated targets are read-only."),
+    ),
+    "skill-evolve": (
+        ("non-generated winner still branches", "Step 4: Winner handling",
+         "If there is a WINNER and the target is not generated:"),
+        ("non-generated winner still branches", "Step 4: Winner handling",
+         "git -C REPO worktree add <winner-worktree> -b <winner-branch>"),
+        ("generated winner is a proposal", "Step 4: Winner handling",
+         "If there is a WINNER and the target is generated: create no "
+         "worktree, branch or commit, and never write the installed profile "
+         "or the canonical source."),
+    ),
+    "skill-iterate": (
+        ("merge and proposal modes", "Target resolution",
+         "Mode. merge for an unmarked contract file in a tree that is not a "
+         "Skill Mesh install. proposal for a generated one:"),
+        ("generated target routes to review", "Phase 3",
+         "review-required (reason generated-target) — the target mode is "
+         "proposal."),
+    ),
+}
+
+# (stop site, source marker, what the marker is). The stop site must be stated
+# BEFORE each marker in the document a host reads top to bottom. Two kinds of
+# marker: the workflow's FIRST WRITE into a target (eval-setup's Step 1, the
+# evolve winner worktree, the iterate per-skill worktree, evolve's brainstorm
+# file), and the existing HALTS that would otherwise fire first in a Skill Mesh
+# source tree -- which holds `skills/<name>/core.md` and no SKILL.md or
+# `.claude/skills/` -- and so would stop the run with a generic missing-file
+# error instead of the shared code (round 1's material finding).
+LEGACY_ORDER = {
+    "skill-eval-setup": (
+        ("input guard", "If the skill, its SKILL.md, or a `core.md` it defers "
+         "to cannot be found", "the not-found halt"),
+        ("input guard", "## Step 1: Read and analyze the SKILL.md",
+         "the first write"),
+    ),
+    "skill-evolve": (
+        ("brainstorm step 1", "**Write `docs/investigations/skill-evolve/",
+         "the brainstorm write"),
+        ("pre-flight guard",
+         "Missing any → halt with the missing-path list",
+         "the missing-file halt"),
+        ("pre-flight guard", "switch to **brainstorm mode**",
+         "the brainstorm exit"),
+        ("pre-flight guard", "`git -C REPO worktree add", "the first write"),
+    ),
+    "skill-iterate": (
+        ("pre-flight guard", "- Verify `.claude/skills/<name>/` exists.",
+         "the folder-missing halt"),
+        ("pre-flight guard", "#### Worktree setup", "the first write"),
+        ("skip reason", "#### Worktree setup", "the first write"),
+    ),
+}
+
+
+def _prose_units(text):
+    """[(first_line, visible_text)] for every paragraph a reader sees.
+
+    Unlike `_blocks`, this descends into containers, so each list item's
+    paragraph is its own unit. A fence, an indented code block and an HTML
+    block carry no paragraph token, so text parked in one is not a unit; an
+    inline HTML comment contributes no visible text (`_inline_text`).
+    """
+    tokens = _parse(text)
+    units = []
+    for index, token in enumerate(tokens):
+        if token.type != "paragraph_open" or token.map is None:
+            continue
+        inline = _inline_text(tokens[index:_close_of(tokens, index)])
+        units.append((token.map[0], _collapsed(inline.text)))
+    return units
+
+
+def _fence_item(section, anchor):
+    """The fenced bullet starting with `anchor`, with its indented
+    continuation lines, collapsed; `None` when absent or not unique."""
+    hits = []
+    for content in _fence_contents(section):
+        lines = content.split("\n")
+        for start, line in enumerate(lines):
+            if not line.startswith(anchor):
+                continue
+            item = [line]
+            for follow in lines[start + 1:]:
+                if not follow.startswith("  "):
+                    break
+                item.append(follow)
+            hits.append(_collapsed(" ".join(item)))
+    return hits[0] if len(hits) == 1 else None
+
+
+def _guard_unit(workflow, text, label, needle, kind, anchor):
+    """(found_unit_or_None, first_line_or_None, problem_or_None)."""
+    try:
+        section = _section(text, needle, f"{workflow} core")
+    except AssertionError as exc:
+        return None, None, str(exc).split(".")[0]
+    if kind == "fence":
+        unit = _fence_item(section, anchor)
+        if unit is None:
+            return None, None, (f"the {label} ({anchor!r}) is not exactly once "
+                                f"in the fenced template of {needle!r}")
+        first = text.find(anchor)
+        return unit, text.count("\n", 0, first), None
+    offset, = [start for _level, title, start in _headings(text)
+               if needle.lower() in title.lower()]
+    hits = [(line, unit) for line, unit in _prose_units(section)
+            if _collapsed(anchor) in unit]
+    if len(hits) != 1:
+        return None, None, (f"the {label} ({anchor!r}) appears in {len(hits)} "
+                            f"visible paragraph(s) of {needle!r}, not 1")
+    line, unit = hits[0]
+    return unit, offset + line, None
+
+
+def _legacy_guard_findings(workflow, text):
+    """Every way `text` (a legacy workflow's core) fails Step 114's guard.
+
+    An empty list is the only passing answer. The list names each missing
+    site, phrase, code, message, ordering or kept path so a red says what to
+    restore.
+    """
+    findings = []
+    lines_of_guard = {}
+    for label, needle, kind, anchor, required in LEGACY_GUARD_SITES[workflow]:
+        unit, line, problem = _guard_unit(workflow, text, label, needle, kind,
+                                          anchor)
+        if problem:
+            findings.append(problem)
+            continue
+        lines_of_guard[label] = line
+        flat = _flat(unit)
+        needed = (CATALOG_GUARD_CODE.lower(),) + tuple(required)
+        if (workflow, label) not in LEGACY_GUARD_SITES_WITHOUT_MESSAGE:
+            needed += (GUIDE_REL,)
+        for phrase in needed:
+            if phrase.lower() not in flat:
+                findings.append(f"the {label} no longer says {phrase!r}")
+        if "skill-crud" in flat:
+            findings.append(f"the {label} names /skill-crud, which does not "
+                            f"exist yet; the stop names the lifecycle guide")
+
+    # eval-setup's own former code is a real locked string of the guide, so a
+    # revert would still be a stop -- just the wrong one. Its absence from the
+    # whole core is what "moved to the shared code" means. (evolve and iterate
+    # had no code of their own; a revert there loses the shared code, which
+    # the per-site check above already reds.)
+    if workflow == "skill-eval-setup" and LEGACY_OWN_CODES[workflow] in text:
+        findings.append("the core still raises PACKAGE_RESOURCE_PLAN_REQUIRED; "
+                        "its catalog-owned guard moved to the shared code")
+
+    for stop_site, marker, what in LEGACY_ORDER[workflow]:
+        if text.count(marker) != 1:
+            findings.append(f"the marker of {what} ({marker!r}) is not "
+                            f"exactly once in the core")
+        elif (stop_site in lines_of_guard
+              and lines_of_guard[stop_site]
+              > text.count("\n", 0, text.find(marker))):
+            findings.append(f"the {stop_site} is stated after {what} "
+                            f"({marker!r}), so it cannot stop first")
+
+    for label, needle, phrase in LEGACY_KEPT_PATHS[workflow]:
+        try:
+            section = _section(text, needle, f"{workflow} core")
+        except AssertionError:
+            findings.append(f"the {label} section {needle!r} is gone")
+            continue
+        visible = " ".join(unit for _line, unit in _prose_units(section))
+        visible += " " + _collapsed(" ".join(_fence_contents(section)))
+        if _flat(phrase) not in _flat(visible):
+            findings.append(f"the existing path '{label}' no longer reads "
+                            f"{phrase!r}")
+    return findings
+
+
+def _legacy_core(workflow):
+    return _read(LEGACY_WORKFLOW_CORES[workflow])
+
+
+def _drop_lines(text, start, end):
+    lines = text.split("\n")
+    return "\n".join(lines[:start] + lines[end:])
+
+
+def _wrap_lines(text, start, end, opener, closer):
+    lines = text.split("\n")
+    return "\n".join(lines[:start] + [opener] + lines[start:end] + [closer]
+                     + lines[end:])
+
+
+def _move_after(text, start, end, marker):
+    """`text` with source lines [start, end) moved to just after the paragraph
+    that holds `marker`, which must come later; nothing else changes."""
+    target = text.count("\n", 0, text.index(marker))
+    stop, = [token.map[1] for token in _parse(text)
+             if token.type == "paragraph_open" and token.map
+             and token.map[0] <= target < token.map[1]]
+    assert stop > end, (marker, start, end, stop)
+    lines = text.split("\n")
+    return "\n".join(lines[:start] + lines[end:stop] + lines[start:end]
+                     + lines[stop:])
+
+
+def _cut_phrase(text, start, end, phrase):
+    """`text` with `phrase` removed from source lines [start, end) only.
+
+    The phrase is matched as a reader sees it: case-insensitive, across any
+    line break, and through the backticks and emphasis markers the source
+    wraps around a code span or a bold lead-in.
+    """
+    words = phrase.split()
+    glue = r"[`*]*\s+[`*]*"
+    pattern = re.compile(r"[`*]*" + glue.join(re.escape(w) for w in words)
+                         + r"[`*]*", re.IGNORECASE)
+    lines = text.split("\n")
+    span = "\n".join(lines[start:end])
+    cut = pattern.sub("", span)
+    return "\n".join(lines[:start] + cut.split("\n") + lines[end:])
+
+
+def _guard_spans(workflow, text):
+    """{label: (start, end)} source-line spans of each guard unit."""
+    spans = {}
+    tokens = _parse(text)
+    for label, needle, kind, anchor, _required in LEGACY_GUARD_SITES[workflow]:
+        if kind == "fence":
+            start = text.count("\n", 0, text.find(anchor))
+            lines = text.split("\n")
+            end = start + 1
+            while lines[end].startswith("  "):
+                end += 1
+            spans[label] = (start, end)
+            continue
+        _unit, line, problem = _guard_unit(workflow, text, label, needle,
+                                           kind, anchor)
+        assert problem is None, problem
+        token = next(t for t in tokens
+                     if t.type == "paragraph_open" and t.map
+                     and t.map[0] == line)
+        spans[label] = (token.map[0], token.map[1])
+    return spans
+
+
+def _planted_negatives():
+    """Every mutation of a real core that MUST red the checker.
+
+    Trimmed in round 2 to cases that each test something distinct: a unit is
+    hidden from a reader (HTML comment, fence) only where the stop is raised,
+    since hiding any other unit reds through the same "appears in 0 visible
+    paragraphs" finding its deletion already proves; and a phrase is not cut
+    when it is part of the unit's anchor, since that cut is the deletion again.
+    """
+    cases = []
+    for workflow in sorted(LEGACY_WORKFLOW_CORES):
+        text = _legacy_core(workflow)
+        spans = _guard_spans(workflow, text)
+        for label, _needle, kind, anchor, required in (
+                LEGACY_GUARD_SITES[workflow]):
+            start, end = spans[label]
+            cases.append((f"{workflow}: {label} deleted", workflow,
+                          _drop_lines(text, start, end)))
+            raising = (workflow, label) not in (
+                LEGACY_GUARD_SITES_WITHOUT_MESSAGE)
+            if raising and kind == "prose":
+                cases.append((f"{workflow}: {label} in an HTML comment",
+                              workflow,
+                              _wrap_lines(text, start, end, "<!--", "-->")))
+                cases.append((f"{workflow}: {label} parked in a fence",
+                              workflow,
+                              _wrap_lines(text, start, end, "```text",
+                                          "```")))
+            # Phrase-level: the unit and its anchor survive, but one clause --
+            # its condition, its ordering, its message, its kept-path promise,
+            # or the code itself -- is cut out of that unit.
+            phrases = (CATALOG_GUARD_CODE,) + tuple(required)
+            if raising:
+                phrases += (GUIDE_REL,)
+            for phrase in phrases:
+                if _flat(phrase) in _flat(anchor):
+                    continue        # cutting it is the deletion again
+                cases.append((f"{workflow}: {label} loses {phrase!r}",
+                              workflow,
+                              _cut_phrase(text, start, end, phrase)))
+        cases.append((f"{workflow}: reverted to its own code", workflow,
+                      text.replace(CATALOG_GUARD_CODE,
+                                   LEGACY_OWN_CODES[workflow])))
+        cases.append((f"{workflow}: stop names /skill-crud", workflow,
+                      text.replace(GUIDE_REL, "/skill-crud")))
+    # The kept paths are graded too: deleting the generated proposal route of
+    # evolve, or iterate's proposal mode, must red as well.
+    evolve = _legacy_core("skill-evolve")
+    cases.append(("skill-evolve: generated proposal route deleted",
+                  "skill-evolve",
+                  evolve.replace("create no worktree, branch or commit, and "
+                                 "never write the installed profile", "")))
+    iterate = _legacy_core("skill-iterate")
+    cases.append(("skill-iterate: proposal mode deleted", "skill-iterate",
+                  iterate.replace("`proposal` for a generated one:", "")))
+    # Hidden INSIDE its list item rather than around it: an inline HTML
+    # comment leaves the item and its neighbours in place and renders the
+    # guard sentences as nothing.
+    start = evolve.index("**Catalog-owned target")
+    end = evolve.index("keeps its existing path.", start) + len(
+        "keeps its existing path.")
+    cases.append(("skill-evolve: pre-flight guard in an inline HTML comment",
+                  "skill-evolve",
+                  evolve[:start] + "<!-- " + evolve[start:end] + " -->"
+                  + evolve[end:]))
+    return cases
+
+
+# (workflow, guard site, marker it is moved past, the ordering findings the
+# move must produce, and nothing else). Each move keeps every sentence and
+# anchor and changes only the order.
+LEGACY_LATE_MOVES = (
+    ("skill-evolve", "pre-flight guard",
+     "Missing any → halt with the missing-path list",
+     ("the missing-file halt",)),
+    ("skill-evolve", "pre-flight guard", "switch to **brainstorm mode**",
+     ("the missing-file halt", "the brainstorm exit")),
+    ("skill-iterate", "pre-flight guard",
+     "- Verify `.claude/skills/<name>/` exists.",
+     ("the folder-missing halt",)),
+)
+
+
+def test_each_legacy_workflow_raises_the_shared_catalog_stop():
+    """All three stop a catalog-owned target with the ONE shared code, before
+    any write and before the halts a source tree would otherwise trip first,
+    naming the guide, and keep their existing paths."""
+    assert set(LEGACY_WORKFLOW_CORES) == set(LEGACY_GUARD_SITES) == set(
+        LEGACY_OWN_CODES) == set(LEGACY_KEPT_PATHS) == set(LEGACY_ORDER)
+    report = {}
+    for workflow in sorted(LEGACY_WORKFLOW_CORES):
+        findings = _legacy_guard_findings(workflow, _legacy_core(workflow))
+        if findings:
+            report[workflow] = findings
+    assert not report, (
+        "legacy-path guard drift (Phase CL Step 114, issue #172):\n"
+        + "\n".join(f"  {workflow}: {item}" for workflow, items
+                    in sorted(report.items()) for item in items))
+
+
+def test_the_guide_names_every_legacy_workflow_the_stop_covers():
+    """The guide's row and the cores agree on who raises the shared code:
+    each workflow is named as its own code span in the row's trigger cell."""
+    rows = {row[0].code: row for row in _cell_rows(_guide_section("Stop codes"))
+            if row}
+    trigger = rows[CATALOG_GUARD_CODE][1].source
+    missing = [name for name in LEGACY_WORKFLOW_CORES
+               if f"`{name}`" not in trigger]
+    assert not missing, (
+        f"the {CATALOG_GUARD_CODE} row no longer names {missing}; the guide "
+        f"and the guarded cores must agree on which workflows raise it.")
+
+
+def test_planted_negatives_turn_the_guard_checker_red():
+    """Each guard sentence removed, hidden from a reader, reverted to the
+    workflow's own code, or pointed at the not-yet-built front door -- and each
+    kept path removed -- must produce a finding. A mutation that changed
+    nothing is reported too, so a planted case cannot pass by not planting."""
+    cases = _planted_negatives()
+    assert len(cases) >= 3 * 3 * 3, (
+        f"only {len(cases)} planted negatives were built; the battery is "
+        f"supposed to cover every guard site of every workflow.")
+    survived = []
+    for label, workflow, mutated in cases:
+        if mutated == _legacy_core(workflow):
+            survived.append(f"{label} (the mutation changed nothing)")
+        elif not _legacy_guard_findings(workflow, mutated):
+            survived.append(label)
+    assert not survived, (
+        "planted negative(s) the legacy-path guard checker did not catch:\n  "
+        + "\n  ".join(survived))
+
+
+def test_a_guard_stated_after_the_first_write_is_reported_as_late():
+    """Order is graded, not only presence: the whole `## Input` section of
+    eval-setup moved below its Step 1 keeps every sentence and every anchor,
+    and must still red -- with the ordering finding, not an incidental one."""
+    text = _legacy_core("skill-eval-setup")
+    lines = text.split("\n")
+    start = lines.index("## Input")
+    end = lines.index("## Step 1: Read and analyze the SKILL.md")
+    following = next(index for index in range(end + 1, len(lines))
+                     if lines[index].startswith("## "))
+    relocated = (lines[:start] + lines[end:following] + lines[start:end]
+                 + lines[following:])
+    findings = _legacy_guard_findings("skill-eval-setup", "\n".join(relocated))
+    assert findings == [
+        "the input guard is stated after the first write "
+        "('## Step 1: Read and analyze the SKILL.md'), so it cannot stop first"
+    ], findings
+
+
+def test_a_guard_moved_after_a_source_tree_halt_is_reported_as_late():
+    """Round 1's material finding, pinned: a Skill Mesh source tree has no
+    SKILL.md and no `.claude/skills/`, so a guard placed after evolve's
+    missing-file halt, after its brainstorm exit, or after iterate's
+    folder-missing halt is never reached there. Moving it there must red with
+    the ordering findings and nothing else."""
+    for workflow, site, marker, whats in LEGACY_LATE_MOVES:
+        text = _legacy_core(workflow)
+        start, end = _guard_spans(workflow, text)[site]
+        moved = _move_after(text, start, end, marker)
+        expected = sorted(
+            f"the {site} is stated after {what} ({mark!r}), so it cannot stop "
+            f"first"
+            for stop_site, mark, what in LEGACY_ORDER[workflow]
+            if stop_site == site and what in whats)
+        assert len(expected) == len(whats), (workflow, site, whats)
+        findings = sorted(_legacy_guard_findings(workflow, moved))
+        assert findings == expected, (workflow, marker, findings)
+
+
+def test_a_core_with_its_guard_deleted_fails_the_production_test(monkeypatch):
+    """The fixture the Done-when asks for: a core with its guard deleted,
+    run through the SAME test that grades the shipped cores, goes red."""
+    original = _read
+    text = _legacy_core("skill-evolve")
+    start, end = _guard_spans("skill-evolve", text)["pre-flight guard"]
+    hollowed = _drop_lines(text, start, end)
+
+    def fake_read(relative_path):
+        if relative_path == LEGACY_WORKFLOW_CORES["skill-evolve"]:
+            return hollowed
+        return original(relative_path)
+
+    monkeypatch.setitem(globals(), "_read", fake_read)
+    try:
+        test_each_legacy_workflow_raises_the_shared_catalog_stop()
+    except AssertionError as exc:
+        assert "pre-flight guard" in str(exc)
+    else:
+        raise AssertionError("the production guard test stayed green on a "
+                             "core whose pre-flight guard was deleted")
 
 
 def test_prerequisite_preflight_separates_recorded_history_from_the_standing_check():

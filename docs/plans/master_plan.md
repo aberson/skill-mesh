@@ -1111,7 +1111,7 @@ reported as generated drift by `--check`. `--check` compares all three in memory
 
 ### Step 114: Pin the legacy-path guards behind one shared stop code (runs first)
 
-- **Status:** PENDING (scope set by the operator 2026-11-17; runs before Step 111)
+- **Status:** DONE 2026-11-17 (build-step PASS, round 2 of 10, code review 5/5; scope set by the operator 2026-11-17; ran before Step 111)
 - **Problem:** The three legacy optimization workflows already refuse most one-host mutations of a catalog skill, but no test pins those refusals, they stop in different ways, and a run aimed at a skill inside a Skill Mesh source tree is never checked against manifest ownership.
 - **Type:** code
 - **Issue:** #172
@@ -1124,7 +1124,7 @@ reported as generated drift by `--check`. `--check` compares all three in memory
 
 ### Step 111: Make native-born inventory generation hermetic
 
-- **Status:** PENDING / BLOCKED ON 114 (Step 110 DONE; re-based 2026-11-14; order set 2026-11-17)
+- **Status:** PENDING (Steps 110 and 114 DONE; re-based 2026-11-14; order set 2026-11-17)
 - **Problem:** The current generator cannot truthfully represent and reproduce a native-born canonical package.
 - **Type:** code
 - **Issue:** #169
