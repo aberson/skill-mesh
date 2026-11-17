@@ -22,4 +22,4 @@ Shared resources, claimed through Heads Up and never owned by a lane: machine me
 
 `central` was renamed `main` in the same window on 2026-11-17 (plan P39); notes still addressed to `central` are read during the handover.
 
-Parked lanes keep their row; their cards are `done`, and `main` reopens them with `lane-open` under the same id. Their unshipped branches stay local until then.
+Parked lanes keep their row; their cards are `done`, and `main` reopens them with `lane-open` under the same id. Their unshipped branches are pushed to origin as backups only (not merged): v4/cg-gate 3948dca, v4/cg-pack-lifecycle-row 2b3fcd5, build-step-20261117T175936Z-3fd3a16c c223758. Each ships through its lane's gates on reopen.
