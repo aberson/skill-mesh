@@ -185,11 +185,11 @@ tests/                  calibration, distributions, experiments, package-integri
 
 - **One behavior contract per skill.** `skills/<name>/core.md` is provider-independent; each
   `providers/<host>.md` wrapper loads the core in full and maps host abstractions onto it. A wrapper
-  may never weaken a gate defined in the core. All 44 portable skills additionally carry a
-  `providers/codex.md` adapter (grown from the Phase CP five-skill pilot across cohorts B–D, then
-  with Step 10's seven workspace-custom promotions) — codex capability is ADDITIVE on a portable
-  record, never a third status, so the portable/native counts below keep their exact meaning.
-  44 skills are portable (both adapters); 2 are
+  may never weaken a gate defined in the core. Every portable skill carries the two required
+  adapters, `providers/claude.md` and `providers/codex.md` (`portable_provider_contract.required`
+  is `['claude', 'codex']` since CL Step 111; the Codex adapters grew from the Phase CP pilot
+  across cohorts B-D). A `providers/gpt.md` may still exist but is not required: GitHub Copilot is
+  unsupported and V4-7 removes those adapters. 44 skills are portable; 2 are
   provider-native Claude-only (`claude-oauth-auth`, `context-slim`) and carry
   `core: null` in the manifest.
 - **Manifest-driven build.** `tools/build-distributions.ps1` reads `config/skill-manifest.json` and
