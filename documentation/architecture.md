@@ -509,7 +509,9 @@ together before anything else happens. A regeneration then replaces each file th
 temporary sibling and an atomic rename, so no artifact is ever left truncated. It is not a
 cross-file transaction: an interruption between two replacements leaves some files old,
 and the no-write check names them. The check compares the three committed artifacts with a
-regeneration, line endings normalized, never writes, and exits 1 naming each drifted file:
+regeneration, line endings normalized, and never writes. It exits 0 when all three match,
+1 naming each drifted file, and 3 with one `validation failed:` line and no traceback when
+the regeneration itself fails validation:
 
 ```powershell
 python tools\gen_manifest.py --check

@@ -1425,8 +1425,11 @@ LOCKED_CLAIMS = tuple(
      "it owns, and the provider profiles are rebuilt with "
      "`tools/build-distributions.ps1`, before any verification verdict is trusted. "
      "`python tools/gen_manifest.py --check` compares the three committed artifacts "
-     "with a regeneration without writing any byte, and exits 1 naming each file "
-     "that has drifted."),
+     "with a regeneration without writing any byte. It exits 0 when all three "
+     "match, 1 naming each file that has drifted, and 3 with one `validation "
+     "failed:` line and no traceback when the regeneration itself fails "
+     "validation, so stale artifacts and a broken generator never share an exit "
+     "code."),
     ('fact 5 - remaining lifecycle scope', GUIDE_REL,
      "Canonical, generated, and consumer surfaces", 'paragraph',
      "**Remaining lifecycle scope.** The scoped repair removed the stale-inventory "

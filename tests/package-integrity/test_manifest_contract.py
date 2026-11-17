@@ -22,6 +22,7 @@ import inspect
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -1205,6 +1206,141 @@ def test_an_interrupted_regeneration_never_truncates_and_check_reports_it(
     monkeypatch.undo()
     gm.write_artifacts(tmp_path)
     assert gm.check_artifacts(tmp_path) == []
+
+
+
+# Each of these checks once had no test that could fail: a reviewer disabled each one in
+# a scratch copy and this whole file stayed green, because every planted defect above
+# that could reach it is also caught by a sibling check. So each case plants ONE defect
+# that this check is the one to name, and matches on that check's own message: removing
+# the check turns its case red even while a sibling still refuses the payload.
+_NAMED_CHECKS = {
+    "fixture counts match manifest counts": (
+        1, lambda d, first: d["counts"].update(vision=d["counts"]["vision"] + 1),
+        "fixture counts != manifest counts"),
+    "portable record core path": (
+        0, lambda d, first: first(d, "plan-init").update(core="skills/user-dr/core.md"),
+        "plan-init: portable record without its core"),
+    "providers in vocabulary order": (
+        0, lambda d, first: first(d, "plan-init").update(
+            providers=dict(reversed(list(first(d, "plan-init")["providers"].items())))),
+        "plan-init: providers not in vocabulary order"),
+    "provider-native has no core": (
+        0, lambda d, first: first(d, "claude-oauth-auth").update(
+            core="skills/claude-oauth-auth/core.md"),
+        "claude-oauth-auth: provider-native record is not Claude-only"),
+    "provider-native has only claude": (
+        0, lambda d, first: first(d, "claude-oauth-auth")["providers"].update(
+            codex="skills/claude-oauth-auth/providers/codex.md"),
+        "claude-oauth-auth: provider-native record is not Claude-only"),
+    "legacy record names a Claude source": (
+        0, lambda d, first: first(d, "claude-oauth-auth")["migration"].update(
+            legacy_claude_adapter=None),
+        "claude-oauth-auth: legacy record names no Claude source"),
+    "fixture codex roster matches the portable records": (
+        1, lambda d, first: d["codex"].remove("plan-init"),
+        "fixture codex roster != the portable records"),
+}
+
+
+@pytest.mark.parametrize("label", sorted(_NAMED_CHECKS))
+def test_validation_names_each_otherwise_unguarded_check(label):
+    gm = _load_gen_manifest()
+    _, good = gm.render_artifacts()
+    index, change, message = _NAMED_CHECKS[label]
+    docs = [json.loads(good[rel]) for rel in gm.ARTIFACTS]
+
+    def first(doc, name):
+        return next(s for s in doc["skills"] if s["name"] == name)
+
+    change(docs[index], first)
+    bad = {rel: gm.serialize(doc).encode("utf-8") for rel, doc in zip(gm.ARTIFACTS, docs)}
+    assert bad != good, f"the planted defect changed nothing: {label}"
+    with pytest.raises(ValueError) as caught:
+        gm.validate_payloads(bad)
+    assert message in str(caught.value), (
+        f"{label}: refused, but not by its own check:\n{caught.value}")
+
+
+# --check exit codes through the production CLI, on a private copy of exactly what the
+# generator reads (it resolves REPO_ROOT from its own file). Each outcome has its own
+# code, so a caller reading only the code can tell stale artifacts from a broken
+# generator. 2 is argparse's usage error and is deliberately not reused.
+_GENERATOR_COPY = ("skills", "tools/gen_manifest.py", "tools/gen_skill_tree.py",
+                   "config/skill-manifest.json",
+                   "tests/package-integrity/expected_inventory.json")
+
+
+@pytest.fixture()
+def generator_copy(tmp_path):
+    root = tmp_path / "repo"
+    for rel in _GENERATOR_COPY:
+        src, dst = REPO_ROOT / rel, root / rel
+        if src.is_dir():
+            shutil.copytree(src, dst, ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
+        else:
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(src, dst)
+    return root
+
+
+def _run_check(root):
+    env = {k: v for k, v in os.environ.items() if k != "SKILL_MESH_LEGACY_SOURCE"}
+    env["PYTHONDONTWRITEBYTECODE"] = "1"
+    return subprocess.run([sys.executable, str(root / "tools" / "gen_manifest.py"), "--check"],
+                          cwd=str(root), env=env, capture_output=True, text=True)
+
+
+def test_check_cli_exit_codes_are_pinned_and_distinct():
+    gm = _load_gen_manifest()
+    assert (gm.EXIT_CLEAN, gm.EXIT_DRIFT, gm.EXIT_INVALID) == (0, 1, 3)
+
+
+def test_check_cli_exits_0_on_a_clean_copy(generator_copy):
+    r = _run_check(generator_copy)
+    assert r.returncode == 0, r.stderr
+    assert "match a regeneration" in r.stdout and r.stderr == ""
+
+
+def test_check_cli_exits_1_on_drift_naming_each_file(generator_copy):
+    gm = _load_gen_manifest()
+    stale = generator_copy / gm.ARTIFACTS[0]
+    stale.write_bytes(stale.read_bytes() + b" ")
+    (generator_copy / gm.ARTIFACTS[2]).unlink()
+    r = _run_check(generator_copy)
+    assert r.returncode == 1, r.stderr
+    assert f"drift: {gm.ARTIFACTS[0]}" in r.stderr
+    assert f"drift: {gm.ARTIFACTS[2]} (missing)" in r.stderr
+    assert "Traceback" not in r.stderr and "validation failed" not in r.stderr
+
+
+@pytest.mark.parametrize("planted", ["payload", "roster"])
+def test_check_cli_exits_3_on_a_validation_failure_with_one_line(generator_copy, planted):
+    """A generator whose own output fails validation (`payload`), or that refuses the
+    tree before it serializes anything (`roster`, an unlisted skill directory), is a
+    broken generator, not drift: exit 3, ONE named stderr line, no traceback."""
+    gm_path = generator_copy / "tools" / "gen_manifest.py"
+    if planted == "payload":
+        text = gm_path.read_text(encoding="utf-8")
+        old = "    inventory = _build_inventory(manifest)\n"
+        assert text.count(old) == 1
+        gm_path.write_text(text.replace(
+            old, old + '    inventory["counts"]["codex"] -= 1\n'), encoding="utf-8")
+    else:
+        package = generator_copy / "skills" / "zz-unlisted"
+        (package / "providers").mkdir(parents=True)
+        (package / "core.md").write_text("# zz-unlisted\n", encoding="utf-8")
+        for provider in ("claude", "codex"):
+            (package / "providers" / f"{provider}.md").write_text("x\n", encoding="utf-8")
+    r = _run_check(generator_copy)
+    assert r.returncode == 3, f"exit {r.returncode}:\n{r.stderr}"
+    lines = r.stderr.splitlines()
+    assert len(lines) == 1, f"expected one error line:\n{r.stderr}"
+    assert lines[0].startswith("validation failed: ValueError: "), lines[0]
+    assert "Traceback" not in r.stderr and "drift:" not in r.stderr
+    assert r.stdout == ""
+    if planted == "payload":
+        assert "inventory counts['codex'] != manifest counts['codex']" in lines[0]
 
 
 def _all_tests():

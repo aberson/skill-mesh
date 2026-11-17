@@ -38,8 +38,15 @@ The normal mode then replaces the three files one at a time, each through a temp
 sibling and an atomic rename, so an interruption can never leave a truncated artifact.
 It does NOT claim a cross-file transaction: an interruption between two replacements
 leaves some files new and some old, and the next `--check` reports the old ones as
-drift. `--check` exits 0 when all three match (line endings normalized) and 1 naming
-each drifted file.
+drift. `--check` has three outcomes, each with its own exit code, so a caller reading
+only the code can tell stale artifacts from a broken generator:
+
+    0  all three match a regeneration (line endings normalized)
+    1  drift: one `drift:` line names each stale or missing file
+    3  the regeneration itself failed validation: one `validation failed:` line, no
+       traceback, and no comparison was made
+
+(2 stays argparse's usage error, e.g. an unrecognized argument.)
 
 Re-run only when one of the constants below changes. There is no legacy-source
 argument and no environment variable: an external source root is precisely what this
@@ -1049,6 +1056,22 @@ def check_artifacts(root: Path) -> list:
     return drift
 
 
+# `--check` exit codes (module docstring). 2 is argparse's own usage error.
+EXIT_CLEAN = 0
+EXIT_DRIFT = 1
+EXIT_INVALID = 3
+
+
+def _one_line(exc: BaseException) -> str:
+    """A validation error as ONE line: `validate_payloads` joins its problems with
+    newlines, and a caller (or a log scraper) must get exactly one error line."""
+    lines = [line.strip() for line in str(exc).splitlines() if line.strip()]
+    if not lines:
+        return type(exc).__name__
+    head, rest = lines[0], lines[1:]
+    return f"{head} {'; '.join(rest)}" if rest else head
+
+
 def build_parser() -> argparse.ArgumentParser:
     """The CLI. One mode switch and no input: generation is hermetic, so no argument
     can name a source, and a stale invocation still carrying the retired
@@ -1057,22 +1080,30 @@ def build_parser() -> argparse.ArgumentParser:
                                                  "and inventory from this repository alone.")
     parser.add_argument("--check", action="store_true",
                         help="compare the three committed artifacts with a regeneration "
-                             "in memory; never write. Exit 1 on drift.")
+                             "in memory; never write. Exit 0 when all three match, "
+                             "1 on drift, 3 when the regeneration fails validation.")
     return parser
 
 
 def main(argv=None) -> int:
     args = build_parser().parse_args(argv)
     if args.check:
-        drift = check_artifacts(REPO_ROOT)
+        try:
+            drift = check_artifacts(REPO_ROOT)
+        except (ValueError, KeyError) as exc:
+            # The generator, not the committed tree, is wrong: say so on one named line
+            # and a code of its own, never as a traceback that reads like drift.
+            print(f"validation failed: {type(exc).__name__}: {_one_line(exc)}",
+                  file=sys.stderr)
+            return EXIT_INVALID
         if drift:
             for rel in drift:
                 print(f"drift: {rel}", file=sys.stderr)
             print("generated artifacts are stale; run `python tools/gen_manifest.py`",
                   file=sys.stderr)
-            return 1
+            return EXIT_DRIFT
         print("check: " + ", ".join(ARTIFACTS) + " match a regeneration")
-        return 0
+        return EXIT_CLEAN
     manifest = write_artifacts(REPO_ROOT)
     print(f"counts: {manifest['counts']}")
     print("wrote " + " and ".join(ARTIFACTS))
