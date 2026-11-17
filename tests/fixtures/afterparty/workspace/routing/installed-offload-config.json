@@ -1,0 +1,9 @@
+{
+  "less_token_mode": true,
+  "enabled_call_sites": {
+    "build-step-style": false,
+    "memory-distill-theme-scan": true,
+    "review-deep-style": true
+  },
+  "local_endpoint": "http://127.0.0.1:11434/v1"
+}

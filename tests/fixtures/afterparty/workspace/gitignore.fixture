@@ -1,0 +1,6 @@
+# Acceptance workspace: local state, generated maps and linked worktrees stay untracked.
+.claude/
+worktree_*/
+tier-escalate-out/
+offload-scan-out/
+docs/user-afterparty/
