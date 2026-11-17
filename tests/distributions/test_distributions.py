@@ -364,9 +364,15 @@ def _install(home, provider, dist_dir=None, uninstall=False, force=False,
     )
 
 
-def _write_manifest(path, skills):
-    """Write a minimal adversarial manifest with the given skills list."""
-    path.write_text(json.dumps({"skills": skills}), encoding="utf-8")
+def _write_manifest(path, skills, required=("claude",)):
+    """Write a minimal adversarial manifest with the given skills list.
+
+    The builder refuses a manifest without `portable_provider_contract.required`
+    (Phase CL Step 112), so every fixture declares one. These minimal fixtures grade
+    other builder rules and carry claude-only portable records, so they declare the
+    narrowest legal set by default; the required-adapter tests pass the real one."""
+    doc = {"portable_provider_contract": {"required": list(required)}, "skills": skills}
+    path.write_text(json.dumps(doc), encoding="utf-8")
     return path
 
 
@@ -1779,6 +1785,116 @@ def test_build_refuses_traversal_source_path(tmp_path):
     assert "SECURITY" in combined or "escapes" in combined
     # Nothing for the malicious skill was produced.
     assert not (dist / "claude" / "evilsrc").exists()
+
+
+# --------------------------------------------------------------------------- #
+# Required-adapter completeness (Phase CL Step 112). The builder validates every
+# required adapter of every portable record BEFORE it removes or writes any output,
+# so a refused build leaves a preseeded output tree byte-identical.
+# --------------------------------------------------------------------------- #
+
+_REQUIRED = ("claude", "codex")
+
+
+def _tree_bytes(root):
+    return {p.relative_to(root).as_posix(): p.read_bytes()
+            for p in sorted(root.rglob("*")) if p.is_file()}
+
+
+def _required_adapter_repo(tmp_path, plant):
+    """A synthetic one-skill repo declaring the real required set. `plant` is None
+    (complete: core + claude + codex), "undeclared" (no codex key in the record) or
+    "missing" (codex declared, file deleted)."""
+    repo = _synthetic_build_repo(
+        tmp_path, {}, "# demo core\n\nNothing shared.\n",
+        codex_adapter_body="# demo -- Codex entry point\n\nLoad `../core.md` in full.\n",
+        description="Demo skill for the required-adapter gate.")
+    manifest_path = repo / "config" / "skill-manifest.json"
+    entry = json.loads(manifest_path.read_text(encoding="utf-8"))["skills"][0]
+    if plant == "undeclared":
+        del entry["providers"]["codex"]
+    elif plant == "missing":
+        (repo / "skills" / "demo" / "providers" / "codex.md").unlink()
+    _write_manifest(manifest_path, [entry], required=_REQUIRED)
+    return repo
+
+
+def _preseed_output(out):
+    for rel, body in (("claude/old-skill/SKILL.md", "PRESEEDED claude\n"),
+                      ("gpt/old-skill/SKILL.md", "PRESEEDED gpt\n"),
+                      ("codex/old-skill/SKILL.md", "PRESEEDED codex\n"),
+                      ("codex/_shared/kept.md", "PRESEEDED shared\n"),
+                      ("operator-notes.txt", "not the builder's\n")):
+        target = out / rel
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(body.encode("utf-8"))
+    return _tree_bytes(out)
+
+
+@pytest.mark.parametrize("provider", ["all", "claude"])
+@pytest.mark.parametrize("plant", ["undeclared", "missing"])
+def test_build_refuses_missing_required_adapter_and_leaves_output_byte_identical(
+        tmp_path, plant, provider):
+    """A portable record without its codex adapter refuses the WHOLE build, before
+    any profile directory is removed -- including a claude-only build, because the
+    claude profile alone cannot prove the package is portable."""
+    repo = _required_adapter_repo(tmp_path, plant)
+    out = tmp_path / "out"
+    before = _preseed_output(out)
+    r = _synthetic_build(repo, out, provider=provider)
+    combined = r.stdout + r.stderr
+    assert r.returncode != 0, f"build accepted an incomplete portable skill:\n{combined}"
+    assert "every required provider" in combined and "demo" in combined, combined
+    assert _tree_bytes(out) == before, "a refused build changed the preseeded output tree"
+
+
+def test_required_adapter_fixture_builds_when_complete(tmp_path):
+    """The red-on-garbage anchor for the test above: the same fixture with its codex
+    adapter in place builds, so the refusal is the planted defect and nothing else."""
+    repo = _required_adapter_repo(tmp_path, None)
+    out = tmp_path / "out"
+    r = _synthetic_build(repo, out, provider="all")
+    assert r.returncode == 0, f"{r.stdout}\n{r.stderr}"
+    assert (out / "codex" / "demo" / "SKILL.md").is_file()
+    assert (out / "claude" / "demo" / "SKILL.md").is_file()
+
+
+def test_portable_skill_without_only_a_gpt_adapter_still_builds(tmp_path):
+    """GPT is not a required provider: a portable skill with core + claude + codex and
+    no gpt.md builds every profile and is simply absent from the gpt one."""
+    repo = _required_adapter_repo(tmp_path, None)
+    assert not (repo / "skills" / "demo" / "providers" / "gpt.md").exists()
+    out = tmp_path / "out"
+    r = _synthetic_build(repo, out, provider="all")
+    assert r.returncode == 0, f"{r.stdout}\n{r.stderr}"
+    assert not (out / "gpt" / "demo").exists()
+    assert (out / "codex" / "demo" / "SKILL.md").is_file()
+
+
+def test_build_refuses_a_manifest_without_the_required_provider_set(tmp_path):
+    """The required set has one owner, the manifest field. A manifest that omits it
+    fails closed instead of building against a guessed set, and touches no output."""
+    repo = _required_adapter_repo(tmp_path, None)
+    manifest_path = repo / "config" / "skill-manifest.json"
+    doc = json.loads(manifest_path.read_text(encoding="utf-8"))
+    del doc["portable_provider_contract"]
+    manifest_path.write_text(json.dumps(doc), encoding="utf-8")
+    out = tmp_path / "out"
+    before = _preseed_output(out)
+    r = _synthetic_build(repo, out, provider="all")
+    assert r.returncode != 0
+    assert "portable_provider_contract.required" in (r.stdout + r.stderr)
+    assert _tree_bytes(out) == before
+
+
+def test_committed_manifest_builds_through_the_required_adapter_gate(tmp_path):
+    """Integration through the production entry point: the real manifest declares
+    the required set and every portable skill satisfies it, so a default-manifest
+    build passes the gate (which runs for every profile, so one profile suffices)."""
+    manifest = _load_manifest()
+    assert manifest["portable_provider_contract"]["required"] == list(_REQUIRED)
+    r = _run(BUILD_SCRIPT, ["-OutputDir", str(tmp_path / "dist"), "-Provider", "codex"])
+    assert r.returncode == 0, f"{r.stdout}\n{r.stderr}"
 
 
 @pytest.mark.parametrize("forge_hash", [False, True], ids=["unhashed", "hash-forged"])

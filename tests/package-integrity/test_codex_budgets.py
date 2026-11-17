@@ -259,11 +259,15 @@ def test_catalog_estimate_basis_is_eligibility_not_the_authored_roster():
     So the basis is pinned on a SYNTHETIC manifest where the predicates disagree: one
     portable record with no codex adapter and one provider-native record carrying
     neither. That portable record is NOT a legal package. Codex has been a required
-    provider since Phase CL Step 111 (`portable_provider_contract.required`), and
-    completeness has its own owners: tools/gen_manifest.py refuses to generate such a
-    record and test_manifest_contract.py's test_portable_skill_truth rejects one. A
-    metadata-budget test is not the owner of release completeness, so this one does not
-    rule on it. It only uses the shape to prove which predicate the estimate follows:
+    provider since Phase CL Step 111 (`portable_provider_contract.required`), and since
+    Phase CL Step 112 required-adapter completeness has three owners, none of them this
+    file: tools/skill_catalog.py (MISSING_REQUIRED_ADAPTER, exit 3),
+    tools/release_checks.py (manifest_completeness_defects and
+    catalog_agreement_defects), and tools/build-distributions.ps1, which refuses an
+    incomplete portable record before it removes or writes any output. A
+    metadata-budget test is not the owner of release completeness, so this one asserts
+    nothing about which records carry codex. It only uses the shape to prove which
+    predicate the estimate follows:
     eligibility must include the record -- a rewrite of `_codex_eligible_records` to
     filter on `"codex" in providers` drops it and reds here, and charging a record
     the catalog must carry is the conservative reading of a budget -- and must still
@@ -274,12 +278,6 @@ def test_catalog_estimate_basis_is_eligibility_not_the_authored_roster():
     portable = {s["name"] for s in manifest["skills"] if s["status"] == "portable"}
     assert eligible == portable
     assert len(eligible) == manifest["counts"]["portable"] == 44
-    # Every eligible record also carries codex -- required since Phase CL Step 111 --
-    # and the coincidence is asserted so a dropped adapter cannot hide behind it.
-    assert "codex" in manifest["portable_provider_contract"]["required"]
-    authored = {s["name"] for s in manifest["skills"] if "codex" in s["providers"]}
-    assert authored == eligible
-    assert len(authored) == manifest["counts"]["codex"] == 44
     # The synthetic-manifest pin: predicates disagree, eligibility must win. The
     # portable record lacks its required codex adapter on purpose (see docstring).
     synthetic = {"skills": [

@@ -13,9 +13,11 @@ tools/release.ps1's CHECK phase runs `python -m pytest tests/package-integrity`
 FROM WITHIN the staged release tree, so the exact same test code that gates a
 normal `pytest tests/` run also gates a release -- there is only one checker.
 
-Seven checks, matching plan Step 38's Done-when list:
+Seven checks, matching plan Step 38's Done-when list, plus the Phase CL Step 112
+catalog agreement gate (2b):
   1. find_broken_local_links      -- LINK CHECKER
-  2. manifest_completeness_defects -- MANIFEST COMPLETENESS
+  2. manifest_completeness_defects -- MANIFEST COMPLETENESS (every required adapter)
+  2b. catalog_agreement_defects    -- CATALOG AGREEMENT (exact skill-name sets)
   3. distribution_drift_defects    -- SOURCE -> DISTRIBUTION DRIFT
   4. wrapper_core_reference_defects -- PROVIDER-WRAPPER / CORE-REFERENCE
   5. readme_skill_count_defects    -- SKILL-COUNT
@@ -25,8 +27,12 @@ Seven checks, matching plan Step 38's Done-when list:
 
 from __future__ import annotations
 
+import functools
+import hashlib
+import importlib.util
 import json
 import re
+import sys
 from pathlib import Path
 
 # --------------------------------------------------------------------------- #
@@ -137,13 +143,35 @@ def find_broken_local_links(doc_paths, root: Path):
 # --------------------------------------------------------------------------- #
 
 
+def required_providers(manifest: dict):
+    """The manifest's ordered `portable_provider_contract.required`, or None when the
+    field is absent or malformed (it must be a non-empty list of unique names that
+    leads with claude). The manifest field is the one owner of the set (Phase CL
+    Step 111); this gate reads it and never spells it. The validity rule itself is
+    tools/skill_catalog.py's `required_provider_set`, loaded from this file's own
+    tools/ directory, so the release gate and the lifecycle verifier share one rule."""
+    return _skill_catalog_module(Path(__file__).resolve().parents[1]).required_provider_set(
+        manifest)
+
+
 def manifest_completeness_defects(manifest: dict, repo_root: Path):
     """Every manifest entry has its required neutral core (unless
-    provider-native/core:null) and its declared provider adapters, all of which
-    must exist on disk; and every skills/<name>/ directory on disk has a
-    corresponding manifest entry (no orphans)."""
+    provider-native/core:null) and an adapter for every provider in the manifest's
+    `portable_provider_contract.required`, all of which must exist on disk; any other
+    declared adapter (an optional provider such as gpt) must exist too; and every
+    skills/<name>/ directory on disk has a corresponding manifest entry (no orphans).
+
+    Release completeness consumes the required set (Phase CL Step 112). A provider
+    outside it is optional: its absence is not a defect, but its declaration is still
+    a promise the package must keep. A manifest without a valid required set fails
+    closed -- completeness cannot be decided -- and claude alone is still checked."""
     defects = []
     names = set()
+    required = required_providers(manifest)
+    if required is None:
+        defects.append("manifest declares no valid portable_provider_contract.required "
+                       "(a non-empty, unique, ordered provider list leading with claude)")
+        required = ["claude"]
     for s in manifest.get("skills", []):
         name = s.get("name", "<unnamed>")
         names.add(name)
@@ -155,23 +183,24 @@ def manifest_completeness_defects(manifest: dict, repo_root: Path):
                 defects.append(f"{name}: portable skill missing 'core' in manifest")
             elif not _file_exists_within(repo_root, core):
                 defects.append(f"{name}: declared core '{core}' does not exist on disk (or escapes the release root)")
-            for prov in ("claude", "gpt"):
+            for prov in required:
                 rel = providers.get(prov)
                 if not rel:
-                    defects.append(f"{name}: portable skill missing '{prov}' adapter in manifest")
+                    defects.append(f"{name}: portable skill missing required '{prov}' adapter in manifest")
                 elif not _file_exists_within(repo_root, rel):
                     defects.append(f"{name}: declared {prov} adapter '{rel}' does not exist on disk (or escapes the release root)")
-            # Codex (Phase CP Step 3) is OPTIONAL per skill, so absence is not a defect
-            # -- but a DECLARED codex path must still exist on disk, exactly like the
-            # two required ones. Without this the release gate would certify a manifest
-            # whose codex adapter is missing, and build-distributions.ps1 would then
-            # throw "adapter source missing" partway through the staged build, after the
-            # gate had already said the package was releasable.
-            codex_rel = providers.get("codex")
-            if codex_rel and not _file_exists_within(repo_root, codex_rel):
-                defects.append(
-                    f"{name}: declared codex adapter '{codex_rel}' does not exist on "
-                    "disk (or escapes the release root)")
+            # An OPTIONAL provider's adapter may be absent -- that is not drift -- but a
+            # DECLARED one must exist on disk exactly like a required one. Otherwise the
+            # gate would certify a manifest whose adapter is missing, and
+            # build-distributions.ps1 would throw "adapter source missing" partway
+            # through the staged build, after the gate had said the package was
+            # releasable.
+            for prov in sorted(set(providers) - set(required)):
+                rel = providers.get(prov)
+                if not rel or not _file_exists_within(repo_root, rel):
+                    defects.append(
+                        f"{name}: declared {prov} adapter '{rel}' does not exist on "
+                        "disk (or escapes the release root)")
         elif status == "provider-native":
             if core:
                 defects.append(f"{name}: provider-native skill has a non-null core")
@@ -201,6 +230,43 @@ def manifest_completeness_defects(manifest: dict, repo_root: Path):
             if entry.name not in names:
                 defects.append(f"orphan skill directory not in manifest: skills/{entry.name}")
     return defects
+
+
+# --------------------------------------------------------------------------- #
+# 2b. CATALOG AGREEMENT
+# --------------------------------------------------------------------------- #
+
+
+@functools.lru_cache(maxsize=None)
+def _skill_catalog_module(repo_root: Path):
+    """Import the tree's own tools/skill_catalog.py, the one owner of the catalog
+    agreement rules, which its read-only inspect/verify commands also apply. Bytecode
+    caching is off for the import, so checking a tree writes no __pycache__ into it."""
+    path = repo_root / "tools" / "skill_catalog.py"
+    digest = hashlib.sha256(str(path).encode("utf-8")).hexdigest()[:12]
+    spec = importlib.util.spec_from_file_location(f"release_checks_skill_catalog_{digest}", path)
+    module = importlib.util.module_from_spec(spec)
+    previous = sys.dont_write_bytecode
+    sys.dont_write_bytecode = True
+    try:
+        spec.loader.exec_module(module)
+    finally:
+        sys.dont_write_bytecode = previous
+    return module
+
+
+def catalog_agreement_defects(repo_root: Path):
+    """The canonical skills/ tree, the manifest, skills/inventory.json, the expected
+    inventory fixture and config/model-mapping.json must name exactly the same
+    skills; every portable skill must carry every required adapter; and the generated
+    artifacts must equal a regeneration. Decision CL-D9: a missing model-map row fails
+    the release, even though the router still falls back to Claude-only for an
+    unknown external name. Delegates to tools/skill_catalog.py, so the release gate
+    and the lifecycle verifier cannot disagree. Each defect reads `CODE path: detail`.
+    Git-free, so it runs inside the staged release tree."""
+    catalog = _skill_catalog_module(repo_root)
+    return [f"{f['code']} {f['path'] or '-'}: {f['detail']}"
+            for f in catalog.catalog_findings(repo_root)]
 
 
 # --------------------------------------------------------------------------- #

@@ -1137,7 +1137,7 @@ reported as generated drift by `--check`. `--check` compares all three in memory
 
 ### Step 112: Enforce one operation-aware catalog truth gate
 
-- **Status:** PENDING (Step 111 DONE)
+- **Status:** DONE 2026-11-17 (build-step PASS, round 2 of 10, code review 5/5)
 - **Problem:** No read-only gate checks operation semantics and exact agreement across every catalog representation.
 - **Type:** code
 - **Issue:** #170
@@ -1150,7 +1150,7 @@ reported as generated drift by `--check`. `--check` compares all three in memory
 
 ### Step 113: Add and dogfood the portable `/skill-crud` front door
 
-- **Status:** PENDING / BLOCKED ON 112
+- **Status:** PENDING (Step 112 DONE)
 - **Problem:** No distributed Skill Mesh skill executes the provider-neutral lifecycle contract.
 - **Type:** code
 - **Issue:** #171

@@ -288,18 +288,18 @@ instead.
 
 **How a Skill Mesh source tree is identified.** The refusal needs a test, not an impression,
 so the predicate is stated rather than left to judgement. It is a property of the TARGET
-TREE alone and never of the request, so the target qualifies when both of these hold:
+TREE alone and never of the request, so the target qualifies when all three of these hold:
 
-1. it is a Git working tree; and
-2. it contains `config/skill-manifest.json` at that path.
+1. it is a Git working tree;
+2. it contains `config/skill-manifest.json` at that path; and
+3. it contains `tools/skill_catalog.py` at that path.
 
 Anything else — most importantly a consumer home carrying an installed `.claude/skills`,
 `.agents/skills`, or `.github/skills` tree but no manifest — stops with
 `NOT_SKILL_MESH_SOURCE`. **There is no single-host fallback**, because a fallback that edits
-one host's copy is exactly the host-only mutation this contract exists to prevent. Phase CL
-Step 112 adds its read-only helper to the same predicate as a second required file — that
-step's plan block names it, and this guide does not, because a path named here has to
-resolve today; until it exists, the two conditions above are the whole test.
+one host's copy is exactly the host-only mutation this contract exists to prevent. The third
+condition is the read-only helper Phase CL Step 112 added, which every mutation runs to
+inspect and verify itself; the three conditions above are the whole test.
 
 **A name the manifest does not own is a different finding, and must not be folded in here.**
 In a tree that satisfies the predicate, a mutation naming a skill the manifest does not
@@ -327,6 +327,21 @@ change, `tools/gen_manifest.py` reproduces the three artifacts it owns, and the 
 profiles are rebuilt with `tools/build-distributions.ps1`, before any verification verdict is
 trusted. `python tools/gen_manifest.py --check` compares the three committed artifacts with a
 regeneration without writing any byte, and exits 1 naming each file that has drifted.
+
+**Read-only verification.** `tools/skill_catalog.py` inspects a mutation before its first
+write and verifies the candidate after it, and never writes a byte:
+
+```text
+python tools/skill_catalog.py inspect --operation READ --name <skill-slug> --format json
+python tools/skill_catalog.py verify --request-file <absolute-json-path> --format json
+```
+
+Both grade the whole catalog as well as the request: the canonical `skills/` tree, the
+manifest, both generated inventories, and `config/model-mapping.json` must name exactly
+the same skills, and every portable skill must carry an adapter for every provider in
+`portable_provider_contract.required`. Exit `0` is a pass, exit `2` an invalid or prohibited
+request, and exit `3` catalog drift. The JSON result and its closed finding vocabulary are
+specified by the plan of record and restated in the helper's module docstring.
 
 **Remaining lifecycle scope.** The scoped repair removed the stale-inventory obstacle, and
 Phase CL Step 111 then made the generator build and validate all three artifacts before it
@@ -502,7 +517,7 @@ and its operator messages key on; a caller may rely on the exact spelling.
 | `PHASE_CL_PREREQUISITE_NOT_MET` | Any of the four section 1 prerequisites is absent. Re-based by DS-D7(b); the retired Phase IS C5 / Phase CP M3 park is never the condition. | any repository write |
 | `PROVIDER_NATIVE_REVIEW_REQUIRED` | `CREATE`, `UPDATE`, `DELETE`, or `RENAME` targets a provider-native identity. | any write |
 | `PACKAGE_RESOURCE_PLAN_REQUIRED` | A request would add, remove, or relocate a package-local file, or change a declared support-asset entry. | any write |
-| `NOT_SKILL_MESH_SOURCE` | The target fails the section 3 source tree predicate — not a Git working tree, or no `config/skill-manifest.json` at that path. A name the manifest does not own is `SKILL_NOT_FOUND`, not this. | any write, and with no single-host fallback |
+| `NOT_SKILL_MESH_SOURCE` | The target fails the section 3 source tree predicate — not a Git working tree, or no `config/skill-manifest.json` or `tools/skill_catalog.py` at that path. A name the manifest does not own is `SKILL_NOT_FOUND`, not this. | any write, and with no single-host fallback |
 | `CATALOG_MUTATION_INCOMPLETE` | A gate failed after the first write, leaving the change partial. | any cleanup — see section 10 |
 | `CATALOG_SKILL_USE_LIFECYCLE` | A legacy optimization workflow (`skill-eval-setup`, `skill-evolve`, or `skill-iterate`) targets a skill whose repository root holds a `config/skill-manifest.json` that owns the skill's name: every tree that passes the section 3 source tree predicate, and any copy inside one. It is also raised, failing closed, when that repository root holds a `config/skill-manifest.json` that cannot be read or parsed as JSON, because ownership then cannot be decided. | any worktree, branch, edit, materialization, commit, or push into that skill's canonical source |
 

@@ -55,9 +55,13 @@
     CODEX IS A THIRD PROVIDER ON THESE SAME RAILS (Phase CP D-CP1), not a separate
     generator: it reads the same manifest, uses the same provenance header, the same
     determinism guarantees, and the same frontmatter synthesizer as the GPT profile.
-    A skill reaches dist/codex only by declaring `providers.codex` in the manifest, so
-    the profile is legitimately EMPTY until the first codex adapter is authored
-    (Phase CP Step 4 ships the pilot five).
+    A skill reaches dist/codex only by declaring `providers.codex` in the manifest.
+
+    REQUIRED ADAPTERS (Phase CL Step 112). Before any profile directory is removed or
+    written, every portable record must carry an adapter for every provider in the
+    manifest's `portable_provider_contract.required`, whichever profile this run
+    builds; a missing one refuses the whole build and leaves every
+    existing output subtree untouched. A provider outside that set (gpt) is optional.
 
     SECURITY: the manifest is treated as untrusted input. Each skill 'name' is
     validated as a safe single path segment before it is joined into an output path,
@@ -516,6 +520,80 @@ $profiles = switch ($Provider) {
     'both'  { @('claude', 'gpt') }
     'all'   { @('claude', 'gpt', 'codex') }
     default { @($Provider) }
+}
+
+# -- Required-adapter completeness (before any output is removed or written) --
+#
+# Phase CL Step 112. A portable skill carries an adapter for EVERY provider in the
+# manifest's portable_provider_contract.required, whichever profile this invocation
+# builds. The check runs over every portable record BEFORE the first
+# Remove-Item below, so an incomplete package can never cost the operator an existing
+# profile: a refused build leaves every output subtree byte-identical. Building
+# -Provider claude still refuses a portable skill whose codex adapter is missing,
+# because the claude profile alone cannot prove the package is portable.
+#
+# The required set is read from the manifest consumed, never spelled here: the
+# manifest field is its one owner (tools/gen_manifest.py emits it). A manifest that
+# omits the field fails closed rather than building against a guessed set. A provider
+# outside the set is optional: a portable skill without that adapter is simply absent
+# from that profile, which is not drift. The validity rule (non-empty, unique, leads
+# with claude) is tools/skill_catalog.py's required_provider_set, restated here
+# because the builder runs no Python.
+
+$contract = Get-Prop $manifest 'portable_provider_contract'
+$requiredRaw = Get-Prop $contract 'required'
+if ($null -eq $requiredRaw) {
+    throw ("build-distributions: manifest declares no portable_provider_contract.required; " +
+           "refusing to build without the required-provider set. Regenerate with " +
+           "python tools/gen_manifest.py.")
+}
+$requiredProviders = @($requiredRaw | ForEach-Object { [string]$_ })
+# The profiles this builder can emit (the -Provider set), not the required set.
+$knownProviders = @('claude', 'gpt', 'codex')
+if ($requiredProviders.Count -eq 0 -or $requiredProviders[0] -ne 'claude') {
+    throw ("build-distributions: portable_provider_contract.required must be a non-empty " +
+           "list that leads with claude; found [" + ($requiredProviders -join ', ') + "]")
+}
+foreach ($req in $requiredProviders) {
+    if ($knownProviders -notcontains $req) {
+        throw "build-distributions: portable_provider_contract.required names unknown provider '$req'"
+    }
+}
+if (@($requiredProviders | Sort-Object -Unique).Count -ne $requiredProviders.Count) {
+    throw "build-distributions: portable_provider_contract.required repeats a provider"
+}
+
+$incomplete = @()
+foreach ($skill in $skills) {
+    $name = [string](Get-Prop $skill 'name')
+    # The same SECURITY check as the build loop below; repeated here because this
+    # pre-pass joins the name into a path before that loop runs.
+    if (-not (Test-SafeSegment $name)) {
+        throw ("build-distributions: SECURITY -- unsafe skill name " +
+               "'$name' in manifest (must be a single path segment: no " +
+               "separators, no '..', not absolute). Refusing to build.")
+    }
+    $status = [string](Get-Prop $skill 'status')
+    $isNative = ($status -eq 'provider-native') -or ($null -eq (Get-Prop $skill 'core'))
+    if ($isNative) { continue }
+    $providersObj = Get-Prop $skill 'providers'
+    foreach ($req in $requiredProviders) {
+        $adapterRel = Get-Prop $providersObj $req
+        if ([string]::IsNullOrWhiteSpace($adapterRel)) {
+            $incomplete += "$name (no $req adapter declared)"
+            continue
+        }
+        # Resolve-SafeSource throws on a source outside skills/, before anything is read.
+        $adapterAbs = Resolve-SafeSource $adapterRel $name "$req-adapter"
+        if (-not (Test-Path -LiteralPath $adapterAbs -PathType Leaf)) {
+            $incomplete += "$name ($req adapter missing: $adapterRel)"
+        }
+    }
+}
+if ($incomplete.Count -gt 0) {
+    throw ("build-distributions: portable skills must carry an adapter for every " +
+           "required provider [" + ($requiredProviders -join ', ') + "]; nothing was " +
+           "removed or written. Incomplete: " + ($incomplete -join '; '))
 }
 
 # -- Build --------------------------------------------------------------------

@@ -13,6 +13,7 @@ suite and tools/release.ps1's CHECK phase are graded by the identical code.
 Runnable via pytest (`python -m pytest tests/package-integrity`) or standalone.
 """
 
+import json
 import os
 import shutil
 import subprocess
@@ -154,18 +155,116 @@ def test_manifest_completeness_clean_on_real_tree():
     assert not defects, "manifest completeness defect(s):\n" + "\n".join(defects)
 
 
+REQUIRED_CONTRACT = {"required": ["claude", "codex"]}
+
+
+def _portable_package(root, name, adapters):
+    (root / "skills" / name / "providers").mkdir(parents=True)
+    (root / "skills" / name / "core.md").write_text("x", encoding="utf-8")
+    for provider in adapters:
+        (root / "skills" / name / "providers" / f"{provider}.md").write_text(
+            "x", encoding="utf-8")
+    return {"name": name, "status": "portable", "core": f"skills/{name}/core.md",
+            "providers": {p: f"skills/{name}/providers/{p}.md" for p in adapters}}
+
+
 def test_manifest_completeness_reds_on_missing_adapter(tmp_path):
-    (tmp_path / "skills" / "foo" / "providers").mkdir(parents=True)
-    (tmp_path / "skills" / "foo" / "core.md").write_text("x", encoding="utf-8")
-    (tmp_path / "skills" / "foo" / "providers" / "claude.md").write_text("x", encoding="utf-8")
-    manifest = {"skills": [{
-        "name": "foo", "status": "portable",
-        "core": "skills/foo/core.md",
-        "providers": {"claude": "skills/foo/providers/claude.md"},
-        # gpt adapter deliberately absent -- must be flagged
-    }]}
+    """Release completeness consumes the manifest's required set (Phase CL Step 112):
+    a portable record without its codex adapter is a release defect."""
+    entry = _portable_package(tmp_path, "foo", ["claude"])
+    manifest = {"portable_provider_contract": REQUIRED_CONTRACT, "skills": [entry]}
     defects = release_checks.manifest_completeness_defects(manifest, tmp_path)
-    assert any("gpt" in d and "foo" in d for d in defects)
+    assert any("codex" in d and "foo" in d and "required" in d for d in defects), defects
+    assert not any("gpt" in d for d in defects), defects
+
+
+def test_manifest_completeness_reds_on_declared_required_adapter_missing_on_disk(tmp_path):
+    entry = _portable_package(tmp_path, "foo", ["claude", "codex"])
+    (tmp_path / "skills" / "foo" / "providers" / "codex.md").unlink()
+    manifest = {"portable_provider_contract": REQUIRED_CONTRACT, "skills": [entry]}
+    defects = release_checks.manifest_completeness_defects(manifest, tmp_path)
+    assert any("codex" in d and "does not exist" in d for d in defects), defects
+
+
+def test_manifest_completeness_accepts_a_portable_skill_missing_only_gpt(tmp_path):
+    """GPT is not a required provider: a portable skill whose only missing adapter is
+    gpt.md is not a defect."""
+    entry = _portable_package(tmp_path, "foo", ["claude", "codex"])
+    manifest = {"portable_provider_contract": REQUIRED_CONTRACT, "skills": [entry]}
+    assert release_checks.manifest_completeness_defects(manifest, tmp_path) == []
+
+
+def test_manifest_completeness_reds_on_declared_optional_adapter_missing_on_disk(tmp_path):
+    """An optional adapter may be absent, but a DECLARED one is still a promise."""
+    entry = _portable_package(tmp_path, "foo", ["claude", "codex"])
+    entry["providers"]["gpt"] = "skills/foo/providers/gpt.md"
+    manifest = {"portable_provider_contract": REQUIRED_CONTRACT, "skills": [entry]}
+    defects = release_checks.manifest_completeness_defects(manifest, tmp_path)
+    assert any("gpt" in d and "does not exist" in d for d in defects), defects
+
+
+@pytest.mark.parametrize("contract", [None, {}, {"required": []},
+                                      {"required": ["codex", "claude"]},
+                                      {"required": ["claude", "claude"]}],
+                         ids=["absent", "no-field", "empty", "not-claude-first", "repeat"])
+def test_manifest_completeness_fails_closed_without_a_valid_required_set(tmp_path, contract):
+    entry = _portable_package(tmp_path, "foo", ["claude", "codex"])
+    manifest = {"skills": [entry]}
+    if contract is not None:
+        manifest["portable_provider_contract"] = contract
+    defects = release_checks.manifest_completeness_defects(manifest, tmp_path)
+    assert any("portable_provider_contract.required" in d for d in defects), defects
+
+
+def test_release_required_set_is_read_from_the_manifest():
+    """One owner: the gate reads the manifest field and spells no provider set."""
+    assert release_checks.required_providers(load_manifest()) == ["claude", "codex"]
+
+
+# --------------------------------------------------------------------------- #
+# 2b. CATALOG AGREEMENT (Phase CL Step 112, decision CL-D9)
+# --------------------------------------------------------------------------- #
+
+_CATALOG_COPY = ("skills", "config", "tools/skill_catalog.py", "tools/gen_manifest.py",
+                 "tools/gen_skill_tree.py", "tests/package-integrity/expected_inventory.json")
+
+
+def _catalog_copy(dest):
+    for rel in _CATALOG_COPY:
+        src, dst = REPO_ROOT / rel, dest / rel
+        if src.is_dir():
+            shutil.copytree(src, dst, ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
+        else:
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(src, dst)
+    return dest
+
+
+def test_catalog_agreement_clean_on_real_tree():
+    defects = release_checks.catalog_agreement_defects(REPO_ROOT)
+    assert not defects, "catalog agreement defect(s):\n" + "\n".join(defects)
+
+
+def test_catalog_agreement_clean_on_an_unchanged_copy(tmp_path):
+    """The anchor for the planted negative below: the copy itself is clean."""
+    root = _catalog_copy(tmp_path / "tree")
+    assert release_checks.catalog_agreement_defects(root) == []
+
+
+def test_catalog_agreement_reds_on_a_missing_model_mapping_row(tmp_path):
+    """A shipped catalog member without a routing row fails the release, even though
+    the router would fall back to Claude-only for it at run time. One plant proves the
+    release gate is wired to the helper and formats its findings; every other planted
+    catalog defect is graded by the same helper code in
+    test_skill_catalog_lifecycle.py."""
+    root = _catalog_copy(tmp_path / "tree")
+    mapping_path = root / "config" / "model-mapping.json"
+    mapping = json.loads(mapping_path.read_text(encoding="utf-8"))
+    del mapping["skills"]["plan-review"]
+    mapping_path.write_text(json.dumps(mapping, indent=2), encoding="utf-8")
+    defects = release_checks.catalog_agreement_defects(root)
+    assert any(d.startswith("MODEL_MAPPING_DRIFT") and "plan-review" in d
+               for d in defects), defects
 
 
 def test_manifest_completeness_reds_on_orphan_skill_dir(tmp_path):

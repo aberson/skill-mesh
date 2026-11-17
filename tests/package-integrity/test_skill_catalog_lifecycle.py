@@ -40,6 +40,12 @@ WHAT THIS FILE DECIDES, stated exactly. Two mechanisms, and only two.
   gate is shown failing, not only passing. The two mechanisms above still
   govern the guide and the root pointer.
 
+  Phase CL Step 112 (issue #170) adds section 4: the read-only helper
+  `tools/skill_catalog.py`, graded as code rather than prose. Its tests run the
+  real `inspect` / `verify` commands against disposable Git copies of the
+  catalog, plant each drift and refusal class the step names, and pair every
+  planted negative with the unchanged copy's PASS.
+
 ONE MODEL OF MARKDOWN, AND IT IS NOT THIS FILE'S. Every question about what a
 block IS -- prose or fence, heading or paragraph, table row or pipe characters,
 code span or backtick, raw HTML or an autolink -- is answered by `markdown-it`,
@@ -161,10 +167,18 @@ to come back.
 import collections
 import difflib
 import functools
+import hashlib
+import importlib.util
 import json
+import os
 import re
+import shutil
+import subprocess
+import sys
 import unicodedata
 from pathlib import Path
+
+import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
@@ -379,12 +393,15 @@ LOCKED_CLAIMS = (
      "**How a Skill Mesh source tree is identified.** The refusal needs a "
      "test, not an impression, so the predicate is stated rather than "
      "left to judgement. It is a property of the TARGET TREE alone and "
-     "never of the request, so the target qualifies when both of these "
-     "hold:"),
-    ('fact 3 - the two source conditions', GUIDE_REL,
+     "never of the request, so the target qualifies when all three of "
+     "these hold:"),
+    # Phase CL Step 112 created tools/skill_catalog.py, so the third condition
+    # the guide had promised now names a path that resolves.
+    ('fact 3 - the three source conditions', GUIDE_REL,
      "Canonical, generated, and consumer surfaces", 'paragraph',
-     "1. it is a Git working tree; and 2. it contains "
-     "`config/skill-manifest.json` at that path."),
+     "1. it is a Git working tree; 2. it contains "
+     "`config/skill-manifest.json` at that path; and 3. it contains "
+     "`tools/skill_catalog.py` at that path."),
     ('fact 3 - NOT_SKILL_MESH_SOURCE', GUIDE_REL,
      "Canonical, generated, and consumer surfaces", 'paragraph',
      "Anything else \u2014 most importantly a consumer home carrying an "
@@ -392,11 +409,9 @@ LOCKED_CLAIMS = (
      "tree but no manifest \u2014 stops with `NOT_SKILL_MESH_SOURCE`. **There "
      "is no single-host fallback**, because a fallback that edits one "
      "host's copy is exactly the host-only mutation this contract exists "
-     "to prevent. Phase CL Step 112 adds its read-only helper to the same "
-     "predicate as a second required file \u2014 that step's plan block names "
-     "it, and this guide does not, because a path named here has to "
-     "resolve today; until it exists, the two conditions above are the "
-     "whole test."),
+     "to prevent. The third condition is the read-only helper Phase CL "
+     "Step 112 added, which every mutation runs to inspect and verify "
+     "itself; the three conditions above are the whole test."),
     # The Known-gap warning, pinned as of iteration 6. It is operator-facing
     # advice rather than one of the five protected facts, which is why it was
     # graded by phrase presence -- and round 5 measured that failing exactly
@@ -1111,8 +1126,9 @@ LOCKED_TABLE_ROWS = (
       "`NOT_SKILL_MESH_SOURCE`": {
        1:
         "The target fails the section 3 source tree predicate \u2014 not "
-        "a Git working tree, or no `config/skill-manifest.json` at that "
-        "path. A name the manifest does not own is `SKILL_NOT_FOUND`, "
+        "a Git working tree, or no `config/skill-manifest.json` or "
+        "`tools/skill_catalog.py` at that path. A name the manifest does "
+        "not own is `SKILL_NOT_FOUND`, "
         "not this.",
        2:
         "any write, and with no single-host fallback",
@@ -3556,35 +3572,41 @@ def test_resource_topology_change_takes_the_resource_plan_stop():
         f"letting an outside creator's package-local file ride in unnoticed.")
 
 
-def test_the_source_tree_predicate_states_exactly_two_conditions():
+def test_the_source_tree_predicate_states_exactly_three_conditions():
     """The predicate's conditions are pinned as one block; this is the
     arithmetic the pin cannot do.
 
-    Pin `fact 3 - NOT_SKILL_MESH_SOURCE` says "the two conditions above are the
-    whole test". If a condition is deleted the pinned SENTENCE is still
+    Pin `fact 3 - NOT_SKILL_MESH_SOURCE` says "the three conditions above are
+    the whole test". If a condition is deleted the pinned SENTENCE is still
     byte-exact while the document it sits in has become false -- so the count is
     asserted against the list, not against the sentence that counts it.
 
-    TWO, not three. Round 5 found the guide folding a third condition into the
-    predicate -- "for a mutation naming an existing skill, that manifest owns
-    the requested `skill_name`" -- which is a property of the REQUEST, not of
-    the tree. The plan of record's predicate is request-independent, and the
-    guide itself already assigns that input `SKILL_NOT_FOUND`. Folding it in
-    did not merely duplicate the finding, it MASKED it: a mistyped name in a
-    real checkout answered "this is not a Skill Mesh source, and there is no
-    single-host fallback", which falsifies the Done-when clause that
-    non-Skill-Mesh sources are what stop with that code.
+    THREE since Phase CL Step 112, and every one a property of the TREE. Round 5
+    of Step 110 found the guide folding a request property into the predicate --
+    "for a mutation naming an existing skill, that manifest owns the requested
+    `skill_name`" -- which MASKED `SKILL_NOT_FOUND`: a mistyped name in a real
+    checkout answered "this is not a Skill Mesh source". Step 112's third
+    condition is not that: it names a file, `tools/skill_catalog.py`, that the
+    tree either carries or does not, and the helper that file holds applies
+    exactly these conditions (`source_findings`), so the prose and the code are
+    asserted to name the same two required files.
     """
     section = _guide_section("Canonical, generated, and consumer surfaces")
     conditions = _ordered_list_code_tokens(section)
     items = [text for text, _codes in _first_ordered_list(section)]
-    assert len(items) == 2, (
-        f"the source-tree predicate lists {len(items)} conditions, not 2. Pin "
-        f"'fact 3 - NOT_SKILL_MESH_SOURCE' states that the two conditions "
+    assert len(items) == 3, (
+        f"the source-tree predicate lists {len(items)} conditions, not 3. Pin "
+        f"'fact 3 - NOT_SKILL_MESH_SOURCE' states that the three conditions "
         f"above it are the whole test; deleting one leaves that pinned "
         f"sentence byte-exact and the document false, and ADDING one is how "
         f"the request got folded into the tree predicate. Conditions found: "
         f"{items}. (Ordered-list code tokens: {conditions}.)")
+    helper = _skill_catalog()
+    named_files = {tok for tok in conditions if tok and "/" in tok}
+    assert named_files == {helper.MANIFEST_REL, helper.HELPER_REL}, (
+        f"the guide's predicate names {sorted(named_files)}; the helper's "
+        f"source_findings requires {helper.MANIFEST_REL} and {helper.HELPER_REL}")
+    assert (REPO_ROOT / helper.HELPER_REL).is_file()
 
     # The separation itself, asserted rather than assumed: a name the manifest
     # does not own is a request-validity finding, and the guide has to say so
@@ -5117,3 +5139,798 @@ def test_architecture_records_the_live_inventory_producer():
     assert "build_inventory()" in inventory
     assert "legacy-tree cli remains retired" in tree_generator
     assert "build_inventory()" in tree_generator
+
+
+# =========================================================================== #
+# 4. Phase CL Step 112 (issue #170): the read-only catalog helper
+# =========================================================================== #
+#
+# `tools/skill_catalog.py` is graded as CODE here, through its real CLI, against
+# disposable Git copies of this repository's catalog (skills/, config/, the
+# generator, and the expected-inventory fixture). Nothing is planted in this
+# checkout. Each planted negative is paired with the clean copy's PASS, so a
+# helper that always says DRIFT cannot pass, and one that always says PASS
+# cannot either.
+
+HELPER_PATH = REPO_ROOT / "tools" / "skill_catalog.py"
+_CATALOG_COPY = ("skills", "config", "tools/skill_catalog.py", "tools/gen_manifest.py",
+                 "tools/gen_skill_tree.py", "tests/package-integrity/expected_inventory.json")
+# The plan of record's closed finding vocabulary ("Non-mutating lifecycle helper"),
+# spelled here as an independent pin of the helper's FINDING_VERDICTS.
+PLAN_FINDING_CODES = {
+    "INVALID_REQUEST": (
+        "INVALID_REQUEST_FILE", "INVALID_OPERATION", "INVALID_SKILL_NAME",
+        "INVALID_BASE_REF", "TARGET_PATH_DIRTY", "SKILL_NOT_FOUND", "CREATE_COLLISION",
+        "RENAME_DESTINATION_REQUIRED", "RENAME_DESTINATION_COLLISION",
+        "REFERENCE_DISPOSITION_INVALID"),
+    "PROHIBITED": (
+        "PROVIDER_NATIVE_REVIEW_REQUIRED", "PACKAGE_RESOURCE_PLAN_REQUIRED",
+        "NOT_SKILL_MESH_SOURCE", "REFERENCE_BINARY_MATCH"),
+    "DRIFT": (
+        "REQUIRED_PROVIDER_SET_DRIFT", "MISSING_REQUIRED_ADAPTER", "MODEL_MAPPING_DRIFT",
+        "INVENTORY_DRIFT", "ORPHAN_SKILL_DIRECTORY", "GENERATED_ONLY_EDIT",
+        "STALE_OLD_NAME_REFERENCE", "CATALOG_MUTATION_INCOMPLETE", "INTERNAL_ERROR"),
+}
+RESULT_KEYS = {"schema_version", "command", "operation", "skill_name", "new_name",
+               "base_ref", "verdict", "exit_code", "required_providers", "findings",
+               "references", "changed_paths"}
+_GIT_IDENTITY = ("-c", "user.email=catalog-test@example.invalid", "-c",
+                 "user.name=catalog-test", "-c", "commit.gpgsign=false")
+
+
+@functools.lru_cache(maxsize=None)
+def _skill_catalog():
+    spec = importlib.util.spec_from_file_location("skill_catalog_under_test", HELPER_PATH)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def _git(repo, *args):
+    proc = subprocess.run(["git", *args], cwd=repo, capture_output=True, text=True)
+    assert proc.returncode == 0, f"git {args}: {proc.stderr}"
+    return proc.stdout.strip()
+
+
+def _commit(repo, message):
+    _git(repo, "add", "-A")
+    _git(repo, *_GIT_IDENTITY, "commit", "-q", "--allow-empty", "-m", message)
+    return _git(repo, "rev-parse", "HEAD")
+
+
+@pytest.fixture(scope="session")
+def _catalog_template(tmp_path_factory):
+    root = tmp_path_factory.mktemp("catalog-template") / "repo"
+    for rel in _CATALOG_COPY:
+        src, dst = REPO_ROOT / rel, root / rel
+        if src.is_dir():
+            shutil.copytree(src, dst, ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
+        else:
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(src, dst)
+    (root / ".gitignore").write_text("__pycache__/\n*.pyc\n", encoding="utf-8")
+    _git(root, "init", "-q")
+    _git(root, "config", "core.autocrlf", "false")
+    _commit(root, "catalog fixture")
+    return root
+
+
+@pytest.fixture
+def catalog_repo(_catalog_template, tmp_path):
+    """A private copy, for a test that plants or mutates."""
+    repo = tmp_path / "repo"
+    shutil.copytree(_catalog_template, repo)
+    return repo
+
+
+@pytest.fixture
+def clean_catalog(_catalog_template):
+    """The shared unchanged copy, for a test that only runs the helper. Sharing it is
+    safe because the helper writes nothing (test_the_helper_writes_no_byte), and it
+    keeps the copy cost off the read-only tests."""
+    return _catalog_template
+
+
+def _run_helper(repo, *args, cli=False):
+    """Run the helper against `repo`. With cli=True, as a real process from the
+    repo's own copy of the script (the locked command line, exit code included);
+    otherwise in-process through the same `run()` entry point `main()` uses, which
+    is the same code without a second interpreter start per call."""
+    argv = [*args, "--format", "json"]
+    if cli:
+        proc = subprocess.run(
+            [sys.executable, str(repo / "tools" / "skill_catalog.py"), *argv],
+            capture_output=True)
+        assert proc.stdout, proc.stderr
+        code, raw = proc.returncode, proc.stdout
+    else:
+        code, raw = _skill_catalog().run(argv, root=repo)
+    result = json.loads(raw.decode("utf-8"))
+    assert result["exit_code"] == code, result
+    assert set(result) == RESULT_KEYS, sorted(result)
+    return code, result, raw
+
+
+def _inspect(repo, operation, name, *extra, cli=False):
+    return _run_helper(repo, "inspect", "--operation", operation, "--name", name, *extra,
+                       cli=cli)
+
+
+def _verify(repo, tmp_path, request, cli=False):
+    path = tmp_path / "request.json"
+    path.write_text(json.dumps(request), encoding="utf-8")
+    return _run_helper(repo, "verify", "--request-file", str(path), cli=cli)
+
+
+def _request(operation, name, base_ref, **fields):
+    request = {"operation": operation, "skill_name": name, "new_name": None,
+               "base_ref": base_ref, "description": None, "capabilities": [],
+               "resource_paths": [], "reference_dispositions": []}
+    request.update(fields)
+    return request
+
+
+def _codes(result):
+    return {f["code"] for f in result["findings"]}
+
+
+def _regenerate(repo):
+    """The repo's own generator, in its normal write mode (the mutation's explicit
+    regeneration step, which happens before verification)."""
+    assert _skill_catalog()._load_generator(repo).main([]) == 0
+
+
+def _edit(path, old, new, count=-1):
+    """Replace text, following the file's own line endings so a CRLF checkout
+    plants the same defect as an LF one."""
+    data = path.read_bytes()
+    if b"\r\n" in data:
+        old, new = old.replace("\n", "\r\n"), new.replace("\n", "\r\n")
+    text = data.decode("utf-8")
+    assert old in text, f"{old!r} not in {path}"
+    path.write_bytes(text.replace(old, new, count).encode("utf-8"))
+
+
+def _mapping(repo):
+    path = repo / "config" / "model-mapping.json"
+    return path, json.loads(path.read_text(encoding="utf-8"))
+
+
+def _write_mapping(path, mapping):
+    path.write_bytes((json.dumps(mapping, indent=2) + "\n").encode("utf-8"))
+
+
+def _snapshot(root):
+    return {p.relative_to(root).as_posix(): p.read_bytes()
+            for p in sorted(root.rglob("*")) if p.is_file()}
+
+
+# -- the contract itself ---------------------------------------------------- #
+
+
+def test_helper_vocabulary_is_the_plans_closed_finding_set():
+    helper = _skill_catalog()
+    expected = {code: verdict for verdict, codes in PLAN_FINDING_CODES.items()
+                for code in codes}
+    assert helper.FINDING_VERDICTS == expected
+    assert helper.VERDICT_EXIT == {"PASS": 0, "INVALID_REQUEST": 2, "PROHIBITED": 2,
+                                   "DRIFT": 3}
+    assert helper.VERDICT_SEVERITY == ("DRIFT", "PROHIBITED", "INVALID_REQUEST")
+    assert helper.REQUEST_FIELDS == REQUEST_FIELDS
+    assert helper.OPERATIONS == OPERATIONS
+
+
+def test_the_unchanged_committed_catalog_agrees_across_every_representation():
+    """The real tree, read Git-free exactly as the release gate reads it."""
+    assert _skill_catalog().catalog_findings(REPO_ROOT) == []
+
+
+@pytest.mark.parametrize("operation, name", [
+    ("READ", "plan-review"), ("UPDATE", "plan-review"), ("DELETE", "user-fermize"),
+    ("CREATE", "zz-new-skill")])
+def test_inspect_passes_every_valid_operation_on_the_unchanged_catalog(
+        clean_catalog, operation, name):
+    """Every operation: PASS, exit 0, canonical sorted bytes. Determinism is checked
+    across two separate interpreters (the real CLI against the in-process entry
+    point), so an order that leaked from string hashing would differ. One operation
+    prices that: DELETE, which carries the most collections (its references)."""
+    code, result, raw = _inspect(clean_catalog, operation, name)
+    assert (code, result["verdict"], result["findings"]) == (0, "PASS", []), result
+    assert result["required_providers"] == ["claude", "codex"]
+    assert raw.endswith(b"\n") and not raw.endswith(b"\n\n") and b"\r" not in raw
+    assert raw == (json.dumps(result, indent=2, sort_keys=True, ensure_ascii=False)
+                   + "\n").encode("utf-8")
+    if operation == "DELETE":
+        assert result["references"], "the determinism check needs a non-empty collection"
+        assert _inspect(clean_catalog, operation, name, cli=True)[2] == raw, \
+            "output is not deterministic across processes"
+
+
+def test_inspect_rename_passes_and_reports_every_old_name_occurrence(clean_catalog):
+    code, result, _ = _inspect(clean_catalog, "RENAME", "user-fermize",
+                               "--new-name", "user-weigh")
+    assert code == 0, result
+    refs = result["references"]
+    assert refs and all(r["class"] is None and r["rationale"] is None for r in refs)
+    assert refs == sorted(refs, key=lambda r: (r["path"], r["line"], r["column"]))
+    core = (clean_catalog / "skills" / "user-fermize" / "core.md").read_bytes()
+    assert {r["before_sha256"] for r in refs if r["path"] == "skills/user-fermize/core.md"} \
+        == {hashlib.sha256(core.replace(b"\r\n", b"\n")).hexdigest()}
+    paths = {r["path"] for r in refs}
+    assert "skills/user-fermize/core.md" in paths and "tools/gen_manifest.py" in paths
+
+
+def test_reference_tokens_respect_kebab_name_boundaries():
+    helper = _skill_catalog()
+    patterns = helper._token_patterns("build-step")
+    text = b"build-step /build-step build-steps x-build-step build_step `build-step`.\n"
+    found, binary = helper.scan_bytes(text, patterns)
+    assert not binary
+    assert found == [(1, 1), (1, 13), (1, 61)]
+    assert helper.scan_bytes(b"\x00build-step", patterns) == ([], True)
+
+
+# -- planted catalog drift (exit 3) ----------------------------------------- #
+
+
+def _plant_missing_provider(repo):
+    (repo / "skills" / "plan-review" / "providers" / "codex.md").unlink()
+
+
+def _plant_missing_mapping(repo):
+    path, mapping = _mapping(repo)
+    del mapping["skills"]["plan-review"]
+    _write_mapping(path, mapping)
+
+
+def _plant_stale_inventory(repo):
+    # An optional adapter removed without regenerating: the manifest and both
+    # inventories still list it.
+    (repo / "skills" / "plan-review" / "providers" / "gpt.md").unlink()
+
+
+def _plant_orphan(repo):
+    (repo / "skills" / "stray-skill").mkdir()
+    (repo / "skills" / "stray-skill" / "core.md").write_text("x\n", encoding="utf-8")
+
+
+def _plant_generated_only_edit(repo):
+    _edit(repo / "config" / "skill-manifest.json",
+          "Run every step of a plan phase", "Hand-edited: run every step of a plan phase")
+
+
+def _plant_legacy_package(repo):
+    (repo / "plan-review").mkdir()
+    (repo / "plan-review" / "SKILL.md").write_text("# hand-made\n", encoding="utf-8")
+
+
+def _plant_consumer_root(repo):
+    target = repo / ".agents" / "skills" / "plan-review" / "SKILL.md"
+    target.parent.mkdir(parents=True)
+    target.write_text("# hand-made\n", encoding="utf-8")
+
+
+def _plant_required_set(repo):
+    _edit(repo / "config" / "skill-manifest.json",
+          '"required": [\n      "claude",\n      "codex"\n    ]',
+          '"required": [\n      "claude"\n    ]', 1)
+
+
+@pytest.mark.parametrize("plant, code", [
+    (_plant_missing_provider, "MISSING_REQUIRED_ADAPTER"),
+    (_plant_missing_mapping, "MODEL_MAPPING_DRIFT"),
+    (_plant_stale_inventory, "INVENTORY_DRIFT"),
+    (_plant_orphan, "ORPHAN_SKILL_DIRECTORY"),
+    (_plant_generated_only_edit, "GENERATED_ONLY_EDIT"),
+    (_plant_legacy_package, "GENERATED_ONLY_EDIT"),
+    (_plant_consumer_root, "GENERATED_ONLY_EDIT"),
+    (_plant_required_set, "REQUIRED_PROVIDER_SET_DRIFT"),
+], ids=["missing-provider", "missing-mapping", "stale-inventory", "orphan-directory",
+        "generated-only-edit", "legacy-package-edit", "consumer-root-edit",
+        "required-set-drift"])
+def test_planted_catalog_drift_returns_3(catalog_repo, plant, code):
+    plant(catalog_repo)
+    rc, result, _ = _inspect(catalog_repo, "READ", "plan-review", cli=True)
+    assert (rc, result["verdict"]) == (3, "DRIFT"), result
+    assert code in _codes(result), result["findings"]
+    assert result["findings"] == sorted(
+        result["findings"], key=lambda f: (f["code"], f["path"] or "", f["detail"]))
+
+
+def test_missing_provider_is_not_reported_for_an_optional_adapter(catalog_repo):
+    _plant_stale_inventory(catalog_repo)
+    result = _inspect(catalog_repo, "READ", "plan-review")[1]
+    assert "MISSING_REQUIRED_ADAPTER" not in _codes(result), result["findings"]
+
+
+def test_a_portable_skill_missing_only_gpt_is_not_drift(catalog_repo, tmp_path):
+    """GPT is not required: removing gpt.md, flipping the routing row's gpt flag and
+    regenerating is a clean catalog, and an UPDATE carrying exactly that verifies."""
+    base = _git(catalog_repo, "rev-parse", "HEAD")
+    (catalog_repo / "skills" / "plan-review" / "providers" / "gpt.md").unlink()
+    path, mapping = _mapping(catalog_repo)
+    mapping["skills"]["plan-review"]["gpt"] = False
+    _write_mapping(path, mapping)
+    _regenerate(catalog_repo)
+    rc, result, _ = _verify(catalog_repo, tmp_path, _request("UPDATE", "plan-review", base))
+    assert (rc, result["findings"]) == (0, []), result
+    _commit(catalog_repo, "plan-review without gpt")
+    rc, result, _ = _inspect(catalog_repo, "READ", "plan-review")
+    assert (rc, result["findings"]) == (0, []), result
+
+
+def _plant_mapping_row(name, **fields):
+    def plant(repo):
+        path, mapping = _mapping(repo)
+        mapping["skills"][name].update(fields)
+        _write_mapping(path, mapping)
+    return plant
+
+
+def _plant_mapping_flip(field):
+    def plant(repo):
+        path, mapping = _mapping(repo)
+        mapping["skills"]["plan-review"][field] = not mapping["skills"]["plan-review"][field]
+        _write_mapping(path, mapping)
+    return plant
+
+
+def _plant_mapping_extra_row(repo):
+    path, mapping = _mapping(repo)
+    mapping["skills"]["zz-ghost"] = dict(mapping["skills"]["plan-review"])
+    _write_mapping(path, mapping)
+
+
+def _plant_mapping_non_object_row(repo):
+    path, mapping = _mapping(repo)
+    mapping["skills"]["plan-review"] = "claude"
+    _write_mapping(path, mapping)
+
+
+def _plant_native_core(repo):
+    (repo / "skills" / "context-slim" / "core.md").write_text("# core\n", encoding="utf-8")
+
+
+def _plant_manifest_count(repo):
+    _edit(repo / "config" / "skill-manifest.json", '"total": 46', '"total": 47', 1)
+
+
+def _plant_expected_roster(repo):
+    path = repo / "tests" / "package-integrity" / "expected_inventory.json"
+    doc = json.loads(path.read_text(encoding="utf-8"))
+    doc["portable"].remove("plan-review")
+    path.write_bytes((json.dumps(doc, indent=2) + "\n").encode("utf-8"))
+
+
+# Each branch of the agreement check that no regeneration comparison can stand in for,
+# pinned by the exact finding it must raise: a check that is switched off leaves the
+# rest of the result DRIFT, so only the named finding proves the branch ran.
+@pytest.mark.parametrize("plant, code, path, needle", [
+    (_plant_mapping_flip("claude"), "MODEL_MAPPING_DRIFT", "config/model-mapping.json",
+     "routing row plan-review.claude is False"),
+    (_plant_mapping_flip("gpt"), "MODEL_MAPPING_DRIFT", "config/model-mapping.json",
+     "routing row plan-review.gpt is False"),
+    (_plant_mapping_flip("local"), "MODEL_MAPPING_DRIFT", "config/model-mapping.json",
+     "routing row plan-review.local is False"),
+    (_plant_mapping_row("context-slim", gpt=True), "MODEL_MAPPING_DRIFT",
+     "config/model-mapping.json", "routing row context-slim.gpt is True"),
+    (_plant_mapping_extra_row, "MODEL_MAPPING_DRIFT", "config/model-mapping.json",
+     "routing row zz-ghost names no catalog skill"),
+    (_plant_mapping_non_object_row, "MODEL_MAPPING_DRIFT", "config/model-mapping.json",
+     "routing row plan-review is not an object"),
+    (_plant_native_core, "INVENTORY_DRIFT", "config/skill-manifest.json",
+     "context-slim is provider-native in the manifest but carries core.md"),
+    (_plant_manifest_count, "INVENTORY_DRIFT", "config/skill-manifest.json",
+     "counts.total is 47; the records give 46"),
+    (_plant_expected_roster, "INVENTORY_DRIFT",
+     "tests/package-integrity/expected_inventory.json",
+     "its portable roster disagrees with the manifest"),
+], ids=["mapping-wrong-claude", "mapping-wrong-gpt", "mapping-wrong-local",
+        "mapping-gpt-without-adapter", "mapping-extra-row", "mapping-non-object-row",
+        "native-carries-core", "manifest-count", "expected-inventory-roster"])
+def test_each_agreement_branch_reaches_its_own_finding(catalog_repo, plant, code, path, needle):
+    plant(catalog_repo)
+    rc, result, _ = _inspect(catalog_repo, "READ", "plan-review")
+    assert (rc, result["verdict"]) == (3, "DRIFT"), result
+    assert any(f["code"] == code and f["path"] == path and needle in f["detail"]
+               for f in result["findings"]), result["findings"]
+
+
+# -- invalid and prohibited requests (exit 2) ------------------------------- #
+
+
+@pytest.mark.parametrize("operation, name, extra, code", [
+    ("PATCH", "plan-review", (), "INVALID_OPERATION"),
+    ("READ", "Plan_Review", (), "INVALID_SKILL_NAME"),
+    ("READ", "con", (), "INVALID_SKILL_NAME"),
+    ("READ", "../plan-review", (), "INVALID_SKILL_NAME"),
+    ("READ", "x;rm -rf .", (), "INVALID_SKILL_NAME"),
+    ("READ", "no-such-skill", (), "SKILL_NOT_FOUND"),
+    ("CREATE", "plan-review", (), "CREATE_COLLISION"),
+    ("RENAME", "plan-review", (), "RENAME_DESTINATION_REQUIRED"),
+    ("RENAME", "plan-review", ("--new-name", "plan-init"), "RENAME_DESTINATION_COLLISION"),
+    ("UPDATE", "plan-review", ("--base-ref", "HEAD"), "INVALID_BASE_REF"),
+    ("UPDATE", "plan-review", ("--base-ref", "0" * 40), "INVALID_BASE_REF"),
+    ("READ", "plan-review", ("--base-ref", "0" * 40), "INVALID_BASE_REF"),
+    ("UPDATE", "context-slim", (), "PROVIDER_NATIVE_REVIEW_REQUIRED"),
+    ("DELETE", "review-deep", (), "PACKAGE_RESOURCE_PLAN_REQUIRED"),
+], ids=["operation", "case", "device-name", "traversal", "shell-meta", "not-found",
+        "create-collision", "rename-no-destination", "rename-collision", "symbolic-ref",
+        "unknown-commit", "read-with-base", "native-mutation", "resource-topology"])
+def test_invalid_or_prohibited_inspect_returns_2(clean_catalog, operation, name, extra, code):
+    rc, result, _ = _inspect(clean_catalog, operation, name, *extra, cli=True)
+    assert rc == 2, result
+    assert code in _codes(result), result["findings"]
+    assert result["verdict"] in ("INVALID_REQUEST", "PROHIBITED")
+
+
+def test_target_path_dirty_stops_a_mutation_inspect(catalog_repo):
+    _edit(catalog_repo / "skills" / "plan-review" / "core.md", "#", "# dirty", 1)
+    rc, result, _ = _inspect(catalog_repo, "UPDATE", "plan-review")
+    assert rc == 2 and "TARGET_PATH_DIRTY" in _codes(result), result
+    # The same dirt does not block an unrelated skill's mutation; it is reported.
+    rc, result, _ = _inspect(catalog_repo, "UPDATE", "plan-init")
+    assert rc == 0 and "skills/plan-review/core.md" in result["changed_paths"], result
+
+
+@pytest.mark.parametrize("mutate, code", [
+    (lambda r: r.update(extra_field=1), "INVALID_REQUEST_FILE"),
+    (lambda r: r.pop("resource_paths"), "INVALID_REQUEST_FILE"),
+    (lambda r: r.update(capabilities="filesystem"), "INVALID_REQUEST_FILE"),
+    (lambda r: r.update(base_ref=None), "INVALID_BASE_REF"),
+    (lambda r: r.update(base_ref="abc123"), "INVALID_BASE_REF"),
+    (lambda r: r.update(resource_paths=["skills/plan-review/templates/x.md"]),
+     "PACKAGE_RESOURCE_PLAN_REQUIRED"),
+    (lambda r: r.update(reference_dispositions=[{"path": "x"}]),
+     "REFERENCE_DISPOSITION_INVALID"),
+], ids=["unknown-key", "missing-key", "wrong-type", "null-base", "short-base",
+        "resource-paths", "dispositions-on-update"])
+def test_invalid_request_files_return_2(clean_catalog, tmp_path, mutate, code):
+    request = _request("UPDATE", "plan-review", _git(clean_catalog, "rev-parse", "HEAD"))
+    mutate(request)
+    rc, result, _ = _verify(clean_catalog, tmp_path, request)
+    assert rc == 2 and code in _codes(result), result
+
+
+def test_a_relative_request_path_is_refused(clean_catalog):
+    rc, result, _ = _run_helper(clean_catalog, "verify", "--request-file", "request.json",
+                                cli=True)
+    assert rc == 2 and _codes(result) == {"INVALID_REQUEST_FILE"}, result
+
+
+@pytest.mark.parametrize("data", [
+    b"[" * 100000 + b"]" * 100000,
+    b'{"operation": ' + b"[" * 100000 + b"]" * 100000 + b"}",
+    b"\xff\xfe not utf-8",
+    b'{"operation": "READ", "operation": "READ"}',
+    b"",
+    b'["not", "an", "object"]',
+], ids=["deep-array", "deep-field", "not-utf8", "duplicate-key", "empty", "not-an-object"])
+def test_an_unparseable_request_file_is_an_invalid_request(clean_catalog, tmp_path, data):
+    """Whatever the file holds, a request the parser cannot turn into the object is an
+    invalid request (exit 2), never an internal error reported as drift (exit 3)."""
+    path = tmp_path / "request.json"
+    path.write_bytes(data)
+    rc, result, _ = _run_helper(clean_catalog, "verify", "--request-file", str(path))
+    assert (rc, result["verdict"]) == (2, "INVALID_REQUEST"), result
+    assert _codes(result) == {"INVALID_REQUEST_FILE"}, result
+
+
+@pytest.mark.parametrize("argv", [
+    ("inspect", "--operation", "READ", "--name", "plan-review", "--bogus"),
+    ("inspect", "--name", "plan-review", "--operation"),
+    ("verify", "--format=json", "--request-file"),
+], ids=["unknown-flag", "missing-value", "equals-form"])
+def test_a_command_line_error_under_json_is_the_v1_shape(clean_catalog, argv):
+    rc, result, _ = _run_helper(clean_catalog, *argv)
+    assert (rc, result["command"]) == (2, argv[0]), result
+    assert _codes(result) == {"INVALID_REQUEST_FILE"}, result
+
+
+def test_a_tree_that_is_not_a_git_working_tree_is_not_a_skill_mesh_source(tmp_path):
+    tree = tmp_path / "plain"
+    for rel in ("config/skill-manifest.json", "tools/skill_catalog.py"):
+        (tree / rel).parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(REPO_ROOT / rel, tree / rel)
+    rc, result, _ = _run_helper(tree, "inspect", "--operation", "READ", "--name", "plan-review",
+                                cli=True)
+    assert rc == 2 and _codes(result) == {"NOT_SKILL_MESH_SOURCE"}, result
+
+
+# -- verify: every operation, end to end ------------------------------------ #
+
+
+def _create_demo(repo, extra_file=None):
+    gen = repo / "tools" / "gen_manifest.py"
+    _edit(gen, '"user-fermize",', '"user-fermize", "zz-demo",', 1)
+    _edit(gen, '    "user-fermize": "Weigh',
+          '    "zz-demo": "Demo skill.",\n    "user-fermize": "Weigh', 1)
+    _edit(gen, '    "user-fermize": [],', '    "user-fermize": [],\n    "zz-demo": [],', 1)
+    package = repo / "skills" / "zz-demo"
+    (package / "providers").mkdir(parents=True)
+    (package / "core.md").write_text("# zz-demo core\n", encoding="utf-8")
+    for provider in ("claude", "codex"):
+        (package / "providers" / f"{provider}.md").write_text(
+            "# zz-demo adapter\n\nLoad ../core.md in full.\n", encoding="utf-8")
+    if extra_file:
+        (package / extra_file).parent.mkdir(parents=True, exist_ok=True)
+        (package / extra_file).write_text("extra\n", encoding="utf-8")
+    path, mapping = _mapping(repo)
+    mapping["skills"]["zz-demo"] = {"default_model": "claude", "claude": True, "gpt": False,
+                                    "local": False, "notes": "demo"}
+    _write_mapping(path, mapping)
+    _regenerate(repo)
+
+
+def _create_request(base):
+    return _request("CREATE", "zz-demo", base, description="Demo skill.",
+                    capabilities=["filesystem"])
+
+
+def test_verify_create_passes(catalog_repo, tmp_path):
+    base = _git(catalog_repo, "rev-parse", "HEAD")
+    _create_demo(catalog_repo)
+    rc, result, _ = _verify(catalog_repo, tmp_path, _create_request(base), cli=True)
+    assert (rc, result["findings"]) == (0, []), result
+    assert "skills/zz-demo/core.md" in result["changed_paths"]
+
+
+def test_verify_create_refuses_a_package_local_resource(catalog_repo, tmp_path):
+    base = _git(catalog_repo, "rev-parse", "HEAD")
+    _create_demo(catalog_repo, extra_file="templates/page.md")
+    rc, result, _ = _verify(catalog_repo, tmp_path, _create_request(base))
+    assert rc == 2 and "PACKAGE_RESOURCE_PLAN_REQUIRED" in _codes(result), result
+
+
+def test_verify_create_refuses_a_partial_provider_set(catalog_repo, tmp_path):
+    base = _git(catalog_repo, "rev-parse", "HEAD")
+    _create_demo(catalog_repo)
+    (catalog_repo / "skills" / "zz-demo" / "providers" / "codex.md").unlink()
+    rc, result, _ = _verify(catalog_repo, tmp_path, _create_request(base))
+    assert rc == 3 and "MISSING_REQUIRED_ADAPTER" in _codes(result), result
+
+
+def test_verify_create_collides_with_the_preimage(clean_catalog, tmp_path):
+    base = _git(clean_catalog, "rev-parse", "HEAD")
+    request = _request("CREATE", "plan-review", base, description="x",
+                       capabilities=["filesystem"])
+    rc, result, _ = _verify(clean_catalog, tmp_path, request)
+    assert rc == 2 and "CREATE_COLLISION" in _codes(result), result
+
+
+def test_verify_create_records_the_requested_metadata(catalog_repo, tmp_path):
+    base = _git(catalog_repo, "rev-parse", "HEAD")
+    _create_demo(catalog_repo)
+    request = _create_request(base)
+    request["description"] = "A different description."
+    rc, result, _ = _verify(catalog_repo, tmp_path, request)
+    assert rc == 3 and "CATALOG_MUTATION_INCOMPLETE" in _codes(result), result
+
+
+def test_verify_read_and_update_pass(catalog_repo, tmp_path):
+    rc, result, _ = _verify(catalog_repo, tmp_path, _request("READ", "plan-review", None))
+    assert (rc, result["findings"]) == (0, []), result
+    base = _git(catalog_repo, "rev-parse", "HEAD")
+    _edit(catalog_repo / "skills" / "plan-review" / "core.md", "#", "# updated", 1)
+    rc, result, _ = _verify(catalog_repo, tmp_path, _request("UPDATE", "plan-review", base))
+    assert (rc, result["findings"]) == (0, []), result
+    # A READ that changed a byte of its own target is refused.
+    rc, result, _ = _verify(catalog_repo, tmp_path, _request("READ", "plan-review", None))
+    assert rc == 2 and "TARGET_PATH_DIRTY" in _codes(result), result
+
+
+def test_verify_native_update_is_prohibited(catalog_repo, tmp_path):
+    base = _git(catalog_repo, "rev-parse", "HEAD")
+    _edit(catalog_repo / "skills" / "context-slim" / "providers" / "claude.md", "#", "# x", 1)
+    rc, result, _ = _verify(catalog_repo, tmp_path, _request("UPDATE", "context-slim", base))
+    assert rc == 2 and "PROVIDER_NATIVE_REVIEW_REQUIRED" in _codes(result), result
+
+
+def test_verify_update_adding_a_package_file_takes_the_resource_stop(catalog_repo, tmp_path):
+    base = _git(catalog_repo, "rev-parse", "HEAD")
+    (catalog_repo / "skills" / "plan-review" / "notes.md").write_text("x\n", encoding="utf-8")
+    rc, result, _ = _verify(catalog_repo, tmp_path, _request("UPDATE", "plan-review", base))
+    assert rc == 2 and "PACKAGE_RESOURCE_PLAN_REQUIRED" in _codes(result), result
+
+
+def _dispositions(refs, preserve=lambda path: False):
+    return [dict(r, **{"class": "historical-preserve" if preserve(r["path"]) else "must-update",
+                       "rationale": "fixture disposition"}) for r in refs]
+
+
+# Paths a DELETE or RENAME of user-fermize rewrites (must-update); every other
+# occurrence in the copy is left byte-identical and dispositioned historical-preserve.
+_LIVE = ("skills/user-fermize/", "skills/user-weigh/", "tools/gen_manifest.py",
+         "config/", "skills/inventory.json", "tests/package-integrity/expected_inventory.json")
+
+
+def _is_live(path):
+    return any(path == p or path.startswith(p) for p in _LIVE)
+
+
+def _delete_fermize(repo):
+    gen = repo / "tools" / "gen_manifest.py"
+    _edit(gen, ' "user-fermize",', '', 1)
+    text = gen.read_text(encoding="utf-8")
+    text = re.sub(r'^    "user-fermize": .*\n', "", text, flags=re.M)
+    gen.write_bytes(text.replace("user-fermize", "a-retired-skill").encode("utf-8"))
+    shutil.rmtree(repo / "skills" / "user-fermize")
+    path, mapping = _mapping(repo)
+    del mapping["skills"]["user-fermize"]
+    _write_mapping(path, mapping)
+    _regenerate(repo)
+
+
+def test_verify_delete_passes_with_every_reference_dispositioned(catalog_repo, tmp_path):
+    base = _git(catalog_repo, "rev-parse", "HEAD")
+    refs = _inspect(catalog_repo, "DELETE", "user-fermize")[1]["references"]
+    _delete_fermize(catalog_repo)
+    request = _request("DELETE", "user-fermize", base,
+                       reference_dispositions=_dispositions(refs, lambda p: not _is_live(p)))
+    rc, result, _ = _verify(catalog_repo, tmp_path, request)
+    assert (rc, result["findings"]) == (0, []), result
+    assert result["references"] and all(r["class"] for r in result["references"])
+
+
+_LIVE_CONSUMER = "skills/user-pm/core.md"
+
+
+def _rename_fermize(repo, skip_live_update=False):
+    _edit(repo / "tools" / "gen_manifest.py", "user-fermize", "user-weigh")
+    (repo / "skills" / "user-fermize").rename(repo / "skills" / "user-weigh")
+    for path in (repo / "skills" / "user-weigh").rglob("*.md"):
+        if "user-fermize" in path.read_text(encoding="utf-8"):
+            _edit(path, "user-fermize", "user-weigh")
+    path, mapping = _mapping(repo)
+    mapping["skills"]["user-weigh"] = mapping["skills"].pop("user-fermize")
+    _write_mapping(path, mapping)
+    if not skip_live_update:
+        _edit(repo / _LIVE_CONSUMER, "user-fermize", "user-weigh")
+    _regenerate(repo)
+
+
+def _rename_request(base, refs):
+    dispositions = _dispositions(
+        refs, lambda p: not _is_live(p) and p != _LIVE_CONSUMER)
+    return _request("RENAME", "user-fermize", base, new_name="user-weigh",
+                    reference_dispositions=dispositions)
+
+
+def _rename_refs(repo):
+    return _inspect(repo, "RENAME", "user-fermize", "--new-name", "user-weigh")[1]["references"]
+
+
+@pytest.fixture(scope="module")
+def renamed_catalog(_catalog_template, tmp_path_factory):
+    """One complete RENAME of user-fermize to user-weigh, shared by the verify tests
+    that only vary the request (the helper writes nothing, so sharing is safe). A test
+    that changes a byte in it restores the byte before it returns."""
+    repo = tmp_path_factory.mktemp("renamed") / "repo"
+    shutil.copytree(_catalog_template, repo)
+    base = _git(repo, "rev-parse", "HEAD")
+    refs = _rename_refs(repo)
+    _rename_fermize(repo)
+    return repo, base, refs
+
+
+def test_verify_rename_passes(renamed_catalog, tmp_path):
+    repo, base, refs = renamed_catalog
+    rc, result, _ = _verify(repo, tmp_path, _rename_request(base, refs))
+    assert (rc, result["findings"]) == (0, []), result
+
+
+def test_verify_stale_rename_returns_3(catalog_repo, tmp_path):
+    """A must-update consumer left naming the old skill is a live stale reference."""
+    base = _git(catalog_repo, "rev-parse", "HEAD")
+    refs = _rename_refs(catalog_repo)
+    _rename_fermize(catalog_repo, skip_live_update=True)
+    rc, result, _ = _verify(catalog_repo, tmp_path, _rename_request(base, refs))
+    assert rc == 3 and "STALE_OLD_NAME_REFERENCE" in _codes(result), result
+    assert any(f["path"] == _LIVE_CONSUMER for f in result["findings"])
+
+
+def test_verify_unclassified_historical_reference_reaches_drift(renamed_catalog, tmp_path):
+    """An occurrence left in place with no disposition is both an invalid request
+    (every reported occurrence needs one) and a live stale reference; DRIFT wins."""
+    repo, base, refs = renamed_catalog
+    request = _rename_request(base, refs)
+    historical = [d for d in request["reference_dispositions"]
+                  if d["class"] == "historical-preserve"]
+    assert historical, "the fixture needs at least one historical occurrence"
+    request["reference_dispositions"].remove(historical[0])
+    rc, result, _ = _verify(repo, tmp_path, request)
+    assert rc == 3, result
+    assert {"REFERENCE_DISPOSITION_INVALID", "STALE_OLD_NAME_REFERENCE"} <= _codes(result)
+
+
+def test_verify_missing_disposition_for_an_updated_reference_returns_2(renamed_catalog, tmp_path):
+    repo, base, refs = renamed_catalog
+    request = _rename_request(base, refs)
+    live = [d for d in request["reference_dispositions"] if d["path"] == _LIVE_CONSUMER]
+    request["reference_dispositions"].remove(live[0])
+    rc, result, _ = _verify(repo, tmp_path, request)
+    assert rc == 2 and _codes(result) == {"REFERENCE_DISPOSITION_INVALID"}, result
+
+
+def test_verify_stale_hash_and_changed_historical_bytes(renamed_catalog, tmp_path):
+    repo, base, refs = renamed_catalog
+    request = _rename_request(base, refs)
+    request["reference_dispositions"][0]["before_sha256"] = "f" * 64
+    rc, result, _ = _verify(repo, tmp_path, request)
+    assert "REFERENCE_DISPOSITION_INVALID" in _codes(result), result
+    # A historical-preserve file whose bytes changed breaks the preservation promise.
+    request = _rename_request(base, refs)
+    preserved = next(d for d in request["reference_dispositions"]
+                     if d["class"] == "historical-preserve")
+    target = repo / preserved["path"]
+    original = target.read_bytes()
+    try:
+        target.write_bytes(original + b"\nappended\n")
+        rc, result, _ = _verify(repo, tmp_path, request)
+    finally:
+        target.write_bytes(original)
+    assert rc == 3 and "CATALOG_MUTATION_INCOMPLETE" in _codes(result), result
+
+
+def test_verify_rename_destination_collision(clean_catalog, tmp_path):
+    base = _git(clean_catalog, "rev-parse", "HEAD")
+    request = _request("RENAME", "user-fermize", base, new_name="plan-init")
+    rc, result, _ = _verify(clean_catalog, tmp_path, request)
+    assert rc == 2 and "RENAME_DESTINATION_COLLISION" in _codes(result), result
+
+
+# -- no writes, and Git only through validated argument arrays -------------- #
+
+
+def test_the_helper_writes_no_byte(catalog_repo, tmp_path):
+    base = _git(catalog_repo, "rev-parse", "HEAD")
+    refs = _inspect(catalog_repo, "DELETE", "user-fermize")[1]["references"]
+    _delete_fermize(catalog_repo)
+    request = _request("DELETE", "user-fermize", base,
+                       reference_dispositions=_dispositions(refs, lambda p: not _is_live(p)))
+    request_path = tmp_path / "request.json"
+    request_path.write_text(json.dumps(request), encoding="utf-8")
+    before, request_before = _snapshot(catalog_repo), request_path.read_bytes()
+    assert _run_helper(catalog_repo, "verify", "--request-file", str(request_path),
+                       cli=True)[0] == 0
+    _inspect(catalog_repo, "READ", "plan-review", cli=True)
+    _inspect(catalog_repo, "RENAME", "plan-review", "--new-name", "plan-reviews", cli=True)
+    assert _snapshot(catalog_repo) == before, "the helper changed a byte in the repository"
+    assert request_path.read_bytes() == request_before
+
+
+def test_git_runs_as_validated_argument_arrays_without_a_shell(catalog_repo, monkeypatch):
+    helper = _skill_catalog()
+    calls = []
+    real_run = subprocess.run
+
+    def recording_run(argv, *args, **kwargs):
+        calls.append((argv, kwargs))
+        return real_run(argv, *args, **kwargs)
+
+    monkeypatch.setattr(helper.subprocess, "run", recording_run)
+    hostile = ["$(touch pwned)", "x;rm -rf .", "HEAD --output=pwned", "a|b"]
+    for value in hostile:
+        helper.run(["inspect", "--operation", "UPDATE", "--name", value], root=catalog_repo)
+        helper.run(["inspect", "--operation", "UPDATE", "--name", "plan-review",
+                    "--base-ref", value], root=catalog_repo)
+    code, _ = helper.run(["inspect", "--operation", "DELETE", "--name", "user-fermize"],
+                         root=catalog_repo)
+    assert code == 0
+    assert calls
+    for argv, kwargs in calls:
+        assert isinstance(argv, list) and argv[0] == "git"
+        assert all(isinstance(arg, str) for arg in argv)
+        assert kwargs.get("shell", False) is False
+        assert not any(value in arg for value in hostile for arg in argv), argv
+    assert not (catalog_repo / "pwned").exists()
+
+
+def test_skill_catalog_is_standard_library_only():
+    import ast
+    tree = ast.parse(HELPER_PATH.read_text(encoding="utf-8"))
+    modules = {alias.name.split(".")[0] for node in ast.walk(tree)
+               if isinstance(node, ast.Import) for alias in node.names}
+    modules |= {node.module.split(".")[0] for node in ast.walk(tree)
+                if isinstance(node, ast.ImportFrom) and node.module}
+    assert modules <= set(sys.stdlib_module_names) | {"__future__"}, modules

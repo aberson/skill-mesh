@@ -62,7 +62,11 @@ def _package_loads_the_contract(launcher: str, core: str) -> bool:
 def built_profiles(tmp_path_factory: pytest.TempPathFactory) -> Path:
     root = tmp_path_factory.mktemp("user-fermize-profiles")
     manifest = root / "manifest.json"
-    manifest.write_text(json.dumps({"skills": [_skill_entry()]}), encoding="utf-8")
+    # The builder refuses a manifest without the required-provider set (Phase CL
+    # Step 112), so the one-skill fixture carries the committed manifest's own.
+    contract = json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))["portable_provider_contract"]
+    manifest.write_text(json.dumps({"portable_provider_contract": contract,
+                                    "skills": [_skill_entry()]}), encoding="utf-8")
     output = root / "dist"
     result = _run(BUILD_SCRIPT, "-ManifestPath", str(manifest), "-OutputDir", str(output),
                   "-Provider", "all")
