@@ -5856,6 +5856,113 @@ def test_the_helper_writes_no_byte(catalog_repo, tmp_path):
     assert request_path.read_bytes() == request_before
 
 
+# A stat-stale index is the case test_the_helper_writes_no_byte cannot see: its first
+# in-process inspect refreshes the copy's index before the snapshot is taken. Here
+# nothing runs between making the index stale and the snapshot except plumbing that
+# never refreshes, and the precondition is re-measured after the helper ran, so a
+# helper that refreshed the index (porcelain `git diff` does, GIT_OPTIONAL_LOCKS=0 or
+# not) fails both on the bytes and on the precondition.
+
+
+def _stale_stat(repo, rels):
+    """Move the mtime of tracked files without changing their bytes, so the index's
+    cached stat data no longer matches the working tree."""
+    for rel in rels:
+        path = repo / rel
+        stat = path.stat()
+        os.utime(path, ns=(stat.st_atime_ns, stat.st_mtime_ns + 7_000_000_000))
+
+
+def _stat_dirty(repo):
+    """Paths whose cached stat data differs from the working tree. `git diff-files`
+    is plumbing: it compares stat data and never refreshes or writes the index."""
+    proc = subprocess.run(["git", "diff-files", "--name-only", "-z"], cwd=repo,
+                          capture_output=True)
+    assert proc.returncode == 0, proc.stderr
+    return {item.decode("utf-8") for item in proc.stdout.split(b"\0") if item}
+
+
+_STALE = ("skills/plan-review/core.md", "config/skill-manifest.json")
+
+
+def _prepare_index_variant(repo, variant):
+    if variant == "split-index":
+        _git(repo, "config", "core.splitIndex", "true")
+        _git(repo, "update-index", "--split-index")
+    elif variant == "untracked-cache":
+        _git(repo, "config", "core.untrackedCache", "true")
+        _git(repo, "update-index", "--untracked-cache")
+        (repo / "notes.txt").write_text("untracked\n", encoding="utf-8")
+        _git(repo, "status", "--porcelain")  # populate the cache in the index
+    elif variant == "fsmonitor-hook":
+        # A configured fsmonitor hook runs for any command that scans the working
+        # tree; it records that it ran inside .git, which the snapshot would see.
+        hook = repo / ".git" / "fsmonitor-probe.sh"
+        hook.write_bytes(b'#!/bin/sh\necho ran >> "$(dirname "$0")/fsmonitor-ran"\nexit 1\n')
+        hook.chmod(0o755)
+        _git(repo, "config", "core.fsmonitor", ".git/fsmonitor-probe.sh")
+
+
+@pytest.mark.parametrize("variant", ["plain", "split-index", "untracked-cache",
+                                     "fsmonitor-hook"])
+def test_inspect_and_verify_write_nothing_into_a_stat_stale_index(
+        catalog_repo, tmp_path, variant):
+    _prepare_index_variant(catalog_repo, variant)
+    base = _git(catalog_repo, "rev-parse", "HEAD")
+    _stale_stat(catalog_repo, _STALE)
+    assert _stat_dirty(catalog_repo) >= set(_STALE), "the index is not stat-stale"
+    read_request, update_request = tmp_path / "read.json", tmp_path / "update.json"
+    read_request.write_text(json.dumps(_request("READ", "plan-review", None)),
+                            encoding="utf-8")
+    update_request.write_text(json.dumps(_request("UPDATE", "plan-review", base)),
+                              encoding="utf-8")
+    before = _snapshot(catalog_repo)
+    results = [_inspect(catalog_repo, "READ", "plan-review", cli=True)[:2]]
+    for path in (read_request, update_request):
+        results.append(_run_helper(catalog_repo, "verify", "--request-file", str(path),
+                                   cli=True)[:2])
+    # A file with new stat data and unchanged bytes is not a change.
+    expected = ["notes.txt"] if variant == "untracked-cache" else []
+    for rc, result in results:
+        assert (rc, result["findings"], result["changed_paths"]) == (0, [], expected), result
+    after = _snapshot(catalog_repo)
+    assert sorted(k for k in set(before) | set(after) if before.get(k) != after.get(k)) \
+        == [], "the helper changed a byte under .git or in the working tree"
+    assert _stat_dirty(catalog_repo) >= set(_STALE), "the helper refreshed the index"
+
+
+def test_changed_paths_classifies_every_kind_of_change_without_writing(
+        catalog_repo, tmp_path):
+    notes = catalog_repo / "notes"
+    notes.mkdir()
+    for name in ("modified", "deleted", "same", "mode"):
+        (notes / f"{name}.txt").write_text(f"{name}\n", encoding="utf-8")
+    base = _commit(catalog_repo, "notes")
+    (notes / "modified.txt").write_text("modified, really\n", encoding="utf-8")
+    (notes / "deleted.txt").unlink()
+    (notes / "added.txt").write_text("added\n", encoding="utf-8")
+    _git(catalog_repo, "add", "notes/added.txt")
+    (notes / "untracked.txt").write_text("untracked\n", encoding="utf-8")
+    # Stat-dirty, content-identical: after the `git add` above, so nothing refreshes it.
+    _stale_stat(catalog_repo, ("notes/same.txt", "skills/plan-review/core.md"))
+    assert {"notes/same.txt", "skills/plan-review/core.md"} <= _stat_dirty(catalog_repo)
+    request_path = tmp_path / "request.json"
+    request_path.write_text(json.dumps(_request("UPDATE", "plan-review", base)),
+                            encoding="utf-8")
+    before = _snapshot(catalog_repo)
+    expected = ["notes/added.txt", "notes/deleted.txt", "notes/modified.txt",
+                "notes/untracked.txt"]
+    inspected = _inspect(catalog_repo, "READ", "plan-review", cli=True)[1]
+    verified = _run_helper(catalog_repo, "verify", "--request-file", str(request_path),
+                           cli=True)[1]
+    assert inspected["changed_paths"] == expected, inspected
+    assert verified["changed_paths"] == expected, verified
+    after = _snapshot(catalog_repo)
+    assert sorted(k for k in set(before) | set(after) if before.get(k) != after.get(k)) \
+        == [], "the helper changed a byte under .git or in the working tree"
+    assert "notes/same.txt" in _stat_dirty(catalog_repo), "the helper refreshed the index"
+
+
 def test_git_runs_as_validated_argument_arrays_without_a_shell(catalog_repo, monkeypatch):
     helper = _skill_catalog()
     calls = []

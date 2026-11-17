@@ -28,9 +28,16 @@ sorted. `required_providers` keeps manifest order; `findings` are sorted by (cod
 detail), `references` by (path, line, column, before_sha256, class, rationale) and
 `changed_paths` by path, so the same tree always yields the same bytes.
 
-NEVER WRITES. Git runs with GIT_OPTIONAL_LOCKS=0 so a status-style read cannot refresh
-the index, and the generator is imported with bytecode caching switched off so no
-__pycache__ file is created. Git is invoked only with argument arrays and shell=False,
+NEVER WRITES. Nothing in the repository or under its .git directory changes, even when
+the index's cached stat data is stale. Porcelain `git diff` refreshes stale stat data
+and rewrites the index it reads, GIT_OPTIONAL_LOCKS=0 notwithstanding, so
+changed_paths() runs it against a disposable copy of the index (GIT_INDEX_FILE) in a
+private temporary directory that is removed before it returns; every other Git command
+here (rev-parse, ls-files, ls-tree, cat-file, show) reads without writing. Every command
+runs with core.fsmonitor=false, so no configured fsmonitor hook or daemon is started,
+and with core.splitIndex=false, so no shared-index file is written beside the index;
+the generator is imported with bytecode caching switched off so no __pycache__ file
+is created. Git is invoked only with argument arrays and shell=False,
 from the resolved repository root; every name, ref and path is validated before it
 reaches an argument, and nothing is interpolated into a shell command.
 
@@ -51,8 +58,10 @@ import importlib.util
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -202,21 +211,29 @@ def _no_bytecode():
 # --------------------------------------------------------------------------- #
 
 
-def _git_env():
+def _git_env(index_file: Path | None = None) -> dict[str, str]:
+    """The caller's environment minus every redirecting GIT_* variable. Only the
+    helper's own disposable index copy may set GIT_INDEX_FILE."""
     env = {key: value for key, value in os.environ.items() if key not in _GIT_ENV_DROP}
     env["GIT_OPTIONAL_LOCKS"] = "0"
     env["GIT_TERMINAL_PROMPT"] = "0"
+    if index_file is not None:
+        env["GIT_INDEX_FILE"] = str(index_file)
     return env
 
 
-def git(root: Path, args, stdin: bytes | None = None) -> bytes:
+def git(root: Path, args, stdin: bytes | None = None,
+        index_file: Path | None = None) -> bytes:
     """Run one Git command against `root`. `args` is a list of already-validated
-    strings; it is passed as an argument array with shell=False."""
-    argv = ["git", "-C", str(root), "-c", "core.quotepath=off", *args]
+    strings; it is passed as an argument array with shell=False. `index_file`, when
+    given, is the disposable index copy the command reads (and may rewrite) instead
+    of the repository's own index."""
+    argv = ["git", "-C", str(root), "-c", "core.quotepath=off",
+            "-c", "core.fsmonitor=false", "-c", "core.splitIndex=false", *args]
     if not all(isinstance(arg, str) for arg in argv):
         raise TypeError("git arguments must be strings")
     proc = subprocess.run(argv, input=stdin, capture_output=True, shell=False,
-                          env=_git_env(), check=False)
+                          env=_git_env(index_file), check=False)
     if proc.returncode != 0:
         message = proc.stderr.decode("utf-8", "replace").strip().splitlines()
         raise GitError(f"git {args[0]} exited {proc.returncode}"
@@ -242,9 +259,22 @@ def resolve_commit(root: Path, ref) -> str | None:
 
 def changed_paths(root: Path, base: str):
     """Every path that differs between `base` and the working tree, plus every
-    untracked, not-ignored file. `base` is "HEAD" or a validated commit."""
-    diff = git(root, ["diff", "--name-only", "-z", "--no-renames", "--no-ext-diff",
-                      base, "--"])
+    untracked, not-ignored file. `base` is "HEAD" or a validated commit.
+
+    Porcelain `git diff` is the only command here that reads the working tree the way
+    a person means "changed": a file whose cached stat data is stale but whose bytes
+    are unchanged is not reported. To get there it refreshes the index and writes the
+    refreshed copy back, so it runs against a copy of the index in a private
+    temporary directory. git() passes core.splitIndex=false, so that write is one full
+    index in the temporary directory, never a shared-index file under .git."""
+    index = root / git(root, ["rev-parse", "--git-path", "index"]).decode("utf-8").strip()
+    with tempfile.TemporaryDirectory(prefix="skill-catalog-index-",
+                                     ignore_cleanup_errors=True) as scratch:
+        index_copy = Path(scratch) / "index"
+        if index.is_file():
+            shutil.copyfile(index, index_copy)
+        diff = git(root, ["diff", "--name-only", "-z", "--no-renames", "--no-ext-diff",
+                          base, "--"], index_file=index_copy)
     untracked = git(root, ["ls-files", "-z", "--others", "--exclude-standard"])
     return sorted(set(_z_paths(diff)) | set(_z_paths(untracked)))
 

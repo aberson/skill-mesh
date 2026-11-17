@@ -202,13 +202,11 @@ def _make_repo(dest):
 def _copy_repo(src, dest):
     """A private copy of a synthetic repository for a scenario that mutates it.
 
-    A copied tree carries index stat data that no longer matches its files, and
-    `git diff` (which tools/skill_catalog.py runs) rewrites a stat-stale .git/index
-    even with GIT_OPTIONAL_LOCKS=0. Refreshing the copy's index here, before any
-    snapshot, makes the copy equivalent to the repository it came from, so a hash
-    change after a gate is the gate's write and not the copy's leftover."""
+    The copy is deliberately not refreshed: its index carries stat data that no
+    longer matches its files, and tools/skill_catalog.py must still write nothing
+    into it, so a no-op scenario's unchanged hashes prove the helper's real no-write
+    property rather than a pre-refreshed index's."""
     shutil.copytree(src, dest)
-    _git(dest, "update-index", "-q", "--refresh")
     return dest
 
 
