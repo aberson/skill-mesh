@@ -8,7 +8,18 @@ Claude-only framing left over from before the provider-neutral migration (Steps 
 description,repositoryTopics`; re-apply with `gh repo edit aberson/skill-mesh --description "..."
 --add-topic ...` or the GitHub web UI.
 
-## Applied 2026-11-13 (current)
+## Applied 2026-11-16 (current)
+
+The four citation skills moved to the Citation Needed repository (operator, 2026-11-16), so the
+catalog is 46 skills, 44 of them portable. This replaces the 2026-11-13 description below.
+
+- **Description:**
+  > Agent skills for a gated plan -> build -> review -> ship pipeline on Claude Code and OpenAI
+  > Codex: 46 skills (44 portable), independent evidence-citing reviewers, calibrated judges, and
+  > install/build/release tooling.
+- **Topics:** unchanged from 2026-11-13.
+
+## Applied 2026-11-13
 
 GitHub Copilot is no longer supported (operator, 2026-11-13), and the catalog is 50 skills, 48 of them
 portable. This replaces the 2026-08 description below.

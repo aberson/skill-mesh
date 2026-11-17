@@ -495,7 +495,7 @@ background services.
 | [Find Again](https://github.com/aberson/find-again) | Optional prior-work retrieval in `plan-feature`; current source stays authoritative. |
 | [Passing Notes](https://github.com/aberson/passing-notes) | Lane cards and notes between windows; skills read a lane's waiting notes and never block on the tool. |
 | dev-observatory | Optional hooks: project registration (`plan-init`), verb and port sync (`repo-update`), a port pre-flight (`build-step --ui`), port and goal checks (`plan-review`, `plan-wrap`), and registry reads (`repo-wrap`, `user-afterparty`); `user-pm --json` feeds its views. Its static doctor and portfolio-block proposer are dev-observatory's own skills. |
-| [Citation Needed](https://github.com/aberson/citation-needed) | Evidence storage and scoring. Its four `citation-*` skills left this catalog in v4 and now ship and install from the Citation Needed repository; `user-gateway` routes evidence checks to them. |
+| [Citation Needed](https://github.com/aberson/citation-needed) | Evidence storage and scoring. Its four `citation-*` skills left this catalog in v4 and are moving to the Citation Needed repository as project-local skills; `user-gateway` points evidence checks there. |
 | Switchboard | `tier-offload` produces advisory, inactive routing candidates. |
 | [Show Your Work](https://github.com/aberson/show-your-work) | Checks diagram sources and generates the detailed workflow index; not a skill runtime dependency. |
 

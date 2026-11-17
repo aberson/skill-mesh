@@ -56,7 +56,7 @@
     <g class="rail"><rect x="380" y="350" width="600" height="38" rx="10"/><text class="rail-name" x="396" y="374">decide</text><text class="rail-dest" x="520" y="374">parked for you · /user-dr · /user-fermize</text></g>
     <g class="rail"><rect x="380" y="398" width="600" height="38" rx="10"/><text class="rail-name" x="396" y="422">draft</text><text class="rail-dest" x="520" y="422">/user-draft  →  /goal</text></g>
     <g class="rail"><rect x="380" y="446" width="600" height="38" rx="10"/><text class="rail-name" x="396" y="470">review</text><text class="rail-dest" x="520" y="470">/review-gauntlet · /review-deep · /review-proof</text></g>
-    <g class="rail"><rect x="380" y="494" width="600" height="38" rx="10"/><text class="rail-name" x="396" y="518">research</text><text class="rail-dest" x="520" y="518">/research-prospect · /citation-*</text></g>
+    <g class="rail"><rect x="380" y="494" width="600" height="38" rx="10"/><text class="rail-name" x="396" y="518">research</text><text class="rail-dest" x="520" y="518">/research-prospect</text></g>
     <g class="rail"><rect x="380" y="542" width="600" height="38" rx="10"/><text class="rail-name" x="396" y="566">tend</text><text class="rail-dest" x="520" y="566">/context-slim · /test-prune · /lesson-harvest · /user-afterparty</text></g>
     <g class="rail"><rect x="380" y="590" width="600" height="38" rx="10"/><text class="rail-name" x="396" y="614">session</text><text class="rail-dest" x="520" y="614">/user-wrap · /task-handoff --resume · /user-pm</text></g>
     <g class="rail"><rect x="380" y="638" width="600" height="38" rx="10"/><text class="rail-name" x="396" y="662">learn</text><text class="rail-dest" x="520" y="662">/user-learn · /user-brainstorm</text></g>

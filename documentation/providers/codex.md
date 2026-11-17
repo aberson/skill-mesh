@@ -285,17 +285,10 @@ its own reported result, never a silently degraded one.
   the tier-drift pair halt on a host that does not pass their own capability contract.
   Each lands in the one report as its reason code rather than being reimplemented
   inline.
-- **Citation review and sweep use parent-owned depth-1 judges.** Review's parent owns
-  OPEN, PREPARE and COMMIT and dispatches one fresh sibling per classification vote.
-  Sweep retains those same phases in one parent, opens every selected run before any
-  commit, and dispatches only the classification judges; it never creates nested
-  per-artifact workers. Both adapters are capability-conditioned on the build-step
-  agent-isolation contract and halt `required_tool_missing` before opening when the
-  host cannot prove fresh siblings. Neither core has an in-context voting fallback.
-  (The `sub-agent` capability set in `config/skill-manifest.json` has 20
-  members, 18 of them codex-eligible. The gate
+- The `sub-agent` capability set in `config/skill-manifest.json` has 16
+  members, 15 of them codex-eligible. The gate
   `tests/package-integrity/test_codex_capability_claims_honesty.py` derives its
-  halt-gate subject set from that field rather than from any count written here.)
+  halt-gate subject set from that field rather than from any count written here.
 - **Lesson harvest offers an audited local preview.** Its parent owns evidence reads,
   in-memory candidate drafting, and a bounded repository-state audit. One read-only
   strong reviewer gates the exact preview surfaces and final negative dispositions.

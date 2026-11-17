@@ -3,13 +3,13 @@
 <style>.node rect{fill:#161C26;stroke:#384153;stroke-width:1.4;filter:url(#shadow)}.name{fill:#6E9BFF;font-size:14px;font-weight:600}.sub{fill:#9AA5B8;font-size:11px}.label{fill:#9AA5B8;font-size:11px;letter-spacing:.12em}.flow{fill:none;stroke:#6E9BFF;stroke-width:2;marker-end:url(#arrow)}.retired{fill:#9AA5B8;font-size:11px;opacity:.75}</style>
 <rect x="6" y="6" width="988" height="270" rx="16" fill="#161C26" stroke="#29313F" stroke-width="1.5"/>
 <text class="label" x="28" y="34">AUTHOR ONCE</text><text class="label" x="360" y="34">BUILD + INSTALL</text><text class="label" x="708" y="34">HOST-NATIVE DISCOVERY</text>
-<g class="node"><rect x="28" y="105" width="255" height="58" rx="10"/><text class="name" x="44" y="129">50 skill contracts</text><text class="sub" x="44" y="149">48 portable + 2 Claude-only</text></g>
+<g class="node"><rect x="28" y="105" width="255" height="58" rx="10"/><text class="name" x="44" y="129">46 skill contracts</text><text class="sub" x="44" y="149">44 portable + 2 Claude-only</text></g>
 <g class="node"><rect x="360" y="105" width="260" height="58" rx="10"/><text class="name" x="376" y="129">Generated profiles</text><text class="sub" x="376" y="149">manifest-driven, ownership-aware</text></g>
 <path class="flow" d="M283,134 H355"/>
 <path class="flow" d="M620,134 H660 V89 H703"/>
 <path class="flow" d="M660,134 V175 H703"/>
-<g class="node"><rect x="708" y="60" width="264" height="58" rx="10"/><text class="name" x="724" y="84">Claude Code</text><text class="sub" x="724" y="104">all 50 skills</text></g>
-<g class="node"><rect x="708" y="146" width="264" height="58" rx="10"/><text class="name" x="724" y="170">OpenAI Codex</text><text class="sub" x="724" y="190">48 portable skills</text></g>
+<g class="node"><rect x="708" y="60" width="264" height="58" rx="10"/><text class="name" x="724" y="84">Claude Code</text><text class="sub" x="724" y="104">all 46 skills</text></g>
+<g class="node"><rect x="708" y="146" width="264" height="58" rx="10"/><text class="name" x="724" y="170">OpenAI Codex</text><text class="sub" x="724" y="190">44 portable skills</text></g>
 <text class="retired" x="708" y="236">GitHub Copilot: no longer supported,</text><text class="retired" x="708" y="252">removed in v4</text>
 <text class="sub" x="28" y="217">Required review and vision capabilities</text><text class="sub" x="28" y="236">are checked in the consuming host.</text>
 </svg>
