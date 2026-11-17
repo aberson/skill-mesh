@@ -218,6 +218,13 @@
       "local": false,
       "notes": "Ported with Phase 2 abstract session-I/O limitation"
     },
+    "skill-crud": {
+      "default_model": "claude",
+      "claude": true,
+      "gpt": false,
+      "local": false,
+      "notes": "Phase CL provider-neutral catalog CRUD; core plus Claude/Codex adapters."
+    },
     "skill-eval-setup": {
       "default_model": "claude",
       "claude": true,

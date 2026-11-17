@@ -13,7 +13,7 @@ For the underlying design and the full canonical-location table, see
 
 | Before | After |
 |---|---|
-| 46 top-level single-file `<skill>/SKILL.md` packages (Claude-only content, no GPT adapter, no shared core) | `skills/<name>/core.md` (neutral behavior contract) + `skills/<name>/providers/{claude,gpt}.md` (thin host adapters), 54 portable + 3 Claude-native exclusions = 57 skills |
+| 46 top-level single-file `<skill>/SKILL.md` packages (Claude-only content, no GPT adapter, no shared core) | `skills/<name>/core.md` (neutral behavior contract) + `skills/<name>/providers/{claude,codex}.md` (thin host adapters, plus a `gpt.md` where one remains until v4), 45 portable + 2 Claude-native exclusions = 47 skills |
 | No router, no provider selection, no install tooling shipped in the public repo | `runtime/skill-router.ps1` (`-Provider auto\|claude\|gpt\|local`), `tools/build-distributions.ps1`, `tools/install-skill-mesh.ps1`, `tools/release.ps1` |
 | README documented `OPENAI_API_KEY` as required for the GPT path | GPT selects GitHub Copilot authentication first; `OPENAI_API_KEY` is an optional direct-OpenAI fallback only (see the README's [Providers & installation](../README.md#providers--installation) section) |
 | README framed Claude as the primary/default provider | README leads with the shared pipeline; Claude and GPT get parallel, equally-weighted installation paths |

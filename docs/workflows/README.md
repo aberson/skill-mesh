@@ -3,11 +3,11 @@
 
 These diagrams summarize the **Skill Mesh v3.0.2** contracts. Use the
 [skill reference](../../documentation/skill-reference.md) for a compact table
-of all 46 skills, purposes, host coverage and direct diagram links.
+of all 47 skills, purposes, host coverage and direct diagram links.
 
 Each diagram declares its source and omitted detail. The linked source contract
 remains authoritative: a diagram does not authorize an action, bypass a hold,
-or establish live qualification. Claude has all 46 packages; Codex has the 44
+or establish live qualification. Claude has all 47 packages; Codex has the 45
 portable packages. GitHub Copilot is no longer supported. Native capability gates still apply.
 
 These diagrams use the same rounded cards, monospace labels, and blue connectors
@@ -69,6 +69,7 @@ produces the default Mermaid README rather than this SVG gallery.
 - [review-proof](#review-proof) - Verify every material claim against primary sources, require exhaustive evidence for absence claims, and flag unsupported conclusions.
 - [review-uat](#review-uat) - Ground and classify every UAT step, emit the refined script and findings, optionally write an eligible anchored span, then delegate execution to user-uat.
 - [session-wrap](#session-wrap) - Triage and act on a transition moment, or return a read-only verdict and loss report through advise mode.
+- [skill-crud](#skill-crud) - Run one catalog create, read, update, delete or rename through preflight stops, canonical edits, regeneration, verification, an all-provider build and tests.
 - [skill-eval-setup](#skill-eval-setup) - Derive discriminating assertions and scenarios from a skill contract, then build and verify a golden corpus and improvement loop.
 - [skill-evolve](#skill-evolve) - Evaluate skill variants in parallel, commit a valid winner locally, and leave every push or pull request to the operator.
 - [skill-iterate](#skill-iterate) - Hill-climb scorable skills under a lock, accepting only integrity-preserving improvements and stopping at budget or kill-switch boundaries.
@@ -687,6 +688,29 @@ Drawn from:
 </picture>
 
 [Open full size](cards/session-wrap-dark.svg)
+
+---
+
+## skill-crud
+
+Run one catalog create, read, update, delete or rename through preflight stops, canonical edits, regeneration, verification, an all-provider build and tests.
+
+Source: [`skill-crud.mmd`](skill-crud.mmd)
+
+Drawn from:
+
+- [`skills/skill-crud/core.md`](../../skills/skill-crud/core.md)
+
+**Alt:** A request is normalized and preflighted read-only; a failed preflight stops unwritten; a mutation is edited, regenerated, verified, built and tested, and the caller commits.
+
+**Deliberately not shown:** the request fields, each stop code's trigger, reference dispositions, the per-operation edits, and the report's fields
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="cards/skill-crud-dark.svg">
+  <img alt="A request is normalized and preflighted read-only; a failed preflight stops unwritten; a mutation is edited, regenerated, verified, built and tested, and the caller commits." src="cards/skill-crud-light.svg">
+</picture>
+
+[Open full size](cards/skill-crud-dark.svg)
 
 ---
 

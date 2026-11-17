@@ -218,12 +218,12 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 MANIFEST_PATH = REPO_ROOT / "config" / "skill-manifest.json"
 NEIGHBOUR_GATE = Path(__file__).with_name("test_codex_agent_isolation_contract.py")
 
-# The roster size is pinned EXPLICITLY, not just floored. A 55th codex skill
+# The roster size is pinned EXPLICITLY, not just floored. A 46th codex skill
 # moves this number in the same commit that adds the skill -- deliberate, and
 # reviewable. The floor below is the separate guard against a mis-rooted glob
 # making every assertion in this module vacuous; both are asserted because they
 # fail for different reasons.
-EXPECTED_ADAPTERS = 44
+EXPECTED_ADAPTERS = 45  # 45 since Phase CL Step 113 added skill-crud
 # The vacuity floor is DERIVED from the manifest, never hand-set: it is the manifest's
 # codex roster size minus this margin (see `_min_adapters`). It was a literal (50, then
 # 45 at v3 catalog cleanup Step 14) and had to be lowered by hand at every retirement.

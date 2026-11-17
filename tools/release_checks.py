@@ -346,20 +346,27 @@ _STATUS_LINE_RE = re.compile(r"(\d+)/(\d+)\s+skills are GPT-capable")
 
 
 def readme_skill_count_defects(readme_text: str, manifest: dict):
-    """The README's skill-count claim must equal the manifest-derived count
+    """The README's skill-count claim must equal the manifest-derived counts
     (i.e. it is effectively GENERATED from the manifest, not hand-maintained --
-    any hand-edit that drifts from the manifest is caught here)."""
+    any hand-edit that drifts from the manifest is caught here).
+
+    The claim reads `<gpt>/<portable> skills are GPT-capable`. GPT has been an
+    optional provider since Phase CL Step 111, so the two numbers may differ:
+    `skill-crud` (Phase CL Step 113) is portable and ships no GPT adapter. A
+    manifest without a `gpt` tally is read as every portable skill carrying one,
+    which is what the claim meant before GPT became optional."""
     defects = []
     m = _STATUS_LINE_RE.search(readme_text)
     if not m:
-        defects.append("README missing the 'N/N skills are GPT-capable' status line")
+        defects.append("README missing the 'N/M skills are GPT-capable' status line")
         return defects
     claimed_a, claimed_b = int(m.group(1)), int(m.group(2))
     portable = manifest["counts"]["portable"]
-    if claimed_a != portable or claimed_b != portable:
+    gpt = manifest["counts"].get("gpt", portable)
+    if claimed_a != gpt or claimed_b != portable:
         defects.append(
             f"README claims {claimed_a}/{claimed_b} GPT-capable skills; "
-            f"manifest portable count is {portable}"
+            f"manifest gpt/portable counts are {gpt}/{portable}"
         )
     return defects
 

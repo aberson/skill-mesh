@@ -86,7 +86,8 @@ PORTABLE = [
     "plan-feature", "plan-init", "plan-merge", "plan-redline", "plan-review",
     "plan-wrap", "repo-init", "repo-sync", "repo-update",
     "repo-wrap", "research-prospect", "review-deep", "review-gauntlet",
-    "review-proof", "review-uat", "session-wrap", "skill-eval-setup",
+    "review-proof", "review-uat", "session-wrap", "skill-crud",
+    "skill-eval-setup",
     "skill-evolve", "skill-iterate", "task-handoff", "test-prune",
     "tier-escalate", "tier-offload", "user-afterparty", "user-brainstorm",
     "user-build-route", "user-debug", "user-dr", "user-draft", "user-fermize",
@@ -348,6 +349,7 @@ DESCRIPTIONS = {
     "review-proof": "Require primary-source verification before any claim in an answer.",
     "review-uat": "Refine a UAT script so every step is unambiguous and only real human checks stay human.",
     "session-wrap": "Session-transition front door: triage context, task state, and git, then act on the verdict.",
+    "skill-crud": "Create, inspect, update, delete, or rename Skill Mesh catalog skills without breaking provider parity.",
     "skill-eval-setup": "Generate an evaluation framework for a skill from its contract, plus a self-improvement loop.",
     "skill-evolve": "A/B-test skill variants in parallel worktrees and push the winner for review.",
     "skill-iterate": "Serial hill-climb every scorable skill autonomously, capped by wall-clock or iterations.",
@@ -443,6 +445,7 @@ SUPPORT_ASSETS = {
     "review-proof": [("skills", "evals/")],
     "review-uat": [("skills", "evals/")],
     "session-wrap": [("skills", "evals/")],
+    "skill-crud": [],
     "skill-eval-setup": [
         ("skills", "evals/"),
         ("skills", "scripts/"),
@@ -576,7 +579,7 @@ def derived_skill_sets(skills_dir: Path | None = None) -> SkillSets:
     # exact native set"), and read at call time so a roster change cannot leave a stale
     # number behind. The roster stays the anti-silent-addition guard; the counts follow
     # it. tests/package-integrity/test_manifest_contract.py still pins the partition
-    # (46/44/2) and the names independently.
+    # (47/45/2) and the names independently.
     expected_portable, expected_native = len(PORTABLE), len(NATIVE)
     expected_total = expected_portable + expected_native
     if len(portable) + len(native) != expected_total:

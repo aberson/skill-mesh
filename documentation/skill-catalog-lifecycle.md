@@ -9,13 +9,14 @@ renaming a skill that this repository owns. It defines the five operations, the 
 request every operation is expressed as, the surfaces a mutation may and may not touch, the
 locked stop codes, and the recovery rule for a mutation that fails partway.
 
-**What this document is not.** It is *not* a claim that a `/skill-crud` skill exists. At
-Step 110 there is **no `skill-crud` package, no installed front door, and nothing to
-invoke** — the distributed skill is built later in this phase (Step 113, issue #171). Until
-that skill lands, this guide **is** the supported path: a human or agent performing a
-catalog mutation follows these rules by hand. When the front door lands, it becomes the
-mechanized expression of this same contract, and the root pointer in
-[`../CLAUDE.md`](../CLAUDE.md) is switched from this guide to that skill in the same change.
+**The front door.** `/skill-crud` is the distributed skill that executes this contract on
+every required provider. Phase CL Step 113 (issue #171) created it through this contract's
+own `CREATE` gates. It normalizes the request, runs the gates in section 10's order, edits
+only canonical authoring surfaces, regenerates and verifies, builds every provider profile,
+and leaves the commit to the caller. This guide stays the contract it follows: where the
+skill and this guide disagree, this guide governs, and the skill is the defect to fix. The
+root pointer in [`../CLAUDE.md`](../CLAUDE.md) routes catalog mutations to that skill and
+still names this guide as the contract.
 
 **Boundary against a host-provided creator.** A host-provided or system `skill-creator` is
 outside this repository's distribution authority. Such a tool is not wrong — it may
@@ -406,7 +407,7 @@ review, and qualification gates in that plan are authorized, eligibility remains
 Claude-only, and every later native mutation still takes
 `PROVIDER_NATIVE_REVIEW_REQUIRED`.
 
-The catalog at the time of writing is 46 skills: 44 portable and 2 provider-native.
+The catalog at the time of writing is 47 skills: 45 portable and 2 provider-native.
 
 ## 5. The five operations
 

@@ -5,10 +5,11 @@ Two independent layers:
 - STRUCTURAL (mandatory, needs NO private/legacy source): every portable skill
   dir has core.md plus an adapter for every provider in the manifest's
   `portable_provider_contract.required` (claude, codex -- Phase CL Step 111), and
-  OPTIONALLY providers/gpt.md (GPT is no longer a required provider; all 44 still
-  carry one until V4-7); every provider-native dir has ONLY providers/claude.md (no
-  core.md, no gpt.md, no codex.md -- provider-native means Claude-only); the counts
-  match the manifest (44 portable, 2 native, 46 total, 44 codex); skills/inventory.json
+  OPTIONALLY providers/gpt.md (GPT is no longer a required provider; 44 still carry
+  one until V4-7, and skill-crud, created at Phase CL Step 113, ships none); every
+  provider-native dir has ONLY providers/claude.md (no core.md, no gpt.md, no
+  codex.md -- provider-native means Claude-only); the counts match the manifest
+  (45 portable, 2 native, 47 total, 45 codex); skills/inventory.json
   agrees with the manifest and the committed expected_inventory.json fixture; and
   no operator-private absolute path leaked into the migrated tree.
 
@@ -90,12 +91,12 @@ def test_inventory_counts():
         "codex": sum(1 for s in skills if s["providers"]["codex"]),
     }
     assert inv["counts"] == derived, (inv["counts"], derived)
-    assert derived["total"] == 46
-    assert derived["portable"] == 44
+    assert derived["total"] == 47
+    assert derived["portable"] == 45
     assert derived["provider_native"] == 2
     # Codex is required for every portable skill since Phase CL Step 111, so the
     # tally equals the portable count by construction.
-    assert derived["codex"] == derived["portable"] == 44
+    assert derived["codex"] == derived["portable"] == 45
 
 
 def test_inventory_matches_manifest():
@@ -216,15 +217,16 @@ def test_file_counts_across_tree():
     claude = list(SKILLS_DIR.glob("*/providers/claude.md"))
     gpt = list(SKILLS_DIR.glob("*/providers/gpt.md"))
     codex = list(SKILLS_DIR.glob("*/providers/codex.md"))
-    assert len(cores) == 44, len(cores)
-    assert len(claude) == 46, len(claude)   # 44 portable + 2 native
+    assert len(cores) == 45, len(cores)
+    assert len(claude) == 47, len(claude)   # 45 portable + 2 native
     # gpt is optional since Phase CL Step 111, so 44 is today's tree rather than a
-    # rule: every portable skill still carries one until V4-7 removes them.
+    # rule: every portable skill but skill-crud (Step 113) still carries one until
+    # V4-7 removes them.
     assert len(gpt) == 44, len(gpt)
     # This is a SPELLED count on purpose, exactly like its siblings: any step that
     # authors more adapters must come here and state the new number, so the catalog
     # size is never silently redefined by a glob.
-    assert len(codex) == 44, len(codex)
+    assert len(codex) == 45, len(codex)
 
 
 def test_no_private_absolute_paths_in_migrated_tree():

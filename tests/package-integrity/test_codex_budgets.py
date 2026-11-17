@@ -232,7 +232,9 @@ def test_whole_catalog_initial_list_estimate_is_under_the_unknown_context_floor(
     # out of the estimate can never make the floor easier to fit.
     portable_names = {s["name"] for s in _load_manifest()["skills"]
                       if s["status"] == "portable"}
-    assert len(sizes) == 44
+    # 45 since Phase CL Step 113 added skill-crud (146 chars, measured 2,018 of
+    # headroom left).
+    assert len(sizes) == 45
     assert set(sizes) == portable_names
     assert _fits_under_floor(total), (
         f"Codex initial-list estimate {total} chars over {len(sizes)} skills exceeds "
@@ -277,7 +279,7 @@ def test_catalog_estimate_basis_is_eligibility_not_the_authored_roster():
     eligible = {s["name"] for s in _codex_eligible_records()}
     portable = {s["name"] for s in manifest["skills"] if s["status"] == "portable"}
     assert eligible == portable
-    assert len(eligible) == manifest["counts"]["portable"] == 44
+    assert len(eligible) == manifest["counts"]["portable"] == 45
     # The synthetic-manifest pin: predicates disagree, eligibility must win. The
     # portable record lacks its required codex adapter on purpose (see docstring).
     synthetic = {"skills": [
@@ -291,7 +293,7 @@ def test_catalog_estimate_basis_is_eligibility_not_the_authored_roster():
         "the estimate's membership predicate drifted off eligibility "
         f"(status == portable): got {sorted(basis)}")
     total, sizes = _catalog_estimate()
-    assert len(sizes) == 44
+    assert len(sizes) == 45
     assert total > 0
 
 
@@ -406,8 +408,9 @@ def test_step6_cohort_is_authored_and_every_authored_record_fits_the_per_skill_c
     # 54 = the Step 4 pilot five + Cohort B's twelve + Cohort C's sixteen (Step 7,
     # issue #124) + Cohort D's fourteen (Step 8, issue #125) + Step 10's seven
     # promotions (issue #127) -- the full portable catalog. Spelled, so any step that
-    # grows the roster must come here and state its new number.
-    assert len(authored) == manifest["counts"]["codex"] == 44
+    # grows the roster must come here and state its new number. 45 since Phase CL
+    # Step 113 added skill-crud.
+    assert len(authored) == manifest["counts"]["codex"] == 45
     offenders = []
     for name, rec in authored.items():
         size = _utf8_len(_skill_metadata_serialization(name, rec["description"]))
@@ -566,7 +569,8 @@ def test_step8_cohort_is_authored_and_the_catalog_is_closed():
                            + STEP10_PROMOTIONS)
     assert set(authored) == pilot | set(STEP6_COHORT_B) | set(STEP7_COHORT_C) \
         | set(STEP8_COHORT_D) | set(STEP10_PROMOTIONS) \
-        | {"code-consigliere", "user-dr", "user-build-route", "user-fermize"}
+        | {"code-consigliere", "user-dr", "user-build-route", "user-fermize",
+           "skill-crud"}
     offenders = []
     for name, rec in authored.items():
         size = _utf8_len(_skill_metadata_serialization(name, rec["description"]))

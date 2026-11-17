@@ -1,0 +1,20 @@
+%% skill-crud
+%% Summary: Run one catalog create, read, update, delete or rename through preflight stops, canonical edits, regeneration, verification, an all-provider build and tests.
+%% Sources: skills/skill-crud/core.md
+%% Not shown: the request fields, each stop code's trigger, reference dispositions, the per-operation edits, and the report's fields
+%% Alt: A request is normalized and preflighted read-only; a failed preflight stops unwritten; a mutation is edited, regenerated, verified, built and tested, and the caller commits.
+
+flowchart TD
+    A[Normalize the request] --> B[Preflight: source, prerequisites, inspect]
+    B --> C{Preflight passes?}
+    C -- No --> D[Stop with its code; nothing written]
+    C -- READ --> E[Report and verify; change nothing]
+    C -- Yes, a mutation --> F[Record base ref and target hashes]
+    F --> G[Edit canonical authoring surfaces only]
+    G --> H[Regenerate the three artifacts]
+    H --> I[Verify the request read-only]
+    I --> J[Build every provider, disposable dir]
+    J --> K[Run focused tests and the change pack]
+    K --> L{All later gates passed?}
+    L -- No --> M[Stop: CATALOG_MUTATION_INCOMPLETE, no cleanup]
+    L -- Yes --> N[Report; the caller commits]

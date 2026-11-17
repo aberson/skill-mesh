@@ -1,6 +1,6 @@
 # Skill reference
 
-The catalog contains **46 Claude skills** and **44 portable skills** for Codex. GitHub Copilot (GPT) is no longer supported and is removed in v4. Host coverage means an adapter is packaged; required native capabilities and external utilities still apply.
+The catalog contains **47 Claude skills** and **45 portable skills** for Codex. GitHub Copilot (GPT) is no longer supported and is removed in v4. Host coverage means an adapter is packaged; required native capabilities and external utilities still apply.
 
 Each workflow link opens its source-linked diagram. Read the contract for full gates, flags, and omissions. See [installation](../README.md#install-or-upgrade), [utility integrations](../README.md#how-utility-projects-are-used), and [release limitations](https://github.com/aberson/skill-mesh/releases/tag/v2.0.2).
 
@@ -32,6 +32,7 @@ Each workflow link opens its source-linked diagram. Read the contract for full g
 | [review-proof](../skills/review-proof/core.md) | Verify every material claim against primary sources, require exhaustive evidence for absence claims, and flag unsupported conclusions. | Claude, Codex | [Diagram](../docs/workflows/README.md#review-proof) |
 | [review-uat](../skills/review-uat/core.md) | Ground and classify every UAT step, emit the refined script and findings, optionally write an eligible anchored span, then delegate execution to user-uat. | Claude, Codex | [Diagram](../docs/workflows/README.md#review-uat) |
 | [session-wrap](../skills/session-wrap/core.md) | Triage and act on a transition moment, or return a read-only verdict and loss report through advise mode. | Claude, Codex | [Diagram](../docs/workflows/README.md#session-wrap) |
+| [skill-crud](../skills/skill-crud/core.md) | Create, read, update, delete, or rename one Skill Mesh catalog skill: stop before any write on a failed preflight, edit canonical sources only, regenerate, verify, build every provider, and leave the commit to the caller. Runs in a Skill Mesh source checkout. | Claude, Codex | [Diagram](../docs/workflows/README.md#skill-crud) |
 | [skill-eval-setup](../skills/skill-eval-setup/core.md) | Derive discriminating assertions and scenarios from a skill contract, then build and verify a golden corpus and improvement loop. | Claude, Codex | [Diagram](../docs/workflows/README.md#skill-eval-setup) |
 | [skill-evolve](../skills/skill-evolve/core.md) | Evaluate skill variants in parallel, commit a valid winner locally, and leave every push or pull request to the operator. | Claude, Codex | [Diagram](../docs/workflows/README.md#skill-evolve) |
 | [skill-iterate](../skills/skill-iterate/core.md) | Hill-climb scorable skills under a lock, accepting only integrity-preserving improvements and stopping at budget or kill-switch boundaries. | Claude, Codex | [Diagram](../docs/workflows/README.md#skill-iterate) |

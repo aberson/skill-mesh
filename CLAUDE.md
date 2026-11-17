@@ -2,7 +2,7 @@
 
 ## Project overview
 
-skill-mesh is a provider-neutral collection of 46 agent skills for planning, building, reviewing,
+skill-mesh is a provider-neutral collection of 47 agent skills for planning, building, reviewing,
 and shipping software. Each skill is authored once as a shared behavior contract (`core.md`) plus
 thin per-host adapters, so the same skill runs on Claude Code and the OpenAI Codex CLI. GitHub
 Copilot (the GPT provider) is no longer supported: its adapters still build for the v3.0.x releases
@@ -153,8 +153,9 @@ phase — pytest is the only automated gate this repository has.
 ## Directory layout
 
 ```
-skills/<name>/          Canonical source: core.md + providers/{claude,gpt,codex}.md (46 skills;
-                        all 46 have claude.md, the 44 portable ones also have gpt.md + codex.md)
+skills/<name>/          Canonical source: core.md + providers/{claude,gpt,codex}.md (47 skills;
+                        all 47 have claude.md, the 45 portable ones also have codex.md, and
+                        44 of those still have gpt.md)
 archive/v1/             The retired v1 launchers (46) as an inert ZIP + manifest + hashes;
                         never an execution fallback (see Skill Mesh version boundary)
 _shared/                Shared cores (judge-core, intake-engine), grader/verdict engines,
@@ -189,7 +190,7 @@ tests/                  calibration, distributions, experiments, package-integri
   adapters, `providers/claude.md` and `providers/codex.md` (`portable_provider_contract.required`
   is `['claude', 'codex']` since CL Step 111; the Codex adapters grew from the Phase CP pilot
   across cohorts B-D). A `providers/gpt.md` may still exist but is not required: GitHub Copilot is
-  unsupported and V4-7 removes those adapters. 44 skills are portable; 2 are
+  unsupported and V4-7 removes those adapters. 45 skills are portable; 2 are
   provider-native Claude-only (`claude-oauth-auth`, `context-slim`) and carry
   `core: null` in the manifest.
 - **Manifest-driven build.** `tools/build-distributions.ps1` reads `config/skill-manifest.json` and
@@ -224,11 +225,11 @@ restates none of those — it carries only the two triggers that tell you the co
   `.github/skills`), and not a legacy top-level `<skill>/SKILL.md` package. Canonical
   authoring surfaces are edited; everything else is produced.
 
-**This pointer names the guide, not a skill.** There is no `/skill-crud` package in this
-repository yet and nothing to invoke — it is built later in the same phase that added this
-pointer, and `plan.md` is this repository's status index for that phase. Until it lands, the
-guide is the supported path and you follow it by hand; when it lands, this pointer is
-switched to that skill in the same change.
+**Run `/skill-crud` to make the change.** It is the distributed front door that executes the
+guide on Claude and Codex (`skills/skill-crud/`): it normalizes the request, runs the guide's
+gates in order, edits only canonical authoring surfaces, regenerates, verifies and builds every
+provider, and leaves the commit to the calling workflow. The guide stays the contract the skill
+follows; where the two disagree, the guide governs.
 
 ## Current authority
 

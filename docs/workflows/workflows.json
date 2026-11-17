@@ -1,7 +1,7 @@
 {
   "schema": "show-your-work.workflows.v1",
   "generator": "show-your-work 0.1.0",
-  "generated_at": "2026-11-17T00:52:22+00:00",
+  "generated_at": "2026-11-17T11:09:55+00:00",
   "source_dir": "docs/workflows",
   "items": [
     {
@@ -365,6 +365,20 @@
       ],
       "source_path": "docs/workflows/session-wrap.mmd",
       "source_sha256": "eefacfc79ee1ba7e70398ce2d2e76bd4a1356bf297e5b0fffcbf9aa7e44a64f6",
+      "engine": "mermaid",
+      "rasters": null
+    },
+    {
+      "id": "skill-crud",
+      "label": "skill-crud",
+      "summary": "Run one catalog create, read, update, delete or rename through preflight stops, canonical edits, regeneration, verification, an all-provider build and tests.",
+      "alt": "A request is normalized and preflighted read-only; a failed preflight stops unwritten; a mutation is edited, regenerated, verified, built and tested, and the caller commits.",
+      "not_shown": "the request fields, each stop code's trigger, reference dispositions, the per-operation edits, and the report's fields",
+      "sources": [
+        "skills/skill-crud/core.md"
+      ],
+      "source_path": "docs/workflows/skill-crud.mmd",
+      "source_sha256": "1dc4eb1b051be286dab74471c70bb42dafd6fb5392eb0bc89a5ce3f1ebe5d2b0",
       "engine": "mermaid",
       "rasters": null
     },

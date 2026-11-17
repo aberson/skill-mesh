@@ -110,7 +110,8 @@ param(
     # does NOT widen, for a second reason that is not: the codex adapter roster is a
     # rollout that began partial (5 of 47 portable skills at Step 5) and has since
     # closed: Steps 6-8 completed the roster and Step 10's promotions kept it equal
-    # to the portable catalog at 54 of 54. The default still does NOT widen, because
+    # to the portable catalog (54 of 54 then; 45 of 45 since Phase CL Step 113, now
+    # that codex is a required provider). The default still does NOT widen, because
     # widening it is a release-contract change an operator should make deliberately,
     # not a side effect of the roster catching up. Ship codex in a release by asking
     # for it -- '-Provider all', or '-Provider codex' for a codex-only artifact.

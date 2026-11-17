@@ -1,16 +1,16 @@
 {
   "note": "Authoritative expected inventory for package-integrity tests. Committed so the public package tests need no private/legacy source. Regenerate with tools/gen_manifest.py.",
   "counts": {
-    "total": 46,
-    "portable": 44,
+    "total": 47,
+    "portable": 45,
     "provider_native": 2,
-    "claude": 46,
+    "claude": 47,
     "gpt": 44,
-    "codex": 44,
+    "codex": 45,
     "local_capable": 17,
     "sub_agent": 16,
     "vision": 1,
-    "filesystem": 46
+    "filesystem": 47
   },
   "portable": [
     "build-phase",
@@ -37,6 +37,7 @@
     "review-proof",
     "review-uat",
     "session-wrap",
+    "skill-crud",
     "skill-eval-setup",
     "skill-evolve",
     "skill-iterate",
@@ -87,6 +88,7 @@
     "review-proof",
     "review-uat",
     "session-wrap",
+    "skill-crud",
     "skill-eval-setup",
     "skill-evolve",
     "skill-iterate",
@@ -707,6 +709,17 @@
           "dest": "skills/session-wrap/evals/"
         }
       ]
+    },
+    {
+      "name": "skill-crud",
+      "status": "portable",
+      "local_capable": false,
+      "capabilities": [
+        "filesystem"
+      ],
+      "origin": "canonical",
+      "migration": null,
+      "support_assets": []
     },
     {
       "name": "skill-eval-setup",

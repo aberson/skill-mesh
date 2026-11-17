@@ -1150,7 +1150,7 @@ reported as generated drift by `--check`. `--check` compares all three in memory
 
 ### Step 113: Add and dogfood the portable `/skill-crud` front door
 
-- **Status:** PENDING (Step 112 DONE)
+- **Status:** DONE 2026-11-17 (build-step PASS, round 1 of 10, code review 5/5; first catalog CREATE through the lifecycle contract)
 - **Problem:** No distributed Skill Mesh skill executes the provider-neutral lifecycle contract.
 - **Type:** code
 - **Issue:** #171
@@ -1163,7 +1163,7 @@ reported as generated drift by `--check`. `--check` compares all three in memory
 
 ### Step 115: Prove nondestructive lifecycle transitions
 
-- **Status:** PENDING / BLOCKED ON 113
+- **Status:** PENDING (Step 113 DONE)
 - **Problem:** Shape gates do not prove that CREATE, READ, and UPDATE flow through the real generator and all three provider builds without hidden mutation.
 - **Type:** code
 - **Issue:** #173

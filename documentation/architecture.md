@@ -23,7 +23,7 @@ Codex hosts receive *generated* compatibility layouts built from this source.
 | **shim** | Thin backward-compatible launcher that delegates to a canonical file. |
 | **transport** | Authenticated API or host-native channel used to execute a provider model. |
 | **calibration** | Existing deterministic/rubric comparison that checks adapter parity. |
-| **portable skill** | Skill with a neutral core plus an adapter for every provider in the manifest's ordered `portable_provider_contract.required`: Claude and Codex. A GPT adapter is optional on a portable record, never a third status; all 44 still carry one until V4-7 removes them. 44 total. |
+| **portable skill** | Skill with a neutral core plus an adapter for every provider in the manifest's ordered `portable_provider_contract.required`: Claude and Codex. A GPT adapter is optional on a portable record, never a third status; every portable skill but `skill-crud` (Phase CL Step 113) still carries one until V4-7 removes them. 45 total. |
 | **provider-native skill** | Skill supported on exactly one host; no neutral core. 2 total. |
 | **origin** | Where a skill's package came from: `legacy-migrated` (moved out of the retired workspace tree, with a `migration` block naming its sources) or `canonical` (authored directly in Skill Mesh, `migration: null`). |
 
@@ -43,7 +43,7 @@ deprecation window (see `migration.md`), not canonical sources.
 | Skill core (portable) | `skills/<name>/core.md` | One per portable skill; `null` in the manifest for provider-native skills. |
 | Claude adapter | `skills/<name>/providers/claude.md` | Thin host adapter. Self-contained for provider-native skills. |
 | GPT adapter | `skills/<name>/providers/gpt.md` | Thin host adapter; optional on a portable skill and absent for provider-native skills. |
-| Codex adapter | `skills/<name>/providers/codex.md` | Thin host adapter; absent for provider-native skills. One per portable skill (44). |
+| Codex adapter | `skills/<name>/providers/codex.md` | Thin host adapter; absent for provider-native skills. One per portable skill (45). |
 | Shared prose assets | `_shared/` (repo root) | Cross-skill cores/prose referenced by multiple skills. The manifest declares `skills/_shared/` as the eventual canonical home; that directory does not exist yet, so today's references resolve to the repo-root tree. The divergence is deliberate and locked by `tests/package-integrity/test_skill_tree.py::test_shared_dest_divergence_is_intentional`. |
 | Skill manifest | `config/skill-manifest.json` | Single source for distribution, install, integrity, and README counts. |
 | Skill inventory | `skills/inventory.json` | Machine-readable per-skill inventory. Committed, generated hermetically by `tools/gen_manifest.py` through the established `build_inventory()` projection, and graded by `tests/package-integrity/test_skill_tree.py`. |
@@ -189,7 +189,7 @@ each skill's legacy contract, not inferred from a single shared wrapper line.
 
 | Capability | Count | Skills |
 |---|---|---|
-| `filesystem` | 46 | all skills |
+| `filesystem` | 47 | all skills |
 | `sub-agent` | 16 | build-step, context-slim, judge-ui, lesson-harvest, research-prospect, review-deep, review-gauntlet, skill-evolve, skill-iterate, test-prune, tier-escalate, tier-offload, user-brainstorm, user-debug, user-learn, user-uat |
 | `vision` | 1 | judge-ui |
 
@@ -578,7 +578,7 @@ seam (defaults to this repository) that must be a git working tree.
 
 `tests/package-integrity/test_manifest_contract.py` fails on any of:
 
-- Skill count != 46, portable != 44, provider-native != 2, sub-agent != 16,
+- Skill count != 47, portable != 45, provider-native != 2, sub-agent != 16,
   vision != 1 (each set checked exactly against the committed
   `tests/package-integrity/expected_inventory.json` fixture — the package tests
   need no private source).
@@ -651,8 +651,8 @@ package rather than how it is built:
 - A generated wrapper resolving outside its canonical dist root, or whose
   `Canonical source:` / co-located `core.md` reference does not exist
   (PROVIDER-WRAPPER / CORE-REFERENCE).
-- The README's `N/N skills are GPT-capable` claim not equal to the manifest's
-  portable count (SKILL-COUNT).
+- The README's `N/M skills are GPT-capable` claim not equal to the manifest's
+  GPT-adapter count over its portable count (SKILL-COUNT).
 - A README skill self-link (a skill name linking to its own `SKILL.md`) naming
   a skill absent from the release manifest (README-CLAIM).
 - A `dist/` path tracked in git — checked against `SKILL_MESH_SOURCE_ROOT`

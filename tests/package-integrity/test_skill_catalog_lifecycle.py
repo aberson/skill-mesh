@@ -20,10 +20,12 @@ WHAT THIS FILE DECIDES, stated exactly. Two mechanisms, and only two.
            reports `CATALOG_MUTATION_INCOMPLETE`, and never auto-cleans),
         5. the canonical-vs-generated boundary and its forbidden surfaces,
 
-      plus the Step 110 scope line -- that neither document claims a
-      `/skill-crud` skill exists. That skill is built later in the phase; a
-      guide that tells an operator to invoke something uninstallable is worse
-      than no guide.
+      plus the front-door line. Step 110 pinned a scope line saying neither
+      document claimed a `/skill-crud` skill existed; Phase CL Step 113
+      (issue #171) built that skill and switched both documents to route
+      catalog mutations to it, so the pin now holds the switch: the root
+      pointer sends the reader to `/skill-crud`, and the guide stays the
+      contract that skill follows.
 
   (b) STRUCTURE AND DERIVATION, for what a pin cannot own: the operations
       table, the request fields, the existence matrix, the pasteable template,
@@ -333,27 +335,27 @@ LOCKED_CLAIMS = (
      "root (`.claude/skills`, `.agents/skills`, `.github/skills`), and not a "
      "legacy top-level `<skill>/SKILL.md` package. Canonical authoring "
      "surfaces are edited; everything else is produced."),
-    ('scope line - CLAUDE.md', ROOT_INSTRUCTION_REL,
+    ('front door - CLAUDE.md', ROOT_INSTRUCTION_REL,
      "Catalog mutations", 'paragraph',
-     "**This pointer names the guide, not a skill.** There is no "
-     "`/skill-crud` package in this repository yet and nothing to invoke "
-     "\u2014 it is built later in the same phase that added this pointer, and "
-     "`plan.md` is this repository's status index for that phase. Until "
-     "it lands, the guide is the supported path and you follow it by "
-     "hand; when it lands, this pointer is switched to that skill in the "
-     "same change."),
-    ('scope line - the guide lede', GUIDE_REL,
+     "**Run `/skill-crud` to make the change.** It is the distributed front "
+     "door that executes the guide on Claude and Codex (`skills/skill-crud/`): "
+     "it normalizes the request, runs the guide's gates in order, edits only "
+     "canonical authoring surfaces, regenerates, verifies and builds every "
+     "provider, and leaves the commit to the calling workflow. The guide "
+     "stays the contract the skill follows; where the two disagree, the "
+     "guide governs."),
+    ('front door - the guide lede', GUIDE_REL,
      "@preamble", 'paragraph',
-     "**What this document is not.** It is *not* a claim that a "
-     "`/skill-crud` skill exists. At Step 110 there is **no `skill-crud` "
-     "package, no installed front door, and nothing to invoke** \u2014 the "
-     "distributed skill is built later in this phase (Step 113, issue #171). "
-     "Until that skill lands, this guide **is** the supported path: a human "
-     "or agent performing a catalog mutation follows these rules by hand. "
-     "When the front door lands, it becomes the mechanized expression of "
-     "this same contract, and the root pointer in "
-     "[`../CLAUDE.md`](../CLAUDE.md) is switched from this guide to that "
-     "skill in the same change."),
+     "**The front door.** `/skill-crud` is the distributed skill that "
+     "executes this contract on every required provider. Phase CL Step 113 "
+     "(issue #171) created it through this contract's own `CREATE` gates. It "
+     "normalizes the request, runs the gates in section 10's order, edits "
+     "only canonical authoring surfaces, regenerates and verifies, builds "
+     "every provider profile, and leaves the commit to the caller. This "
+     "guide stays the contract it follows: where the skill and this guide "
+     "disagree, this guide governs, and the skill is the defect to fix. The "
+     "root pointer in [`../CLAUDE.md`](../CLAUDE.md) routes catalog "
+     "mutations to that skill and still names this guide as the contract."),
     ('fact 3 - PHASE_CL_PREREQUISITE_NOT_MET', GUIDE_REL,
      "Prerequisite preflight", 'paragraph',
      "If any of the four is absent at the moment a mutation is attempted, "
@@ -1332,7 +1334,7 @@ LOCKED_TABLE_CELL_HEADERS = {
 # The labels every pin table must still cover, so a later edit cannot quietly
 # empty it. Checked by `test_locked_claims_covers_every_protected_fact`.
 PROTECTED_FACTS = ("fact 1", "fact 2", "fact 3", "fact 4", "fact 5",
-                   "scope line")
+                   "front door")
 
 # THE GUIDE'S SECTION LIST, closed. Generated from the document the same way
 # every pin is, and held for the same reason: a pin holds what a section SAYS,
@@ -1592,30 +1594,20 @@ def _parse(text):
 # between the verb and the name -- round-2 review measured "use THE `/skill-crud`
 # skill" walking straight through a `verb\s+name` pattern, in both documents.
 #
-# NOT negation-guarded, and that is a correction. An earlier draft of this
-# module paired it with a `(do not|never|rather than|instead of|without)`
-# blacklist so a maintainer who STRENGTHENED the warning would not be told they
-# had instructed the reader to run it. Round 4 measured what that costs: `Rather
-# than editing by hand, run `/skill-crud`` and `Instead of the guide, use
-# `/skill-crud`` -- two genuine instructions to invoke an uninstalled skill --
-# both passed, while the unhedged control reddened. A negator sitting anywhere
-# in the 40 characters before the verb excuses the verb, and that is the same
-# finite-blacklist arms race the LOCKED_CLAIMS decision retired on issue #168.
-# It does not come back through a side door.
-#
-# The false red is removed STRUCTURALLY instead, by scope: the scan below reads
-# only the prose of these sections that no pin already owns. A prohibition
-# belongs in the pinned paragraph that states the rule, where it is held
-# verbatim rather than pattern-matched.
-#
-# This is a rule about ENGLISH, not about markdown, which is why it is still a
-# regex when the markdown scanners are not.
+# Until Phase CL Step 113 this pattern was a PROHIBITION scan: the front door
+# did not exist, and a document telling the reader to invoke it was the defect.
+# Step 113 built the skill and switched the root pointer to it, so the polarity
+# flipped: the pointer section must now CARRY such an instruction, and this is
+# the pattern that decides it does. This is a rule about ENGLISH, not about
+# markdown, which is why it is still a regex when the markdown scanners are not.
 _IMPERATIVE_RE = re.compile(
     r"\b(run|invoke|use|call|reach for)\b[^.`]{0,24}`?/?skill-crud")
 
-# Phrases that mark a future-tense statement about the front door.
+# Phrases that marked the Step 110 future-tense statement about the front door.
+# Since Step 113 the front door exists, so any of these beside its name is a
+# stale claim that it does not.
 NOT_YET_MARKERS = (
-    "there is no", "not installed", "nothing to invoke",
+    "there is no `/skill-crud`", "not installed", "nothing to invoke",
     "until it lands", "is built later",
 )
 
@@ -2912,7 +2904,7 @@ def test_locked_claims_covers_every_protected_fact():
     uncovered = [fact for fact in PROTECTED_FACTS if fact not in labels]
     assert not uncovered, (
         f"LOCKED_CLAIMS no longer pins any enforcement text for {uncovered}. "
-        f"Every one of the five protected facts and the Step 110 scope line "
+        f"Every one of the five protected facts and the front-door line "
         f"has to be pinned somewhere, or this module is grading structure "
         f"only while its docstring claims otherwise.")
 
@@ -3264,115 +3256,77 @@ def test_root_instruction_points_at_the_lifecycle_guide():
                           ROOT_INSTRUCTION_REL))
     guide_at = flat.find("skill-catalog-lifecycle.md")
     assert guide_at != -1, "the pointer no longer names the guide at all."
-    # `.index` would raise a bare ValueError here, with no message and no
-    # repair, on precisely the edit the guide's own pinned prose says is
-    # coming: Phase CL Step 113 switches this pointer to the front door. Every
-    # other assertion in this module prints what to do; this one did not.
+    # `.find`, not `.index`, so a missing name reds with a message and a
+    # repair rather than a bare ValueError.
     crud_at = flat.find("skill-crud")
     assert crud_at != -1, (
         "the `CLAUDE.md` pointer section no longer mentions `/skill-crud` at "
-        "all. Step 110's pointer has to say the front door does not exist "
-        "yet; when Step 113 lands it, this assertion and the scope-line pin "
-        "above it are what change, in that step's own commit.")
+        "all. Since Phase CL Step 113 the pointer routes catalog mutations to "
+        "that front door; restore the pinned front-door paragraph.")
     assert guide_at < crud_at, (
-        "the pointer mentions `/skill-crud` before the guide -- Step 110's "
-        "supported path is the guide, and the ordering is what a reader acts on.")
+        "the pointer mentions `/skill-crud` before the guide -- the guide is "
+        "the contract the front door follows, so the reader meets the "
+        "contract first and the skill that executes it second.")
 
 
-def test_no_document_instructs_the_reader_to_invoke_the_front_door():
-    """BEST EFFORT, and labelled as such.
+def test_documents_route_to_the_existing_front_door():
+    """The Step 113 switch, graded where a pin cannot reach.
 
-    The pinned scope-line claims say `/skill-crud` does not exist. A pin cannot
-    see a SIBLING paragraph that contradicts it -- round 3 measured exactly
-    that, a new lede paragraph reading "the `/skill-crud` skill is installed and
-    ready: run `/skill-crud`" while the pinned paragraph was untouched. This
-    scans for an instruction to invoke it, and for prose disparaging the guide
-    it routes to. THREE DIFFERENT SCOPES do that scanning, spelled out below --
-    this sentence deliberately names none of them, because the version of it
-    that did went stale twice and a maintainer reading top-down got the retired
-    answer first.
+    Step 110 shipped this as a prohibition scan: the front door did not exist,
+    so a document telling the reader to invoke it was the defect. Phase CL Step
+    113 (issue #171) built `/skill-crud` and switched the root pointer to it in
+    the same change, so the polarity flipped and three things are checked now:
 
-    It is a finite verb list, so it is a floor and not a guarantee: the
-    guarantee is Step 112's read-only verifier. It stays because it costs
-    nothing and it catches the mutation that was actually measured -- not
-    because a blacklist can decide this.
+    - the front door EXISTS as a catalog skill -- a portable record in the
+      manifest and a canonical core on disk -- because a pointer that routes to
+      an uninstallable skill is worse than no pointer;
+    - `CLAUDE.md`'s pointer section and the guide's lede both name it, neither
+      still carries a Step 110 "not yet" marker beside it, and the pointer
+      section INSTRUCTS the reader to invoke it (the IMPERATIVE pattern that
+      used to forbid this now requires it there);
+    - the DISPARAGEMENT scan still runs, over the pointer section and over any
+      TABLE ROW in the three documents whose identifying cell is the guide,
+      because the guide stays the contract the front door follows. Round 6
+      rewrote `architecture.md`'s section-10 row to "superseded planning prose
+      ... edit a host discovery root directly when a catalog change is urgent"
+      and it shipped green while the guard read the pointer section only. It
+      does NOT scan free-form prose: round 7 measured that both ways and each
+      was wrong -- see the comment at the scan.
 
-    It is SCOPED TO UNPINNED PROSE, and that scope replaces the negation
-    blacklist an earlier draft carried. The blacklist was measured excusing two
-    genuine instructions (round 4: "Rather than editing by hand, run
-    `/skill-crud`"), which is the arms race issue #168 retired. Scope removes
-    the same false red without a vocabulary: a prohibition naming the verb
-    belongs in the pinned paragraph that states the rule, and pinned paragraphs
-    are held verbatim rather than pattern-matched, so this scan never reads
-    them. The accepted cost is the pins' own: to add a prohibition mentioning
-    the verb, put it in the pinned paragraph and update that pin.
-
-    THREE SCOPES, and they are not the same scope, which is a round-6
-    correction to this docstring:
-
-    - "names it, and says it does not exist yet" runs over the two sections
-      that have to carry that disclaimer -- `CLAUDE.md`'s pointer section and
-      the guide's lede. `architecture.md` never mentions the front door and is
-      not required to.
-    - the IMPERATIVE scan runs over all THREE whole documents, unpinned prose
-      only. Round 5 measured the narrower scope letting "For any of the five,
-      run `/skill-crud` and it does the rest." ship green from guide section 5;
-      round 6 measured `architecture.md` outside the scan entirely.
-    - the DISPARAGEMENT scan runs over `CLAUDE.md`'s pointer section, whose
-      whole job is to route, and over any TABLE ROW in the three documents
-      whose identifying cell is the guide. Round 6 rewrote `architecture.md`'s
-      section-10 row to "superseded planning prose ... edit a host discovery
-      root directly when a catalog change is urgent" and it shipped green,
-      because the guard read the pointer section only. It does NOT scan
-      free-form prose: round 7 measured that both ways and each was wrong --
-      see the comment at the scan for the four false reds and why deciding
-      which noun a word is predicated of is not attempted here.
+    It is a finite marker and verb list, so it is a floor and not a guarantee;
+    the semantics belong to Step 112's read-only verifier.
     """
-    pinned = {text for _fact, document, _scope, mode, text in LOCKED_CLAIMS
-              if mode == "paragraph"}
-
-    def unpinned(body):
-        return _flat(" ".join(block for block in _paragraphs(body)
-                              if block not in pinned))
+    manifest = _manifest()
+    records = {s["name"]: s for s in manifest["skills"]}
+    assert records.get("skill-crud", {}).get("status") == "portable", (
+        "the root pointer routes catalog mutations to `/skill-crud`, but the "
+        "manifest carries no portable `skill-crud` record.")
+    assert (REPO_ROOT / "skills" / "skill-crud" / "core.md").is_file(), (
+        "the front door's canonical core skills/skill-crud/core.md is missing.")
 
     pointer_body = _section(_read(ROOT_INSTRUCTION_REL), "Catalog mutations",
                             ROOT_INSTRUCTION_REL)
     lede_body = _preamble(_read(GUIDE_REL))
-
-    # The IMPERATIVE scan runs over each whole document; the "names it and says
-    # it does not exist yet" checks run over the section that has to carry that
-    # disclaimer. Round 5 measured the difference: scanning only the pointer
-    # section and the guide lede let "For any of the five, run `/skill-crud`
-    # and it does the rest." ship green from guide section 5, and the same
-    # instruction ship green from a new section of CLAUDE.md. Widening costs
-    # nothing -- the payload mentions `/skill-crud` nowhere else.
     for label, body in ((ROOT_INSTRUCTION_REL, pointer_body),
                         (GUIDE_REL, lede_body)):
         text = _flat(body)
         assert "skill-crud" in text, (
-            f"{label} no longer names the front door it will be superseded by, "
-            f"so the supersession is undiscoverable when that skill lands.")
-        assert any(marker in text for marker in NOT_YET_MARKERS), (
-            f"{label} names `/skill-crud` without saying it does not exist "
-            f"yet. Carry one of {list(NOT_YET_MARKERS)}.")
-    for label in (ROOT_INSTRUCTION_REL, GUIDE_REL, ARCH_REL):
-        instructing = [match.group(0) for match
-                       in _IMPERATIVE_RE.finditer(unpinned(_read(label)))]
-        assert not instructing, (
-            f"{label} instructs the reader to {instructing[0]!r}, but no such "
-            f"skill is installed at Step 110. A guide that tells an operator "
-            f"to invoke something uninstallable is worse than no guide, and a "
-            f"pinned paragraph elsewhere saying so does not license this one. "
-            f"If this sentence is a PROHIBITION, it belongs inside the pinned "
-            f"paragraph that states the rule, not beside it.")
+            f"{label} no longer names the `/skill-crud` front door.")
+        stale_markers = [marker for marker in NOT_YET_MARKERS if marker in text]
+        assert not stale_markers, (
+            f"{label} still says the front door does not exist yet "
+            f"({stale_markers}); it has existed since Phase CL Step 113.")
+    assert _IMPERATIVE_RE.search(_flat(pointer_body)), (
+        "the `CLAUDE.md` pointer section names `/skill-crud` but never tells "
+        "the reader to run it; the switch to the front door is the point.")
 
     disparaging = re.compile(r"(obsolete|superseded|no longer authoritative|"
                              r"should be ignored)")
     stale = disparaging.search(_flat(pointer_body))
     assert not stale, (
         f"the pointer disparages the guide it exists to route to "
-        f"({stale.group(0)!r}). Until the front door lands, the guide IS the "
-        f"supported path.")
+        f"({stale.group(0)!r}). The guide stays the contract the front door "
+        f"follows.")
 
     # Beyond the pointer section, the scan runs on ONE decidable unit: a table
     # row whose IDENTIFYING cell is the guide. There, a disparaging word in the
@@ -3400,7 +3354,7 @@ def test_no_document_instructs_the_reader_to_invoke_the_front_door():
                 f"{label} carries a table row FOR the catalog lifecycle guide "
                 f"that disparages it ({found.group(0)!r}):\n"
                 f"    {' | '.join(row)[:240]}\n"
-                f"Until the front door lands, the guide IS the supported path, "
+                f"The guide stays the contract the front door follows, "
                 f"and a row that indexes it while calling it superseded sends "
                 f"the reader to edit a host discovery root instead.")
 
@@ -3965,8 +3919,8 @@ def _legacy_guard_findings(workflow, text):
             if phrase.lower() not in flat:
                 findings.append(f"the {label} no longer says {phrase!r}")
         if "skill-crud" in flat:
-            findings.append(f"the {label} names /skill-crud, which does not "
-                            f"exist yet; the stop names the lifecycle guide")
+            findings.append(f"the {label} names /skill-crud; the stop names "
+                            f"the lifecycle guide, which routes to it (CL-D15)")
 
     # eval-setup's own former code is a real locked string of the guide, so a
     # revert would still be a stop -- just the wrong one. Its absence from the
@@ -4202,7 +4156,7 @@ def test_the_guides_shared_stop_row_names_both_triggers():
 
 def test_planted_negatives_turn_the_guard_checker_red():
     """Each guard sentence removed, hidden from a reader, reverted to the
-    workflow's own code, or pointed at the not-yet-built front door -- and each
+    workflow's own code, or pointed at the front door instead of the guide -- and each
     kept path removed -- must produce a finding. A mutation that changed
     nothing is reported too, so a planted case cannot pass by not planting."""
     cases = _planted_negatives()
@@ -5495,7 +5449,7 @@ def _plant_native_core(repo):
 
 
 def _plant_manifest_count(repo):
-    _edit(repo / "config" / "skill-manifest.json", '"total": 46', '"total": 47', 1)
+    _edit(repo / "config" / "skill-manifest.json", '"total": 47', '"total": 48', 1)
 
 
 def _plant_expected_roster(repo):
@@ -5524,7 +5478,7 @@ def _plant_expected_roster(repo):
     (_plant_native_core, "INVENTORY_DRIFT", "config/skill-manifest.json",
      "context-slim is provider-native in the manifest but carries core.md"),
     (_plant_manifest_count, "INVENTORY_DRIFT", "config/skill-manifest.json",
-     "counts.total is 47; the records give 46"),
+     "counts.total is 48; the records give 47"),
     (_plant_expected_roster, "INVENTORY_DRIFT",
      "tests/package-integrity/expected_inventory.json",
      "its portable roster disagrees with the manifest"),

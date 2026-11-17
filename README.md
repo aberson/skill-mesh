@@ -9,8 +9,8 @@ run on Claude Code and OpenAI Codex from one behavior contract.**
 - **Independent review.** Verdicts come from fresh-context reviewers that must cite
   `file:line` or have the finding dropped. Fixed rules combine their findings, and only a
   Block fails a round. The review judges are themselves checked against gold examples.
-- **Real and portable.** 46 skills used day to day, extracted from a working personal
-  workspace. One contract per skill drives Claude Code (all 46) and OpenAI Codex (44
+- **Real and portable.** 47 skills used day to day, extracted from a working personal
+  workspace. One contract per skill drives Claude Code (all 47) and OpenAI Codex (45
   portable). GitHub Copilot is no longer supported.
 
 **[v3.0.2 is released](https://github.com/aberson/skill-mesh/releases/tag/v3.0.2)** ·
@@ -86,7 +86,7 @@ capabilities, and installation puts the generated skills where that host finds t
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="_shared/host-profiles-dark.svg">
-  <img alt="Shared Skill Mesh contracts generate host profiles for Claude Code (all 46 skills) and OpenAI Codex (44 portable skills). GitHub Copilot is no longer supported and is removed in v4." src="_shared/host-profiles-light.svg">
+  <img alt="Shared Skill Mesh contracts generate host profiles for Claude Code (all 47 skills) and OpenAI Codex (45 portable skills). GitHub Copilot is no longer supported and is removed in v4." src="_shared/host-profiles-light.svg">
 </picture>
 
 ### The routing web
@@ -125,7 +125,7 @@ something else, such as a failed verification becoming a bug. The table shows wh
 ## What's inside
 
 <details>
-<summary><strong>46 skills across planning, building, review, shipping, sessions, and skill and workspace care</strong></summary>
+<summary><strong>47 skills across planning, building, review, shipping, sessions, and skill and workspace care</strong></summary>
 
 **Core pipeline**: plan → build → review → ship.
 
@@ -143,7 +143,7 @@ something else, such as a failed verification becoming a bug. The table shows wh
 |---|---|
 | **Sessions & status** | [user-pm](skills/user-pm/core.md) · [user-wrap](skills/user-wrap/core.md) · [session-wrap](skills/session-wrap/core.md) · [task-handoff](skills/task-handoff/core.md) · [user-debug](skills/user-debug/core.md) · [user-draft](skills/user-draft/core.md) |
 | **Ideas & learning** | [user-brainstorm](skills/user-brainstorm/core.md) · [user-learn](skills/user-learn/core.md) · [research-prospect](skills/research-prospect/core.md) |
-| **Skill tooling** | [skill-eval-setup](skills/skill-eval-setup/core.md) · [skill-evolve](skills/skill-evolve/core.md) · [skill-iterate](skills/skill-iterate/core.md) · [tier-offload](skills/tier-offload/core.md) · [tier-escalate](skills/tier-escalate/core.md) |
+| **Skill tooling** | [skill-crud](skills/skill-crud/core.md) · [skill-eval-setup](skills/skill-eval-setup/core.md) · [skill-evolve](skills/skill-evolve/core.md) · [skill-iterate](skills/skill-iterate/core.md) · [tier-offload](skills/tier-offload/core.md) · [tier-escalate](skills/tier-escalate/core.md) |
 | **Workspace care** | [user-afterparty](skills/user-afterparty/core.md) · [lesson-harvest](skills/lesson-harvest/core.md) · [memory-distill](skills/memory-distill/core.md) · [test-prune](skills/test-prune/core.md) · [context-slim](skills/context-slim/providers/claude.md) |
 | **Reference** | [claude-oauth-auth](skills/claude-oauth-auth/providers/claude.md) |
 
@@ -443,6 +443,9 @@ Two independent tracks work on the skills themselves and on the workspace's feed
 /lesson-harvest --dry-run                        # zero-write, independently reviewed local preview
 /memory-distill                                  # human gate: distill feedback into durable principles
 
+# change the catalog itself (in a Skill Mesh source checkout)
+/skill-crud CREATE <name>                        # or READ, UPDATE, DELETE, RENAME; gated, verified, all providers built; you commit
+
 # tidy the workspace (monthly)
 /user-afterparty                                 # one hygiene report and cleanup, plus the monthly usage snapshot
 /test-prune                                      # find redundant, trivial or mock-only tests
@@ -535,9 +538,9 @@ and `build-*` skills (they create repositories and post to issues), and Playwrig
 
 Each skill has one provider-neutral behavior contract (`skills/<name>/core.md`) plus a thin
 adapter per host; installing binds one adapter into that host's discovery layout. Claude
-provides all 46 skills, two of them Claude-only (`claude-oauth-auth`, `context-slim`), and Codex
-the 44 portable ones. Until v4 removes it, the unsupported GPT profile still builds: for the
-release checks, 44/44 skills are GPT-capable.
+provides all 47 skills, two of them Claude-only (`claude-oauth-auth`, `context-slim`), and Codex
+the 45 portable ones. Until v4 removes it, the unsupported GPT profile still builds: for the
+release checks, 44/45 skills are GPT-capable (`skill-crud` ships no GPT adapter).
 
 | Provider | Host | Discovery root under the chosen home |
 |---|---|---|

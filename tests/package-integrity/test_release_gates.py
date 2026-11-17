@@ -439,6 +439,18 @@ def test_skill_count_reds_on_mismatched_count():
     assert defects
 
 
+def test_skill_count_reads_gpt_over_portable():
+    """GPT is optional, so the claim is `<gpt>/<portable>` and the two may differ."""
+    manifest = {"counts": {"portable": 45, "gpt": 44}}
+    ok = "- 44/45 skills are GPT-capable."
+    assert not release_checks.readme_skill_count_defects(ok, manifest)
+    # The old all-portable spelling now overclaims a GPT adapter skill-crud lacks.
+    stale = "- 45/45 skills are GPT-capable."
+    assert release_checks.readme_skill_count_defects(stale, manifest)
+    swapped = "- 45/44 skills are GPT-capable."
+    assert release_checks.readme_skill_count_defects(swapped, manifest)
+
+
 def test_skill_count_reds_on_missing_status_line():
     manifest = {"counts": {"portable": 47}}
     defects = release_checks.readme_skill_count_defects("no status line in this doc", manifest)

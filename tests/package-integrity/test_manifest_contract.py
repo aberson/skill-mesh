@@ -111,16 +111,18 @@ def test_counts_match_fixture_and_array():
     assert m["counts"] == derived, (m["counts"], derived)
     assert fx["counts"] == derived, (fx["counts"], derived)
     # spelled-out expectations
-    assert derived["total"] == 46
-    assert derived["portable"] == 44
+    assert derived["total"] == 47
+    assert derived["portable"] == 45
     assert derived["provider_native"] == 2
-    assert derived["claude"] == 46, "every skill carries a Claude adapter"
-    assert derived["gpt"] == 44, "the gpt adapter set IS the portable set"
+    assert derived["claude"] == 47, "every skill carries a Claude adapter"
+    # GPT is optional since Phase CL Step 111: skill-crud (Step 113) is the one
+    # portable skill born after that, and it ships no gpt.md.
+    assert derived["gpt"] == 44, "every portable skill but skill-crud has a gpt adapter"
     # Codex is a REQUIRED provider since Phase CL Step 111
     # (portable_provider_contract.required), so this equals `portable` by
     # construction. A portable skill dir without skills/<name>/providers/codex.md is
     # an incomplete package that gen_manifest.derived_skill_sets() refuses.
-    assert derived["codex"] == derived["portable"] == 44
+    assert derived["codex"] == derived["portable"] == 45
     # user-debug requires independent fresh-context diagnosis arms, so it is no
     # longer eligible for text-only local fallback and joins the sub-agent set.
     # user-uat requires isolated deep assessment and strong final visual review;
@@ -128,7 +130,7 @@ def test_counts_match_fixture_and_array():
     assert derived["local_capable"] == 17
     assert derived["sub_agent"] == 16
     assert derived["vision"] == 1
-    assert derived["filesystem"] == 46
+    assert derived["filesystem"] == 47
 
 
 def test_exact_skill_names_and_statuses():
@@ -297,7 +299,8 @@ def test_vision_or_subagent_implies_not_local():
 # except as Skill Mesh's own install output. repo-wrap was a single Claude SKILL.md
 # in the workspace tree before Phase CP Step 10 promoted it. Spelled here so a
 # provenance change has to state itself in a test, like every other partition.
-CANONICAL_ORIGIN = {"code-consigliere", "user-build-route", "user-dr", "user-fermize"}
+CANONICAL_ORIGIN = {"code-consigliere", "skill-crud", "user-build-route", "user-dr",
+                    "user-fermize"}
 SINGLE_FILE_PORTABLE = {"repo-wrap"}
 
 
@@ -770,12 +773,13 @@ def test_derived_skill_sets_match_the_spelled_out_rosters():
     sets = gm.derived_skill_sets()
     assert sets.portable == sorted(gm.PORTABLE)
     assert sets.native == sorted(gm.NATIVE)
-    assert (len(sets.portable), len(sets.native)) == (44, 2)
-    # gpt is the one OPTIONAL provider today, and every portable skill still carries
-    # its adapter until V4-7 removes them. Spelled, so the day that stops being true
-    # is a deliberate edit here rather than a silent change of meaning.
+    assert (len(sets.portable), len(sets.native)) == (45, 2)
+    # gpt is the one OPTIONAL provider today. Every portable skill that predates
+    # Phase CL Step 113 still carries its adapter until V4-7 removes them; skill-crud,
+    # created in that step, ships none. Spelled, so the next change in that set is a
+    # deliberate edit here rather than a silent change of meaning.
     assert set(sets.optional) == {"gpt"}
-    assert sets.optional["gpt"] == sets.portable
+    assert sets.optional["gpt"] == sorted(set(sets.portable) - {"skill-crud"})
     assert not set(sets.optional["gpt"]) & set(sets.native)
 
 
@@ -797,7 +801,7 @@ def test_no_independent_codex_membership_authority_remains():
     assert codex == sorted(gm.PORTABLE)
 
 
-def _plant_skill_tree(root, portable=44, native=2, extras=(), gpt=None,
+def _plant_skill_tree(root, portable=45, native=2, extras=(), gpt=None,
                       drop=None, native_extra=None, names=None, native_names=None):
     """A synthetic skills/ tree.
 
@@ -852,7 +856,7 @@ def test_enumeration_skips_inventory_json_and_the_shared_namespace(tmp_path):
     _plant_skill_tree(root, extras=("inventory.json", "_shared/"))
     (root / "_shared" / "judge-core.md").write_text("x", encoding="utf-8")
     sets = gm.derived_skill_sets(root)
-    assert (len(sets.portable), len(sets.native)) == (44, 2)
+    assert (len(sets.portable), len(sets.native)) == (45, 2)
     assert "inventory.json" not in sets.portable + sets.native
     assert "_shared" not in sets.portable + sets.native
 
@@ -861,14 +865,14 @@ def test_gpt_is_optional_and_changes_nothing_but_the_gpt_entry(tmp_path):
     """A portable skill without gpt.md is still portable -- that is not drift.
 
     GPT is no longer a required provider (operator decision 2026-11-14), so leaving
-    gpt.md off four portable dirs must leave the 44/2 partition byte-for-byte
+    gpt.md off five portable dirs must leave the 45/2 partition byte-for-byte
     unchanged and only shrink the optional gpt list.
     """
     gm = _load_gen_manifest()
     root = tmp_path / "skills"
     _plant_skill_tree(root, gpt=40)
     sets = gm.derived_skill_sets(root)
-    assert (len(sets.portable), len(sets.native)) == (44, 2)
+    assert (len(sets.portable), len(sets.native)) == (45, 2)
     assert len(sets.optional["gpt"]) == 40
     assert set(sets.optional["gpt"]) <= set(sets.portable)
 
@@ -897,7 +901,7 @@ def test_enumeration_reds_when_a_native_skill_carries_another_providers_adapter(
     skill dir is a contradiction. Without this guard the generator would emit a
     provider path for a skill the builder deliberately excludes from every non-claude
     profile -- a manifest promising a profile that will never contain it. The counts
-    stay valid (44/2), so no count-based guard can catch it.
+    stay valid (45/2), so no count-based guard can catch it.
     """
     gm = _load_gen_manifest()
     root = tmp_path / "skills"
@@ -911,12 +915,12 @@ def test_enumeration_reds_when_the_tree_disagrees_with_the_counts(tmp_path):
 
     Every planted tree here must be REJECTED, so deleting the whole guard block reds
     this test. Beyond that, no ONE guard can carry the block alone -- for each single
-    guard, at least one planted case slips past it: keep only the total guard and 45/1
-    slips (it sums to 46); keep only the portable guard and 44/3 slips; keep only the
-    native guard and BOTH 45/2 and 43/2 slip. Before the 45/1 case existed the other
+    guard, at least one planted case slips past it: keep only the total guard and 46/1
+    slips (it sums to 47); keep only the portable guard and 45/3 slips; keep only the
+    native guard and BOTH 46/2 and 44/2 slip. Before the 46/1 case existed the other
     three all broke the total too, so a total-only block passed this anchor -- that is
-    the hole 45/1 closes. The four cases do NOT each have a distinct catching subset,
-    and this docstring does not claim they do: 45/2 and 43/2 are both caught by exactly
+    the hole 46/1 closes. The four cases do NOT each have a distinct catching subset,
+    and this docstring does not claim they do: 46/2 and 44/2 are both caught by exactly
     {total, portable}.
 
     What it CANNOT decide, and does not claim: deleting exactly one guard is invisible
@@ -925,14 +929,14 @@ def test_enumeration_reds_when_the_tree_disagrees_with_the_counts(tmp_path):
     fifth planted tree could close.
 
     The expected counts are DERIVED from the spelled roster (Phase CL Step 111), so
-    these trees are judged against len(PORTABLE) / len(NATIVE) -- 44/2 today.
+    these trees are judged against len(PORTABLE) / len(NATIVE) -- 45/2 today.
 
     The guards raise ValueError, not AssertionError, precisely so `python -O` cannot
     strip them; catching ValueError here keeps that property under test.
     """
     gm = _load_gen_manifest()
-    for kwargs in ({"portable": 45}, {"native": 3}, {"portable": 43},
-                   {"portable": 45, "native": 1}):
+    for kwargs in ({"portable": 46}, {"native": 3}, {"portable": 44},
+                   {"portable": 46, "native": 1}):
         root = tmp_path / ("skills-" + "-".join(f"{k}{v}" for k, v in sorted(kwargs.items())))
         _plant_skill_tree(root, **kwargs)
         try:
@@ -955,6 +959,12 @@ def _plant_catalog_with_a_new_skill(gm, tmp_path, monkeypatch, assets=()):
     root = tmp_path / "skills"
     portable = list(gm.PORTABLE)
     _plant_skill_tree(root, names=portable, native_names=list(gm.NATIVE))
+    # Mirror the committed tree's optional adapters: a portable skill that ships no
+    # gpt.md (skill-crud since Phase CL Step 113) ships none here either.
+    with_gpt = set(gm.derived_skill_sets().optional["gpt"])
+    for name in portable:
+        if name not in with_gpt:
+            (root / name / "providers" / "gpt.md").unlink()
     new = root / "skill-new"
     (new / "providers").mkdir(parents=True)
     for rel in ("core.md", "providers/claude.md", "providers/codex.md"):
@@ -989,7 +999,7 @@ def test_a_canonical_born_fixture_carries_null_migration(tmp_path, monkeypatch):
     inv = next(s for s in inventory["skills"] if s["name"] == "skill-new")
     assert inv["providers"] == {"claude": True, "gpt": False, "codex": True}
     # ...and the counts it moves are the ones a CREATE should move, no others.
-    assert manifest["counts"]["portable"] == 45 and manifest["counts"]["codex"] == 45
+    assert manifest["counts"]["portable"] == 46 and manifest["counts"]["codex"] == 46
     assert manifest["counts"]["gpt"] == 44
     # Existing records keep their truthful legacy provenance through the same run.
     plan_init = next(s for s in manifest["skills"] if s["name"] == "plan-init")

@@ -74,16 +74,16 @@
     ]
   },
   "counts": {
-    "total": 46,
-    "portable": 44,
+    "total": 47,
+    "portable": 45,
     "provider_native": 2,
-    "claude": 46,
+    "claude": 47,
     "gpt": 44,
-    "codex": 44,
+    "codex": 45,
     "local_capable": 17,
     "sub_agent": 16,
     "vision": 1,
-    "filesystem": 46
+    "filesystem": 47
   },
   "global_support_assets": [
     {
@@ -859,6 +859,23 @@
           "dest": "skills/session-wrap/evals/"
         }
       ]
+    },
+    {
+      "name": "skill-crud",
+      "status": "portable",
+      "description": "Create, inspect, update, delete, or rename Skill Mesh catalog skills without breaking provider parity.",
+      "core": "skills/skill-crud/core.md",
+      "providers": {
+        "claude": "skills/skill-crud/providers/claude.md",
+        "codex": "skills/skill-crud/providers/codex.md"
+      },
+      "capabilities": [
+        "filesystem"
+      ],
+      "local_capable": false,
+      "origin": "canonical",
+      "migration": null,
+      "support_assets": []
     },
     {
       "name": "skill-eval-setup",

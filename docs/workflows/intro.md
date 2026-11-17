@@ -1,10 +1,10 @@
 These diagrams summarize the **Skill Mesh v3.0.2** contracts. Use the
 [skill reference](../../documentation/skill-reference.md) for a compact table
-of all 46 skills, purposes, host coverage and direct diagram links.
+of all 47 skills, purposes, host coverage and direct diagram links.
 
 Each diagram declares its source and omitted detail. The linked source contract
 remains authoritative: a diagram does not authorize an action, bypass a hold,
-or establish live qualification. Claude has all 46 packages; Codex has the 44
+or establish live qualification. Claude has all 47 packages; Codex has the 45
 portable packages. GitHub Copilot is no longer supported. Native capability gates still apply.
 
 These diagrams use the same rounded cards, monospace labels, and blue connectors

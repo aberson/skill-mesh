@@ -415,6 +415,17 @@ def _codex_skills():
     return [s["name"] for s in m["skills"] if "codex" in s.get("providers", {})]
 
 
+def _gpt_skills():
+    """Names declaring a `providers.gpt` path -- exactly what dist/gpt may hold.
+
+    GPT is an optional provider since Phase CL Step 111, so this is not the portable
+    set: skill-crud (Phase CL Step 113) is portable and ships no GPT adapter. Read from
+    the manifest for the same reason as `_codex_skills`.
+    """
+    m = _load_manifest()
+    return [s["name"] for s in m["skills"] if "gpt" in s.get("providers", {})]
+
+
 def _tree_snapshot(root):
     """Map of posix-relative path -> file bytes for every file under root."""
     snap = {}
@@ -486,11 +497,21 @@ def test_build_emits_both_profiles(dist_root):
 
 def test_portable_skills_have_launcher_and_core_in_both_profiles(dist_root):
     portable, _ = _skill_partition()
+    gpt = set(_gpt_skills())
+    assert gpt and gpt <= set(portable), sorted(gpt - set(portable))
     for name in portable:
-        for profile in ("claude", "gpt"):
+        # Every portable skill is in the claude profile; only those declaring the
+        # optional gpt adapter are in the gpt profile, and the rest are absent from
+        # it rather than stubbed.
+        profiles = ("claude", "gpt") if name in gpt else ("claude",)
+        for profile in profiles:
             d = dist_root / profile / name
             assert (d / "SKILL.md").is_file(), f"{profile}/{name}: missing SKILL.md"
             assert (d / "core.md").is_file(), f"{profile}/{name}: missing core.md"
+        if name not in gpt:
+            assert not (dist_root / "gpt" / name).exists(), (
+                f"gpt/{name}: a portable skill without a gpt adapter must not be "
+                f"stubbed")
 
 
 def test_native_exclusions_only_truthful_adapter(dist_root):
@@ -528,7 +549,8 @@ def test_build_file_counts_match_manifest(dist_root):
     # Their focused resource tests prove each exact SET.
     shared = len(EXPECTED_SHARED_PAYLOAD)
     assert len(claude_files) == len(portable) * 2 + len(native) * 1 + 2 + shared + 4 + 2 + 6 + 2
-    assert len(gpt_files) == len(portable) * 2 + 2 + shared + 4 + 2 + 6 + 2
+    # gpt carries only the portable skills that declare its optional adapter.
+    assert len(gpt_files) == len(_gpt_skills()) * 2 + 2 + shared + 4 + 2 + 6 + 2
 
 
 # --------------------------------------------------------------------------- #
@@ -1297,10 +1319,12 @@ def test_gpt_skill_md_leads_with_frontmatter_then_provenance(dist_root):
     `description` in config/skill-manifest.json (single source of truth -- NOT the
     generic `<name> (skill-mesh skill).` builder stub), with the provenance header
     placed IMMEDIATELY after the closing `---`."""
-    portable, _ = _skill_partition()
+    # The gpt profile carries the portable skills that declare the optional gpt
+    # adapter, not every portable skill (skill-crud ships none).
+    portable = _gpt_skills()
     marker = _marker_literal()
     desc_by_name = {s["name"]: s.get("description") for s in _load_manifest()["skills"]}
-    assert portable, "expected portable skills in the manifest"
+    assert portable, "expected gpt-carrying portable skills in the manifest"
     for name in portable:
         text = (dist_root / "gpt" / name / "SKILL.md").read_text(encoding="utf-8")
         parsed = _parse_leading_frontmatter(text)
@@ -1466,13 +1490,14 @@ def test_every_emitted_skill_md_frontmatter_survives_a_strict_yaml_parse(dist_ro
     fc = _frontmatter_contract()
     portable, native = _skill_partition()
     # Per-profile expected launcher count, derived from the manifest rather than
-    # spelled: claude carries every skill, gpt carries the portable ones. No `codex`
+    # spelled: claude carries every skill, gpt carries the portable ones that declare
+    # the optional gpt adapter (since Phase CL Step 113, not all of them). No `codex`
     # entry here -- `dist_root` builds -Provider both, which is claude + gpt BY DESIGN
     # (see the $profiles comment in build-distributions.ps1) and never produces a
     # dist/codex to grade. The codex profile has its own dedicated coverage below,
     # built from the synthetic fixture repo; a third dict entry here would be dead code
     # dressed as codex coverage, since the loop below only ever iterates these two.
-    expected = {"claude": len(portable) + len(native), "gpt": len(portable)}
+    expected = {"claude": len(portable) + len(native), "gpt": len(_gpt_skills())}
     allowed = {"claude": fc.CLAUDE_KEYS, "gpt": fc.GPT_KEYS}
     failures = []
     for profile in ("claude", "gpt"):
@@ -3433,13 +3458,17 @@ USER_DR_ADDITION = ["user-dr"]
 USER_BUILD_ROUTE_ADDITION = ["user-build-route"]
 # The v3 catalog cleanup's user-fermize CREATE (plan Step 5, #261) adds one more.
 USER_FERMIZE_ADDITION = ["user-fermize"]
+# Phase CL Step 113's skill-crud CREATE (#171) adds one more, core plus the two
+# required adapters (Claude, Codex) and no GPT adapter.
+SKILL_CRUD_ADDITION = ["skill-crud"]
 DECLARED_CODEX_SKILLS = sorted(PILOT_CODEX_SKILLS + COHORT_B_CODEX_SKILLS
                                + COHORT_C_CODEX_SKILLS + COHORT_D_CODEX_SKILLS
                                + STEP10_PROMOTED_SKILLS
                                + CODE_CONSIGLIERE_ADDITION
                                + USER_DR_ADDITION
                                + USER_BUILD_ROUTE_ADDITION
-                               + USER_FERMIZE_ADDITION)
+                               + USER_FERMIZE_ADDITION
+                               + SKILL_CRUD_ADDITION)
 
 
 def test_codex_profile_holds_exactly_the_declared_cohorts_for_the_committed_manifest(
@@ -3459,8 +3488,8 @@ def test_codex_profile_holds_exactly_the_declared_cohorts_for_the_committed_mani
     fifty-four, folding the autonomous shakedown skill into user-walkthrough to
     fifty-three, folding the plan-cutting skill into plan-merge to fifty-two, and
     retiring the three Goblin skills to forty-nine, replacing user-project with a script
-    to forty-eight, and moving the four citation skills out to Citation Needed to
-    forty-four. It
+    to forty-eight, moving the four citation skills out to Citation Needed to
+    forty-four, and Phase CL Step 113's skill-crud CREATE to forty-five. It
     grades the whole emission contract for the real cohorts at once,
     because the parts are only correct together: a launcher without its co-located
     core.md is a package Codex can list and cannot run, and an unstamped file is one
@@ -3469,7 +3498,7 @@ def test_codex_profile_holds_exactly_the_declared_cohorts_for_the_committed_mani
     out = tmp_path / "out"
     r = _build(out, provider="codex")
     assert r.returncode == 0, f"{r.stdout}\n{r.stderr}"
-    assert "(44 skills," in r.stdout, r.stdout
+    assert "(45 skills," in r.stdout, r.stdout
     # The manifest declares exactly the spelled cohorts...
     assert sorted(_codex_skills()) == DECLARED_CODEX_SKILLS, _codex_skills()
     # ...and the emitted tree IS that roster: no extra skill dir, none missing. The

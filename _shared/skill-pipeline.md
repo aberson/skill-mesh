@@ -41,7 +41,7 @@ named in a rail's Chain cell or listed under § Not vent targets, never both
 | **draft** | "here are rough thoughts" — wants a usable prompt or goal, not work done | `/user-draft` → `/goal` |
 | **review** | "look this over / is this change OK / review PR #N" — judge a change before it lands | `/review-gauntlet` (default) / `/review-deep` (high stakes) / `/review-proof` (an answer's claims need primary sources) |
 | **research** | "what should we research? / are this doc's claims backed?" — pick topics or check evidence, not answer a question | `/research-prospect` (topics per project); LLM-facing artifact rigor: Citation Needed's own evidence-check skills (review one artifact or sweep a project, then triage and distill), which ship and install from the Citation Needed repository, not this catalog |
-| **tend** | "context feels bloated / tests are slow / we keep repeating mistakes / this skill misbehaves" — workspace care | context bloat → `/context-slim` (Claude host); slow or redundant tests → `/test-prune`; repeated mistakes → `/lesson-harvest`; messy memory → `/memory-distill`; a skill misbehaving → `/skill-iterate` (variants: `/skill-evolve`; no evals yet: `/skill-eval-setup`); model cost or weakness → `/tier-offload` / `/tier-escalate`; milestone cleanup → `/user-afterparty`; close out a repo → `/repo-wrap` (detail below) |
+| **tend** | "context feels bloated / tests are slow / we keep repeating mistakes / this skill misbehaves / add or retire a skill" — workspace care | context bloat → `/context-slim` (Claude host); slow or redundant tests → `/test-prune`; repeated mistakes → `/lesson-harvest`; messy memory → `/memory-distill`; a skill misbehaving → `/skill-iterate` (variants: `/skill-evolve`; no evals yet: `/skill-eval-setup`); create, change, rename or remove a Skill Mesh catalog skill (in a Skill Mesh source checkout) → `/skill-crud`; model cost or weakness → `/tier-offload` / `/tier-escalate`; milestone cleanup → `/user-afterparty`; close out a repo → `/repo-wrap` (detail below) |
 | **session** | "I'm back / keep going or close? / wrap up / where does this stand?" — the window or the project's state, not new work | `/user-wrap`; resume a saved task → `/task-handoff --resume`; "where does this project stand?" → `/user-pm` |
 | **learn** | "teach me X / I want to learn X / let's explore an idea" — understanding, not delivery | `/user-learn` (a hands-on learning ramp); explore an idea → `/user-brainstorm` |
 
@@ -177,6 +177,8 @@ orphan-`worktree_*` cleanup and the derived-`current.md` rollup commit/archive s
 `--only` / `--skip` / `--dry-run` / `--all-projects`.
 
 `/skill-evolve --skill <name> --variants <path-or-inline>` — A/B-tests N variant mutations of a skill in parallel worktrees, scored against the skill's existing `evals/` suite. Winner branch is pushed and a `gh pr create` command is printed (no auto-PR); losers are cleaned up and analyzed under `docs/investigations/skill-evolve/`. Requires `/skill-eval-setup` to have set up the target skill's evals first.
+
+`/skill-crud <OPERATION> <name>` — the catalog lifecycle front door for a Skill Mesh source checkout: CREATE, READ, UPDATE, DELETE or RENAME one catalog skill through the lifecycle guide's gates (`documentation/skill-catalog-lifecycle.md` in that checkout). It stops before any write on a failed preflight, edits canonical sources only, regenerates, verifies, builds every provider, and never commits. `skill-eval-setup`, `skill-evolve` and `skill-iterate` stop on a catalog-owned skill and name that guide instead.
 
 ---
 
