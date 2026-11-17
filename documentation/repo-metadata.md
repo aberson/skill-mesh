@@ -8,7 +8,18 @@ Claude-only framing left over from before the provider-neutral migration (Steps 
 description,repositoryTopics`; re-apply with `gh repo edit aberson/skill-mesh --description "..."
 --add-topic ...` or the GitHub web UI.
 
-## Applied 2026-11-16 (current)
+## Applied 2026-11-17 (current)
+
+Phase CL Step 113 added `/skill-crud` (operator, 2026-11-17: "do all of these"), so the catalog is
+47 skills, 45 of them portable. This replaces the 2026-11-16 description below.
+
+- **Description:**
+  > Agent skills for a gated plan -> build -> review -> ship pipeline on Claude Code and OpenAI
+  > Codex: 47 skills (45 portable), independent evidence-citing reviewers, calibrated judges, and
+  > install/build/release tooling.
+- **Topics:** unchanged from 2026-11-13.
+
+## Applied 2026-11-16
 
 The four citation skills moved to the Citation Needed repository (operator, 2026-11-16), so the
 catalog is 46 skills, 44 of them portable. This replaces the 2026-11-13 description below.
