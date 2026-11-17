@@ -1,5 +1,5 @@
 {
-  "description": "Single source of truth for the nondestructive lifecycle smoke test (tests/smoke/test_skill_crud_lifecycle.py, Phase CL Step 115). It names the synthetic portable skill that test CREATEs, READs and UPDATEs inside a disposable Git copy of the catalog, and the exact canonical bytes it authors. Nothing here is ever written into this checkout: the skill exists only in a temporary synthetic repository, its builds and its disposable homes.",
+  "description": "Single source of truth for the lifecycle smoke test (tests/smoke/test_skill_crud_lifecycle.py, Phase CL Steps 115 and 116). It names the synthetic portable skill that test CREATEs, READs and UPDATEs inside a disposable Git copy of the catalog, the exact canonical bytes it authors, and the inputs of the destructive transitions (RENAME and DELETE) run against it. Nothing here is ever written into this checkout: the skill exists only in a temporary synthetic repository, its builds and its disposable homes.",
   "skill_name": "zz-lifecycle-probe",
   "manifest_description": "Probe the catalog lifecycle end to end in a disposable repository; never shipped.",
   "capabilities": ["filesystem"],
@@ -18,5 +18,32 @@
   "update": {
     "anchor": "- Report the catalog lifecycle stage this probe was built at.\n",
     "added_behavior": "- UPDATE-MARKER-115: also report that the shared core changed after the create.\n"
+  },
+  "destructive": {
+    "new_name": "zz-lifecycle-renamed",
+    "companion_skill": "task-handoff",
+    "live_document": {
+      "path": "documentation/zz-lifecycle-roster.md",
+      "text": "# Synthetic live roster\n\n- zz-lifecycle-probe: the probe the lifecycle smoke test drives.\n- task-handoff: a real catalog skill installed beside it.\n"
+    },
+    "historical_document": {
+      "path": "documentation/history/zz-lifecycle-evidence.md",
+      "text": "# Frozen synthetic evidence\n\nStep 115 created zz-lifecycle-probe and recorded this measurement.\nThe zz-lifecycle-probe record below is immutable: zz-lifecycle-probe passed.\n"
+    },
+    "unrelated_tracked": {
+      "path": "documentation/zz-unrelated-notes.md",
+      "text": "# Unrelated notes\n\nCommitted at the base; an operator edits this file while a mutation runs.\n",
+      "dirty_text": "# Unrelated notes\n\nCommitted at the base; an operator edits this file while a mutation runs.\n\nUNCOMMITTED OPERATOR EDIT\n"
+    },
+    "unrelated_untracked": {
+      "path": "scratch/zz-unrelated-untracked.txt",
+      "text": "untracked operator work in progress\n"
+    },
+    "operator_home_files": {
+      "in_discovery_root": "operator-tool/SKILL.md",
+      "at_home_root": "operator-notes.txt",
+      "text": "operator-owned; never installed by skill-mesh\n"
+    },
+    "customization": "\nOPERATOR CUSTOMIZATION OF AN INSTALLED FILE\n"
   }
 }

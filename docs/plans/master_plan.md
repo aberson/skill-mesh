@@ -1176,7 +1176,7 @@ reported as generated drift by `--check`. `--check` compares all three in memory
 
 ### Step 116: Prove destructive transitions and recovery
 
-- **Status:** PENDING (Step 115 DONE)
+- **Status:** DONE 2026-11-17 (build-step PASS, round 1 of 10, code review 5/5; includes the #192 installer hardening)
 - **Problem:** DELETE and RENAME can damage customized installs or erase historical evidence unless reference disposition, ledger cleanup, and failure recovery are exercised together.
 - **Type:** code
 - **Issue:** #174
@@ -1189,7 +1189,7 @@ reported as generated drift by `--check`. `--check` compares all three in memory
 
 ### Step 117: Certify the release candidate and prepare attended acceptance
 
-- **Status:** PENDING / BLOCKED ON 116
+- **Status:** PENDING (Step 116 DONE)
 - **Problem:** The completed lifecycle needs one immutable all-provider certification packet before any model is asked to exercise it in a host.
 - **Type:** code
 - **Issue:** #175

@@ -91,6 +91,11 @@
 
     Every mismatching target adopted through -Force requires -BackupDir.
 
+    A forced removal (a stale path or an uninstall, under -Force or -ForceShared)
+    deletes only a path whose literal spelling below the discovery root holds no
+    reparse point and ends at a regular file; otherwise the run refuses before any
+    backup or deletion, and the check is repeated immediately before each delete.
+
 .PARAMETER ForceShared
     SCOPED take-ownership: overwrite AND take ownership of foreign files ONLY where the
     collision is inside the profile's `_shared/` payload. A foreign collision anywhere
@@ -995,6 +1000,71 @@ function Assert-ProviderTargetDomain([string]$rel, [string]$provider, [string]$h
     return $target
 }
 
+function Test-LiteralFinalPathIdentity([string]$rel, [string]$provider, [string]$homeAbs, [string]$resolvedPath) {
+    # Issue #192. Forced (-Force / -ForceShared) removal waives the provenance and
+    # recorded-hash identity, so the only thing left binding the bytes it deletes to
+    # the ledger row it is acting on is the PATH. Assert-ProviderTargetDomain proves
+    # containment of the RESOLVED path, and the hash a forced run compares against was
+    # read through that same resolution, so a junction swapped onto any directory
+    # between the discovery root and the leaf redirects the deletion onto another
+    # file in the same root and every check still agrees. Literal identity closes that:
+    # walk the rel's own spelling down from the provider's canonical discovery root
+    # and require every component to exist without a reparse point, the leaf to be a
+    # regular file, and the literal path to BE the resolved path.
+    #
+    # Ancestors above the discovery root stay canonicalized, exactly as
+    # $payloadRootAbs treats them: a junction on the home or on '.claude' is a
+    # legitimate install layout and must not de-authorize removal. Read-only; it never
+    # returns a path, so no mutation can take its value as a target.
+    $subdir = ([string]$DISCOVERY_SUBDIR[$provider]).TrimEnd('/')
+    $prefix = $subdir + '/'
+    if ([string]::IsNullOrWhiteSpace($rel) -or $rel.Contains('\') -or
+        [string]::IsNullOrWhiteSpace($resolvedPath) -or
+        -not $rel.StartsWith($prefix, [System.StringComparison]::Ordinal)) {
+        return $false
+    }
+    $segments = $rel.Substring($prefix.Length).Split('/')
+    $literal = Get-CanonicalRealPath -InputPath (Join-Path $homeAbs ($subdir -replace '/', '\'))
+    for ($i = 0; $i -lt $segments.Count; $i++) {
+        $segment = [string]$segments[$i]
+        if ([string]::IsNullOrEmpty($segment) -or $segment -eq '.' -or $segment -eq '..') {
+            return $false
+        }
+        $literal = [System.IO.Path]::Combine($literal, $segment)
+        try {
+            $attributes = [System.IO.File]::GetAttributes($literal)
+        } catch {
+            return $false
+        }
+        if (($attributes -band [System.IO.FileAttributes]::ReparsePoint) -ne 0) { return $false }
+        $isDirectory = ($attributes -band [System.IO.FileAttributes]::Directory) -ne 0
+        if ($i -lt $segments.Count - 1) {
+            if (-not $isDirectory) { return $false }
+        } elseif ($isDirectory) {
+            return $false
+        }
+    }
+    return ([System.IO.Path]::GetFullPath($literal)).Equals(
+        [System.IO.Path]::GetFullPath($resolvedPath), [System.StringComparison]::OrdinalIgnoreCase)
+}
+
+function Assert-LiteralFinalPathIdentity([string]$rel, [string]$provider, [string]$homeAbs, [string]$resolvedPath) {
+    # The destructive-boundary form: called immediately before a forced Remove-Item.
+    if (-not (Test-LiteralFinalPathIdentity $rel $provider $homeAbs $resolvedPath)) {
+        throw ("install-skill-mesh: SECURITY -- forced removal of '$rel' failed literal " +
+               "final-path identity at the destructive boundary (a reparse point below " +
+               "the discovery root, or not a regular file); stopping before deleting it.")
+    }
+}
+
+function New-LiteralIdentityRefusal($rels, [string]$operation) {
+    $list = (@($rels) | Sort-Object) -join "`n  "
+    return ("install-skill-mesh: REFUSING forced $operation -- these paths fail literal " +
+            "final-path identity (a reparse point below the discovery root, or not a " +
+            "regular file), so a forced removal could delete a file the ledger never " +
+            "owned:`n  $list`nNothing was deleted or backed up; prior state is unchanged.")
+}
+
 function Get-ValidOwnedHashMap($entry, [string]$provider = '', [string]$expectedSubdir = '', [string]$homeAbs = '') {
     # Authority is all-or-nothing: owned_files and owned_file_hashes must be an exact
     # bijection. A partially useful-looking legacy/tampered map grants no destructive
@@ -1167,6 +1237,9 @@ function Assert-OwnedFilesRemovable([string]$homeAbs, $entry, $removalHashes, $f
         if ($forced -and $ForceShared -and -not $Force) {
             $abs = Resolve-FreshSharedTarget ([string]$rel) $Provider $homeAbs $payloadRootAbs
         }
+        if ($forced -and -not (Test-LiteralFinalPathIdentity ([string]$rel) $Provider $homeAbs $abs)) {
+            throw (New-LiteralIdentityRefusal @([string]$rel) 'uninstall')
+        }
         $identityOk = $forced -or (Test-OwnedIdentity $abs ([string]$rel) $expected)
         $hashOk = ($actual -ceq $expected)
         if (-not $identityOk -or -not $hashOk) {
@@ -1187,6 +1260,8 @@ function Remove-OwnedFiles([string]$homeAbs, $entry, $removalHashes, $forcedRels
             if ($ForceShared -and -not $Force) {
                 $safeTarget = Resolve-FreshSharedTarget ([string]$rel) $Provider $homeAbs $payloadRootAbs
             }
+            # The forced deletion's only remaining identity is the path itself.
+            Assert-LiteralFinalPathIdentity ([string]$rel) $Provider $homeAbs $safeTarget
         }
         if ((Get-SkillMeshFileSha256 $safeTarget) -cne $expected -or
             (-not $forced -and -not (Test-OwnedIdentity $safeTarget ([string]$rel) $expected))) {
@@ -1291,6 +1366,7 @@ function Invoke-Uninstall([string]$homeAbs) {
     $forcedRels = New-CIStringSet
     $removalHashes = @{}
     $forcePairs = @()
+    $literalRefusals = @()
     foreach ($rel in @(Get-Field $entry 'owned_files' @())) {
         $rel = [string]$rel
         $abs = Assert-ProviderTargetDomain $rel $Provider $homeAbs
@@ -1314,9 +1390,18 @@ function Invoke-Uninstall([string]$homeAbs) {
         if ([string]::IsNullOrWhiteSpace($BackupDir)) {
             throw "install-skill-mesh: REFUSING forced uninstall -- -BackupDir is required. Nothing was deleted."
         }
+        # #192: the backup below reads, and the deletion later removes, $abs. Prove it
+        # is the rel's own literal path before either happens.
+        if (-not (Test-LiteralFinalPathIdentity $rel $Provider $homeAbs $abs)) {
+            $literalRefusals += $rel
+            continue
+        }
         [void]$forcedRels.Add($rel)
         $removalHashes[$rel] = $actual
         $forcePairs += , @($abs, $rel, $actual)
+    }
+    if ($literalRefusals.Count -gt 0) {
+        throw (New-LiteralIdentityRefusal $literalRefusals 'uninstall')
     }
     if ($forcePairs.Count -gt 0) {
         Assert-BackupOutsideHome $BackupDir $homeAbs
@@ -1509,6 +1594,7 @@ function Invoke-Install([string]$homeAbs) {
         $stalePreHashes = @{}
         $staleForcedRels = New-CIStringSet
         $staleRefusals = @()
+        $staleLiteralRefusals = @()
         foreach ($r in $priorOwnedRel) {
             if ($producedRels.Contains([string]$r)) { continue }
             $abs = Assert-ProviderTargetDomain ([string]$r) $Provider $homeAbs
@@ -1525,6 +1611,12 @@ function Invoke-Install([string]$homeAbs) {
                     catch { $sharedAllowed = $false }
                 }
                 if (($Force -or $sharedAllowed) -and -not [string]::IsNullOrWhiteSpace($BackupDir)) {
+                    # #192: forced stale removal keeps only the path as identity, and
+                    # $actual was read through $abs -- so $abs must be the literal path.
+                    if (-not (Test-LiteralFinalPathIdentity ([string]$r) $Provider $homeAbs $abs)) {
+                        $staleLiteralRefusals += [string]$r
+                        continue
+                    }
                     [void]$forceRels.Add([string]$r)
                     [void]$staleForcedRels.Add([string]$r)
                     $forcePairs += , @($abs, [string]$r, $actual)
@@ -1534,6 +1626,9 @@ function Invoke-Install([string]$homeAbs) {
                     $staleRefusals += [string]$r
                 }
             }
+        }
+        if ($staleLiteralRefusals.Count -gt 0) {
+            throw (New-LiteralIdentityRefusal $staleLiteralRefusals 'stale removal')
         }
         if ($staleRefusals.Count -gt 0) {
             $list = ($staleRefusals | Sort-Object) -join "`n  "
@@ -1792,6 +1887,8 @@ function Invoke-Install([string]$homeAbs) {
                     if ($ForceShared -and -not $Force) {
                         $safeStale = Resolve-FreshSharedTarget ([string]$r) $Provider $homeAbs $payloadRootAbs
                     }
+                    # The forced deletion's only remaining identity is the path itself.
+                    Assert-LiteralFinalPathIdentity ([string]$r) $Provider $homeAbs $safeStale
                 }
                 if ((-not $staleForced -and
                      -not (Test-OwnedIdentity $safeStale ([string]$r) ([string]$stalePreHashes[$r]))) -or
