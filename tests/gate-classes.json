@@ -1,0 +1,288 @@
+{
+  "classes": {
+    "catalog-content": {
+      "catalog": true,
+      "reason": "Fast content and contract scans of the catalog sources; no PowerShell."
+    },
+    "generator-pins": {
+      "catalog": true,
+      "reason": "Generator outputs and count pins a catalog change can move (the v2.0.3 report miss)."
+    },
+    "repo-wide-scans": {
+      "catalog": true,
+      "reason": "Whole-repository scans a new file anywhere can turn red (the w3 router-scan miss)."
+    },
+    "installer-release": {
+      "catalog": false,
+      "reason": "Build, install, release, router runtime and telemetry tooling; shells out to PowerShell."
+    },
+    "legacy-migration": {
+      "catalog": false,
+      "reason": "The legacy migrator and its transaction engine; PowerShell-heavy."
+    },
+    "host-inspection": {
+      "catalog": false,
+      "reason": "tools/inspect-host-install.ps1 behaviour; PowerShell-heavy."
+    },
+    "build-step-tree": {
+      "catalog": false,
+      "reason": "The build-step tree helper and its recovery paths; git and filesystem heavy."
+    },
+    "shared-engines": {
+      "catalog": false,
+      "reason": "Shared engines and skill script packages: behaviour tests of code, not catalog content."
+    }
+  },
+  "files": {
+    "_shared/test_build_step_verdict.py": {
+      "class": "shared-engines"
+    },
+    "_shared/test_calibrate_judge.py": {
+      "class": "shared-engines"
+    },
+    "_shared/test_grader_prompt.py": {
+      "class": "shared-engines",
+      "exclude_reason": "Unit tests of the shared grader prompt builder; reads no catalog source (no skills/, config/ or manifest reference), so no catalog change can move it."
+    },
+    "_shared/test_lane_inbox.py": {
+      "class": "shared-engines"
+    },
+    "_shared/test_score_skill.py": {
+      "class": "shared-engines",
+      "exclude_reason": "Unit tests of the shared skill scorer; reads no catalog source (no skills/, config/ or manifest reference), so no catalog change can move it."
+    },
+    "_shared/test_score_skill_absolute.py": {
+      "class": "shared-engines",
+      "exclude_reason": "Unit tests of the shared absolute scorer; reads no catalog source (no skills/, config/ or manifest reference), so no catalog change can move it."
+    },
+    "_shared/test_user_project.py": {
+      "class": "shared-engines"
+    },
+    "experiments/recovery/cross-family-fixture/seed/base/test_order_totals.py": {
+      "class": "shared-engines",
+      "exclude_reason": "Seed fixture of the cross-family recovery experiment (an order-totals toy); tests the fixture's own code, not the catalog."
+    },
+    "skill-eval-setup/scripts/test_generate_bad_examples.py": {
+      "class": "shared-engines"
+    },
+    "skill-iterate/scripts/test_adversarial_calibration.py": {
+      "class": "shared-engines"
+    },
+    "skill-iterate/scripts/test_append_result.py": {
+      "class": "shared-engines",
+      "exclude_reason": "Unit tests of the skill-iterate result appender; reads no catalog source (no skills/, config/ or manifest reference), so no catalog change can move it."
+    },
+    "skill-iterate/scripts/test_differential_grader.py": {
+      "class": "shared-engines",
+      "exclude_reason": "Unit tests of the skill-iterate differential grader; reads no catalog source (no skills/, config/ or manifest reference), so no catalog change can move it. 8 of 25 tests reach subprocess through an imported helper."
+    },
+    "skill-iterate/scripts/test_morning_summary.py": {
+      "class": "shared-engines"
+    },
+    "skill-iterate/scripts/test_resolve_queue.py": {
+      "class": "shared-engines"
+    },
+    "skill-iterate/scripts/test_structural_metrics.py": {
+      "class": "shared-engines"
+    },
+    "skills/user-afterparty/scripts/test_usage_scripts.py": {
+      "class": "shared-engines"
+    },
+    "tests/behavioural/test_build_phase_landed_paths_roundtrip.py": {
+      "class": "shared-engines"
+    },
+    "tests/behavioural/test_lesson_observations.py": {
+      "class": "shared-engines"
+    },
+    "tests/behavioural/test_review_deep_fail_closed.py": {
+      "class": "shared-engines"
+    },
+    "tests/behavioural/test_review_deep_lint_prepass_adapter.py": {
+      "class": "shared-engines"
+    },
+    "tests/behavioural/test_shared_ledger_checks.py": {
+      "class": "shared-engines"
+    },
+    "tests/calibration/test_calibrate.py": {
+      "class": "shared-engines"
+    },
+    "tests/distributions/test_build_step_tree.py": {
+      "class": "build-step-tree"
+    },
+    "tests/distributions/test_build_step_tree_recovery.py": {
+      "class": "build-step-tree",
+      "exclude_reason": "Git and filesystem recovery paths of the build-step tree helper; every test reaches subprocess through its imported fixture module, which the file's own text does not name."
+    },
+    "tests/distributions/test_codex_install_path.py": {
+      "class": "installer-release"
+    },
+    "tests/distributions/test_distributions.py": {
+      "class": "installer-release"
+    },
+    "tests/distributions/test_host_inspect.py": {
+      "class": "host-inspection"
+    },
+    "tests/distributions/test_lane_inbox_hooks.py": {
+      "class": "installer-release"
+    },
+    "tests/distributions/test_legacy_migration.py": {
+      "class": "legacy-migration"
+    },
+    "tests/distributions/test_path_choke_point.py": {
+      "class": "installer-release"
+    },
+    "tests/distributions/test_user_fermize_profiles.py": {
+      "class": "installer-release"
+    },
+    "tests/experiments/test_cross_family_probe.py": {
+      "class": "shared-engines"
+    },
+    "tests/experiments/test_lifecycle_probe.py": {
+      "class": "shared-engines"
+    },
+    "tests/package-integrity/test_autofix_marker_single_owner.py": {
+      "class": "catalog-content"
+    },
+    "tests/package-integrity/test_build_step_scripts_duplication.py": {
+      "class": "repo-wide-scans"
+    },
+    "tests/package-integrity/test_code_consigliere_contract.py": {
+      "class": "catalog-content"
+    },
+    "tests/package-integrity/test_codex_agent_isolation_contract.py": {
+      "class": "catalog-content"
+    },
+    "tests/package-integrity/test_codex_budgets.py": {
+      "class": "generator-pins"
+    },
+    "tests/package-integrity/test_codex_capability_claims_honesty.py": {
+      "class": "catalog-content"
+    },
+    "tests/package-integrity/test_cutover_handoff.py": {
+      "class": "catalog-content"
+    },
+    "tests/package-integrity/test_document_output_contract.py": {
+      "class": "catalog-content"
+    },
+    "tests/package-integrity/test_frontmatter_yaml.py": {
+      "class": "catalog-content"
+    },
+    "tests/package-integrity/test_gate_classes.py": {
+      "class": "repo-wide-scans"
+    },
+    "tests/package-integrity/test_gate_preflight.py": {
+      "class": "catalog-content"
+    },
+    "tests/package-integrity/test_host_discovery.py": {
+      "class": "catalog-content"
+    },
+    "tests/package-integrity/test_instruction_contract_single_owner.py": {
+      "class": "catalog-content"
+    },
+    "tests/package-integrity/test_lesson_observations_installed.py": {
+      "class": "catalog-content"
+    },
+    "tests/package-integrity/test_link_resolution.py": {
+      "class": "repo-wide-scans"
+    },
+    "tests/package-integrity/test_manifest_contract.py": {
+      "class": "generator-pins"
+    },
+    "tests/package-integrity/test_phase_is_route_decision.py": {
+      "class": "catalog-content"
+    },
+    "tests/package-integrity/test_recovery_plan_hygiene.py": {
+      "class": "catalog-content"
+    },
+    "tests/package-integrity/test_release_gates.py": {
+      "class": "generator-pins"
+    },
+    "tests/package-integrity/test_repo_wrap_worktree_cleanup.py": {
+      "class": "catalog-content"
+    },
+    "tests/package-integrity/test_review_deep_config_snapshot.py": {
+      "class": "catalog-content"
+    },
+    "tests/package-integrity/test_review_deep_scripts_duplication.py": {
+      "class": "repo-wide-scans"
+    },
+    "tests/package-integrity/test_routing_web_coverage.py": {
+      "class": "catalog-content"
+    },
+    "tests/package-integrity/test_skill_catalog_lifecycle.py": {
+      "class": "catalog-content"
+    },
+    "tests/package-integrity/test_skill_tree.py": {
+      "class": "generator-pins"
+    },
+    "tests/package-integrity/test_user_debug_codex_contract.py": {
+      "class": "catalog-content"
+    },
+    "tests/package-integrity/test_user_pm_call_budget.py": {
+      "class": "catalog-content"
+    },
+    "tests/package-integrity/test_user_pm_caller_contract.py": {
+      "class": "catalog-content"
+    },
+    "tests/package-integrity/test_user_pm_fermize_label.py": {
+      "class": "catalog-content"
+    },
+    "tests/package-integrity/test_user_pm_json_superset.py": {
+      "class": "catalog-content"
+    },
+    "tests/package-integrity/test_user_pm_lanes.py": {
+      "class": "catalog-content"
+    },
+    "tests/package-integrity/test_user_pm_readiness_citation.py": {
+      "class": "catalog-content"
+    },
+    "tests/package-integrity/test_v2_authoring_contract.py": {
+      "class": "catalog-content"
+    },
+    "tests/package-integrity/test_v2_orientation_contract.py": {
+      "class": "catalog-content"
+    },
+    "tests/package-integrity/test_v2_session_contract.py": {
+      "class": "catalog-content"
+    },
+    "tests/production-toolchain/test_policy_contract.py": {
+      "class": "catalog-content"
+    },
+    "tests/release/test_release_script.py": {
+      "class": "installer-release"
+    },
+    "tests/router/test_gpt_transport_precedence.py": {
+      "class": "installer-release"
+    },
+    "tests/router/test_no_claude_dependency.py": {
+      "class": "repo-wide-scans"
+    },
+    "tests/router/test_path_guard.py": {
+      "class": "installer-release"
+    },
+    "tests/router/test_provider_host_adapters.py": {
+      "class": "installer-release"
+    },
+    "tests/router/test_router_scenarios.py": {
+      "class": "installer-release"
+    },
+    "tests/router/test_shim_parity.py": {
+      "class": "installer-release"
+    },
+    "tests/router/test_spend_ledger_guard.py": {
+      "class": "installer-release"
+    },
+    "tests/smoke/test_cross_provider_smoke.py": {
+      "class": "installer-release"
+    },
+    "tests/smoke/test_release_candidate_report.py": {
+      "class": "generator-pins"
+    },
+    "tests/smoke/test_skill_crud_lifecycle.py": {
+      "class": "installer-release"
+    },
+    "tests/telemetry/test_telemetry.py": {
+      "class": "installer-release"
+    }
+  }
+}
