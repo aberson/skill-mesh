@@ -9,7 +9,9 @@ Design:
   is committed in tests/package-integrity/expected_inventory.json.
 - Since Step 67 the GENERATOR depends on no external source either, and the last
   section of this file is the gate that holds it there: a regeneration must
-  reproduce both committed artifacts with no environment set.
+  reproduce all three committed artifacts with no environment set, and since Phase
+  CL Step 111 it validates all three before replacing any, replaces each one safely,
+  and offers a no-write `--check`.
 
 Runnable via pytest (`python -m pytest tests/package-integrity`) or standalone
 (`python tests/package-integrity/test_manifest_contract.py`).
@@ -113,14 +115,11 @@ def test_counts_match_fixture_and_array():
     assert derived["provider_native"] == 2
     assert derived["claude"] == 46, "every skill carries a Claude adapter"
     assert derived["gpt"] == 44, "the gpt adapter set IS the portable set"
-    # 54 at Phase CP Step 10. It was 0 at Step 3 (the generation rails ship before
-    # any codex adapter is authored), 5 at Step 4, 17 at Step 6, 33 at Step 7, and
-    # Step 8 closed it at the then-portable catalog of 47. Step 10 (issue #127)
-    # promoted seven workspace-custom skills, each authored portable AND codex in
-    # one commit, so this grew WITH `portable` rather than apart from it. A value
-    # here without a matching skills/*/providers/codex.md on disk is caught by
-    # gen_manifest.py's CODEX-vs-tree guard.
-    assert derived["codex"] == 44
+    # Codex is a REQUIRED provider since Phase CL Step 111
+    # (portable_provider_contract.required), so this equals `portable` by
+    # construction. A portable skill dir without skills/<name>/providers/codex.md is
+    # an incomplete package that gen_manifest.derived_skill_sets() refuses.
+    assert derived["codex"] == derived["portable"] == 44
     # user-debug requires independent fresh-context diagnosis arms, so it is no
     # longer eligible for text-only local fallback and joins the sub-agent set.
     # user-uat requires isolated deep assessment and strong final visual review;
@@ -160,20 +159,18 @@ def test_exact_sub_agent_set():
 
 
 def test_exact_codex_set():
-    """The codex roster, pinned against the committed fixture like its siblings.
+    """The codex set, pinned against the committed fixture like its siblings.
 
-    Non-vacuous from Phase CP Step 4 onward: the pilot five are the first names in it.
-    A count alone cannot tell "the pilot five" from "any five portable skills", and the
-    cohort steps grow this set deliberately -- so the NAMES are asserted, and against a
-    fixture produced by the same generator run that produced the manifest.
+    Codex is required (decision CL-D4 as amended 2026-11-14), so the set the manifest's
+    `providers` dicts imply is exactly the portable set -- and decision CL-D14 says it
+    is DERIVED from that set rather than spelled as a second roster.
     """
     m = load_manifest()
     fx = load_fixture()
     codex = {s["name"] for s in m["skills"] if "codex" in s["providers"]}
     assert codex == set(fx["codex"])
-    # Orthogonal axis: every codex name is also portable (see gen_manifest.CODEX).
     portable = {s["name"] for s in m["skills"] if s["status"] == "portable"}
-    assert codex <= portable
+    assert codex == portable == set(fx["portable"])
 
 
 def test_exact_vision_set():
@@ -192,6 +189,7 @@ def test_manifest_matches_fixture_per_skill():
         assert got["status"] == exp["status"], name
         assert got["local_capable"] == exp["local_capable"], name
         assert got["capabilities"] == exp["capabilities"], name
+        assert got["origin"] == exp["origin"], name
         assert got["migration"] == exp["migration"], name
         assert got["support_assets"] == exp["support_assets"], name
 
@@ -205,25 +203,41 @@ def test_status_values_valid():
         assert s["status"] in {"portable", "provider-native"}, s["name"]
 
 
+# The ordered required-provider set (Phase CL Step 111; CL-D4 as amended 2026-11-14
+# by operator decision). Spelled here as a pin, and asserted equal to the manifest
+# field and the generator constant; the lifecycle guide's section 4 list is held to
+# the same value by test_skill_catalog_lifecycle.py.
+REQUIRED_PROVIDERS = ["claude", "codex"]
+
+
+def test_portable_provider_contract_is_the_ordered_required_set():
+    m = load_manifest()
+    contract = m["portable_provider_contract"]
+    assert contract["required"] == REQUIRED_PROVIDERS
+    # Every required provider is in the installable vocabulary, and the vocabulary is
+    # wider than the set: gpt is declared and is not required.
+    assert set(contract["required"]) <= set(m["providers"])
+    assert "gpt" in m["providers"] and "gpt" not in contract["required"]
+    assert list(_load_gen_manifest().REQUIRED_PROVIDERS) == REQUIRED_PROVIDERS
+
+
 def test_portable_skill_truth():
+    required = load_manifest()["portable_provider_contract"]["required"]
     for s in load_manifest()["skills"]:
         if s["status"] != "portable":
             continue
         name = s["name"]
         assert s["core"] == f"skills/{name}/core.md", name
         prov = s["providers"]
-        # claude + gpt are MANDATORY for a portable skill (that pair is what
-        # "portable" means); codex is OPTIONAL and additive -- present only for the
-        # skills whose adapter has been authored, which grows across Phase CP
-        # (0 at Step 3, the pilot five at Step 4, the catalog after the cohorts).
-        # Asserted as "the required pair, plus at most codex" rather than a widened
-        # exact set, so an unexpected FOURTH provider key is still caught here.
-        assert {"claude", "gpt"} <= set(prov.keys()), name
-        assert set(prov.keys()) <= {"claude", "gpt", "codex"}, name
-        assert prov["claude"] == f"skills/{name}/providers/claude.md", name
-        assert prov["gpt"] == f"skills/{name}/providers/gpt.md", name
-        if "codex" in prov:
-            assert prov["codex"] == f"skills/{name}/providers/codex.md", name
+        # Every REQUIRED provider is mandatory -- that set is what "portable" means
+        # since Phase CL Step 111. gpt is OPTIONAL: present where its adapter is still
+        # authored, absent (no key, never a null) otherwise, and its absence is not
+        # drift. Asserted as "the required set, plus at most gpt" rather than an exact
+        # set, so an unexpected FOURTH provider key is still caught here.
+        assert set(required) <= set(prov.keys()), name
+        assert set(prov.keys()) <= set(required) | {"gpt"}, name
+        for provider, path in prov.items():
+            assert path == f"skills/{name}/providers/{provider}.md", (name, provider)
 
 
 def test_provider_native_skill_truth():
@@ -276,20 +290,46 @@ def test_vision_or_subagent_implies_not_local():
 # Migration launcher / adapter convention
 # --------------------------------------------------------------------------- #
 
+# Provenance, pinned by name (Phase CL Step 111, decision CL-D8). Measured against
+# the coding root's Git history at Step 111: these four were authored directly in
+# Skill Mesh, and the legacy paths the manifest used to give them never existed
+# except as Skill Mesh's own install output. repo-wrap was a single Claude SKILL.md
+# in the workspace tree before Phase CP Step 10 promoted it. Spelled here so a
+# provenance change has to state itself in a test, like every other partition.
+CANONICAL_ORIGIN = {"code-consigliere", "user-build-route", "user-dr", "user-fermize"}
+SINGLE_FILE_PORTABLE = {"repo-wrap"}
+
+
+def test_origin_partition_is_pinned():
+    records = load_manifest()["skills"]
+    assert {s["origin"] for s in records} <= {"legacy-migrated", "canonical"}
+    assert {s["name"] for s in records if s["origin"] == "canonical"} == CANONICAL_ORIGIN
+    single = {s["name"] for s in records if s["origin"] == "legacy-migrated"
+              and s["status"] == "portable" and s["migration"]["legacy_core"] is None}
+    assert single == SINGLE_FILE_PORTABLE
+
+
 def test_migration_launcher_adapter_convention():
     for s in load_manifest()["skills"]:
         name = s["name"]
         mig = s["migration"]
+        if s["origin"] == "canonical":
+            # Authored in Skill Mesh: no legacy source exists, so there is no block
+            # to fill and none is fabricated. Exactly null, not an all-null object.
+            assert mig is None, name
+            assert s["support_assets"] == [], name
+            continue
+        assert s["origin"] == "legacy-migrated", name
         assert set(mig.keys()) == {
             "legacy_core", "legacy_claude_launcher",
             "legacy_claude_adapter", "legacy_gpt",
         }, name
-        if s["status"] == "portable":
+        if s["status"] == "portable" and name not in SINGLE_FILE_PORTABLE:
             assert mig["legacy_core"] == f".claude/skills-gpt/{name}/SKILL-core.md", name
             assert mig["legacy_claude_launcher"] == f".claude/skills/{name}/SKILL.md", name
             assert mig["legacy_claude_adapter"] == f".claude/skills/{name}/SKILL-claude.md", name
             assert mig["legacy_gpt"] == f".claude/skills-gpt/{name}/SKILL-gpt.md", name
-        else:  # provider-native: SKILL.md is the substantive adapter, no launcher
+        else:  # one SKILL.md was the substantive skill: no core, launcher or gpt
             assert mig["legacy_core"] is None, name
             assert mig["legacy_claude_launcher"] is None, name
             assert mig["legacy_claude_adapter"] == f".claude/skills/{name}/SKILL.md", name
@@ -298,6 +338,8 @@ def test_migration_launcher_adapter_convention():
 
 def test_migration_paths_are_coding_root_relative():
     for s in load_manifest()["skills"]:
+        if s["migration"] is None:
+            continue
         for key in ("legacy_core", "legacy_claude_launcher",
                     "legacy_claude_adapter", "legacy_gpt"):
             val = s["migration"][key]
@@ -613,11 +655,22 @@ def test_generator_reads_no_external_source():
     assert list(inspect.signature(gm.build).parameters) == [], (
         "gen_manifest.build() regained a parameter -- the only thing it ever took was "
         "an external legacy root, which the Step 50 cutover overwrote")
+    # The CLI's whole surface is ONE value-less mode switch. `--check` selects
+    # compare-instead-of-write; it names no source, so a parser that accepts anything
+    # else -- the retired --legacy-source above all -- has regained an input.
+    parser = gm.build_parser()
+    assert vars(parser.parse_args([])) == {"check": False}
+    assert vars(parser.parse_args(["--check"])) == {"check": True}
+    for stale in (["--legacy-source", "x"], ["--check", "x"], ["somewhere"]):
+        with pytest.raises(SystemExit):
+            parser.parse_args(stale)
     src = GEN_MANIFEST_PATH.read_text(encoding="utf-8")
-    assert "add_argument" not in src, (
-        "gen_manifest.py's CLI declares an argument again; generation takes no input "
+    assert src.count("add_argument(") == 1, (
+        "gen_manifest.py's CLI declares a second argument; generation takes no input "
         "beyond this repository")
-    assert "import os" not in src and "os.environ" not in src, (
+    # `os` is imported for the safe per-file replacement (fsync + atomic rename);
+    # what must never come back is a read of the environment.
+    assert not re.search(r"\benviron\b|getenv", src), (
         "gen_manifest.py reads the environment again; the legacy-source variable is "
         "exactly the input this generator no longer has")
 
@@ -713,48 +766,70 @@ def test_derived_skill_sets_match_the_spelled_out_rosters():
     """The roster guards inside `build()`, exercised on their own so a roster edited in
     one place only is named here rather than surfacing as a generator crash."""
     gm = _load_gen_manifest()
-    portable, native, codex = gm.derived_skill_sets()
-    assert portable == sorted(gm.PORTABLE)
-    assert native == sorted(gm.NATIVE)
-    assert codex == sorted(gm.CODEX)
-    assert (len(portable), len(native)) == (44, 2)
-    # 54 at Phase CP Step 10: the Step 8 catalog of 47 plus the seven promoted
-    # workspace-custom skills (issue #127), each landing portable and codex in the
-    # same commit. Spelled, like its siblings above, so any step that grows the
-    # roster must come here and state the new number rather than letting a glob
-    # silently redefine it.
-    assert len(codex) == 44
-    # Codex is an ORTHOGONAL axis, not a third bucket -- every codex name is also
-    # portable, and the 54/3 partition is unaffected by codex membership. This is the
-    # invariant that lets counts["portable"], the README's GPT-capable line and the
-    # `total == portable + native` arithmetic all keep their existing meanings.
-    assert set(codex) <= set(portable)
-    assert not set(codex) & set(native)
+    sets = gm.derived_skill_sets()
+    assert sets.portable == sorted(gm.PORTABLE)
+    assert sets.native == sorted(gm.NATIVE)
+    assert (len(sets.portable), len(sets.native)) == (44, 2)
+    # gpt is the one OPTIONAL provider today, and every portable skill still carries
+    # its adapter until V4-7 removes them. Spelled, so the day that stops being true
+    # is a deliberate edit here rather than a silent change of meaning.
+    assert set(sets.optional) == {"gpt"}
+    assert sets.optional["gpt"] == sets.portable
+    assert not set(sets.optional["gpt"]) & set(sets.native)
 
 
-def _plant_skill_tree(root, portable=44, native=2, extras=(), codex=0,
-                      codex_on_native=0):
-    """A synthetic skills/ tree: `portable` dirs with providers/gpt.md, `native`
-    without, plus whatever non-skill entries the caller wants to prove are skipped.
+def test_no_independent_codex_membership_authority_remains():
+    """Decision CL-D14: Codex membership is DERIVED from PORTABLE plus the required set.
 
-    `codex` plants providers/codex.md on the first N PORTABLE dirs (the legal shape);
-    `codex_on_native` plants it on the first N NATIVE dirs (the illegal shape, since
-    provider-native means Claude-only).
+    A spelled codex roster beside PORTABLE is a second authority for an equality the
+    contract requires, so its return is a defect this test names. The derivation is
+    proven through the production builder: every portable record carries codex
+    because codex is required, and nothing else puts it there.
+    """
+    gm = _load_gen_manifest()
+    assert not hasattr(gm, "CODEX"), "a spelled CODEX roster is back in gen_manifest.py"
+    src = GEN_MANIFEST_PATH.read_text(encoding="utf-8")
+    assert not re.search(r"^CODEX\s*=", src, re.M)
+    assert "codex" in gm.REQUIRED_PROVIDERS and "codex" not in gm.OPTIONAL_PROVIDERS
+    manifest, _ = gm.build()
+    codex = [s["name"] for s in manifest["skills"] if "codex" in s["providers"]]
+    assert codex == sorted(gm.PORTABLE)
+
+
+def _plant_skill_tree(root, portable=44, native=2, extras=(), gpt=None,
+                      drop=None, native_extra=None, names=None, native_names=None):
+    """A synthetic skills/ tree.
+
+    `portable` dirs carry core.md plus an adapter for every required provider (claude,
+    codex) -- the legal portable shape -- and the first `gpt` of them (default: all)
+    also carry the optional gpt.md. `native` dirs carry core-less providers/claude.md.
+
+    `drop`, `(provider, n)`, removes that required adapter from the first n portable
+    dirs (the incomplete-package shape); `native_extra`, `(provider, n)`, plants a
+    non-Claude adapter on the first n native dirs (illegal: provider-native means
+    Claude-only). `names` / `native_names` override the generated directory names.
+    `extras` are non-skill entries the caller wants to prove are skipped.
     """
     root.mkdir(parents=True, exist_ok=True)
-    for i in range(portable):
-        d = root / f"skill-{i:02d}" / "providers"
+    names = names or [f"skill-{i:02d}" for i in range(portable)]
+    native_names = native_names or [f"native-{i}" for i in range(native)]
+    gpt = len(names) if gpt is None else gpt
+    for i, name in enumerate(names):
+        d = root / name
+        (d / "providers").mkdir(parents=True)
+        (d / "core.md").write_text("x", encoding="utf-8")
+        for provider in ("claude", "codex"):
+            if drop and drop[0] == provider and i < drop[1]:
+                continue
+            (d / "providers" / f"{provider}.md").write_text("x", encoding="utf-8")
+        if i < gpt:
+            (d / "providers" / "gpt.md").write_text("x", encoding="utf-8")
+    for i, name in enumerate(native_names):
+        d = root / name / "providers"
         d.mkdir(parents=True)
-        (d / "gpt.md").write_text("x", encoding="utf-8")
         (d / "claude.md").write_text("x", encoding="utf-8")
-        if i < codex:
-            (d / "codex.md").write_text("x", encoding="utf-8")
-    for i in range(native):
-        d = root / f"native-{i}" / "providers"
-        d.mkdir(parents=True)
-        (d / "claude.md").write_text("x", encoding="utf-8")
-        if i < codex_on_native:
-            (d / "codex.md").write_text("x", encoding="utf-8")
+        if native_extra and i < native_extra[1]:
+            (d / f"{native_extra[0]}.md").write_text("x", encoding="utf-8")
     for name in extras:
         if name.endswith("/"):
             (root / name.rstrip("/")).mkdir()
@@ -765,53 +840,67 @@ def _plant_skill_tree(root, portable=44, native=2, extras=(), codex=0,
 def test_enumeration_skips_inventory_json_and_the_shared_namespace(tmp_path):
     """The two gates the enumeration must apply, proven on a synthetic tree.
 
-    `p.is_dir()` keeps the generated skills/inventory.json from counting as a 58th
-    skill, and `_shared` is excluded because it is the cross-skill payload namespace,
-    not a skill. `_shared` does not exist under skills/ today, so only a planted tree
-    can exercise that branch at all -- without this the exclusion would be untested
-    code that silently stops working the day the directory lands.
+    `p.is_dir()` keeps the generated skills/inventory.json from counting as a skill,
+    and `_shared` is excluded because it is the cross-skill payload namespace, not a
+    skill. `_shared` does not exist under skills/ today, so only a planted tree can
+    exercise that branch at all -- without this the exclusion would be untested code
+    that silently stops working the day the directory lands.
     """
     gm = _load_gen_manifest()
     root = tmp_path / "skills"
     _plant_skill_tree(root, extras=("inventory.json", "_shared/"))
     (root / "_shared" / "judge-core.md").write_text("x", encoding="utf-8")
-    portable, native, codex = gm.derived_skill_sets(root)
-    assert (len(portable), len(native)) == (44, 2)
-    assert codex == []
-    assert "inventory.json" not in portable + native
-    assert "_shared" not in portable + native
+    sets = gm.derived_skill_sets(root)
+    assert (len(sets.portable), len(sets.native)) == (44, 2)
+    assert "inventory.json" not in sets.portable + sets.native
+    assert "_shared" not in sets.portable + sets.native
 
 
-def test_codex_enumeration_is_orthogonal_to_the_portable_native_partition(tmp_path):
-    """A planted codex.md changes the codex roster and NOTHING else.
+def test_gpt_is_optional_and_changes_nothing_but_the_gpt_entry(tmp_path):
+    """A portable skill without gpt.md is still portable -- that is not drift.
 
-    This is the load-bearing property of the Phase CP Step 3 shape choice: codex is an
-    additive axis, so planting 5 codex adapters must leave the 54/3 partition -- and
-    therefore every committed count, the README's GPT-capable line, and the
-    `total == portable + native` arithmetic -- byte-for-byte unchanged. If codex were
-    modelled as a third STATUS instead, this test would red.
+    GPT is no longer a required provider (operator decision 2026-11-14), so leaving
+    gpt.md off four portable dirs must leave the 44/2 partition byte-for-byte
+    unchanged and only shrink the optional gpt list.
     """
     gm = _load_gen_manifest()
     root = tmp_path / "skills"
-    _plant_skill_tree(root, codex=5)
-    portable, native, codex = gm.derived_skill_sets(root)
-    assert (len(portable), len(native)) == (44, 2)
-    assert len(codex) == 5
-    assert set(codex) <= set(portable)
+    _plant_skill_tree(root, gpt=40)
+    sets = gm.derived_skill_sets(root)
+    assert (len(sets.portable), len(sets.native)) == (44, 2)
+    assert len(sets.optional["gpt"]) == 40
+    assert set(sets.optional["gpt"]) <= set(sets.portable)
 
 
-def test_enumeration_reds_when_a_native_skill_carries_a_codex_adapter(tmp_path):
+@pytest.mark.parametrize("provider", ["claude", "codex"])
+def test_enumeration_reds_on_a_portable_skill_missing_a_required_adapter(tmp_path, provider):
+    """Red-on-garbage anchor for the required-provider rule at the tree level.
+
+    A core plus only some required adapters is an incomplete change, not a portable
+    skill in a partial state. It must raise naming the skill and the missing provider,
+    not be filed as provider-native or merely miscounted.
+    """
+    gm = _load_gen_manifest()
+    root = tmp_path / "skills"
+    _plant_skill_tree(root, drop=(provider, 1))
+    with pytest.raises(ValueError, match=rf"required provider.*skill-00 \(missing {provider}\)"):
+        gm.derived_skill_sets(root)
+
+
+@pytest.mark.parametrize("provider", ["codex", "gpt"])
+def test_enumeration_reds_when_a_native_skill_carries_another_providers_adapter(
+        tmp_path, provider):
     """Red-on-garbage anchor for the native-is-Claude-only guard.
 
-    Provider-native means Claude-only, so providers/codex.md inside a native skill dir
-    is a contradiction. Without this guard the generator would happily emit a
-    `providers.codex` path for a skill the builder deliberately excludes from every
-    non-claude profile -- a manifest promising a profile that dist/codex will never
-    contain. The counts stay valid (54/3), so no count-based guard can catch it.
+    Provider-native means Claude-only, so any other provider's adapter inside a native
+    skill dir is a contradiction. Without this guard the generator would emit a
+    provider path for a skill the builder deliberately excludes from every non-claude
+    profile -- a manifest promising a profile that will never contain it. The counts
+    stay valid (44/2), so no count-based guard can catch it.
     """
     gm = _load_gen_manifest()
     root = tmp_path / "skills"
-    _plant_skill_tree(root, codex_on_native=1)
+    _plant_skill_tree(root, native_extra=(provider, 1))
     with pytest.raises(ValueError, match="Claude-only"):
         gm.derived_skill_sets(root)
 
@@ -824,15 +913,18 @@ def test_enumeration_reds_when_the_tree_disagrees_with_the_counts(tmp_path):
     guard, at least one planted case slips past it: keep only the total guard and 45/1
     slips (it sums to 46); keep only the portable guard and 44/3 slips; keep only the
     native guard and BOTH 45/2 and 43/2 slip. Before the 45/1 case existed the other
-    three all broke the total too (47/47/45), so a total-only block passed this
-    anchor -- that is the hole 45/1 closes. The four cases do NOT each have a distinct
-    catching subset, and this docstring does not claim they do: 45/2 and 43/2 are both
-    caught by exactly {total, portable}.
+    three all broke the total too, so a total-only block passed this anchor -- that is
+    the hole 45/1 closes. The four cases do NOT each have a distinct catching subset,
+    and this docstring does not claim they do: 45/2 and 43/2 are both caught by exactly
+    {total, portable}.
 
     What it CANNOT decide, and does not claim: deleting exactly one guard is invisible
     to any count-based tree, because total == portable + native makes any two of the
     three guards imply the third. That is a property of the arithmetic, not a gap a
     fifth planted tree could close.
+
+    The expected counts are DERIVED from the spelled roster (Phase CL Step 111), so
+    these trees are judged against len(PORTABLE) / len(NATIVE) -- 44/2 today.
 
     The guards raise ValueError, not AssertionError, precisely so `python -O` cannot
     strip them; catching ValueError here keeps that property under test.
@@ -847,6 +939,272 @@ def test_enumeration_reds_when_the_tree_disagrees_with_the_counts(tmp_path):
         except ValueError:
             continue
         raise AssertionError(f"enumeration accepted a tree with {kwargs}")
+
+
+# --------------------------------------------------------------------------- #
+# Provenance: origin + nullable migration (Phase CL Step 111, CL-D8)
+# --------------------------------------------------------------------------- #
+
+def _plant_catalog_with_a_new_skill(gm, tmp_path, monkeypatch, assets=()):
+    """The committed roster plus one CANONICAL-born portable skill, `skill-new`,
+    planted as core.md + claude.md + codex.md and NO gpt.md -- the shape a CREATE
+    produces now that GPT is not required. Every module constant a real CREATE edits
+    is extended the same way, and SKILLS_DIR points at the planted tree, so the
+    record comes out of the production `build()` / `render_artifacts()` path."""
+    root = tmp_path / "skills"
+    portable = list(gm.PORTABLE)
+    _plant_skill_tree(root, names=portable, native_names=list(gm.NATIVE))
+    new = root / "skill-new"
+    (new / "providers").mkdir(parents=True)
+    for rel in ("core.md", "providers/claude.md", "providers/codex.md"):
+        (new / rel).write_text("x", encoding="utf-8")
+    monkeypatch.setattr(gm, "SKILLS_DIR", root)
+    monkeypatch.setattr(gm, "PORTABLE", portable + ["skill-new"])
+    monkeypatch.setattr(gm, "DESCRIPTIONS", {**gm.DESCRIPTIONS, "skill-new": "A new skill."})
+    monkeypatch.setattr(gm, "SUPPORT_ASSETS", {**gm.SUPPORT_ASSETS, "skill-new": list(assets)})
+
+
+def test_a_canonical_born_fixture_carries_null_migration(tmp_path, monkeypatch):
+    """The canonical fixture: a skill authored in Skill Mesh has `origin: canonical`
+    and `migration: null` -- never a fabricated legacy path -- in the manifest AND the
+    expected fixture, and it validates and projects into the inventory unchanged."""
+    gm = _load_gen_manifest()
+    _plant_catalog_with_a_new_skill(gm, tmp_path, monkeypatch)
+    manifest, payloads = gm.render_artifacts()
+    record = next(s for s in manifest["skills"] if s["name"] == "skill-new")
+    assert record["origin"] == "canonical"
+    assert record["migration"] is None
+    assert record["status"] == "portable"
+    # The required set and nothing else: no gpt.md, so no gpt key, and that is legal.
+    assert record["providers"] == {
+        "claude": "skills/skill-new/providers/claude.md",
+        "codex": "skills/skill-new/providers/codex.md",
+    }
+    fixture = json.loads(payloads[gm.ARTIFACTS[1]])
+    fixture_record = next(s for s in fixture["skills"] if s["name"] == "skill-new")
+    assert (fixture_record["origin"], fixture_record["migration"]) == ("canonical", None)
+    assert "skill-new" in fixture["codex"]
+    inventory = json.loads(payloads[gm.ARTIFACTS[2]])
+    inv = next(s for s in inventory["skills"] if s["name"] == "skill-new")
+    assert inv["providers"] == {"claude": True, "gpt": False, "codex": True}
+    # ...and the counts it moves are the ones a CREATE should move, no others.
+    assert manifest["counts"]["portable"] == 45 and manifest["counts"]["codex"] == 45
+    assert manifest["counts"]["gpt"] == 44
+    # Existing records keep their truthful legacy provenance through the same run.
+    plan_init = next(s for s in manifest["skills"] if s["name"] == "plan-init")
+    assert plan_init["origin"] == "legacy-migrated"
+    assert plan_init["migration"]["legacy_core"] == ".claude/skills-gpt/plan-init/SKILL-core.md"
+
+
+def test_a_canonical_skill_cannot_declare_legacy_sourced_support_assets(tmp_path, monkeypatch):
+    """A support asset's `source` is a legacy path, so on a canonical skill it would
+    be exactly the fabricated provenance CL-D8 forbids."""
+    gm = _load_gen_manifest()
+    _plant_catalog_with_a_new_skill(gm, tmp_path, monkeypatch, assets=[("skills", "evals/")])
+    with pytest.raises(ValueError, match="canonical skill cannot declare"):
+        gm.build()
+
+
+def test_legacy_provenance_is_closed_history(monkeypatch):
+    """The legacy sets may only shrink: a name the roster no longer carries is a
+    DELETE that left its provenance behind, and a provider-native skill without
+    legacy provenance would be a new native identity."""
+    gm = _load_gen_manifest()
+    monkeypatch.setattr(gm, "LEGACY_SPLIT", gm.LEGACY_SPLIT | {"ghost"})
+    with pytest.raises(ValueError, match="not in the roster"):
+        gm.build()
+    monkeypatch.setattr(gm, "LEGACY_SPLIT", gm.LEGACY_SPLIT - {"ghost"})
+    monkeypatch.setattr(gm, "LEGACY_SINGLE_FILE", gm.LEGACY_SINGLE_FILE - {"context-slim"})
+    with pytest.raises(ValueError, match="provider-native skills must carry legacy"):
+        gm.build()
+
+
+# --------------------------------------------------------------------------- #
+# Validate-then-replace writer and the no-write --check (Phase CL Step 111)
+# --------------------------------------------------------------------------- #
+
+def _artifact_state(gm, root):
+    """Bytes and mtime of each artifact, plus the listing of every directory that
+    holds one -- the evidence that a run wrote nothing, temporaries included."""
+    state = {}
+    for rel in gm.ARTIFACTS:
+        p = root / rel
+        state[rel] = (p.read_bytes(), p.stat().st_mtime_ns) if p.exists() else None
+        state["dir:" + rel] = sorted(x.name for x in p.parent.iterdir()) \
+            if p.parent.is_dir() else None
+    return state
+
+
+def test_check_cli_is_read_only_and_green():
+    """`python tools/gen_manifest.py --check` through the production entry point:
+    exit 0 on the committed tree, and not one byte, mtime or directory entry of the
+    three artifacts' homes changes."""
+    gm = _load_gen_manifest()
+    before = _artifact_state(gm, REPO_ROOT)
+    env = {k: v for k, v in os.environ.items() if k != "SKILL_MESH_LEGACY_SOURCE"}
+    r = subprocess.run([sys.executable, str(GEN_MANIFEST_PATH), "--check"],
+                       cwd=str(REPO_ROOT), env=env, capture_output=True, text=True)
+    assert r.returncode == 0, f"--check is red on the committed tree:\n{r.stderr}"
+    assert "match a regeneration" in r.stdout
+    assert _artifact_state(gm, REPO_ROOT) == before, "--check changed the tree"
+
+
+def test_check_mode_never_reaches_the_writer(monkeypatch):
+    """In-process, with every write primitive booby-trapped: `main(["--check"])` must
+    finish without touching one of them."""
+    gm = _load_gen_manifest()
+
+    def trap(*args, **kwargs):
+        raise AssertionError("--check reached a write path")
+
+    monkeypatch.setattr(gm, "_replace_file", trap)
+    monkeypatch.setattr(gm, "write_artifacts", trap)
+    monkeypatch.setattr(gm, "_write_payload", trap)
+    assert gm.main(["--check"]) == 0
+
+
+def test_check_reports_drift_and_missing_files_without_writing(tmp_path):
+    gm = _load_gen_manifest()
+    for rel, committed in zip(gm.ARTIFACTS, (MANIFEST_PATH, FIXTURE_PATH, INVENTORY_PATH)):
+        (tmp_path / rel).parent.mkdir(parents=True, exist_ok=True)
+        # CRLF copies of the committed bytes: a property of the clone, never drift.
+        (tmp_path / rel).write_bytes(_norm(committed.read_bytes()).replace(b"\n", b"\r\n"))
+    assert gm.check_artifacts(tmp_path) == []
+    (tmp_path / gm.ARTIFACTS[0]).write_bytes(MANIFEST_PATH.read_bytes() + b" ")
+    (tmp_path / gm.ARTIFACTS[2]).unlink()
+    before = _artifact_state(gm, tmp_path)
+    assert gm.check_artifacts(tmp_path) == [gm.ARTIFACTS[0], f"{gm.ARTIFACTS[2]} (missing)"]
+    assert _artifact_state(gm, tmp_path) == before
+
+
+def test_all_three_payloads_are_validated_before_the_first_replacement(tmp_path, monkeypatch):
+    gm = _load_gen_manifest()
+    events = []
+    real_validate, real_replace = gm.validate_payloads, gm._replace_file
+
+    def validate(payloads):
+        events.append(("validate", tuple(payloads)))
+        real_validate(payloads)
+
+    def replace(path, data):
+        events.append(("replace", path.relative_to(tmp_path).as_posix()))
+        real_replace(path, data)
+
+    monkeypatch.setattr(gm, "validate_payloads", validate)
+    monkeypatch.setattr(gm, "_replace_file", replace)
+    gm.write_artifacts(tmp_path)
+    assert events == [("validate", gm.ARTIFACTS)] + [("replace", rel) for rel in gm.ARTIFACTS]
+
+
+def test_a_payload_that_fails_validation_replaces_nothing(tmp_path, monkeypatch):
+    """The third payload is the one built last; corrupting it must still stop the
+    FIRST replacement, which is what "validate all three first" means."""
+    gm = _load_gen_manifest()
+    seed = b'{"stale": true}\n'
+    for rel in gm.ARTIFACTS:
+        (tmp_path / rel).parent.mkdir(parents=True, exist_ok=True)
+        (tmp_path / rel).write_bytes(seed)
+    real_build_inventory = gm._build_inventory
+
+    def bad_inventory(manifest):
+        inventory = real_build_inventory(manifest)
+        inventory["counts"]["codex"] -= 1
+        return inventory
+
+    monkeypatch.setattr(gm, "_build_inventory", bad_inventory)
+    before = _artifact_state(gm, tmp_path)
+    with pytest.raises(ValueError, match="nothing was written"):
+        gm.write_artifacts(tmp_path)
+    assert _artifact_state(gm, tmp_path) == before
+
+
+def test_validation_reds_on_each_planted_defect():
+    """Red-on-garbage anchors for `validate_payloads`: each planted defect, alone, on
+    otherwise-valid payloads, is refused."""
+    gm = _load_gen_manifest()
+    _, good = gm.render_artifacts()
+
+    def mutated(index, change):
+        docs = [json.loads(good[rel]) for rel in gm.ARTIFACTS]
+        change(docs[index])
+        return {rel: gm.serialize(doc).encode("utf-8") for rel, doc in zip(gm.ARTIFACTS, docs)}
+
+    def first(doc, name):
+        return next(s for s in doc["skills"] if s["name"] == name)
+
+    planted = {
+        "required set widened": (0, lambda d: d["portable_provider_contract"]["required"].append("gpt")),
+        "portable record lost codex": (0, lambda d: first(d, "plan-init")["providers"].pop("codex")),
+        "canonical record fabricated": (0, lambda d: first(d, "user-dr").update(
+            migration={k: None for k in gm.MIGRATION_KEYS})),
+        "legacy record lost provenance": (0, lambda d: first(d, "plan-init").update(migration=None)),
+        "fixture origin drifted": (1, lambda d: first(d, "user-dr").update(origin="legacy-migrated")),
+        "inventory flag drifted": (2, lambda d: first(d, "plan-init")["providers"].update(codex=False)),
+    }
+    gm.validate_payloads(good)
+    for label, (index, change) in planted.items():
+        with pytest.raises(ValueError):
+            gm.validate_payloads(mutated(index, change))
+            raise AssertionError(f"validation accepted: {label}")
+    crlf = dict(good)
+    crlf[gm.ARTIFACTS[1]] = good[gm.ARTIFACTS[1]].replace(b"\n", b"\r\n")
+    with pytest.raises(ValueError, match="LF"):
+        gm.validate_payloads(crlf)
+
+
+@pytest.mark.parametrize("where", ["mid-write", "between-files"])
+def test_an_interrupted_regeneration_never_truncates_and_check_reports_it(
+        tmp_path, monkeypatch, where):
+    """Inject an interruption into the second replacement -- part-way through writing
+    its bytes, or before it starts -- and prove the two properties the writer claims:
+    no artifact is ever truncated (each file is wholly old or wholly new, and no
+    temporary is left behind), and the next `--check` names exactly the files the
+    interrupted run did not reach. A rerun then repairs the tree."""
+    gm = _load_gen_manifest()
+    seed = b'{"stale": true}\n'
+    for rel in gm.ARTIFACTS:
+        (tmp_path / rel).parent.mkdir(parents=True, exist_ok=True)
+        (tmp_path / rel).write_bytes(seed)
+    _, payloads = gm.render_artifacts()
+    calls = []
+
+    class Interrupted(KeyboardInterrupt):
+        pass
+
+    if where == "mid-write":
+        real_write = gm._write_payload
+
+        def write(handle, data):
+            calls.append(len(data))
+            if len(calls) == 2:
+                handle.write(data[: len(data) // 2])
+                raise Interrupted()
+            real_write(handle, data)
+
+        monkeypatch.setattr(gm, "_write_payload", write)
+    else:
+        real_replace = gm._replace_file
+
+        def replace(path, data):
+            calls.append(path)
+            if len(calls) == 2:
+                raise Interrupted()
+            real_replace(path, data)
+
+        monkeypatch.setattr(gm, "_replace_file", replace)
+
+    with pytest.raises(Interrupted):
+        gm.write_artifacts(tmp_path)
+    first, second, third = (tmp_path / rel for rel in gm.ARTIFACTS)
+    assert first.read_bytes() == payloads[gm.ARTIFACTS[0]]
+    assert second.read_bytes() == seed, "the interrupted artifact is not the old file whole"
+    assert third.read_bytes() == seed
+    leftovers = sorted(p.name for p in tmp_path.rglob("*.tmp"))
+    assert not leftovers, f"temporary files left behind: {leftovers}"
+    assert gm.check_artifacts(tmp_path) == [gm.ARTIFACTS[1], gm.ARTIFACTS[2]]
+    monkeypatch.undo()
+    gm.write_artifacts(tmp_path)
+    assert gm.check_artifacts(tmp_path) == []
 
 
 def _all_tests():

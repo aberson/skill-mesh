@@ -1124,7 +1124,7 @@ reported as generated drift by `--check`. `--check` compares all three in memory
 
 ### Step 111: Make native-born inventory generation hermetic
 
-- **Status:** PENDING (Steps 110 and 114 DONE; re-based 2026-11-14; order set 2026-11-17)
+- **Status:** DONE 2026-11-17 (build-step PASS, round 1 of 10, code review 5/5; re-based 2026-11-14; order set 2026-11-17)
 - **Problem:** The current generator cannot truthfully represent and reproduce a native-born canonical package.
 - **Type:** code
 - **Issue:** #169
@@ -1137,7 +1137,7 @@ reported as generated drift by `--check`. `--check` compares all three in memory
 
 ### Step 112: Enforce one operation-aware catalog truth gate
 
-- **Status:** PENDING / BLOCKED ON 111
+- **Status:** PENDING (Step 111 DONE)
 - **Problem:** No read-only gate checks operation semantics and exact agreement across every catalog representation.
 - **Type:** code
 - **Issue:** #170

@@ -156,6 +156,7 @@
       "capabilities": [
         "filesystem"
       ],
+      "origin": "legacy-migrated",
       "migration": {
         "legacy_core": ".claude/skills-gpt/build-phase/SKILL-core.md",
         "legacy_claude_launcher": ".claude/skills/build-phase/SKILL.md",
@@ -176,6 +177,7 @@
       "capabilities": [
         "filesystem"
       ],
+      "origin": "legacy-migrated",
       "migration": {
         "legacy_core": ".claude/skills-gpt/build-queue/SKILL-core.md",
         "legacy_claude_launcher": ".claude/skills/build-queue/SKILL.md",
@@ -197,6 +199,7 @@
         "filesystem",
         "sub-agent"
       ],
+      "origin": "legacy-migrated",
       "migration": {
         "legacy_core": ".claude/skills-gpt/build-step/SKILL-core.md",
         "legacy_claude_launcher": ".claude/skills/build-step/SKILL.md",
@@ -221,6 +224,7 @@
       "capabilities": [
         "filesystem"
       ],
+      "origin": "legacy-migrated",
       "migration": {
         "legacy_core": null,
         "legacy_claude_launcher": null,
@@ -241,12 +245,8 @@
       "capabilities": [
         "filesystem"
       ],
-      "migration": {
-        "legacy_core": ".claude/skills-gpt/code-consigliere/SKILL-core.md",
-        "legacy_claude_launcher": ".claude/skills/code-consigliere/SKILL.md",
-        "legacy_claude_adapter": ".claude/skills/code-consigliere/SKILL-claude.md",
-        "legacy_gpt": ".claude/skills-gpt/code-consigliere/SKILL-gpt.md"
-      },
+      "origin": "canonical",
+      "migration": null,
       "support_assets": []
     },
     {
@@ -257,6 +257,7 @@
         "filesystem",
         "sub-agent"
       ],
+      "origin": "legacy-migrated",
       "migration": {
         "legacy_core": null,
         "legacy_claude_launcher": null,
@@ -279,6 +280,7 @@
         "sub-agent",
         "vision"
       ],
+      "origin": "legacy-migrated",
       "migration": {
         "legacy_core": ".claude/skills-gpt/judge-ui/SKILL-core.md",
         "legacy_claude_launcher": ".claude/skills/judge-ui/SKILL.md",
@@ -304,6 +306,7 @@
         "filesystem",
         "sub-agent"
       ],
+      "origin": "legacy-migrated",
       "migration": {
         "legacy_core": ".claude/skills-gpt/lesson-harvest/SKILL-core.md",
         "legacy_claude_launcher": ".claude/skills/lesson-harvest/SKILL.md",
@@ -324,6 +327,7 @@
       "capabilities": [
         "filesystem"
       ],
+      "origin": "legacy-migrated",
       "migration": {
         "legacy_core": ".claude/skills-gpt/memory-distill/SKILL-core.md",
         "legacy_claude_launcher": ".claude/skills/memory-distill/SKILL.md",
@@ -344,6 +348,7 @@
       "capabilities": [
         "filesystem"
       ],
+      "origin": "legacy-migrated",
       "migration": {
         "legacy_core": ".claude/skills-gpt/plan-expedite/SKILL-core.md",
         "legacy_claude_launcher": ".claude/skills/plan-expedite/SKILL.md",
@@ -368,6 +373,7 @@
       "capabilities": [
         "filesystem"
       ],
+      "origin": "legacy-migrated",
       "migration": {
         "legacy_core": ".claude/skills-gpt/plan-feature/SKILL-core.md",
         "legacy_claude_launcher": ".claude/skills/plan-feature/SKILL.md",
@@ -388,6 +394,7 @@
       "capabilities": [
         "filesystem"
       ],
+      "origin": "legacy-migrated",
       "migration": {
         "legacy_core": ".claude/skills-gpt/plan-init/SKILL-core.md",
         "legacy_claude_launcher": ".claude/skills/plan-init/SKILL.md",
@@ -408,6 +415,7 @@
       "capabilities": [
         "filesystem"
       ],
+      "origin": "legacy-migrated",
       "migration": {
         "legacy_core": ".claude/skills-gpt/plan-merge/SKILL-core.md",
         "legacy_claude_launcher": ".claude/skills/plan-merge/SKILL.md",
@@ -428,6 +436,7 @@
       "capabilities": [
         "filesystem"
       ],
+      "origin": "legacy-migrated",
       "migration": {
         "legacy_core": ".claude/skills-gpt/plan-redline/SKILL-core.md",
         "legacy_claude_launcher": ".claude/skills/plan-redline/SKILL.md",
@@ -452,6 +461,7 @@
       "capabilities": [
         "filesystem"
       ],
+      "origin": "legacy-migrated",
       "migration": {
         "legacy_core": ".claude/skills-gpt/plan-review/SKILL-core.md",
         "legacy_claude_launcher": ".claude/skills/plan-review/SKILL.md",
@@ -472,6 +482,7 @@
       "capabilities": [
         "filesystem"
       ],
+      "origin": "legacy-migrated",
       "migration": {
         "legacy_core": ".claude/skills-gpt/plan-wrap/SKILL-core.md",
         "legacy_claude_launcher": ".claude/skills/plan-wrap/SKILL.md",
@@ -492,6 +503,7 @@
       "capabilities": [
         "filesystem"
       ],
+      "origin": "legacy-migrated",
       "migration": {
         "legacy_core": ".claude/skills-gpt/repo-init/SKILL-core.md",
         "legacy_claude_launcher": ".claude/skills/repo-init/SKILL.md",
@@ -512,6 +524,7 @@
       "capabilities": [
         "filesystem"
       ],
+      "origin": "legacy-migrated",
       "migration": {
         "legacy_core": ".claude/skills-gpt/repo-sync/SKILL-core.md",
         "legacy_claude_launcher": ".claude/skills/repo-sync/SKILL.md",
@@ -532,6 +545,7 @@
       "capabilities": [
         "filesystem"
       ],
+      "origin": "legacy-migrated",
       "migration": {
         "legacy_core": ".claude/skills-gpt/repo-update/SKILL-core.md",
         "legacy_claude_launcher": ".claude/skills/repo-update/SKILL.md",
@@ -552,11 +566,12 @@
       "capabilities": [
         "filesystem"
       ],
+      "origin": "legacy-migrated",
       "migration": {
-        "legacy_core": ".claude/skills-gpt/repo-wrap/SKILL-core.md",
-        "legacy_claude_launcher": ".claude/skills/repo-wrap/SKILL.md",
-        "legacy_claude_adapter": ".claude/skills/repo-wrap/SKILL-claude.md",
-        "legacy_gpt": ".claude/skills-gpt/repo-wrap/SKILL-gpt.md"
+        "legacy_core": null,
+        "legacy_claude_launcher": null,
+        "legacy_claude_adapter": ".claude/skills/repo-wrap/SKILL.md",
+        "legacy_gpt": null
       },
       "support_assets": []
     },
@@ -568,6 +583,7 @@
         "filesystem",
         "sub-agent"
       ],
+      "origin": "legacy-migrated",
       "migration": {
         "legacy_core": ".claude/skills-gpt/research-prospect/SKILL-core.md",
         "legacy_claude_launcher": ".claude/skills/research-prospect/SKILL.md",
@@ -589,6 +605,7 @@
         "filesystem",
         "sub-agent"
       ],
+      "origin": "legacy-migrated",
       "migration": {
         "legacy_core": ".claude/skills-gpt/review-deep/SKILL-core.md",
         "legacy_claude_launcher": ".claude/skills/review-deep/SKILL.md",
@@ -614,6 +631,7 @@
         "filesystem",
         "sub-agent"
       ],
+      "origin": "legacy-migrated",
       "migration": {
         "legacy_core": ".claude/skills-gpt/review-gauntlet/SKILL-core.md",
         "legacy_claude_launcher": ".claude/skills/review-gauntlet/SKILL.md",
@@ -634,6 +652,7 @@
       "capabilities": [
         "filesystem"
       ],
+      "origin": "legacy-migrated",
       "migration": {
         "legacy_core": ".claude/skills-gpt/review-proof/SKILL-core.md",
         "legacy_claude_launcher": ".claude/skills/review-proof/SKILL.md",
@@ -654,6 +673,7 @@
       "capabilities": [
         "filesystem"
       ],
+      "origin": "legacy-migrated",
       "migration": {
         "legacy_core": ".claude/skills-gpt/review-uat/SKILL-core.md",
         "legacy_claude_launcher": ".claude/skills/review-uat/SKILL.md",
@@ -674,6 +694,7 @@
       "capabilities": [
         "filesystem"
       ],
+      "origin": "legacy-migrated",
       "migration": {
         "legacy_core": ".claude/skills-gpt/session-wrap/SKILL-core.md",
         "legacy_claude_launcher": ".claude/skills/session-wrap/SKILL.md",
@@ -694,6 +715,7 @@
       "capabilities": [
         "filesystem"
       ],
+      "origin": "legacy-migrated",
       "migration": {
         "legacy_core": ".claude/skills-gpt/skill-eval-setup/SKILL-core.md",
         "legacy_claude_launcher": ".claude/skills/skill-eval-setup/SKILL.md",
@@ -719,6 +741,7 @@
         "filesystem",
         "sub-agent"
       ],
+      "origin": "legacy-migrated",
       "migration": {
         "legacy_core": ".claude/skills-gpt/skill-evolve/SKILL-core.md",
         "legacy_claude_launcher": ".claude/skills/skill-evolve/SKILL.md",
@@ -740,6 +763,7 @@
         "filesystem",
         "sub-agent"
       ],
+      "origin": "legacy-migrated",
       "migration": {
         "legacy_core": ".claude/skills-gpt/skill-iterate/SKILL-core.md",
         "legacy_claude_launcher": ".claude/skills/skill-iterate/SKILL.md",
@@ -764,6 +788,7 @@
       "capabilities": [
         "filesystem"
       ],
+      "origin": "legacy-migrated",
       "migration": {
         "legacy_core": ".claude/skills-gpt/task-handoff/SKILL-core.md",
         "legacy_claude_launcher": ".claude/skills/task-handoff/SKILL.md",
@@ -780,6 +805,7 @@
         "filesystem",
         "sub-agent"
       ],
+      "origin": "legacy-migrated",
       "migration": {
         "legacy_core": ".claude/skills-gpt/test-prune/SKILL-core.md",
         "legacy_claude_launcher": ".claude/skills/test-prune/SKILL.md",
@@ -801,6 +827,7 @@
         "filesystem",
         "sub-agent"
       ],
+      "origin": "legacy-migrated",
       "migration": {
         "legacy_core": ".claude/skills-gpt/tier-escalate/SKILL-core.md",
         "legacy_claude_launcher": ".claude/skills/tier-escalate/SKILL.md",
@@ -826,6 +853,7 @@
         "filesystem",
         "sub-agent"
       ],
+      "origin": "legacy-migrated",
       "migration": {
         "legacy_core": ".claude/skills-gpt/tier-offload/SKILL-core.md",
         "legacy_claude_launcher": ".claude/skills/tier-offload/SKILL.md",
@@ -858,6 +886,7 @@
       "capabilities": [
         "filesystem"
       ],
+      "origin": "legacy-migrated",
       "migration": {
         "legacy_core": ".claude/skills-gpt/user-afterparty/SKILL-core.md",
         "legacy_claude_launcher": ".claude/skills/user-afterparty/SKILL.md",
@@ -879,6 +908,7 @@
         "filesystem",
         "sub-agent"
       ],
+      "origin": "legacy-migrated",
       "migration": {
         "legacy_core": ".claude/skills-gpt/user-brainstorm/SKILL-core.md",
         "legacy_claude_launcher": ".claude/skills/user-brainstorm/SKILL.md",
@@ -899,12 +929,8 @@
       "capabilities": [
         "filesystem"
       ],
-      "migration": {
-        "legacy_core": ".claude/skills-gpt/user-build-route/SKILL-core.md",
-        "legacy_claude_launcher": ".claude/skills/user-build-route/SKILL.md",
-        "legacy_claude_adapter": ".claude/skills/user-build-route/SKILL-claude.md",
-        "legacy_gpt": ".claude/skills-gpt/user-build-route/SKILL-gpt.md"
-      },
+      "origin": "canonical",
+      "migration": null,
       "support_assets": []
     },
     {
@@ -915,6 +941,7 @@
         "filesystem",
         "sub-agent"
       ],
+      "origin": "legacy-migrated",
       "migration": {
         "legacy_core": ".claude/skills-gpt/user-debug/SKILL-core.md",
         "legacy_claude_launcher": ".claude/skills/user-debug/SKILL.md",
@@ -935,12 +962,8 @@
       "capabilities": [
         "filesystem"
       ],
-      "migration": {
-        "legacy_core": ".claude/skills-gpt/user-dr/SKILL-core.md",
-        "legacy_claude_launcher": ".claude/skills/user-dr/SKILL.md",
-        "legacy_claude_adapter": ".claude/skills/user-dr/SKILL-claude.md",
-        "legacy_gpt": ".claude/skills-gpt/user-dr/SKILL-gpt.md"
-      },
+      "origin": "canonical",
+      "migration": null,
       "support_assets": []
     },
     {
@@ -950,6 +973,7 @@
       "capabilities": [
         "filesystem"
       ],
+      "origin": "legacy-migrated",
       "migration": {
         "legacy_core": ".claude/skills-gpt/user-draft/SKILL-core.md",
         "legacy_claude_launcher": ".claude/skills/user-draft/SKILL.md",
@@ -970,12 +994,8 @@
       "capabilities": [
         "filesystem"
       ],
-      "migration": {
-        "legacy_core": ".claude/skills-gpt/user-fermize/SKILL-core.md",
-        "legacy_claude_launcher": ".claude/skills/user-fermize/SKILL.md",
-        "legacy_claude_adapter": ".claude/skills/user-fermize/SKILL-claude.md",
-        "legacy_gpt": ".claude/skills-gpt/user-fermize/SKILL-gpt.md"
-      },
+      "origin": "canonical",
+      "migration": null,
       "support_assets": []
     },
     {
@@ -985,6 +1005,7 @@
       "capabilities": [
         "filesystem"
       ],
+      "origin": "legacy-migrated",
       "migration": {
         "legacy_core": ".claude/skills-gpt/user-gateway/SKILL-core.md",
         "legacy_claude_launcher": ".claude/skills/user-gateway/SKILL.md",
@@ -1006,6 +1027,7 @@
         "filesystem",
         "sub-agent"
       ],
+      "origin": "legacy-migrated",
       "migration": {
         "legacy_core": ".claude/skills-gpt/user-learn/SKILL-core.md",
         "legacy_claude_launcher": ".claude/skills/user-learn/SKILL.md",
@@ -1026,6 +1048,7 @@
       "capabilities": [
         "filesystem"
       ],
+      "origin": "legacy-migrated",
       "migration": {
         "legacy_core": ".claude/skills-gpt/user-pm/SKILL-core.md",
         "legacy_claude_launcher": ".claude/skills/user-pm/SKILL.md",
@@ -1047,6 +1070,7 @@
         "filesystem",
         "sub-agent"
       ],
+      "origin": "legacy-migrated",
       "migration": {
         "legacy_core": ".claude/skills-gpt/user-uat/SKILL-core.md",
         "legacy_claude_launcher": ".claude/skills/user-uat/SKILL.md",
@@ -1067,6 +1091,7 @@
       "capabilities": [
         "filesystem"
       ],
+      "origin": "legacy-migrated",
       "migration": {
         "legacy_core": ".claude/skills-gpt/user-walkthrough/SKILL-core.md",
         "legacy_claude_launcher": ".claude/skills/user-walkthrough/SKILL.md",
@@ -1087,6 +1112,7 @@
       "capabilities": [
         "filesystem"
       ],
+      "origin": "legacy-migrated",
       "migration": {
         "legacy_core": ".claude/skills-gpt/user-wrap/SKILL-core.md",
         "legacy_claude_launcher": ".claude/skills/user-wrap/SKILL.md",

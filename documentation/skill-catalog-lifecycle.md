@@ -325,40 +325,47 @@ and a skill that no Skill Mesh manifest owns keeps each workflow's existing path
 Regeneration is an explicit step of a mutation, not a side effect. After the canonical bytes
 change, `tools/gen_manifest.py` reproduces the three artifacts it owns, and the provider
 profiles are rebuilt with `tools/build-distributions.ps1`, before any verification verdict is
-trusted.
+trusted. `python tools/gen_manifest.py --check` compares the three committed artifacts with a
+regeneration without writing any byte, and exits 1 naming each file that has drifted.
 
-**Remaining lifecycle scope.** The scoped repair removes the stale-inventory obstacle but does
-not finish Phase CL Step 111 or make count-changing mutations routine. The explicit portable,
-native, description, support-asset, and expected-count authorities remain anti-silent-addition
-guards and must be changed deliberately with the canonical package. A later `CREATE`, `DELETE`,
-or `RENAME` still needs its own authority until the phase completes; this exception grants none.
+**Remaining lifecycle scope.** The scoped repair removed the stale-inventory obstacle, and
+Phase CL Step 111 then made the generator build and validate all three artifacts before it
+replaces any, replace each file through an atomic rename so none is ever left truncated, and
+record each skill's `origin`: `legacy-migrated` with its retired-tree paths, or `canonical` with
+`migration: null`. An interruption between two replacements is not hidden: the next `--check`
+names the files it did not reach. Neither change makes count-changing mutations routine. The
+explicit portable, native, description, and support-asset authorities remain
+anti-silent-addition guards, and the expected counts are derived from them; all of them must be
+changed deliberately with the canonical package. A later `CREATE`, `DELETE`, or `RENAME` still
+needs its own authority until the phase completes; neither the exception nor Step 111 grants
+one.
 
 ## 4. Portable means a core plus every required provider
 
 This section states a rule about a **mutation**, not a second definition of the manifest
 *status* `portable`. That status is defined once, in section 1 of
-[`architecture.md`](architecture.md), where a Codex adapter is additive on a portable record
+[`architecture.md`](architecture.md), where a GPT adapter is optional on a portable record
 rather than a third status; this guide neither restates nor widens it, and
 `tests/package-integrity/test_manifest_contract.py` is what enforces it.
 
 The narrower rule Phase CL adds is about a change: a skill **created or changed under this
 contract** must ship one neutral `core.md` **plus a thin adapter for every required
-provider**. The required set is ordered, and it is exactly three:
+provider**. The required set is ordered, it is recorded in `config/skill-manifest.json` as
+`portable_provider_contract.required`, and it is exactly two:
 
 1. `claude`
-2. `gpt`
-3. `codex`
+2. `codex`
 
-All three land in the same change. A package carrying a core and two of the three adapters
-is not a portable skill in a partial state — it is an incomplete change, and the gates treat
-it as one. This is the rule that makes a host-only creator's output structurally incapable of
+Both land in the same change. A package carrying a core and only one of the two adapters is
+not a portable skill in a partial state — it is an incomplete change, and the gates treat it
+as one. This is the rule that makes a host-only creator's output structurally incapable of
 passing as a portable create.
 
-**`gpt` is mandatory.** Descope decision DS-D7(c) demoted the GPT/Copilot host to a
-**build-only** adapter: every portable skill still carries `gpt.md`, and every build still
-emits and verifies its GPT profile. What DS-D7(c) removed is the requirement for an
-*attended* GPT session during acceptance, per anti-goals 2 and 9 of
-[`product-charter.md`](product-charter.md). The adapter is neither optional nor dropped.
+**`gpt` is not required.** GitHub Copilot is no longer a supported host (operator decision,
+2026-11-14, amending CL-D4 and the earlier DS-D7(c) build-only rule). The existing
+`providers/gpt.md` files stay until V4-7 removes them, and the GPT profile still builds the
+adapters that are present. A `CREATE` ships no `gpt.md`, and a portable skill without one is
+not drift. Removing the existing GPT adapters is V4-7's work, not a lifecycle mutation's.
 
 Adding a provider to the general provider vocabulary does not widen this set. Widening it is
 an explicit provider-rollout decision with its own review.
@@ -497,7 +504,7 @@ and its operator messages key on; a caller may rely on the exact spelling.
 | `PACKAGE_RESOURCE_PLAN_REQUIRED` | A request would add, remove, or relocate a package-local file, or change a declared support-asset entry. | any write |
 | `NOT_SKILL_MESH_SOURCE` | The target fails the section 3 source tree predicate — not a Git working tree, or no `config/skill-manifest.json` at that path. A name the manifest does not own is `SKILL_NOT_FOUND`, not this. | any write, and with no single-host fallback |
 | `CATALOG_MUTATION_INCOMPLETE` | A gate failed after the first write, leaving the change partial. | any cleanup — see section 10 |
-| `CATALOG_SKILL_USE_LIFECYCLE` | A legacy optimization workflow (`skill-eval-setup`, `skill-evolve`, or `skill-iterate`) targets a skill whose repository root holds a `config/skill-manifest.json` that owns the skill's name: every tree that passes the section 3 source tree predicate, and any copy inside one. | any worktree, branch, edit, materialization, commit, or push into that skill's canonical source |
+| `CATALOG_SKILL_USE_LIFECYCLE` | A legacy optimization workflow (`skill-eval-setup`, `skill-evolve`, or `skill-iterate`) targets a skill whose repository root holds a `config/skill-manifest.json` that owns the skill's name: every tree that passes the section 3 source tree predicate, and any copy inside one. It is also raised, failing closed, when that repository root holds a `config/skill-manifest.json` that cannot be read or parsed as JSON, because ownership then cannot be decided. | any worktree, branch, edit, materialization, commit, or push into that skill's canonical source |
 
 A stop is a refusal to proceed, not an error to be worked around. Widening any of these
 conditions is a plan change, not an implementation detail.

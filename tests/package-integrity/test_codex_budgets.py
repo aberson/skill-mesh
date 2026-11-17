@@ -122,8 +122,9 @@ def _codex_eligible_records(manifest=None):
 
     The membership predicate is ELIGIBILITY (`status == "portable"`), deliberately NOT
     `"codex" in providers`. Since Step 8 the two select the same records from the
-    committed manifest (47 then, 54 since Step 10), so no assertion over real records
-    can tell them apart any more
+    committed manifest (47 then, 54 since Step 10), and since Phase CL Step 111 made
+    codex a required provider they must, so no assertion over real records can tell
+    them apart any more
     -- which is exactly why `manifest` is a parameter: the basis-pinning test feeds a
     synthetic manifest where the two predicates disagree and proves this function
     follows eligibility.
@@ -256,32 +257,39 @@ def test_catalog_estimate_basis_is_eligibility_not_the_authored_roster():
     no arithmetic over real records can separate the predicates any more.
 
     So the basis is pinned on a SYNTHETIC manifest where the predicates disagree: one
-    portable record with no authored codex adapter (legal: portability precedes
-    authoring for any future skill) and one provider-native record carrying neither.
-    Eligibility must include the not-yet-authored portable record -- a rewrite of
-    `_codex_eligible_records` to filter on `"codex" in providers` drops it and reds
-    here -- and must still exclude the native record, whose absence from dist/codex is
-    the builder's contract.
+    portable record with no codex adapter and one provider-native record carrying
+    neither. That portable record is NOT a legal package. Codex has been a required
+    provider since Phase CL Step 111 (`portable_provider_contract.required`), and
+    completeness has its own owners: tools/gen_manifest.py refuses to generate such a
+    record and test_manifest_contract.py's test_portable_skill_truth rejects one. A
+    metadata-budget test is not the owner of release completeness, so this one does not
+    rule on it. It only uses the shape to prove which predicate the estimate follows:
+    eligibility must include the record -- a rewrite of `_codex_eligible_records` to
+    filter on `"codex" in providers` drops it and reds here, and charging a record
+    the catalog must carry is the conservative reading of a budget -- and must still
+    exclude the native record, whose absence from dist/codex is the builder's contract.
     """
     manifest = _load_manifest()
     eligible = {s["name"] for s in _codex_eligible_records()}
     portable = {s["name"] for s in manifest["skills"] if s["status"] == "portable"}
     assert eligible == portable
     assert len(eligible) == manifest["counts"]["portable"] == 44
-    # Since Step 8 every eligible record is also authored -- the pass-2 exit fact --
+    # Every eligible record also carries codex -- required since Phase CL Step 111 --
     # and the coincidence is asserted so a dropped adapter cannot hide behind it.
+    assert "codex" in manifest["portable_provider_contract"]["required"]
     authored = {s["name"] for s in manifest["skills"] if "codex" in s["providers"]}
     assert authored == eligible
     assert len(authored) == manifest["counts"]["codex"] == 44
-    # The synthetic-manifest pin: predicates disagree, eligibility must win.
+    # The synthetic-manifest pin: predicates disagree, eligibility must win. The
+    # portable record lacks its required codex adapter on purpose (see docstring).
     synthetic = {"skills": [
-        {"name": "future-portable", "status": "portable", "description": "d",
-         "providers": {"claude": "x", "gpt": "y"}},
+        {"name": "incomplete-portable", "status": "portable", "description": "d",
+         "providers": {"claude": "x"}},
         {"name": "native-only", "status": "provider-native", "description": "d",
          "providers": {"claude": "x"}},
     ]}
     basis = {s["name"] for s in _codex_eligible_records(synthetic)}
-    assert basis == {"future-portable"}, (
+    assert basis == {"incomplete-portable"}, (
         "the estimate's membership predicate drifted off eligibility "
         f"(status == portable): got {sorted(basis)}")
     total, sizes = _catalog_estimate()

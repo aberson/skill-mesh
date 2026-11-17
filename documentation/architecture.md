@@ -23,8 +23,9 @@ Codex hosts receive *generated* compatibility layouts built from this source.
 | **shim** | Thin backward-compatible launcher that delegates to a canonical file. |
 | **transport** | Authenticated API or host-native channel used to execute a provider model. |
 | **calibration** | Existing deterministic/rubric comparison that checks adapter parity. |
-| **portable skill** | Skill with a neutral core plus Claude and GPT adapters, all 44 of which additionally carry a Codex adapter — codex capability is ADDITIVE on a portable record, never a third status. 44 total. |
-| **provider-native skill** | Skill supported on exactly one host; no neutral core. 3 total. |
+| **portable skill** | Skill with a neutral core plus an adapter for every provider in the manifest's ordered `portable_provider_contract.required`: Claude and Codex. A GPT adapter is optional on a portable record, never a third status; all 44 still carry one until V4-7 removes them. 44 total. |
+| **provider-native skill** | Skill supported on exactly one host; no neutral core. 2 total. |
+| **origin** | Where a skill's package came from: `legacy-migrated` (moved out of the retired workspace tree, with a `migration` block naming its sources) or `canonical` (authored directly in Skill Mesh, `migration: null`). |
 
 `<name>` and `<skill>` in every path template mean the same stable kebab-case
 `skills[].name` value from `config/skill-manifest.json`.
@@ -41,7 +42,7 @@ deprecation window (see `migration.md`), not canonical sources.
 |---|---|---|
 | Skill core (portable) | `skills/<name>/core.md` | One per portable skill; `null` in the manifest for provider-native skills. |
 | Claude adapter | `skills/<name>/providers/claude.md` | Thin host adapter. Self-contained for provider-native skills. |
-| GPT adapter | `skills/<name>/providers/gpt.md` | Thin host adapter; absent for provider-native skills. |
+| GPT adapter | `skills/<name>/providers/gpt.md` | Thin host adapter; optional on a portable skill and absent for provider-native skills. |
 | Codex adapter | `skills/<name>/providers/codex.md` | Thin host adapter; absent for provider-native skills. One per portable skill (44). |
 | Shared prose assets | `_shared/` (repo root) | Cross-skill cores/prose referenced by multiple skills. The manifest declares `skills/_shared/` as the eventual canonical home; that directory does not exist yet, so today's references resolve to the repo-root tree. The divergence is deliberate and locked by `tests/package-integrity/test_skill_tree.py::test_shared_dest_divergence_is_intentional`. |
 | Skill manifest | `config/skill-manifest.json` | Single source for distribution, install, integrity, and README counts. |
@@ -97,7 +98,8 @@ class, not a restatement of every row above:
 
 `skills/inventory.json` is generated in-repo and never hand-authored. Its projection remains
 owned by `build_inventory()` in `tools/gen_skill_tree.py`; the hermetic manifest command calls
-that projection and writes all three catalog artifacts in one operation.
+that projection, validates all three catalog artifacts before it replaces any, and then
+replaces each one safely (section 8.5).
 
 **The required-provider set is owned elsewhere, and does not redefine `portable`.** Section
 1's Vocabulary row is the definition of the manifest *status* `portable`, and this section
@@ -139,8 +141,9 @@ Portable skill:
 skills/<name>/
   core.md                 # neutral workflow contract (single source of behavior)
   providers/
-    claude.md             # thin Claude adapter
-    gpt.md                # thin GPT/Copilot adapter
+    claude.md             # thin Claude adapter (required)
+    codex.md              # thin Codex adapter (required)
+    gpt.md                # thin GPT/Copilot adapter (optional, until V4-7)
 ```
 
 Provider-native skill (Claude-only exclusion):
@@ -299,10 +302,15 @@ those steps must satisfy.
 
 ## 7. Migration manifest
 
-Every skill has a machine-readable migration entry in `config/skill-manifest.json`
-(the `migration` + `support_assets` blocks per skill, plus top-level
-`global_support_assets`), covering **all 44 portable skills plus the 2
-Claude-native exclusions (46 total)**.
+Every skill records its `origin` in `config/skill-manifest.json` (section 1). The 42
+`legacy-migrated` skills carry a machine-readable migration entry (the `migration` +
+`support_assets` blocks per skill, plus top-level `global_support_assets`); the 4
+`canonical` skills — `code-consigliere`, `user-build-route`, `user-dr`, `user-fermize` —
+were authored directly in Skill Mesh and carry `migration: null` and no support assets,
+because no legacy source exists to name. Phase CL Step 111 measured each legacy path
+against the coding root's Git history before recording it. The provenance sets are
+checked-in constants in `tools/gen_manifest.py`, closed because the source tree is gone: a
+new skill is `canonical`.
 
 **Migration root.** All `source` / `legacy_*` paths are relative to **coding-root**
 (`aberson/coding-root` — the operator's `dev` checkout), READ-ONLY during Steps
@@ -330,12 +338,17 @@ Portable skill `<name>` (`migration` block):
 | `legacy_claude_launcher` | `.claude/skills/<name>/SKILL.md` (compat launcher) | regenerated as a `dist/` shim; **not** a canonical source |
 | `legacy_gpt` | `.claude/skills-gpt/<name>/SKILL-gpt.md` | `skills/<name>/providers/gpt.md` |
 
-Provider-native skill `<name>` (claude-oauth-auth, context-slim):
+Single-file legacy skill `<name>` — the two provider-native skills (claude-oauth-auth,
+context-slim) and `repo-wrap`, a workspace-custom Claude skill that Phase CP Step 10
+promoted to a portable package:
 
 | Manifest field | Legacy source (read-only) | Canonical target |
 |---|---|---|
 | `legacy_claude_adapter` | `.claude/skills/<name>/SKILL.md` | `skills/<name>/providers/claude.md` |
-| `legacy_core`, `legacy_claude_launcher`, `legacy_gpt` | `null` (truthfully none) | — (`core: null`, no gpt adapter) |
+| `legacy_core`, `legacy_claude_launcher`, `legacy_gpt` | `null` (truthfully none) | — (for `repo-wrap`, the core and the other adapters were authored in the canonical tree) |
+
+Canonical skill `<name>`: `migration` is `null`. It is never an object of nulls and never
+a set of plausible legacy paths.
 
 ### 7.2 Support-asset ownership (machine-readable)
 
@@ -483,12 +496,23 @@ repo-root command; that is the drift the single-owner rule exists to stop.
 `skills\inventory.json`
 are generated by `tools\gen_manifest.py` from authoritative constants plus the
 committed `skills\<name>\` tree. **Generation is hermetic** (Step 67): it reads
-nothing outside this repository, takes no argument and no environment variable, and
-reproduces all three artifacts exactly. Regenerate only when one of those constants
+nothing outside this repository, takes no input argument and no environment variable,
+and reproduces all three artifacts exactly. Regenerate only when one of those constants
 changes:
 
 ```powershell
 python tools\gen_manifest.py
+```
+
+Since Phase CL Step 111 both modes build all three payloads in memory and validate them
+together before anything else happens. A regeneration then replaces each file through a
+temporary sibling and an atomic rename, so no artifact is ever left truncated. It is not a
+cross-file transaction: an interruption between two replacements leaves some files old,
+and the no-write check names them. The check compares the three committed artifacts with a
+regeneration, line endings normalized, never writes, and exits 1 naming each drifted file:
+
+```powershell
+python tools\gen_manifest.py --check
 ```
 
 It previously SCANNED an external legacy root for each skill's `support_assets`. The
@@ -497,8 +521,12 @@ output, so a regeneration fed skill-mesh's build product back into skill-mesh's
 manifest and drifted 47 of 50 skills. Those lists are now a checked-in constant, for
 the same reason the published `description` values already were. Four constants stay
 non-derivable by design and each says why at its own definition: `LOCAL_CAPABLE`,
-`SUB_AGENT`, `VISION`, `DESCRIPTIONS`. `PORTABLE` and `NATIVE` are re-derived from
-the committed tree on every run and asserted equal.
+`SUB_AGENT`, `VISION`, `DESCRIPTIONS`, and so are the two provenance sets. `PORTABLE`
+and `NATIVE` are re-derived from the committed tree on every run and asserted equal: a
+directory with `core.md` and an adapter for every required provider is portable, one with
+no `core.md` is provider-native, and a core with only some required adapters is refused.
+The expected counts are derived from those two rosters. Codex membership is not a separate
+roster: every portable skill carries Codex because Codex is required.
 
 All three artifacts are written as UTF-8 with LF line endings on every host. Any
 comparison against a committed copy still normalizes first (BOM stripped, CRLF/CR to
@@ -554,15 +582,19 @@ seam (defaults to this repository) that must be a git working tree.
   need no private source).
 - The provider-native set != {claude-oauth-auth, context-slim}, or
   the exact local-capable / sub-agent / vision name sets not matching the fixture.
-- A portable skill missing a `core`, a `claude` adapter, or a `gpt` adapter.
-- A provider-native skill with a non-null `core` or a `gpt` adapter.
+- `portable_provider_contract.required` other than the ordered `claude`, `codex`; a
+  portable skill missing a `core` or an adapter for a required provider, or carrying a
+  provider other than those two plus the optional `gpt`.
+- A provider-native skill with a non-null `core` or any adapter but `claude`.
 - Any core/adapter path outside `skills/<name>/` or with the wrong `<name>`.
 - A `status` not in {portable, provider-native}, or a capability outside the
   declared vocabulary; missing `capability_semantics`.
 - A skill declaring `vision` or `sub-agent` while `local_capable` is true.
-- A `migration` block not carrying the launcher/adapter convention
-  (`legacy_claude_launcher` + `legacy_claude_adapter`, truthful nulls for native
-  skills), or a legacy path that is not coding-root-relative.
+- An `origin` other than `legacy-migrated` or `canonical`, or a set of canonical skills
+  other than the four pinned names; a canonical skill whose `migration` is not `null`; a
+  legacy `migration` block not carrying the launcher/adapter convention
+  (`legacy_claude_launcher` + `legacy_claude_adapter`, truthful nulls for the
+  single-file skills), or a legacy path that is not coding-root-relative.
 - A `support_assets` entry whose `dest` is not scoped to `skills/<name>/`, or a
   missing known skill-local/global asset; `global_support_assets` not matching the
   fixture.
@@ -575,7 +607,10 @@ seam (defaults to this repository) that must be a git working tree.
 - The normalized build/install/test command lines or the "lint/typecheck not
   configured" statement missing from this document.
 - A regeneration that does not reproduce all three committed artifacts, compared with
-  line endings normalized on both sides (section 8.5). This replaced an optional
+  line endings normalized on both sides (section 8.5); a `--check` that writes anything or
+  is red on the committed tree; a replacement that starts before all three payloads are
+  validated; or an interrupted regeneration that truncates a file or that the next check
+  does not report. This replaced an optional
   legacy-source verification that skipped unless `SKILL_MESH_LEGACY_SOURCE` was set:
   the Step 50 cutover overwrote that source, leaving a check whose only outcomes were
   "skipped" and "wrong".

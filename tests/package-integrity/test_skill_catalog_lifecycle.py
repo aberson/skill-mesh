@@ -14,7 +14,7 @@ WHAT THIS FILE DECIDES, stated exactly. Two mechanisms, and only two.
       -- extended by an appended sentence. The five facts:
 
         1. the `CLAUDE.md` pointer at the guide,
-        2. the required-provider rule (a mutation carries claude, gpt, codex),
+        2. the required-provider rule (a mutation carries claude, codex),
         3. any of the six locked stop codes, or the trigger bound to it,
         4. the recovery rule (a failed mutation preserves unrelated work,
            reports `CATALOG_MUTATION_INCOMPLETE`, and never auto-cleans),
@@ -199,7 +199,12 @@ REQUEST_FIELDS = (
     "description", "capabilities", "resource_paths", "reference_dispositions",
 )
 
-REQUIRED_PROVIDERS = ("claude", "gpt", "codex")
+# The ordered required-provider set: Claude and Codex (Phase CL Step 111; CL-D4 as
+# amended 2026-11-14 by operator decision -- the September set was claude, gpt,
+# codex). The guide's section 4 list, this constant, and the manifest's
+# `portable_provider_contract.required` must agree, and
+# `test_required_provider_set_is_core_plus_claude_codex_in_order` holds all three.
+REQUIRED_PROVIDERS = ("claude", "codex")
 
 # Assembled from parts to match the sibling idiom at test_cutover_handoff.py,
 # and for no stronger reason than that -- stated plainly because the earlier
@@ -225,9 +230,10 @@ FORBIDDEN_SURFACES = (
 
 # Generated in-repo, and therefore never hand-edited -- but not a FORBIDDEN
 # SURFACE marker, so the boundary row naming them is checked separately. These
-# are exactly the two `tools/gen_manifest.py` reproduces (architecture 8.5).
+# are exactly the three `tools/gen_manifest.py` reproduces (architecture 8.5).
 GENERATED_IN_REPO = ("config/skill-manifest.json",
-                     "tests/package-integrity/expected_inventory.json")
+                     "tests/package-integrity/expected_inventory.json",
+                     "skills/inventory.json")
 
 # --------------------------------------------------------------------------- #
 # LOCKED_CLAIMS -- the verbatim pins
@@ -479,26 +485,28 @@ LOCKED_CLAIMS = (
      "This section states a rule about a **mutation**, not a second "
      "definition of the manifest *status* `portable`. That status is defined "
      "once, in section 1 of [`architecture.md`](architecture.md), where a "
-     "Codex adapter is additive on a portable record rather than a third "
+     "GPT adapter is optional on a portable record rather than a third "
      "status; this guide neither restates nor widens it, and "
      "`tests/package-integrity/test_manifest_contract.py` is what enforces "
      "it."),
     ('fact 2 - the required-provider rule', GUIDE_REL,
      "Portable means a core", 'paragraph',
-     "All three land in the same change. A package carrying a core and two "
-     "of the three adapters is not a portable skill in a partial state "
+     "Both land in the same change. A package carrying a core and only one "
+     "of the two adapters is not a portable skill in a partial state "
      "\u2014 it is an incomplete change, and the gates treat it as one. This "
      "is the rule that makes a host-only creator's output structurally "
      "incapable of passing as a portable create."),
+    # Re-based by Phase CL Step 111 (operator decision 2026-11-14): this pin used
+    # to read "`gpt` is mandatory" under DS-D7(c). GPT is no longer required.
     ('fact 2 - the gpt adapter', GUIDE_REL,
      "Portable means a core", 'paragraph',
-     "**`gpt` is mandatory.** Descope decision DS-D7(c) demoted the "
-     "GPT/Copilot host to a **build-only** adapter: every portable skill "
-     "still carries `gpt.md`, and every build still emits and verifies its "
-     "GPT profile. What DS-D7(c) removed is the requirement for an "
-     "*attended* GPT session during acceptance, per anti-goals 2 and 9 of "
-     "[`product-charter.md`](product-charter.md). The adapter is neither "
-     "optional nor dropped."),
+     "**`gpt` is not required.** GitHub Copilot is no longer a supported "
+     "host (operator decision, 2026-11-14, amending CL-D4 and the earlier "
+     "DS-D7(c) build-only rule). The existing `providers/gpt.md` files stay "
+     "until V4-7 removes them, and the GPT profile still builds the adapters "
+     "that are present. A `CREATE` ships no `gpt.md`, and a portable skill "
+     "without one is not drift. Removing the existing GPT adapters is V4-7's "
+     "work, not a lifecycle mutation's."),
     # The gate's own declared scope, pinned in the document it grades. Round 6
     # ended an enumeration race this module could not win by patching: each
     # round's pins held and a container nobody had listed appeared. Declaring
@@ -808,8 +816,9 @@ LOCKED_CLAIMS = (
      "The narrower rule Phase CL adds is about a change: a skill "
      "**created or changed under this contract** must ship one "
      "neutral `core.md` **plus a thin adapter for every required "
-     "provider**. The required set is ordered, and it is exactly "
-     "three:"),
+     "provider**. The required set is ordered, it is recorded in "
+     "`config/skill-manifest.json` as `portable_provider_contract.required`, "
+     "and it is exactly two:"),
     ('fact 3 - read and update over a grandfathered package', GUIDE_REL,
      'What this guide governs', 'paragraph',
      "`READ`, and an `UPDATE` confined to the core and adapters, may "
@@ -1121,7 +1130,10 @@ LOCKED_TABLE_ROWS = (
         "`skill-evolve`, or `skill-iterate`) targets a skill whose "
         "repository root holds a `config/skill-manifest.json` that owns the "
         "skill's name: every tree that passes the section 3 source tree "
-        "predicate, and any copy inside one.",
+        "predicate, and any copy inside one. It is also raised, failing "
+        "closed, when that repository root holds a "
+        "`config/skill-manifest.json` that cannot be read or parsed as JSON, "
+        "because ownership then cannot be decided.",
        2:
         "any worktree, branch, edit, materialization, commit, or push into "
         "that skill's canonical source",
@@ -1379,27 +1391,41 @@ LOCKED_CLAIMS = tuple(
      "or authorize a commit, push, install, or release. Those actions follow the "
      "separately authorized caller workflow; this exception does not by itself grant "
      "them."),
+    # Phase CL Step 111 re-based the next three: generation validates all three
+    # payloads before the first replacement, replaces each file safely, and gains a
+    # no-write `--check`. "In one operation" read as a cross-file transaction the
+    # writer does not provide, so it is gone.
     ('fact 5 - architecture states three-artifact generation', ARCH_REL,
      "Catalog mutation authority", 'paragraph',
      "`skills/inventory.json` is generated in-repo and never hand-authored. Its "
      "projection remains owned by `build_inventory()` in `tools/gen_skill_tree.py`; "
-     "the hermetic manifest command calls that projection and writes all three "
-     "catalog artifacts in one operation."),
+     "the hermetic manifest command calls that projection, validates all three "
+     "catalog artifacts before it replaces any, and then replaces each one safely "
+     "(section 8.5)."),
     ('fact 5 - regeneration is an explicit three-artifact step', GUIDE_REL,
      "Canonical, generated, and consumer surfaces", 'paragraph',
      "Regeneration is an explicit step of a mutation, not a side effect. After the "
      "canonical bytes change, `tools/gen_manifest.py` reproduces the three artifacts "
      "it owns, and the provider profiles are rebuilt with "
-     "`tools/build-distributions.ps1`, before any verification verdict is trusted."),
+     "`tools/build-distributions.ps1`, before any verification verdict is trusted. "
+     "`python tools/gen_manifest.py --check` compares the three committed artifacts "
+     "with a regeneration without writing any byte, and exits 1 naming each file "
+     "that has drifted."),
     ('fact 5 - remaining lifecycle scope', GUIDE_REL,
      "Canonical, generated, and consumer surfaces", 'paragraph',
-     "**Remaining lifecycle scope.** The scoped repair removes the stale-inventory "
-     "obstacle but does not finish Phase CL Step 111 or make count-changing mutations "
-     "routine. The explicit portable, native, description, support-asset, and "
-     "expected-count authorities remain anti-silent-addition guards and must be "
-     "changed deliberately with the canonical package. A later `CREATE`, `DELETE`, "
-     "or `RENAME` still needs its own authority until the phase completes; this "
-     "exception grants none."),
+     "**Remaining lifecycle scope.** The scoped repair removed the stale-inventory "
+     "obstacle, and Phase CL Step 111 then made the generator build and validate all "
+     "three artifacts before it replaces any, replace each file through an atomic "
+     "rename so none is ever left truncated, and record each skill's `origin`: "
+     "`legacy-migrated` with its retired-tree paths, or `canonical` with "
+     "`migration: null`. An interruption between two replacements is not hidden: the "
+     "next `--check` names the files it did not reach. Neither change makes "
+     "count-changing mutations routine. The explicit portable, native, description, "
+     "and support-asset authorities remain anti-silent-addition guards, and the "
+     "expected counts are derived from them; all of them must be changed deliberately "
+     "with the canonical package. A later `CREATE`, `DELETE`, or `RENAME` still needs "
+     "its own authority until the phase completes; neither the exception nor Step 111 "
+     "grants one."),
 )
 
 _updated_rows = []
@@ -1446,23 +1472,12 @@ for _label, _document, _scope, _rows in LOCKED_TABLE_CELLS:
     _updated_cells.append((_label, _document, _scope, _rows))
 LOCKED_TABLE_CELLS = tuple(_updated_cells)
 
-# The `Generated, no current producer` row of the guide's boundary table is
-# fully pinned as of iteration 6, RULE cell included. It was the one boundary
-# cell left unpinned, on the reasoning that Phase CL Step 111 makes its
-# reproducibility clause false and a pin would force churn there; round 5
-# measured what the exemption cost, and the substring guards standing in for the
-# pin were satisfied by a cell that contains "never hand-edited" and then grants
-# exactly that hand-edit. Step 111 updates the pin in the same change, which is
-# the ordinary cost every other contract cell already pays. The claims that
-# survive Step 111 -- that it is never hand-edited, that no command writes it
-# today, and that its content is nevertheless derivable -- are ALSO asserted
-# semantically by
-# `test_guide_records_that_inventory_regeneration_has_no_current_producer`,
-# because a pin holds one wording and those three are what any rewording must
-# still say.
-# (A module-level constant naming that class was carried here and referenced
-# nowhere; round 4 found it dead, so it is gone rather than left to read as a
-# mechanism.)
+# The boundary table's former `Generated, no current producer` row is gone: the
+# rebinding above folds `skills/inventory.json` into the live `Generated in-repo`
+# row, whose rule cell is pinned like every other contract cell, and
+# `test_guide_records_the_scoped_three_artifact_generator_exception` asserts the
+# claims any rewording must keep -- never hand-edited, written by
+# `tools/gen_manifest.py`, projected through `build_inventory()`.
 
 # --------------------------------------------------------------------------- #
 # THE MARKDOWN MODEL -- one, and it is not this module's
@@ -3386,17 +3401,26 @@ def test_guide_lede_classifies_a_single_host_package_as_host_only():
 # 2. The required-provider rule
 # --------------------------------------------------------------------------- #
 
-def test_required_provider_set_is_core_plus_claude_gpt_codex_in_order():
+def test_required_provider_set_is_core_plus_claude_codex_in_order():
     section = _guide_section("Portable means a core")
     assert _ordered_list_code_tokens(section) == list(REQUIRED_PROVIDERS), (
         f"the guide's required-provider list is no longer exactly "
         f"{list(REQUIRED_PROVIDERS)} in order. This is the rule that makes a "
         f"host-only package structurally incapable of passing as a portable "
         f"create; it is not a stylistic list.")
-    # The enforcement SENTENCE ("All three land in the same change..."), the
-    # gpt mandate, and the one-owner citation are pinned verbatim; what a pin
+    # The guide and the manifest state the same ordered set. The manifest field is
+    # what the generator and the gates consume; a guide that drifted from it would
+    # instruct a CREATE the generator then refuses, or accepts the wrong one.
+    manifest = json.loads(_read(MANIFEST_REL))
+    assert manifest["portable_provider_contract"]["required"] == list(
+        REQUIRED_PROVIDERS), (
+        f"{MANIFEST_REL}'s portable_provider_contract.required is "
+        f"{manifest['portable_provider_contract']['required']}; the guide's "
+        f"section 4 says {list(REQUIRED_PROVIDERS)}.")
+    # The enforcement SENTENCE ("Both land in the same change..."), the gpt
+    # paragraph, and the one-owner citation are pinned verbatim; what a pin
     # cannot express is that the vocabulary is an ORDERED list of exactly these
-    # three, which is the assertion above.
+    # two, which is the assertion above.
     #
     # BEST EFFORT, kept for the same reason as the front-door scan: round-2
     # review measured this document carrying a SECOND live definition of the
@@ -4133,6 +4157,22 @@ def test_the_guide_names_every_legacy_workflow_the_stop_covers():
     assert not missing, (
         f"the {CATALOG_GUARD_CODE} row no longer names {missing}; the guide "
         f"and the guarded cores must agree on which workflows raise it.")
+
+
+def test_the_guides_shared_stop_row_names_both_triggers():
+    """The cores raise the shared code on two conditions -- the manifest OWNS the
+    name, or the manifest is present but cannot be read or parsed (fail closed) --
+    and the guide's row must name both. The row is also pinned verbatim; this
+    states the two claims any rewording must keep."""
+    rows = {row[0].code: row for row in _cell_rows(_guide_section("Stop codes"))
+            if row}
+    trigger = _flat(rows[CATALOG_GUARD_CODE][1].source)
+    for claim in ("owns the skill's name", "cannot be read or parsed as json",
+                  "failing closed"):
+        assert claim in trigger, (
+            f"the {CATALOG_GUARD_CODE} row no longer says {claim!r}; the three "
+            f"cores raise it both for an owned name and for a present but "
+            f"unreadable or unparseable manifest.")
 
 
 def test_planted_negatives_turn_the_guard_checker_red():
@@ -5062,7 +5102,8 @@ def test_guide_records_the_scoped_three_artifact_generator_exception():
     assert "build_inventory()" in rule
     prose = _flat(_prose(section))
     assert "three artifacts" in prose
-    assert "does not finish phase cl step 111" in prose
+    assert "tools/gen_manifest.py --check" in prose
+    assert "neither change makes count-changing mutations routine" in prose
 
 
 def test_architecture_records_the_live_inventory_producer():

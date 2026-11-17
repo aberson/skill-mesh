@@ -3,12 +3,12 @@
 Two independent layers:
 
 - STRUCTURAL (mandatory, needs NO private/legacy source): every portable skill
-  dir has core.md + providers/claude.md + providers/gpt.md, and OPTIONALLY
-  providers/codex.md (the additive third provider from Phase CP Step 3 -- 0 authored
-  at that step, the pilot five at Step 4, the whole portable roster since Step 8);
-  every provider-native dir has ONLY providers/claude.md (no core.md, no gpt.md,
-  no codex.md -- provider-native means Claude-only); the counts match the manifest
-  (44 portable, 2 native, 46 total, 44 codex); skills/inventory.json
+  dir has core.md plus an adapter for every provider in the manifest's
+  `portable_provider_contract.required` (claude, codex -- Phase CL Step 111), and
+  OPTIONALLY providers/gpt.md (GPT is no longer a required provider; all 44 still
+  carry one until V4-7); every provider-native dir has ONLY providers/claude.md (no
+  core.md, no gpt.md, no codex.md -- provider-native means Claude-only); the counts
+  match the manifest (44 portable, 2 native, 46 total, 44 codex); skills/inventory.json
   agrees with the manifest and the committed expected_inventory.json fixture; and
   no operator-private absolute path leaked into the migrated tree.
 
@@ -85,18 +85,17 @@ def test_inventory_counts():
         "portable": sum(1 for s in skills if s["status"] == "portable"),
         "provider_native": sum(1 for s in skills
                                if s["status"] == "provider-native"),
-        # Additive third-provider tally (Phase CP Step 3), derived from the per-skill
-        # booleans so the count and the records cannot disagree.
+        # Codex tally, derived from the per-skill booleans so the count and the
+        # records cannot disagree.
         "codex": sum(1 for s in skills if s["providers"]["codex"]),
     }
     assert inv["counts"] == derived, (inv["counts"], derived)
     assert derived["total"] == 46
     assert derived["portable"] == 44
     assert derived["provider_native"] == 2
-    # 54 since Phase CP Step 10 (issue #127) promoted the seven workspace-custom
-    # skills on top of the Step 8 catalog of 47. Every portable skill carries a
-    # providers/codex.md, and each promotion landed portable and codex together.
-    assert derived["codex"] == 44
+    # Codex is required for every portable skill since Phase CL Step 111, so the
+    # tally equals the portable count by construction.
+    assert derived["codex"] == derived["portable"] == 44
 
 
 def test_inventory_matches_manifest():
@@ -129,6 +128,31 @@ def test_inventory_skill_set_matches_fixture():
     assert native == set(fx["provider_native"])
 
 
+def test_historical_migration_plan_follows_truthful_provenance():
+    """`build_plan()` is the retired migration's plan, kept for its transform coverage.
+
+    Since Phase CL Step 111 a record may say there was nothing to migrate: a canonical
+    skill has `migration: null`, and a single-file legacy skill (repo-wrap) has null
+    core and gpt sources. The plan must follow that truth -- no record for a canonical
+    skill, no record for a null source -- rather than crash, or invent a path, because
+    `_record` refuses any source that is not a real `.claude/` legacy path.
+    """
+    manifest = load_manifest()
+    plan = gen_skill_tree.build_plan(manifest)
+    planned = {}
+    legacy_root = "." + "claude/"  # assembled: a provenance prefix, not a runtime path
+    for rec in plan:
+        assert rec["legacy_rel"].startswith(legacy_root), rec
+        planned.setdefault(rec["name"], []).append(rec["role"])
+    by_name = {s["name"]: s for s in manifest["skills"]}
+    canonical = {n for n, s in by_name.items() if s["origin"] == "canonical"}
+    assert canonical and not canonical & set(planned), "a canonical skill was planned"
+    assert planned["repo-wrap"] == ["claude"]
+    assert planned["context-slim"] == ["claude"]
+    assert planned["plan-init"] == ["core", "claude", "gpt"]
+    assert set(planned) == set(by_name) - canonical
+
+
 def test_exclusion_records_for_native_only():
     for s in load_inventory()["skills"]:
         if s["status"] == "provider-native":
@@ -145,15 +169,21 @@ def test_exclusion_records_for_native_only():
 # On-disk tree shape (mandatory, no private source)
 # --------------------------------------------------------------------------- #
 
-def test_portable_dirs_have_exactly_core_and_two_adapters():
-    for s in load_manifest()["skills"]:
+def test_portable_dirs_have_a_core_and_every_required_adapter():
+    """Tree shape consumes the manifest's required-provider field (Phase CL Step 111)
+    rather than restating it, so widening or narrowing the set is one edit."""
+    manifest = load_manifest()
+    required = manifest["portable_provider_contract"]["required"]
+    assert required == ["claude", "codex"]
+    for s in manifest["skills"]:
         if s["status"] != "portable":
             continue
         name = s["name"]
         d = SKILLS_DIR / name
         assert (d / "core.md").is_file(), f"{name}: missing core.md"
-        assert (d / "providers" / "claude.md").is_file(), f"{name}: missing claude.md"
-        assert (d / "providers" / "gpt.md").is_file(), f"{name}: missing gpt.md"
+        for provider in required:
+            assert (d / "providers" / f"{provider}.md").is_file(), (
+                f"{name}: missing required {provider}.md")
 
 
 def test_native_dirs_have_only_claude_adapter():
@@ -188,11 +218,12 @@ def test_file_counts_across_tree():
     codex = list(SKILLS_DIR.glob("*/providers/codex.md"))
     assert len(cores) == 44, len(cores)
     assert len(claude) == 46, len(claude)   # 44 portable + 2 native
+    # gpt is optional since Phase CL Step 111, so 44 is today's tree rather than a
+    # rule: every portable skill still carries one until V4-7 removes them.
     assert len(gpt) == 44, len(gpt)
-    # 54 since Phase CP Step 10 (issue #127) promoted seven workspace-custom skills
-    # on top of the Step 8 catalog of 47. This is a SPELLED count on purpose, exactly
-    # like its three siblings: any step that authors more adapters must come here and
-    # state the new number, so the catalog size is never silently redefined by a glob.
+    # This is a SPELLED count on purpose, exactly like its siblings: any step that
+    # authors more adapters must come here and state the new number, so the catalog
+    # size is never silently redefined by a glob.
     assert len(codex) == 44, len(codex)
 
 
