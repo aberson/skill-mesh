@@ -1,25 +1,21 @@
 {
   "note": "Authoritative expected inventory for package-integrity tests. Committed so the public package tests need no private/legacy source. Regenerate with tools/gen_manifest.py.",
   "counts": {
-    "total": 50,
-    "portable": 48,
+    "total": 46,
+    "portable": 44,
     "provider_native": 2,
-    "claude": 50,
-    "gpt": 48,
-    "codex": 48,
+    "claude": 46,
+    "gpt": 44,
+    "codex": 44,
     "local_capable": 17,
-    "sub_agent": 18,
+    "sub_agent": 16,
     "vision": 1,
-    "filesystem": 50
+    "filesystem": 46
   },
   "portable": [
     "build-phase",
     "build-queue",
     "build-step",
-    "citation-distill",
-    "citation-review",
-    "citation-sweep",
-    "citation-triage",
     "code-consigliere",
     "judge-ui",
     "lesson-harvest",
@@ -70,10 +66,6 @@
     "build-phase",
     "build-queue",
     "build-step",
-    "citation-distill",
-    "citation-review",
-    "citation-sweep",
-    "citation-triage",
     "code-consigliere",
     "judge-ui",
     "lesson-harvest",
@@ -137,8 +129,6 @@
   ],
   "sub_agent": [
     "build-step",
-    "citation-review",
-    "citation-sweep",
     "context-slim",
     "judge-ui",
     "lesson-harvest",
@@ -223,68 +213,6 @@
           "dest": "skills/build-step/scripts/"
         }
       ]
-    },
-    {
-      "name": "citation-distill",
-      "status": "portable",
-      "local_capable": false,
-      "capabilities": [
-        "filesystem"
-      ],
-      "migration": {
-        "legacy_core": ".claude/skills-gpt/citation-distill/SKILL-core.md",
-        "legacy_claude_launcher": ".claude/skills/citation-distill/SKILL.md",
-        "legacy_claude_adapter": ".claude/skills/citation-distill/SKILL-claude.md",
-        "legacy_gpt": ".claude/skills-gpt/citation-distill/SKILL-gpt.md"
-      },
-      "support_assets": []
-    },
-    {
-      "name": "citation-review",
-      "status": "portable",
-      "local_capable": false,
-      "capabilities": [
-        "filesystem",
-        "sub-agent"
-      ],
-      "migration": {
-        "legacy_core": ".claude/skills-gpt/citation-review/SKILL-core.md",
-        "legacy_claude_launcher": ".claude/skills/citation-review/SKILL.md",
-        "legacy_claude_adapter": ".claude/skills/citation-review/SKILL-claude.md",
-        "legacy_gpt": ".claude/skills-gpt/citation-review/SKILL-gpt.md"
-      },
-      "support_assets": []
-    },
-    {
-      "name": "citation-sweep",
-      "status": "portable",
-      "local_capable": false,
-      "capabilities": [
-        "filesystem",
-        "sub-agent"
-      ],
-      "migration": {
-        "legacy_core": ".claude/skills-gpt/citation-sweep/SKILL-core.md",
-        "legacy_claude_launcher": ".claude/skills/citation-sweep/SKILL.md",
-        "legacy_claude_adapter": ".claude/skills/citation-sweep/SKILL-claude.md",
-        "legacy_gpt": ".claude/skills-gpt/citation-sweep/SKILL-gpt.md"
-      },
-      "support_assets": []
-    },
-    {
-      "name": "citation-triage",
-      "status": "portable",
-      "local_capable": false,
-      "capabilities": [
-        "filesystem"
-      ],
-      "migration": {
-        "legacy_core": ".claude/skills-gpt/citation-triage/SKILL-core.md",
-        "legacy_claude_launcher": ".claude/skills/citation-triage/SKILL.md",
-        "legacy_claude_adapter": ".claude/skills/citation-triage/SKILL-claude.md",
-        "legacy_gpt": ".claude/skills-gpt/citation-triage/SKILL-gpt.md"
-      },
-      "support_assets": []
     },
     {
       "name": "claude-oauth-auth",

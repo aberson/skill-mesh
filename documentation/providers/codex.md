@@ -25,7 +25,7 @@ and byte-identical ledger, refusal, containment, and uninstall semantics to the 
 two profiles, because all three derive from the discovery subdirectory rather than
 spelling a root per provider.
 
-Only the 48 portable skills have a Codex adapter. The 2 Claude-native exclusions —
+Only the 44 portable skills have a Codex adapter. The 2 Claude-native exclusions —
 `claude-oauth-auth` and `context-slim` — carry `core: null` in
 `config/skill-manifest.json` and are absent from a Codex profile entirely; no
 misleading stub is emitted for a provider that cannot support them.
@@ -227,7 +227,8 @@ its own reported result, never a silently degraded one.
   after its explicit no-history probe passes; `build-phase` additionally requires a
   fresh per-step opaque parent HMAC state and a usable caller-scoped parent-only verdict
   service. Phase CL Step 119 (issue #165) swept all 54 adapters and closed the rest of
-  that historical set: `citation-sweep`, `judge-ui`, `research-prospect`,
+  that historical set (one member, a citation sweep skill, has since moved to the
+  Citation Needed repository): `judge-ui`, `research-prospect`,
   `review-gauntlet`, `test-prune`, `tier-escalate`, `tier-offload`,
   `user-brainstorm`, and `user-learn` are now capability-conditioned on the SAME
   contract build-step publishes -- a host that passes it may map their isolated arms
@@ -241,9 +242,6 @@ its own reported result, never a silently degraded one.
   whether that script can execute, so those two keep their own workflow-scoped halts.
   Every adapter still establishes the capability for itself, from the active callable
   schema plus a non-mutating probe.
-  `citation-review` now joins the capability-conditioned set because its parent
-  dispatches fresh classification judges; its sweep caller uses the same direct
-  depth-1 mapping after completing the OPEN ALL barrier.
   `user-debug` is capability-conditioned: its parent directly dispatches separately
   probed fresh siblings for Step 2 and Option 4, or visibly halts
   `required_tool_missing`; the child receives only symptom, repro, and bounded

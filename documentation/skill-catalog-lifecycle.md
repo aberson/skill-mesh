@@ -46,6 +46,8 @@ other catalog change.
 
 **Scoped v3 catalog exception (2026-11-12).** The operator authorized one scoped exception for the v3 catalog cleanup batch: retiring `goblin-suggest`, `goblin-sweep`, `goblin-do`, `judge-motion` and `user-lavishify`; folding `user-shakedown` into `user-walkthrough` and `plan-trim` into `plan-merge`; moving `build-observer` and `observatory-doctor` out; creating `user-fermize`; updating `user-afterparty`; replacing `user-project` with a script; and deleting `user-orient` (see [the v3 catalog cleanup plan](v3-catalog-cleanup-plan.md) and [the v3 user-pm plan](v3-user-pm-revamp-plan.md)). Each mutation runs in an isolated worktree from `origin/main` while the original checkout stays dirty and untouched, and the request, base ref, target paths and pre-write hashes are recorded outside the repository before any write. On 2026-11-12 the operator confirmed that it also covers the `user-pm` core rewrite and the skill inbox hooks UPDATEs, with the same safeguards. It does not claim Phase CL Step 111 or the full phase complete, waive any other lifecycle gate, or authorize a push, install or release.
 
+**Scoped citation-move exception (2026-11-16).** The operator authorized one scoped exception for four portable `DELETE`s: the Citation Needed review, distill, triage and sweep skills leave the catalog because they are specific to that tool, which now ships and installs them from its own repository. The mutation runs in an isolated worktree from `origin/main`, and the request, base ref, target paths and pre-write hashes are recorded outside the repository before any write. It does not claim Phase CL Step 111 or the full phase complete, waive any other lifecycle gate, or authorize a push, install or release.
+
 **Scoped operator exception (2026-10-31):** the operator authorized creation of
 `user-build-route`, including the inventory-generation changes needed to register
 and validate it. The work was first written in a checkout that predates v2.0.3 and
@@ -365,7 +367,7 @@ review, and qualification gates in that plan are authorized, eligibility remains
 Claude-only, and every later native mutation still takes
 `PROVIDER_NATIVE_REVIEW_REQUIRED`.
 
-The catalog at the time of writing is 50 skills: 48 portable and 2 provider-native.
+The catalog at the time of writing is 46 skills: 44 portable and 2 provider-native.
 
 ## 5. The five operations
 

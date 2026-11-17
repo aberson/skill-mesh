@@ -54,7 +54,6 @@ SKILLS_DIR = REPO_ROOT / "skills"
 
 PORTABLE = [
     "build-phase", "build-queue", "build-step",
-    "citation-distill", "citation-review", "citation-sweep", "citation-triage",
     "code-consigliere",
     "judge-ui",
     "lesson-harvest", "memory-distill", "plan-expedite",
@@ -79,7 +78,7 @@ NATIVE = ["claude-oauth-auth", "context-slim"]
 # what `status`, `counts["portable"]`, `counts["provider_native"]` and the README's
 # GPT-capable line all mean. A codex adapter is ADDITIVE on top of a record that is
 # already portable-or-native: it never moves a skill between those two buckets, so
-# EXPECTED_TOTAL / EXPECTED_PORTABLE / EXPECTED_NATIVE are 50/48/2 and every existing
+# EXPECTED_TOTAL / EXPECTED_PORTABLE / EXPECTED_NATIVE are 46/44/2 and every existing
 # count keeps its exact meaning. Modelling codex as a third status instead would
 # redefine `portable` for all catalog records and invalidate every committed tally.
 #
@@ -96,8 +95,8 @@ NATIVE = ["claude-oauth-auth", "context-slim"]
 # portable skill now carries a codex adapter, so this list EQUALS PORTABLE by
 # value. Phase CP Step 10 (issue #127) promoted seven workspace-custom skills --
 # a portfolio-block proposer (moved to dev-observatory by the v3 catalog cleanup,
-# Step 4), the four citation-* skills, a goblin sweep wrapper (retired by the v3
-# catalog cleanup, Step 14) and repo-wrap -- each
+# Step 4), four citation skills (moved to the Citation Needed repository in v4), a
+# goblin sweep wrapper (retired by the v3 catalog cleanup, Step 14) and repo-wrap -- each
 # authored portable AND codex-capable in one commit, so the two lists grew together
 # from 47 to 54 and the equality survived. It stays a SEPARATE spelled list anyway --
 # equality is a fact about
@@ -109,7 +108,6 @@ NATIVE = ["claude-oauth-auth", "context-slim"]
 # raises instead of shipping.
 CODEX = [
     "build-phase", "build-queue", "build-step",
-    "citation-distill", "citation-review", "citation-sweep", "citation-triage",
     "code-consigliere",
     "judge-ui",
     "lesson-harvest", "memory-distill", "plan-expedite",
@@ -143,8 +141,9 @@ CODEX = [
 # would be asserting a capability nothing measured. Absence here means "not yet
 # assessed", which is also the safe reading -- local_capable=false costs a routing
 # opportunity, while a wrong true costs a wrong host. Step 55 owns the assessment.
-# (citation-sweep is additionally excluded by construction: it is in SUB_AGENT below,
-# and sub-agent implies local_capable=false.)
+# (The citation sweep skill, since moved to the Citation Needed repository, was
+# additionally excluded by construction: it was in SUB_AGENT, and sub-agent implies
+# local_capable=false.)
 LOCAL_CAPABLE = {
     "memory-distill", "plan-feature",
     "plan-init", "plan-merge", "plan-review", "plan-wrap",
@@ -167,9 +166,6 @@ LOCAL_CAPABLE = {
 # per-entry evidence quote stays beside each name so the judgment is auditable.
 SUB_AGENT = {
     "build-step",        # "Spawn a sub-agent"; "Step 6 -- Spawn reviewer agents"
-    "citation-review",   # parent dispatches one fresh depth-1 judge per vote
-    "citation-sweep",    # parent owns every artifact phase and dispatches only fresh
-                         # depth-1 classification judges after the OPEN ALL barrier
     "context-slim",      # "Spawn three parallel subagents using the Agent tool"
     "judge-ui",          # "dispatches an independent vision-judge sub-agent"
     "lesson-harvest",    # fresh strong reviewer gates public surfaces/dispositions
@@ -195,7 +191,8 @@ SUB_AGENT = {
 # render a verdict without it. Nothing on disk marks that difference.
 #
 # Unchanged by Phase CP Step 10: none of the seven promoted skills reads an image.
-# The portfolio-block proposer rendered TOML from text sources, the citation-* family grades prose,
+# The portfolio-block proposer rendered TOML from text sources, the citation family (since
+# moved to the Citation Needed repository) grades prose,
 # the goblin sweep wrapper (since retired) parsed JSON, and repo-wrap runs git -- all
 # text-only end to end.
 VISION = {"judge-ui"}
@@ -228,10 +225,6 @@ DESCRIPTIONS = {
     "build-phase": "Run every step of a plan phase through build-step in order, gating quality between steps.",
     "build-queue": "Run pending phase plans unattended, each in its own worktree; halts become issues.",
     "build-step": "Run one build step: an agent writes it, isolated reviewers gate it, it merges.",
-    "citation-distill": "Turn a committed Citation Needed review into evidence-backed trim or rewrite proposals.",
-    "citation-review": "Evidence-check one LLM-facing artifact through Citation Needed's calibrated review pipeline.",
-    "citation-sweep": "Project-wide Citation Needed rigor pass producing a citation-backed distill backlog.",
-    "citation-triage": "Walk Citation Needed's ranked distill queue and record keep, cut, or rewrite decisions.",
     "code-consigliere": "Investigate a project's workflows and rationale, agree a change, hand off a build seed.",
     "claude-oauth-auth": "How to authenticate with Claude using a subscription OAuth token instead of an API key.",
     "context-slim": "Audit a project's auto-loaded context files and produce a prioritized progressive-disclosure plan to cut per-turn token cost.",
@@ -315,10 +308,6 @@ SUPPORT_ASSETS = {
         ("skills", "evals/"),
         ("skills", "scripts/"),
     ],
-    "citation-distill": [],
-    "citation-review": [],
-    "citation-sweep": [],
-    "citation-triage": [],
     "code-consigliere": [],
     "claude-oauth-auth": [("skills", "evals/")],
     "context-slim": [("skills", "evals/")],
@@ -393,7 +382,7 @@ SUPPORT_ASSETS = {
 # Spelled-out expectations for the tree enumeration below. The same three numbers are
 # asserted independently by tests/package-integrity/test_manifest_contract.py.
 # 59/56/3 since the v3 user-pm plan's Step 13 (#238) retired the orientation skill into user-pm.
-EXPECTED_TOTAL, EXPECTED_PORTABLE, EXPECTED_NATIVE = 50, 48, 2
+EXPECTED_TOTAL, EXPECTED_PORTABLE, EXPECTED_NATIVE = 46, 44, 2
 
 
 def skill_support_assets(name: str):

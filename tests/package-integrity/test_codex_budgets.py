@@ -231,7 +231,7 @@ def test_whole_catalog_initial_list_estimate_is_under_the_unknown_context_floor(
     # out of the estimate can never make the floor easier to fit.
     portable_names = {s["name"] for s in _load_manifest()["skills"]
                       if s["status"] == "portable"}
-    assert len(sizes) == 48
+    assert len(sizes) == 44
     assert set(sizes) == portable_names
     assert _fits_under_floor(total), (
         f"Codex initial-list estimate {total} chars over {len(sizes)} skills exceeds "
@@ -267,12 +267,12 @@ def test_catalog_estimate_basis_is_eligibility_not_the_authored_roster():
     eligible = {s["name"] for s in _codex_eligible_records()}
     portable = {s["name"] for s in manifest["skills"] if s["status"] == "portable"}
     assert eligible == portable
-    assert len(eligible) == manifest["counts"]["portable"] == 48
+    assert len(eligible) == manifest["counts"]["portable"] == 44
     # Since Step 8 every eligible record is also authored -- the pass-2 exit fact --
     # and the coincidence is asserted so a dropped adapter cannot hide behind it.
     authored = {s["name"] for s in manifest["skills"] if "codex" in s["providers"]}
     assert authored == eligible
-    assert len(authored) == manifest["counts"]["codex"] == 48
+    assert len(authored) == manifest["counts"]["codex"] == 44
     # The synthetic-manifest pin: predicates disagree, eligibility must win.
     synthetic = {"skills": [
         {"name": "future-portable", "status": "portable", "description": "d",
@@ -285,7 +285,7 @@ def test_catalog_estimate_basis_is_eligibility_not_the_authored_roster():
         "the estimate's membership predicate drifted off eligibility "
         f"(status == portable): got {sorted(basis)}")
     total, sizes = _catalog_estimate()
-    assert len(sizes) == 48
+    assert len(sizes) == 44
     assert total > 0
 
 
@@ -401,7 +401,7 @@ def test_step6_cohort_is_authored_and_every_authored_record_fits_the_per_skill_c
     # issue #124) + Cohort D's fourteen (Step 8, issue #125) + Step 10's seven
     # promotions (issue #127) -- the full portable catalog. Spelled, so any step that
     # grows the roster must come here and state its new number.
-    assert len(authored) == manifest["counts"]["codex"] == 48
+    assert len(authored) == manifest["counts"]["codex"] == 44
     offenders = []
     for name, rec in authored.items():
         size = _utf8_len(_skill_metadata_serialization(name, rec["description"]))
@@ -474,11 +474,11 @@ STEP8_COHORT_D = [
 # together. SPELLED for the same reason as the cohorts above -- the sweep must grade
 # the step's actual roster, not whatever the manifest happens to declare.
 # The v3 catalog cleanup moved the seventh, a portfolio-block proposer, to dev-observatory
-# (plan Step 4, #260) and retired the goblin sweep wrapper (plan Step 14, #270); the
-# five that remain are spelled here.
+# (plan Step 4, #260) and retired the goblin sweep wrapper (plan Step 14, #270), and
+# v4 moved the four citation skills to the Citation Needed repository; the one that
+# remains is spelled here.
 STEP10_PROMOTIONS = [
-    "citation-distill", "citation-review", "citation-sweep",
-    "citation-triage", "repo-wrap",
+    "repo-wrap",
 ]
 
 
@@ -511,11 +511,12 @@ def test_step10_promotions_are_authored_and_paid_for_within_the_floor():
     # The fixed cost these names add, before a single description character. Stated
     # as arithmetic so the "why did Step 10 have to trim?" answer cannot rot: the name
     # is charged twice (once as `name`, once inside the install path). The seven Step 10
-    # added cost more than 350; the five still in the catalog cost exactly 258 (306
-    # over six until v3 catalog cleanup Step 14 retired the goblin sweep wrapper).
+    # added cost more than 350; the one still in the catalog costs exactly 42 (306
+    # over six until v3 catalog cleanup Step 14 retired the goblin sweep wrapper, then
+    # 258 over five until v4 moved the four citation skills out).
     fixed = sum(_utf8_len(_skill_metadata_serialization(n, ""))
                 for n in STEP10_PROMOTIONS)
-    assert fixed == 258, fixed
+    assert fixed == 42, fixed
     # And the enlarged catalog still fits, which is the whole point of the trim.
     total, sizes = _catalog_estimate()
     assert set(STEP10_PROMOTIONS) <= set(sizes)

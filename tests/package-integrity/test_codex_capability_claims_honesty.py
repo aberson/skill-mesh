@@ -223,7 +223,7 @@ NEIGHBOUR_GATE = Path(__file__).with_name("test_codex_agent_isolation_contract.p
 # reviewable. The floor below is the separate guard against a mis-rooted glob
 # making every assertion in this module vacuous; both are asserted because they
 # fail for different reasons.
-EXPECTED_ADAPTERS = 48
+EXPECTED_ADAPTERS = 44
 # The vacuity floor is DERIVED from the manifest, never hand-set: it is the manifest's
 # codex roster size minus this margin (see `_min_adapters`). It was a literal (50, then
 # 45 at v3 catalog cleanup Step 14) and had to be lowered by hand at every retirement.
@@ -240,9 +240,11 @@ MIN_MANIFEST_CODEX = 10
 # two tests before Step 119 iteration 3; two hand-maintained copies of one
 # threshold drift the first time someone moves one (CLAUDE.md, "One source of
 # truth for data-shape constants").
-MIN_SUB_AGENT = 12          # manifest `sub-agent` codex skills (live: 17)
+MIN_SUB_AGENT = 12          # manifest `sub-agent` codex skills (live: 15)
 MIN_CONDITIONED = 8         # capability-conditioned adapters (live: 10)
-MIN_FALLBACK_SENTENCES = 10  # adapters naming a single-context fallback (live: 13)
+# Lowered 10 -> 8 in v4: the two citation `sub-agent` adapters that each carried one such
+# sentence moved to the Citation Needed repository (measured 11 at the base, 9 after).
+MIN_FALLBACK_SENTENCES = 8  # adapters naming a single-context fallback (live: 9)
 
 # A VACUITY floor on the harvest, and nothing more. The 73 live instances are 21
 # distinct strings, of which 2 carry an isolation noun and 1 also states a lack;
@@ -1759,10 +1761,10 @@ def test_the_fallback_polarity_gate_reds_on_the_one_word_inversion():
     """
     texts = _adapter_texts()
     anchor = "This core documents NO single-context fallback for that dispatch"
-    original = texts["citation-sweep"]
+    original = texts["judge-ui"]
     assert anchor in original, f"planted-negative anchor moved: {anchor!r}"
     assert not _fallback_polarity_defects(
-        {"citation-sweep": original}, {"citation-sweep"})
+        {"judge-ui": original}, {"judge-ui"})
     for inversion in (
             anchor.replace("documents NO", "documents a"),
             "Use the single-context fallback the core documents.",
@@ -1772,7 +1774,7 @@ def test_the_fallback_polarity_gate_reds_on_the_one_word_inversion():
         if inversion not in mutated:
             mutated = original + "\n- " + inversion + "\n"
         assert _fallback_polarity_defects(
-            {"citation-sweep": mutated}, {"citation-sweep"}), (
+            {"judge-ui": mutated}, {"judge-ui"}), (
             f"the polarity gate does not see this inversion: {inversion!r}")
 
 

@@ -9,8 +9,8 @@ run on Claude Code and OpenAI Codex from one behavior contract.**
 - **Independent review.** Verdicts come from fresh-context reviewers that must cite
   `file:line` or have the finding dropped. Fixed rules combine their findings, and only a
   Block fails a round. The review judges are themselves checked against gold examples.
-- **Real and portable.** 50 skills used day to day, extracted from a working personal
-  workspace. One contract per skill drives Claude Code (all 50) and OpenAI Codex (48
+- **Real and portable.** 46 skills used day to day, extracted from a working personal
+  workspace. One contract per skill drives Claude Code (all 46) and OpenAI Codex (44
   portable). GitHub Copilot is no longer supported.
 
 **[v3.0.2 is released](https://github.com/aberson/skill-mesh/releases/tag/v3.0.2)** ·
@@ -86,7 +86,7 @@ capabilities, and installation puts the generated skills where that host finds t
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="_shared/host-profiles-dark.svg">
-  <img alt="Shared Skill Mesh contracts generate host profiles for Claude Code (all 50 skills) and OpenAI Codex (48 portable skills). GitHub Copilot is no longer supported and is removed in v4." src="_shared/host-profiles-light.svg">
+  <img alt="Shared Skill Mesh contracts generate host profiles for Claude Code (all 46 skills) and OpenAI Codex (44 portable skills). GitHub Copilot is no longer supported and is removed in v4." src="_shared/host-profiles-light.svg">
 </picture>
 
 ### The routing web
@@ -117,7 +117,7 @@ something else, such as a failed verification becoming a bug. The table shows wh
 | **decide** | "should we do A or B?" | never decided for you: recorded with `/user-dr`; a hard scope call goes to `/user-fermize` |
 | **draft** | "here are rough thoughts" | `/user-draft` → `/goal` |
 | **review** | "look this over / is this change OK?" | `/review-gauntlet` · `/review-deep` (high stakes) · `/review-proof` |
-| **research** | "what should we research? / are this doc's claims backed?" | `/research-prospect` · the `citation-*` skills |
+| **research** | "what should we research? / are this doc's claims backed?" | `/research-prospect` · Citation Needed's `citation-*` skills (installed from that repository) |
 | **tend** | "context feels bloated / tests are slow / we keep repeating mistakes" | `/context-slim` · `/test-prune` · `/lesson-harvest` · `/memory-distill` · `/skill-iterate` · `/tier-offload` · `/repo-wrap` · `/user-afterparty` |
 | **session** | "I'm back / keep going or close? / where does this stand?" | `/user-wrap` · `/task-handoff --resume` · `/user-pm` |
 | **learn** | "teach me X / let's explore an idea" | `/user-learn` · `/user-brainstorm` |
@@ -125,7 +125,7 @@ something else, such as a failed verification becoming a bug. The table shows wh
 ## What's inside
 
 <details>
-<summary><strong>50 skills across planning, building, review, shipping, sessions, and skill and workspace care</strong></summary>
+<summary><strong>46 skills across planning, building, review, shipping, sessions, and skill and workspace care</strong></summary>
 
 **Core pipeline**: plan → build → review → ship.
 
@@ -145,7 +145,6 @@ something else, such as a failed verification becoming a bug. The table shows wh
 | **Ideas & learning** | [user-brainstorm](skills/user-brainstorm/core.md) · [user-learn](skills/user-learn/core.md) · [research-prospect](skills/research-prospect/core.md) |
 | **Skill tooling** | [skill-eval-setup](skills/skill-eval-setup/core.md) · [skill-evolve](skills/skill-evolve/core.md) · [skill-iterate](skills/skill-iterate/core.md) · [tier-offload](skills/tier-offload/core.md) · [tier-escalate](skills/tier-escalate/core.md) |
 | **Workspace care** | [user-afterparty](skills/user-afterparty/core.md) · [lesson-harvest](skills/lesson-harvest/core.md) · [memory-distill](skills/memory-distill/core.md) · [test-prune](skills/test-prune/core.md) · [context-slim](skills/context-slim/providers/claude.md) |
-| **Evidence & citations** | [citation-review](skills/citation-review/core.md) · [citation-distill](skills/citation-distill/core.md) · [citation-triage](skills/citation-triage/core.md) · [citation-sweep](skills/citation-sweep/core.md): *these drive the separate [Citation Needed](https://github.com/aberson/citation-needed) CLI, which they do not ship* |
 | **Reference** | [claude-oauth-auth](skills/claude-oauth-auth/providers/claude.md) |
 
 `_shared/` holds resources several skills use: the judging doctrine
@@ -496,7 +495,7 @@ background services.
 | [Find Again](https://github.com/aberson/find-again) | Optional prior-work retrieval in `plan-feature`; current source stays authoritative. |
 | [Passing Notes](https://github.com/aberson/passing-notes) | Lane cards and notes between windows; skills read a lane's waiting notes and never block on the tool. |
 | dev-observatory | Optional hooks: project registration (`plan-init`), verb and port sync (`repo-update`), a port pre-flight (`build-step --ui`), port and goal checks (`plan-review`, `plan-wrap`), and registry reads (`repo-wrap`, `user-afterparty`); `user-pm --json` feeds its views. Its static doctor and portfolio-block proposer are dev-observatory's own skills. |
-| [Citation Needed](https://github.com/aberson/citation-needed) | Evidence storage and scoring for the citation skills; review and sweep dispatch independent judges. Requires the [overview-filters branch](https://github.com/aberson/citation-needed/tree/skill-mesh-v2/overview-filters). |
+| [Citation Needed](https://github.com/aberson/citation-needed) | Evidence storage and scoring. Its four `citation-*` skills left this catalog in v4 and now ship and install from the Citation Needed repository; `user-gateway` routes evidence checks to them. |
 | Switchboard | `tier-offload` produces advisory, inactive routing candidates. |
 | [Show Your Work](https://github.com/aberson/show-your-work) | Checks diagram sources and generates the detailed workflow index; not a skill runtime dependency. |
 
@@ -536,9 +535,9 @@ and `build-*` skills (they create repositories and post to issues), and Playwrig
 
 Each skill has one provider-neutral behavior contract (`skills/<name>/core.md`) plus a thin
 adapter per host; installing binds one adapter into that host's discovery layout. Claude
-provides all 50 skills, two of them Claude-only (`claude-oauth-auth`, `context-slim`), and Codex
-the 48 portable ones. Until v4 removes it, the unsupported GPT profile still builds: for the
-release checks, 48/48 skills are GPT-capable.
+provides all 46 skills, two of them Claude-only (`claude-oauth-auth`, `context-slim`), and Codex
+the 44 portable ones. Until v4 removes it, the unsupported GPT profile still builds: for the
+release checks, 44/44 skills are GPT-capable.
 
 | Provider | Host | Discovery root under the chosen home |
 |---|---|---|
@@ -601,7 +600,7 @@ are not upgraded by publishing a release.
 - **Some skills need adapting to your setup.** `tier-offload` emits a config for a local-model
   router and `tier-escalate` a model-tiering map; adapt them to your models, or skip them.
   `judge-ui` needs a per-project browser adapter (server start-up, auth, test IDs). The
-  `citation-*` skills need the Citation Needed CLI, and the lane features need Passing Notes.
+  lane features need Passing Notes.
 - A few workspace-only references stay unpublished (the `docs/investigations/` corpus, and
   workspace rules a skill cites by name). Published skills may point at them; treat those as
   adaptation points, not missing files.

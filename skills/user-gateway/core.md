@@ -176,9 +176,10 @@ fragment belongs on stays the web's call):
   `/review-gauntlet '<intent as voiced>' <PR #N or diff>`,
   `/review-deep --prompt '<intent as voiced>' --diff <PR #N or diff>`, or `/review-proof`
   with the answer whose claims need sources.
-- **research** → `/research-prospect --projects <project>`, or the first link of the
-  citation chain the web names: `/citation-review <workspace-relative path>` (one
-  artifact) or `/citation-sweep <project-slug>` (project-wide).
+- **research** → `/research-prospect --projects <project>`. When the fragment asks
+  whether an LLM-facing artifact's claims are backed, add one note that Citation
+  Needed's own review (one artifact) and sweep (project-wide) skills do that check;
+  they ship and install from that repository, not this catalog.
 - **tend** → one line for the skill the web's tend rail names for the voiced complaint,
   with its target when one was voiced (e.g. `/test-prune <suite path>`,
   `/repo-wrap <path-or-slug>`, `/context-slim`).

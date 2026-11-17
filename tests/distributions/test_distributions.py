@@ -3306,10 +3306,9 @@ COHORT_D_CODEX_SKILLS = ["memory-distill", "research-prospect",
 # together and the two reached 54.
 # The v3 catalog cleanup moved the seventh, a portfolio-block proposer, to
 # dev-observatory (plan Step 4, #260) and retired the goblin sweep wrapper (plan
-# Step 14, #270), so five remain.
-STEP10_PROMOTED_SKILLS = ["citation-distill", "citation-review",
-                          "citation-sweep", "citation-triage",
-                          "repo-wrap"]
+# Step 14, #270), and v4 moved the four citation skills to the Citation Needed
+# repository, so one remains.
+STEP10_PROMOTED_SKILLS = ["repo-wrap"]
 # The separately approved code-consigliere addition extends both explicit rosters to 55.
 CODE_CONSIGLIERE_ADDITION = ["code-consigliere"]
 # The separately authorized user-dr addition extends both explicit rosters to 56.
@@ -3343,7 +3342,9 @@ def test_codex_profile_holds_exactly_the_declared_cohorts_for_the_committed_mani
     user-fermize back to fifty-five, moving the Dev Observatory doctor out to
     fifty-four, folding the autonomous shakedown skill into user-walkthrough to
     fifty-three, folding the plan-cutting skill into plan-merge to fifty-two, and
-    retiring the three Goblin skills to forty-nine. It
+    retiring the three Goblin skills to forty-nine, replacing user-project with a script
+    to forty-eight, and moving the four citation skills out to Citation Needed to
+    forty-four. It
     grades the whole emission contract for the real cohorts at once,
     because the parts are only correct together: a launcher without its co-located
     core.md is a package Codex can list and cannot run, and an unstamped file is one
@@ -3352,7 +3353,7 @@ def test_codex_profile_holds_exactly_the_declared_cohorts_for_the_committed_mani
     out = tmp_path / "out"
     r = _build(out, provider="codex")
     assert r.returncode == 0, f"{r.stdout}\n{r.stderr}"
-    assert "(48 skills," in r.stdout, r.stdout
+    assert "(44 skills," in r.stdout, r.stdout
     # The manifest declares exactly the spelled cohorts...
     assert sorted(_codex_skills()) == DECLARED_CODEX_SKILLS, _codex_skills()
     # ...and the emitted tree IS that roster: no extra skill dir, none missing. The
