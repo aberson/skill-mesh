@@ -1,0 +1,22 @@
+{
+  "description": "Single source of truth for the nondestructive lifecycle smoke test (tests/smoke/test_skill_crud_lifecycle.py, Phase CL Step 115). It names the synthetic portable skill that test CREATEs, READs and UPDATEs inside a disposable Git copy of the catalog, and the exact canonical bytes it authors. Nothing here is ever written into this checkout: the skill exists only in a temporary synthetic repository, its builds and its disposable homes.",
+  "skill_name": "zz-lifecycle-probe",
+  "manifest_description": "Probe the catalog lifecycle end to end in a disposable repository; never shipped.",
+  "capabilities": ["filesystem"],
+  "model_mapping_row": {
+    "default_model": "claude",
+    "claude": true,
+    "gpt": false,
+    "local": false,
+    "notes": "Synthetic Phase CL Step 115 lifecycle probe; core plus Claude/Codex adapters."
+  },
+  "core": "# NOTE: This is the canonical provider-independent contract. Both provider wrappers must load it in full.\n\n# zz-lifecycle-probe core\n\nA synthetic catalog skill. It exists only so the lifecycle smoke test can create, read and update a real portable package through the generator, the verifier, the builder and the installer.\n\n## Behavior\n\n- Report the catalog lifecycle stage this probe was built at.\n",
+  "adapters": {
+    "claude": "---\nname: zz-lifecycle-probe\ndescription: Claude provider entry point for zz-lifecycle-probe; loads the canonical shared core.\nuser-invocable: true\n---\n\n# zz-lifecycle-probe - Claude entry point\n\nSee [../core.md](../core.md) for the full specification. Load the core in full before acting.\n",
+    "codex": "# zz-lifecycle-probe - Codex entry point\n\nSee [../core.md](../core.md) for the full specification. Load the core in full before acting.\n"
+  },
+  "update": {
+    "anchor": "- Report the catalog lifecycle stage this probe was built at.\n",
+    "added_behavior": "- UPDATE-MARKER-115: also report that the shared core changed after the create.\n"
+  }
+}

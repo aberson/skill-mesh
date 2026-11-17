@@ -1622,12 +1622,17 @@ def test_build_contract_verdict_helper_reference_is_repointed(dist_root):
 # --------------------------------------------------------------------------- #
 
 def test_build_is_byte_identical_across_runs(tmp_path):
+    """Every provider, not only claude + gpt (Phase CL Step 115): codex is a required
+    profile, so a determinism gate that never built it could not see codex drift.
+    tests/smoke/test_skill_crud_lifecycle.py proves the same property for a tree that
+    has just taken a CREATE and an UPDATE."""
     a = tmp_path / "a"
     b = tmp_path / "b"
-    _build(a, provider="both")
-    _build(b, provider="both")
+    _build(a, provider="all")
+    _build(b, provider="all")
     snap_a = _tree_snapshot(a)
     snap_b = _tree_snapshot(b)
+    assert {rel.split("/", 1)[0] for rel in snap_a} == {"claude", "codex", "gpt"}
     assert set(snap_a) == set(snap_b), "file SET differs across builds"
     diffs = [k for k in snap_a if snap_a[k] != snap_b[k]]
     assert not diffs, f"non-deterministic file contents: {diffs[:5]}"
