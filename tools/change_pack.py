@@ -73,6 +73,9 @@ FOCUSED = (
      "the installer security selection in tests/distributions, "
      "tests/router/test_path_guard.py, and the codex install round trip in "
      "tests/distributions/test_codex_install_path.py"),
+    ("tools/skill_catalog.py, tools/gen_manifest.py, tools/build-distributions.ps1, "
+     "tools/install-skill-mesh.ps1 (the lifecycle tools /skill-crud drives)",
+     "tests/smoke/test_skill_crud_lifecycle.py"),
     ("runtime/skill-router.ps1", "tests/router"),
     ("tools/skill-mesh-transaction.ps1 (the engine the installer uses)",
      "the engine-only and installer-routed tests in "
