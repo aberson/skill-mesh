@@ -3636,6 +3636,7 @@ LEGACY_GUARD_SITES = {
           "package-resource change",
           "resource plan",
           "is not catalog-owned and keeps its existing path",
+          "cannot be read or parsed as json, fail closed",
           "fold the selected skill folder's name to lowercase")),
         ("loop preflight row", "Prompt template", "fence",
          "- catalog-target:",
@@ -3661,9 +3662,22 @@ LEGACY_GUARD_SITES = {
           "brainstorm mode",
           "it needs no file to exist",
           "config/skill-manifest.json",
-          "before any worktree, branch, edit, materialization, commit or push",
-          "fold the requested name to lowercase",
-          "section 3 of the lifecycle guide",
+          "before any worktree, branch, edit, materialization, commit or push")),
+        ("pre-flight name and repository", "Step 0: Pre-flight", "prose",
+         "Name and repository for the " + CATALOG_GUARD_CODE + " check.",
+         ("the requested name is",
+          "if that command fails, this check passes and #3 decides",
+          "fold the requested name to lowercase")),
+        ("pre-flight unreadable manifest", "Step 0: Pre-flight", "prose",
+         "Unreadable manifest → halt with " + CATALOG_GUARD_CODE + ".",
+         ("config/skill-manifest.json",
+          "cannot be read or parsed as json",
+          "the check fails closed",
+          "before any worktree, branch, edit, materialization, commit or "
+          "push")),
+        ("pre-flight coverage", "Step 0: Pre-flight", "prose",
+         "What the " + CATALOG_GUARD_CODE + " check covers.",
+         ("section 3 of the lifecycle guide",
           "a generated copy inside such a repository stops too",
           "keeps its proposal route",
           "keeps its existing path")),
@@ -3683,6 +3697,14 @@ LEGACY_GUARD_SITES = {
          "name is a Skill Mesh catalog skill (" + CATALOG_GUARD_CODE
          + "; checked before the folder check)",
          ()),
+        ("catalog manifest check", "Catalog manifest check", "prose",
+         "Runs on every invocation, whether the queue will be explicit or "
+         "discovered.",
+         ("config/skill-manifest.json",
+          "cannot be read or parsed as json",
+          "the run fails closed",
+          "before any worktree, branch, edit, materialization, commit or push",
+          "a project with no config/skill-manifest.json is not affected")),
         ("pre-flight guard", "Explicit --skill / --queue handling", "prose",
          "Catalog-owned name → halt with " + CATALOG_GUARD_CODE + ".",
          ("checked first, before the folder check below",
@@ -3699,6 +3721,10 @@ LEGACY_GUARD_SITES = {
          "name is a Skill Mesh catalog skill (" + CATALOG_GUARD_CODE
          + "), checked before the folder check.",
          ()),
+        ("failure-modes unreadable entry", "Pre-flight failure modes", "prose",
+         "config/skill-manifest.json that cannot be read or parsed as JSON ("
+         + CATALOG_GUARD_CODE + ", fail closed)",
+         ("from the catalog manifest check",)),
         ("catalog-owned resolution", "Target resolution", "prose",
          "Catalog-owned. The skill is catalog-owned under the same test as "
          "Phase 0's catalog-owned check",
@@ -3715,19 +3741,22 @@ LEGACY_GUARD_SITES = {
 
 # Guard units that are NOT where the stop message is printed, so they need not
 # name the guide: each points at the unit that raises the stop (eval-setup's
-# HELD entry points at its Input guard; evolve's rule 8, brainstorm step and
-# halt #1 point at its Step 0 guard; iterate's When-NOT-to-use, autonomy,
-# queue, failure-mode and resolution units point at its Phase 0 guard or its
-# skip reason). Every other unit is a raising site and must name the guide.
+# HELD entry points at its Input guard; evolve's rule 8, brainstorm step,
+# halt #1 and the name and coverage bullets point at or qualify its Step 0
+# guard; iterate's When-NOT-to-use, autonomy, queue, failure-mode and
+# resolution units point at its Phase 0 guards or its skip reason). Every other unit is a raising site and must name the guide.
 LEGACY_GUARD_SITES_WITHOUT_MESSAGE = {
     ("skill-eval-setup", "held-outcome entry"),
     ("skill-evolve", "execution-model rule 8"),
+    ("skill-evolve", "pre-flight name and repository"),
+    ("skill-evolve", "pre-flight coverage"),
     ("skill-evolve", "brainstorm step 1"),
     ("skill-evolve", "halt #1"),
     ("skill-iterate", "when-not-to-use bullet"),
     ("skill-iterate", "autonomy pre-flight bullet"),
     ("skill-iterate", "queue reuse"),
     ("skill-iterate", "failure-modes entry"),
+    ("skill-iterate", "failure-modes unreadable entry"),
     ("skill-iterate", "catalog-owned resolution"),
 }
 
@@ -3765,7 +3794,8 @@ LEGACY_KEPT_PATHS = {
 # file), and the existing HALTS that would otherwise fire first in a Skill Mesh
 # source tree -- which holds `skills/<name>/core.md` and no SKILL.md or
 # `.claude/skills/` -- and so would stop the run with a generic missing-file
-# error instead of the shared code (round 1's material finding).
+# error instead of the shared code. A source tree has no SKILL.md, so each
+# guard must precede those halts as well as the first write.
 LEGACY_ORDER = {
     "skill-eval-setup": (
         ("input guard", "If the skill, its SKILL.md, or a `core.md` it defers "
@@ -3782,11 +3812,21 @@ LEGACY_ORDER = {
         ("pre-flight guard", "switch to **brainstorm mode**",
          "the brainstorm exit"),
         ("pre-flight guard", "`git -C REPO worktree add", "the first write"),
+        ("pre-flight unreadable manifest",
+         "Missing any → halt with the missing-path list",
+         "the missing-file halt"),
+        ("pre-flight unreadable manifest", "switch to **brainstorm mode**",
+         "the brainstorm exit"),
+        ("pre-flight unreadable manifest", "`git -C REPO worktree add",
+         "the first write"),
     ),
     "skill-iterate": (
         ("pre-flight guard", "- Verify `.claude/skills/<name>/` exists.",
          "the folder-missing halt"),
         ("pre-flight guard", "#### Worktree setup", "the first write"),
+        ("catalog manifest check", "- Verify `.claude/skills/<name>/` exists.",
+         "the folder-missing halt"),
+        ("catalog manifest check", "#### Worktree setup", "the first write"),
         ("skip reason", "#### Worktree setup", "the first write"),
     ),
 }
@@ -3983,11 +4023,11 @@ def _guard_spans(workflow, text):
 def _planted_negatives():
     """Every mutation of a real core that MUST red the checker.
 
-    Trimmed in round 2 to cases that each test something distinct: a unit is
-    hidden from a reader (HTML comment, fence) only where the stop is raised,
-    since hiding any other unit reds through the same "appears in 0 visible
-    paragraphs" finding its deletion already proves; and a phrase is not cut
-    when it is part of the unit's anchor, since that cut is the deletion again.
+    Each case tests something distinct. A unit is hidden from a reader (HTML
+    comment, fence) only where the stop is raised, since hiding any other unit
+    reds through the same "appears in 0 visible paragraphs" finding its
+    deletion already proves; and a phrase is not cut when it is part of the
+    unit's anchor, since that cut is the deletion again.
     """
     cases = []
     for workflow in sorted(LEGACY_WORKFLOW_CORES):
@@ -4039,8 +4079,7 @@ def _planted_negatives():
     # comment leaves the item and its neighbours in place and renders the
     # guard sentences as nothing.
     start = evolve.index("**Catalog-owned target")
-    end = evolve.index("keeps its existing path.", start) + len(
-        "keeps its existing path.")
+    end = evolve.index("\n", start)
     cases.append(("skill-evolve: pre-flight guard in an inline HTML comment",
                   "skill-evolve",
                   evolve[:start] + "<!-- " + evolve[start:end] + " -->"
@@ -4060,6 +4099,9 @@ LEGACY_LATE_MOVES = (
     ("skill-iterate", "pre-flight guard",
      "- Verify `.claude/skills/<name>/` exists.",
      ("the folder-missing halt",)),
+    ("skill-evolve", "pre-flight unreadable manifest",
+     "Missing any → halt with the missing-path list",
+     ("the missing-file halt",)),
 )
 
 
@@ -4133,11 +4175,10 @@ def test_a_guard_stated_after_the_first_write_is_reported_as_late():
 
 
 def test_a_guard_moved_after_a_source_tree_halt_is_reported_as_late():
-    """Round 1's material finding, pinned: a Skill Mesh source tree has no
-    SKILL.md and no `.claude/skills/`, so a guard placed after evolve's
-    missing-file halt, after its brainstorm exit, or after iterate's
-    folder-missing halt is never reached there. Moving it there must red with
-    the ordering findings and nothing else."""
+    """A Skill Mesh source tree has no SKILL.md and no `.claude/skills/`, so a
+    guard placed after evolve's missing-file halt, after its brainstorm exit,
+    or after iterate's folder-missing halt is never reached there. Moving it
+    there must red with the ordering findings and nothing else."""
     for workflow, site, marker, whats in LEGACY_LATE_MOVES:
         text = _legacy_core(workflow)
         start, end = _guard_spans(workflow, text)[site]
@@ -4150,6 +4191,35 @@ def test_a_guard_moved_after_a_source_tree_halt_is_reported_as_late():
         assert len(expected) == len(whats), (workflow, site, whats)
         findings = sorted(_legacy_guard_findings(workflow, moved))
         assert findings == expected, (workflow, marker, findings)
+
+
+# Where each core states that a present but unreadable or unparseable
+# `config/skill-manifest.json` fails closed with the shared code: (workflow,
+# guard unit, phrase cut, or None to delete the whole unit).
+LEGACY_UNREADABLE_MANIFEST = (
+    ("skill-eval-setup", "input guard",
+     "cannot be read or parsed as JSON, fail closed"),
+    ("skill-evolve", "pre-flight unreadable manifest", None),
+    ("skill-iterate", "catalog manifest check", None),
+)
+
+
+def test_an_unreadable_manifest_stop_removed_is_reported():
+    """A manifest that cannot be read or parsed cannot show that a skill is
+    outside the catalog, so each core stops with the shared code before any
+    write. Each core with that sentence removed must red, naming the unit
+    that lost it."""
+    for workflow, label, phrase in LEGACY_UNREADABLE_MANIFEST:
+        text = _legacy_core(workflow)
+        start, end = _guard_spans(workflow, text)[label]
+        if phrase is None:
+            mutated = _drop_lines(text, start, end)
+        else:
+            mutated = _cut_phrase(text, start, end, phrase)
+        assert mutated != text, (workflow, label)
+        findings = _legacy_guard_findings(workflow, mutated)
+        assert any(f"the {label} " in item for item in findings), (
+            workflow, label, findings)
 
 
 def test_a_core_with_its_guard_deleted_fails_the_production_test(monkeypatch):

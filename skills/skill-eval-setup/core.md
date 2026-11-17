@@ -76,7 +76,9 @@ lifecycle (`documentation/skill-catalog-lifecycle.md` in the Skill Mesh source t
 because they change resource topology, a scoped packaging or source-only resource plan. A
 host-provided skill creator and a single-host installed copy are not substitutes. A target whose
 repository has no `config/skill-manifest.json`, or whose manifest does not own the skill, is not
-catalog-owned and keeps its existing path.
+catalog-owned and keeps its existing path. If `TARGET_REPO` contains `config/skill-manifest.json`
+but it cannot be read or parsed as JSON, fail closed: stop the same way with
+`CATALOG_SKILL_USE_LIFECYCLE` before any edit, materialization, commit or push.
 Catalog names are lowercase kebab-case: fold the selected skill folder's name to lowercase, then
 compare it exactly with the manifest's spelling, so a case variant on a case-insensitive file
 system still matches.
