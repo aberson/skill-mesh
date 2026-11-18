@@ -39,6 +39,86 @@ Start a fresh host session after installation. Installing does not authenticate
 the host or supply missing native capabilities. Codex uses its own adapter and
 authenticated host, not the GPT/Copilot transport.
 
+## Companion tools (`-Companions`)
+
+The skills call a few small public tools, the companion members listed in
+[`config/companions.json`](../config/companions.json) (owned by the
+[core companion plan](core-companion-plan.md), sections 3 and 4). The installer can
+install them after the skills:
+
+```powershell
+powershell -NoProfile -File tools/install-skill-mesh.ps1 -Provider claude -Home C:\path\to\consumer-home -DistDir .\dist -Companions core
+```
+
+| `-Companions` | Installs |
+|---|---|
+| `none` (default for now) | skills only, exactly as before |
+| `core` | the core ring |
+| `all` | the core and optional rings, then prints each optional member's setup steps (never runs them) |
+
+Candidates are never installed. A member whose manifest tag is still null
+(unreleased) is reported `skipped: unreleased`. The companion step needs three
+things on `PATH`: `uv`, Git and Python 3.12 or later. If any is missing, every
+member is reported `skipped: missing <tool>` and nothing is installed. The skill
+install has already completed by then and is not affected.
+
+For each selected member, in manifest order, the step runs:
+
+1. `uv tool install "git+<repo>@<tag>"`. If the member's command is already on
+   `PATH` (or in uv's tool directory) and Skill Mesh did not install it, the member
+   is reported `skipped: pre-existing ...` and left alone. It is never reinstalled
+   or uninstalled.
+2. The member's health command.
+3. The member's own skill installer, when the member ships skills (passing-notes'
+   lane skills). The step fetches a tagged source checkout with
+   `git clone --depth 1 --branch <tag>` into
+   `<home>\.skill-mesh-companions\src\<slug>` and runs the installer from there.
+   It appends `--host <host> --root <that host's skills folder in this home>`.
+   `-Provider claude` maps to `--host claude` and `-Provider codex` to
+   `--host codex`; the old `gpt` profile has no member skill host. The member's
+   installer owns those files and keeps its own ledger. Skill Mesh never copies
+   or deletes them. The checkout stays in place so uninstall can run the member's
+   uninstaller offline.
+4. The member's own ledgered writer (`setup_write`), when it has one.
+
+Each member gets one status line: `install-companions: <slug>: installed`,
+`already current`, or `skipped: <reason>`. A member that fails is reported, and
+the others still run. Re-running with the same manifest reports
+`already current` and changes nothing.
+
+When the manifest moves a member to a new tag, the step reinstalls the tool and
+re-runs the member's skill installer and writer at the new tag. The ledger keeps
+the old tag until every one of those steps has succeeded. If one fails, or the
+process is stopped, the next run still sees the old tag and re-attempts the whole
+upgrade instead of reporting `already current`. Ownership of a new tool is
+recorded before `uv tool install` runs and dropped again if nothing was installed,
+so an interrupted install is never mistaken for a pre-existing tool.
+
+The companion step keeps its own ledger, `<home>\.skill-mesh-companions.json`. It
+never reads or writes the Skill Mesh skill ledger (`.skill-mesh-install.json`).
+The ledger has one entry per member: the tag, `installed` or `pre-existing`, and
+which member skill hosts and writers ran. Member tools are installed once per
+user (uv's tool directory), and their ledger entry belongs to the home, not to
+one provider. So installing the claude and codex profiles into the same home
+records both skill hosts on one entry.
+
+With `-Uninstall -Companions core` (or `all`), the companion step runs after the
+skill uninstall. It reverses only work its ledger records, in reverse order:
+the member writer's uninstall command, the member skill uninstaller for each
+recorded host, the source checkout, then `uv tool uninstall <slug>`.
+A recorded host whose skills folder no longer exists has nothing left to remove
+and is noted and skipped. Uninstall checks the manifest with
+`tools/companions.py verify` first, as install does, so it needs Python 3.12;
+without it, nothing is uninstalled. Pre-existing tools are never touched. `core` reverses the core-ring entries and
+`all` reverses every entry. A companion failure is reported but never changes
+the skill install's result.
+
+`tools/install-companions.ps1` can also be run on its own with the same
+`-Provider`, `-Home`, `-Companions` and `-Uninstall` parameters. Its exit codes
+are 0 (done, skips included), 1 (a member failed), 2 (usage error), 3 (manifest
+or companion ledger refused, nothing changed) and 4 (another companion operation
+holds this home's lock). Refusals are written to the error stream.
+
 Before upgrading, preserve the previous distribution and back up the target
 discovery tree and `.skill-mesh-install.json`. Stop sessions writing those paths.
 Run the installer with the new distribution and existing home. It checks

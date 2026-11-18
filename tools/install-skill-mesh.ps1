@@ -124,11 +124,25 @@
 .PARAMETER Uninstall
     Remove a previously-installed provider profile (identity- + ledger-gated).
 
+.PARAMETER Companions
+    'none' (the default until core companion plan Step 20), 'core' or 'all'. After
+    the skill install (or uninstall) above has completed, run
+    tools/install-companions.ps1 for the selected companion rings
+    (config/companions.json). The companion step keeps its own ledger,
+    <Home>/.skill-mesh-companions.json, and never reads or writes this installer's
+    ledger. It runs in a separate process, and its failures are reported but never
+    fail, change or roll back the skill operation: this script still exits 0.
+
+.PARAMETER CompanionsManifest
+    Optional companion manifest passed through to tools/install-companions.ps1
+    (default: config/companions.json in this checkout).
+
 .EXAMPLE
     powershell -File tools\install-skill-mesh.ps1 -Provider claude -Home C:\tmp\home
     powershell -File tools\install-skill-mesh.ps1 -Provider gpt -Home C:\tmp\home -DistDir C:\stage\dist
     powershell -File tools\install-skill-mesh.ps1 -Provider codex -Home C:\tmp\home -DistDir C:\stage\dist
     powershell -File tools\install-skill-mesh.ps1 -Provider claude -Home C:\tmp\home -Uninstall
+    powershell -File tools\install-skill-mesh.ps1 -Provider claude -Home C:\tmp\home -Companions core
 #>
 
 [CmdletBinding()]
@@ -153,7 +167,12 @@ param(
 
     [string]$BackupDir = '',
 
-    [switch]$Uninstall
+    [switch]$Uninstall,
+
+    [ValidateSet('core', 'all', 'none')]
+    [string]$Companions = 'none',
+
+    [string]$CompanionsManifest = ''
 )
 
 Set-StrictMode -Version Latest
@@ -2008,6 +2027,39 @@ function Enter-HomeOperationLock([string]$homeAbs) {
     }
 }
 
+function Invoke-CompanionStep([string]$homeAbs) {
+    # Core companion plan Step 9. Runs AFTER the skill install/uninstall has
+    # completed and its lock is released, in a separate process, so nothing it does
+    # can reach this installer's ledger, transaction or exit code. A failure is
+    # reported as one line; the skill operation stands as completed.
+    $companionScript = Join-Path $TOOLS_DIR 'install-companions.ps1'
+    $psExe = Join-Path $PSHOME 'powershell.exe'
+    $companionArgs = @('-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass',
+                       '-File', $companionScript, '-Provider', $Provider,
+                       '-Home', $homeAbs, '-Companions', $Companions)
+    if ($Uninstall) { $companionArgs += '-Uninstall' }
+    if (-not [string]::IsNullOrWhiteSpace($CompanionsManifest)) {
+        $companionArgs += @('-Manifest', [System.IO.Path]::GetFullPath($CompanionsManifest))
+    }
+    $previousPreference = $ErrorActionPreference
+    $code = $null
+    try {
+        $ErrorActionPreference = 'Continue'
+        & $psExe @companionArgs | ForEach-Object { Write-Host $_ }
+        $code = $LASTEXITCODE
+    } catch {
+        Write-Host ("install-skill-mesh: companions: WARNING the companion step could not run " +
+                    "($($_.Exception.Message)); the skill step above is complete.")
+        return
+    } finally {
+        $ErrorActionPreference = $previousPreference
+    }
+    if ($code -ne 0) {
+        Write-Host ("install-skill-mesh: companions: WARNING the companion step reported a problem " +
+                    "(exit $code); the skill step above is complete and unchanged.")
+    }
+}
+
 # -- Entry point --------------------------------------------------------------
 
 $homeLexical = Resolve-HomeRoot $TargetHome
@@ -2065,6 +2117,11 @@ try {
     }
 } catch {
     throw
+}
+
+# The companion step runs only once the skill operation above has completed.
+if ($Companions -ne 'none') {
+    Invoke-CompanionStep $homeAbs
 }
 
 exit 0
