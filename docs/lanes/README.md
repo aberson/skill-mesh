@@ -18,7 +18,7 @@ Operator-only work (never in a lane): CL Step 118 attended UAT (#176), the WF pr
 
 Held (no lane): E1-E33, 47B, TM, LM and Step 109.
 
-Shared resources, claimed through Heads Up and never owned by a lane: machine memory (each gate starts at 2 GB or more free), the installed Claude and Codex profiles, the release stage, and pushes to `origin/main`.
+Shared resources, held through Passing Notes cards and never owned by a lane: machine memory (each gate starts at 2 GB or more free), the installed Claude and Codex profiles, the release stage, and pushes to `origin/main`.
 
 `central` was renamed `main` in the same window on 2026-11-17 (plan P39); notes still addressed to `central` are read during the handover.
 
