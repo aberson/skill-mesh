@@ -1,0 +1,160 @@
+{
+  "schema_version": 1,
+  "members": [
+    {
+      "slug": "changed-check",
+      "ring": "candidate",
+      "repo": "https://github.com/aberson/changed-check",
+      "tag": null,
+      "cli": "changed-check",
+      "health": ["changed-check", "--version"],
+      "contract": null,
+      "callers": [],
+      "skills": null,
+      "setup_write": null,
+      "hooks": [],
+      "setup": [],
+      "candidate_note": "Toolkit H04"
+    },
+    {
+      "slug": "drift-ranger",
+      "ring": "candidate",
+      "repo": "https://github.com/aberson/drift-ranger",
+      "tag": null,
+      "cli": "drift-ranger",
+      "health": ["drift-ranger", "--version"],
+      "contract": {"name": "drift-ranger-store", "schema_version": 1},
+      "callers": ["_shared/intent-continuity.md"],
+      "skills": null,
+      "setup_write": null,
+      "hooks": [],
+      "setup": [],
+      "candidate_note": "Core companion plan Step 3 packages it as an installable tool; promoted to core once it is tagged"
+    },
+    {
+      "slug": "find-again",
+      "ring": "optional",
+      "repo": "https://github.com/aberson/find-again",
+      "tag": null,
+      "cli": "find-again",
+      "health": ["find-again", "--version"],
+      "contract": {"name": "find-again-search-json", "schema_version": 1},
+      "callers": ["skills/plan-feature/core.md"],
+      "skills": null,
+      "setup_write": null,
+      "hooks": [],
+      "setup": [
+        "Write a find-again.toml (schema_version = 1, roots = [...]) at the root of the workspace you want searchable.",
+        "Run: find-again --root <workspace-root> index",
+        "Check it with: find-again --root <workspace-root> status"
+      ],
+      "candidate_note": null
+    },
+    {
+      "slug": "mesh-lens",
+      "ring": "candidate",
+      "repo": "https://github.com/aberson/mesh-lens",
+      "tag": null,
+      "cli": "mesh-lens",
+      "health": ["mesh-lens", "--version"],
+      "contract": null,
+      "callers": [],
+      "skills": null,
+      "setup_write": null,
+      "hooks": [],
+      "setup": [],
+      "candidate_note": "Toolkit H07; needs real telemetry"
+    },
+    {
+      "slug": "paper-trail",
+      "ring": "candidate",
+      "repo": "https://github.com/aberson/paper-trail",
+      "tag": null,
+      "cli": "paper-trail",
+      "health": ["paper-trail", "--version"],
+      "contract": null,
+      "callers": [],
+      "skills": null,
+      "setup_write": null,
+      "hooks": [],
+      "setup": [],
+      "candidate_note": "Toolkit H05, after the open quote-injection finding on candidate C3 closes"
+    },
+    {
+      "slug": "passing-notes",
+      "ring": "core",
+      "repo": "https://github.com/aberson/passing-notes",
+      "tag": null,
+      "cli": "passing-notes",
+      "health": ["passing-notes", "--version"],
+      "contract": {"name": "passing-notes-lane-text", "schema_version": 1},
+      "callers": [
+        "_shared/lane-inbox-hooks.md",
+        "_shared/lane_inbox.py",
+        "skills/user-pm/core.md"
+      ],
+      "skills": {
+        "installer": ["uv", "run", "python", "tools/skills_install.py", "install"],
+        "uninstaller": ["uv", "run", "python", "tools/skills_install.py", "uninstall"],
+        "names": ["lane-close", "lane-handoff", "lane-open", "lane-status"]
+      },
+      "setup_write": null,
+      "hooks": [
+        {
+          "kind": "member",
+          "host": "claude",
+          "event": "Stop",
+          "install": ["passing-notes", "hook", "install", "--settings", "{settings}"],
+          "uninstall": ["passing-notes", "hook", "uninstall", "--settings", "{settings}"],
+          "check": ["passing-notes", "hook", "install", "--settings", "{settings}", "--check"]
+        }
+      ],
+      "setup": [],
+      "candidate_note": null
+    },
+    {
+      "slug": "switchboard",
+      "ring": "candidate",
+      "repo": null,
+      "tag": null,
+      "cli": "switchboard",
+      "health": ["switchboard", "--version"],
+      "contract": null,
+      "callers": [
+        "skills/review-deep/core.md",
+        "skills/review-gauntlet/core.md",
+        "skills/tier-offload/core.md"
+      ],
+      "skills": null,
+      "setup_write": null,
+      "hooks": [],
+      "setup": [],
+      "candidate_note": "Core companion plan Steps 12-16: public repository split, then registry and apply join the core ring"
+    },
+    {
+      "slug": "tripwire",
+      "ring": "core",
+      "repo": "https://github.com/aberson/tripwire",
+      "tag": null,
+      "cli": "tripwire",
+      "health": ["tripwire", "--version"],
+      "contract": {"name": "tripwire-check-json", "schema_version": 1},
+      "callers": ["member:hooks/claude/tripwire-pretool.ps1"],
+      "skills": null,
+      "setup_write": null,
+      "hooks": [
+        {
+          "kind": "file",
+          "name": "pretool",
+          "host": "claude",
+          "event": "PreToolUse",
+          "matcher": "Bash|PowerShell",
+          "locate": ["tripwire", "hook", "path", "--host", "claude"],
+          "timeout": 5
+        }
+      ],
+      "setup": [],
+      "candidate_note": null
+    }
+  ]
+}
