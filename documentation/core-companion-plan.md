@@ -243,7 +243,7 @@ The `Depends on:` lines decide the order across repositories.
 
 - **Problem:** Skill Mesh has no machine-readable list of the tools its skills call, so nothing can install, pin or check them.
 - **Type:** code
-- **Issue:** #
+- **Issue:** #280
 - **Repo:** skill-mesh
 - **Files:** `config/companions.json`, `schemas/companions.schema.json`, `tools/companions.py`, `tests/companions/test_manifest.py`
 - **Produces:**
@@ -260,7 +260,7 @@ The `Depends on:` lines decide the order across repositories.
 
 - **Problem:** No utility has ever been tagged, so the manifest cannot pin a version.
 - **Type:** operator
-- **Issue:** #
+- **Issue:** #281
 - **Repo:** passing-notes, tripwire, find-again
 - **Produces:** annotated tags `v0.1.0` pushed to each of the three public repositories. Each tag sits at a commit whose own declared gate was green, and the tag message records that gate. No code.
 - **Done when:** `git ls-remote --tags https://github.com/aberson/<slug>` shows `v0.1.0` for each of the three. The manifest `tag` fields are filled by Step 9's build, not by hand. The later tags after Steps 3, 6 and 7 are Step 8's.
@@ -271,7 +271,7 @@ The `Depends on:` lines decide the order across repositories.
 
 - **Problem:** drift-ranger is a single script with no `pyproject.toml` and one test file. Its plan says it was "delivered without tests or independent verification". `uv tool install` cannot install it, yet seven skills depend on its store format.
 - **Type:** code
-- **Issue:** #
+- **Issue:** #282
 - **Repo:** drift-ranger
 - **Files:** `pyproject.toml`, `src/drift_ranger/__init__.py`, `src/drift_ranger/cli.py` (moved from `drift_ranger.py`), `drift_ranger.py` (kept as a thin shim so `python drift_ranger.py ...` still works), `tests/test_store_contract.py`, `tests/test_cli.py`, `utility-project.toml`, `README.md`
 - **Existing context:**
@@ -292,7 +292,7 @@ The `Depends on:` lines decide the order across repositories.
 
 - **Problem:** The convention (the one owner of utility call shapes) resolves tools only through `DEV_UTILITIES_ROOT` checkouts, which a new user who installed tools on PATH does not have. It also still calls the utilities private.
 - **Type:** code
-- **Issue:** #
+- **Issue:** #283
 - **Repo:** coding-root
 - **Files:** `.claude/references/advisory-call-convention.md` (sections 2-4), `.claude/rules/advisory-calls.md` (stub: one clause)
 - **Existing context:** consumers of `DEV_UTILITIES_ROOT`, from a scoped search on 2026-11-17:
@@ -322,7 +322,7 @@ The `Depends on:` lines decide the order across repositories.
 
 - **Problem:** Skill Mesh's shared helpers still assume checkout paths: drift-ranger by path convention, switchboard by `python -m` from a checkout. Installed tools on PATH are never found.
 - **Type:** code
-- **Issue:** #
+- **Issue:** #284
 - **Repo:** skill-mesh
 - **Files:** `_shared/intent-continuity.md`, `_shared/lane-inbox-hooks.md` (wording only, if needed), `skills/review-deep/core.md` and `skills/review-gauntlet/core.md` (switchboard call sites), `skills/tier-offload/core.md` (`--switchboard-root` default), focused distribution tests
 - **Produces:** each listed caller resolves its tool in the Step 4 order and degrades exactly as before when the tool is absent. A distribution test proves that the emitted Claude and Codex payloads carry the new order and that each cited path resolves.
@@ -338,7 +338,7 @@ The `Depends on:` lines decide the order across repositories.
 
 - **Problem:** Tripwire's daily use comes from a hook that lives in the coding-root, resolves tripwire through checkouts, and logs into the private jev-gate folder. No new user can get it.
 - **Type:** code
-- **Issue:** #
+- **Issue:** #285
 - **Repo:** tripwire (hook source and tests); the coding-root copy becomes installed output in Step 18
 - **Files:** `tripwire/hooks/claude/tripwire-pretool.ps1` (package data), `tripwire/src/tripwire/cli.py` (`hook path --host claude`), `tripwire/pyproject.toml` (package-data include), `tripwire/tests/hooks/tripwire-pretool.tests.ps1` (ported from `dev/.claude/hooks/tests/tripwire-pretool.tests.ps1`), `tripwire/README.md`
 - **Existing context:**
@@ -381,7 +381,7 @@ The `Depends on:` lines decide the order across repositories.
 
 - **Problem:** `passing-notes hook install` merges its Stop entry and `--check` reports it, but there is no uninstall. The companion must remove what it installed (CC-D14).
 - **Type:** code
-- **Issue:** #
+- **Issue:** #286
 - **Repo:** passing-notes
 - **Files:** `src/passing_notes/hook.py` (an `uninstall(path)` beside `install(path)` at `:562`), `src/passing_notes/cli.py` (`hook uninstall [--settings PATH]`, beside `_cmd_hook_install` at `:1306`), `tests/test_hook.py`, `README.md`
 - **Existing context:** `passing-notes hook install --settings PATH [--check]` writes a `.bak` copy first, keeps every other byte, is idempotent, and exits 3 on invalid JSON with the file unchanged. The live entry is `{"type":"command","command":"passing-notes hook stop","timeout":10}` under `hooks.Stop` in `~/.claude/settings.json`.
@@ -396,7 +396,7 @@ The `Depends on:` lines decide the order across repositories.
 
 - **Problem:** Steps 3, 6 and 7 change drift-ranger, tripwire and passing-notes, but a manifest pin needs a pushed tag, and pushing a tag is an outward-facing operator action. No code step can do it.
 - **Type:** operator
-- **Issue:** #
+- **Issue:** #287
 - **Repo:** drift-ranger, tripwire, passing-notes
 - **Produces:** annotated tags pushed to each repository as its step merges: drift-ranger `v0.1.0` after Step 3; the next tripwire minor version after Step 6; the next passing-notes minor version after Step 7. Each tag sits at a commit whose declared gate was green, and the tag message records that gate. No code. This step may run in parts, one repository at a time, as each prerequisite lands.
 - **Done when:** `git ls-remote --tags https://github.com/aberson/<slug>` shows each new tag. Step 11's contract suite has passed on it before the manifest pin moves.
@@ -407,7 +407,7 @@ The `Depends on:` lines decide the order across repositories.
 
 - **Problem:** There is no single command that installs the companion members.
 - **Type:** code
-- **Issue:** #
+- **Issue:** #288
 - **Repo:** skill-mesh
 - **Files:** `tools/install-companions.ps1`, `tools/install-skill-mesh.ps1` (new `-Companions core|all|none`, default `none` until Step 20), `tests/companions/test_companions_install.py`, `documentation/v2-installation.md`
 - **Existing context:** the skill installer's write-ahead ledger and ownership checks stay untouched. The companion keeps its own ledger, `.skill-mesh-companions.json`, in the target home. Members that ship skills (passing-notes) are installed by **their** installer (`uv run python tools/skills_install.py install --host claude|codex`, with its own SHA-256 ledger). Skill Mesh never copies or owns those files. Members with a `setup_write` (switchboard, from Step 16) run their own ledgered writer.
@@ -439,7 +439,7 @@ The `Depends on:` lines decide the order across repositories.
 
 - **Problem:** Hooks are how these tools reliably fire (CC-D5), but Skill Mesh has never written host settings.
 - **Type:** code
-- **Issue:** #
+- **Issue:** #289
 - **Repo:** skill-mesh
 - **Files:** `tools/install-companions.ps1`, `tools/companion_settings.py` (JSON merge), `tests/companions/test_companion_hooks.py`
 - **Produces:**
@@ -473,7 +473,7 @@ The `Depends on:` lines decide the order across repositories.
 
 - **Problem:** Nothing checks that a pinned member still speaks the call shape and payload version the skills read, so a member release could silently break an advisory call.
 - **Type:** code
-- **Issue:** #
+- **Issue:** #290
 - **Repo:** skill-mesh
 - **Files:** `tests/companions/test_contracts.py`, `tools/change_pack.py` (register the suite), `config/companions.json` (`contract` fields)
 - **Produces:**
@@ -495,7 +495,7 @@ The `Depends on:` lines decide the order across repositories.
 
 - **Problem:** Switchboard lives in the private coding-root, has no console command, and has never been checked for private data. It cannot be published as it stands.
 - **Type:** code
-- **Issue:** #
+- **Issue:** #291
 - **Repo:** coding-root (`switchboard/`)
 - **Files:** `switchboard/pyproject.toml` (console script `switchboard`), `switchboard/README.md`, `switchboard/docs/publication-audit-2026-11.md`, `switchboard/utility-project.toml`
 - **Existing context:**
@@ -522,7 +522,7 @@ The `Depends on:` lines decide the order across repositories.
 
 - **Problem:** The move itself is outward-facing and needs the operator.
 - **Type:** operator
-- **Issue:** #
+- **Issue:** #292
 - **Repo:** new `aberson/switchboard`
 - **Produces:** a public repository created from the audited path history with the split commands recorded in Step 12's audit report, pushed and tagged `v0.1.0`, with a nested checkout at `<coding-root>/switchboard`. No code.
 - **Done when:** `gh repo view aberson/switchboard --json visibility` reports PUBLIC, and the tag exists. The operator re-reads the audit report's accepted risks before the visibility flip.
@@ -532,7 +532,7 @@ The `Depends on:` lines decide the order across repositories.
 
 - **Problem:** After the move, the coding-root must not track two copies.
 - **Type:** code
-- **Issue:** #
+- **Issue:** #293
 - **Repo:** coding-root
 - **Files:** `.gitignore`, `.claude/observatory/registry.toml` (entry stays `owned=true`; repo path updated if needed)
 - **Produces:** `git rm --cached -r switchboard/` plus a `.gitignore` line, the same pattern as the 2026-08 untrack pass for the seven utilities (commits `f1444a8`, `873963f`). The registry still resolves the project.
@@ -544,7 +544,7 @@ The `Depends on:` lines decide the order across repositories.
 
 - **Problem:** Public measure-twice cannot be installed by anyone else while it depends on a sibling folder.
 - **Type:** code
-- **Issue:** #
+- **Issue:** #294
 - **Repo:** measure-twice
 - **Files:** `pyproject.toml`, `uv.lock`, `README.md` (drop "not a standalone install")
 - **Produces:** `switchboard` as a Git dependency on `aberson/switchboard@v0.1.0`, plus a documented local-override recipe for development.
@@ -557,7 +557,7 @@ The `Depends on:` lines decide the order across repositories.
 
 - **Problem:** Switchboard's registry already sets the model for every role dispatch here (14 generated role files), but a new user gets no role files. CC-D11 makes the registry and `apply` core at the public split.
 - **Type:** code
-- **Issue:** #
+- **Issue:** #295
 - **Repo:** skill-mesh
 - **Files:** `config/companions.json` (switchboard row), `tests/companions/test_companions_install.py`, `tests/companions/test_contracts.py`
 - **Existing context:** `apply` writes role files with a ledger and never overwrites a hand edit (Step 12 context). The judge offload is enabled only through `~/.switchboard/config.json` and stays off.
@@ -578,7 +578,7 @@ The `Depends on:` lines decide the order across repositories.
 
 - **Problem:** The README says installing Skill Mesh "does not install every utility", its "Which integrations are in v3?" table understates switchboard (tier-offload only), and nothing tells readers about the companion or its pins.
 - **Type:** code
-- **Issue:** #
+- **Issue:** #296
 - **Repo:** skill-mesh
 - **Files:** `README.md` ("How utility projects are used", "Which integrations are in v3?", "Quick start", "Providers & installation"), `documentation/v2-installation.md`, the release-notes template
 - **Produces:**
@@ -596,7 +596,7 @@ The `Depends on:` lines decide the order across repositories.
 
 - **Problem:** This workspace runs the hand-registered tripwire hook (project settings) and checkout-based tools. It must switch to the companion's managed copies with no double hook.
 - **Type:** operator
-- **Issue:** #
+- **Issue:** #297
 - **Repo:** coding-root (settings and hooks), user tool directory
 - **Produces:**
   1. Remove the hand-registered tripwire entry from `dev/.claude/settings.json`.
@@ -618,7 +618,7 @@ The `Depends on:` lines decide the order across repositories.
 
 - **Problem:** Every earlier check used fixtures or this workspace; a new user's one-command install has never run.
 - **Type:** operator
-- **Issue:** #
+- **Issue:** #298
 - **Repo:** none (disposable Windows user profile or guest)
 - **Produces:**
   - Starting with only Python, uv and Git, download the release zip, verify its SHA-256 and run the one documented command with `-Companions core`.
@@ -641,7 +641,7 @@ The `Depends on:` lines decide the order across repositories.
 
 - **Problem:** `-Companions` defaults to `none` until acceptance. CC-D10 sets the default to the core ring.
 - **Type:** code
-- **Issue:** #
+- **Issue:** #299
 - **Repo:** skill-mesh
 - **Files:** `tools/install-skill-mesh.ps1`, `documentation/v2-installation.md`, the tests from Steps 9 and 10
 - **Produces:** default `-Companions core`, with `all` and `none` documented.
@@ -656,7 +656,7 @@ The `Depends on:` lines decide the order across repositories.
 - **Problem:** Codex documents hooks, but they are not qualified on this machine; v1 registers Claude hooks only.
 - **Type:** conditional
 - **Condition:** `test -f "$USERPROFILE/.codex/hooks-qualified.json"`. This runs under `bash -c`; Git Bash sets `USERPROFILE`. The path is a placeholder: replace it with the real Codex hook qualification record once one exists. Until then the test exits 1 and the step is skipped.
-- **Issue:** #
+- **Issue:** #300
 - **Repo:** skill-mesh, tripwire
 - **Produces:** `host: codex` hook entries, Codex hook packaging in tripwire, and the Codex settings merge, with the same ownership, opt-out and uninstall rules as Step 10.
 - **Done when:** the Step 10 test matrix passes for the Codex settings format, plus one live Codex observation of the hook firing.
