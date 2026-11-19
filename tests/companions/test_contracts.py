@@ -40,7 +40,141 @@ CONTRACT_NAMES = {
     "passing-notes": "passing-notes-lane-text",
     "tripwire": "tripwire-check-json",
     "drift-ranger": "drift-ranger-store",
+    "switchboard": "switchboard-apply-preview",
 }
+
+# switchboard apply's preview (switchboard/cli.py _print_apply_report at the pinned
+# tag): a header, three "  key: value" lines, one line per planned file, a summary.
+APPLY_HEADER = {False: "== switchboard apply (dry run) ==", True: "== switchboard apply --write =="}
+APPLY_FIELDS = ("home", "registry", "ledger")
+APPLY_PLAN_LINE = re.compile(
+    r"  (?P<action>[a-z]+) +(?P<host>claude|codex) +role=(?P<role>[a-z0-9-]+) +"
+    r"(?P<path>\S.*?)(?:  \((?P<reason>[^()]*)\))?")
+APPLY_SUMMARY = re.compile(r"  summary: (?P<counts>[a-z]+=\d+(?: [a-z]+=\d+)*); (?P<tail>.+)")
+APPLY_TAILS = {False: re.escape("dry run, nothing written (pass --write to apply)"),
+               True: r"(?P<written>\d+) change\(s\) written"}
+
+# Each host's role-file folder belongs to switchboard (switchboard/generate.py
+# HOST_AGENT_DIRECTORIES and HOST_FILE_SUFFIXES), not to skill-mesh, so the contract
+# reads it from the installed tag's own package instead of restating it here.
+ROLE_FILES_PROBE = (
+    "import json\n"
+    "from switchboard.generate import HOST_AGENT_DIRECTORIES, HOST_FILE_SUFFIXES\n"
+    "print(json.dumps({host: [list(parts), HOST_FILE_SUFFIXES[host]]\n"
+    "                  for host, parts in HOST_AGENT_DIRECTORIES.items()}))\n"
+)
+
+
+def tool_python(tool_dir, slug):
+    """The interpreter of the uv tool environment `slug` under UV_TOOL_DIR."""
+    candidates = [tool_dir / slug / "Scripts" / "python.exe", tool_dir / slug / "bin" / "python"]
+    found = [p for p in candidates if p.is_file()]
+    assert len(found) == 1, f"no single tool interpreter for {slug} under {tool_dir}: {found}"
+    return found[0]
+
+
+def switchboard_role_files(python, *, cwd, env):
+    """host -> (home-relative folder parts, file suffix), as the installed tag reports it."""
+    reported = json.loads(run([python, "-c", ROLE_FILES_PROBE], cwd=cwd, env=env))
+    assert set(reported) == {"claude", "codex"}, f"switchboard hosts: {sorted(reported)}"
+    role_files = {}
+    for host, (parts, suffix) in reported.items():
+        assert parts and all(p and p not in (".", "..") and "/" not in p and "\\" not in p
+                             for p in parts), f"{host} role folder is not home-relative: {parts}"
+        assert re.fullmatch(r"\.[a-z]+", suffix), f"{host} role file suffix: {suffix!r}"
+        role_files[host] = (tuple(parts), suffix)
+    return role_files
+
+
+def role_file_paths(home, role_files, roles):
+    return {str(home.joinpath(*parts, f"role-{role}{suffix}"))
+            for parts, suffix in role_files.values() for role in roles}
+
+
+def parse_apply_report(text, write=False):
+    """Parse one apply report into its fields, plan rows and summary counts.
+
+    Any line outside the shape above fails, so a renamed field or a new line kind is a
+    contract break, not a silently ignored line.
+    """
+    lines = text.splitlines()
+    assert len(lines) >= 5, f"apply report too short: {lines!r}"
+    assert lines[0] == APPLY_HEADER[write], f"apply header: {lines[0]!r}"
+    fields = {}
+    for key, line in zip(APPLY_FIELDS, lines[1:4]):
+        prefix = f"  {key}: "
+        assert line.startswith(prefix), f"apply field {key}: {line!r}"
+        fields[key] = line[len(prefix):]
+    rows = []
+    for line in lines[4:-1]:
+        match = APPLY_PLAN_LINE.fullmatch(line)
+        assert match, f"apply plan line: {line!r}"
+        rows.append(match.groupdict())
+    summary = APPLY_SUMMARY.fullmatch(lines[-1])
+    assert summary, f"apply summary line: {lines[-1]!r}"
+    counts = {}
+    for pair in summary["counts"].split(" "):
+        action, number = pair.split("=")
+        assert action not in counts, f"apply summary repeats {action}"
+        counts[action] = int(number)
+    tail = re.fullmatch(APPLY_TAILS[write], summary["tail"])
+    assert tail, f"apply summary tail: {summary['tail']!r}"
+    for row in rows:
+        assert row["action"] in counts, f"apply action {row['action']!r} not in the summary"
+    assert all(counts[a] == sum(r["action"] == a for r in rows) for a in counts), (
+        f"apply summary counts {counts} disagree with the plan rows")
+    return {"fields": fields, "rows": rows, "counts": counts,
+            "written": int(tail["written"]) if write else None}
+
+
+def home_snapshot(home):
+    return {p.relative_to(home).as_posix(): (p.read_bytes(), p.stat().st_mtime_ns)
+            for p in sorted(home.rglob("*")) if p.is_file()}
+
+
+def check_switchboard_apply(row, invoke, home, role_files):
+    """The switchboard-apply-preview contract: the plan shape, then a write and a no-op.
+
+    role_files is switchboard_role_files() of the same installed tag.
+    """
+    assert row["contract"]["schema_version"] == 1, "schema_version: apply-preview requires v1"
+    home.mkdir(parents=True)
+    ledger = home / ".switchboard" / "generated.json"
+    preview = parse_apply_report(invoke(["apply", "--home", str(home)]))
+    assert preview["fields"]["home"] == str(home)
+    # An installed tool reads the registry its wheel carries (v0.1.0 did not ship one).
+    assert preview["fields"]["registry"].startswith("ok (package:"), preview["fields"]
+    assert preview["fields"]["ledger"] == f"absent ({ledger})"
+    assert preview["rows"], "the pinned registry renders no role files"
+    roles = {r["role"] for r in preview["rows"]}
+    expected = role_file_paths(home, role_files, roles)
+    assert {r["path"] for r in preview["rows"]} == expected
+    for r in preview["rows"]:
+        parts, suffix = role_files[r["host"]]
+        assert r["path"] == str(home.joinpath(*parts, f"role-{r['role']}{suffix}")), r
+    assert {r["action"] for r in preview["rows"]} == {"create"}
+    assert home_snapshot(home) == {}, "a dry run must write nothing"
+
+    written = parse_apply_report(invoke(["apply", "--write", "--home", str(home)]), write=True)
+    assert written["written"] == len(expected)
+    assert {r["action"] for r in written["rows"]} == {"create"}
+    on_disk = {str(p) for p in home.rglob("role-*") if p.is_file()}
+    assert on_disk == expected
+    files = json.loads(ledger.read_text(encoding="utf-8"))["files"]
+    assert {str(home.joinpath(*key.split("/"))) for key in files} == expected
+    for key, entry in files.items():
+        data = home.joinpath(*key.split("/")).read_bytes()
+        assert entry["sha256"] == hashlib.sha256(data).hexdigest(), key
+
+    before = home_snapshot(home)
+    again = parse_apply_report(invoke(["apply", "--write", "--home", str(home)]), write=True)
+    assert again["written"] == 0
+    assert {r["action"] for r in again["rows"]} == {"unchanged"}
+    assert home_snapshot(home) == before, "a second apply --write must write nothing"
+    assert parse_apply_report(invoke(["apply", "--home", str(home)]))["fields"]["ledger"] == (
+        f"ok ({ledger})")
+    # The judge offload is enabled only by the operator's own config file.
+    assert not (home / ".switchboard" / "config.json").exists()
 
 
 def members():
@@ -244,6 +378,15 @@ def check_payload(row, commands, workspace, env):
             assert_schema(payload, row)
             assert payload["project_id"] == "contract-fixture"
         assert "Fixture outcome" in invoke(["show", "contract-fixture", "--store", str(store)])
+    elif slug == "switchboard":
+        # The installed command is the pinned tag's, not a checkout or a PATH tool.
+        assert invoke(["--version"]).strip() == f"switchboard {row['tag'].removeprefix('v')}"
+        # installed_tag() puts UV_TOOL_DIR ("tools") beside the bin folder.
+        tools = Path(commands[cli][0]).parent.parent / "tools"
+        role_files = switchboard_role_files(tool_python(tools, cli), cwd=workspace, env=env)
+        check_switchboard_apply(row, invoke, Path(env["HOME"]) / "role-home", role_files)
+    else:
+        pytest.fail(f"no payload check for {slug}")
 
 
 @pytest.fixture(scope="session")
@@ -398,6 +541,59 @@ def test_missing_member_caller_fails(tmp_path):
     (tmp_path / "hooks").mkdir()
     (tmp_path / "hooks" / "check.ps1").write_text("# fixture\n", encoding="utf-8")
     check_member_callers(row, tmp_path)
+
+
+# Stand-in folders: the parser does not interpret a plan row's folder; the online
+# contract checks the real ones against switchboard_role_files().
+FIXTURE_ROLE_FILES = {"claude": (("claude-host", "agents"), ".md"),
+                      "codex": (("codex-host", "agents"), ".toml")}
+
+
+def apply_preview_fixture(home, action="create", tail=None):
+    """A preview in the shape switchboard/cli.py _print_apply_report prints."""
+    rows = [f"  {action:<9} {host:<6} role={role:<18} "
+            + str(home.joinpath(*parts, f"role-{role}{suffix}"))
+            for host, (parts, suffix) in FIXTURE_ROLE_FILES.items()
+            for role in ("builder", "research-verifier")]
+    counts = " ".join(f"{a}={4 if a == action else 0}" for a in
+                      ("create", "update", "unchanged", "refuse", "delete", "orphan",
+                       "forget", "error"))
+    return "\n".join([
+        APPLY_HEADER[False],
+        f"  home: {home}",
+        f"  registry: ok (package:{home / 'models.json'})",
+        f"  ledger: absent ({home / '.switchboard' / 'generated.json'})",
+        *rows,
+        f"  summary: {counts}; "
+        + (tail or "dry run, nothing written (pass --write to apply)"),
+    ]) + "\n"
+
+
+def test_apply_preview_parser_accepts_the_pinned_shape(tmp_path):
+    report = parse_apply_report(apply_preview_fixture(tmp_path))
+    assert report["fields"]["home"] == str(tmp_path)
+    assert report["counts"]["create"] == len(report["rows"]) == 4
+    assert {r["role"] for r in report["rows"]} == {"builder", "research-verifier"}
+    assert {r["host"] for r in report["rows"]} == {"claude", "codex"}
+    refused = apply_preview_fixture(tmp_path, action="refuse").replace(
+        ".md\n", ".md  (it was edited by hand; left untouched)\n")
+    reasons = {r["reason"] for r in parse_apply_report(refused)["rows"]}
+    assert reasons == {"it was edited by hand; left untouched", None}
+
+
+@pytest.mark.parametrize("breakage", [
+    ("== switchboard apply (dry run) ==", "== switchboard apply =="),
+    ("  registry: ", "  registry source: "),
+    ("role=builder", "builder"),
+    ("create=4", "created=4"),
+    ("update=0", "update=1"),
+    ("dry run, nothing written", "nothing written"),
+])
+def test_apply_preview_parser_refuses_a_changed_shape(tmp_path, breakage):
+    text = apply_preview_fixture(tmp_path)
+    assert breakage[0] in text, "the fixture lost the line this case breaks"
+    with pytest.raises(AssertionError, match="apply"):
+        parse_apply_report(text.replace(breakage[0], breakage[1], 1))
 
 
 def test_unpinned_member_cannot_install(tmp_path, monkeypatch):

@@ -114,22 +114,25 @@
     },
     {
       "slug": "switchboard",
-      "ring": "candidate",
-      "repo": null,
-      "tag": null,
+      "ring": "core",
+      "repo": "https://github.com/aberson/switchboard",
+      "tag": "v0.1.1",
       "cli": "switchboard",
       "health": ["switchboard", "--version"],
-      "contract": null,
+      "contract": {"name": "switchboard-apply-preview", "schema_version": 1},
       "callers": [
         "skills/review-deep/core.md",
         "skills/review-gauntlet/core.md",
         "skills/tier-offload/core.md"
       ],
       "skills": null,
-      "setup_write": null,
+      "setup_write": {
+        "install": ["switchboard", "apply", "--write", "--home", "{home}"],
+        "uninstall": null
+      },
       "hooks": [],
       "setup": [],
-      "candidate_note": "Core companion plan Steps 12-16: public repository split, then registry and apply join the core ring"
+      "candidate_note": null
     },
     {
       "slug": "tripwire",

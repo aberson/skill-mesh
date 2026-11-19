@@ -104,7 +104,8 @@ def test_real_manifest_holds_the_eight_rows_at_their_plan_time_rings():
         "tripwire": "core",
         "find-again": "optional",
         "drift-ranger": "candidate",
-        "switchboard": "candidate",
+        # Plan Step 16 (#295) promoted switchboard's registry and apply to core.
+        "switchboard": "core",
         "changed-check": "candidate",
         "paper-trail": "candidate",
         "mesh-lens": "candidate",
@@ -693,9 +694,8 @@ def test_inspect_lists_every_row_by_ring():
             "drift-ranger",
             "mesh-lens",
             "paper-trail",
-            "switchboard",
         ],
-        "core": ["passing-notes", "tripwire"],
+        "core": ["passing-notes", "switchboard", "tripwire"],
         "optional": ["find-again"],
     }
     rows = {row["slug"]: row for row in payload["members"]}

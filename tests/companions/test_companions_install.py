@@ -15,8 +15,10 @@ are read back from it.
 from __future__ import annotations
 
 import hashlib
+import importlib.util
 import json
 import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -162,9 +164,18 @@ def skill_member(manifest, rings=("core",)):
 
 
 def plain_member(manifest, rings=("core",)):
-    """The first selected member without skills (tripwire today)."""
+    """The first selected member without skills or a writer (tripwire today)."""
     return next(
-        m for m in manifest["members"] if m["ring"] in rings and not m["skills"]
+        m
+        for m in manifest["members"]
+        if m["ring"] in rings and not m["skills"] and not m["setup_write"]
+    )
+
+
+def writer_member(manifest, rings=("core",)):
+    """The first selected member with a setup_write (switchboard today)."""
+    return next(
+        m for m in manifest["members"] if m["ring"] in rings and m["setup_write"]
     )
 
 
@@ -211,6 +222,9 @@ class Env:
         self.extra = []
         self.tools = list(tools)
         self.fail = []
+        # Extra environment (set) and inherited names to drop (None), and the cwd.
+        self.overrides = {}
+        self.cwd = None
 
     def write_shim(self, name, role):
         (self.dirs[name] / (name + ".cmd")).write_text(
@@ -228,6 +242,11 @@ class Env:
         env["FAKE_LOG"] = str(self.log)
         env["FAKE_TOOL_BIN"] = str(self.tool_bin)
         env["FAKE_FAIL"] = ",".join(self.fail)
+        for name, value in self.overrides.items():
+            if value is None:
+                env.pop(name, None)
+            else:
+                env[name] = value
         return env
 
     def calls(self):
@@ -242,7 +261,7 @@ class Env:
         if self.log.exists():
             self.log.unlink()
 
-    def run(self, script, *args):
+    def run(self, script, *args, timeout=300):
         return subprocess.run(
             [
                 str(POWERSHELL),
@@ -259,14 +278,15 @@ class Env:
             encoding="utf-8",
             errors="replace",
             env=self.env(),
-            timeout=300,
+            cwd=self.cwd,
+            timeout=timeout,
         )
 
-    def companions(self, *args, provider="claude", manifest=None):
+    def companions(self, *args, provider="claude", manifest=None, timeout=300):
         extra = ["-Provider", provider, "-Home", str(self.home)]
         if manifest is not None:
             extra += ["-Manifest", str(manifest)]
-        return self.run(INSTALL_COMPANIONS, *extra, *args)
+        return self.run(INSTALL_COMPANIONS, *extra, *args, timeout=timeout)
 
     def ledger(self):
         path = self.home / COMPANION_LEDGER
@@ -336,7 +356,7 @@ def mini_dist(tmp_path_factory):
     return mini
 
 
-def skill_install(env, dist, *extra):
+def skill_install(env, dist, *extra, timeout=300):
     return env.run(
         INSTALL_SKILL_MESH,
         "-Provider",
@@ -346,6 +366,7 @@ def skill_install(env, dist, *extra):
         "-DistDir",
         str(dist),
         *extra,
+        timeout=timeout,
     )
 
 
@@ -416,7 +437,8 @@ def test_skill_installer_companions_core_installs_core_members(tmp_path, mini_di
     for slug in core:
         entry = ledger["members"][slug]
         assert entry["tag"] == TAG and entry["tool"] == "installed"
-        assert entry["setup_write"] is False and entry["hooks"] == []
+        assert entry["setup_write"] is bool(member(manifest, slug)["setup_write"])
+        assert entry["hooks"] == []
         assert entry["skills"] is bool(member(manifest, slug)["skills"])
     assert ledger["members"][pn["slug"]]["skills_hosts"] == ["claude"]
     assert ledger["opt_outs"] == {"no_hooks": False, "skip_hook": []}
@@ -1046,3 +1068,222 @@ def test_uninstall_with_the_skills_folder_gone_still_reverses_the_member(tmp_pat
     assert not [c for c in env.calls() if c["argv"][:1] == ["run"]]
     assert env.ledger() is None
     assert [p.name for p in env.tool_bin.iterdir()] == []
+
+
+# --------------------------------------------------------------------------- #
+# A member writer in the core ring: switchboard (plan Step 16, issue #295)
+# --------------------------------------------------------------------------- #
+
+# The judge offload's switch. Only the operator writes it; the companion never does.
+OFFLOAD_CONFIG = Path(".switchboard") / "config.json"
+
+
+def expand_argv(argv, home):
+    """argv after its command, with {home} replaced as install-companions.ps1 does."""
+    return [item.replace("{home}", str(home)) for item in argv[1:]]
+
+
+def tree_snapshot(root, skip=()):
+    """Every file under root but skip: relative POSIX path -> (bytes, mtime)."""
+    return {
+        p.relative_to(root).as_posix(): (p.read_bytes(), p.stat().st_mtime_ns)
+        for p in sorted(root.rglob("*"))
+        if p.is_file() and p.relative_to(root).as_posix() not in skip
+    }
+
+
+def test_writer_member_runs_apply_once_and_never_touches_the_offload_config(tmp_path):
+    """The installer's side of the writer contract, with fake tools.
+
+    The fake switchboard writes nothing, so the offload-config assertions here guard
+    the real installer (it must neither write the file nor pass it to the member).
+    That the real member leaves it alone is checked by the online
+    test_core_install_writes_the_pinned_switchboard_role_files_once below.
+    """
+    path, manifest = pinned_manifest(tmp_path)
+    sb = writer_member(manifest)
+    assert sb["setup_write"]["uninstall"] is None, (
+        "switchboard v0.1.1 has no removal command; this test pins the reporting path"
+    )
+    env = Env(tmp_path)
+    (env.home / ".claude" / "skills").mkdir(parents=True)
+    config = env.home / OFFLOAD_CONFIG
+    config.parent.mkdir()
+    config.write_bytes(b'{"synthetic": "operator-owned offload config"}\n')
+    before = config.read_bytes()
+
+    def writer_calls():
+        return [
+            c["argv"]
+            for c in env.calls()
+            if c["tool"] == "cli:" + sb["slug"] and c["argv"] != sb["health"][1:]
+        ]
+
+    r = env.companions(manifest=path)
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert statuses(r.stdout)[sb["slug"]] == "installed", r.stdout
+    assert writer_calls() == [expand_argv(sb["setup_write"]["install"], env.home)]
+    assert env.ledger()["members"][sb["slug"]]["setup_write"] is True
+    assert config.read_bytes() == before
+    assert not any("config.json" in json.dumps(c) for c in env.calls())
+
+    env.reset_log()
+    r = env.companions(manifest=path)
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert statuses(r.stdout)[sb["slug"]] == "already current", r.stdout
+    assert writer_calls() == []
+    assert config.read_bytes() == before
+
+    env.reset_log()
+    r = env.companions("-Uninstall", manifest=path)
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert statuses(r.stdout)[sb["slug"]] == "uninstalled", r.stdout
+    assert (
+        "install-companions: note: %s: its setup_write output has no uninstall "
+        "command; left in place" % sb["slug"]
+    ) in r.stdout
+    assert writer_calls() == []
+    assert config.read_bytes() == before
+
+
+def load_contract_suite():
+    """The contract suite module: its online gate (SKILL_MESH_CONTRACTS_OFFLINE, then
+    a probe) and its reader of switchboard's own role-file folders."""
+    spec = importlib.util.spec_from_file_location(
+        "companion_contract_suite", Path(__file__).with_name("test_contracts.py")
+    )
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def git_directory(git):
+    """The PATH folder for the real git.
+
+    Git for Windows' mingw64/bin/git.exe on a minimal PATH fails uv's checkout clone
+    ("destination path already exists"); its cmd/git.exe launcher sets up the
+    environment git expects, so it is preferred when it sits beside it.
+    """
+    exe = Path(git).resolve()
+    if exe.parent.name.lower() == "bin" and exe.parent.parent.name.lower() == "mingw64":
+        launcher = exe.parent.parent.parent / "cmd" / "git.exe"
+        if launcher.is_file():
+            return launcher.parent
+    return exe.parent
+
+
+def test_core_install_writes_the_pinned_switchboard_role_files_once(
+    tmp_path, mini_dist
+):
+    """Step 16 done-when, end to end: install-skill-mesh.ps1 -Companions core with
+    the REAL uv and git installs the pinned switchboard tag from GitHub, and its
+    apply writes the role files of the registry that tag ships.
+
+    The fake-tool harness above cannot produce real role files, so this one test
+    uses real tools behind the contract suite's online gate
+    (SKILL_MESH_CONTRACTS_OFFLINE=1 skips it). Everything it writes is disposable:
+    the home, uv's tool, bin and cache folders, and HOME/USERPROFILE.
+    """
+    contracts = load_contract_suite()
+    contracts.require_online()
+    uv, git = shutil.which("uv"), shutil.which("git")
+    assert uv and git, "the online switchboard install needs uv and git"
+    manifest = real_manifest()
+    sb = writer_member(manifest)
+    assert sb["tag"], "switchboard has no pinned tag"
+    path = tmp_path / "switchboard-only.json"
+    path.write_text(
+        json.dumps({"schema_version": manifest["schema_version"], "members": [sb]}),
+        encoding="utf-8",
+    )
+
+    env = Env(tmp_path, tools=("uv", "python"))
+    (env.dirs["uv"] / "uv.cmd").write_text(
+        '@"%s" %%*\r\n@exit /b %%ERRORLEVEL%%\r\n' % uv, encoding="ascii"
+    )
+    env.extra = [git_directory(git)]
+    user = tmp_path / "user"
+    user.mkdir()
+    tools_dir = tmp_path / "uv-tools"
+    env.cwd = tmp_path
+    env.overrides = {
+        "UV_TOOL_DIR": str(tools_dir),
+        "UV_TOOL_BIN_DIR": str(env.tool_bin),
+        "UV_CACHE_DIR": str(tmp_path / "uv-cache"),
+        "UV_NO_CONFIG": "1",
+        "UV_PYTHON": sys.executable,
+        "UV_PYTHON_DOWNLOADS": "never",
+        "HOME": str(user),
+        "USERPROFILE": str(user),
+        "GIT_TERMINAL_PROMPT": "0",
+        "SWITCHBOARD_REGISTRY": None,
+    }
+
+    def install():
+        return skill_install(
+            env,
+            mini_dist,
+            "-Companions",
+            "core",
+            "-CompanionsManifest",
+            str(path),
+            timeout=1200,
+        )
+
+    r = install()
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert statuses(r.stdout) == {sb["slug"]: "installed"}, r.stdout
+    entry = env.ledger()["members"][sb["slug"]]
+    assert entry["tag"] == sb["tag"] and entry["tool"] == "installed"
+    assert entry["setup_write"] is True
+
+    # The role files are exactly the pinned tag's packaged registry, ledger-owned.
+    registries = sorted(tools_dir.rglob("_registry/models.json"))
+    assert len(registries) == 1, registries
+    roles = json.loads(registries[0].read_text(encoding="utf-8"))["roles"]
+    assert roles, "the pinned registry has no roles"
+    # Each host's folder and suffix as the installed tag's own package states them.
+    role_files = contracts.switchboard_role_files(
+        contracts.tool_python(tools_dir, sb["cli"]),
+        cwd=tmp_path,
+        env=contracts.isolated_env(tmp_path / "probe-home"),
+    )
+    expected = {
+        Path(p).relative_to(env.home).as_posix()
+        for p in contracts.role_file_paths(env.home, role_files, roles)
+    }
+    written = {
+        p.relative_to(env.home).as_posix()
+        for parts, _ in role_files.values()
+        for p in env.home.joinpath(*parts).iterdir()
+    }
+    assert written == expected
+    owned = json.loads(
+        (env.home / ".switchboard" / "generated.json").read_text(encoding="utf-8")
+    )["files"]
+    assert set(owned) == expected
+    for key, item in owned.items():
+        assert item["sha256"] == sha(env.home / key), key
+    for base in (env.home, user):
+        assert not (base / OFFLOAD_CONFIG).exists(), base
+
+    # A re-install through the same entry point writes nothing. The skill step
+    # rewrites its own ledger on every run; every other file, role files and the
+    # companion ledger included, keeps its bytes and mtime.
+    before = tree_snapshot(env.home, skip=(SKILL_LEDGER,))
+    r = install()
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert statuses(r.stdout) == {sb["slug"]: "already current"}, r.stdout
+    assert tree_snapshot(env.home, skip=(SKILL_LEDGER,)) == before
+    for base in (env.home, user):
+        assert not (base / OFFLOAD_CONFIG).exists(), base
+
+    # Uninstall removes the tool and reports the role files left in place.
+    r = env.companions("-Uninstall", manifest=path, timeout=1200)
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert statuses(r.stdout) == {sb["slug"]: "uninstalled"}, r.stdout
+    assert "no uninstall command; left in place" in r.stdout
+    after = tree_snapshot(env.home)
+    for key in expected | {".switchboard/generated.json"}:
+        assert after[key] == before[key], key
+    assert not list(env.tool_bin.glob(sb["cli"] + ".*"))
