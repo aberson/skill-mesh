@@ -937,14 +937,15 @@ def test_setup_write_runs_after_skills_and_is_reversed_first(tmp_path):
     r = env.companions(manifest=path)
     assert r.returncode == 0, r.stdout + r.stderr
     writes = [c["argv"] for c in env.calls() if c["tool"] == "cli:" + slug]
-    assert writes == [["--version"], ["apply", "--write", "--home", str(env.home)]]
+    health_argv = member(manifest, slug)["health"][1:]
+    assert writes == [health_argv, ["apply", "--write", "--home", str(env.home)]]
     assert env.ledger()["members"][slug]["setup_write"] is True
 
     env.reset_log()
     r = env.companions(manifest=path)
     assert statuses(r.stdout)[slug] == "already current"
     assert [c["argv"] for c in env.calls() if c["tool"] == "cli:" + slug] == [
-        ["--version"]
+        health_argv
     ]
 
     env.reset_log()

@@ -20,6 +20,17 @@ Usage (from anywhere; paths resolve against this checkout):
                  system temp directory; the path is printed)
     --list       print the selection as JSON and exit 0 without running pytest
     --focused    print the focused-tests-by-change lookup and exit 0
+    --base REF   compare tracked changes with REF (overrides automatic selection)
+    --changed PATH  explicit changed path (repeatable); replaces git detection
+
+Companion contracts are added when config/companions.json or one of its Skill
+Mesh caller paths changes. By default, inspect uncommitted changes against HEAD;
+if none exist, inspect the latest commit (including a root commit). Use --base
+for a larger committed range. Outside a git checkout, conservatively include
+contracts and report that change detection is unavailable. --list and saved
+evidence name the selection source so this fallback is visible.
+The contract suite also runs in the per-release sweep. Set
+SKILL_MESH_CONTRACTS_OFFLINE=1 to report its network cases as skipped: offline.
 
 Everything after ``--`` is passed to pytest (for example ``-- --durations=25``).
 
@@ -63,10 +74,15 @@ ROSTER_CHECK = (
     "::test_codex_profile_holds_exactly_the_declared_cohorts_for_the_committed_manifest"
 )
 RC_REPORT_CHECK = "tests/smoke/test_release_candidate_report.py"
+COMPANION_CONTRACTS = "tests/companions/test_contracts.py"
 
 # Focused tests, by what a change touches. Printed by --focused and after
 # every run; the pack does not run these.
 FOCUSED = (
+    ("config/companions.json or a companion caller path",
+     "tests/companions/test_contracts.py (selected automatically; network required)"),
+    ("tools/change_pack.py or tests/companions/test_contracts.py",
+     "tests/companions/test_contracts.py"),
     ("a skill's content, docs, generated catalog files",
      "the quick checks only"),
     ("tools/install-skill-mesh.ps1, runtime/path-guard.ps1",
@@ -96,12 +112,58 @@ SUMMARY_RE = re.compile(
 )
 
 
-def selection(roster=False, rc_report=False):
+def companion_contracts_changed(paths):
+    manifest = json.loads((REPO_ROOT / "config/companions.json").read_text(encoding="utf-8"))
+    triggers = {"config/companions.json"}
+    triggers.update(caller for row in manifest["members"] for caller in row["callers"]
+                    if not caller.startswith("member:"))
+    if paths is None:
+        return True  # source archive: unknown changes must not silently omit contracts
+    normalized = set()
+    for item in paths:
+        path = Path(item.replace("\\", "/"))
+        try:
+            normalized.add((REPO_ROOT / path).resolve().relative_to(REPO_ROOT.resolve()).as_posix())
+        except ValueError:
+            continue  # an explicitly supplied path outside this checkout
+    return bool(triggers.intersection(normalized))
+
+
+def changed_paths(base):
+    if base is not None and (not base or base.startswith("-")):
+        raise ValueError("--base must be a git revision, not an option")
+
+    def git(*args, check=True):
+        return subprocess.run(
+            ["git", *args], cwd=REPO_ROOT, capture_output=True, text=True,
+            encoding="utf-8", errors="replace", check=check, timeout=30,
+        )
+
+    try:
+        probe = git("rev-parse", "--show-toplevel", check=False)
+    except FileNotFoundError:
+        return None, "git unavailable; contracts conservatively included"
+    if probe.returncode != 0 or not probe.stdout.strip():
+        return None, "outside a git checkout; contracts conservatively included"
+    if Path(probe.stdout.strip()).resolve() != REPO_ROOT.resolve():
+        return None, "parent git checkout; contracts conservatively included"
+    result = git("diff", "--no-ext-diff", "--name-only", "--no-renames", "-z", base or "HEAD", "--")
+    paths = [p for p in result.stdout.split("\0") if p]
+    if base is not None or paths:
+        return paths, "git diff %s" % (base or "HEAD")
+    result = git("diff-tree", "--root", "--no-commit-id", "--name-only", "--no-renames",
+                 "-r", "-m", "-z", "HEAD")
+    return sorted(set(p for p in result.stdout.split("\0") if p)), "latest commit (clean checkout)"
+
+
+def selection(roster=False, rc_report=False, changed=()):
     targets = list(QUICK_CHECKS)
     if roster:
         targets.append(ROSTER_CHECK)
     if rc_report:
         targets.append(RC_REPORT_CHECK)
+    if companion_contracts_changed(changed):
+        targets.append(COMPANION_CONTRACTS)
     return targets, list(PACKAGE_INTEGRITY_IGNORES)
 
 
@@ -148,15 +210,27 @@ def main(argv=None):
     parser.add_argument("--evidence")
     parser.add_argument("--list", action="store_true")
     parser.add_argument("--focused", action="store_true")
+    parser.add_argument("--base")
+    parser.add_argument("--changed", action="append")
     args = parser.parse_args(argv)
 
     if args.focused:
         print_focused()
         return 0
 
-    targets, ignores = selection(args.roster, args.rc_report)
+    try:
+        if args.changed is not None:
+            changed, selection_source = args.changed, "explicit --changed paths"
+        else:
+            changed, selection_source = changed_paths(args.base)
+        targets, ignores = selection(args.roster, args.rc_report, changed)
+    except (OSError, ValueError, KeyError, TypeError, subprocess.SubprocessError) as exc:
+        sys.stderr.write("change_pack: cannot determine companion contract selection: %s\n" % exc)
+        return 6
     if args.list:
-        json.dump({"targets": targets, "ignores": ignores}, sys.stdout, indent=2)
+        json.dump({"targets": targets, "ignores": ignores,
+                   "selection_source": selection_source, "changed_paths": changed},
+                  sys.stdout, indent=2)
         sys.stdout.write("\n")
         return 0
 
@@ -198,6 +272,8 @@ def main(argv=None):
         out.write("started: %s\n" % started.isoformat(timespec="seconds"))
         out.write("wall_clock_s: %.1f\n" % (ended - started).total_seconds())
         out.write("checkout: %s\n" % REPO_ROOT.name)
+        out.write("selection source: %s\n" % selection_source)
+        out.write("changed paths: %s\n" % (", ".join(changed) if changed is not None else "unknown"))
         out.write("command: %s\n" % " ".join(
             ["python"] + command[1:]))
         out.write("extra_args: %s\n" % (" ".join(extra) if extra else "none"))
