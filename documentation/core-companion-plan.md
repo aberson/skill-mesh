@@ -112,7 +112,7 @@ Accepted 2026-11-18 (operator, relayed by the workspace main in note
 |---|---|
 | CC-D10 | **The default install is the core ring only.** That is passing-notes, tripwire, drift-ranger once packaged, and switchboard's registry after the public split. Find Again is **optional and opt-in** (`-Companions all`), not installed by default. This replaces the 2026-11-17 "optional installs by default but stays inactive". |
 | CC-D11 | **Switchboard's registry and `apply` join the core ring at the public split, without waiting for V4-2.** They already set the model for every role dispatch. The local-model judge offload stays optional and off: the installer never enables it. |
-| CC-D12 | **Tripwire ships in advisory mode in v1.** Advisory mode means a log row per finding, at most one `additionalContext` note on `fail`, and never a `permissionDecision`. An opt-in deny for TW-SEC-001 `fail` is later work, outside this plan. It comes only after the six preconditions in section 7 and its own per-rule operator decision. |
+| CC-D12 | **Tripwire ships in advisory mode in v1.** Advisory mode means a log row per finding, at most one `additionalContext` note, and never a `permissionDecision`. The note fires on `fail`; the one exception is Phase HE's TW-GIT-001 `warn` note at a coding root, and `fail` takes precedence when both apply. Every other `warn` stays silent (operator, 2026-11-19, relayed by main 2a31). An opt-in deny for TW-SEC-001 `fail` is later work, outside this plan. It comes only after the six preconditions in section 7 and its own per-rule operator decision. |
 | CC-D13 | **Toolkit hookups H01 (Heads Up) and H03 (Same Page) are dropped.** Both repositories stay stand-alone and are not companion candidates. The workspace main routes the Toolkit-program and `user-pm` edits; this plan does not make them. |
 | CC-D14 | **The passing-notes Stop hook ships with the companion**, with its own opt-out, alongside tripwire's hook. |
 
@@ -347,7 +347,7 @@ The `Depends on:` lines decide the order across repositories.
     - never emits `permissionDecision`;
     - 3-second cap with process-tree kill;
     - ASCII-only;
-    - at most one `additionalContext` line, and only on `fail`.
+    - at most one `additionalContext` line: on `fail`, or for Phase HE's TW-GIT-001 `warn` at a coding root (the one allowed warn note; `fail` takes precedence; every other `warn` stays silent; CC-D12).
 
     That contract is CC-D12's advisory mode and must not change in this step. The packaged hook includes Phase HE's landed changes (section 5).
   - Consumers of the old log path `%LOCALAPPDATA%\jev-gate\tripwire-shadow.jsonl`:
@@ -369,6 +369,7 @@ The `Depends on:` lines decide the order across repositories.
   - The ported behavioural suite passes when run through the exact command line the installer will register.
   - A red-on-garbage anchor fixture fails the suite.
   - A test asserts that no output path ever contains `permissionDecision`.
+  - Tests prove the CC-D12 note rule both ways: a coding-root TW-GIT-001 `warn` emits exactly one note, and every other `warn` emits none; when a `fail` and that `warn` both apply, only the `fail` note is emitted.
   - Nothing is written under the jev-gate folder.
   - `hook path` resolves inside a disposable `uv tool` install.
   - The hook file is ASCII-only (byte check).
