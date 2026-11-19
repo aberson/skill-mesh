@@ -362,7 +362,7 @@ The `Depends on:` lines decide the order across repositories.
   - the hook shipped inside the tripwire package;
   - `tripwire hook path --host claude`, which prints the hook's absolute installed path;
   - a `tripwire --version` flag (the manifest health check; the CLI has none today);
-  - tool resolution in the Step 4 order, with the existing `CLAUDE_PROJECT_DIR` fallback kept last;
+  - tool resolution in exactly the Step 4 order. Security correction (2026-11-19): the old `CLAUDE_PROJECT_DIR` fallback is dropped, because a packaged hook must not execute code from the open project (workspace security rule);
   - a shadow log at `%LOCALAPPDATA%\tripwire\hook-shadow.jsonl` with the same row schema;
   - one dated note in each of the jev-toolkit and HE plans, pointing their verification lines at the new path.
 - **Done when:**
