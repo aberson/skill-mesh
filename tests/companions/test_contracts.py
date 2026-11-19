@@ -226,6 +226,8 @@ def check_payload(row, commands, workspace, env):
         assert [note, "fyi", "ack", "writer", "contract fixture"] in [
             line.split("\t") for line in inbox.splitlines()]
         settings = Path(env["HOME"]) / ".claude" / "settings.json"
+        # The member writes settings, but requires the host directory to exist.
+        settings.parent.mkdir(parents=True, exist_ok=True)
         invoke(["hook", "install", "--settings", str(settings)])
         before = settings.read_bytes()
         invoke(["hook", "install", "--settings", str(settings), "--check"])
