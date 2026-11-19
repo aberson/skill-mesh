@@ -1,7 +1,9 @@
 """Companion tool resolution: wiring and production-caller tests (V4-10 core companion plan Step 5).
 
 The producers are the call sites that run drift-ranger and switchboard: the shared
-`intent-continuity.md`, and the `review-deep`, `review-gauntlet` and `tier-offload` cores.
+`intent-continuity.md`, and the `review-deep`, `review-gauntlet` and `tier-offload` cores,
+plus (the Step 5 follow-up) the inert `context-slim` classifier offload and the documented,
+not-wired `skill-evolve` and `skill-iterate` grader call shapes.
 The consumer is the real resolver, `_shared/tool_resolve.py`. A unit test of the resolver
 cannot see a core that still calls a checkout, so these tests build the real Claude and
 Codex profiles with `tools/build-distributions.ps1`, extract each call site's marked block
@@ -55,13 +57,26 @@ CALL_SITES = {
                               "is a `defer`, exactly as before"),
     "tier-offload-validate": ("tier-offload/core.md", "tier-offload", "switchboard",
                               "means validation is unavailable"),
+    "context-slim-classifier": ("context-slim/SKILL.md", "context-slim", "switchboard",
+                                "is a **defer**"),
+    "skill-evolve-grader": ("skill-evolve/core.md", "skill-evolve", "switchboard",
+                            "is a **defer**"),
+    "skill-iterate-grader": ("skill-iterate/core.md", "skill-iterate", "switchboard",
+                             "is a **defer**, so the normal grader is used"),
 }
+# context-slim is provider-native Claude-only (core: null), so only the Claude profile emits
+# it. Declared, not discovered: a site that silently vanished from a profile must fail.
+PROFILE_ONLY = {"context-slim-classifier": ("claude",)}
 # Every core that follows the intent continuity contract reaches the drift-ranger site.
 INTENT_CONSUMERS = ("build-phase", "build-queue", "build-step", "plan-feature", "plan-init",
                     "session-wrap", "task-handoff")
 # The forms Step 5 retires. None may survive in an emitted caller.
 RETIRED = ("python -m switchboard judge", "drift_ranger.py",
            "switchboard/switchboard/config.py")
+# The retired judge form, matched across any whitespace and a versioned interpreter name.
+# It targets `judge` only: tier-offload documents the checkout route
+# `python -m switchboard config ...` deliberately, and that must not be flagged.
+RETIRED_JUDGE_RE = re.compile(r"\bpython[0-9.]*\s+-m\s+switchboard\s+judge\b")
 
 BLOCK_RE = re.compile(
     r"```text\r?\n[ \t]*tool-resolve-call: ([a-z0-9-]+)\r?\n"
@@ -113,7 +128,17 @@ def cited_convention(text):
 
 
 def _cases():
-    return [(point, profile) for point in CALL_SITES for profile in PROFILES]
+    return [(point, profile) for point in CALL_SITES
+            for profile in PROFILE_ONLY.get(point, PROFILES)]
+
+
+def retired_forms_in(text):
+    """Every retired form a payload text still carries (empty means clean)."""
+    found = [form for form in ("drift_ranger.py", "switchboard/switchboard/config.py")
+             if form in text]
+    if RETIRED_JUDGE_RE.search(text):
+        found.append("python -m switchboard judge")
+    return found
 
 
 # --------------------------------------------------------------------------- #
@@ -250,7 +275,10 @@ def test_emitted_caller_carries_the_block_and_its_paths_resolve(dist, point, pro
         "python -B <skill-dir>/../_shared/tool_resolve.py resolve --tool %s" % tool)
     assert call_line.startswith("<argv> ")
     skill_dir = dist / profile / skill
-    assert (skill_dir / "core.md").is_file()
+    # <skill-dir> is the directory of the loaded file: the core, or for a provider-native
+    # skill (no core) its emitted SKILL.md.
+    loaded = "SKILL.md" if rel.endswith("/SKILL.md") else "core.md"
+    assert (skill_dir / loaded).is_file()
     assert (skill_dir / ".." / "_shared" / RESOLVER).resolve().is_file()
     # The caller cites the convention (its section 4 owns the order) and restates none of it.
     # It cites the very path the shipped resolver cites, so callers and resolver name
@@ -271,13 +299,24 @@ def test_every_intent_continuity_consumer_reaches_the_drift_ranger_site(dist, pr
                 "intent-continuity.md").resolve().is_file()
 
 
+def test_profile_only_sites_are_absent_from_the_other_profiles(dist):
+    for point, profiles in PROFILE_ONLY.items():
+        skill = CALL_SITES[point][1]
+        for profile in PROFILES:
+            assert (dist / profile / skill).is_dir() == (profile in profiles), (point, profile)
+
+
 @pytest.mark.parametrize("profile", PROFILES)
 def test_no_emitted_skill_still_runs_a_retired_form(dist, profile):
     root = dist / profile
-    for path in root.rglob("*.md"):
-        text = path.read_text(encoding="utf-8")
-        for retired in ("drift_ranger.py", "switchboard/switchboard/config.py"):
-            assert retired not in text, (path, retired)
+    scanned = 0
+    for path in root.rglob("*"):
+        if not path.is_file():
+            continue
+        text = path.read_bytes().decode("utf-8", errors="replace")
+        scanned += 1
+        assert retired_forms_in(text) == [], (path, retired_forms_in(text))
+    assert scanned > 0
     for skill in ("review-deep", "review-gauntlet"):
         core = (root / skill / "core.md").read_text(encoding="utf-8")
         assert "python -m switchboard" not in core, skill
@@ -318,6 +357,8 @@ def test_block_round_trip(dist, tmp_path, point, profile, kind):
     prompt.write_text("judge this\n", encoding="utf-8")
     values = {"<style-lens-prompt-file>": str(prompt),
               "<absolute-config-path>": str(tmp_path / "offload-config.json"),
+              "<section-prompt-file>": str(prompt),
+              "<grading-prompt-file>": str(prompt),
               "<project-id>": "demo-project"}
     argv, call_args = fill_call(call_line, record["argv"], values)
     r = subprocess.run(argv, stdin=subprocess.DEVNULL, capture_output=True, text=True,
@@ -354,6 +395,26 @@ def test_anchor_caller_without_the_convention_citation_fails(dist, point, profil
                                                    "in the coding root, section 2")):
         with pytest.raises(AssertionError):
             cited_convention(garbage)
+
+
+@pytest.mark.parametrize("garbage", [
+    "python -m switchboard judge --site context-slim-classifier --prompt-file p",
+    "`python  -m\n  switchboard judge --site skill-evolve-grader`",
+    "python3 -m switchboard judge --site skill-iterate-grader",
+])
+@pytest.mark.parametrize("point,profile", _cases())
+def test_anchor_sweep_flags_a_payload_with_the_retired_judge_form(dist, point, profile,
+                                                                  garbage):
+    text = _text(dist, profile, point)
+    assert retired_forms_in(text) == []
+    assert retired_forms_in(text + "\n" + garbage + "\n") == ["python -m switchboard judge"]
+
+
+def test_anchor_sweep_spares_the_documented_config_route(dist):
+    """The check is precise: tier-offload's documented checkout config route stays legal."""
+    text = _text(dist, "claude", "tier-offload-validate")
+    assert "python -m switchboard config" in text
+    assert retired_forms_in(text) == []
 
 
 def test_anchor_a_checkout_only_resolver_fails_the_path_fixture(dist, tmp_path):

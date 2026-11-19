@@ -181,7 +181,15 @@ Every score this skill acts on â€” baseline, garbage anchor and each iteration â
 
 #### Switchboard local grader (`skill-iterate-grader`): not wired
 
-Switchboard Decision 9 names the `absolute_weighted` grading slice as the one role this skill may route to a local model (tier-offload task_class `skill-iterate-grader`), and switchboard config can enable that site. No step of this skill calls it: grading happens inside the shared workflow's grade agents, and the orchestrator never holds a grading prompt to send. Do not call switchboard from this skill. The planned call shape, kept for a future wiring, is `python -m switchboard judge --site skill-iterate-grader --prompt-file <grading-prompt-file>` (one JSON object on stdout, always exit 0; a `defer` result means use the normal grader). A local model may only ever *advise* a score; it is never the keep/revert gate.
+Switchboard Decision 9 names the `absolute_weighted` grading slice as the one role this skill may route to a local model (tier-offload task_class `skill-iterate-grader`), and switchboard config can enable that site. No step of this skill calls it: grading happens inside the shared workflow's grade agents, and the orchestrator never holds a grading prompt to send. Do not call switchboard from this skill. The planned call shape, kept for a future wiring, reaches the switchboard judge entrypoint through the shared resolver `<skill-dir>/../_shared/tool_resolve.py` (`<skill-dir>` is the directory that contains this loaded core), which finds switchboard in the order the workspace's advisory-call convention owns (`.claude/references/advisory-call-convention.md` in the coding root, section 4):
+
+```text
+tool-resolve-call: skill-iterate-grader
+python -B <skill-dir>/../_shared/tool_resolve.py resolve --tool switchboard
+<argv> judge --site skill-iterate-grader --prompt-file <grading-prompt-file>
+```
+
+The first line prints one JSON line or nothing; on a line, that future wiring would run its `argv` followed by the judge arguments of the second line (one JSON object on stdout, always exit 0; a `defer` result means use the normal grader). Nothing printed (switchboard is not installed), no `python` to run the resolver, or a judge call that cannot start is a **defer**, so the normal grader is used. A local model may only ever *advise* a score; it is never the keep/revert gate.
 
 ---
 

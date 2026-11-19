@@ -188,7 +188,15 @@ grade itself. A sub-agent cannot spawn its own producer/grader sub-agents (agent
 forced to self-grade. Moving the fan-out into a workflow flattens it — every agent is a sibling of the script.
 See § Execution model.
 
-**Local-grader offload (switchboard call site `skill-evolve-grader`): not wired.** Switchboard declares this call site (tier-offload task_class `skill-evolve-grader`; Switchboard Decision 9 — a cheap parallel scoring array), but the scoring workflow's grader agents make no switchboard call and this orchestrator never holds a per-scenario grading prompt. Do not grade outside the workflow to create a call point, and never let a local verdict replace or alter an independent grader's verdict. A future wired grader would call `python -m switchboard judge --site skill-evolve-grader --prompt-file <grading-prompt-file>` (prints one JSON object, always exits 0, defers whenever offload is off or the model is unavailable) and use a verdict only as an advisory score; wiring it is a change to the workflow, not a run-time choice.
+**Local-grader offload (switchboard call site `skill-evolve-grader`): not wired.** Switchboard declares this call site (tier-offload task_class `skill-evolve-grader`; Switchboard Decision 9 — a cheap parallel scoring array), but the scoring workflow's grader agents make no switchboard call and this orchestrator never holds a per-scenario grading prompt. Do not grade outside the workflow to create a call point, and never let a local verdict replace or alter an independent grader's verdict. A future wired grader would reach the switchboard judge entrypoint through the shared resolver `<skill-dir>/../_shared/tool_resolve.py` (`<skill-dir>` is the directory that contains this loaded core), which finds switchboard in the order the workspace's advisory-call convention owns (`.claude/references/advisory-call-convention.md` in the coding root, section 4), and call it as:
+
+```text
+tool-resolve-call: skill-evolve-grader
+python -B <skill-dir>/../_shared/tool_resolve.py resolve --tool switchboard
+<argv> judge --site skill-evolve-grader --prompt-file <grading-prompt-file>
+```
+
+The first line prints one JSON line or nothing; on a line, the grader would run its `argv` followed by the judge arguments of the second line (prints one JSON object, always exits 0, defers whenever offload is off or the model is unavailable). Nothing printed (switchboard is not installed), no `python` to run the resolver, or a judge call that cannot start is a **defer**. The grader would use a verdict only as an advisory score; wiring it is a change to the workflow, not a run-time choice.
 
 Create a temp work dir for this run, then assemble the workflow `args`:
 
