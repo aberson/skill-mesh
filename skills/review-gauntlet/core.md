@@ -146,7 +146,19 @@ review-gauntlet inherits review-deep's
 [Style-lens local-judge offload](../review-deep/core.md#style-and-conventions-lens):
 the Style lens is the only code lens cheap enough to route to a local model, and it
 is **off unless switchboard offload is enabled** for this profile's site,
-`review-gauntlet-style` (`python -m switchboard judge --site review-gauntlet-style ...`).
+`review-gauntlet-style`. The judge call is review-deep's resolved call with this site:
+the shared resolver follows the order the workspace's advisory-call convention owns
+(`.claude/references/advisory-call-convention.md` in the coding root, section 4), and
+review-deep describes its output. `<skill-dir>` is the directory that contains this
+loaded core:
+
+```text
+tool-resolve-call: review-gauntlet-style
+python -B <skill-dir>/../_shared/tool_resolve.py resolve --tool switchboard
+<argv> judge --site review-gauntlet-style --prompt-file <style-lens-prompt-file>
+```
+
+An absent switchboard (the resolver prints nothing) is a `defer`, exactly as before.
 A local **verdict** is an advisory annotation only: it never fills the Style lens
 slot. On a verdict and on a `defer` (the default) alike, a fresh-context Style
 reviewer invocation runs on the Style lens's configured tier, and its verdict is the

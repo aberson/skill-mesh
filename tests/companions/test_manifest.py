@@ -152,9 +152,10 @@ def test_real_skill_mesh_callers_actually_name_their_tool():
     """A caller of record must call the member, not merely exist (plan section 3, point 1)."""
     names = {
         "passing-notes": ("passing-notes",),
-        "drift-ranger": ("drift_ranger.py", "drift-ranger"),
+        "drift-ranger": ("tool_resolve.py resolve --tool drift-ranger",),
         "find-again": ("find-again",),
-        "switchboard": ("python -m switchboard",),
+        # V4-10 Step 5: every switchboard caller resolves it through the shared resolver.
+        "switchboard": ("tool_resolve.py resolve --tool switchboard",),
     }
     seen = 0
     for row in real_manifest()["members"]:

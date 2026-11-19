@@ -26,9 +26,17 @@ Defaults:
 
 - `--skills-dir`: adapter `discovery_root`.
 - `--out-dir`: `./offload-scan-out` relative to invocation cwd.
-- `--switchboard-root`: optional. When omitted, validation may use a prepared sibling Switchboard checkout only if an ancestor of cwd contains exactly `switchboard/switchboard/config.py`; otherwise validation is unavailable.
+- `--switchboard-root`: optional. When omitted, resolve Switchboard once with the shared resolver, in the order the workspace's advisory-call convention owns (`.claude/references/advisory-call-convention.md` in the coding root, section 4). `<skill-dir>` is the directory that contains this loaded core:
 
-Validate arguments before classification or writes. An explicit Switchboard root must contain `switchboard/config.py` and `switchboard/cli.py`; otherwise report validation unavailable rather than searching elsewhere or installing anything.
+  ```text
+  tool-resolve-call: tier-offload-validate
+  python -B <skill-dir>/../_shared/tool_resolve.py resolve --tool switchboard
+  <argv> config --path "<absolute-config-path>"
+  ```
+
+  The first line prints one JSON line or nothing. A `"via": "checkout"` line names a source checkout in its `checkout` field; that directory is the prepared root when it contains `switchboard/config.py` and `switchboard/cli.py`. A `"via": "path"` line is the installed command: it has no prepared loader, so only the post-write loud check is available. Nothing printed, or no `python` to run the resolver, means validation is unavailable.
+
+Validate arguments before classification or writes. An explicit Switchboard root must contain `switchboard/config.py` and `switchboard/cli.py`; otherwise report validation unavailable rather than searching elsewhere or installing anything. An explicit root is used as given and the resolver is not run.
 
 Capture the invocation cwd before any directory change. Resolve `--out-dir` against that cwd to an absolute output directory, and derive the absolute `offload-config.json` path from it. Use those same resolved paths for reporting, writes, and validation even when a validator runs from another directory. Resolving paths does not create them.
 
@@ -152,13 +160,13 @@ Rules matching the current `SwitchboardConfig` interface:
 
 ### Optional read-only Switchboard validation
 
-When a prepared Switchboard source is available, validate the exact in-memory candidate with its own `SwitchboardConfig.from_mapping` implementation. Set `PYTHONDONTWRITEBYTECODE=1`; pass the JSON through stdin or memory; create no temp file. After a normal-mode write, the equivalent loud check is:
+When a prepared Switchboard source is available (an explicit `--switchboard-root`, or the resolver's checkout), validate the exact in-memory candidate with its own `SwitchboardConfig.from_mapping` implementation. Set `PYTHONDONTWRITEBYTECODE=1`; pass the JSON through stdin or memory; create no temp file. After a normal-mode write, the equivalent loud check for an explicit root is:
 
 ```text
 python -m switchboard config --path "<absolute-config-path>"
 ```
 
-run with cwd set to the prepared Switchboard root and `PYTHONDONTWRITEBYTECODE=1`. `<absolute-config-path>` is the exact artifact path resolved from the original invocation cwd before changing directories; quote it to preserve spaces. Do not rebase a relative output path in the Switchboard checkout. This command validates config only; never run bare `python -m switchboard`, `inspect`, `judge`, or any endpoint probe.
+run with cwd set to the prepared Switchboard root and `PYTHONDONTWRITEBYTECODE=1`. For a resolved Switchboard (installed command or checkout), the loud check is the `tier-offload-validate` block's second line, its `argv` followed by `config --path "<absolute-config-path>"`, also with `PYTHONDONTWRITEBYTECODE=1`. An installed command has no prepared loader, so it gets no pre-write validation: write the candidate as `unvalidated candidate`, then run the loud check. `<absolute-config-path>` is the exact artifact path resolved from the original invocation cwd before changing directories; quote it to preserve spaces. Do not rebase a relative output path in the Switchboard checkout. This command validates config only; never run bare `python -m switchboard` or a bare resolved `argv`, `inspect`, `judge`, or any endpoint probe.
 
 Record exact command or in-memory validator description, stdout, stderr, and exit status in the report. Exit zero qualifies schema compatibility only; it is not gate evidence, bake-off certification, or permission to install. A nonzero pre-write result suppresses the normal-mode config write and reports `not written (invalid candidate)`; still write the inventory with that result. Under dry-run it reports the candidate invalid and writes nothing. If the optional post-write loud check fails, retain the already-written file without cleanup and report its path as `invalid candidate retained`; write or update the inventory with that exact result before the final report. Label proposed-entry counts as invalid whenever either validation fails; they never describe enabled sites.
 

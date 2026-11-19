@@ -9,7 +9,7 @@ decides.
 The generic shape of an advisory call (cheap gate, bounded call, at most one line, fail-open,
 never block, provider-bound identity) is owned by the workspace's advisory-call convention
 (`.claude/references/advisory-call-convention.md` in the coding root). This file applies it to
-the `passing-notes` tool with one documented deviation (section 4, gate 4). The Passing Notes
+the `passing-notes` tool with one documented narrowing (section 4, gate 4). The Passing Notes
 protocol (`passing-notes/docs/protocol.md` in the coding root) owns the store, note and card
 formats; the facts this contract depends on are restated in section 10 so a reader of this
 public repository needs no private file.
@@ -71,11 +71,12 @@ calls** (`rev-parse --show-toplevel` and `--git-common-dir`; the helper asks bot
    default `uv tool` bin directory, the `.local/bin` folder of the user profile. Both are file
    lookups, not spawns (`uv tool dir --bin` would be a spawn, so the folder is stat-ed instead).
    On Windows only a `.exe` is accepted: a `.bat` or `.cmd` shim is treated as absent, because
-   its arguments would pass through `cmd.exe`. **This is the one documented deviation from the
-   advisory-call convention:** the tool is installed with `uv tool install --editable <checkout>`,
-   so this lookup replaces the convention's tools-root gate; `DEV_UTILITIES_ROOT` and
-   `uv run --project` are not used. If the tool is absent the hook skips silently and the lane
-   keeps working by hand under the project's lane README.
+   its arguments would pass through `cmd.exe`. This lookup is the advisory-call convention's
+   first resolution step (PATH first, the general rule since 2026-11-18). **The one documented
+   narrowing:** the helper stops there and never takes the convention's checkout fallback, so
+   `DEV_UTILITIES_ROOT` and `uv run --project` are not used; the tool is installed with
+   `uv tool install`. If the tool is absent the hook skips silently and the lane keeps working by
+   hand under the project's lane README.
 5. Only then: the calls (section 5).
 
 A call without `--lane` (no declared lane), with an unknown point name, with an invalid

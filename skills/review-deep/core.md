@@ -390,9 +390,21 @@ ONLY review-deep lens cheap enough to route to a local model (tier-offload task_
 Plan-conformance are deep-reasoning drift-catchers (`code-quality.md`) and ALWAYS use a
 fresh-context reviewer invocation — never route them local. The Style offload is **off unless switchboard offload is
 enabled for `review-deep-style`**. When enabled, dispatch the Style judgment through the
-switchboard judge entrypoint:
-`python -m switchboard judge --site review-deep-style --prompt-file <style-lens-prompt-file>`
-(prints one JSON object, always exits 0). On a **verdict**, record it as an advisory
+switchboard judge entrypoint, found by the shared resolver
+`<skill-dir>/../_shared/tool_resolve.py` (`<skill-dir>` is the directory that contains this
+loaded core) in the order the workspace's advisory-call convention owns
+(`.claude/references/advisory-call-convention.md` in the coding root, section 4):
+
+```text
+tool-resolve-call: review-deep-style
+python -B <skill-dir>/../_shared/tool_resolve.py resolve --tool switchboard
+<argv> judge --site review-deep-style --prompt-file <style-lens-prompt-file>
+```
+
+The first line prints one JSON line or nothing; on a line, run its `argv` followed by the
+judge arguments of the second line (prints one JSON object, always exits 0). Nothing printed
+(switchboard is not installed), no `python` to run the resolver, or a judge call that cannot
+start is a **defer**. On a **verdict**, record it as an advisory
 annotation only; it never fills the Style lens slot and is never written to the lens
 directory. On a verdict and on a **defer** (`{"defer": true, ...}`) — ALWAYS returned when offload is
 off, the slice is disabled, or the model is down/slow/wrong-shaped — spawn a

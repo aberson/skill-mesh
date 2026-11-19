@@ -157,6 +157,10 @@ EXPECTED_SHARED_PAYLOAD = frozenset({
     # The independent closure walk below finds both without being told about them.
     "lane-inbox-hooks.md",
     "lane_inbox.py",
+    # V4-10 core companion plan Step 5 (#284): the companion tool resolver, cited by
+    # the switchboard and drift-ranger call sites as `<skill-dir>/../_shared/tool_resolve.py`
+    # and named bare by intent-continuity.md. The independent walk finds it unaided.
+    "tool_resolve.py",
     # v3 catalog cleanup Step 15 (#271): the session pin script that replaced the
     # project-pin skill, cited as `<repo>/_shared/user-project.ps1`. The first .ps1
     # leaf in the payload; it ships under Add-PowerShellProvenance.

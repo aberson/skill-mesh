@@ -67,7 +67,21 @@ do not invent evidence or run unwanted checks. User acceptance stays distinct.
 
 Planning skills establish the record; build coordinators map work to gaps and reassess;
 task-handoff preserves it across transitions; session-wrap reports actual capability.
-Use the local `drift_ranger.py` CLI when available. Its output records assertions and
-signals reassessment; it does not certify delivery or authorize actions. If unavailable,
-keep the same small record in existing private session state and continue. Do not
-build or install supporting tooling as a prerequisite to the user's task.
+Use the `drift-ranger` CLI when it resolves. Resolve it once with the shared resolver
+`tool_resolve.py`, beside this file, which follows the resolution order owned by the
+workspace's advisory-call convention (`.claude/references/advisory-call-convention.md` in
+the coding root, section 4). `<skill-dir>` is the directory that contains the calling
+skill's loaded core:
+
+```text
+tool-resolve-call: intent-continuity
+python -B <skill-dir>/../_shared/tool_resolve.py resolve --tool drift-ranger
+<argv> show <project-id>
+```
+
+The first line prints one JSON line or nothing. On a line, run its `argv` followed by the
+drift-ranger command the record needs (`init`, `checkpoint` or `show`, as above). Nothing
+printed, or no `python` to run the resolver, means unavailable. Its output records
+assertions and signals reassessment; it does not certify delivery or authorize actions.
+If unavailable, keep the same small record in existing private session state and continue.
+Do not build or install supporting tooling as a prerequisite to the user's task.
