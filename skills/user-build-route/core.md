@@ -18,6 +18,53 @@ dependencies, blast radius and reversibility, observable acceptance criteria,
 and whether experiments must establish the approach. File count, estimated
 duration and task size alone do not decide the route.
 
+## Route a lane-start item
+
+`lane-open` does not invoke this skill. Apply this overlay automatically on the
+new lane's first item only when all three signals agree: the opening context says
+the window was opened by `lane-open`; it contains the exact instruction `start
+each item with /user-build-route`; and the current lane's read-only Passing Notes
+card agrees with the lane and project identities in that context. Otherwise use
+the ordinary routing rules below. A missing or conflicting signal never proves a
+lane identity.
+
+Read the project's lane document, current plan, and only the relevant Passing
+Notes card, inbox, overlap and reservation evidence. Notes do not authorize work
+by themselves. Honor only the authority that the project's lane rules validate,
+such as a correctly linked `operator-said:` relay or reply, or a
+`coordinator-decision:` within its recorded delegated scope. Use that evidence
+in this order:
+
+1. If another lane owns the slice or its preserved candidate, keep the
+   substantive route but have the current lane decline execution. Name the
+   owning lane and recommend continuation under that same lane id; never propose
+   a duplicate or replacement lane.
+2. If this lane owns a preserved candidate, recommend its exact existing stage.
+   Preserve its gates, original deadline or budget, consumed attempts and prior
+   findings; a lane start does not reset any of them.
+3. Recommend **Core pipeline** with `build-phase` for a short dependency chain
+   only when its plan is reviewed and prepared, the chain's dependencies are
+   ready, and the build route is compatible. Otherwise recommend only the
+   preparation or decision that is actually ready.
+4. Recommend parallel source and art preparation only when the slices are
+   demonstrably disjoint, have no recorded overlap, and a coordinator assignment
+   already exists or is the next explicit step. Recommend that the coordinator
+   assign the slices; this skill never opens either lane.
+5. When the project names one scheduled heavy-gate slot or a reservation, proceed
+   to the gate only when the named scheduled slot is current or the named
+   reservation is observed as held. Otherwise retain the selected route and
+   allow independent preparation, but make the immediate prompt stop before that
+   gate. Do not invent a slot policy for a project that names none.
+6. When ownership, overlap or reservation evidence is missing or conflicts,
+   keep the ordinary three-route decision but make the current lane stop and
+   report the ambiguity instead of inferring ownership or dispatching work.
+
+Automatic here means the first lane turn selects the route without asking the
+operator to repeat the brief. It never invokes another skill, starts a goal or
+pipeline, posts or mutates Passing Notes, opens a lane, changes active work or
+release candidates, or executes the copy block. Those remain actions for the
+authorized runner or coordinator after this recommendation returns.
+
 ## Choose the next slice
 
 | Route | Use when |
