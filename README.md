@@ -486,8 +486,45 @@ registering projects and their ports.
   <img alt="Skill workflows use Drift Ranger for intent, Find Again for retrieval, Citation Needed for evidence, Passing Notes for notes between lanes, and dev-observatory for registry and port hooks. Show Your Work documents the workflows." src="_shared/utility-support-light.svg">
 </picture>
 
-These projects remain separate. Installing Skill Mesh does not install every utility or start
-background services.
+These projects remain separate. One option installs the core companion; `-Companions all` adds
+Find Again. Nothing else is installed, and no background service is started.
+
+<a id="companion-tools"></a>
+<details>
+<summary><strong>What does the core companion install?</strong></summary>
+
+The core companion is the set of small public tools the skills call. Add `-Companions core` to
+the install command to get them after the skills (they are off by default for now), or
+`-Companions all` to add Find Again as well. Each tool installs from its own public repository
+at a pinned tag, so you get the version Skill Mesh was tested against.
+
+A tool joins the companion only when a skill or hook in a released Skill Mesh calls it, it
+installs from a public repository at a tag that passed Skill Mesh's checks for it, and it meets
+the utility project standard. Candidates are listed so you can see what may join; they are
+never installed.
+
+Tripwire's hook is advisory: it checks a shell command before it runs and adds a note when it
+finds a problem. It never blocks a command.
+
+<!-- companions-table:members:begin -->
+| Member | Ring | Pinned tag | Called from | Installs |
+|---|---|---|---|---|
+| [passing-notes](https://github.com/aberson/passing-notes) | core | `v0.1.0` | `_shared/lane-inbox-hooks.md`, `_shared/lane_inbox.py`, `skills/user-pm/core.md` | the `passing-notes` command; skills `lane-close`, `lane-handoff`, `lane-open`, `lane-status`; a Claude Code `Stop` hook |
+| [switchboard](https://github.com/aberson/switchboard) | core | `v0.1.1` | `skills/review-deep/core.md`, `skills/review-gauntlet/core.md`, `skills/tier-offload/core.md` | the `switchboard` command; runs `switchboard apply --write --home <home>` |
+| [tripwire](https://github.com/aberson/tripwire) | core | `v0.1.1` | `hooks/claude/tripwire-pretool.ps1` in its own repository | the `tripwire` command; a Claude Code `PreToolUse` hook |
+| [find-again](https://github.com/aberson/find-again) | optional | `v0.1.0` | `skills/plan-feature/core.md` | the `find-again` command; prints its setup steps |
+| [changed-check](https://github.com/aberson/changed-check) | candidate | none yet | none yet | nothing; listed only |
+| [drift-ranger](https://github.com/aberson/drift-ranger) | candidate | `v0.1.0` | `_shared/intent-continuity.md` | nothing; listed only |
+| [mesh-lens](https://github.com/aberson/mesh-lens) | candidate | none yet | none yet | nothing; listed only |
+| [paper-trail](https://github.com/aberson/paper-trail) | candidate | none yet | none yet | nothing; listed only |
+<!-- companions-table:members:end -->
+
+This table is generated from [`config/companions.json`](config/companions.json) by
+`python tools/companions.py table`; edit the manifest, then regenerate the table. The
+[installation guide](documentation/v2-installation.md#companion-tools--companions) covers
+what each install step does and how to uninstall.
+
+</details>
 
 <details>
 <summary><strong>Which integrations are in v3?</strong></summary>
@@ -497,9 +534,10 @@ background services.
 | [Drift Ranger](https://github.com/aberson/drift-ranger) | Private outcome records and capability checkpoints; existing session state is the fallback. |
 | [Find Again](https://github.com/aberson/find-again) | Optional prior-work retrieval in `plan-feature`; current source stays authoritative. |
 | [Passing Notes](https://github.com/aberson/passing-notes) | Lane cards and notes between windows; skills read a lane's waiting notes and never block on the tool. |
+| [Tripwire](https://github.com/aberson/tripwire) | An advisory hook that checks shell commands before they run and adds a note on a problem; it never blocks. |
 | dev-observatory | Optional hooks: project registration (`plan-init`), verb and port sync (`repo-update`), a port pre-flight (`build-step --ui`), port and goal checks (`plan-review`, `plan-wrap`), and registry reads (`repo-wrap`, `user-afterparty`); `user-pm --json` feeds its views. Its static doctor and portfolio-block proposer are dev-observatory's own skills. |
 | [Citation Needed](https://github.com/aberson/citation-needed) | Evidence storage and scoring. Its four `citation-*` skills left this catalog in v4 and are moving to the Citation Needed repository as project-local skills; `user-gateway` points evidence checks there. |
-| Switchboard | `tier-offload` produces advisory, inactive routing candidates. |
+| [Switchboard](https://github.com/aberson/switchboard) | Its role registry sets the model for each role a skill sends work to; the core companion writes the role files from that registry and never overwrites a hand edit. `tier-offload` produces advisory, inactive routing candidates, and the local-model judge offload in `review-deep` and `review-gauntlet` stays off unless you turn it on. |
 | [Show Your Work](https://github.com/aberson/show-your-work) | Checks diagram sources and generates the detailed workflow index; not a skill runtime dependency. |
 
 Build, review, and explicit mistake-observation helpers also ship inside the packages. The
@@ -519,6 +557,9 @@ profile for your host from the extracted folder, with Windows PowerShell 5.1:
 powershell -NoProfile -File tools/install-skill-mesh.ps1 -Provider claude -Home C:\path\to\consumer-home -DistDir .\dist   # Claude Code
 powershell -NoProfile -File tools/install-skill-mesh.ps1 -Provider codex  -Home C:\path\to\consumer-home -DistDir .\dist   # OpenAI Codex
 ```
+
+To also install the small tools the skills call, add `-Companions core`, or `-Companions all`
+to add Find Again ([what they install](#companion-tools)).
 
 Restart your host sessions, then run a skill: in Claude Code that's a slash command
 (`/plan-init`); Codex discovers the same skill from its installed folder. Swap the
@@ -555,6 +596,9 @@ release checks, 44/45 skills are GPT-capable (`skill-crud` ships no GPT adapter)
 - Preserve the previous distribution and installation ledger before upgrading. The installer
   removes a retired skill's files only if you have not edited them, and refuses to overwrite a
   file it does not own unless you tell it to (with a backup).
+- `-Companions core` or `-Companions all` installs the [companion tools](#companion-tools)
+  after the skills, with their own ledger, so uninstalling them never touches the skill
+  install. Their hooks can be turned off with `-NoHooks`, or one tool's with `-SkipHook <slug>`.
 - **Auth** is a separate question from install: each host uses its own sign-in.
 - See the [installation and restoration guide](documentation/v2-installation.md) for home
   resolution, collision handling, and legacy migration, and the
