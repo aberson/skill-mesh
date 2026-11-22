@@ -509,12 +509,12 @@ finds a problem. It never blocks a command.
 <!-- companions-table:members:begin -->
 | Member | Ring | Pinned tag | Called from | Installs |
 |---|---|---|---|---|
+| [drift-ranger](https://github.com/aberson/drift-ranger) | core | `v0.1.0` | `_shared/intent-continuity.md` | the `drift-ranger` command |
 | [passing-notes](https://github.com/aberson/passing-notes) | core | `v0.1.0` | `_shared/lane-inbox-hooks.md`, `_shared/lane_inbox.py`, `skills/user-pm/core.md` | the `passing-notes` command; skills `lane-close`, `lane-handoff`, `lane-open`, `lane-status`; a Claude Code `Stop` hook |
 | [switchboard](https://github.com/aberson/switchboard) | core | `v0.1.1` | `skills/review-deep/core.md`, `skills/review-gauntlet/core.md`, `skills/tier-offload/core.md` | the `switchboard` command; runs `switchboard apply --write --home <home>` |
 | [tripwire](https://github.com/aberson/tripwire) | core | `v0.1.1` | `hooks/claude/tripwire-pretool.ps1` in its own repository | the `tripwire` command; a Claude Code `PreToolUse` hook |
 | [find-again](https://github.com/aberson/find-again) | optional | `v0.1.0` | `skills/plan-feature/core.md` | the `find-again` command; prints its setup steps |
 | [changed-check](https://github.com/aberson/changed-check) | candidate | none yet | none yet | nothing; listed only |
-| [drift-ranger](https://github.com/aberson/drift-ranger) | candidate | `v0.1.0` | `_shared/intent-continuity.md` | nothing; listed only |
 | [mesh-lens](https://github.com/aberson/mesh-lens) | candidate | none yet | none yet | nothing; listed only |
 | [paper-trail](https://github.com/aberson/paper-trail) | candidate | none yet | none yet | nothing; listed only |
 <!-- companions-table:members:end -->
