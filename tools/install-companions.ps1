@@ -145,7 +145,9 @@ $script:Failures = 0
 $script:SkipHooks = @()
 
 for ($i = 0; $i -lt @($HookArguments).Count; $i++) {
-    if ([string]$HookArguments[$i] -cne '-SkipHook' -or $i + 1 -ge @($HookArguments).Count) {
+    # The flag name matches case-insensitively, as PowerShell parameter names do and
+    # as tools/install-skill-mesh.ps1 accepts it before forwarding it here.
+    if ([string]$HookArguments[$i] -ine '-SkipHook' -or $i + 1 -ge @($HookArguments).Count) {
         [Console]::Error.WriteLine("install-companions: usage: unknown hook option '$($HookArguments[$i])'.")
         exit 2
     }

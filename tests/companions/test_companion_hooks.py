@@ -777,6 +777,97 @@ def test_persisted_hook_opt_outs(tmp_path, mini_dist, flags, skipped):
     assert bool(commands(env.home, "Stop")) is ("passing-notes" not in skipped)
 
 
+@pytest.mark.parametrize(
+    ("extra", "named"),
+    [
+        (("-Unistall",), "'-Unistall'"),
+        # Every string parameter is positional, so a stray value reaches the
+        # remaining arguments only once each of them is bound by name.
+        (("-BackupDir", "<backup>", "-Companions", "none", "stray-value"), "'stray-value'"),
+        (("-SkipHook",), "'-SkipHook'"),
+        (("-SkipHook", "-Uninstall"), "'-SkipHook'"),
+        (("-SkipHook", "tripwire", "-Unistall"), "'-Unistall'"),
+        (("-Companions", "core", "-Unistall"), "'-Unistall'"),
+    ],
+)
+def test_skill_installer_refuses_unknown_remaining_arguments_before_any_write(
+    tmp_path, mini_dist, extra, named
+):
+    # Without the up-front check these arguments were swallowed by the
+    # remaining-arguments parameter and a real install ran into the empty home.
+    manifest_path, _ = pinned_manifest(tmp_path)
+    env = Env(tmp_path)
+
+    extra = tuple(str(tmp_path / "backup") if a == "<backup>" else a for a in extra)
+    result = skill_install(env, mini_dist, "-CompanionsManifest", str(manifest_path), *extra)
+
+    assert result.returncode == 2, result.stdout + result.stderr
+    assert named in result.stderr, result.stderr
+    assert list(env.home.iterdir()) == []
+    assert env.calls() == []
+
+
+def test_skill_installer_refusal_leaves_an_existing_install_untouched(tmp_path, mini_dist):
+    env = Env(tmp_path)
+    assert skill_install(env, mini_dist).returncode == 0
+    before = {
+        p.relative_to(env.home).as_posix(): p.read_bytes()
+        for p in env.home.rglob("*")
+        if p.is_file()
+    }
+    assert before
+
+    result = skill_install(env, mini_dist, "-Unistall")
+
+    assert result.returncode == 2, result.stdout + result.stderr
+    assert "'-Unistall'" in result.stderr
+    after = {
+        p.relative_to(env.home).as_posix(): p.read_bytes()
+        for p in env.home.rglob("*")
+        if p.is_file()
+    }
+    assert after == before
+
+
+def test_skill_installer_forwards_skip_hook_case_insensitively(tmp_path, mini_dist):
+    manifest_path, _ = pinned_manifest(tmp_path)
+    env = Env(tmp_path)
+
+    result = skill_install(
+        env, mini_dist, "-Companions", "core", "-CompanionsManifest", str(manifest_path),
+        "-skiphook", "tripwire",
+    )
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert set(env.ledger()["opt_outs"]["skip_hook"]) == {"tripwire"}
+    assert not commands(env.home, "PreToolUse")
+    assert commands(env.home, "Stop")
+
+
+@pytest.mark.parametrize(
+    ("extra", "named"),
+    [
+        (("-Unistall",), "'-Unistall'"),
+        # -Companions is positional; bound by name, the stray value is left over.
+        (("-Companions", "core", "stray-value"), "'stray-value'"),
+        (("-SkipHook",), "'-SkipHook'"),
+        (("-SkipHook", "tripwire", "-Unistall"), "'-Unistall'"),
+    ],
+)
+def test_companion_installer_refuses_unknown_remaining_arguments_before_any_write(
+    tmp_path, extra, named
+):
+    manifest_path, _ = pinned_manifest(tmp_path)
+    env = Env(tmp_path)
+
+    result = env.companions(*extra, manifest=manifest_path)
+
+    assert result.returncode == 2, result.stdout + result.stderr
+    assert named in result.stderr, result.stderr
+    assert list(env.home.iterdir()) == []
+    assert env.calls() == []
+
+
 def test_real_pinned_tools_install_and_execute_hooks_through_production_entry(tmp_path, mini_dist):
     """One command installs the pinned packages; their real hook commands then run."""
     uv = shutil.which("uv")

@@ -142,6 +142,7 @@
 
 .PARAMETER HookArguments
     Captures repeatable `-SkipHook <slug>` arguments for the companion installer.
+    Any other unbound argument is refused (exit 2) before the home is touched.
 
 .EXAMPLE
     powershell -File tools\install-skill-mesh.ps1 -Provider claude -Home C:\tmp\home
@@ -188,6 +189,31 @@ param(
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
+
+# -- Remaining-argument validation (before ANY read or write of the home) --------
+# $HookArguments takes every argument no declared parameter bound, so without this
+# check a misspelled switch (`-Unistall`) or a stray value would be silently
+# swallowed and the wrong operation would run. The only accepted shape is zero or
+# more `-SkipHook <slug>` pairs; the flag name matches case-insensitively, as
+# PowerShell parameter names do. Anything else is refused here, whatever
+# -Companions is, before this script touches the target home.
+for ($hookArgIndex = 0; $hookArgIndex -lt @($HookArguments).Count; $hookArgIndex++) {
+    $hookArg = [string]$HookArguments[$hookArgIndex]
+    if ($hookArg -ine '-SkipHook') {
+        [Console]::Error.WriteLine(
+            "install-skill-mesh: unknown argument '$hookArg'; nothing was changed.")
+        exit 2
+    }
+    $hookSlugIndex = $hookArgIndex + 1
+    if ($hookSlugIndex -ge @($HookArguments).Count -or
+        [string]::IsNullOrEmpty([string]$HookArguments[$hookSlugIndex]) -or
+        ([string]$HookArguments[$hookSlugIndex]).StartsWith('-')) {
+        [Console]::Error.WriteLine(
+            "install-skill-mesh: '$hookArg' requires a hook slug; nothing was changed.")
+        exit 2
+    }
+    $hookArgIndex = $hookSlugIndex
+}
 
 # Load the Windows PowerShell 5.1-compatible JSON object parser before any path in
 # the consumer home is inspected or changed. Unlike ConvertFrom-Json, this accepts
