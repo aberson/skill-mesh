@@ -137,6 +137,12 @@
     Optional companion manifest passed through to tools/install-companions.ps1
     (default: config/companions.json in this checkout).
 
+.PARAMETER NoHooks
+    Persistently opt out of every companion hook.
+
+.PARAMETER HookArguments
+    Captures repeatable `-SkipHook <slug>` arguments for the companion installer.
+
 .EXAMPLE
     powershell -File tools\install-skill-mesh.ps1 -Provider claude -Home C:\tmp\home
     powershell -File tools\install-skill-mesh.ps1 -Provider gpt -Home C:\tmp\home -DistDir C:\stage\dist
@@ -172,7 +178,12 @@ param(
     [ValidateSet('core', 'all', 'none')]
     [string]$Companions = 'none',
 
-    [string]$CompanionsManifest = ''
+    [string]$CompanionsManifest = '',
+
+    [switch]$NoHooks,
+
+    [Parameter(ValueFromRemainingArguments = $true)]
+    [string[]]$HookArguments = @()
 )
 
 Set-StrictMode -Version Latest
@@ -2038,6 +2049,8 @@ function Invoke-CompanionStep([string]$homeAbs) {
                        '-File', $companionScript, '-Provider', $Provider,
                        '-Home', $homeAbs, '-Companions', $Companions)
     if ($Uninstall) { $companionArgs += '-Uninstall' }
+    if ($NoHooks) { $companionArgs += '-NoHooks' }
+    if (@($HookArguments).Count -gt 0) { $companionArgs += @($HookArguments) }
     if (-not [string]::IsNullOrWhiteSpace($CompanionsManifest)) {
         $companionArgs += @('-Manifest', [System.IO.Path]::GetFullPath($CompanionsManifest))
     }
