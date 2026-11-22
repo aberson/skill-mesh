@@ -10,12 +10,22 @@ Usage (from anywhere; paths resolve against this checkout unless given):
 
     python tools/companions.py inspect [--manifest FILE] [--root DIR]
     python tools/companions.py verify [--release] [--manifest FILE] [--root DIR]
+    python tools/companions.py table [--kind members|release] [--manifest FILE]
+                                     [--root DIR]
 
     inspect    print the manifest rows as deterministic JSON. It first runs the
                same checks as verify (without --release); a manifest verify
                refuses gets verify's exit code and its findings, no rows
     verify     check the manifest against the membership rule (plan section 3)
                and the section 4 shape; print the findings as deterministic JSON
+    table      print a Markdown table generated from the manifest, for the
+               documents that show it (the README members table and the
+               release-notes companion set). It first runs verify (with
+               --release for --kind release); a manifest verify refuses gets
+               verify's exit code and its findings as JSON, no table
+    --kind     members (default): every row, core first, with its ring, pinned
+               tag, call sites and what it installs; release: the core and
+               optional rows a release installs, with the source each comes from
     --release  also require a non-null tag for every core and optional member
     --manifest the manifest to read (default: config/companions.json)
     --root     the Skill Mesh tree that caller paths resolve against
@@ -46,8 +56,9 @@ of violation has its own code:
     21  an argv's first entry (the command) is not a bare command name: it must
         match CLI_PATTERN, so no leading '-', no path separator, no {token}
 
-Every outcome is one of these codes with JSON-only stdout; argparse usage errors
-(2) print to stderr and nothing to stdout.
+Every outcome is one of these codes with JSON-only stdout, except a table that
+succeeds, which prints only its Markdown lines (LF endings); argparse usage
+errors (2) print to stderr and nothing to stdout.
 
 member: caller entries name a call site in the member's own repository; they are
 checked at the pinned tag by the contract suite (plan Step 11), not here.
@@ -797,6 +808,108 @@ def inspect(manifest: Any, root: Path) -> dict[str, Any]:
     }
 
 
+TABLE_KINDS = ("members", "release")
+
+# How a hook host is named in a table cell.
+HOST_NAMES = {"claude": "Claude Code", "codex": "Codex"}
+
+
+def _cell(text: str) -> str:
+    """Escape a table cell so a '|' in the manifest cannot split a column."""
+    return text.replace("|", "\\|")
+
+
+def _code(text: str) -> str:
+    return "`%s`" % text
+
+
+def _argv_text(argv: list[str]) -> str:
+    text = " ".join(argv)
+    for token in ARGV_TOKENS:
+        text = text.replace(token, "<%s>" % token[1:-1])
+    return text
+
+
+def _caller_cell(callers: list[str]) -> str:
+    if not callers:
+        return "none yet"
+    parts = []
+    for caller in callers:
+        if caller.startswith(MEMBER_CALLER_PREFIX):
+            parts.append(
+                "%s in its own repository" % _code(caller[len(MEMBER_CALLER_PREFIX):])
+            )
+        else:
+            parts.append(_code(caller))
+    return ", ".join(parts)
+
+
+def _installs_cell(row: dict[str, Any]) -> str:
+    if row["ring"] not in INSTALLED_RINGS:
+        return "nothing; listed only"
+    parts = ["the %s command" % _code(row["cli"])]
+    if row["skills"]:
+        parts.append("skills " + ", ".join(_code(name) for name in row["skills"]["names"]))
+    for hook in row["hooks"]:
+        parts.append(
+            "a %s %s hook" % (HOST_NAMES.get(hook["host"], hook["host"]), _code(hook["event"]))
+        )
+    if row["setup_write"]:
+        parts.append("runs %s" % _code(_argv_text(row["setup_write"]["install"])))
+    if row["setup"]:
+        parts.append("prints its setup steps")
+    return "; ".join(parts)
+
+
+def _table_lines(header: list[str], rows: list[list[str]]) -> str:
+    lines = ["| " + " | ".join(header) + " |", "|" + "---|" * len(header)]
+    lines += ["| " + " | ".join(_cell(cell) for cell in row) + " |" for row in rows]
+    return "\n".join(lines) + "\n"
+
+
+def _ring_order(manifest: Any) -> list[dict[str, Any]]:
+    """Rows core first, then optional, then candidate; manifest (slug) order within."""
+    return sorted(manifest["members"], key=lambda row: RINGS.index(row["ring"]))
+
+
+def table(manifest: Any, root: Path, kind: str = "members") -> str:
+    """Return the Markdown table of kind for a parsed manifest.
+
+    The manifest must first pass verify (with release=True for the release
+    table, so a release never lists an untagged member). Otherwise raises
+    ManifestError with verify's exit code and findings.
+    """
+    items = verify(manifest, root, release=(kind == "release"))
+    if items:
+        first = min(items, key=lambda item: item["code"])
+        raise ManifestError(first["code"], first["message"], findings=items)
+    if kind == "release":
+        header = ["Member", "Ring", "Tag", "Installs from"]
+        rows = [
+            [
+                "[%s](%s)" % (row["slug"], row["repo"]),
+                row["ring"],
+                _code(row["tag"]),
+                _code("git+%s@%s" % (row["repo"], row["tag"])),
+            ]
+            for row in _ring_order(manifest)
+            if row["ring"] in INSTALLED_RINGS
+        ]
+    else:
+        header = ["Member", "Ring", "Pinned tag", "Called from", "Installs"]
+        rows = [
+            [
+                "[%s](%s)" % (row["slug"], row["repo"]),
+                row["ring"],
+                _code(row["tag"]) if row["tag"] is not None else "none yet",
+                _caller_cell(row["callers"]),
+                _installs_cell(row),
+            ]
+            for row in _ring_order(manifest)
+        ]
+    return _table_lines(header, rows)
+
+
 def _display_path(path: Path, root: Path) -> str:
     try:
         return path.resolve().relative_to(root.resolve()).as_posix()
@@ -820,12 +933,14 @@ def _emit(payload: dict[str, Any]) -> None:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     sub = parser.add_subparsers(dest="command", required=True)
-    for name in ("inspect", "verify"):
+    for name in ("inspect", "verify", "table"):
         cmd = sub.add_parser(name)
         cmd.add_argument("--manifest", type=Path, default=DEFAULT_MANIFEST)
         cmd.add_argument("--root", type=Path, default=REPO_ROOT)
         if name == "verify":
             cmd.add_argument("--release", action="store_true")
+        if name == "table":
+            cmd.add_argument("--kind", choices=TABLE_KINDS, default="members")
     args = parser.parse_args(argv)
 
     root = args.root
@@ -835,9 +950,17 @@ def main(argv: list[str] | None = None) -> int:
     payload: dict[str, Any] = {"command": args.command, "manifest": display}
     if args.command == "verify":
         payload["release"] = args.release
+    if args.command == "table":
+        payload["kind"] = args.kind
 
     try:
         manifest = load_manifest(args.manifest)
+        if args.command == "table":
+            text = table(manifest, root, args.kind)
+            sys.stdout.flush()
+            sys.stdout.buffer.write(text.encode("utf-8"))
+            sys.stdout.buffer.flush()
+            return EXIT_OK
         if args.command == "inspect":
             payload.update(inspect(manifest, root))
             payload["exit_code"] = EXIT_OK
