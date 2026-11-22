@@ -15,7 +15,10 @@ files and checks the relationship:
 
 The garbage anchors prove each check can fail: a user-pm core with the citation removed,
 a producer with the heading renamed, a core missing a gap, a core with the route table
-pasted in, and the three ways the short-lived alignment can break.
+pasted in, and the three ways the short-lived alignment can break. The same file also
+pins user-build-route's lane-start overlay because it extends the producer contract this
+relationship already reads; the lifecycle guide says a prose-only UPDATE extends an
+existing contract test instead of adding a new test file.
 """
 
 from __future__ import annotations
@@ -34,6 +37,52 @@ GAP_LABELS = ("**Checkout and commit rule.**", "**Host capability.**", "**Agent 
 KNOWN_CONFLICT = "- **Known conflict**"
 SHORT_LIVED = "short-lived"
 NGRAM = 5
+LANE_START_HEADING = "Route a lane-start item"
+LANE_START_INSTRUCTION = "start each item with /user-build-route"
+LANE_START_REQUIRED = {
+    "three-signal trigger": (
+        "only when all three signals agree",
+        "opened by `lane-open`",
+        LANE_START_INSTRUCTION,
+        "read-only Passing Notes card agrees",
+    ),
+    "preserved owner and duplicate refusal": (
+        "current lane decline execution",
+        "same lane id",
+        "never propose a duplicate or replacement lane",
+    ),
+    "prepared build-phase route": (
+        "plan is reviewed and prepared",
+        "chain's dependencies are ready",
+        "build route is compatible",
+    ),
+    "disjoint source and art preparation": (
+        "demonstrably disjoint",
+        "no recorded overlap",
+        "coordinator assignment",
+        "never opens either lane",
+    ),
+    "heavy-gate slot": (
+        "retain the selected route",
+        "stop before that gate",
+        "named scheduled slot is current",
+        "named reservation is observed as held",
+        "Do not invent a slot policy",
+    ),
+    "notes are evidence": (
+        "Notes do not authorize work by themselves",
+        "correctly linked `operator-said:` relay or reply",
+        "`coordinator-decision:` within its recorded delegated scope",
+    ),
+    "no silent dispatch": (
+        "never invokes another skill",
+        "starts a goal or pipeline",
+        "posts or mutates Passing Notes",
+        "opens a lane",
+        "changes active work or release candidates",
+        "executes the copy block",
+    ),
+}
 
 
 def _section(text: str, heading_prefix: str) -> str:
@@ -135,6 +184,29 @@ def readiness_defects(pm_core: str, route_core: str) -> list[str]:
     return defects
 
 
+def lane_start_defects(route_core: str) -> list[str]:
+    """Return contract drift in the recommendation-only lane-start overlay."""
+    defects: list[str] = []
+    section = _section(route_core, f"## {LANE_START_HEADING}")
+    flat = " ".join(section.split())
+    if not section:
+        return [f"missing '## {LANE_START_HEADING}'"]
+    for label, required in LANE_START_REQUIRED.items():
+        for phrase in required:
+            if phrase not in flat:
+                defects.append(f"{label}: missing {phrase!r}")
+
+    matches = re.findall(r"## Decision: <([^>]+)>", route_core)
+    decisions = (
+        tuple(part.strip() for part in matches[0].split("|") if part.strip())
+        if len(matches) == 1 else ()
+    )
+    expected = ("Core pipeline", "Bounded goal", "Direct task")
+    if decisions != expected:
+        defects.append(f"decision values changed: expected {expected!r}, got {decisions!r}")
+    return defects
+
+
 def _cores() -> tuple[str, str]:
     return USER_PM_CORE.read_text(encoding="utf-8"), ROUTE_CORE.read_text(encoding="utf-8")
 
@@ -152,6 +224,50 @@ def test_rubric_cites_the_route_compat_section_and_is_aligned_with_it() -> None:
 
     # Assert
     assert defects == [], "\n".join(defects)
+
+
+def test_lane_start_overlay_selects_or_declines_without_dispatch() -> None:
+    # Arrange
+    _, route_core = _cores()
+
+    # Act
+    defects = lane_start_defects(route_core)
+
+    # Assert
+    assert defects == [], "\n".join(defects)
+
+
+def test_garbage_anchor_each_lane_start_invariant_fails() -> None:
+    _, route_core = _cores()
+    for label, phrases in LANE_START_REQUIRED.items():
+        # Arrange: remove one load-bearing phrase from each invariant group.
+        phrase = phrases[0]
+        phrase_pattern = r"\s+".join(re.escape(part) for part in phrase.split())
+        garbage = re.sub(phrase_pattern, f"removed-{label}", route_core, count=1)
+
+        # Act
+        defects = lane_start_defects(garbage)
+
+        # Assert
+        assert garbage != route_core, label
+        assert any(defect.startswith(label) for defect in defects), (label, defects)
+
+
+def test_garbage_anchor_lane_start_cannot_add_a_declined_decision() -> None:
+    # Arrange: expand the public output contract instead of declining execution in Next.
+    _, route_core = _cores()
+    garbage = route_core.replace(
+        "<Core pipeline | Bounded goal | Direct task>",
+        "<Core pipeline | Bounded goal | Direct task | Declined>",
+        1,
+    )
+
+    # Act
+    defects = lane_start_defects(garbage)
+
+    # Assert
+    assert garbage != route_core
+    assert any(defect.startswith("decision values changed") for defect in defects), defects
 
 
 def test_garbage_anchor_core_without_the_citation_fails() -> None:
