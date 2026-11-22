@@ -56,6 +56,16 @@ powershell -NoProfile -File tools/install-skill-mesh.ps1 -Provider claude -Home 
 | `core` | the core ring |
 | `all` | the core and optional rings, then prints each optional member's setup steps (never runs them) |
 
+The README's [members table](../README.md#companion-tools) lists each member with
+its ring, pinned tag and the skills that call it; it is generated from the
+manifest. `-Companions all` adds Find Again, the one optional member. A tool
+joins the companion only when a skill or hook in a released Skill Mesh calls it,
+it installs from a public repository at a tag that passed Skill Mesh's checks for
+it, and it meets the utility project standard.
+
+Tripwire's hook is advisory: it checks a shell command before it runs and adds a
+note when it finds a problem, and it never blocks a command.
+
 Candidates are never installed. A member whose manifest tag is still null
 (unreleased) is reported `skipped: unreleased`. The companion step needs three
 things on `PATH`: `uv`, Git and Python 3.12 or later. If any is missing, every
