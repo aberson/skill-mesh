@@ -69,6 +69,14 @@
 
 .PARAMETER Uninstall
     Reverse ledger-owned companion work.
+
+.PARAMETER NoHooks
+    Persistently skip every companion hook. Existing ledger-owned hooks are
+    removed on the next install pass; member tools and skills remain installed.
+
+.PARAMETER HookArguments
+    Internal capture for repeatable `-SkipHook <slug>` arguments. Each named
+    hook opt-out is persisted in the companion ledger.
 #>
 
 [CmdletBinding()]
@@ -89,7 +97,12 @@ param(
 
     [string]$Manifest = '',
 
-    [switch]$Uninstall
+    [switch]$Uninstall,
+
+    [switch]$NoHooks,
+
+    [Parameter(ValueFromRemainingArguments = $true)]
+    [string[]]$HookArguments = @()
 )
 
 Set-StrictMode -Version Latest
@@ -100,6 +113,7 @@ $REPO_ROOT = Split-Path -Parent $TOOLS_DIR
 $PATH_GUARD = Join-Path $REPO_ROOT 'runtime\path-guard.ps1'
 $DISCOVERY = Join-Path $TOOLS_DIR 'skill-mesh-discovery.ps1'
 $MANIFEST_TOOL = Join-Path $TOOLS_DIR 'companions.py'
+$SETTINGS_TOOL = Join-Path $TOOLS_DIR 'companion_settings.py'
 
 # Resolve-SafePath / Get-CanonicalRealPath (containment, follows reparse points).
 . $PATH_GUARD
@@ -128,6 +142,22 @@ $TIMEOUT_PROBE_S = 30
 $OUTPUT_TAIL = 400
 
 $script:Failures = 0
+$script:SkipHooks = @()
+
+for ($i = 0; $i -lt @($HookArguments).Count; $i++) {
+    # The flag name matches case-insensitively, as PowerShell parameter names do and
+    # as tools/install-skill-mesh.ps1 accepts it before forwarding it here.
+    if ([string]$HookArguments[$i] -ine '-SkipHook' -or $i + 1 -ge @($HookArguments).Count) {
+        [Console]::Error.WriteLine("install-companions: usage: unknown hook option '$($HookArguments[$i])'.")
+        exit 2
+    }
+    $slug = [string]$HookArguments[++$i]
+    if ($slug -notmatch '^[a-z0-9][a-z0-9-]*$') {
+        [Console]::Error.WriteLine("install-companions: usage: invalid -SkipHook slug '$slug'.")
+        exit 2
+    }
+    if ($script:SkipHooks -notcontains $slug) { $script:SkipHooks += $slug }
+}
 
 function Write-Line([string]$text) {
     Write-Host ('install-companions: ' + $text)
@@ -149,6 +179,10 @@ function Write-Note([string]$slug, [string]$text) {
 function Get-Prop($obj, [string]$name) {
     # StrictMode-safe property read; $null when absent.
     if ($null -eq $obj) { return $null }
+    if ($obj -is [System.Collections.IDictionary]) {
+        if ($obj.Contains($name)) { return $obj[$name] }
+        return $null
+    }
     $p = $obj.PSObject.Properties[$name]
     if ($p) { return $p.Value }
     return $null
@@ -156,6 +190,7 @@ function Get-Prop($obj, [string]$name) {
 
 function Test-HasProp($obj, [string]$name) {
     if ($null -eq $obj) { return $false }
+    if ($obj -is [System.Collections.IDictionary]) { return $obj.Contains($name) }
     return ($null -ne $obj.PSObject.Properties[$name])
 }
 
@@ -164,7 +199,9 @@ function Test-HasProp($obj, [string]$name) {
 function ConvertTo-NativeArgument([string]$arg) {
     # CommandLineToArgvW quoting: quote when empty or holding space/tab/quote;
     # double backslashes that precede a quote.
-    if ($arg.Length -gt 0 -and $arg -notmatch '[\s"]') { return $arg }
+    # .cmd shims are applications on Windows too; quote cmd metacharacters so a
+    # manifest matcher such as Bash|PowerShell remains one literal argv token.
+    if ($arg.Length -gt 0 -and $arg -notmatch '[\s"&|<>^()]') { return $arg }
     $sb = New-Object System.Text.StringBuilder
     [void]$sb.Append('"')
     $slashes = 0
@@ -264,6 +301,8 @@ function Find-Application([string]$name) {
 
 $script:UvBinDir = $null
 $script:UvBinDirRead = $false
+$script:UvToolDir = $null
+$script:UvToolDirRead = $false
 
 function Get-UvBinDir {
     if ($script:UvBinDirRead) { return $script:UvBinDir }
@@ -278,6 +317,22 @@ function Get-UvBinDir {
         }
     }
     return $script:UvBinDir
+}
+
+function Get-UvToolDir {
+    if ($script:UvToolDirRead) { return $script:UvToolDir }
+    $script:UvToolDirRead = $true
+    if ($null -eq $script:UvExe) { return $null }
+    $r = Invoke-Native -FilePath $script:UvExe -Arguments @('tool', 'dir') -TimeoutSeconds $TIMEOUT_PROBE_S
+    if ($r.ExitCode -eq 0) {
+        $lines = @(($r.Out -split "`r?`n") | Where-Object { $_ -ne '' })
+        if ($lines.Count -eq 1 -and $lines[0] -ceq $lines[0].Trim() -and
+            [System.IO.Path]::IsPathRooted($lines[0]) -and
+            (Test-Path -LiteralPath $lines[0] -PathType Container)) {
+            $script:UvToolDir = Get-CanonicalRealPath -InputPath $lines[0]
+        }
+    }
+    return $script:UvToolDir
 }
 
 function Find-MemberCommand([string]$name) {
@@ -408,7 +463,7 @@ function Test-ManifestVerified([string]$path, $python) {
 
 function Expand-Argv($argv) {
     # Replace the two manifest tokens in every entry after the command.
-    $settings = Join-Path (Join-Path $script:HomeReal '.claude') 'settings.json'
+    $settings = Get-HomePath '.claude\settings.json'
     $out = @()
     $i = 0
     foreach ($item in @($argv)) {
@@ -502,7 +557,33 @@ function Read-CompanionLedger {
         $entry.skills = $skills
         $entry.skills_hosts = $hosts
         $entry.setup_write = $setupWrite
-        $entry.hooks = @(Get-Prop $e 'hooks' | Where-Object { $null -ne $_ })
+        $entry.hooks = @()
+        foreach ($hook in @(Get-Prop $e 'hooks' | Where-Object { $null -ne $_ })) {
+            $kind = Get-Prop $hook 'kind'
+            $hookHost = Get-Prop $hook 'host'
+            $event = Get-Prop $hook 'event'
+            $valid = $hookHost -ceq 'claude' -and $event -is [string] -and $event.Length -gt 0
+            if ($kind -ceq 'file') {
+                $valid = $valid -and (Get-Prop $hook 'name') -is [string] -and
+                    (Get-Prop $hook 'path') -is [string] -and
+                    (Get-Prop $hook 'sha256') -is [string] -and
+                    (Get-Prop $hook 'matcher') -is [string] -and
+                    (Get-Prop $hook 'timeout') -is [int]
+                $pendingHash = Get-Prop $hook 'pending_sha256'
+                $valid = $valid -and ($null -eq $pendingHash -or $pendingHash -is [string])
+            } elseif ($kind -ceq 'member') {
+                $uninstaller = Get-Prop $hook 'uninstall'
+                $valid = $valid -and (Get-Prop $hook 'owned') -is [bool] -and
+                    $uninstaller -is [System.Collections.IEnumerable] -and
+                    @($uninstaller | Where-Object { $_ -isnot [string] }).Count -eq 0
+            } else {
+                $valid = $false
+            }
+            if (-not $valid) {
+                throw "companion ledger $LEDGER_NAME has a malformed hook record for '$($p.Name)'; nothing was changed"
+            }
+            $entry.hooks += $hook
+        }
         $ledger.members[$p.Name] = $entry
     }
     $opt = Get-Prop $doc 'opt_outs'
@@ -559,6 +640,462 @@ function Write-CompanionLedger($ledger) {
         [System.IO.File]::Move($safeTemp, $safeLedger)
     }
     $ledger.exists = $true
+}
+
+# -- Claude companion hooks -------------------------------------------------------
+
+function Get-HookKey([string]$kind, [string]$hookHost, [string]$event, [string]$name) {
+    return ($kind + '|' + $hookHost + '|' + $event + '|' + $name)
+}
+
+function Get-HookRecordKey($record) {
+    if ((Get-Prop $record 'kind') -ceq 'file') {
+        return (Get-HookKey 'file' ([string](Get-Prop $record 'host')) `
+            ([string](Get-Prop $record 'event')) ([string](Get-Prop $record 'name')))
+    }
+    return (Get-HookKey ([string](Get-Prop $record 'kind')) `
+        ([string](Get-Prop $record 'host')) ([string](Get-Prop $record 'event')) '')
+}
+
+function Get-HookManifestKey($hook) {
+    if ((Get-Prop $hook 'kind') -ceq 'file') {
+        return (Get-HookKey 'file' ([string](Get-Prop $hook 'host')) `
+            ([string](Get-Prop $hook 'event')) ([string](Get-Prop $hook 'name')))
+    }
+    return (Get-HookKey ([string](Get-Prop $hook 'kind')) `
+        ([string](Get-Prop $hook 'host')) ([string](Get-Prop $hook 'event')) '')
+}
+
+function Get-HookRecord(
+    $entry, [string]$kind, [string]$hookHost, [string]$event, [string]$name
+) {
+    foreach ($record in @($entry.hooks)) {
+        $recordName = ''
+        if ((Get-Prop $record 'kind') -ceq 'file') {
+            $recordName = [string](Get-Prop $record 'name')
+        }
+        if ((Get-Prop $record 'kind') -ceq $kind -and
+            (Get-Prop $record 'host') -ceq $hookHost -and
+            (Get-Prop $record 'event') -ceq $event -and
+            $recordName -ceq $name) {
+            return $record
+        }
+    }
+    return $null
+}
+
+function Remove-HookRecord(
+    $entry, [string]$kind, [string]$hookHost, [string]$event, [string]$name
+) {
+    $kept = @()
+    foreach ($record in @($entry.hooks)) {
+        $recordName = ''
+        if ((Get-Prop $record 'kind') -ceq 'file') {
+            $recordName = [string](Get-Prop $record 'name')
+        }
+        $matches = (Get-Prop $record 'kind') -ceq $kind -and
+            (Get-Prop $record 'host') -ceq $hookHost -and
+            (Get-Prop $record 'event') -ceq $event -and
+            $recordName -ceq $name
+        if (-not $matches) { $kept += $record }
+    }
+    $entry['hooks'] = @($kept)
+}
+
+function Set-FileHookRecord(
+    $entry, $ledger, [string]$event, [string]$name,
+    [string]$path, [string]$sha256, [string]$matcher, [int]$timeout,
+    [string]$pendingSha256
+) {
+    Remove-HookRecord $entry 'file' 'claude' $event $name
+    $record = [ordered]@{
+        kind = 'file'; host = 'claude'; event = $event; name = $name
+        path = $path; sha256 = $sha256; matcher = $matcher; timeout = $timeout
+    }
+    if (-not [string]::IsNullOrWhiteSpace($pendingSha256)) {
+        $record.pending_sha256 = $pendingSha256
+    }
+    $entry['hooks'] = @($entry['hooks']) + @($record)
+    Write-CompanionLedger $ledger
+    return $record
+}
+
+function Set-MemberHookRecord(
+    $entry, $ledger, [string]$event, [bool]$owned, $uninstall
+) {
+    Remove-HookRecord $entry 'member' 'claude' $event ''
+    $record = [ordered]@{
+        kind = 'member'; host = 'claude'; event = $event
+        owned = $owned; uninstall = @($uninstall)
+    }
+    $entry['hooks'] = @($entry['hooks']) + @($record)
+    Write-CompanionLedger $ledger
+}
+
+function Invoke-SettingsTool(
+    [string]$action,
+    [string]$settings,
+    [string]$event,
+    [string]$matcher,
+    [int]$timeout,
+    [string]$command,
+    [string]$companionPath
+) {
+    $args2 = @($script:Python[1]) + @(
+        $SETTINGS_TOOL, $action, '--settings', $settings, '--event', $event,
+        '--matcher', $matcher, '--timeout', [string]$timeout, '--command', $command,
+        '--companion-path', $companionPath)
+    $r = Invoke-Native -FilePath ([string]$script:Python[0]) -Arguments $args2 -TimeoutSeconds $TIMEOUT_COMMAND_S
+    $payload = $null
+    try { $payload = ConvertFrom-Json -InputObject $r.Out } catch { }
+    return , @($r, $payload)
+}
+
+function Get-ClaudeSettingsPath {
+    return (Get-HomePath '.claude\settings.json')
+}
+
+function Get-FileHookDestination([string]$slug, [string]$name) {
+    return (Get-HomePath ('.claude\hooks\companions\' + $slug + '-' + $name + '.ps1'))
+}
+
+function Get-FileHookCommand([string]$path) {
+    return ('powershell.exe -NoProfile -NonInteractive -File "' + $path + '"')
+}
+
+function Test-ExactArgv($actual, [string[]]$expected) {
+    $got = @($actual)
+    if ($got.Count -ne $expected.Count) { return $false }
+    for ($i = 0; $i -lt $expected.Count; $i++) {
+        if ($got[$i] -isnot [string] -or [string]$got[$i] -cne $expected[$i]) {
+            return $false
+        }
+    }
+    return $true
+}
+
+function Test-TrustedFileHookRecord([string]$slug, $record) {
+    if ($slug -cne 'tripwire' -or
+        (Get-Prop $record 'kind') -cne 'file' -or
+        (Get-Prop $record 'host') -cne 'claude' -or
+        (Get-Prop $record 'event') -cne 'PreToolUse' -or
+        (Get-Prop $record 'name') -cne 'pretool' -or
+        (Get-Prop $record 'path') -cne '.claude/hooks/companions/tripwire-pretool.ps1' -or
+        (Get-Prop $record 'matcher') -cne 'Bash|PowerShell' -or
+        (Get-Prop $record 'timeout') -ne 5 -or
+        [string](Get-Prop $record 'sha256') -notmatch '^[0-9a-f]{64}$') {
+        return $false
+    }
+    $pending = Get-Prop $record 'pending_sha256'
+    return $null -eq $pending -or [string]$pending -match '^[0-9a-f]{64}$'
+}
+
+function Get-PassingNotesHookCount {
+    $settings = Get-ClaudeSettingsPath
+    if (-not (Test-Path -LiteralPath $settings -PathType Leaf)) {
+        return [PSCustomObject]@{ Valid = $true; Count = 0; Reason = '' }
+    }
+    try {
+        $doc = ConvertFrom-Json -InputObject ([System.IO.File]::ReadAllText($settings, $UTF8_NO_BOM))
+        $hooks = Get-Prop $doc 'hooks'
+        if ($null -ne $hooks -and $hooks -isnot [System.Management.Automation.PSCustomObject]) {
+            throw 'hooks is not an object'
+        }
+        $stop = @()
+        if ($null -ne $hooks -and (Test-HasProp $hooks 'Stop')) {
+            $stop = $hooks.Stop
+            if ($stop -isnot [object[]]) { throw 'hooks.Stop is not a list' }
+        }
+        $count = 0
+        foreach ($group in @($stop)) {
+            if ($group -isnot [System.Management.Automation.PSCustomObject] -or
+                -not (Test-HasProp $group 'hooks') -or $group.hooks -isnot [object[]]) {
+                throw 'hooks.Stop contains an invalid group'
+            }
+            foreach ($item in @($group.hooks)) {
+                if ((Get-Prop $item 'type') -ceq 'command' -and
+                    (Get-Prop $item 'command') -ceq 'passing-notes hook stop') {
+                    $count++
+                }
+            }
+        }
+        return [PSCustomObject]@{ Valid = $true; Count = $count; Reason = '' }
+    } catch {
+        return [PSCustomObject]@{
+            Valid = $false; Count = 0; Reason = 'settings could not be inspected safely'
+        }
+    }
+}
+
+function Test-TrustedMemberHookRecord([string]$slug, $record) {
+    $expected = @('passing-notes', 'hook', 'uninstall', '--settings', '{settings}')
+    return $slug -ceq 'passing-notes' -and
+        (Get-Prop $record 'kind') -ceq 'member' -and
+        (Get-Prop $record 'host') -ceq 'claude' -and
+        (Get-Prop $record 'event') -ceq 'Stop' -and
+        (Test-ExactArgv (Get-Prop $record 'uninstall') $expected)
+}
+
+function Resolve-UvToolFile([string]$path, [string]$toolDir) {
+    # uv installs package files as hard links into its cache on Windows. A hard
+    # link is still the installed file and is safe to read through its in-tree
+    # name; Get-CanonicalRealPath intentionally follows its Target and would
+    # therefore reject uv's legitimate layout. Reject actual reparse points
+    # (file symlinks and directory junctions) component by component instead.
+    $safe = [System.IO.Path]::GetFullPath($path)
+    $root = [System.IO.Path]::GetFullPath($toolDir).TrimEnd('\', '/')
+    if (-not ($safe -ceq $root -or
+        $safe.StartsWith($root + '\', [System.StringComparison]::OrdinalIgnoreCase))) {
+        throw 'outside'
+    }
+    $relative = $safe.Substring($root.Length).TrimStart('\', '/')
+    $current = $root
+    foreach ($segment in $relative.Split([char[]]@('\', '/'),
+        [System.StringSplitOptions]::RemoveEmptyEntries)) {
+        $current = [System.IO.Path]::Combine($current, $segment)
+        $attributes = [System.IO.File]::GetAttributes($current)
+        if (($attributes -band [System.IO.FileAttributes]::ReparsePoint) -ne 0) {
+            throw 'reparse'
+        }
+    }
+    return $safe
+}
+
+function Get-LocatedHook($hook) {
+    $r = Invoke-MemberArgv (Get-Prop $hook 'locate') '' $TIMEOUT_COMMAND_S
+    if ($r.ExitCode -ne 0) { return , @($null, (Get-FailReason 'hook locate' $r)) }
+    $output = [string]$r.Out
+    if ($output -notmatch '^[^\r\n]+(?:\r?\n)?\z') {
+        return , @($null, 'hook locate did not return exactly one line')
+    }
+    $path = $output.TrimEnd("`r", "`n")
+    if ($path -cne $path.Trim()) { return , @($null, 'hook locate returned leading or trailing whitespace') }
+    if ($path.Contains('"')) { return , @($null, 'hook locate returned a path containing a quote') }
+    # Path.IsPathRooted accepts drive-relative paths such as C:hook.ps1. Require
+    # a drive root or a complete UNC share instead (PS 5.1 lacks
+    # Path.IsPathFullyQualified).
+    if ($path -notmatch '^(?:[A-Za-z]:[\\/]|\\\\[^\\/]+[\\/][^\\/]+(?:[\\/]|$))') {
+        return , @($null, 'hook locate returned a path that is not fully qualified')
+    }
+    if ([System.IO.Path]::GetExtension($path) -ine '.ps1') { return , @($null, 'hook locate did not return a .ps1 file') }
+    if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { return , @($null, 'hook locate returned a missing file') }
+    $toolDir = Get-UvToolDir
+    if ($null -eq $toolDir) { return , @($null, 'uv tool directory is unavailable') }
+    try {
+        $safe = Resolve-UvToolFile -Path $path -ToolDir $toolDir
+    } catch {
+        return , @($null, 'hook locate returned a path outside the uv tool directory')
+    }
+    return , @($safe, $null)
+}
+
+function Uninstall-FileHookRecord([string]$slug, $record, $entry, $ledger) {
+    if (-not (Test-TrustedFileHookRecord $slug $record)) {
+        Write-Note $slug 'file hook kept: ledger record does not match the owned tripwire destination'
+        $script:Failures++
+        return $false
+    }
+    $event = 'PreToolUse'
+    $safeDestination = Resolve-SafePath -Path (Get-FileHookDestination 'tripwire' 'pretool') `
+        -AllowedRoots @($script:HomeReal)
+    $settings = Get-ClaudeSettingsPath
+    $command = Get-FileHookCommand $safeDestination
+    $result = Invoke-SettingsTool 'remove' $settings $event 'Bash|PowerShell' 5 `
+        $command $safeDestination
+    if ($result[0].ExitCode -ne 0 -or (Get-Prop $result[1] 'status') -ceq 'collision') {
+        Write-Note $slug ('file hook settings kept: ' + [string](Get-Prop $result[1] 'reason'))
+        $script:Failures++
+        return $false
+    }
+    if (Test-Path -LiteralPath $safeDestination -PathType Leaf) {
+        $expected = [string](Get-Prop $record 'sha256')
+        $actual = (Get-FileHash -LiteralPath $safeDestination -Algorithm SHA256).Hash.ToLowerInvariant()
+        if ($expected -match '^[0-9a-f]{64}$' -and $actual -ceq $expected) {
+            [System.IO.File]::Delete($safeDestination)
+        } else {
+            Write-Note $slug "modified hook file $safeDestination was kept"
+        }
+    }
+    Remove-HookRecord $entry 'file' 'claude' $event 'pretool'
+    Write-CompanionLedger $ledger
+    return $true
+}
+
+function Install-FileHook([string]$slug, $hook, $entry, $ledger) {
+    $event = [string](Get-Prop $hook 'event')
+    $name = [string](Get-Prop $hook 'name')
+    if ($NoHooks -or $script:SkipHooks -contains $slug -or $ledger.opt_outs.no_hooks -or
+        @($ledger.opt_outs.skip_hook) -contains $slug) {
+        $record = Get-HookRecord $entry 'file' 'claude' $event $name
+        if ($null -ne $record) { [void](Uninstall-FileHookRecord $slug $record $entry $ledger) }
+        Write-Note $slug 'file hook skipped: opted out'
+        return
+    }
+    $located = Get-LocatedHook $hook
+    if ($null -ne $located[1]) {
+        Write-Note $slug ('file hook skipped: ' + $located[1])
+        return
+    }
+    $source = [string]$located[0]
+    $sourceHash = (Get-FileHash -LiteralPath $source -Algorithm SHA256).Hash.ToLowerInvariant()
+    $safeDestination = Resolve-SafePath -Path (Get-FileHookDestination $slug $name) `
+        -AllowedRoots @($script:HomeReal)
+    $settings = Get-ClaudeSettingsPath
+    $command = Get-FileHookCommand $safeDestination
+    $inspect = Invoke-SettingsTool 'inspect' $settings $event ([string](Get-Prop $hook 'matcher')) `
+        ([int](Get-Prop $hook 'timeout')) $command $safeDestination
+    if ($inspect[0].ExitCode -ne 0) {
+        $why = [string](Get-Prop $inspect[1] 'reason')
+        if ([string]::IsNullOrWhiteSpace($why)) { $why = Get-Tail $inspect[0].Err }
+        Write-Note $slug ('file hook skipped: settings invalid: ' + $why)
+        return
+    }
+    $inspectStatus = [string](Get-Prop $inspect[1] 'status')
+    if ($inspectStatus -ceq 'collision') {
+        Write-Note $slug ('file hook skipped: ' + [string](Get-Prop $inspect[1] 'reason'))
+        return
+    }
+    $record = Get-HookRecord $entry 'file' 'claude' $event $name
+    $actual = $null
+    if ($null -ne $record -and (Test-Path -LiteralPath $safeDestination -PathType Leaf)) {
+        $expected = [string](Get-Prop $record 'sha256')
+        $actual = (Get-FileHash -LiteralPath $safeDestination -Algorithm SHA256).Hash.ToLowerInvariant()
+        $pending = [string](Get-Prop $record 'pending_sha256')
+        $recognized = $actual -ceq $sourceHash -or $actual -ceq $expected -or
+            ($pending -match '^[0-9a-f]{64}$' -and $actual -ceq $pending)
+        if (-not $recognized) {
+            Write-Note $slug "modified hook file $safeDestination was kept; hook not reinstalled"
+            return
+        }
+        if ($actual -ceq $sourceHash -and $expected -ceq $sourceHash -and
+            [string]::IsNullOrWhiteSpace($pending) -and
+            $inspectStatus -ceq 'current') {
+            return
+        }
+    } elseif (Test-Path -LiteralPath $safeDestination) {
+        Write-Note $slug "file hook skipped: unowned destination $safeDestination already exists"
+        return
+    }
+    $safeParent = Resolve-SafePath -Path (Split-Path -Parent $safeDestination) `
+        -AllowedRoots @($script:HomeReal)
+    if (-not (Test-Path -LiteralPath $safeParent -PathType Container)) {
+        New-Item -ItemType Directory -Path $safeParent -Force | Out-Null
+    }
+    $relativePath = '.claude/hooks/companions/' + $slug + '-' + $name + '.ps1'
+    if ($actual -cne $sourceHash) {
+        $oldHash = if ($null -eq $actual) { $sourceHash } else { $actual }
+        [void](Set-FileHookRecord $entry $ledger $event $name $relativePath `
+            $oldHash ([string](Get-Prop $hook 'matcher')) ([int](Get-Prop $hook 'timeout')) $sourceHash)
+        Copy-Item -LiteralPath $source -Destination $safeDestination -Force
+    }
+    [void](Set-FileHookRecord $entry $ledger $event $name $relativePath `
+        $sourceHash ([string](Get-Prop $hook 'matcher')) ([int](Get-Prop $hook 'timeout')) '')
+    $install = Invoke-SettingsTool 'install' $settings $event ([string](Get-Prop $hook 'matcher')) `
+        ([int](Get-Prop $hook 'timeout')) $command $safeDestination
+    if ($install[0].ExitCode -ne 0 -or (Get-Prop $install[1] 'status') -ceq 'collision') {
+        $why = [string](Get-Prop $install[1] 'reason')
+        if ([string]::IsNullOrWhiteSpace($why)) { $why = Get-Tail $install[0].Err }
+        Write-Note $slug ('file hook skipped: settings merge failed: ' + $why)
+        return
+    }
+    Write-Note $slug 'file hook installed'
+}
+
+function Uninstall-MemberHookRecord([string]$slug, $record, $entry, $ledger) {
+    if (-not (Test-TrustedMemberHookRecord $slug $record)) {
+        Write-Note $slug 'member hook kept: ledger record does not match the approved passing-notes hook'
+        $script:Failures++
+        return $false
+    }
+    if ((Get-Prop $record 'owned') -eq $true) {
+        $state = Get-PassingNotesHookCount
+        if (-not $state.Valid -or $state.Count -gt 1) {
+            $why = if (-not $state.Valid) { $state.Reason } else { 'more than one exact hook command is present' }
+            Write-Note $slug ('member hook kept: ' + $why)
+            $script:Failures++
+            return $false
+        }
+        if ($state.Count -eq 1) {
+            $trustedUninstall = @('passing-notes', 'hook', 'uninstall', '--settings', '{settings}')
+            $r = Invoke-MemberArgv $trustedUninstall '' $TIMEOUT_INSTALL_S
+            if ($r.ExitCode -ne 0) {
+                Write-Note $slug ('member hook kept: ' + (Get-FailReason 'hook uninstall' $r))
+                $script:Failures++
+                return $false
+            }
+        }
+    }
+    Remove-HookRecord $entry 'member' 'claude' ([string](Get-Prop $record 'event')) ''
+    Write-CompanionLedger $ledger
+    return $true
+}
+
+function Install-MemberHook([string]$slug, $hook, $entry, $ledger) {
+    $event = [string](Get-Prop $hook 'event')
+    if ($NoHooks -or $script:SkipHooks -contains $slug -or $ledger.opt_outs.no_hooks -or
+        @($ledger.opt_outs.skip_hook) -contains $slug) {
+        $record = Get-HookRecord $entry 'member' 'claude' $event ''
+        if ($null -ne $record) { [void](Uninstall-MemberHookRecord $slug $record $entry $ledger) }
+        Write-Note $slug 'member hook skipped: opted out'
+        return
+    }
+    $record = Get-HookRecord $entry 'member' 'claude' $event ''
+    $check = Invoke-MemberArgv (Get-Prop $hook 'check') '' $TIMEOUT_COMMAND_S
+    if ($check.ExitCode -ne 0) {
+        Write-Note $slug ('member hook skipped: ' + (Get-FailReason 'hook check' $check))
+        return
+    }
+    if ($check.Out -match '(?im)^installed(?:\s*:|\s*$)') {
+        if ($null -eq $record) {
+            Set-MemberHookRecord $entry $ledger $event $false (Get-Prop $hook 'uninstall')
+            Write-Note $slug 'member hook pre-existing; recorded as not owned'
+        }
+        return
+    }
+    $install = Invoke-MemberArgv (Get-Prop $hook 'install') '' $TIMEOUT_INSTALL_S
+    if ($install.ExitCode -ne 0) {
+        Write-Note $slug ('member hook skipped: ' + (Get-FailReason 'hook install' $install))
+        return
+    }
+    Set-MemberHookRecord $entry $ledger $event $true (Get-Prop $hook 'uninstall')
+    Write-Note $slug 'member hook installed'
+}
+
+function Install-MemberHooks($member, $entry, $ledger) {
+    if ($Provider -cne 'claude') { return }
+    $slug = [string](Get-Prop $member 'slug')
+    $currentKeys = @{}
+    foreach ($hook in @(Get-Prop $member 'hooks')) {
+        if ((Get-Prop $hook 'host') -ceq 'claude') { $currentKeys[(Get-HookManifestKey $hook)] = $true }
+    }
+    foreach ($record in @($entry.hooks)) {
+        if (-not $currentKeys.ContainsKey((Get-HookRecordKey $record))) {
+            if (-not (Uninstall-HookRecord $slug $record $entry $ledger)) { return }
+        }
+    }
+    foreach ($hook in @(Get-Prop $member 'hooks')) {
+        if ((Get-Prop $hook 'host') -cne 'claude') { continue }
+        if ((Get-Prop $hook 'kind') -ceq 'file') {
+            Install-FileHook $slug $hook $entry $ledger
+        } else {
+            Install-MemberHook $slug $hook $entry $ledger
+        }
+    }
+}
+
+function Uninstall-HookRecord([string]$slug, $record, $entry, $ledger) {
+    if ((Get-Prop $record 'kind') -ceq 'file') {
+        return (Uninstall-FileHookRecord $slug $record $entry $ledger)
+    }
+    return (Uninstall-MemberHookRecord $slug $record $entry $ledger)
+}
+
+function Uninstall-MemberHooks([string]$slug, $member, $entry, $ledger) {
+    $ok = $true
+    foreach ($record in @($entry.hooks)) {
+        if (-not (Uninstall-HookRecord $slug $record $entry $ledger)) { $ok = $false }
+    }
+    return $ok
 }
 
 # -- Member steps -----------------------------------------------------------------
@@ -735,6 +1272,9 @@ function Install-Member($member, $ledger) {
 
 function Uninstall-Member([string]$slug, $member, $ledger) {
     $entry = $ledger.members[$slug]
+    if (-not (Uninstall-MemberHooks $slug $member $entry $ledger)) {
+        return 'skipped: hook uninstall failed; ledger kept'
+    }
     if ($entry.tool -ceq 'pre-existing') {
         [void]$ledger.members.Remove($slug)
         Write-CompanionLedger $ledger
@@ -884,6 +1424,7 @@ try {
         if ($null -eq $script:UvExe) { $missing += 'uv' }
         if ($null -eq $script:GitExe) { $missing += 'git' }
         $python = Find-Python312
+        $script:Python = $python
         if ($null -eq $python) { $missing += 'Python 3.12' }
         if ($missing.Count -gt 0) {
             foreach ($m in $selected) {
@@ -903,6 +1444,19 @@ try {
             Write-Refusal ('refusing: ' + $_.Exception.Message + '.')
             exit 3
         }
+        $optChanged = $false
+        if ($NoHooks -and -not $ledger.opt_outs.no_hooks) {
+            $ledger.opt_outs.no_hooks = $true
+            $optChanged = $true
+        }
+        foreach ($slug in $script:SkipHooks) {
+            if (@($ledger.opt_outs.skip_hook) -notcontains $slug) {
+                $ledger.opt_outs.skip_hook = @($ledger.opt_outs.skip_hook) + $slug
+                $optChanged = $true
+            }
+        }
+        $ledger.opt_outs.skip_hook = @($ledger.opt_outs.skip_hook | Sort-Object -Unique)
+        if ($optChanged) { Write-CompanionLedger $ledger }
         $setupMembers = @()
         foreach ($m in $selected) {
             $slug = [string]$m.slug
@@ -915,6 +1469,16 @@ try {
             } catch {
                 $script:Failures++
                 $status = 'skipped: ' + $_.Exception.Message
+            }
+            if ($ledger.members.Contains($slug) -and
+                ($status -ceq 'installed' -or $status -ceq 'already current' -or
+                 $status -like 'skipped: pre-existing*')) {
+                try {
+                    Install-MemberHooks $m $ledger.members[$slug] $ledger
+                } catch {
+                    $script:Failures++
+                    Write-Note $slug ('hooks skipped: ' + $_.Exception.Message)
+                }
             }
             Write-Status $slug $status
             if ([string]$m.ring -ceq 'optional' -and
@@ -935,6 +1499,7 @@ try {
         # The manifest's argv (setup_write.uninstall, skills.uninstaller) and repo
         # are executed here too, so they pass the same verify as on install.
         $python = Find-Python312
+        $script:Python = $python
         if ($null -eq $python) {
             Write-Line 'Python 3.12 is missing from PATH, so the companion manifest cannot be verified; no member was uninstalled.'
             exit 0

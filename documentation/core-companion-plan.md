@@ -454,6 +454,12 @@ The `Depends on:` lines decide the order across repositories.
   2. **`member` hooks (passing-notes).** Run the member's `check`. If it reports the entry already present, record `pre-existing, not owned` and change nothing. Otherwise run `install` and record ownership.
   3. **Uninstall.** Remove only the companion's own `file` entries, and only unmodified hook files; a modified file is reported and kept. Run a `member` hook's `uninstall` only when the ledger says the companion installed it.
   4. **Opt out.** `-NoHooks` (all) and `-SkipHook <slug>` (repeatable). The ledger records each opt-out, so a re-install respects it.
+  5. **Keeping installed hooks current (in scope, decided 2026-11-22).** Items 1-4 promise that the companion's own hooks match the pinned manifest and that nothing else is touched, so a re-install also:
+     - replaces an owned, unmodified hook file when the pinned tag moves (otherwise the old hook keeps running after an upgrade);
+     - removes an owned hook the manifest no longer lists, by the item 3 rules (otherwise its settings entry and file are left behind);
+     - removes an owned hook the user has just opted out of, by the item 3 rules (a re-install respects the opt-out).
+
+     A user-modified file is still kept and reported. The step's review raised both readings in turn (round 2 asked for these behaviors; round 4 called them out of scope), so this item records the decision. To trim them instead, remove this item and reopen #289.
 - **Done when:** disposable-home tests cover:
   - a missing settings file, and an empty one;
   - one with unrelated hooks, byte-preserved apart from the appended entries;

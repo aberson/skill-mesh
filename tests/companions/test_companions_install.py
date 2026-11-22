@@ -58,6 +58,7 @@ with open(os.environ["FAKE_LOG"], "a", encoding="utf-8") as log:
     log.write(json.dumps({"tool": role, "argv": args, "cwd": os.getcwd()}) + "\n")
 fail = set(filter(None, os.environ.get("FAKE_FAIL", "").split(",")))
 bindir = Path(os.environ["FAKE_TOOL_BIN"])
+tooldir = Path(os.environ["FAKE_TOOL_DIR"])
 here = Path(__file__).resolve()
 
 def shim(path, target_role):
@@ -78,6 +79,10 @@ if role == "uv":
             sys.exit(0)
         shim(target, "cli:" + slug)
         (bindir / (slug + ".tag")).write_text(tag, encoding="ascii")
+        if slug == "tripwire":
+            hook = tooldir / slug / "hooks" / "claude" / "tripwire-pretool.ps1"
+            hook.parent.mkdir(parents=True, exist_ok=True)
+            hook.write_text(f"# fake packaged tripwire hook {tag}\n", encoding="ascii")
         sys.exit(0)
     if args[:2] == ["tool", "uninstall"]:
         slug = args[2]
@@ -90,6 +95,9 @@ if role == "uv":
         sys.exit(0)
     if args == ["tool", "dir", "--bin"]:
         print(bindir)
+        sys.exit(0)
+    if args == ["tool", "dir"]:
+        print(tooldir)
         sys.exit(0)
     if args[:1] == ["run"]:
         slug = Path.cwd().name
@@ -135,6 +143,59 @@ if role.startswith("cli:"):
     if args[:1] == ["apply"] and "setup-write:" + slug in fail:
         sys.stderr.write("refused: fake writer failure\n")
         sys.exit(1)
+    if slug == "tripwire" and args == ["hook", "path", "--host", "claude"]:
+        override = os.environ.get("FAKE_HOOK_LOCATE")
+        if override is not None:
+            sys.stdout.write(override)
+        else:
+            print(tooldir / slug / "hooks" / "claude" / "tripwire-pretool.ps1")
+        sys.exit(0)
+    if slug == "passing-notes" and args[:2] == ["hook", "install"]:
+        settings = Path(args[args.index("--settings") + 1])
+        data = json.loads(settings.read_text(encoding="utf-8")) if settings.exists() else {}
+        groups = data.get("hooks", {}).get("Stop", [])
+        installed = any(
+            item.get("command") == "passing-notes hook stop"
+            for group in groups if isinstance(group, dict)
+            for item in group.get("hooks", []) if isinstance(item, dict)
+        )
+        if "--check" in args:
+            print(("installed: " if installed else "missing: ") + str(settings))
+            sys.exit(0)
+        if "hook-install:passing-notes" in fail:
+            sys.stderr.write("refused: fake member hook install failure\n")
+            sys.exit(1)
+        if not installed:
+            data.setdefault("hooks", {}).setdefault("Stop", []).append(
+                {"hooks": [{"type": "command", "command": "passing-notes hook stop", "timeout": 10}]}
+            )
+            settings.parent.mkdir(parents=True, exist_ok=True)
+            settings.write_text(json.dumps(data), encoding="utf-8")
+        print("installed: " + str(settings))
+        sys.exit(0)
+    if slug == "passing-notes" and args[:2] == ["hook", "uninstall"]:
+        settings = Path(args[args.index("--settings") + 1])
+        data = json.loads(settings.read_text(encoding="utf-8"))
+        groups = data.get("hooks", {}).get("Stop", [])
+        kept = []
+        for group in groups:
+            if not isinstance(group, dict) or not isinstance(group.get("hooks"), list):
+                kept.append(group)
+                continue
+            group["hooks"] = [
+                item for item in group["hooks"]
+                if not (
+                    isinstance(item, dict)
+                    and item.get("type") == "command"
+                    and item.get("command") == "passing-notes hook stop"
+                )
+            ]
+            if group["hooks"] or set(group) - {"hooks", "matcher"}:
+                kept.append(group)
+        data["hooks"]["Stop"] = kept
+        settings.write_text(json.dumps(data), encoding="utf-8")
+        print("uninstalled: " + str(settings))
+        sys.exit(0)
     sys.exit(0)
 
 sys.exit(2)
@@ -206,6 +267,8 @@ class Env:
         self.log = tmp_path / "fake.log"
         self.tool_bin = tmp_path / "uv-tool-bin"
         self.tool_bin.mkdir()
+        self.tool_dir = tmp_path / "uv-tool-dir"
+        self.tool_dir.mkdir()
         self.fake = tmp_path / "fake_tool.py"
         self.fake.write_text(FAKE_TOOL, encoding="utf-8")
         self.dirs = {}
@@ -241,6 +304,7 @@ class Env:
         env["PATH"] = os.pathsep.join(path)
         env["FAKE_LOG"] = str(self.log)
         env["FAKE_TOOL_BIN"] = str(self.tool_bin)
+        env["FAKE_TOOL_DIR"] = str(self.tool_dir)
         env["FAKE_FAIL"] = ",".join(self.fail)
         for name, value in self.overrides.items():
             if value is None:
@@ -438,7 +502,8 @@ def test_skill_installer_companions_core_installs_core_members(tmp_path, mini_di
         entry = ledger["members"][slug]
         assert entry["tag"] == TAG and entry["tool"] == "installed"
         assert entry["setup_write"] is bool(member(manifest, slug)["setup_write"])
-        assert entry["hooks"] == []
+        if not member(manifest, slug)["hooks"]:
+            assert entry["hooks"] == []
         assert entry["skills"] is bool(member(manifest, slug)["skills"])
     assert ledger["members"][pn["slug"]]["skills_hosts"] == ["claude"]
     assert ledger["opt_outs"] == {"no_hooks": False, "skip_hook": []}
@@ -960,14 +1025,19 @@ def test_setup_write_runs_after_skills_and_is_reversed_first(tmp_path):
     assert r.returncode == 0, r.stdout + r.stderr
     writes = [c["argv"] for c in env.calls() if c["tool"] == "cli:" + slug]
     health_argv = member(manifest, slug)["health"][1:]
-    assert writes == [health_argv, ["apply", "--write", "--home", str(env.home)]]
+    assert writes == [
+        health_argv,
+        ["apply", "--write", "--home", str(env.home)],
+        ["hook", "path", "--host", "claude"],
+    ]
     assert env.ledger()["members"][slug]["setup_write"] is True
 
     env.reset_log()
     r = env.companions(manifest=path)
     assert statuses(r.stdout)[slug] == "already current"
     assert [c["argv"] for c in env.calls() if c["tool"] == "cli:" + slug] == [
-        health_argv
+        health_argv,
+        ["hook", "path", "--host", "claude"],
     ]
 
     env.reset_log()
