@@ -1097,11 +1097,16 @@ function Install-FileHook([string]$slug, $hook, $entry, $ledger) {
         # Never a trust record: the operator trusts the entry in Codex itself.
         Write-Note $slug ("Codex hook written to $settings; open /hooks in Codex and trust the " +
             "$event entry for $safeDestination (Codex does not run a hook until it is trusted)")
+        # Advisory only: an unparsable CODEX_HOME must not fail a hook that is already written.
         $codexHome = [string]$env:CODEX_HOME
-        if (-not [string]::IsNullOrWhiteSpace($codexHome) -and
-            [System.IO.Path]::GetFullPath($codexHome).TrimEnd('\', '/') -ine
-            (Split-Path -Parent $settings).TrimEnd('\', '/')) {
-            Write-Note $slug "CODEX_HOME is set to $codexHome, so Codex reads its hooks from there, not from $settings"
+        if (-not [string]::IsNullOrWhiteSpace($codexHome)) {
+            $codexHomeFull = $null
+            try { $codexHomeFull = [System.IO.Path]::GetFullPath($codexHome).TrimEnd('\', '/') } catch { $codexHomeFull = $null }
+            if ($null -eq $codexHomeFull) {
+                Write-Note $slug "CODEX_HOME is set to $codexHome, which is not a valid path; Codex may not read $settings"
+            } elseif ($codexHomeFull -ine (Split-Path -Parent $settings).TrimEnd('\', '/')) {
+                Write-Note $slug "CODEX_HOME is set to $codexHome, so Codex reads its hooks from there, not from $settings"
+            }
         }
     }
 }
