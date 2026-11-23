@@ -141,13 +141,44 @@ def test_real_manifest_hook_entries_match_the_plan():
         "--settings",
         "{settings}",
     ]
-    (pretool,) = member(manifest, "tripwire")["hooks"]
+    pretool, codex_pretool = member(manifest, "tripwire")["hooks"]
     assert pretool["kind"] == "file" and pretool["event"] == "PreToolUse"
+    assert pretool["host"] == "claude" and pretool["name"] == "pretool"
     assert pretool["matcher"] == "Bash|PowerShell"
     assert pretool["locate"] == ["tripwire", "hook", "path", "--host", "claude"]
+    # v3.0.4: the same packaged hook for Codex, written to <home>/.codex/hooks.json.
+    # Codex's shell tool is named Bash; its hook timeout is in seconds.
+    assert codex_pretool == {
+        "kind": "file",
+        "name": "pretool",
+        "host": "codex",
+        "event": "PreToolUse",
+        "matcher": "^Bash$",
+        "locate": ["tripwire", "hook", "path", "--host", "codex"],
+        "timeout": 5,
+    }
     assert member(manifest, "tripwire")["callers"] == [
         "member:hooks/claude/tripwire-pretool.ps1"
     ]
+
+
+def test_file_hook_name_is_unique_per_host_not_across_hosts(tmp_path):
+    # The installed file name is <slug>-<name>.ps1 inside the host's own folder
+    # (.claude/hooks/companions or .codex/hooks/companions), so one name may be
+    # used once per host.
+    manifest = real_manifest()
+    hooks = member(manifest, "tripwire")["hooks"]
+    assert {h["name"] for h in hooks} == {"pretool"} and len(hooks) == 2
+    code, payload, _ = run_json(
+        "verify", "--manifest", str(write_manifest(tmp_path, manifest, "ok.json"))
+    )
+    assert code == 0, payload
+    hooks[1]["host"] = "claude"
+    code, payload, _ = run_json(
+        "verify", "--manifest", str(write_manifest(tmp_path, manifest, "dup.json"))
+    )
+    assert code == 17
+    assert [f["field"] for f in payload["findings"]] == ["hooks[1].name"]
 
 
 def test_real_skill_mesh_callers_actually_name_their_tool():

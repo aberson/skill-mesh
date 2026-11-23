@@ -402,6 +402,11 @@ def _check_caller(
         )
 
 
+def _name_key(hook: dict[str, Any]) -> str:
+    host = hook.get("host")
+    return "%s/%s" % (host if isinstance(host, str) else "?", hook["name"])
+
+
 def _check_hook(
     findings: _Findings,
     member: str,
@@ -440,15 +445,17 @@ def _check_hook(
                     field + ".name",
                     "name must match %s" % HOOK_NAME_PATTERN,
                 )
-            elif hook["name"] in names_seen:
+            # Unique per host: the installed file is <slug>-<name>.ps1 inside that
+            # host's own folder, so the same hook may be packaged for each host.
+            elif _name_key(hook) in names_seen:
                 findings.add(
                     EXIT_HOOK,
                     member,
                     field + ".name",
-                    "hook name %r repeats" % hook["name"],
+                    "hook name %r repeats for host %r" % (hook["name"], hook.get("host")),
                 )
             else:
-                names_seen.add(hook["name"])
+                names_seen.add(_name_key(hook))
         if "matcher" in hook and not (
             isinstance(hook["matcher"], str) and hook["matcher"]
         ):

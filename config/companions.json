@@ -154,6 +154,15 @@
           "matcher": "Bash|PowerShell",
           "locate": ["tripwire", "hook", "path", "--host", "claude"],
           "timeout": 5
+        },
+        {
+          "kind": "file",
+          "name": "pretool",
+          "host": "codex",
+          "event": "PreToolUse",
+          "matcher": "^Bash$",
+          "locate": ["tripwire", "hook", "path", "--host", "codex"],
+          "timeout": 5
         }
       ],
       "setup": [],

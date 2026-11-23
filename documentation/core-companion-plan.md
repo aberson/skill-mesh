@@ -176,9 +176,10 @@ versions and refuse newer ones with an explicit error (portfolio decision P-4).
 
 **Hook entry kinds.**
 
-- **`kind: "file"`** (tripwire). Fields: `name` (`[a-z0-9-]`, used in the installed file name), `host`, `event`, `matcher`, `locate` (argv printing the
+- **`kind: "file"`** (tripwire). Fields: `name` (`[a-z0-9-]`, used in the installed file name; unique per host, so one hook may be packaged once for each host), `host`, `event`, `matcher`, `locate` (argv printing the
   packaged hook file's absolute path, e.g. `["tripwire","hook","path","--host","claude"]`),
-  `timeout`. The companion copies the file and merges the settings entry itself (Step 10).
+  `timeout` (seconds, for both hosts). The companion copies the file and merges the settings entry itself (Step 10;
+  a `host: codex` entry goes to `<home>/.codex/hooks.json`, v3.0.4).
 - **`kind: "member"`** (passing-notes). Fields: `host`, `event`, `install`, `uninstall` and `check`
   argv. Each takes `--settings <path>`, for example
   `["passing-notes","hook","install","--settings","{settings}"]`. The member owns its own settings

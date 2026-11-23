@@ -394,10 +394,33 @@ def online():
     require_online()
 
 
+def check_file_hooks(row, commands, workspace, env):
+    """Each file hook's locate argv prints its packaged hook file at the pinned tag.
+
+    The companion installer copies whatever `locate` prints, per host. A host the
+    pinned tag cannot locate (tripwire v0.1.1 has no `hook path --host codex`) is a
+    broken promise in the manifest, so it fails here rather than as a silent skip.
+    """
+    failures = []
+    for hook in row["hooks"]:
+        if hook["kind"] != "file":
+            continue
+        try:
+            lines = call(hook["locate"], commands, workspace, env).splitlines()
+            assert len(lines) == 1, f"printed {len(lines)} lines"
+            located = Path(lines[0])
+            assert located.is_absolute() and located.suffix == ".ps1", f"not a .ps1 path: {located}"
+            assert located.is_file(), f"missing file: {located}"
+        except (Exception, pytest.fail.Exception) as exc:
+            failures.append(f"{hook['host']} {hook['name']}: {exc}")
+    assert not failures, "; ".join(failures)
+
+
 def check_all_contracts(row, commands, source, workspace, env):
     checks = (
         ("health", lambda: check_health(row, commands, workspace, env)),
         ("member callers", lambda: check_member_callers(row, source)),
+        ("file hooks", lambda: check_file_hooks(row, commands, workspace, env)),
         ("payload", lambda: check_payload(row, commands, workspace, env)),
     )
     failures = []

@@ -73,7 +73,7 @@
       }
     },
     "file_hook": {
-      "$comment": "kind file (tripwire): the companion copies the packaged hook file that locate prints and merges the settings entry itself.",
+      "$comment": "kind file (tripwire): the companion copies the packaged hook file that locate prints and merges the settings entry itself (host claude: <home>/.claude/settings.json; host codex: <home>/.codex/hooks.json). verify also requires name to be unique per host within a member. timeout is in seconds.",
       "type": "object",
       "additionalProperties": false,
       "required": ["kind", "name", "host", "event", "matcher", "locate", "timeout"],
