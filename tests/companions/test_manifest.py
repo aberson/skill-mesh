@@ -103,7 +103,8 @@ def test_real_manifest_holds_the_eight_rows_at_their_plan_time_rings():
         "passing-notes": "core",
         "tripwire": "core",
         "find-again": "optional",
-        "drift-ranger": "candidate",
+        # Promoted once Plan Step 3 (#282) packaged and tagged it (CC-D10).
+        "drift-ranger": "core",
         # Plan Step 16 (#295) promoted switchboard's registry and apply to core.
         "switchboard": "core",
         "changed-check": "candidate",
@@ -691,11 +692,10 @@ def test_inspect_lists_every_row_by_ring():
     assert payload["rings"] == {
         "candidate": [
             "changed-check",
-            "drift-ranger",
             "mesh-lens",
             "paper-trail",
         ],
-        "core": ["passing-notes", "switchboard", "tripwire"],
+        "core": ["drift-ranger", "passing-notes", "switchboard", "tripwire"],
         "optional": ["find-again"],
     }
     rows = {row["slug"]: row for row in payload["members"]}
