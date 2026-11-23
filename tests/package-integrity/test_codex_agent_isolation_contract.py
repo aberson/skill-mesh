@@ -443,6 +443,9 @@ def test_c0r_inventory_gate_rejects_a_deleted_active_doc_surface():
 REVIEW_DEEP = REPO_ROOT / "skills/review-deep/providers/codex.md"
 ACCEPTANCE = REPO_ROOT / "documentation/codex-deep-review-unblock-acceptance.md"
 DEEP_REQUIREMENTS = {
+    "model-pin": ("all six code lenses", "gpt-5.6-sol", "reasoning effort `high`",
+                  "--model gpt-5.6-sol", 'model_reasoning_effort="high"',
+                  "Explicit `--model-override` values still win", "required_tool_missing"),
     "capability-probe": ("Conversation challenge v2", "Parent-state capability contract",
                          "inconclusive", "required_tool_missing", "ordinary Codex CLI",
                          "out-of-process CLI route"),
