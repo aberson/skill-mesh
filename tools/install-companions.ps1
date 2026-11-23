@@ -44,6 +44,32 @@
     "skipped: missing <tool>" and nothing runs. A member with a null tag is
     "skipped: unreleased".
 
+    HOOKS. -Provider picks the host whose hooks are installed, exactly as it picks
+    the host's skills folder: claude writes Claude Code hooks into
+    <home>/.claude/settings.json, codex writes Codex hooks into the Codex user
+    layer <home>/.codex/hooks.json (never config.toml), and gpt installs no hooks.
+    A manifest hook whose host is not the provider's is left alone, so a claude run
+    and a codex run into one home each keep their own hooks. A "file" hook
+    (tripwire) is copied to <home>/.<host>/hooks/companions/<slug>-<name>.ps1 and
+    merged as one owned entry: every foreign key and entry is preserved, only the
+    owned entry is added, replaced or removed, and a malformed settings file is
+    refused with nothing written. A re-run with nothing to change writes nothing.
+
+    Codex specifics. When <home>/.codex/config.toml defines hooks (any key under
+    its [hooks] table other than the [hooks.state] trust records Codex writes
+    itself), the Codex hook is skipped with one note: Codex hooks stay in one
+    layer, never mixed. The command is
+    powershell.exe -NoProfile -NonInteractive -File <path>, with the path quoted
+    only when it needs quoting: Codex runs a hook command through PowerShell, where
+    a leading quoted token is a parse error that would make the hook fail open.
+    This script never writes a Codex hook-trust record. After it writes a Codex
+    hook it prints one line asking the operator to open /hooks in Codex and trust
+    the entry; Codex does not run an untrusted hook.
+
+    -Uninstall removes every ledger-owned hook of the member, for both hosts: only
+    the owned settings entry and the copied file (a modified copy is kept).
+    -NoHooks and -SkipHook <slug> apply to every host.
+
     Exit codes: 0 done (skips included); 1 at least one member failed; 2 usage or
     home error; 3 manifest or companion ledger refused (nothing changed); 4 another
     companion operation holds this home's lock.
@@ -52,8 +78,8 @@
 
 .PARAMETER Provider
     'claude' | 'gpt' | 'codex': the host profile whose skills folder member skill
-    installers write into. gpt has no member skill host, so member skills are not
-    installed for it.
+    installers write into, and whose hooks are installed (see HOOKS). gpt has no
+    member skill host and no hook host, so neither is installed for it.
 
 .PARAMETER Home
     The target home (must exist). Alias: -Destination. Backed by $TargetHome.
@@ -134,6 +160,27 @@ $MEMBER_SKILL_HOSTS = @{
     'claude' = 'claude'
     'codex'  = 'codex'
 }
+
+# Skill Mesh provider -> the manifest hook host it installs. A provider absent
+# here (gpt) installs no hooks.
+$PROVIDER_HOOK_HOSTS = @{
+    'claude' = 'claude'
+    'codex'  = 'codex'
+}
+
+# Per hook host: the home-relative host folder, the settings file the host reads
+# hooks from, and the matcher of the one trusted tripwire file hook record (the
+# uninstall path trusts only this fixed shape, never a ledger-supplied path).
+$FILE_HOOK_HOSTS = @{
+    'claude' = @{ Dir = '.claude'; Settings = '.claude\settings.json'; Matcher = 'Bash|PowerShell' }
+    'codex'  = @{ Dir = '.codex'; Settings = '.codex\hooks.json'; Matcher = '^Bash$' }
+}
+
+# Characters a double-quoted PowerShell string cannot carry literally (expansion,
+# escape, quote, and the typographic quotes U+2018..U+201E that PowerShell also
+# treats as quotes). A Codex hook path holding one is refused rather than written
+# into a command. Built from char codes so this file stays ASCII-only.
+$CODEX_UNQUOTABLE = '[\x00-\x1f"$`' + [char]0x2018 + '-' + [char]0x201E + ']'
 
 # Bounded child processes: a member install fetches from the network.
 $TIMEOUT_INSTALL_S = 900
@@ -562,7 +609,10 @@ function Read-CompanionLedger {
             $kind = Get-Prop $hook 'kind'
             $hookHost = Get-Prop $hook 'host'
             $event = Get-Prop $hook 'event'
-            $valid = $hookHost -ceq 'claude' -and $event -is [string] -and $event.Length -gt 0
+            # Claude records either kind; Codex records only file hooks (no member
+            # hook has a Codex host yet).
+            $valid = ($hookHost -ceq 'claude' -or ($kind -ceq 'file' -and $hookHost -ceq 'codex')) -and
+                $event -is [string] -and $event.Length -gt 0
             if ($kind -ceq 'file') {
                 $valid = $valid -and (Get-Prop $hook 'name') -is [string] -and
                     (Get-Prop $hook 'path') -is [string] -and
@@ -703,13 +753,13 @@ function Remove-HookRecord(
 }
 
 function Set-FileHookRecord(
-    $entry, $ledger, [string]$event, [string]$name,
+    $entry, $ledger, [string]$hookHost, [string]$event, [string]$name,
     [string]$path, [string]$sha256, [string]$matcher, [int]$timeout,
     [string]$pendingSha256
 ) {
-    Remove-HookRecord $entry 'file' 'claude' $event $name
+    Remove-HookRecord $entry 'file' $hookHost $event $name
     $record = [ordered]@{
-        kind = 'file'; host = 'claude'; event = $event; name = $name
+        kind = 'file'; host = $hookHost; event = $event; name = $name
         path = $path; sha256 = $sha256; matcher = $matcher; timeout = $timeout
     }
     if (-not [string]::IsNullOrWhiteSpace($pendingSha256)) {
@@ -734,6 +784,7 @@ function Set-MemberHookRecord(
 
 function Invoke-SettingsTool(
     [string]$action,
+    [string]$hookHost,
     [string]$settings,
     [string]$event,
     [string]$matcher,
@@ -744,7 +795,11 @@ function Invoke-SettingsTool(
     $args2 = @($script:Python[1]) + @(
         $SETTINGS_TOOL, $action, '--settings', $settings, '--event', $event,
         '--matcher', $matcher, '--timeout', [string]$timeout, '--command', $command,
-        '--companion-path', $companionPath)
+        '--companion-path', $companionPath, '--host', $hookHost)
+    if ($hookHost -ceq 'codex') {
+        # Read only: an install or inspect is refused when config.toml defines hooks.
+        $args2 += @('--codex-config', (Get-HomePath '.codex\config.toml'))
+    }
     $r = Invoke-Native -FilePath ([string]$script:Python[0]) -Arguments $args2 -TimeoutSeconds $TIMEOUT_COMMAND_S
     $payload = $null
     try { $payload = ConvertFrom-Json -InputObject $r.Out } catch { }
@@ -755,11 +810,30 @@ function Get-ClaudeSettingsPath {
     return (Get-HomePath '.claude\settings.json')
 }
 
-function Get-FileHookDestination([string]$slug, [string]$name) {
-    return (Get-HomePath ('.claude\hooks\companions\' + $slug + '-' + $name + '.ps1'))
+function Get-HookSettingsPath([string]$hookHost) {
+    return (Get-HomePath $FILE_HOOK_HOSTS[$hookHost].Settings)
 }
 
-function Get-FileHookCommand([string]$path) {
+function Get-FileHookRelativePath([string]$hookHost, [string]$slug, [string]$name) {
+    # The ledger form (forward slashes, home-relative).
+    return ($FILE_HOOK_HOSTS[$hookHost].Dir + '/hooks/companions/' + $slug + '-' + $name + '.ps1')
+}
+
+function Get-FileHookDestination([string]$hookHost, [string]$slug, [string]$name) {
+    return (Get-HomePath ((Get-FileHookRelativePath $hookHost $slug $name) -replace '/', '\'))
+}
+
+function Get-FileHookCommand([string]$hookHost, [string]$path) {
+    if ($hookHost -ceq 'codex') {
+        # Codex runs the command through PowerShell, where a leading quoted token
+        # is a parse error (the hook would fail open). Start with the bare
+        # executable name; quote the path only when it holds anything beyond
+        # letters, digits and \ : . _ -. Install-FileHook refuses a path that a
+        # double-quoted string cannot carry ($CODEX_UNQUOTABLE).
+        if ($path -match '^[A-Za-z0-9\\:._-]+$') {
+            return ('powershell.exe -NoProfile -NonInteractive -File ' + $path)
+        }
+    }
     return ('powershell.exe -NoProfile -NonInteractive -File "' + $path + '"')
 }
 
@@ -775,13 +849,15 @@ function Test-ExactArgv($actual, [string[]]$expected) {
 }
 
 function Test-TrustedFileHookRecord([string]$slug, $record) {
+    $hookHost = [string](Get-Prop $record 'host')
+    # Case-sensitive: the hashtable lookup below is not.
+    if ($hookHost -cne 'claude' -and $hookHost -cne 'codex') { return $false }
     if ($slug -cne 'tripwire' -or
         (Get-Prop $record 'kind') -cne 'file' -or
-        (Get-Prop $record 'host') -cne 'claude' -or
         (Get-Prop $record 'event') -cne 'PreToolUse' -or
         (Get-Prop $record 'name') -cne 'pretool' -or
-        (Get-Prop $record 'path') -cne '.claude/hooks/companions/tripwire-pretool.ps1' -or
-        (Get-Prop $record 'matcher') -cne 'Bash|PowerShell' -or
+        (Get-Prop $record 'path') -cne (Get-FileHookRelativePath $hookHost 'tripwire' 'pretool') -or
+        (Get-Prop $record 'matcher') -cne $FILE_HOOK_HOSTS[$hookHost].Matcher -or
         (Get-Prop $record 'timeout') -ne 5 -or
         [string](Get-Prop $record 'sha256') -notmatch '^[0-9a-f]{64}$') {
         return $false
@@ -895,17 +971,25 @@ function Uninstall-FileHookRecord([string]$slug, $record, $entry, $ledger) {
         $script:Failures++
         return $false
     }
+    $hookHost = [string](Get-Prop $record 'host')
     $event = 'PreToolUse'
-    $safeDestination = Resolve-SafePath -Path (Get-FileHookDestination 'tripwire' 'pretool') `
+    $safeDestination = Resolve-SafePath -Path (Get-FileHookDestination $hookHost 'tripwire' 'pretool') `
         -AllowedRoots @($script:HomeReal)
-    $settings = Get-ClaudeSettingsPath
-    $command = Get-FileHookCommand $safeDestination
-    $result = Invoke-SettingsTool 'remove' $settings $event 'Bash|PowerShell' 5 `
+    $settings = Get-HookSettingsPath $hookHost
+    $command = Get-FileHookCommand $hookHost $safeDestination
+    $result = Invoke-SettingsTool 'remove' $hookHost $settings $event ($FILE_HOOK_HOSTS[$hookHost].Matcher) 5 `
         $command $safeDestination
     if ($result[0].ExitCode -ne 0 -or (Get-Prop $result[1] 'status') -ceq 'collision') {
         Write-Note $slug ('file hook settings kept: ' + [string](Get-Prop $result[1] 'reason'))
         $script:Failures++
         return $false
+    }
+    $moved = Get-Prop $result[1] 'moved'
+    if ($hookHost -ceq 'codex' -and ($moved -is [int] -or $moved -is [long]) -and $moved -gt 0) {
+        # Codex keys a hook's trust by its position in the file.
+        $noun = if ($moved -eq 1) { 'entry' } else { 'entries' }
+        Write-Note $slug ("$moved later Codex $event hook $noun moved up one place in $settings; " +
+            'check /hooks in Codex, which may ask to trust them again')
     }
     if (Test-Path -LiteralPath $safeDestination -PathType Leaf) {
         $expected = [string](Get-Prop $record 'sha256')
@@ -916,17 +1000,20 @@ function Uninstall-FileHookRecord([string]$slug, $record, $entry, $ledger) {
             Write-Note $slug "modified hook file $safeDestination was kept"
         }
     }
-    Remove-HookRecord $entry 'file' 'claude' $event 'pretool'
+    Remove-HookRecord $entry 'file' $hookHost $event 'pretool'
     Write-CompanionLedger $ledger
     return $true
 }
 
 function Install-FileHook([string]$slug, $hook, $entry, $ledger) {
+    $hookHost = [string](Get-Prop $hook 'host')
     $event = [string](Get-Prop $hook 'event')
     $name = [string](Get-Prop $hook 'name')
+    $matcher = [string](Get-Prop $hook 'matcher')
+    $timeout = [int](Get-Prop $hook 'timeout')
     if ($NoHooks -or $script:SkipHooks -contains $slug -or $ledger.opt_outs.no_hooks -or
         @($ledger.opt_outs.skip_hook) -contains $slug) {
-        $record = Get-HookRecord $entry 'file' 'claude' $event $name
+        $record = Get-HookRecord $entry 'file' $hookHost $event $name
         if ($null -ne $record) { [void](Uninstall-FileHookRecord $slug $record $entry $ledger) }
         Write-Note $slug 'file hook skipped: opted out'
         return
@@ -938,12 +1025,16 @@ function Install-FileHook([string]$slug, $hook, $entry, $ledger) {
     }
     $source = [string]$located[0]
     $sourceHash = (Get-FileHash -LiteralPath $source -Algorithm SHA256).Hash.ToLowerInvariant()
-    $safeDestination = Resolve-SafePath -Path (Get-FileHookDestination $slug $name) `
+    $safeDestination = Resolve-SafePath -Path (Get-FileHookDestination $hookHost $slug $name) `
         -AllowedRoots @($script:HomeReal)
-    $settings = Get-ClaudeSettingsPath
-    $command = Get-FileHookCommand $safeDestination
-    $inspect = Invoke-SettingsTool 'inspect' $settings $event ([string](Get-Prop $hook 'matcher')) `
-        ([int](Get-Prop $hook 'timeout')) $command $safeDestination
+    if ($hookHost -ceq 'codex' -and $safeDestination -match $CODEX_UNQUOTABLE) {
+        Write-Note $slug "file hook skipped: the Codex hook path $safeDestination cannot be quoted safely for PowerShell"
+        return
+    }
+    $settings = Get-HookSettingsPath $hookHost
+    $command = Get-FileHookCommand $hookHost $safeDestination
+    $inspect = Invoke-SettingsTool 'inspect' $hookHost $settings $event $matcher `
+        $timeout $command $safeDestination
     if ($inspect[0].ExitCode -ne 0) {
         $why = [string](Get-Prop $inspect[1] 'reason')
         if ([string]::IsNullOrWhiteSpace($why)) { $why = Get-Tail $inspect[0].Err }
@@ -951,11 +1042,12 @@ function Install-FileHook([string]$slug, $hook, $entry, $ledger) {
         return
     }
     $inspectStatus = [string](Get-Prop $inspect[1] 'status')
-    if ($inspectStatus -ceq 'collision') {
+    if ($inspectStatus -ceq 'collision' -or $inspectStatus -ceq 'layer-conflict') {
+        # layer-conflict: <home>/.codex/config.toml defines hooks; one layer only.
         Write-Note $slug ('file hook skipped: ' + [string](Get-Prop $inspect[1] 'reason'))
         return
     }
-    $record = Get-HookRecord $entry 'file' 'claude' $event $name
+    $record = Get-HookRecord $entry 'file' $hookHost $event $name
     $actual = $null
     if ($null -ne $record -and (Test-Path -LiteralPath $safeDestination -PathType Leaf)) {
         $expected = [string](Get-Prop $record 'sha256')
@@ -981,24 +1073,37 @@ function Install-FileHook([string]$slug, $hook, $entry, $ledger) {
     if (-not (Test-Path -LiteralPath $safeParent -PathType Container)) {
         New-Item -ItemType Directory -Path $safeParent -Force | Out-Null
     }
-    $relativePath = '.claude/hooks/companions/' + $slug + '-' + $name + '.ps1'
+    $relativePath = Get-FileHookRelativePath $hookHost $slug $name
     if ($actual -cne $sourceHash) {
         $oldHash = if ($null -eq $actual) { $sourceHash } else { $actual }
-        [void](Set-FileHookRecord $entry $ledger $event $name $relativePath `
-            $oldHash ([string](Get-Prop $hook 'matcher')) ([int](Get-Prop $hook 'timeout')) $sourceHash)
+        [void](Set-FileHookRecord $entry $ledger $hookHost $event $name $relativePath `
+            $oldHash $matcher $timeout $sourceHash)
         Copy-Item -LiteralPath $source -Destination $safeDestination -Force
     }
-    [void](Set-FileHookRecord $entry $ledger $event $name $relativePath `
-        $sourceHash ([string](Get-Prop $hook 'matcher')) ([int](Get-Prop $hook 'timeout')) '')
-    $install = Invoke-SettingsTool 'install' $settings $event ([string](Get-Prop $hook 'matcher')) `
-        ([int](Get-Prop $hook 'timeout')) $command $safeDestination
-    if ($install[0].ExitCode -ne 0 -or (Get-Prop $install[1] 'status') -ceq 'collision') {
+    [void](Set-FileHookRecord $entry $ledger $hookHost $event $name $relativePath `
+        $sourceHash $matcher $timeout '')
+    $install = Invoke-SettingsTool 'install' $hookHost $settings $event $matcher `
+        $timeout $command $safeDestination
+    $installStatus = [string](Get-Prop $install[1] 'status')
+    if ($install[0].ExitCode -ne 0 -or
+        ($installStatus -cne 'installed' -and $installStatus -cne 'current')) {
         $why = [string](Get-Prop $install[1] 'reason')
         if ([string]::IsNullOrWhiteSpace($why)) { $why = Get-Tail $install[0].Err }
         Write-Note $slug ('file hook skipped: settings merge failed: ' + $why)
         return
     }
     Write-Note $slug 'file hook installed'
+    if ($hookHost -ceq 'codex') {
+        # Never a trust record: the operator trusts the entry in Codex itself.
+        Write-Note $slug ("Codex hook written to $settings; open /hooks in Codex and trust the " +
+            "$event entry for $safeDestination (Codex does not run a hook until it is trusted)")
+        $codexHome = [string]$env:CODEX_HOME
+        if (-not [string]::IsNullOrWhiteSpace($codexHome) -and
+            [System.IO.Path]::GetFullPath($codexHome).TrimEnd('\', '/') -ine
+            (Split-Path -Parent $settings).TrimEnd('\', '/')) {
+            Write-Note $slug "CODEX_HOME is set to $codexHome, so Codex reads its hooks from there, not from $settings"
+        }
+    }
 }
 
 function Uninstall-MemberHookRecord([string]$slug, $record, $entry, $ledger) {
@@ -1062,23 +1167,30 @@ function Install-MemberHook([string]$slug, $hook, $entry, $ledger) {
 }
 
 function Install-MemberHooks($member, $entry, $ledger) {
-    if ($Provider -cne 'claude') { return }
+    # Only the provider's own hook host: a claude run never reconciles or rewrites
+    # a Codex hook, nor a codex run a Claude one.
+    $providerKey = $Provider.ToLowerInvariant()
+    if (-not $PROVIDER_HOOK_HOSTS.ContainsKey($providerKey)) { return }
+    $hookHost = $PROVIDER_HOOK_HOSTS[$providerKey]
     $slug = [string](Get-Prop $member 'slug')
     $currentKeys = @{}
     foreach ($hook in @(Get-Prop $member 'hooks')) {
-        if ((Get-Prop $hook 'host') -ceq 'claude') { $currentKeys[(Get-HookManifestKey $hook)] = $true }
+        if ((Get-Prop $hook 'host') -ceq $hookHost) { $currentKeys[(Get-HookManifestKey $hook)] = $true }
     }
     foreach ($record in @($entry.hooks)) {
+        if ((Get-Prop $record 'host') -cne $hookHost) { continue }
         if (-not $currentKeys.ContainsKey((Get-HookRecordKey $record))) {
             if (-not (Uninstall-HookRecord $slug $record $entry $ledger)) { return }
         }
     }
     foreach ($hook in @(Get-Prop $member 'hooks')) {
-        if ((Get-Prop $hook 'host') -cne 'claude') { continue }
+        if ((Get-Prop $hook 'host') -cne $hookHost) { continue }
         if ((Get-Prop $hook 'kind') -ceq 'file') {
             Install-FileHook $slug $hook $entry $ledger
-        } else {
+        } elseif ($hookHost -ceq 'claude') {
             Install-MemberHook $slug $hook $entry $ledger
+        } else {
+            Write-Note $slug "member hook skipped: member hooks are installed for Claude only, not $hookHost"
         }
     }
 }

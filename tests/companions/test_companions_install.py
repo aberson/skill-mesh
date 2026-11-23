@@ -83,6 +83,9 @@ if role == "uv":
             hook = tooldir / slug / "hooks" / "claude" / "tripwire-pretool.ps1"
             hook.parent.mkdir(parents=True, exist_ok=True)
             hook.write_text(f"# fake packaged tripwire hook {tag}\n", encoding="ascii")
+            hook = tooldir / slug / "hooks" / "codex" / "tripwire-pretool.ps1"
+            hook.parent.mkdir(parents=True, exist_ok=True)
+            hook.write_text(f"# fake packaged tripwire codex hook {tag}\n", encoding="ascii")
         sys.exit(0)
     if args[:2] == ["tool", "uninstall"]:
         slug = args[2]
@@ -143,12 +146,16 @@ if role.startswith("cli:"):
     if args[:1] == ["apply"] and "setup-write:" + slug in fail:
         sys.stderr.write("refused: fake writer failure\n")
         sys.exit(1)
-    if slug == "tripwire" and args == ["hook", "path", "--host", "claude"]:
-        override = os.environ.get("FAKE_HOOK_LOCATE")
+    if slug == "tripwire" and args[:3] == ["hook", "path", "--host"] and len(args) == 4:
+        host = args[3]
+        if host not in ("claude", "codex") or "hook-path:" + host in fail:
+            sys.stderr.write("tripwire: error: invalid --host %r\n" % host)
+            sys.exit(2)
+        override = os.environ.get("FAKE_HOOK_LOCATE" if host == "claude" else "FAKE_HOOK_LOCATE_CODEX")
         if override is not None:
             sys.stdout.write(override)
         else:
-            print(tooldir / slug / "hooks" / "claude" / "tripwire-pretool.ps1")
+            print(tooldir / slug / "hooks" / host / "tripwire-pretool.ps1")
         sys.exit(0)
     if slug == "passing-notes" and args[:2] == ["hook", "install"]:
         settings = Path(args[args.index("--settings") + 1])

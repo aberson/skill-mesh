@@ -1,9 +1,18 @@
-"""Safely merge Skill Mesh owned Claude file hooks into settings JSON.
+"""Safely merge Skill Mesh owned file hooks into a host's hook settings JSON.
+
+Claude reads them from ``<home>/.claude/settings.json``; Codex reads the same JSON hook
+contract from its user layer ``<home>/.codex/hooks.json`` (``--host codex``).
 
 The helper deliberately edits text at the containing object/array boundary.  Existing
 settings bytes are therefore retained verbatim; only the new entry (or the exact owned
 entry during removal) changes.  Invalid or ambiguous JSON is refused before backup or
 write.
+
+Codex keeps one hook layer per location: hooks defined in ``config.toml`` and in
+``hooks.json`` load side by side with a warning.  With ``--codex-config`` an install or
+inspect refuses (status ``layer-conflict``, nothing written) when that ``config.toml``
+defines hooks.  Its ``[hooks.state.*]`` tables are Codex's own /hooks trust records, not
+hook definitions, and are ignored; this helper never writes ``config.toml``.
 """
 
 from __future__ import annotations
@@ -14,6 +23,7 @@ import os
 import re
 import sys
 import tempfile
+import tomllib
 from pathlib import Path
 from typing import Any
 
@@ -237,20 +247,36 @@ def _append(text: str, event: str, entry: dict[str, Any]) -> str:
     return text[: event_end - 1] + prefix + payload + text[event_end - 1 :]
 
 
+def _cut_last(text: str, previous_end: int, start: int, end: int) -> str:
+    """Remove a container's last element together with the comma before it.
+
+    Cutting from the comma (not from the previous element's end) keeps the
+    whitespace before the closing bracket, so removing an entry this helper
+    appended restores the original bytes exactly.
+    """
+    comma = text.rindex(",", previous_end, start)
+    return text[:comma] + text[end:]
+
+
 def _remove_one(
     text: str,
     event: str,
     companion_path: Path,
     entry: dict[str, Any],
-) -> tuple[str, bool]:
+) -> tuple[str, bool, int]:
+    """Remove the owned entry; also return how many later entries moved up.
+
+    Codex keys a hook's trust by its position (``<file>:<event>:<group>:<handler>``),
+    so the caller tells the operator when a removal shifts entries after it.
+    """
     root_start = _skip_ws(text, 0)
     root_end = _value_end(text, root_start)
     hooks_span = _member(text, root_start, root_end, "hooks")
     if hooks_span is None:
-        return text, False
+        return text, False, 0
     event_span = _member(text, *hooks_span, event)
     if event_span is None:
-        return text, False
+        return text, False, 0
     elements = _array_elements(text, *event_span)
     for index in range(len(elements) - 1, -1, -1):
         start, end = elements[index]
@@ -279,17 +305,19 @@ def _remove_one(
             # other command or group field, remove only our nested command.
             generated_group = set(group) <= {"matcher", "hooks"}
             if len(items) == 1 and generated_group:
+                moved = len(elements) - 1 - index
                 if len(elements) == 1:
-                    return text[:start] + text[end:], True
+                    return text[:start] + text[end:], True, moved
                 if index < len(elements) - 1:
-                    return text[:start] + text[elements[index + 1][0] :], True
-                return text[: elements[index - 1][1]] + text[end:], True
+                    return text[:start] + text[elements[index + 1][0] :], True, moved
+                return _cut_last(text, elements[index - 1][1], start, end), True, moved
+            moved = len(items) - 1 - item_index
             if len(items) == 1:
-                return text[:item_start] + text[item_end:], True
+                return text[:item_start] + text[item_end:], True, moved
             if item_index < len(items) - 1:
-                return text[:item_start] + text[items[item_index + 1][0] :], True
-            return text[: items[item_index - 1][1]] + text[item_end:], True
-    return text, False
+                return text[:item_start] + text[items[item_index + 1][0] :], True, moved
+            return _cut_last(text, items[item_index - 1][1], item_start, item_end), True, moved
+    return text, False, 0
 
 
 def _read(path: Path) -> tuple[bytes | None, str]:
@@ -353,13 +381,47 @@ def _write(path: Path, raw: bytes | None, text: str) -> None:
                     pass
 
 
+def codex_config_hooks(config: Path) -> str | None:
+    """Why ``config.toml`` holds Codex hook definitions, or None when it holds none.
+
+    Any key under the ``hooks`` table other than ``state`` is a definition (an event
+    list today).  ``hooks.state`` holds the /hooks trust records Codex writes itself.
+    """
+    try:
+        raw = config.read_bytes()
+    except FileNotFoundError:
+        return None
+    try:
+        document = tomllib.loads(raw.decode("utf-8-sig"))
+    except (UnicodeDecodeError, tomllib.TOMLDecodeError) as exc:
+        raise SettingsError(f"{config} is not valid TOML ({exc})") from None
+    hooks = document.get("hooks")
+    if hooks is None:
+        return None
+    if not isinstance(hooks, dict):
+        return f"{config} defines hooks"
+    defined = sorted(key for key in hooks if key != "state")
+    if defined:
+        return f"{config} defines hooks ({', '.join(defined)})"
+    return None
+
+
 def change(
     action: str,
     path: Path,
     event: str,
     companion_path: Path,
     entry: dict[str, Any],
+    codex_config: Path | None = None,
 ) -> dict[str, Any]:
+    if codex_config is not None and action in ("inspect", "install"):
+        conflict = codex_config_hooks(codex_config)
+        if conflict is not None:
+            return {
+                "status": "layer-conflict",
+                "reason": conflict + "; Codex hooks stay in one layer, so "
+                + path.name + " was not changed",
+            }
     raw, text = _read(path)
     settings = _decode(text)
     groups = _event_groups(settings, event)
@@ -384,7 +446,7 @@ def change(
             "status": "collision",
             "reason": f"multiple exact {companion_path.name} entries",
         }
-    text, removed = _remove_one(text, event, companion_path, entry)
+    text, removed, moved = _remove_one(text, event, companion_path, entry)
     if not removed:
         if any(_is_collision(group, companion_path, entry) for group in groups):
             return {
@@ -394,7 +456,19 @@ def change(
         return {"status": "absent"}
     _decode(text)
     _write(path, raw, text)
-    return {"status": "removed"}
+    return {"status": "removed", "moved": moved}
+
+
+def hook_command(host: str, command: str, timeout: int) -> dict[str, Any]:
+    """The one owned command entry, in the host's own hook schema.
+
+    Both hosts read ``type``/``command``/``timeout`` (seconds).  ``onFailure`` is a
+    Claude field; the Codex entry carries only the fields Codex documents.
+    """
+    item: dict[str, Any] = {"type": "command", "command": command, "timeout": timeout}
+    if host == "claude":
+        item["onFailure"] = "continue"
+    return item
 
 
 def main() -> int:
@@ -406,18 +480,18 @@ def main() -> int:
     parser.add_argument("--timeout", type=int, required=True)
     parser.add_argument("--command", required=True)
     parser.add_argument("--companion-path", type=Path, required=True)
+    parser.add_argument("--host", choices=("claude", "codex"), default="claude")
+    parser.add_argument("--codex-config", type=Path, default=None)
     args = parser.parse_args()
     entry = {
         "matcher": args.matcher,
-        "hooks": [{
-            "type": "command",
-            "command": args.command,
-            "timeout": args.timeout,
-            "onFailure": "continue",
-        }],
+        "hooks": [hook_command(args.host, args.command, args.timeout)],
     }
     try:
-        result = change(args.action, args.settings, args.event, args.companion_path, entry)
+        result = change(
+            args.action, args.settings, args.event, args.companion_path, entry,
+            codex_config=args.codex_config,
+        )
     except (OSError, SettingsError) as exc:
         print(json.dumps({"status": "invalid", "reason": str(exc)}))
         return 3
