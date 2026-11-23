@@ -225,7 +225,7 @@ def skill_member(manifest, rings=("core",)):
 
 
 def plain_member(manifest, rings=("core",)):
-    """The first selected member without skills or a writer (tripwire today)."""
+    """The first selected member without skills or a writer (drift-ranger today)."""
     return next(
         m
         for m in manifest["members"]
@@ -1010,7 +1010,14 @@ def test_both_hosts_in_one_home_are_tracked_and_reversed(tmp_path):
 
 
 def test_setup_write_runs_after_skills_and_is_reversed_first(tmp_path):
-    slug = plain_member(real_manifest())["slug"]
+    # A plain member that also has a file hook (tripwire today), so the test
+    # sees the writer run before the hook is located.
+    slug = next(
+        m["slug"]
+        for m in real_manifest()["members"]
+        if m["ring"] == "core" and not m["skills"] and not m["setup_write"]
+        and any(h["kind"] == "file" for h in m["hooks"])
+    )
 
     def add_writer(m):
         member(m, slug)["setup_write"] = {
@@ -1025,10 +1032,14 @@ def test_setup_write_runs_after_skills_and_is_reversed_first(tmp_path):
     assert r.returncode == 0, r.stdout + r.stderr
     writes = [c["argv"] for c in env.calls() if c["tool"] == "cli:" + slug]
     health_argv = member(manifest, slug)["health"][1:]
+    # The member's own file hooks are located after its writer runs; which
+    # member is "plain" follows the manifest, so derive them, never hard-code.
+    locates = [h["locate"][1:] for h in member(manifest, slug)["hooks"] if h["kind"] == "file"]
+    assert locates
     assert writes == [
         health_argv,
         ["apply", "--write", "--home", str(env.home)],
-        ["hook", "path", "--host", "claude"],
+        *locates,
     ]
     assert env.ledger()["members"][slug]["setup_write"] is True
 
@@ -1037,7 +1048,7 @@ def test_setup_write_runs_after_skills_and_is_reversed_first(tmp_path):
     assert statuses(r.stdout)[slug] == "already current"
     assert [c["argv"] for c in env.calls() if c["tool"] == "cli:" + slug] == [
         health_argv,
-        ["hook", "path", "--host", "claude"],
+        *locates,
     ]
 
     env.reset_log()
