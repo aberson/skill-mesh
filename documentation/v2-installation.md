@@ -66,6 +66,40 @@ it, and it meets the utility project standard.
 Tripwire's hook is advisory: it checks a shell command before it runs and adds a
 note when it finds a problem, and it never blocks a command.
 
+The hooks follow `-Provider`, the same way the member skills do:
+
+- `-Provider claude` registers tripwire's `PreToolUse` hook, and passing-notes'
+  `Stop` hook, in `<home>\.claude\settings.json`.
+- `-Provider codex` registers tripwire's `PreToolUse` hook (matcher `^Bash$`,
+  5-second timeout) in Codex's user-level hook file, `<home>\.codex\hooks.json`.
+  Use the Codex `-Home`, the folder that holds `.codex` (normally your user
+  profile). The step never writes `config.toml`. If your `config.toml` already
+  defines hooks, the Codex hook is skipped with one note, because Codex should
+  read hooks from one file per layer, not two. The `[hooks.state]` entries Codex
+  writes when you trust a hook are not hook definitions and do not cause a skip.
+- `-Provider gpt` installs no hooks.
+
+Either way, the step copies the packaged hook file to
+`<home>\.<host>\hooks\companions\tripwire-pretool.ps1` and adds one entry that
+runs it. Everything else in the file stays as it was. A file that is not valid
+JSON is left untouched, and the hook is skipped. A re-run with nothing to change
+writes nothing. The Codex entry's command starts with `powershell.exe`, never with
+a quoted path, because Codex runs hook commands through PowerShell and a leading
+quoted path would not parse.
+
+**Trust the Codex hook.** Codex runs a new or changed hook only after you trust
+it. After a Codex install, the step prints one line naming the entry. Open
+`/hooks` in Codex and trust the tripwire `PreToolUse` entry. Skill Mesh never
+writes a trust record for you. When the hook is removed during uninstall, any
+Codex hook entries listed after it in the same event move up one place. The
+step says so, because Codex may ask you to trust those again.
+
+`-NoHooks` skips every companion hook and `-SkipHook <slug>` (repeatable, for
+example `-SkipHook tripwire`) skips one member's hooks, for every host. Both are
+remembered in the companion ledger, and a hook installed earlier is removed on
+the next run. Uninstall removes only the entries and copied files it installed,
+for both hosts. A copied hook file you have edited is kept.
+
 Candidates are never installed. A member whose manifest tag is still null
 (unreleased) is reported `skipped: unreleased`. The companion step needs three
 things on `PATH`: `uv`, Git and Python 3.12 or later. If any is missing, every

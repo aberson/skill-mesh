@@ -504,7 +504,11 @@ the utility project standard. Candidates are listed so you can see what may join
 never installed.
 
 Tripwire's hook is advisory: it checks a shell command before it runs and adds a note when it
-finds a problem. It never blocks a command.
+finds a problem. It never blocks a command. The `-Provider` you install with picks the host it
+is registered for: Claude Code reads it from `.claude/settings.json`, and Codex reads it from
+your user-level `.codex/hooks.json`. Codex runs a new hook only after you trust it, so after a
+Codex install, open `/hooks` in Codex and trust the tripwire `PreToolUse` entry; the installer
+prints the entry to look for and never trusts it for you.
 
 <!-- companions-table:members:begin -->
 | Member | Ring | Pinned tag | Called from | Installs |
@@ -512,7 +516,7 @@ finds a problem. It never blocks a command.
 | [drift-ranger](https://github.com/aberson/drift-ranger) | core | `v0.1.0` | `_shared/intent-continuity.md` | the `drift-ranger` command |
 | [passing-notes](https://github.com/aberson/passing-notes) | core | `v0.1.0` | `_shared/lane-inbox-hooks.md`, `_shared/lane_inbox.py`, `skills/user-pm/core.md` | the `passing-notes` command; skills `lane-close`, `lane-handoff`, `lane-open`, `lane-status`; a Claude Code `Stop` hook |
 | [switchboard](https://github.com/aberson/switchboard) | core | `v0.1.1` | `skills/review-deep/core.md`, `skills/review-gauntlet/core.md`, `skills/tier-offload/core.md` | the `switchboard` command; runs `switchboard apply --write --home <home>` |
-| [tripwire](https://github.com/aberson/tripwire) | core | `v0.1.1` | `hooks/claude/tripwire-pretool.ps1` in its own repository | the `tripwire` command; a Claude Code `PreToolUse` hook |
+| [tripwire](https://github.com/aberson/tripwire) | core | `v0.1.1` | `hooks/claude/tripwire-pretool.ps1` in its own repository | the `tripwire` command; a Claude Code `PreToolUse` hook; a Codex `PreToolUse` hook |
 | [find-again](https://github.com/aberson/find-again) | optional | `v0.1.0` | `skills/plan-feature/core.md` | the `find-again` command; prints its setup steps |
 | [changed-check](https://github.com/aberson/changed-check) | candidate | none yet | none yet | nothing; listed only |
 | [mesh-lens](https://github.com/aberson/mesh-lens) | candidate | none yet | none yet | nothing; listed only |
