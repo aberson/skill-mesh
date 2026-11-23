@@ -15,6 +15,7 @@ slots are exhausted; `required_tool_missing` only when neither route exists.
 
 | Contract field | Required Codex mapping |
 |---|---|
+| `model-pin` | By default, dispatch all six code lenses with exact model `gpt-5.6-sol` and reasoning effort `high`; no lens inherits the parent model or effort. For sibling dispatch, set the child model and reasoning effort explicitly. For the out-of-process route, pass `--model gpt-5.6-sol -c model_reasoning_effort="high"` to each fresh `codex exec` process. Preserve each lens's core tier name in the audit record. Explicit `--model-override` values still win for that invocation and resolve through the loaded tier map; this default pin changes no shared tier mapping. If exact model or effort selection is unavailable, halt `required_tool_missing` rather than inherit, downgrade, or fall back. |
 | `capability-probe` | Load the installed build-step Agent-isolation capability contract and build-phase Parent-state capability contract, including Conversation challenge v2, in full. Require their non-mutating probes in this session before sibling lens dispatch: explicit no-history dispatch, calibrated conversation comparisons, opaque parent state, caller-scoped parent-only verdict service and tamper/key-rotation checks. A host that passes may dispatch the code lenses as fresh siblings. Probe absence, failure or inconclusive evidence closes the sibling route and sends the lenses to the core's out-of-process CLI route instead of halting; an ordinary Codex CLI without these capabilities stays on that route. Halt visibly with `required_tool_missing` at isolated lens dispatch only when no `codex` or `claude` executable is reachable either: an ordinary Codex CLI with neither these capabilities nor a reachable `codex`/`claude` executable remains unsupported. |
 | `six-siblings` | The review parent directly spawns correctness, bugs, security, test-quality, style, plan-conformance as six distinct fresh sibling children with `fork_turns="none"`. Use available-slot batches, releasing completed children before the next batch. No reused child, no child-spawned reviewer, no producer-to-reviewer follow-up, no omitted/default fork mode. Each receives the identical immutable diff/intent/context snapshot and its own core lens instructions. Never pass sibling findings or producer reasoning. When the sibling route is closed or its slots are exhausted mid-run, dispatch the remaining lenses through the core's out-of-process CLI route (`codex exec` preferred; `claude -p` where only it is installed), one fresh process per lens with the same snapshot and with the read-only and private-channel rows applying unchanged; record the route split in the report. |
 | `read-only` | All lens prompts are read-only: inspect named project/worktree files and return one JSON LensVerdict with cited evidence and recommendations only. No edits, commands that mutate the target, commits, installs or child dispatch. Snapshot project/worktree bytes before dispatch and audit after each batch; reject unexpected reviewer mutation. Shared filesystem/tools are expected, not OS isolation. |
@@ -22,13 +23,12 @@ slots are exhausted; `required_tool_missing` only when neither route exists.
 | `private-channel` | Never pass the verdict path, run id, HMAC key or parent service handle to lenses in prompts, arguments, environment, files, logs or reports. The parent-only verdict service separately authenticates the enclosing build-step result; the review-deep JSON audit is unsigned and cannot authorize advancement. Shared filesystem discovery or tampering can force BLOCKED, never authenticate PASS. |
 | `plan-binding` | Codex build-phase loads build-step under the same parent context, which already holds the parsed plan path and integer step id. Before deep review, bind `plan_step` to the resolved absolute plan path (forward slashes) plus `:<id>` and pass that exact string and extracted step to review-deep. Verify the plan exists and step resolves; a known phase step must never become null or SKIPPED. Standalone invocation without a plan retains the core's plan-conformance SKIPPED rule, with the sixth fresh lens returning that explicit record. |
 
-Resolve capability roles from the loaded package's `<loaded-package>/config/model-tier-map.md`, whose
-single fenced JSON payload matches canonical `config/model-tier-map.json`. Explicit
-overrides win; unavailable required capability returns `required_tool_missing`.
-The map declares no Codex peer: use the closest capability actually provided by the
-configured Codex model without weakening a gate. No automatic model-tier fallback;
-the core's out-of-process CLI route is a dispatch route, not a tier change, and
-`codex exec` keeps the configured model.
+Resolve explicit overrides and non-default capability roles from the loaded package's
+`<loaded-package>/config/model-tier-map.md`, whose single fenced JSON payload matches canonical
+`config/model-tier-map.json`. The `model-pin` row owns default Codex code-lens selection without
+changing that shared map. Explicit overrides win; unavailable required capability returns
+`required_tool_missing`. No automatic model-tier fallback; the core's out-of-process CLI route is a
+dispatch route, not a tier change.
 
 ## Parent aggregation from the installed package
 
