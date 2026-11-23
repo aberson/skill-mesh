@@ -1,4 +1,4 @@
-These diagrams summarize the **Skill Mesh v3.0.3** contracts. Use the
+These diagrams summarize the **Skill Mesh v3.0.4** contracts. Use the
 [skill reference](../../documentation/skill-reference.md) for a compact table
 of all 47 skills, purposes, host coverage and direct diagram links.
 

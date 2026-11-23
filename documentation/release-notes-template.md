@@ -30,7 +30,7 @@ Each installs from its own public repository at the tag shown.
 | [drift-ranger](https://github.com/aberson/drift-ranger) | core | `v0.1.0` | `git+https://github.com/aberson/drift-ranger@v0.1.0` |
 | [passing-notes](https://github.com/aberson/passing-notes) | core | `v0.1.0` | `git+https://github.com/aberson/passing-notes@v0.1.0` |
 | [switchboard](https://github.com/aberson/switchboard) | core | `v0.1.1` | `git+https://github.com/aberson/switchboard@v0.1.1` |
-| [tripwire](https://github.com/aberson/tripwire) | core | `v0.1.1` | `git+https://github.com/aberson/tripwire@v0.1.1` |
+| [tripwire](https://github.com/aberson/tripwire) | core | `v0.1.2` | `git+https://github.com/aberson/tripwire@v0.1.2` |
 | [find-again](https://github.com/aberson/find-again) | optional | `v0.1.0` | `git+https://github.com/aberson/find-again@v0.1.0` |
 <!-- companions-table:release:end -->
 

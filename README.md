@@ -13,7 +13,7 @@ run on Claude Code and OpenAI Codex from one behavior contract.**
   workspace. One contract per skill drives Claude Code (all 47) and OpenAI Codex (45
   portable). GitHub Copilot is no longer supported.
 
-**[v3.0.3 is released](https://github.com/aberson/skill-mesh/releases/tag/v3.0.3)** ·
+**[v3.0.4 is released](https://github.com/aberson/skill-mesh/releases/tag/v3.0.4)** ·
 [Quick start](#quick-start) · [Browse the skills](documentation/skill-reference.md) ·
 [Detailed workflows](docs/workflows/README.md)
 
@@ -516,7 +516,7 @@ prints the entry to look for and never trusts it for you.
 | [drift-ranger](https://github.com/aberson/drift-ranger) | core | `v0.1.0` | `_shared/intent-continuity.md` | the `drift-ranger` command |
 | [passing-notes](https://github.com/aberson/passing-notes) | core | `v0.1.0` | `_shared/lane-inbox-hooks.md`, `_shared/lane_inbox.py`, `skills/user-pm/core.md` | the `passing-notes` command; skills `lane-close`, `lane-handoff`, `lane-open`, `lane-status`; a Claude Code `Stop` hook |
 | [switchboard](https://github.com/aberson/switchboard) | core | `v0.1.1` | `skills/review-deep/core.md`, `skills/review-gauntlet/core.md`, `skills/tier-offload/core.md` | the `switchboard` command; runs `switchboard apply --write --home <home>` |
-| [tripwire](https://github.com/aberson/tripwire) | core | `v0.1.1` | `hooks/claude/tripwire-pretool.ps1` in its own repository | the `tripwire` command; a Claude Code `PreToolUse` hook; a Codex `PreToolUse` hook |
+| [tripwire](https://github.com/aberson/tripwire) | core | `v0.1.2` | `hooks/claude/tripwire-pretool.ps1` in its own repository | the `tripwire` command; a Claude Code `PreToolUse` hook; a Codex `PreToolUse` hook |
 | [find-again](https://github.com/aberson/find-again) | optional | `v0.1.0` | `skills/plan-feature/core.md` | the `find-again` command; prints its setup steps |
 | [changed-check](https://github.com/aberson/changed-check) | candidate | none yet | none yet | nothing; listed only |
 | [mesh-lens](https://github.com/aberson/mesh-lens) | candidate | none yet | none yet | nothing; listed only |
@@ -553,8 +553,8 @@ is historical planning, not proof that every proposed caller is wired.
 <a id="install-or-upgrade"></a>
 ## Quick start
 
-Download the [v3.0.3 release](https://github.com/aberson/skill-mesh/releases/tag/v3.0.3),
-check its SHA-256 against `skill-mesh-v3.0.3.sha256`, and extract it. Then install the
+Download the [v3.0.4 release](https://github.com/aberson/skill-mesh/releases/tag/v3.0.4),
+check its SHA-256 against `skill-mesh-v3.0.4.sha256`, and extract it. Then install the
 profile for your host from the extracted folder, with Windows PowerShell 5.1:
 
 ```powershell
@@ -624,11 +624,15 @@ release checks, 44/45 skills are GPT-capable (`skill-crud` ships no GPT adapter)
   catalog changes. The four citation skills moved out of the catalog into the project that uses
   them. `/user-build-route` now routes a new lane's first item, and on Codex the six
   `review-deep` code lenses run on `gpt-5.6-sol` at high reasoning effort by default.
+- **v3.0.4** installs tripwire's hook for Codex as well as Claude Code. With tripwire v0.1.2, the
+  hook checks the command inside Codex's PowerShell wrapper, and it no longer flags secret-file
+  names that only appear in search patterns or commit messages.
 
 The [v3.0.0](https://github.com/aberson/skill-mesh/releases/tag/v3.0.0),
 [v3.0.1](https://github.com/aberson/skill-mesh/releases/tag/v3.0.1),
-[v3.0.2](https://github.com/aberson/skill-mesh/releases/tag/v3.0.2) and
-[v3.0.3](https://github.com/aberson/skill-mesh/releases/tag/v3.0.3) release notes record what
+[v3.0.2](https://github.com/aberson/skill-mesh/releases/tag/v3.0.2),
+[v3.0.3](https://github.com/aberson/skill-mesh/releases/tag/v3.0.3) and
+[v3.0.4](https://github.com/aberson/skill-mesh/releases/tag/v3.0.4) release notes record what
 changed, the checks that ran and installation limits. **v4** is the full intended pipeline:
 approved work is queued and runs without the operator starting each stage
 ([plan.md](plan.md), "v4 program").

@@ -138,7 +138,7 @@
       "slug": "tripwire",
       "ring": "core",
       "repo": "https://github.com/aberson/tripwire",
-      "tag": "v0.1.1",
+      "tag": "v0.1.2",
       "cli": "tripwire",
       "health": ["tripwire", "--version"],
       "contract": {"name": "tripwire-check-json", "schema_version": 1},
