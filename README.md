@@ -626,7 +626,7 @@ release checks, 44/45 skills are GPT-capable (`skill-crud` ships no GPT adapter)
   `review-deep` code lenses run on `gpt-5.6-sol` at high reasoning effort by default.
 - **v3.0.4** installs tripwire's hook for Codex as well as Claude Code. With tripwire v0.1.2, the
   hook checks the command inside Codex's PowerShell wrapper, and it no longer flags secret-file
-  names that only appear in search patterns or commit messages.
+  names that only appear in search patterns or heredoc text.
 
 The [v3.0.0](https://github.com/aberson/skill-mesh/releases/tag/v3.0.0),
 [v3.0.1](https://github.com/aberson/skill-mesh/releases/tag/v3.0.1),
