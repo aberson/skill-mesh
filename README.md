@@ -13,7 +13,7 @@ run on Claude Code and OpenAI Codex from one behavior contract.**
   workspace. One contract per skill drives Claude Code (all 47) and OpenAI Codex (45
   portable). GitHub Copilot is no longer supported.
 
-**[v3.0.2 is released](https://github.com/aberson/skill-mesh/releases/tag/v3.0.2)** ·
+**[v3.0.3 is released](https://github.com/aberson/skill-mesh/releases/tag/v3.0.3)** ·
 [Quick start](#quick-start) · [Browse the skills](documentation/skill-reference.md) ·
 [Detailed workflows](docs/workflows/README.md)
 
@@ -549,8 +549,8 @@ is historical planning, not proof that every proposed caller is wired.
 <a id="install-or-upgrade"></a>
 ## Quick start
 
-Download the [v3.0.2 release](https://github.com/aberson/skill-mesh/releases/tag/v3.0.2),
-check its SHA-256 against `skill-mesh-v3.0.2.sha256`, and extract it. Then install the
+Download the [v3.0.3 release](https://github.com/aberson/skill-mesh/releases/tag/v3.0.3),
+check its SHA-256 against `skill-mesh-v3.0.3.sha256`, and extract it. Then install the
 profile for your host from the extracted folder, with Windows PowerShell 5.1:
 
 ```powershell
@@ -615,10 +615,14 @@ release checks, 44/45 skills are GPT-capable (`skill-crud` ships no GPT adapter)
   the build and wrap skills, and retired, folded or moved eleven skills.
 - **v3.0.1** made `/user-pm --lanes` end with one `/lane-open` line per lane.
 - **v3.0.2** made review rounds fail only on a Block.
+- **v3.0.3** added the [companion tools](#companion-tools): `-Companions core` or
+  `-Companions all` installs them with their hooks. On Codex, the six `review-deep` code lenses
+  now run on `gpt-5.6-sol` at high reasoning effort by default.
 
 The [v3.0.0](https://github.com/aberson/skill-mesh/releases/tag/v3.0.0),
-[v3.0.1](https://github.com/aberson/skill-mesh/releases/tag/v3.0.1) and
-[v3.0.2](https://github.com/aberson/skill-mesh/releases/tag/v3.0.2) release notes record what
+[v3.0.1](https://github.com/aberson/skill-mesh/releases/tag/v3.0.1),
+[v3.0.2](https://github.com/aberson/skill-mesh/releases/tag/v3.0.2) and
+[v3.0.3](https://github.com/aberson/skill-mesh/releases/tag/v3.0.3) release notes record what
 changed, the checks that ran and installation limits. **v4** is the full intended pipeline:
 approved work is queued and runs without the operator starting each stage
 ([plan.md](plan.md), "v4 program").
