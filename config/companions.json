@@ -18,7 +18,7 @@
     },
     {
       "slug": "drift-ranger",
-      "ring": "candidate",
+      "ring": "core",
       "repo": "https://github.com/aberson/drift-ranger",
       "tag": "v0.1.0",
       "cli": "drift-ranger",
@@ -29,7 +29,7 @@
       "setup_write": null,
       "hooks": [],
       "setup": [],
-      "candidate_note": "Core companion plan Step 3 packages it as an installable tool; promoted to core once it is tagged"
+      "candidate_note": null
     },
     {
       "slug": "find-again",
