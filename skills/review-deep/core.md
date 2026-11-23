@@ -129,8 +129,9 @@ walk is automatic, happens inside the run, and never asks the operator.
    tool allowlist or sandbox, `--model` per the tier table where the CLI supports
    it, and stdout captured to a per-lens file that the parent parses as that
    lens's single JSON `LensVerdict`. Prefer the host's own CLI (`codex exec` on
-   Codex, `claude -p` on Claude Code) so the configured model is unchanged; use
-   the other only when it is the one installed. A new process inherits nothing
+   Codex, `claude -p` on Claude Code) so the host's own model selection applies
+   (the configured model, unless the provider adapter pins one); use the other
+   only when it is the one installed. A new process inherits nothing
    from the review conversation, so this route satisfies invariant 1 exactly as
    route 1 does.
 3. **Halt `required_tool_missing`** only when neither route exists: no isolated

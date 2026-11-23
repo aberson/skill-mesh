@@ -26,7 +26,9 @@ slots are exhausted; `required_tool_missing` only when neither route exists.
 Resolve explicit overrides and non-default capability roles from the loaded package's
 `<loaded-package>/config/model-tier-map.md`, whose single fenced JSON payload matches canonical
 `config/model-tier-map.json`. The `model-pin` row owns default Codex code-lens selection without
-changing that shared map. Explicit overrides win; unavailable required capability returns
+changing that shared map. The map maps Claude tiers onto GPT peers and declares no Codex peer, so resolve any other tier to the closest
+capability the configured Codex model actually provides, never by weakening a gate. Explicit
+overrides win; unavailable required capability returns
 `required_tool_missing`. No automatic model-tier fallback; the core's out-of-process CLI route is a
 dispatch route, not a tier change.
 
