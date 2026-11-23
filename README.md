@@ -536,7 +536,7 @@ what each install step does and how to uninstall.
 | [Passing Notes](https://github.com/aberson/passing-notes) | Lane cards and notes between windows; skills read a lane's waiting notes and never block on the tool. |
 | [Tripwire](https://github.com/aberson/tripwire) | An advisory hook that checks shell commands before they run and adds a note on a problem; it never blocks. |
 | dev-observatory | Optional hooks: project registration (`plan-init`), verb and port sync (`repo-update`), a port pre-flight (`build-step --ui`), port and goal checks (`plan-review`, `plan-wrap`), and registry reads (`repo-wrap`, `user-afterparty`); `user-pm --json` feeds its views. Its static doctor and portfolio-block proposer are dev-observatory's own skills. |
-| [Citation Needed](https://github.com/aberson/citation-needed) | Evidence storage and scoring. Its four `citation-*` skills left this catalog in v4 and are moving to the Citation Needed repository as project-local skills; `user-gateway` points evidence checks there. |
+| [Citation Needed](https://github.com/aberson/citation-needed) | Evidence storage and scoring. Its four `citation-*` skills left this catalog in v3.0.3 and live in the Citation Needed repository as project-local skills; `user-gateway` points evidence checks there. |
 | [Switchboard](https://github.com/aberson/switchboard) | Its role registry sets the model for each role a skill sends work to; the core companion writes the role files from that registry and never overwrites a hand edit. `tier-offload` produces advisory, inactive routing candidates, and the local-model judge offload in `review-deep` and `review-gauntlet` stays off unless you turn it on. |
 | [Show Your Work](https://github.com/aberson/show-your-work) | Checks diagram sources and generates the detailed workflow index; not a skill runtime dependency. |
 
@@ -615,9 +615,11 @@ release checks, 44/45 skills are GPT-capable (`skill-crud` ships no GPT adapter)
   the build and wrap skills, and retired, folded or moved eleven skills.
 - **v3.0.1** made `/user-pm --lanes` end with one `/lane-open` line per lane.
 - **v3.0.2** made review rounds fail only on a Block.
-- **v3.0.3** added the [companion tools](#companion-tools): `-Companions core` or
-  `-Companions all` installs them with their hooks. On Codex, the six `review-deep` code lenses
-  now run on `gpt-5.6-sol` at high reasoning effort by default.
+- **v3.0.3** added the [companion tools](#companion-tools) (`-Companions core` or
+  `-Companions all` installs them with their hooks) and `/skill-crud`, the front door for
+  catalog changes. The four citation skills moved out of the catalog into the project that uses
+  them. `/user-build-route` now routes a new lane's first item, and on Codex the six
+  `review-deep` code lenses run on `gpt-5.6-sol` at high reasoning effort by default.
 
 The [v3.0.0](https://github.com/aberson/skill-mesh/releases/tag/v3.0.0),
 [v3.0.1](https://github.com/aberson/skill-mesh/releases/tag/v3.0.1),
