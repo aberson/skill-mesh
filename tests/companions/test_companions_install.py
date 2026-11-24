@@ -1041,7 +1041,12 @@ def test_setup_write_runs_after_skills_and_is_reversed_first(tmp_path):
     health_argv = member(manifest, slug)["health"][1:]
     # The member's own file hooks are located after its writer runs; which
     # member is "plain" follows the manifest, so derive them, never hard-code.
-    locates = [h["locate"][1:] for h in member(manifest, slug)["hooks"] if h["kind"] == "file"]
+    # This run installs the Claude profile, so only the Claude hooks are located.
+    locates = [
+        h["locate"][1:]
+        for h in member(manifest, slug)["hooks"]
+        if h["kind"] == "file" and h["host"] == "claude"
+    ]
     assert locates
     assert writes == [
         health_argv,
