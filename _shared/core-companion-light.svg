@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 592" font-family="ui-monospace,'Cascadia Code','SF Mono',Consolas,monospace" role="img" aria-label="The core companion. install-skill-mesh installs the skills, then with -Companions core installs each core member from its public repository at a pinned tag with uv, runs its health check and its own setup (passing-notes' lane skills, switchboard apply), and records a companion ledger. The core ring is drift-ranger, passing-notes, switchboard and tripwire; -Companions all adds find-again. The installer writes hooks for the host you install: for Claude, tripwire's PreToolUse hook and passing-notes' Stop hook in .claude/settings.json; for Codex, tripwire's PreToolUse hook in the user-level .codex/hooks.json, which runs only after you trust it in /hooks. At run time a skill resolves a tool on PATH, then a checkout, else skips, and prints at most one advisory line; the tripwire hook checks a shell command and adds a note. Nothing blocks.">
+<defs><marker id="arrow" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 Z" fill="#3355E0"/></marker><marker id="arrow-soft" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 Z" fill="#C0C9DA"/></marker><filter id="shadow" x="-20%" y="-45%" width="140%" height="190%"><feDropShadow dx="0" dy="2" stdDeviation="4" flood-opacity=".12"/></filter></defs>
+<style>.node rect{fill:#FFFFFF;stroke:#C0C9DA;stroke-width:1.4;filter:url(#shadow)}.opt rect{stroke-dasharray:5 4}.name{fill:#3355E0;font-size:14px;font-weight:600}.sub{fill:#6E778C;font-size:11px}.label{fill:#6E778C;font-size:11px;letter-spacing:.12em}.grp{fill:none;stroke:#C0C9DA;stroke-width:1.3;stroke-dasharray:6 5}.flow{fill:none;stroke:#3355E0;stroke-width:2;marker-end:url(#arrow)}.lnk{fill:none;stroke:#C0C9DA;stroke-width:1.7;marker-end:url(#arrow-soft)}.tie{fill:none;stroke:#C0C9DA;stroke-width:1.7}</style>
+<rect x="6" y="6" width="988" height="580" rx="16" fill="#FFFFFF" stroke="#D4DBE8" stroke-width="1.5"/>
+<text class="label" x="24" y="34">1  INSTALL</text>
+<text class="label" x="338" y="34">2  THE CORE RING</text>
+<text class="label" x="684" y="34">3  WRITTEN INTO THE HOME</text>
+<g class="node"><rect x="24" y="48" width="268" height="75" rx="10"/><text class="name" x="40" y="72">install-skill-mesh</text><text class="sub" x="40" y="92">skills first, then</text><text class="sub" x="40" y="109">-Companions core | all</text></g>
+<g class="node"><rect x="24" y="147" width="268" height="75" rx="10"/><text class="name" x="40" y="171">each member</text><text class="sub" x="40" y="191">uv tool install</text><text class="sub" x="40" y="208">from its repo @ pinned tag</text></g>
+<g class="node"><rect x="24" y="246" width="268" height="75" rx="10"/><text class="name" x="40" y="270">member setup</text><text class="sub" x="40" y="290">health check, lane skills,</text><text class="sub" x="40" y="307">switchboard apply</text></g>
+<g class="node"><rect x="24" y="345" width="268" height="75" rx="10"/><text class="name" x="40" y="369">companion ledger</text><text class="sub" x="40" y="389">uninstall removes only</text><text class="sub" x="40" y="406">what it installed</text></g>
+<path class="lnk" d="M158,123 V146"/>
+<path class="lnk" d="M158,222 V245"/>
+<path class="lnk" d="M158,321 V344"/>
+<rect class="grp" x="328" y="44" width="320" height="292" rx="14"/>
+<g class="node"><rect x="338" y="58" width="300" height="58" rx="10"/><text class="name" x="354" y="82">drift-ranger</text><text class="sub" x="354" y="102">intent records + checkpoints</text></g>
+<g class="node"><rect x="338" y="126" width="300" height="58" rx="10"/><text class="name" x="354" y="150">passing-notes</text><text class="sub" x="354" y="170">notes, cards, 4 lane skills</text></g>
+<g class="node"><rect x="338" y="194" width="300" height="58" rx="10"/><text class="name" x="354" y="218">switchboard</text><text class="sub" x="354" y="238">the model behind each role</text></g>
+<g class="node"><rect x="338" y="262" width="300" height="58" rx="10"/><text class="name" x="354" y="286">tripwire</text><text class="sub" x="354" y="306">advisory shell-command check</text></g>
+<g class="node opt"><rect x="338" y="362" width="300" height="58" rx="10"/><text class="name" x="354" y="386">find-again</text><text class="sub" x="354" y="406">optional: -Companions all</text></g>
+<g class="node"><rect x="684" y="48" width="292" height="92" rx="10"/><text class="name" x="700" y="72">Claude</text><text class="sub" x="700" y="92">.claude/settings.json:</text><text class="sub" x="700" y="109">tripwire PreToolUse hook,</text><text class="sub" x="700" y="126">passing-notes Stop hook</text></g>
+<g class="node"><rect x="684" y="154" width="292" height="92" rx="10"/><text class="name" x="700" y="178">Codex</text><text class="sub" x="700" y="198">.codex/hooks.json (user layer):</text><text class="sub" x="700" y="215">tripwire PreToolUse hook;</text><text class="sub" x="700" y="232">trust it once in /hooks</text></g>
+<g class="node"><rect x="684" y="260" width="292" height="75" rx="10"/><text class="name" x="700" y="284">hook scripts</text><text class="sub" x="700" y="304">.&lt;host&gt;/hooks/companions/</text><text class="sub" x="700" y="321">a copy per host</text></g>
+<g class="node"><rect x="684" y="345" width="292" height="75" rx="10"/><text class="name" x="700" y="369">the tools</text><text class="sub" x="700" y="389">commands on PATH;</text><text class="sub" x="700" y="406">no service is started</text></g>
+<path class="flow" d="M292,184 H322"/>
+<path class="flow" d="M648,100 H678"/>
+<text class="label" x="24" y="452">4  AT RUN TIME: SKILL CALLS | HOST HOOKS (NEVER BLOCK)</text>
+<path class="grp" d="M499,462 V545"/>
+<g class="node"><rect x="24" y="466" width="212" height="75" rx="10"/><text class="name" x="40" y="490">a skill step</text><text class="sub" x="40" y="510">calls a member, e.g.</text><text class="sub" x="40" y="527">passing-notes inbox</text></g>
+<g class="node"><rect x="270" y="466" width="212" height="75" rx="10"/><text class="name" x="286" y="490">tool_resolve</text><text class="sub" x="286" y="510">PATH, else a checkout,</text><text class="sub" x="286" y="527">else skip silently</text></g>
+<g class="node"><rect x="516" y="466" width="212" height="75" rx="10"/><text class="name" x="532" y="490">a shell command</text><text class="sub" x="532" y="510">the host is about</text><text class="sub" x="532" y="527">to run it</text></g>
+<g class="node"><rect x="762" y="466" width="212" height="75" rx="10"/><text class="name" x="778" y="490">tripwire hook</text><text class="sub" x="778" y="510">checks it, may add</text><text class="sub" x="778" y="527">a note; never blocks</text></g>
+<path class="flow" d="M236,503 H264"/>
+<path class="flow" d="M728,503 H756"/>
+<text class="sub" x="24" y="568">Hooks follow -Provider; -NoHooks skips all, -SkipHook &lt;slug&gt; one member's. -Companions is off by default for now.</text>
+</svg>

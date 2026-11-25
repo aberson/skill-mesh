@@ -1,7 +1,7 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 290" font-family="ui-monospace,'Cascadia Code','SF Mono',Consolas,monospace" role="img" aria-label="Separate utilities support intent, retrieval, evidence, notes between lanes, and project registry hooks; Show Your Work documents the workflows">
-<defs><marker id="arrow" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 Z" fill="#3355E0"/></marker><filter id="shadow" x="-20%" y="-45%" width="140%" height="190%"><feDropShadow dx="0" dy="2" stdDeviation="4" flood-opacity=".12"/></filter></defs>
-<style>.node rect{fill:#FFFFFF;stroke:#C0C9DA;stroke-width:1.4;filter:url(#shadow)}.name{fill:#3355E0;font-size:14px;font-weight:600}.sub{fill:#6E778C;font-size:11px}.label{fill:#6E778C;font-size:11px;letter-spacing:.12em}.flow{fill:none;stroke:#3355E0;stroke-width:2;marker-end:url(#arrow)}</style>
-<rect x="6" y="6" width="988" height="278" rx="16" fill="#FFFFFF" stroke="#D4DBE8" stroke-width="1.5"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 384" font-family="ui-monospace,'Cascadia Code','SF Mono',Consolas,monospace" role="img" aria-label="Skills coordinate the work: plan, build, review, ship. The core companion, installed with -Companions core, adds Drift Ranger for intent, Passing Notes for notes between lanes, Switchboard for the model behind each role and Tripwire for an advisory shell-command check. Find Again is optional, Citation Needed keeps its own evidence skills, and dev-observatory provides registry and port hooks. Show Your Work documents the flows.">
+<defs><marker id="arrow" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 Z" fill="#3355E0"/></marker><marker id="arrow-soft" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 Z" fill="#C0C9DA"/></marker><filter id="shadow" x="-20%" y="-45%" width="140%" height="190%"><feDropShadow dx="0" dy="2" stdDeviation="4" flood-opacity=".12"/></filter></defs>
+<style>.node rect{fill:#FFFFFF;stroke:#C0C9DA;stroke-width:1.4;filter:url(#shadow)}.opt rect{stroke-dasharray:5 4}.name{fill:#3355E0;font-size:14px;font-weight:600}.sub{fill:#6E778C;font-size:11px}.label{fill:#6E778C;font-size:11px;letter-spacing:.12em}.grp{fill:none;stroke:#C0C9DA;stroke-width:1.3;stroke-dasharray:6 5}.flow{fill:none;stroke:#3355E0;stroke-width:2;marker-end:url(#arrow)}.lnk{fill:none;stroke:#C0C9DA;stroke-width:1.7;marker-end:url(#arrow-soft)}.tie{fill:none;stroke:#C0C9DA;stroke-width:1.7}</style>
+<rect x="6" y="6" width="988" height="372" rx="16" fill="#FFFFFF" stroke="#D4DBE8" stroke-width="1.5"/>
 <text class="label" x="28" y="34">SKILLS COORDINATE THE WORK</text>
 <g class="node"><rect x="28" y="49" width="206" height="58" rx="10"/><text class="name" x="44" y="73">Plan</text><text class="sub" x="44" y="93">understand + scope</text></g>
 <path class="flow" d="M234,78 H268"/>
@@ -10,12 +10,15 @@
 <g class="node"><rect x="520" y="49" width="206" height="58" rx="10"/><text class="name" x="536" y="73">Review</text><text class="sub" x="536" y="93">independent gates</text></g>
 <path class="flow" d="M726,78 H760"/>
 <g class="node"><rect x="766" y="49" width="206" height="58" rx="10"/><text class="name" x="782" y="73">Ship</text><text class="sub" x="782" y="93">accept + publish</text></g>
-<path d="M130,107 V133 H869 V107 M377,107 V133 M623,107 V133 M500,133 V151" fill="none" stroke="#C0C9DA" stroke-width="1.7"/>
-<text class="label" x="28" y="164">SEPARATE TOOLS, USED BY SPECIFIC WORKFLOWS</text>
-<g class="node"><rect x="28" y="182" width="176" height="58" rx="10"/><text class="name" x="44" y="206">Drift Ranger</text><text class="sub" x="44" y="226">intent + checkpoints</text></g>
-<g class="node"><rect x="220" y="182" width="176" height="58" rx="10"/><text class="name" x="236" y="206">Find Again</text><text class="sub" x="236" y="226">optional retrieval</text></g>
-<g class="node"><rect x="412" y="182" width="176" height="58" rx="10"/><text class="name" x="428" y="206">Citation Needed</text><text class="sub" x="428" y="226">evidence + scoring</text></g>
-<g class="node"><rect x="604" y="182" width="176" height="58" rx="10"/><text class="name" x="620" y="206">Passing Notes</text><text class="sub" x="620" y="226">notes between lanes</text></g>
-<g class="node"><rect x="796" y="182" width="176" height="58" rx="10"/><text class="name" x="812" y="206">dev-observatory</text><text class="sub" x="812" y="226">registry + port hooks</text></g>
-<text class="sub" x="28" y="268">Show Your Work documents the flows. Utilities are not bundled or automatically started.</text>
+<path class="tie" d="M131,107 V133 H869 V107 M377,107 V133 M623,133 V107 M500,133 V151"/>
+<text class="label" x="28" y="166">CORE COMPANION (-Companions core)</text>
+<g class="node"><rect x="28" y="180" width="224" height="58" rx="10"/><text class="name" x="44" y="204">Drift Ranger</text><text class="sub" x="44" y="224">intent + checkpoints</text></g>
+<g class="node"><rect x="268" y="180" width="224" height="58" rx="10"/><text class="name" x="284" y="204">Passing Notes</text><text class="sub" x="284" y="224">notes between lanes</text></g>
+<g class="node"><rect x="508" y="180" width="224" height="58" rx="10"/><text class="name" x="524" y="204">Switchboard</text><text class="sub" x="524" y="224">model for each role</text></g>
+<g class="node"><rect x="748" y="180" width="224" height="58" rx="10"/><text class="name" x="764" y="204">Tripwire</text><text class="sub" x="764" y="224">advisory command check</text></g>
+<text class="label" x="28" y="266">OPTIONAL OR SEPARATE</text>
+<g class="node opt"><rect x="28" y="280" width="304" height="58" rx="10"/><text class="name" x="44" y="304">Find Again</text><text class="sub" x="44" y="324">optional retrieval (-Companions all)</text></g>
+<g class="node"><rect x="348" y="280" width="304" height="58" rx="10"/><text class="name" x="364" y="304">Citation Needed</text><text class="sub" x="364" y="324">evidence + scoring, its own skills</text></g>
+<g class="node"><rect x="668" y="280" width="304" height="58" rx="10"/><text class="name" x="684" y="304">dev-observatory</text><text class="sub" x="684" y="324">registry + port hooks</text></g>
+<text class="sub" x="28" y="364">Show Your Work documents the flows. Tools install only when asked; none runs as a background service.</text>
 </svg>
