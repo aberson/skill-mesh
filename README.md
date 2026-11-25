@@ -413,7 +413,7 @@ checkpoint and handoff files.*
 - **Lanes.** A lane is a named, lasting slice of one project's work, owned by one window at a
   time. `user-pm --lanes` drafts the split, with a `main` lane that coordinates, ships and
   relays your requests, and it ends with one `/lane-open` line per lane. Lanes coordinate
-  through the [Passing Notes](https://github.com/aberson/passing-notes) tool, and
+  through the [Passing Notes](#passing-notes-lanes-that-talk-to-each-other) tool, and
   `task-handoff`, `session-wrap`, `build-step` and `repo-update` show each lane its waiting
   notes.
 - After a merge, re-run `/plan-review` and `/plan-wrap` on the merged plan, then `/repo-sync`
@@ -478,16 +478,40 @@ pipeline.
 ## How utility projects are used
 
 Skills coordinate the work. Small utility projects provide specific operations: tracking the
-intended outcome, finding prior work, keeping evidence, passing notes between lanes, and
-registering projects and their ports.
+intended outcome, passing notes between lanes, choosing the model behind each role, checking
+shell commands before they run, finding prior work, keeping evidence, and registering projects
+and their ports.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="_shared/utility-support-dark.svg">
-  <img alt="Skill workflows use Drift Ranger for intent, Find Again for retrieval, Citation Needed for evidence, Passing Notes for notes between lanes, and dev-observatory for registry and port hooks. Show Your Work documents the workflows." src="_shared/utility-support-light.svg">
+  <img alt="Skills coordinate the work: plan, build, review, ship. The core companion, installed with -Companions core, adds Drift Ranger for intent, Passing Notes for notes between lanes, Switchboard for the model behind each role and Tripwire for an advisory shell-command check. Find Again is optional, Citation Needed keeps its own evidence skills, and dev-observatory provides registry and port hooks. Show Your Work documents the flows." src="_shared/utility-support-light.svg">
 </picture>
 
 These projects remain separate. One option installs the core companion; `-Companions all` adds
 Find Again. Nothing else is installed, and no background service is started.
+
+### The core companion
+
+The core companion is the set of small tools the skills call, installed only when you ask for
+it. The installer adds the skills first, then installs each member from its own repository at a
+pinned tag and writes hooks for the host you installed. When a skill runs, it looks the tool
+up and prints at most one advisory line; if the tool is missing, the skill carries on without
+it.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="_shared/core-companion-dark.svg">
+  <img alt="The core companion. install-skill-mesh installs the skills, then with -Companions core installs each core member from its public repository at a pinned tag with uv, runs its health check and its own setup (passing-notes' lane skills, switchboard apply), and records a companion ledger. The core ring is drift-ranger, passing-notes, switchboard and tripwire; -Companions all adds find-again. The installer writes hooks for the host you install: for Claude, tripwire's PreToolUse hook and passing-notes' Stop hook in .claude/settings.json; for Codex, tripwire's PreToolUse hook in the user-level .codex/hooks.json, which runs only after you trust it in /hooks. At run time a skill resolves a tool on PATH, then a checkout, else skips, and prints at most one advisory line; the tripwire hook checks a shell command and adds a note. Nothing blocks." src="_shared/core-companion-light.svg">
+</picture>
+
+- **Ledgered and reversible.** The companion keeps its own ledger, so uninstalling it removes
+  only the entries and files it wrote and never touches the skill install. A tool you
+  installed yourself is reported `skipped: pre-existing` and left alone.
+- **Hooks follow `-Provider`.** A Claude install edits `.claude/settings.json`; a Codex install
+  edits your user-level `.codex/hooks.json` and never writes `config.toml` or a trust record
+  (if `config.toml` already defines hooks, the Codex hook is skipped with a note). Everything
+  else in those files stays as it was.
+- **Needs `uv`, Git and Python 3.12+** on `PATH`. If one is missing, every member is reported
+  skipped and the skill install is unaffected.
 
 <a id="companion-tools"></a>
 <details>
@@ -550,6 +574,36 @@ is historical planning, not proof that every proposed caller is wired.
 
 </details>
 
+### Passing Notes: lanes that talk to each other
+
+[Passing Notes](https://github.com/aberson/passing-notes) lets parallel windows, Claude Code
+and Codex alike, coordinate without you copying messages between them. Each lane works in its
+own window and keeps a card saying what it is doing. Lanes leave short notes for each other in
+a private store outside every repository, and `main` coordinates and speaks for you.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="_shared/passing-notes-dark.svg">
+  <img alt="Passing Notes. The operator usually types in main, the coordinator and operator relay; each work lane has its own window, its own card, and binds that window for doorbells. Lanes write to a private store outside every repository: immutable notes with a kind and a needs field, one card per lane with its state, and one queue per shared resource. A note's life: post it to a lane, optionally ring a doorbell that carries only the note id, the recipient finds it at an inbox moment, reads it as data, and acknowledges it or replies. Operator relay: a lane posts a needs operator-decision question to main, main shows it verbatim, the operator answers, and main replies with the operator's words on an operator-said line that the lane acts on. Shared-resource turns: a lane reserves a turn or joins the line, the holder uses the resource until it releases (an overrun is reported, never ended by the queue), release posts and rings the next holder, and the next holder replies taken or passing." src="_shared/passing-notes-light.svg">
+</picture>
+
+- **A note is data, not an instruction.** It grants no approval, work or ownership, and an
+  acknowledgement means "received", not agreed or done. The one exception is a note from
+  `main` whose first line is `operator-said: <your words>`, either an answer to the lane's
+  question or a request you gave `main` for that lane: the lane acts on it as if you had typed
+  it in that window.
+- **Doorbells only unblock.** After posting, a sender may ring the recipient with a doorbell
+  that carries only the note id. An idle Claude window wakes; Codex queues it for its thread.
+  Lanes otherwise check their inbox at fixed moments (session start, around gates, before a
+  shared commit, at a handoff) and never poll.
+- **Turns on a shared resource** (an engine lock, a GPU) go through a queue: `reserve` takes a
+  turn or joins the line, and `release` posts the next holder one reservation note and rings
+  it. The queue only orders turns; the project's own lock rules still decide who may use the
+  resource.
+- **In Skill Mesh,** `user-pm --lanes` drafts the split and ends with one `/lane-open` line per
+  lane, and in a project with lanes `task-handoff`, `session-wrap`, `build-step` and
+  `repo-update` show a declared lane its waiting notes. The lane skills (`lane-open`, `lane-close`, `lane-handoff`, `lane-status`)
+  come from Passing Notes, not from this catalog; the core companion installs them.
+
 <a id="install-or-upgrade"></a>
 ## Quick start
 
@@ -562,8 +616,13 @@ powershell -NoProfile -File tools/install-skill-mesh.ps1 -Provider claude -Home 
 powershell -NoProfile -File tools/install-skill-mesh.ps1 -Provider codex  -Home C:\path\to\consumer-home -DistDir .\dist   # OpenAI Codex
 ```
 
+For Codex, `-Home` is the folder that holds `.codex` (normally your user profile); the
+[Codex guide](documentation/providers/codex.md) shows how to confirm it.
+
 To also install the small tools the skills call, add `-Companions core`, or `-Companions all`
-to add Find Again ([what they install](#companion-tools)).
+to add Find Again ([what they install](#companion-tools)). After a Codex companion install,
+open `/hooks` in Codex and trust the tripwire `PreToolUse` entry; the installer prints the
+entry to look for.
 
 Restart your host sessions, then run a skill: in Claude Code that's a slash command
 (`/plan-init`); Codex discovers the same skill from its installed folder. Swap the
